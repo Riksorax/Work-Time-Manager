@@ -1,203 +1,107 @@
 import 'package:flutter/material.dart';
 
 class ManuelSelection extends StatefulWidget {
-  final TimeOfDay? workTime;
-  final TimeOfDay? breakTime;
+  final TimeOfDay workTime;
+  final TimeOfDay breakTime;
 
-  const ManuelSelection({Key? key, this.workTime, this.breakTime}) : super(key: key);
+  const ManuelSelection({Key? key, required this.workTime, required this.breakTime}) : super(key: key);
 
   @override
   State<ManuelSelection> createState() => _ManuelSelectionState();
 }
 
 class _ManuelSelectionState extends State<ManuelSelection> {
+  late TimeOfDay workTimeBegin;
+  late TimeOfDay workTimeEnd;
+  late TimeOfDay workTime;
+  late TimeOfDay breakTime;
+
+  @override
+  void initState() {
+    super.initState();
+    workTimeBegin = const TimeOfDay(hour: 00, minute: 00);
+    workTimeEnd = const TimeOfDay(hour: 00, minute: 00);
+    workTime = widget.workTime;
+    breakTime = widget.breakTime;
+  }
+
   @override
   Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: [
+        _buildColumn('Arbeitsbeginn', workTimeBegin, (value) {
+          setState(() {
+            if (value != null) {
+              workTimeBegin = value;
+            }
+          });
+        }),
+        _buildColumn('Arbeitsende', workTimeEnd, (value) {
+          setState(() {
+            if (value != null) {
+              workTimeEnd = value;
+            }
+          });
+        }),
+        _buildColumn('Arbeitzeit', widget.workTime, (value) {
+          setState(() {
+            if (value != null) {
+              workTime = value;
+            }
+          });
+        }),
+        _buildColumn('Pause', widget.breakTime, (value) {
+          setState(() {
+            if (value != null) {
+              breakTime = value;
+            }
+          });
+        }),
+        // ... Weitere Spalten hier einfügen
+      ],
+    );
+  }
 
-    TimeOfDay? workTime = widget.workTime;
-    TimeOfDay? breakTime = widget.breakTime;
-    TimeOfDay? workTimeBegin;
-    TimeOfDay workTimeEnd;
-    var test;
-
-    return Container(
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          Container(
-            child: Column(
-              children: [
-                Container(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Container(
-                        child: const Text('Arbeitsbeginn'),
+  Widget _buildColumn(String labelText, TimeOfDay timeOfDay, Function(TimeOfDay?) onPressed) {
+    return Column(
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(labelText),
+          ],
+        ),
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.only(top: 10),
+              child: OutlinedButton(
+                onPressed: () {
+                  showTimePicker(
+                    context: context,
+                    initialTime: timeOfDay,
+                    helpText: labelText,
+                  ).then((value) {
+                    onPressed(value);
+                  });
+                },
+                child: Row(
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.only(right: 4),
+                      child: Text(
+                        timeOfDay.format(context),
                       ),
-                    ],
-                  ),
+                    ),
+                    const Icon(Icons.access_alarm),
+                  ],
                 ),
-                Container(
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.only(top: 10),
-                        child: OutlinedButton(
-                          onPressed: () {
-                            showTimePicker(
-                              context: context,
-                              initialTime: TimeOfDay.now(),
-                              helpText: 'Arbeitsbeginn',
-                            ).then((value) {
-                              setState(() {
-                                workTimeBegin = value!;
-                              });
-                            });
-                          },
-                          child: Row(
-                            children: [
-                              Container(
-                                margin: const EdgeInsets.only(right: 4),
-                                child: Text(
-                                  workTimeBegin != null ? workTimeBegin.format(context) : '00:00',
-                                ),
-                              ),
-                              Container(child: const Icon(Icons.access_alarm)),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              ],
+              ),
             ),
-          ),
-          Container(
-            child: Column(
-              children: [
-                Container(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Container(
-                        child: const Text('Arbeitsende'),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.only(top: 10),
-                        child: OutlinedButton(
-                            onPressed: () {
-
-                            },
-                            child: Row(
-                              children: [
-                                Container(margin: const EdgeInsets.only(right: 4) ,child: const Text(test.toString();)),
-                                Container(child: const Icon(Icons.access_alarm)),
-                              ],
-                            )),
-                      ),
-                    ],
-                  ),
-                )
-              ],
-            ),
-          ),
-          Container(
-            child: Column(
-              children: [
-                Container(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Container(
-                        child: const Text('Arbeitzeit'),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.only(top: 10),
-                        child: OutlinedButton(
-                            onPressed: () {
-                              showTimePicker(
-                                context: context, initialTime: workTime == null ? TimeOfDay(hour: 07, minute: 42) : workTime!, helpText: 'Arbeitzeit',
-                              ).then((value) {
-                                setState(() {
-                                  if(value == null){
-                                    return;
-                                  }
-                                  workTime = value;
-                                });
-                              });
-                            },
-                            child: Row(
-                              children: [
-                                Container(margin: const EdgeInsets.only(right: 4) ,child: Text(workTime == null ? '07:42' : workTime.format(context))),
-                                Container(child: const Icon(Icons.access_alarm)),
-                              ],
-                            )),
-                      ),
-                    ],
-                  ),
-                )
-              ],
-            ),
-          ),
-          Container(
-            child: Column(
-              children: [
-                Container(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Container(
-                        child: const Text('Pause'),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.only(top: 10),
-                        child: OutlinedButton(
-                            onPressed: () {
-                              showTimePicker(
-                                context: context, initialTime: breakTime == null ? TimeOfDay(hour: 00, minute: 30) : breakTime!, helpText: 'Pause',
-                              ).then((value) {
-                                setState(() {
-                                  if(value == null){
-                                    return;
-                                  }
-                                  breakTime = value;
-                                });
-                              });
-                            },
-                            child: Row(
-                              children: [
-                                Container(margin: const EdgeInsets.only(right: 4) ,child: Text(breakTime == null ? '00:30' : breakTime.format(context))),
-                                Container(child: const Icon(Icons.access_alarm)),
-                              ],
-                            )),
-                      ),
-                    ],
-                  ),
-                )
-              ],
-            ),
-          ),
-        ],
-      ),
+          ],
+        ),
+      ],
     );
   }
 }

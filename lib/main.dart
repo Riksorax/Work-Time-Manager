@@ -14,7 +14,12 @@ class WorkTimeCalculate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      builder: (context, child) => MediaQuery(data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true), child: child!),
+      builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+          child: child!),
+      theme: ThemeData(
+        useMaterial3: true,
+      ),
       home: DefaultTabController(
         length: 3,
         child: Scaffold(
@@ -22,27 +27,25 @@ class WorkTimeCalculate extends StatelessWidget {
             bottom: const TabBar(
               tabs: [
                 Tab(icon: Icon(Icons.alarm), text: 'Arbeitszeiten'),
-                Tab(icon: Icon(Icons.list), text: 'Zeiten Liste',),
+                Tab(
+                  icon: Icon(Icons.list),
+                  text: 'Zeiten Liste',
+                ),
                 Tab(icon: Icon(Icons.timer), text: 'Kommissionierzeit'),
               ],
             ),
           ),
-          body: TabBarView(
+          body: const TabBarView(
             children: <Widget>[
               SingleChildScrollView(
-                child: Container(
-                  child:
-                  DefaultSelection(),
-                ),
+                child: DefaultSelection(),
               ),
-              Container(
-                child: const Row(
-                  children: [
-                    //WorkTimeList(),
-                  ],
-                ),
+              Row(
+                children: [
+                  //WorkTimeList(),
+                ],
               ),
-              const Icon(Icons.directions_transit),
+              Icon(Icons.directions_transit),
             ],
           ),
         ),
