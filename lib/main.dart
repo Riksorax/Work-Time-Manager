@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_work_time/widget/manuelSelection.dart';
-import 'package:flutter_work_time/widget/showCalculateTime.dart';
-
-import 'widget/defaultSelection.dart';
+import 'package:flutter_work_time/theme.dart';
 
 void main() {
   runApp(const WorkTimeCalculate());
@@ -17,37 +14,24 @@ class WorkTimeCalculate extends StatelessWidget {
       builder: (context, child) => MediaQuery(
           data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
           child: child!),
-      theme: ThemeData(
-        useMaterial3: true,
-      ),
-      home: DefaultTabController(
-        length: 3,
-        child: Scaffold(
-          appBar: AppBar(
-            bottom: const TabBar(
-              tabs: [
-                Tab(icon: Icon(Icons.alarm), text: 'Arbeitszeiten'),
-                Tab(
-                  icon: Icon(Icons.list),
-                  text: 'Zeiten Liste',
-                ),
-                Tab(icon: Icon(Icons.timer), text: 'Kommissionierzeit'),
-              ],
+      debugShowCheckedModeBanner: false,
+      theme: const MaterialTheme(TextTheme()).light(),
+      darkTheme: const MaterialTheme(TextTheme()).dark(),
+      themeMode: ThemeMode.dark,
+      home: Scaffold(
+        appBar: AppBar(
+          leading: const IconButton(
+            icon: Icon(Icons.menu),
+            onPressed: null,
+          ),
+          centerTitle: true,
+          title: const Text("Arbeitszeit Rechner"),
+          actions: const [
+            IconButton(
+              onPressed: null,
+              icon: Icon(Icons.person),
             ),
-          ),
-          body: const TabBarView(
-            children: <Widget>[
-              SingleChildScrollView(
-                child: DefaultSelection(),
-              ),
-              Row(
-                children: [
-                  //WorkTimeList(),
-                ],
-              ),
-              Icon(Icons.directions_transit),
-            ],
-          ),
+          ],
         ),
       ),
     );
