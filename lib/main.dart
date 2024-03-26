@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_work_time/features/presentation/work_time_screen.dart';
 import 'package:flutter_work_time/theme.dart';
 
 void main() {
-  runApp(const WorkTimeCalculate());
+  runApp(const ProviderScope(child: WorkTimeCalculate()));
 }
 
-class WorkTimeCalculate extends StatelessWidget {
+class WorkTimeCalculate extends ConsumerWidget {
   const WorkTimeCalculate({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp(
       builder: (context, child) => MediaQuery(
           data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
@@ -33,6 +35,7 @@ class WorkTimeCalculate extends StatelessWidget {
             ),
           ],
         ),
+        body: const WorkTimeScreen(),
       ),
     );
   }
