@@ -26,7 +26,7 @@ enum EndTime{
   eightHour
 }
 
-enum ManuelTime{
+enum ManualTime{
   startTime,
   breakTime,
   workHour,

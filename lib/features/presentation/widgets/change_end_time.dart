@@ -13,20 +13,12 @@ class _ChangeEndTimeState extends State<ChangeEndTime> {
   Widget build(BuildContext context) {
     Set<EndTime> timeSlots = <EndTime>{};
     return Container(
-      margin: EdgeInsets.only(left: 16, right: 16),
+      margin: const EdgeInsets.only(left: 16, right: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ActionChip(
-            label: const Text("End Zeit wählen"),
-            avatar: const Icon(Icons.alarm),
-            onPressed: () {
-              showTimePicker(
-                context: context,
-                initialTime: TimeOfDay.now(),
-              );
-            },
-          ),
+          const Text("End Zeit wählen"),
+          const Divider(),
           const Padding(padding: EdgeInsets.only(bottom: 10)),
           SizedBox(
             width: double.infinity,

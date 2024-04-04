@@ -13,20 +13,12 @@ class _ChangeStartTimeState extends State<ChangeStartTime> {
   Widget build(BuildContext context) {
     Set<StartTime> timeSlots = <StartTime>{};
     return Container(
-      margin: EdgeInsets.only(left: 16, right: 16),
+      margin: const EdgeInsets.only(left: 16, right: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ActionChip(
-            label: const Text("Start zeit wählen"),
-            avatar: const Icon(Icons.alarm),
-            onPressed: () {
-              showTimePicker(
-                context: context,
-                initialTime: TimeOfDay.now(),
-              );
-            },
-          ),
+          const Text("Start zeit wählen"),
+          const Divider(),
           const Padding(padding: EdgeInsets.only(bottom: 10)),
           SizedBox(
             width: double.infinity,
