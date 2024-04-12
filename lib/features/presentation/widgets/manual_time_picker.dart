@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_work_time/features/provider/entities/time_slots.dart';
 
 class ManualTimePicker extends StatefulWidget {
   const ManualTimePicker({super.key});
@@ -9,9 +8,10 @@ class ManualTimePicker extends StatefulWidget {
 }
 
 class _ManualTimePickerState extends State<ManualTimePicker> {
+
   @override
   Widget build(BuildContext context) {
-    Set<ManualTime> timeSlots = <ManualTime>{};
+
     return Container(
       padding: const EdgeInsets.only(left: 16, right: 16),
       child: Column(
@@ -37,34 +37,61 @@ class _ManualTimePickerState extends State<ManualTimePicker> {
                   const Padding(padding: EdgeInsets.only(bottom: 10)),
                   SizedBox(
                     width: double.infinity,
-                    child: SegmentedButton(
-                      segments: const <ButtonSegment<ManualTime>>[
-                        ButtonSegment<ManualTime>(
-                          value: ManualTime.startTime,
-                          label: Text('8:00 Uhr'),
-                        ),
-                        ButtonSegment<ManualTime>(
-                          value: ManualTime.breakTime,
-                          label: Text('30 min'),
-                        ),
-                        ButtonSegment<ManualTime>(
-                          value: ManualTime.workHour,
-                          label: Text('7,42 h'),
-                        ),
-                        ButtonSegment<ManualTime>(
-                          value: ManualTime.endTime,
-                          label: Text('17:30 Uhr'),
-                        ),
+                    child: Column(
+                      children: [
+                        OverflowBar(
+                          children: [
+                            TextButton(
+                              child: const Text('8:00 Uhr'),
+                              onPressed: () {
+                                showTimePicker(
+                                    context: context,
+                                    initialTime: TimeOfDay.now(),
+                                    cancelText: "Abbrechen",
+                                    helpText: "Start Zeit",
+                                    hourLabelText: "Stunden",
+                                    minuteLabelText: "Minuten");
+                              },
+                            ),
+                            TextButton(
+                              child: const Text('30 min'),
+                              onPressed: () {
+                                showTimePicker(
+                                    context: context,
+                                    initialTime: TimeOfDay.now(),
+                                    cancelText: "Abbrechen",
+                                    helpText: "Pause",
+                                    hourLabelText: "Stunden",
+                                    minuteLabelText: "Minuten");
+                              },
+                            ),
+                            TextButton(
+                              child: const Text('7,42 h'),
+                              onPressed: () {
+                                showTimePicker(
+                                    context: context,
+                                    initialTime: TimeOfDay.now(),
+                                    cancelText: "Abbrechen",
+                                    helpText: "Arbeits Stunden",
+                                    hourLabelText: "Stunden",
+                                    minuteLabelText: "Minuten");
+                              },
+                            ),
+                            TextButton(
+                              child: const Text('17:30 Uhr'),
+                              onPressed: () {
+                                showTimePicker(
+                                    context: context,
+                                    initialTime: TimeOfDay.now(),
+                                    cancelText: "Abbrechen",
+                                    helpText: "End Zeit",
+                                    hourLabelText: "Stunden",
+                                    minuteLabelText: "Minuten");
+                              },
+                            ),
+                          ],
+                        )
                       ],
-                      selected: timeSlots,
-                      onSelectionChanged: (Set<ManualTime> newSelection) {
-                        setState(
-                              () {
-                            timeSlots = newSelection;
-                          },
-                        );
-                      },
-                      emptySelectionAllowed: true,
                     ),
                   ),
                 ],

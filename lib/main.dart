@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_work_time/features/presentation/work_time_screen.dart';
-import 'package:flutter_work_time/theme.dart';
+import 'package:flutter_work_time/features/shared/presentation/theme/theme.dart';
 
 void main() {
   runApp(const ProviderScope(child: WorkTimeCalculate()));
@@ -35,7 +35,9 @@ class WorkTimeCalculate extends ConsumerWidget {
             ),
           ],
         ),
-        body: const WorkTimeScreen(),
+        body: const SingleChildScrollView(
+          child: WorkTimeScreen(),
+        ),
       ),
     );
   }

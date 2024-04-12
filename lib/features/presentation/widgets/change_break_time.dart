@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_work_time/features/provider/entities/time_slots.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_work_time/features/providers/break_time_change.notifier.dart';
 
-class ChangeBreakTime extends StatefulWidget {
+import '../../providers/entities/time_slots.dart';
+
+class ChangeBreakTime extends ConsumerStatefulWidget {
   const ChangeBreakTime({Key? key}) : super(key: key);
 
   @override
-  _ChangeBreakTimeState createState() => _ChangeBreakTimeState();
+  ConsumerState<ChangeBreakTime> createState() => _ChangeBreakTimeState();
 }
 
-class _ChangeBreakTimeState extends State<ChangeBreakTime> {
+class _ChangeBreakTimeState extends ConsumerState<ChangeBreakTime> {
   @override
   Widget build(BuildContext context) {
+    DateTime defaultBreak = ref.watch(breakTimeChangeNotifierProvider.notifier).state;
     Set<BreakTime> timeSlots = <BreakTime>{};
     return Container(
       margin: const EdgeInsets.only(left: 16, right: 16),
