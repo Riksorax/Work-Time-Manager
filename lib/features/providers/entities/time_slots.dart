@@ -6,10 +6,10 @@ enum StartTime{
 }
 
 enum BreakTime{
-  firstBreak,
-  secondBreak,
-  thirdBreak,
-  fourthBreak
+  fifteenMinBreak,
+  thirtyMinBreak,
+  fortyFiveMinuteBreak,
+  sixtyMinuteBreak
 }
 
 enum WorkTime{

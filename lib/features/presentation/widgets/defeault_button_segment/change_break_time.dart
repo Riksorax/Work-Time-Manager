@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_work_time/features/providers/break_time_change.notifier.dart';
+import 'package:flutter_work_time/features/providers/break_time/break_time_change_segment.notifier.dart';
 
-import '../../providers/entities/time_slots.dart';
+import '../../../providers/entities/time_slots.dart';
 
 class ChangeBreakTime extends ConsumerStatefulWidget {
-  const ChangeBreakTime({Key? key}) : super(key: key);
+  const ChangeBreakTime({super.key});
 
   @override
   ConsumerState<ChangeBreakTime> createState() => _ChangeBreakTimeState();
@@ -14,8 +14,7 @@ class ChangeBreakTime extends ConsumerStatefulWidget {
 class _ChangeBreakTimeState extends ConsumerState<ChangeBreakTime> {
   @override
   Widget build(BuildContext context) {
-    DateTime defaultBreak = ref.watch(breakTimeChangeNotifierProvider.notifier).state;
-    Set<BreakTime> timeSlots = <BreakTime>{};
+    BreakTime breakTimeView = ref.watch(breakTimeChangeSegmentNotifierProvider);
     return Container(
       margin: const EdgeInsets.only(left: 16, right: 16),
       child: Column(
@@ -29,29 +28,26 @@ class _ChangeBreakTimeState extends ConsumerState<ChangeBreakTime> {
             child: SegmentedButton(
               segments: const <ButtonSegment<BreakTime>>[
                 ButtonSegment<BreakTime>(
-                  value: BreakTime.firstBreak,
+                  value: BreakTime.fifteenMinBreak,
                   label: Text('15 min'),
                 ),
                 ButtonSegment<BreakTime>(
-                  value: BreakTime.secondBreak,
+                  value: BreakTime.thirtyMinBreak,
                   label: Text('30 min'),
                 ),
                 ButtonSegment<BreakTime>(
-                  value: BreakTime.thirdBreak,
+                  value: BreakTime.fortyFiveMinuteBreak,
                   label: Text('45 min'),
                 ),
                 ButtonSegment<BreakTime>(
-                  value: BreakTime.fourthBreak,
+                  value: BreakTime.sixtyMinuteBreak,
                   label: Text('60 min'),
                 ),
               ],
-              selected: timeSlots,
+              selected: <BreakTime>{breakTimeView},
               onSelectionChanged: (Set<BreakTime> newSelection) {
-                setState(
-                      () {
-                    timeSlots = newSelection;
-                  },
-                );
+                ref.read(breakTimeChangeSegmentNotifierProvider.notifier)
+                    .setBreakTimeChange(newSelection.first);
               },
               emptySelectionAllowed: true,
             ),

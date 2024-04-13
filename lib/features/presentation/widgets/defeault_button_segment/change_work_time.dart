@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../providers/entities/time_slots.dart';
+import '../../../providers/entities/time_slots.dart';
 
 class ChangeWorkTime extends StatefulWidget {
   const ChangeWorkTime({Key? key}) : super(key: key);

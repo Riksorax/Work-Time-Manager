@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_work_time/features/presentation/widgets/manual_work_time_picker/change_break_time_manual.dart';
+import 'package:flutter_work_time/features/presentation/widgets/manual_work_time_picker/change_end_time_manual.dart';
+import 'package:flutter_work_time/features/presentation/widgets/manual_work_time_picker/change_start_time_manual.dart';
+import 'package:flutter_work_time/features/presentation/widgets/manual_work_time_picker/change_work_time_manual.dart';
 
 class ManualTimePicker extends StatefulWidget {
   const ManualTimePicker({super.key});
@@ -14,81 +18,37 @@ class _ManualTimePickerState extends State<ManualTimePicker> {
 
     return Container(
       padding: const EdgeInsets.only(left: 16, right: 16),
-      child: Column(
+      child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Zeiten manuell anpassen"),
-          const Divider(),
+          Text("Zeiten manuell anpassen"),
+          Divider(),
           Card(
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text("Die Arbeitszeit wird durch Start, "
+                  Text("Die Arbeitszeit wird durch Start, "
                       "Pausen und End Zeit automatisch ausgerechnet. "
                       "End Zeit wird automatisch durch Start, "
                       "Pausen und Arbeit Zeit ausgerechnet."),
-                  const SizedBox(height: 10),
-                  const Text("Zeiten sind manuell änderbar."),
-                  const SizedBox(height: 10),
-                  const Text("Du machst  xx min/std plus/minus."),
-                  const Text("Feierabend in xx std  xx min"),
-                  const Padding(padding: EdgeInsets.only(bottom: 10)),
+                  SizedBox(height: 10),
+                  Text("Zeiten sind manuell änderbar."),
+                  SizedBox(height: 10),
+                  Text("Du machst  xx min/std plus/minus."),
+                  Text("Feierabend in xx std  xx min"),
+                  Padding(padding: EdgeInsets.only(bottom: 10)),
                   SizedBox(
                     width: double.infinity,
                     child: Column(
                       children: [
                         OverflowBar(
                           children: [
-                            TextButton(
-                              child: const Text('8:00 Uhr'),
-                              onPressed: () {
-                                showTimePicker(
-                                    context: context,
-                                    initialTime: TimeOfDay.now(),
-                                    cancelText: "Abbrechen",
-                                    helpText: "Start Zeit",
-                                    hourLabelText: "Stunden",
-                                    minuteLabelText: "Minuten");
-                              },
-                            ),
-                            TextButton(
-                              child: const Text('30 min'),
-                              onPressed: () {
-                                showTimePicker(
-                                    context: context,
-                                    initialTime: TimeOfDay.now(),
-                                    cancelText: "Abbrechen",
-                                    helpText: "Pause",
-                                    hourLabelText: "Stunden",
-                                    minuteLabelText: "Minuten");
-                              },
-                            ),
-                            TextButton(
-                              child: const Text('7,42 h'),
-                              onPressed: () {
-                                showTimePicker(
-                                    context: context,
-                                    initialTime: TimeOfDay.now(),
-                                    cancelText: "Abbrechen",
-                                    helpText: "Arbeits Stunden",
-                                    hourLabelText: "Stunden",
-                                    minuteLabelText: "Minuten");
-                              },
-                            ),
-                            TextButton(
-                              child: const Text('17:30 Uhr'),
-                              onPressed: () {
-                                showTimePicker(
-                                    context: context,
-                                    initialTime: TimeOfDay.now(),
-                                    cancelText: "Abbrechen",
-                                    helpText: "End Zeit",
-                                    hourLabelText: "Stunden",
-                                    minuteLabelText: "Minuten");
-                              },
-                            ),
+                            ChangeStartTimeManual(),
+                            ChangeBreakTimeManual(),
+                            ChangeWorkTimeManual(),
+                            ChangeEndTimeManual(),
                           ],
                         )
                       ],
