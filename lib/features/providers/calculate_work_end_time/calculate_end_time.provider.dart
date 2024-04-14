@@ -11,7 +11,7 @@ part 'calculate_end_time.provider.g.dart';
 class CalculateEndTime extends _$CalculateEndTime {
   @override
   TimeOfDay build() {
-    return TimeOfDay.now();
+    return const TimeOfDay(hour: 16, minute: 30);
   }
 
   TimeOfDay calculateEnd(){

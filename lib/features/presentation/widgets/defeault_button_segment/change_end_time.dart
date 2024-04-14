@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_work_time/features/providers/calculate_work_end_time/calculate_work_time.provider.dart';
 import 'package:flutter_work_time/features/providers/end_time/end_time_change_segment.notifier.dart';
 
 import '../../../providers/end_time/end_time_change_manual.notifier.dart';
@@ -53,6 +54,9 @@ class _ChangeEndTimeState extends ConsumerState<ChangeEndTime> {
                 ref
                     .read(endTimeChangeManualNotifierProvider.notifier)
                     .getEndTimeChangeSegment();
+                ref
+                    .read(calculateWorkTimeProvider.notifier)
+                    .setCalculateWorkTime();
               },
               emptySelectionAllowed: true,
             ),
