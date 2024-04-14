@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_work_time/features/providers/end_time/end_time_change_segment.notifier.dart';
 
+import '../../../providers/end_time/end_time_change_manual.notifier.dart';
 import '../../../providers/entities/time_slots.dart';
 
-class ChangeEndTime extends StatefulWidget {
-  const ChangeEndTime({Key? key}) : super(key: key);
+class ChangeEndTime extends ConsumerStatefulWidget {
+  const ChangeEndTime({super.key});
 
   @override
-  _ChangeEndTimeState createState() => _ChangeEndTimeState();
+  ConsumerState<ChangeEndTime> createState() => _ChangeEndTimeState();
 }
 
-class _ChangeEndTimeState extends State<ChangeEndTime> {
+class _ChangeEndTimeState extends ConsumerState<ChangeEndTime> {
   @override
   Widget build(BuildContext context) {
-    Set<EndTime> timeSlots = <EndTime>{};
+    EndTime endTimeView = ref.watch(endTimeChangeSegmentNotifierProvider);
     return Container(
       margin: const EdgeInsets.only(left: 16, right: 16),
       child: Column(
@@ -26,29 +29,30 @@ class _ChangeEndTimeState extends State<ChangeEndTime> {
             child: SegmentedButton(
               segments: const <ButtonSegment<EndTime>>[
                 ButtonSegment<EndTime>(
-                  value: EndTime.t,
+                  value: EndTime.twelveClock,
                   label: Text('12:00 Uhr'),
                 ),
                 ButtonSegment<EndTime>(
-                  value: EndTime.eightHour,
+                  value: EndTime.fourteenClock,
                   label: Text('14:00 Uhr'),
                 ),
                 ButtonSegment<EndTime>(
-                  value: EndTime.sevenHalfHour,
+                  value: EndTime.sixteenClock,
                   label: Text('16:00 Uhr'),
                 ),
                 ButtonSegment<EndTime>(
-                  value: EndTime.sevenHour,
-                  label: Text('18:00 Uhr'),
+                  value: EndTime.seventeenThirtyClock,
+                  label: Text('17:30 Uhr'),
                 ),
               ],
-              selected: timeSlots,
+              selected: <EndTime>{endTimeView},
               onSelectionChanged: (Set<EndTime> newSelection) {
-                setState(
-                      () {
-                    timeSlots = newSelection;
-                  },
-                );
+                ref
+                    .read(endTimeChangeSegmentNotifierProvider.notifier)
+                    .setEndTimeChange(newSelection.first);
+                ref
+                    .read(endTimeChangeManualNotifierProvider.notifier)
+                    .getEndTimeChangeSegment();
               },
               emptySelectionAllowed: true,
             ),

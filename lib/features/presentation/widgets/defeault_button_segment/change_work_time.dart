@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_work_time/features/providers/work_time/work_time_change_segment.notifier.dart';
 
+import '../../../providers/calculate_work_end_time/calculate_end_time.provider.dart';
 import '../../../providers/entities/time_slots.dart';
+import '../../../providers/work_time/work_time_change_manual.notifier.dart';
 
-class ChangeWorkTime extends StatefulWidget {
-  const ChangeWorkTime({Key? key}) : super(key: key);
+class ChangeWorkTime extends ConsumerStatefulWidget {
+  const ChangeWorkTime({super.key});
 
   @override
-  State<ChangeWorkTime> createState() => _ChangeWorkTimeState();
+  ConsumerState<ChangeWorkTime> createState() => _ChangeWorkTimeState();
 }
 
-class _ChangeWorkTimeState extends State<ChangeWorkTime> {
+class _ChangeWorkTimeState extends ConsumerState<ChangeWorkTime> {
   @override
   Widget build(BuildContext context) {
-    Set<WorkTime> timeSlots = <WorkTime>{};
+    WorkTime workTimeView = ref.watch(workTimeChangeSegmentNotifierProvider);
     return Container(
       margin: const EdgeInsets.only(left: 16, right: 16),
       child: Column(
@@ -27,28 +31,31 @@ class _ChangeWorkTimeState extends State<ChangeWorkTime> {
               segments: const <ButtonSegment<WorkTime>>[
                 ButtonSegment<WorkTime>(
                   value: WorkTime.sixHour,
-                  label: Text('6:00 h'),
+                  label: Text('6 h'),
                 ),
                 ButtonSegment<WorkTime>(
                   value: WorkTime.sevenHour,
-                  label: Text('7:00 h'),
+                  label: Text('7 h'),
                 ),
                 ButtonSegment<WorkTime>(
-                  value: WorkTime.sevenHalfHour,
-                  label: Text('7:42 h'),
+                  value: WorkTime.sevenTwentySixHour,
+                  label: Text('7:26 h'),
                 ),
                 ButtonSegment<WorkTime>(
                   value: WorkTime.eightHour,
-                  label: Text('8:00 h'),
+                  label: Text('8 h'),
                 ),
               ],
-              selected: timeSlots,
+              selected: <WorkTime>{workTimeView},
               onSelectionChanged: (Set<WorkTime> newSelection) {
-                setState(
-                      () {
-                    timeSlots = newSelection;
-                  },
-                );
+                ref
+                    .read(workTimeChangeSegmentNotifierProvider.notifier)
+                    .setWorkTimeChange(newSelection.first);
+                ref
+                    .read(workTimeChangeManualNotifierProvider.notifier)
+                    .getWorkTimeChangeSegment();
+                ref.watch(calculateEndTimeProvider.notifier)
+                    .setCalculateEndTime();
               },
               emptySelectionAllowed: true,
             ),

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_work_time/features/providers/break_time/break_time_change_manual.notifier.dart';
 import 'package:flutter_work_time/features/providers/break_time/break_time_change_segment.notifier.dart';
 
+import '../../../providers/calculate_work_end_time/calculate_end_time.provider.dart';
 import '../../../providers/entities/time_slots.dart';
 
 class ChangeBreakTime extends ConsumerStatefulWidget {
@@ -46,8 +48,14 @@ class _ChangeBreakTimeState extends ConsumerState<ChangeBreakTime> {
               ],
               selected: <BreakTime>{breakTimeView},
               onSelectionChanged: (Set<BreakTime> newSelection) {
-                ref.read(breakTimeChangeSegmentNotifierProvider.notifier)
+                ref
+                    .read(breakTimeChangeSegmentNotifierProvider.notifier)
                     .setBreakTimeChange(newSelection.first);
+                ref
+                    .read(breakTimeChangeManualNotifierProvider.notifier)
+                    .getBreakTimeChangeSegment();
+                ref.watch(calculateEndTimeProvider.notifier)
+                    .setCalculateEndTime();
               },
               emptySelectionAllowed: true,
             ),

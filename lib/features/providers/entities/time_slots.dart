@@ -15,15 +15,15 @@ enum BreakTime{
 enum WorkTime{
   sixHour,
   sevenHour,
-  sevenHalfHour,
+  sevenTwentySixHour,
   eightHour
 }
 
 enum EndTime{
-  t,
-  sevenHour,
-  sevenHalfHour,
-  eightHour
+  twelveClock,
+  fourteenClock,
+  sixteenClock,
+  seventeenThirtyClock
 }
 
 enum ManualTime{

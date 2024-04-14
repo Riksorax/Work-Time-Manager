@@ -7,7 +7,7 @@ part of 'break_time_change_manual.notifier.dart';
 // **************************************************************************
 
 String _$breakTimeChangeManualNotifierHash() =>
-    r'978aa08aa1a6ebc552f8c3352306037e87d73b7c';
+    r'0746ca27da2062df1ee860077ad142d0ba61c692';
 
 /// See also [BreakTimeChangeManualNotifier].
 @ProviderFor(BreakTimeChangeManualNotifier)

@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_work_time/features/providers/start_time/start_time_change_segment.notifier.dart';
 
+import '../../../providers/calculate_work_end_time/calculate_end_time.provider.dart';
 import '../../../providers/entities/time_slots.dart';
+import '../../../providers/start_time/start_time_change_manual.notifier.dart';
 
-class ChangeStartTime extends StatefulWidget {
+class ChangeStartTime extends ConsumerStatefulWidget {
   const ChangeStartTime({super.key});
 
   @override
-  State<ChangeStartTime> createState() => _ChangeStartTimeState();
+  ConsumerState<ChangeStartTime> createState() => _ChangeStartTimeState();
 }
 
-class _ChangeStartTimeState extends State<ChangeStartTime> {
+class _ChangeStartTimeState extends ConsumerState<ChangeStartTime> {
   @override
   Widget build(BuildContext context) {
-    Set<StartTime> timeSlots = <StartTime>{};
+    StartTime startTimeView = ref.watch(startTimeChangeSegmentNotifierProvider);
     return Container(
       margin: const EdgeInsets.only(left: 16, right: 16),
       child: Column(
@@ -42,13 +46,17 @@ class _ChangeStartTimeState extends State<ChangeStartTime> {
                   label: Text('9:00 Uhr'),
                 ),
               ],
-              selected: timeSlots,
+              selected: <StartTime>{startTimeView},
               onSelectionChanged: (Set<StartTime> newSelection) {
-                setState(
-                  () {
-                    timeSlots = newSelection;
-                  },
-                );
+                ref
+                    .read(startTimeChangeSegmentNotifierProvider.notifier)
+                    .setStartTimeChange(newSelection.first);
+                ref
+                    .read(startTimeChangeManualNotifierProvider.notifier)
+                    .getStartTimeChangeSegment();
+                ref.watch(calculateEndTimeProvider.notifier)
+                    .setCalculateEndTime();
+
               },
               emptySelectionAllowed: true,
             ),
