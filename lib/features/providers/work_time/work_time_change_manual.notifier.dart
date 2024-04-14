@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_work_time/features/providers/entities/time_slots.dart';
+import 'package:flutter_work_time/features/shared/providers/shared_prefs_repository.provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'work_time_change_segment.notifier.dart';
@@ -10,16 +11,31 @@ part 'work_time_change_manual.notifier.g.dart';
 class WorkTimeChangeManualNotifier extends _$WorkTimeChangeManualNotifier {
   @override
   TimeOfDay build() {
-    return const TimeOfDay(hour: 7, minute: 26);
+    final savedWorkTime = ref
+        .watch(
+          GetWorkTimeManualSharedPrefsProvider("WorkTime"),
+        )
+        .value;
+    late TimeOfDay workTime = const TimeOfDay(hour: 7, minute: 26);
+    if (savedWorkTime != null) {
+      workTime = TimeOfDay(
+          hour: int.parse(savedWorkTime.split(":")[0]),
+          minute: int.parse(savedWorkTime.split(":")[1]));
+    } else {
+      //saveWorkTime(workTime);
+    }
+    return workTime;
   }
 
   void setWorkTimeManual(TimeOfDay choseTimeOfDay) {
     state = choseTimeOfDay;
+    //saveWorkTime(choseTimeOfDay);
   }
 
-  void getWorkTimeChangeSegment(){
-    WorkTime workTimeView = ref.watch(workTimeChangeSegmentNotifierProvider.notifier).state;
-    switch(workTimeView) {
+  void getWorkTimeChangeSegment() {
+    WorkTime workTimeView =
+        ref.watch(workTimeChangeSegmentNotifierProvider.notifier).state;
+    switch (workTimeView) {
       case WorkTime.sixHour:
         state = const TimeOfDay(hour: 6, minute: 00);
         break;
@@ -35,6 +51,14 @@ class WorkTimeChangeManualNotifier extends _$WorkTimeChangeManualNotifier {
       default:
         state = const TimeOfDay(hour: 7, minute: 42);
     }
+  }
 
+  void saveWorkTime(TimeOfDay workTime) {
+    ref.read(
+      SaveWorkTimeManualSharedPrefsProvider(
+        "WorkTime",
+        workTime.toString(),
+      ),
+    );
   }
 }

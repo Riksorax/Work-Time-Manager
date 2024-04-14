@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_work_time/features/providers/entities/time_slots.dart';
+import 'package:flutter_work_time/features/shared/providers/shared_prefs_repository.provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../calculate_work_end_time/calculate_end_time.provider.dart';
@@ -11,16 +12,31 @@ part 'start_time_change_manual.notifier.g.dart';
 class StartTimeChangeManualNotifier extends _$StartTimeChangeManualNotifier {
   @override
   TimeOfDay build() {
-    return const TimeOfDay(hour: 8, minute: 00);
+    final savedStartTime = ref
+        .watch(
+          GetStartTimeManualSharedPrefsProvider("StartTime"),
+        )
+        .value;
+    late TimeOfDay startTime = const TimeOfDay(hour: 8, minute: 00);
+    if (savedStartTime != null) {
+      startTime = TimeOfDay(
+          hour: int.parse(savedStartTime.split(":")[0]),
+          minute: int.parse(savedStartTime.split(":")[1]));
+    } else {
+      //saveStartTime(startTime);
+    }
+    return startTime;
   }
 
   void setStartTimeManual(TimeOfDay choseTimeOfDay) {
     state = choseTimeOfDay;
+    //saveStartTime(choseTimeOfDay);
   }
 
-  void getStartTimeChangeSegment(){
-    StartTime startTimeView = ref.watch(startTimeChangeSegmentNotifierProvider.notifier).state;
-    switch(startTimeView) {
+  void getStartTimeChangeSegment() {
+    StartTime startTimeView =
+        ref.watch(startTimeChangeSegmentNotifierProvider.notifier).state;
+    switch (startTimeView) {
       case StartTime.sixClock:
         state = const TimeOfDay(hour: 6, minute: 00);
         break;
@@ -36,5 +52,14 @@ class StartTimeChangeManualNotifier extends _$StartTimeChangeManualNotifier {
       default:
         state = const TimeOfDay(hour: 8, minute: 00);
     }
+  }
+
+  void saveStartTime(TimeOfDay startTime) {
+    ref.read(
+      SaveStartTimeManualSharedPrefsProvider(
+        "StartTime",
+        startTime.toString(),
+      ),
+    );
   }
 }
