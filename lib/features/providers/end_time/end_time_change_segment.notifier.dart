@@ -1,5 +1,6 @@
-import 'package:flutter_work_time/features/providers/entities/time_slots.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+import '../entities/time_slots.dart';
 
 part 'end_time_change_segment.notifier.g.dart';
 

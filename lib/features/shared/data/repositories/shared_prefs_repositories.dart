@@ -1,5 +1,6 @@
-import 'package:flutter_work_time/features/shared/domain/repositories/ishared_pres_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../domain/repositories/ishared_pres_repository.dart';
 
 class SharedPrefsRepositories implements ISharedPrefsRepository{
   @override

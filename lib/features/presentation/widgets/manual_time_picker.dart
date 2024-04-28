@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_work_time/features/presentation/widgets/manual_work_time_picker/change_break_time_manual.dart';
-import 'package:flutter_work_time/features/presentation/widgets/manual_work_time_picker/change_end_time_manual.dart';
-import 'package:flutter_work_time/features/presentation/widgets/manual_work_time_picker/change_start_time_manual.dart';
-import 'package:flutter_work_time/features/presentation/widgets/manual_work_time_picker/change_work_time_manual.dart';
+
+import 'manual_work_time_picker/change_break_time_manual.dart';
+import 'manual_work_time_picker/change_end_time_manual.dart';
+import 'manual_work_time_picker/change_start_time_manual.dart';
+import 'manual_work_time_picker/change_work_time_manual.dart';
 
 class ManualTimePicker extends StatefulWidget {
   const ManualTimePicker({super.key});

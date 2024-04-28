@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_work_time/features/providers/break_time/break_time_change_manual.notifier.dart';
 
+import '../../../providers/break_time/break_time_change_manual.notifier.dart';
 import '../../../providers/calculate_work_end_time/calculate_end_time.provider.dart';
 
 class ChangeBreakTimeManual extends ConsumerStatefulWidget {

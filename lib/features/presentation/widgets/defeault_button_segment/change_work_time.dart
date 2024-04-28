@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_work_time/features/providers/work_time/work_time_change_segment.notifier.dart';
 
 import '../../../providers/calculate_work_end_time/calculate_end_time.provider.dart';
 import '../../../providers/entities/time_slots.dart';
 import '../../../providers/work_time/work_time_change_manual.notifier.dart';
+import '../../../providers/work_time/work_time_change_segment.notifier.dart';
 
 class ChangeWorkTime extends ConsumerStatefulWidget {
   const ChangeWorkTime({super.key});

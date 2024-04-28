@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_work_time/features/providers/break_time/break_time_change_manual.notifier.dart';
-import 'package:flutter_work_time/features/providers/end_time/end_time_change_manual.notifier.dart';
-import 'package:flutter_work_time/features/providers/start_time/start_time_change_manual.notifier.dart';
-import 'package:flutter_work_time/features/providers/work_time/work_time_change_manual.notifier.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+import '../break_time/break_time_change_manual.notifier.dart';
+import '../end_time/end_time_change_manual.notifier.dart';
+import '../start_time/start_time_change_manual.notifier.dart';
+import '../work_time/work_time_change_manual.notifier.dart';
 
 part 'calculate_end_time.provider.g.dart';
 

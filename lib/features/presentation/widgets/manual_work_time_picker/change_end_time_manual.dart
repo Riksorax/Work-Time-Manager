@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_work_time/features/providers/calculate_work_end_time/calculate_work_time.provider.dart';
 
+import '../../../providers/calculate_work_end_time/calculate_work_time.provider.dart';
 import '../../../providers/end_time/end_time_change_manual.notifier.dart';
 
 class ChangeEndTimeManual extends ConsumerStatefulWidget {

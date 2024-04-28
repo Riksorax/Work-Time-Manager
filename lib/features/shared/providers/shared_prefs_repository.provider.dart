@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_work_time/features/shared/data/repositories/shared_prefs_repositories.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+import '../data/repositories/shared_prefs_repositories.dart';
 
 part 'shared_prefs_repository.provider.g.dart';
 

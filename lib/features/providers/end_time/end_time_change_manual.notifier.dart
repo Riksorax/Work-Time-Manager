@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_work_time/features/providers/calculate_work_end_time/calculate_end_time.provider.dart';
-import 'package:flutter_work_time/features/providers/entities/time_slots.dart';
-import 'package:flutter_work_time/features/shared/providers/shared_prefs_repository.provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../shared/providers/shared_prefs_repository.provider.dart';
+import '../calculate_work_end_time/calculate_end_time.provider.dart';
+import '../entities/time_slots.dart';
 import 'end_time_change_segment.notifier.dart';
 
 part 'end_time_change_manual.notifier.g.dart';
