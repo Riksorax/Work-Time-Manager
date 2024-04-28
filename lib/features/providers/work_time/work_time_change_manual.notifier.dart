@@ -16,7 +16,7 @@ class WorkTimeChangeManualNotifier extends _$WorkTimeChangeManualNotifier {
           GetWorkTimeManualSharedPrefsProvider("WorkTime"),
         )
         .value;
-    late TimeOfDay workTime = const TimeOfDay(hour: 7, minute: 26);
+    late TimeOfDay workTime = const TimeOfDay(hour: 7, minute: 42);
     if (savedWorkTime != null) {
       workTime = TimeOfDay(
           hour: int.parse(savedWorkTime.split(":")[0]),
@@ -43,7 +43,7 @@ class WorkTimeChangeManualNotifier extends _$WorkTimeChangeManualNotifier {
         state = const TimeOfDay(hour: 7, minute: 00);
         break;
       case WorkTime.sevenTwentySixHour:
-        state = const TimeOfDay(hour: 7, minute: 26);
+        state = const TimeOfDay(hour: 7, minute: 42);
         break;
       case WorkTime.eightHour:
         state = const TimeOfDay(hour: 8, minute: 00);

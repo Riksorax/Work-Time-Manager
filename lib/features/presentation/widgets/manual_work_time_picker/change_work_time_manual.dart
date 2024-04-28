@@ -27,7 +27,10 @@ class _ChangeWorkTimeManualState extends ConsumerState<ChangeWorkTimeManual> {
         int minute = defaultWorkTime.minute;
         final selectedTime = await showTimePicker(
             context: context,
-            initialTime: TimeOfDay.now(),
+            initialTime: TimeOfDay(
+              hour: hour,
+              minute: minute,
+            ),
             cancelText: "Abbrechen",
             helpText: "Arbeits Stunden",
             hourLabelText: "Stunden",
@@ -35,8 +38,7 @@ class _ChangeWorkTimeManualState extends ConsumerState<ChangeWorkTimeManual> {
         ref
             .read(workTimeChangeManualNotifierProvider.notifier)
             .setWorkTimeManual(selectedTime!);
-        ref.watch(calculateEndTimeProvider.notifier)
-            .setCalculateEndTime();
+        ref.watch(calculateEndTimeProvider.notifier).setCalculateEndTime();
       },
     );
   }

@@ -39,7 +39,7 @@ class _ChangeWorkTimeState extends ConsumerState<ChangeWorkTime> {
                 ),
                 ButtonSegment<WorkTime>(
                   value: WorkTime.sevenTwentySixHour,
-                  label: Text('7:26 h'),
+                  label: Text('7:42 h'),
                 ),
                 ButtonSegment<WorkTime>(
                   value: WorkTime.eightHour,
