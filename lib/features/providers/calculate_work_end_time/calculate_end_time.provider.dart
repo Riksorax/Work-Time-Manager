@@ -28,6 +28,9 @@ class CalculateEndTime extends _$CalculateEndTime {
       hour: endTimeDuration.inHours.remainder(24),
       minute: endTimeDuration.inMinutes.remainder(60),
     );
+    ref.read(startTimeChangeManualNotifierProvider.notifier).saveStartTime(startTime);
+    ref.read(breakTimeChangeManualNotifierProvider.notifier).saveBreakTime(breakTime);
+    ref.read(workTimeChangeManualNotifierProvider.notifier).saveWorkTime(workTime);
     return endTime;
   }
 

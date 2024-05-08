@@ -23,15 +23,13 @@ class EndTimeChangeManualNotifier extends _$EndTimeChangeManualNotifier {
       endTime = TimeOfDay(
           hour: int.parse(savedEndTime.split(":")[0]),
           minute: int.parse(savedEndTime.split(":")[1]));
-    } else {
-      //saveEndTime(endTime);
     }
     return endTime;
   }
 
   void setEndTimeManual(TimeOfDay choseTimeOfDay) {
     state = choseTimeOfDay;
-    //saveEndTime(choseTimeOfDay);
+    saveEndTime(choseTimeOfDay);
   }
 
   void getEndTimeChangeSegment() {
@@ -56,10 +54,11 @@ class EndTimeChangeManualNotifier extends _$EndTimeChangeManualNotifier {
   }
 
   void saveEndTime(TimeOfDay endTime) {
+    var savedEndTime = "${endTime.hour}:${endTime.minute}";
     ref.read(
       SaveEndTimeManualSharedPrefsProvider(
         "EndTime",
-        endTime.toString(),
+        savedEndTime,
       ),
     );
   }

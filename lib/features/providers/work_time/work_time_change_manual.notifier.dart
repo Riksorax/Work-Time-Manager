@@ -21,15 +21,13 @@ class WorkTimeChangeManualNotifier extends _$WorkTimeChangeManualNotifier {
       workTime = TimeOfDay(
           hour: int.parse(savedWorkTime.split(":")[0]),
           minute: int.parse(savedWorkTime.split(":")[1]));
-    } else {
-      //saveWorkTime(workTime);
     }
     return workTime;
   }
 
   void setWorkTimeManual(TimeOfDay choseTimeOfDay) {
     state = choseTimeOfDay;
-    //saveWorkTime(choseTimeOfDay);
+    saveWorkTime(choseTimeOfDay);
   }
 
   void getWorkTimeChangeSegment() {
@@ -54,10 +52,11 @@ class WorkTimeChangeManualNotifier extends _$WorkTimeChangeManualNotifier {
   }
 
   void saveWorkTime(TimeOfDay workTime) {
+    var savedWorkTime = "${workTime.hour}:${workTime.minute}";
     ref.read(
       SaveWorkTimeManualSharedPrefsProvider(
         "WorkTime",
-        workTime.toString(),
+        savedWorkTime,
       ),
     );
   }

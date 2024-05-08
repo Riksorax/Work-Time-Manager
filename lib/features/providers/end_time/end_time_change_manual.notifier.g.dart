@@ -7,7 +7,7 @@ part of 'end_time_change_manual.notifier.dart';
 // **************************************************************************
 
 String _$endTimeChangeManualNotifierHash() =>
-    r'ccc4342df9c37c193b714ebf8586b0ed7e25d905';
+    r'd501109cb4b602dcac18948f51679a541183de93';
 
 /// See also [EndTimeChangeManualNotifier].
 @ProviderFor(EndTimeChangeManualNotifier)

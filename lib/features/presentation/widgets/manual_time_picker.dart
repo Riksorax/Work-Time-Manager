@@ -4,6 +4,7 @@ import 'manual_work_time_picker/change_break_time_manual.dart';
 import 'manual_work_time_picker/change_end_time_manual.dart';
 import 'manual_work_time_picker/change_start_time_manual.dart';
 import 'manual_work_time_picker/change_work_time_manual.dart';
+import 'work_time_end.dart';
 
 class ManualTimePicker extends StatefulWidget {
   const ManualTimePicker({super.key});
@@ -38,7 +39,7 @@ class _ManualTimePickerState extends State<ManualTimePicker> {
                   Text("Zeiten sind manuell änderbar."),
                   SizedBox(height: 10),
                   Text("Du machst  xx min/std plus/minus."),
-                  Text("Feierabend in xx std  xx min"),
+                  WorkTimeEnd(),
                   Padding(padding: EdgeInsets.only(bottom: 10)),
                   SizedBox(
                     width: double.infinity,

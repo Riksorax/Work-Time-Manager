@@ -14,15 +14,12 @@ class BreakTimeChangeManualNotifier extends _$BreakTimeChangeManualNotifier {
     final savedBreakTime = ref
         .watch(
           GetBreakTimeManualSharedPrefsProvider("BreakTime"),
-        )
-        .value;
+        ).asData!.value;
     late TimeOfDay breakTime = const TimeOfDay(hour: 0, minute: 30);
     if (savedBreakTime != null) {
       breakTime = TimeOfDay(
           hour: int.parse(savedBreakTime.split(":")[0]),
           minute: int.parse(savedBreakTime.split(":")[1]));
-    } else {
-      //saveBreakTime(breakTime);
     }
     return breakTime;
   }
@@ -54,10 +51,11 @@ class BreakTimeChangeManualNotifier extends _$BreakTimeChangeManualNotifier {
   }
 
   void saveBreakTime(TimeOfDay breakTime) {
+    var savedBreakTime = "${breakTime.hour}:${breakTime.minute}";
     ref.read(
       SaveBreakTimeManualSharedPrefsProvider(
         "BreakTime",
-        breakTime.toString(),
+        savedBreakTime,
       ),
     );
   }

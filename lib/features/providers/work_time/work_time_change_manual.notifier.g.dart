@@ -7,7 +7,7 @@ part of 'work_time_change_manual.notifier.dart';
 // **************************************************************************
 
 String _$workTimeChangeManualNotifierHash() =>
-    r'f28efa5019733559f76f62d6347407222be3639d';
+    r'71476304c1a24ec5a7a4a6dc69a4bd338f4a1175';
 
 /// See also [WorkTimeChangeManualNotifier].
 @ProviderFor(WorkTimeChangeManualNotifier)

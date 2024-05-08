@@ -21,15 +21,13 @@ class StartTimeChangeManualNotifier extends _$StartTimeChangeManualNotifier {
       startTime = TimeOfDay(
           hour: int.parse(savedStartTime.split(":")[0]),
           minute: int.parse(savedStartTime.split(":")[1]));
-    } else {
-      //saveStartTime(startTime);
     }
     return startTime;
   }
 
   void setStartTimeManual(TimeOfDay choseTimeOfDay) {
     state = choseTimeOfDay;
-    //saveStartTime(choseTimeOfDay);
+    saveStartTime(choseTimeOfDay);
   }
 
   void getStartTimeChangeSegment() {
@@ -54,10 +52,11 @@ class StartTimeChangeManualNotifier extends _$StartTimeChangeManualNotifier {
   }
 
   void saveStartTime(TimeOfDay startTime) {
+    var savedStartTime = "${startTime.hour}:${startTime.minute}";
     ref.read(
       SaveStartTimeManualSharedPrefsProvider(
         "StartTime",
-        startTime.toString(),
+        savedStartTime,
       ),
     );
   }
