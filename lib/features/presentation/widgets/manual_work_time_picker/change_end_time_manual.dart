@@ -15,7 +15,8 @@ class ChangeEndTimeManual extends ConsumerStatefulWidget {
 class _ChangeEndTimeManualState extends ConsumerState<ChangeEndTimeManual> {
   @override
   Widget build(BuildContext context) {
-    final defaultEndTime = ref.watch(endTimeChangeManualNotifierProvider);
+    ref.watch(endTimeChangeManualNotifierProvider.notifier).getEndTime();
+    final defaultEndTime = ref.read(endTimeChangeManualNotifierProvider);
     String minuteString = defaultEndTime.minute.toString();
     String hourString = defaultEndTime.hour.toString();
     return TextButton(

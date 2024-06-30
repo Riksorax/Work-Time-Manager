@@ -11,20 +11,22 @@ part 'end_time_change_manual.notifier.g.dart';
 @riverpod
 class EndTimeChangeManualNotifier extends _$EndTimeChangeManualNotifier {
   @override
-  TimeOfDay build() {
+  TimeOfDay build() => const TimeOfDay(hour: 16, minute: 00);
+
+  void getEndTime(){
     final savedEndTime = ref
         .watch(
-          GetEndTimeManualSharedPrefsProvider("EndTime"),
-        )
+      GetEndTimeManualSharedPrefsProvider("EndTime"),
+    )
         .value;
     late TimeOfDay endTime =
-        ref.read(calculateEndTimeProvider.notifier).calculateEnd();
+    ref.read(calculateEndTimeProvider.notifier).calculateEnd();
     if (savedEndTime != null) {
       endTime = TimeOfDay(
           hour: int.parse(savedEndTime.split(":")[0]),
           minute: int.parse(savedEndTime.split(":")[1]));
     }
-    return endTime;
+    state = endTime;
   }
 
   void setEndTimeManual(TimeOfDay choseTimeOfDay) {

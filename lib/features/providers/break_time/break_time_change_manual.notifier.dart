@@ -10,18 +10,20 @@ part 'break_time_change_manual.notifier.g.dart';
 @riverpod
 class BreakTimeChangeManualNotifier extends _$BreakTimeChangeManualNotifier {
   @override
-  TimeOfDay build() {
+  TimeOfDay build() => const TimeOfDay(hour: 0, minute: 30);
+
+  void getBreakTime(){
     final savedBreakTime = ref
         .watch(
-          GetBreakTimeManualSharedPrefsProvider("BreakTime"),
-        ).asData!.value;
+      GetBreakTimeManualSharedPrefsProvider("BreakTime"),
+    ).asData!.value;
     late TimeOfDay breakTime = const TimeOfDay(hour: 0, minute: 30);
     if (savedBreakTime != null) {
       breakTime = TimeOfDay(
           hour: int.parse(savedBreakTime.split(":")[0]),
           minute: int.parse(savedBreakTime.split(":")[1]));
     }
-    return breakTime;
+    state = breakTime;
   }
 
   void setBreakTimeManual(TimeOfDay choseTimeOfDay) {
