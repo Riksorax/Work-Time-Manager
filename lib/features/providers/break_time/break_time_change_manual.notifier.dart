@@ -12,12 +12,10 @@ class BreakTimeChangeManualNotifier extends _$BreakTimeChangeManualNotifier {
   @override
   TimeOfDay build() => const TimeOfDay(hour: 0, minute: 30);
 
-  void getBreakTime(){
+  void getBreakTime() {
     final savedBreakTime = ref
-        .watch(
-      GetBreakTimeManualSharedPrefsProvider("BreakTime"),
-    ).asData!.value;
-    late TimeOfDay breakTime = const TimeOfDay(hour: 0, minute: 30);
+        .watch(getBreakTimeManualSharedPrefsProvider.call("BreakTime")).value;
+    late TimeOfDay breakTime = state;
     if (savedBreakTime != null) {
       breakTime = TimeOfDay(
           hour: int.parse(savedBreakTime.split(":")[0]),

@@ -15,9 +15,7 @@ class ChangeBreakTimeManual extends ConsumerStatefulWidget {
 class _ChangeBreakTimeManualState extends ConsumerState<ChangeBreakTimeManual> {
   @override
   Widget build(BuildContext context) {
-    ref.watch(breakTimeChangeManualNotifierProvider.notifier).getBreakTime()☻
-    ;
-    final defaultBreakTime = ref.read(breakTimeChangeManualNotifierProvider);
+    final defaultBreakTime = ref.watch(breakTimeChangeManualNotifierProvider);
     String minuteString = defaultBreakTime.minute.toString();
     String hourString = defaultBreakTime.hour.toString();
     return TextButton(
