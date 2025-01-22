@@ -9,9 +9,9 @@ part 'calculate_work_time_end.notifier.g.dart';
 @riverpod
 class CalculateWorkTimeEndNotifier extends _$CalculateWorkTimeEndNotifier {
   @override
-  TimeOfDay build() => const TimeOfDay(hour: 00, minute: 00);
+  TimeOfDay build() => calculateWorkTimeEnd();
 
-  void calculateWorkTimeEnd(){
+  TimeOfDay calculateWorkTimeEnd(){
     final savedEndTime = ref
         .watch(
       GetEndTimeManualSharedPrefsProvider("EndTime"),
@@ -39,5 +39,6 @@ class CalculateWorkTimeEndNotifier extends _$CalculateWorkTimeEndNotifier {
       endTime = const TimeOfDay(hour: 00, minute: 00);
     }
     state = endTime;
+    return endTime;
   }
 }

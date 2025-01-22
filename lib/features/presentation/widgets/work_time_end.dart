@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_timer_countdown/flutter_timer_countdown.dart';
 
 import '../../providers/calculate_work_end_time/calculate_work_time_end.notifier.dart';
 
@@ -17,6 +18,17 @@ class _WorkTimeEndState extends ConsumerState<WorkTimeEnd> {
     final workTimeEndHour = workTimeEnd.hour;
     final workTimeEndMinute = workTimeEnd.minute;
 
-    return Text("Feierabend in $workTimeEndHour std  $workTimeEndMinute min");
+    return Row(
+      children: [
+        Text("Du hast Feierabend in "),
+        TimerCountdown(
+          endTime: DateTime.now().add(
+            Duration(hours: workTimeEndHour, minutes: workTimeEndMinute),
+          ),
+          format: CountDownTimerFormat.hoursMinutesSeconds,
+          enableDescriptions: false,
+        ),
+      ],
+    );
   }
 }
