@@ -9,18 +9,16 @@ part 'calculate_work_time_end.notifier.g.dart';
 @riverpod
 class CalculateWorkTimeEndNotifier extends _$CalculateWorkTimeEndNotifier {
   @override
-  TimeOfDay build() {
-    return _calculateWorkTimeEnd();
-  }
+  TimeOfDay build() => calculateWorkTimeEnd();
 
-  TimeOfDay _calculateWorkTimeEnd(){
+  TimeOfDay calculateWorkTimeEnd(){
     final savedEndTime = ref
         .watch(
       GetEndTimeManualSharedPrefsProvider("EndTime"),
     ).value;
     late TimeOfDay endTime = ref.watch(calculateEndTimeProvider.notifier).calculateEnd();
 
-    if (savedEndTime != null) {
+    if (savedEndTime != null ) {
       endTime = TimeOfDay(
           hour: int.parse(savedEndTime.split(":")[0]),
           minute: int.parse(savedEndTime.split(":")[1]));
@@ -37,7 +35,10 @@ class CalculateWorkTimeEndNotifier extends _$CalculateWorkTimeEndNotifier {
         minute: totalTime.inMinutes.remainder(60),
       );
     }
-
+    else{
+      endTime = const TimeOfDay(hour: 00, minute: 00);
+    }
+    state = endTime;
     return endTime;
   }
 }
