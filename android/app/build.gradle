@@ -54,6 +54,15 @@ android {
         versionName flutterVersionName
     }
 
+    signingConfigs {
+        debug {
+            storeFile file('C:\\Users\\Frank\\.android\\debug.keystore')
+            storePassword 'Riksorax.04?07!1993'
+            keyAlias 'debug'
+            keyPassword 'Riksorax.04?07!1993'
+        }
+    }
+
     buildTypes {
         release {
             // TODO: Add your own signing config for the release build.
