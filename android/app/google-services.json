@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "915742606352",
+    "project_id": "worktime-56c7a",
+    "storage_bucket": "worktime-56c7a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:915742606352:android:53d65a429a75b3f121f695",
+        "android_client_info": {
+          "package_name": "com.example.flutterworktime"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "915742606352-pfpdiapf47utg6a9vjvaut7v3i76q2hm.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.flutterworktime",
+            "certificate_hash": "7501d7febc1df96a597d69f0fbca73b7f66030ee"
+          }
+        },
+        {
+          "client_id": "915742606352-rsrquuo91q9jk44avt26fklgdb9hv7ho.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAGqvPYrz8zpgWwuVTizEE7IT068Ui7les"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "915742606352-rsrquuo91q9jk44avt26fklgdb9hv7ho.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
