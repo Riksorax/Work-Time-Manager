@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_work_time/presentation/screens/auth_gate.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'core/providers/providers.dart';
@@ -12,6 +14,10 @@ import 'presentation/view_models/theme_view_model.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialisiere die Datumsformatierung für die deutsche Sprache.
+  await initializeDateFormatting('de_DE', null);
+  Intl.defaultLocale = 'de_DE';
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,

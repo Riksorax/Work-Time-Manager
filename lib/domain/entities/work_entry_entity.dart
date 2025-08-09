@@ -35,6 +35,11 @@ class WorkEntryEntity extends Equatable {
     return workEnd!.difference(workStart!);
   }
 
+  /// Die effektive Arbeitszeit (Brutto-Arbeitszeit abzüglich der Pausen).
+  Duration get effectiveWorkDuration {
+    return totalWorkTime - totalBreakTime;
+  }
+
   /// Eine copyWith-Methode zur einfachen Erstellung einer neuen, modifizierten Instanz.
   /// Dies ist ein Kernprinzip der unveränderlichen (immutable) Zustandsverwaltung.
   ///
@@ -67,5 +72,6 @@ class WorkEntryEntity extends Equatable {
         workEnd,
         breaks,
         manualOvertime,
+        effectiveWorkDuration,
       ];
 }

@@ -1,28 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../../domain/entities/break_entity.dart';
-import '../../../domain/entities/work_entry_entity.dart';
-import '../../../domain/repositories/work_repository.dart';
-import '../../core/providers/providers.dart' hide workRepositoryProvider;
+import '../../domain/entities/break_entity.dart';
+import '../../domain/entities/work_entry_entity.dart';
+import '../../domain/repositories/work_repository.dart';
+import '../../core/providers/providers.dart';
 import '../state/edit_work_entry_state.dart';
-import 'dashboard_view_model.dart';
 
 final editWorkEntryViewModelProvider = StateNotifierProvider.autoDispose
     .family<EditWorkEntryViewModel, EditWorkEntryState, WorkEntryEntity>(
         (ref, entry) {
-  final workRepositoryAsync = ref.watch(workRepositoryProvider);
-
-  // We can only create the ViewModel when the repository is successfully loaded.
-  final workRepository = workRepositoryAsync.asData?.value;
-
-  if (workRepository == null) {
-    // This is a temporary state until the FutureProvider resolves.
-    // The ViewModel requires a non-null repository.
-    // A better approach is for the UI to handle the loading state of workRepositoryProvider.
-    // For now, we create a dummy repository that will be replaced.
-    return EditWorkEntryViewModel(const DummyWorkRepository(), entry);
-  }
+  final workRepository = ref.watch(workRepositoryProvider);
   return EditWorkEntryViewModel(workRepository, entry);
 });
 
@@ -79,8 +67,6 @@ class EditWorkEntryViewModel extends StateNotifier<EditWorkEntryState> {
   }
 
   Future<void> saveChanges() async {
-    // Prevent saving with the dummy repository
-    if (_workRepository is DummyWorkRepository) return;
     if (state.newStartTime == null) return;
 
     final updatedEntry = state.originalEntry.copyWith(

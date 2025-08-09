@@ -8,7 +8,6 @@ import '../widgets/add_adjustment_modal.dart';
 import '../widgets/edit_break_modal.dart';
 import 'settings_page.dart';
 
-
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
@@ -24,6 +23,11 @@ class DashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final dashboardState = ref.watch(dashboardViewModelProvider);
     final dashboardViewModel = ref.read(dashboardViewModelProvider.notifier);
+    final workEntry = dashboardState.workEntry;
+
+    // Den Timer-Status basierend auf den Daten von workEntry ableiten
+    final isTimerRunning = workEntry.workStart != null && workEntry.workEnd == null;
+    final isBreakRunning = workEntry.breaks.isNotEmpty && workEntry.breaks.last.end == null;
 
     return Scaffold(
       appBar: AppBar(
@@ -56,13 +60,15 @@ class DashboardScreen extends ConsumerWidget {
             // Time Input Fields
             _TimeInputField(
               label: 'Startzeit',
-              initialValue: dashboardState.manualStartTime,
+              // Korrekter Zugriff auf workStart über workEntry
+              initialValue: workEntry.workStart,
               onTimeSelected: (time) => dashboardViewModel.setManualStartTime(time),
             ),
             const SizedBox(height: 16),
             _TimeInputField(
               label: 'Endzeit',
-              initialValue: dashboardState.manualEndTime,
+              // Korrekter Zugriff auf workEnd über workEntry
+              initialValue: workEntry.workEnd,
               enabled: false,
             ),
             const SizedBox(height: 24),
@@ -73,19 +79,21 @@ class DashboardScreen extends ConsumerWidget {
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
-              child: Text(dashboardState.isTimerRunning
+              // Korrekte Verwendung des abgeleiteten isTimerRunning-Flags
+              child: Text(isTimerRunning
                   ? 'Zeiterfassung beenden'
                   : 'Zeiterfassung starten'),
             ),
             const SizedBox(height: 24),
 
             // Breaks Section
-            _buildBreaksSection(context, ref, dashboardState.breaks),
+            // Korrekter Zugriff auf breaks über workEntry
+            _buildBreaksSection(context, ref, workEntry.breaks),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () => dashboardViewModel.startOrStopBreak(),
-              child: Text(
-                  dashboardState.breaks.any((b) => b.end == null)
+              // Korrekte Verwendung des abgeleiteten isBreakRunning-Flags
+              child: Text(isBreakRunning
                       ? 'Pause beenden'
                       : 'Pause hinzufügen'),
             ),

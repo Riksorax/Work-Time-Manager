@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
@@ -7,139 +8,127 @@ import '../../core/providers/providers.dart';
 import '../../domain/entities/break_entity.dart';
 import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/repositories/work_repository.dart';
+import '../../domain/usecases/overtime_usecases.dart';
+import '../../domain/usecases/start_or_stop_timer.dart';
 import '../state/dashboard_state.dart';
-import '../../data/repositories/work_repository_impl.dart';
-
-// Provider that exposes the current authentication state stream.
-final authStateProvider = StreamProvider((ref) {
-  final authRepository = ref.watch(authRepositoryProvider);
-  return authRepository.authStateChanges;
-});
-
-// Provider to asynchronously provide the WorkRepository.
-// It depends on the user's authentication state.
-final workRepositoryProvider = FutureProvider<WorkRepository>((ref) async {
-  // Wait for the auth state to be available and be a non-null user
-  final user = await ref.watch(authStateProvider.future);
-
-  if (user == null) {
-    // If the user is not logged in, we throw an exception.
-    // The UI should handle this state and not try to show the dashboard.
-    throw Exception('User is not logged in');
-  }
-
-  // We get the Firestore data source and return the implementation of the WorkRepository.
-  final firestoreDataSource = ref.watch(firestoreDataSourceProvider);
-  return WorkRepositoryImpl(dataSource: firestoreDataSource, userId: user.id);
-});
 
 // The provider for the ViewModel.
-// It now handles the asynchronous loading of its WorkRepository dependency.
 final dashboardViewModelProvider =
-    StateNotifierProvider.autoDispose<DashboardViewModel, DashboardState>((ref) {
-  // Watch the asynchronous workRepositoryProvider.
-  final workRepositoryAsync = ref.watch(workRepositoryProvider);
-
-  // We can only create the ViewModel when the repository is successfully loaded.
-  // The UI should show a loading or error state based on the `workRepositoryProvider`.
-  final workRepository = workRepositoryAsync.asData?.value;
-
-  // If the repository is not loaded yet, we return an initial (empty) ViewModel.
-  // The UI should prevent any actions until the repository is ready.
-  if (workRepository == null) {
-    // This is a temporary state until the FutureProvider resolves.
-    // The ViewModel requires a non-null repository.
-    // A better approach is for the UI to handle the loading state of workRepositoryProvider.
-    // For now, we create a dummy repository that will be replaced.
-    return DashboardViewModel(const DummyWorkRepository());
-  }
-
-  // Once the repository is available, we create the real ViewModel and initialize it.
-  return DashboardViewModel(workRepository)..init();
+    StateNotifierProvider<DashboardViewModel, DashboardState>((ref) {
+  final workRepository = ref.watch(workRepositoryProvider);
+  final startOrStopTimerUseCase = ref.watch(startOrStopTimerUseCaseProvider);
+  final getOvertimeUseCase = ref.watch(getOvertimeUseCaseProvider);
+  final updateOvertimeUseCase = ref.watch(updateOvertimeUseCaseProvider);
+  return DashboardViewModel(
+    workRepository,
+    startOrStopTimerUseCase,
+    getOvertimeUseCase,
+    updateOvertimeUseCase,
+  )..init();
 });
-
 
 class DashboardViewModel extends StateNotifier<DashboardState> {
   final WorkRepository _workRepository;
+  final StartOrStopTimer _startOrStopTimer;
+  final GetOvertime _getOvertime;
+  final UpdateOvertime _updateOvertime;
   Timer? _timer;
   final Uuid _uuid = const Uuid();
   String? _entryId;
 
-  DashboardViewModel(this._workRepository) : super(DashboardState.initial());
+  DashboardViewModel(
+    this._workRepository,
+    this._startOrStopTimer,
+    this._getOvertime,
+    this._updateOvertime,
+  ) : super(DashboardState.initial());
 
-  /// Initializes the ViewModel by loading the work entry for the current day.
+  /// Initializes the ViewModel by loading data.
   Future<void> init() async {
-    // Prevent initialization with the dummy repository
-    if (_workRepository is DummyWorkRepository) return;
-
+    // Load today's work entry.
     try {
       final todayEntry = await _workRepository.getWorkEntry(DateTime.now());
-      _entryId = todayEntry.id; // Store the ID for future updates
-      state = DashboardState.fromWorkEntry(todayEntry);
-      // If the timer was running when the app was closed, we restart the timer.
-      if (state.isTimerRunning) {
-        _startTimer(resume: true);
-      }
+      _entryId = todayEntry.id;
+      final newState = DashboardState.fromWorkEntry(todayEntry);
+      // CORRECTED: Removed await as _getOvertime is synchronous.
+      final currentOvertime = _getOvertime();
+      state = newState.copyWith(
+        overtimeBalance: currentOvertime,
+        actualWorkDuration: todayEntry.workEnd != null ? todayEntry.effectiveWorkDuration : null,
+      );
+      _manageUiTimer();
     } catch (e) {
-      // If no entry is found for today, getWorkEntry will throw an error.
-      // We can ignore it and just start with a fresh state.
       debugPrint("No work entry for today found: $e");
+      // Even if no entry is found, load the overtime balance
+      // CORRECTED: Removed await as _getOvertime is synchronous.
+      final currentOvertime = _getOvertime();
+      state = state.copyWith(overtimeBalance: currentOvertime);
     }
   }
 
-  void startOrStopTimer() {
-    if (state.isTimerRunning) {
-      _stopTimer();
-    } else {
-      _startTimer();
-    }
+  /// Adjusts the overtime balance by the given amount.
+  Future<void> adjustOvertime(Duration amount) async {
+    final newBalance = await _updateOvertime(amount: amount);
+    state = state.copyWith(overtimeBalance: newBalance);
   }
 
-  void _startTimer({bool resume = false}) {
-    // If we are not resuming, we set the start time.
-    // If a manual start time is set, we use it. Otherwise, we use the current time.
-    final startTime = resume ? state.startTime! : (state.manualStartTime ?? DateTime.now());
-
-    state = state.copyWith(
-      isTimerRunning: true,
-      startTime: startTime,
-      manualEndTime: () => null, // Reset end time on start
+  Future<void> startOrStopTimer() async {
+    final entryToUpdate = state.workEntry.copyWith(
+      id: _entryId ?? _uuid.v4(),
+      date: state.workEntry.workStart ?? DateTime.now(),
     );
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      _updateElapsedTime();
-    });
-    // We save the current state to the repository.
-    _saveWorkEntry();
-  }
 
-  void _stopTimer() {
-    _timer?.cancel();
-    state = state.copyWith(
-        isTimerRunning: false, manualEndTime: () => DateTime.now());
-    _saveWorkEntry();
+    try {
+      final updatedEntry = await _startOrStopTimer(entryToUpdate);
+
+      // When the timer is stopped
+      if (updatedEntry.workEnd != null) {
+        final actualWorkDuration = updatedEntry.effectiveWorkDuration;
+        const dailyGoal = Duration(hours: 8);
+        final overtimeDifference = actualWorkDuration - dailyGoal;
+
+        final newOvertimeBalance = await _updateOvertime(amount: overtimeDifference);
+        
+        state = state.copyWith(
+          workEntry: updatedEntry,
+          elapsedTime: actualWorkDuration,
+          overtimeBalance: newOvertimeBalance,
+          actualWorkDuration: actualWorkDuration,
+        );
+      } else {
+        // When the timer is started
+        final newState = DashboardState.fromWorkEntry(updatedEntry);
+        state = newState.copyWith(
+          overtimeBalance: state.overtimeBalance,
+          actualWorkDuration: null,
+        );
+      }
+      _entryId = updatedEntry.id;
+      _manageUiTimer();
+    } catch (e) {
+      debugPrint("Error starting or stopping timer: $e");
+    }
   }
 
   void startOrStopBreak() {
     final now = DateTime.now();
-    // We check if there is a break that has a start time but no end time.
-    final runningBreak =
-        state.breaks.where((b) => b.end == null).firstOrNull;
+    final runningBreak = state.workEntry.breaks.where((b) => b.end == null).firstOrNull;
 
+    WorkEntryEntity updatedEntry;
     if (runningBreak != null) {
-      // If a break is running, we stop it by setting its end time.
-      final updatedBreaks = state.breaks
+      final updatedBreaks = state.workEntry.breaks
           .map((b) => b.id == runningBreak.id ? b.copyWith(end: now) : b)
           .toList();
-      state = state.copyWith(breaks: updatedBreaks);
+      updatedEntry = state.workEntry.copyWith(breaks: updatedBreaks);
     } else {
-      // If no break is running, we start a new one.
       final newBreak = BreakEntity(
         id: _uuid.v4(),
-        name: 'Pause #${state.breaks.length + 1}',
+        name: 'Pause #${state.workEntry.breaks.length + 1}',
         start: now,
       );
-      state = state.copyWith(breaks: [...state.breaks, newBreak]);
+      updatedEntry = state.workEntry.copyWith(breaks: [...state.workEntry.breaks, newBreak]);
     }
+    state = state.copyWith(workEntry: updatedEntry);
     _saveWorkEntry();
   }
 
@@ -149,24 +138,24 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
     DateTime? newStart,
     DateTime? newEnd,
   }) {
-    final updatedBreaks = state.breaks.map((b) {
+    final updatedBreaks = state.workEntry.breaks.map((b) {
       if (b.id == breakId) {
         return b.copyWith(
           name: newName ?? b.name,
           start: newStart ?? b.start,
-          end: newEnd, // Allow setting end to null
+          end: newEnd,
         );
       }
       return b;
     }).toList();
-    state = state.copyWith(breaks: updatedBreaks);
+    state = state.copyWith(workEntry: state.workEntry.copyWith(breaks: updatedBreaks));
     _saveWorkEntry();
   }
 
   void deleteBreak(String breakId) {
     final updatedBreaks =
-        state.breaks.where((b) => b.id != breakId).toList();
-    state = state.copyWith(breaks: updatedBreaks);
+        state.workEntry.breaks.where((b) => b.id != breakId).toList();
+    state = state.copyWith(workEntry: state.workEntry.copyWith(breaks: updatedBreaks));
     _saveWorkEntry();
   }
 
@@ -174,67 +163,48 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
     final now = DateTime.now();
     final manualStartTime =
         DateTime(now.year, now.month, now.day, time.hour, time.minute);
-    state = state.copyWith(manualStartTime: manualStartTime);
-    // We don't save here, the user has to press start.
+    state = state.copyWith(workEntry: state.workEntry.copyWith(workStart: manualStartTime));
+    _saveWorkEntry();
   }
 
-  /// Adds a manual adjustment for overtime or undertime.
-  void addAdjustment({required int hours, required int minutes}) {
-    final totalMinutes = hours * 60 + (hours.isNegative ? -minutes : minutes);
-    state = state.copyWith(manualAdjustmentMinutes: totalMinutes);
+  void setManualEndTime(TimeOfDay time) {
+    final now = state.workEntry.workEnd ?? DateTime.now();
+    final manualEndTime =
+        DateTime(now.year, now.month, now.day, time.hour, time.minute);
+    state = state.copyWith(workEntry: state.workEntry.copyWith(workEnd: manualEndTime));
     _saveWorkEntry();
   }
 
   void _updateElapsedTime() {
-    if (!state.isTimerRunning || state.startTime == null) return;
-
-    final now = DateTime.now();
-    final totalDuration = now.difference(state.startTime!);
-
-    final breakDuration = state.breaks.fold<Duration>(
-      Duration.zero,
-      (previousValue, breakEntity) {
-        // If the break has an end time, we calculate the duration.
-        if (breakEntity.end != null) {
-          return previousValue +
-              breakEntity.end!.difference(breakEntity.start);
-        } else {
-          // If the break is still running, we calculate the duration until now.
-          return previousValue + now.difference(breakEntity.start);
-        }
-      },
-    );
-
-    final netDuration = totalDuration - breakDuration;
-    state = state.copyWith(elapsedTime: netDuration);
+    if (state.workEntry.workStart != null && state.workEntry.workEnd == null) {
+      final elapsed = DateTime.now().difference(state.workEntry.workStart!);
+      // CORRECTED: Used the correct property 'totalBreakTime' from the WorkEntryEntity.
+      final totalElapsed = elapsed - state.workEntry.totalBreakTime;
+      state = state.copyWith(elapsedTime: totalElapsed);
+    }
   }
 
-  /// Saves the current state as a WorkEntryEntity to the repository.
+  void _manageUiTimer() {
+    _timer?.cancel();
+    if (state.workEntry.workStart != null && state.workEntry.workEnd == null) {
+      _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        _updateElapsedTime();
+      });
+    }
+  }
+
   Future<void> _saveWorkEntry() async {
-    // We need a start time to save an entry.
-    // If the timer is not running and there is no manual start time, we can't save.
-    final startTime = state.startTime ?? state.manualStartTime;
-    if (startTime == null) return;
+    final workEntry = state.workEntry;
+    if (workEntry.workStart == null) return;
 
     final entryId = _entryId ?? _uuid.v4();
     _entryId = entryId;
 
-    final entry = WorkEntryEntity(
-      id: entryId,
-      date: startTime,
-      workStart: startTime,
-      // If the timer is not running, we use the manual end time.
-      workEnd: state.isTimerRunning ? null : state.manualEndTime,
-      breaks: state.breaks,
-      manualOvertime: state.manualAdjustmentMinutes != null
-          ? Duration(minutes: state.manualAdjustmentMinutes!)
-          : null,
-    );
+    final entry = workEntry.copyWith(id: entryId);
     try {
       await _workRepository.saveWorkEntry(entry);
     } catch (e) {
       debugPrint("Error saving work entry: $e");
-      // Here you could show a snackbar or some other error indication to the user
     }
   }
 
@@ -242,26 +212,5 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
   void dispose() {
     _timer?.cancel();
     super.dispose();
-  }
-}
-
-/// A dummy implementation of WorkRepository to satisfy the ViewModel's constructor
-/// while the real repository is loading.
-class DummyWorkRepository implements WorkRepository {
-  const DummyWorkRepository();
-
-  @override
-  Future<WorkEntryEntity> getWorkEntry(DateTime date) async {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<List<WorkEntryEntity>> getWorkEntriesForMonth(int year, int month) async {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<void> saveWorkEntry(WorkEntryEntity entry) async {
-    throw UnimplementedError();
   }
 }

@@ -8,177 +8,7 @@ import '../state/monthly_report_state.dart';
 import '../state/reports_state.dart';
 import '../state/weekly_report_state.dart';
 
-final reportsViewModelProvider =
-    StateNotifierProvider<ReportsViewModel, ReportsState>((ref) {
-  try {
-    final workRepository = ref.watch(workRepositoryProvider);
-    final settingsRepository = ref.watch(settingsRepositoryProvider);
-    return ReportsViewModel(workRepository, settingsRepository)..init();
-  } catch (e) {
-    // Wenn das workRepositoryProvider eine Exception wirft (weil kein User da ist),
-    // fangen wir sie hier ab und geben ein ViewModel mit einem DummyRepository zurück.
-    final settingsRepository = ref.watch(settingsRepositoryProvider);
-    return ReportsViewModel(const DummyWorkRepository(), settingsRepository);
-  }
-});
-
-class ReportsViewModel extends StateNotifier<ReportsState> {
-  final WorkRepository _workRepository;
-  final SettingsRepository _settingsRepository;
-
-  ReportsViewModel(this._workRepository, this._settingsRepository)
-      : super(ReportsState.initial());
-
-  Future<void> init() async {
-    if (_workRepository is DummyWorkRepository) return;
-    await _loadWorkEntriesForMonth(state.focusedDay);
-  }
-
-  Future<void> _loadWorkEntriesForMonth(DateTime month) async {
-    state = state.copyWith(isLoading: true);
-    final entries =
-        await _workRepository.getWorkEntriesForMonth(month.year, month.month);
-    final Map<DateTime, List<WorkEntryEntity>> entriesByDay = {};
-    for (var entry in entries) {
-      final day = DateTime(entry.date.year, entry.date.month, entry.date.day);
-      if (entriesByDay[day] == null) {
-        entriesByDay[day] = [];
-      }
-      entriesByDay[day]!.add(entry);
-    }
-    state = state.copyWith(
-        workEntries: entriesByDay, focusedDay: month, isLoading: false);
-    await _calculateReports(state.selectedDay ?? month);
-  }
-
-  Future<void> selectDate(DateTime day) async {
-    state = state.copyWith(selectedDay: day, focusedDay: day);
-    await _calculateReports(day);
-  }
-
-  Future<void> onMonthChanged(DateTime newMonth) async {
-    await _loadWorkEntriesForMonth(newMonth);
-  }
-
-  void setReportType(ReportType type) {
-    state = state.copyWith(reportType: type);
-  }
-
-  Future<void> _calculateReports(DateTime selectedDay) async {
-    final weeklyTargetHours = _settingsRepository.getTargetWeeklyHours();
-    // Assuming 5 workdays a week if not specified
-    const workdaysPerWeek = 5;
-    final double targetHoursPerDay =
-        weeklyTargetHours > 0 ? weeklyTargetHours / workdaysPerWeek : 8.0;
-    final Duration dailyTargetDuration = Duration(
-        microseconds:
-            (targetHoursPerDay * Duration.microsecondsPerHour).round());
-
-    final dayWithoutTime =
-        DateTime(selectedDay.year, selectedDay.month, selectedDay.day);
-    final entriesForDay = state.workEntries[dayWithoutTime] ?? [];
-    final dailyReport =
-        _calculateDailyReport(entriesForDay, dailyTargetDuration);
-
-    final weeklyReport =
-        _calculateWeeklyReport(selectedDay, dailyTargetDuration);
-    final monthlyReport = _calculateMonthlyReport(dailyTargetDuration);
-
-    state = state.copyWith(
-      dailyReportState: dailyReport,
-      weeklyReportState: weeklyReport,
-      monthlyReportState: monthlyReport,
-    );
-  }
-
-  DailyReportState _calculateDailyReport(
-      List<WorkEntryEntity> entries, Duration dailyTargetDuration) {
-    if (entries.isEmpty) {
-      return DailyReportState.initial;
-    }
-
-    Duration workTime = Duration.zero;
-    Duration breakTime = Duration.zero;
-
-    for (var entry in entries) {
-      workTime += entry.totalWorkTime;
-      breakTime += entry.totalBreakTime;
-    }
-
-    final overtime = workTime - dailyTargetDuration;
-
-    return DailyReportState(
-      entries: entries,
-      workTime: workTime,
-      breakTime: breakTime,
-      totalTime: workTime + breakTime,
-      overtime: overtime,
-    );
-  }
-
-  WeeklyReportState _calculateWeeklyReport(
-      DateTime selectedDay, Duration dailyTargetDuration) {
-    final startOfWeek =
-        selectedDay.subtract(Duration(days: selectedDay.weekday - 1));
-    final endOfWeek = startOfWeek.add(const Duration(days: 6));
-
-    Duration totalWork = Duration.zero;
-    Duration totalBreak = Duration.zero;
-    Set<DateTime> daysWithWork = {};
-
-    state.workEntries.forEach((day, entries) {
-      if (day.isAfter(startOfWeek.subtract(const Duration(days: 1))) &&
-          day.isBefore(endOfWeek.add(const Duration(days: 1)))) {
-        for (var entry in entries) {
-          totalWork += entry.totalWorkTime;
-          totalBreak += entry.totalBreakTime;
-        }
-        daysWithWork.add(day);
-      }
-    });
-
-    final workDays = daysWithWork.length;
-    final overtime = totalWork -
-        Duration(microseconds: workDays * dailyTargetDuration.inMicroseconds);
-
-    return WeeklyReportState(
-      totalWorkDuration: totalWork,
-      totalBreakDuration: totalBreak,
-      totalNetWorkDuration: totalWork,
-      averageWorkDuration: workDays > 0 ? totalWork ~/ workDays : Duration.zero,
-      overtime: overtime,
-      workDays: workDays,
-    );
-  }
-
-  MonthlyReportState _calculateMonthlyReport(Duration dailyTargetDuration) {
-    Duration totalWork = Duration.zero;
-    Duration totalBreak = Duration.zero;
-    Set<DateTime> daysWithWork = {};
-
-    state.workEntries.forEach((day, entries) {
-      for (var entry in entries) {
-        totalWork += entry.totalWorkTime;
-        totalBreak += entry.totalBreakTime;
-      }
-      daysWithWork.add(day);
-    });
-
-    final workDays = daysWithWork.length;
-    final overtime = totalWork -
-        Duration(microseconds: workDays * dailyTargetDuration.inMicroseconds);
-
-    return MonthlyReportState(
-      totalWorkDuration: totalWork,
-      totalBreakDuration: totalBreak,
-      totalNetWorkDuration: totalWork,
-      averageWorkDuration: workDays > 0 ? totalWork ~/ workDays : Duration.zero,
-      overtime: overtime,
-      workDays: workDays,
-    );
-  }
-}
-
+// Dummy-Implementierung, um den Provider zu vervollständigen, falls das echte Repository nicht verfügbar ist.
 class DummyWorkRepository implements WorkRepository {
   const DummyWorkRepository();
 
@@ -193,7 +23,7 @@ class DummyWorkRepository implements WorkRepository {
 
   @override
   Future<WorkEntryEntity> getWorkEntry(DateTime date) async {
-    // Return a valid, but empty entity as per the interface contract.
+    // Gemäß dem Interface eine leere, aber gültige Entität zurückgeben.
     return WorkEntryEntity(
       id: 'dummy',
       date: date,
@@ -201,6 +31,149 @@ class DummyWorkRepository implements WorkRepository {
       workEnd: date,
       breaks: [],
       manualOvertime: Duration.zero,
+    );
+  }
+}
+
+final reportsViewModelProvider =
+    StateNotifierProvider<ReportsViewModel, ReportsState>((ref) {
+  final workRepository = ref.watch(workRepositoryProvider);
+  final settingsRepository = ref.watch(settingsRepositoryProvider);
+
+  // Das ViewModel wird erst mit einem echten Repository erstellt, wenn die Abhängigkeiten bereit sind.
+  // Bis dahin wird ein Dummy verwendet, um Abstürze zu vermeiden.
+  return ReportsViewModel(
+    workRepository,
+    settingsRepository,
+  );
+});
+
+class ReportsViewModel extends StateNotifier<ReportsState> {
+  ReportsViewModel(this._workRepository, this._settingsRepository)
+      : super(ReportsState.initial()) {
+    init();
+  }
+
+  final WorkRepository _workRepository;
+  final SettingsRepository _settingsRepository;
+
+  // Cache für die Einträge des aktuell angezeigten Monats, um häufige DB-Aufrufe zu vermeiden
+  List<WorkEntryEntity> _monthlyEntries = [];
+
+  void init() async {
+    final now = DateTime.now();
+    // Setze den initialen Zustand, ohne zuerst zu laden
+    state = state.copyWith(selectedDay: now, isLoading: true);
+    // Löse dann das Laden aus, aber nur, wenn das Repository kein Dummy ist
+    if (_workRepository is! DummyWorkRepository) {
+      await _loadWorkEntriesForMonth(now.year, now.month);
+    }
+  }
+
+  void selectDate(DateTime date) {
+    final oldDate = state.selectedDay;
+    state = state.copyWith(selectedDay: date);
+    // Wenn sich Monat/Jahr unterscheiden oder vorher kein Datum ausgewählt war, müssen wir neue Daten laden
+    if (oldDate == null || date.month != oldDate.month || date.year != oldDate.year) {
+      _loadWorkEntriesForMonth(date.year, date.month);
+    } else {
+      // Wenn wir im selben Monat sind, berechne die Berichte für den neuen Tag neu
+      state = state.copyWith(
+        dailyReportState: _calculateDailyReport(date),
+        weeklyReportState: _calculateWeeklyReport(date),
+        // Der Monatsbericht ändert sich nicht, wenn sich nur der Tag ändert
+      );
+    }
+  }
+
+  void onMonthChanged(DateTime newMonth) {
+    selectDate(newMonth);
+  }
+
+  Future<void> _loadWorkEntriesForMonth(int year, int month) async {
+    state = state.copyWith(isLoading: true);
+    try {
+      final entries = await _workRepository.getWorkEntriesForMonth(year, month);
+      _monthlyEntries = entries;
+    } catch (e) {
+      print('Fehler beim Laden der Arbeitseinträge: $e');
+      _monthlyEntries = []; // Stelle sicher, dass die Liste bei einem Fehler leer ist
+    } finally {
+      // Dieser Block wird immer ausgeführt, egal ob ein Fehler aufgetreten ist oder nicht.
+      state = state.copyWith(
+        isLoading: false,
+        dailyReportState: _calculateDailyReport(state.selectedDay!),
+        weeklyReportState: _calculateWeeklyReport(state.selectedDay!),
+        monthlyReportState: _calculateMonthlyReport(),
+      );
+    }
+  }
+
+  DailyReportState _calculateDailyReport(DateTime date) {
+    final dayToReport = DateTime(date.year, date.month, date.day);
+    final entriesForDay = _monthlyEntries
+        .where((entry) =>
+            entry.date.year == dayToReport.year &&
+            entry.date.month == dayToReport.month &&
+            entry.date.day == dayToReport.day)
+        .toList();
+
+    final workTime = entriesForDay.fold<Duration>(
+        Duration.zero, (prev, e) => prev + e.totalWorkTime);
+    final breakTime = entriesForDay.fold<Duration>(
+        Duration.zero, (prev, e) => prev + e.totalBreakTime);
+    final totalTime = workTime - breakTime;
+    // Overtime calculation might need more specific logic based on your requirements
+    final overtime = Duration.zero;
+
+    return DailyReportState(
+      entries: entriesForDay,
+      workTime: workTime,
+      breakTime: breakTime,
+      totalTime: totalTime,
+      overtime: overtime,
+    );
+  }
+
+  WeeklyReportState _calculateWeeklyReport(DateTime date) {
+    final startOfWeek = date.subtract(Duration(days: date.weekday - 1));
+    final endOfWeek = startOfWeek.add(const Duration(days: 6));
+    final entriesForWeek = _monthlyEntries
+        .where((entry) =>
+            !entry.date.isBefore(startOfWeek) && !entry.date.isAfter(endOfWeek))
+        .toList();
+
+    final totalWorkDuration = entriesForWeek.fold<Duration>(
+        Duration.zero, (prev, e) => prev + e.effectiveWorkDuration);
+
+    return WeeklyReportState(
+      workDays: entriesForWeek.length,
+      totalWorkDuration: totalWorkDuration,
+    );
+  }
+
+  MonthlyReportState _calculateMonthlyReport() {
+    final totalWorkDuration = _monthlyEntries.fold<Duration>(
+        Duration.zero, (prev, e) => prev + e.totalWorkTime);
+    final totalBreakDuration = _monthlyEntries.fold<Duration>(
+        Duration.zero, (prev, e) => prev + e.totalBreakTime);
+    final totalNetWorkDuration = totalWorkDuration - totalBreakDuration;
+    final workDays = _monthlyEntries.length;
+    final averageWorkDuration =
+        workDays > 0 ? totalNetWorkDuration ~/ workDays : Duration.zero;
+
+    // Overtime calculation for the month, assuming target hours are weekly
+    final targetWeeklyHours = _settingsRepository.getTargetWeeklyHours();
+    final totalTargetHours = targetWeeklyHours * 4; // Simplification for 4 weeks
+    final overtime = totalNetWorkDuration - Duration(hours: totalTargetHours);
+
+    return MonthlyReportState(
+      totalWorkDuration: totalWorkDuration,
+      totalBreakDuration: totalBreakDuration,
+      totalNetWorkDuration: totalNetWorkDuration,
+      averageWorkDuration: averageWorkDuration,
+      overtime: overtime,
+      workDays: workDays,
     );
   }
 }

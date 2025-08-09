@@ -15,6 +15,12 @@ abstract class StorageDataSource {
 
   /// Speichert die wöchentlichen Soll-Arbeitsstunden des Benutzers.
   Future<void> setTargetWeeklyHours(int hours);
+
+  /// Ruft den aktuellen Überstundensaldo ab.
+  Duration getOvertime();
+
+  /// Speichert den Überstundensaldo.
+  Future<void> saveOvertime(Duration overtime);
 }
 
 /// Die konkrete Implementierung der lokalen Datenquelle,
@@ -29,6 +35,7 @@ class StorageDataSourceImpl implements StorageDataSource {
   // Private Konstanten für die Schlüssel, um Tippfehler zu vermeiden.
   static const String _themeKey = 'theme_mode';
   static const String _targetHoursKey = 'target_weekly_hours';
+  static const String _overtimeKey = 'overtime_balance';
 
   @override
   ThemeMode getThemeMode() {
@@ -36,7 +43,7 @@ class StorageDataSourceImpl implements StorageDataSource {
     // Suche in den ThemeMode-Werten nach dem gespeicherten String.
     // Wenn nichts gefunden wird, gib den System-Standard zurück.
     return ThemeMode.values.firstWhere(
-          (e) => e.name == themeString,
+      (e) => e.name == themeString,
       orElse: () => ThemeMode.system, // Standardwert
     );
   }
@@ -57,5 +64,16 @@ class StorageDataSourceImpl implements StorageDataSource {
   @override
   Future<void> setTargetWeeklyHours(int hours) async {
     await _prefs.setInt(_targetHoursKey, hours);
+  }
+
+  @override
+  Duration getOvertime() {
+    final minutes = _prefs.getInt(_overtimeKey) ?? 0;
+    return Duration(minutes: minutes);
+  }
+
+  @override
+  Future<void> saveOvertime(Duration overtime) async {
+    await _prefs.setInt(_overtimeKey, overtime.inMinutes);
   }
 }
