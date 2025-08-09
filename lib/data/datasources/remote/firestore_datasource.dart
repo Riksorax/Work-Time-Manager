@@ -20,7 +20,7 @@ abstract class FirestoreDataSource {
 
   // --- Arbeitseinträge ---
   /// Ruft einen einzelnen Arbeitseintrag für einen bestimmten Benutzer und ein bestimmtes Datum ab.
-  Future<WorkEntryModel> getWorkEntry(String userId, DateTime date);
+  Future<WorkEntryModel?> getWorkEntry(String userId, DateTime date);
 
   /// Speichert (erstellt oder überschreibt) einen Arbeitseintrag für einen Benutzer.
   Future<void> saveWorkEntry(String userId, WorkEntryModel model);
@@ -55,7 +55,6 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
   Future<void> signInWithGoogle() async {
     try {
       // 1. Starte den Google Sign-In Dialog.
-      // Die Methode heißt in den aktuellen Versionen `signIn()`.
       final GoogleSignInAccount? googleUser = await _googleSignIn.authenticate();
 
       // Wenn der User den Dialog abbricht, ist googleUser null.
@@ -63,13 +62,12 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
         return;
       }
 
-      // 2. Hole die Authentifizierungsdetails. Dies ist jetzt ein synchroner Getter,
-      //    daher ist `await` nicht mehr nötig.
-      final GoogleSignInAuthentication googleAuth = googleUser.authentication;
+      // 2. Hole die Authentifizierungsdetails.
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
 
       // 3. Erstelle ein Firebase-Credential mit den Google-Tokens.
-      final firebase.AuthCredential credential = firebase.GoogleAuthProvider.credential(
-        accessToken: null,
+      final firebase.AuthCredential credential =
+      firebase.GoogleAuthProvider.credential(
         idToken: googleAuth.idToken,
       );
 
@@ -101,7 +99,7 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
   }
 
   @override
-  Future<WorkEntryModel> getWorkEntry(String userId, DateTime date) async {
+  Future<WorkEntryModel?> getWorkEntry(String userId, DateTime date) async {
     // Generiere die konsistente Dokumenten-ID für das Datum.
     final docId = WorkEntryModel.generateId(date);
     final docRef = _getWorkEntryDocRef(userId, docId);
@@ -112,9 +110,9 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
       // Wenn das Dokument existiert, erstelle ein Model daraus.
       return WorkEntryModel.fromFirestore(snapshot);
     } else {
-      // Wenn kein Dokument für diesen Tag existiert, erstelle ein neues, leeres Model.
-      // Dies vereinfacht die Logik im ViewModel erheblich, da es nie `null` erhält.
-      return WorkEntryModel.empty(date);
+      // Wenn kein Dokument für diesen Tag existiert, wird null zurückgegeben.
+      // Das Repository ist dafür verantwortlich, daraus ein leeres Objekt zu machen.
+      return null;
     }
   }
 
@@ -134,9 +132,8 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
       ) async {
     // Definiere den Datumsbereich für die Abfrage.
     final startOfMonth = DateTime.utc(year, month, 1);
-    // Der letzte Tag des Monats. DateTime(year, month + 1, 0) ist ein Trick,
-    // um den letzten Tag des Vormonats zu erhalten.
-    final endOfMonth = DateTime.utc(year, month, DateUtils.getDaysInMonth(year, month), 23, 59, 59);
+    // Der letzte Tag des Monats.
+    final endOfMonth = DateTime.utc(year, month + 1, 0, 23, 59, 59);
 
     final collectionRef = _firestore.collection('users').doc(userId).collection('work_entries');
 

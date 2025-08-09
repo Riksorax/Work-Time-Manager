@@ -1,36 +1,40 @@
-import 'package:flutter/material.dart' show ThemeMode;
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../domain/repositories/settings_repository.dart';
-import '../datasources/local/storage_datasource.dart';
 
-/// Die konkrete Implementierung des SettingsRepository-Vertrags.
 class SettingsRepositoryImpl implements SettingsRepository {
-  final StorageDataSource _dataSource;
+  static const String _themeModeKey = 'theme_mode';
+  static const String _targetHoursKey = 'target_weekly_hours';
 
-  // Die Abhängigkeit zur lokalen Datenquelle wird injiziert.
-  SettingsRepositoryImpl(this._dataSource);
+  final SharedPreferences _prefs;
+
+  SettingsRepositoryImpl(this._prefs);
 
   @override
   ThemeMode getThemeMode() {
-    // Leitet den Aufruf einfach an die Datenquelle weiter.
-    return _dataSource.getThemeMode();
+    final themeModeString = _prefs.getString(_themeModeKey);
+    if (themeModeString == 'dark') {
+      return ThemeMode.dark;
+    } else if (themeModeString == 'light') {
+      return ThemeMode.light;
+    } else {
+      return ThemeMode.system;
+    }
   }
 
   @override
   Future<void> setThemeMode(ThemeMode mode) async {
-    // Leitet den Aufruf einfach an die Datenquelle weiter.
-    await _dataSource.setThemeMode(mode);
+    await _prefs.setString(_themeModeKey, mode.name);
   }
 
   @override
   int getTargetWeeklyHours() {
-    // Leitet den Aufruf einfach an die Datenquelle weiter.
-    return _dataSource.getTargetWeeklyHours();
+    return _prefs.getInt(_targetHoursKey) ?? 40; // Default to 40 hours
   }
 
   @override
   Future<void> setTargetWeeklyHours(int hours) async {
-    // Leitet den Aufruf einfach an die Datenquelle weiter.
-    await _dataSource.setTargetWeeklyHours(hours);
+    await _prefs.setInt(_targetHoursKey, hours);
   }
 }

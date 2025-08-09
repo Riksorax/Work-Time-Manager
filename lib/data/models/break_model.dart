@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../domain/entities/break_entity.dart';
 
@@ -8,11 +9,11 @@ import '../../domain/entities/break_entity.dart';
 /// zu gewährleisten, und fügt die Logik für die (De-)Serialisierung
 /// für Firestore hinzu.
 class BreakModel extends BreakEntity {
-  const BreakModel({
+  BreakModel({
     required super.name,
     required super.start,
     super.end,
-  });
+  }) : super(id: const Uuid().v4());
 
   /// Erstellt ein BreakModel aus einer reinen BreakEntity.
   /// Dies wird beim Speichern von Daten verwendet.

@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../view_models/auth_view_model.dart';
 import '../widgets/common/loading_indicator.dart';
 import '../widgets/common/error_display.dart';
-import 'dashboard_page.dart';
+import 'home_screen.dart';
 import 'login_page.dart';
 
 class AuthGate extends ConsumerWidget {
@@ -14,7 +14,7 @@ class AuthGate extends ConsumerWidget {
     return authState.when(
       data: (user) {
         if (user != null) {
-          return const DashboardPage();
+          return const HomeScreen();
         } else {
           return const LoginPage();
         }

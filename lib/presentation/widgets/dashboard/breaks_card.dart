@@ -63,7 +63,7 @@ class BreaksCard extends ConsumerWidget {
             const SizedBox(height: 16),
             ElevatedButton.icon(
               icon: Icon(
-                activeBreak != null ? Icons.start_outlined : Icons.stop_circle_outlined,
+                activeBreak != null ? Icons.stop_circle_outlined : Icons.play_circle_outlined,
               ),
               label: Text(
                 activeBreak != null ? 'Pause beenden' : 'Pause starten',
@@ -78,7 +78,7 @@ class BreaksCard extends ConsumerWidget {
                   : () {
                 // ====== HIER IST DIE ÄNDERUNG ======
                 // Rufe die neue ViewModel-Methode auf, die wir erstellt haben.
-                ref.read(dashboardViewModelProvider.notifier).toggleBreak();
+                ref.read(dashboardViewModelProvider.notifier).startOrStopBreak();
               },
             ),
           ],

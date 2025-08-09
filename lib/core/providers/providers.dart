@@ -7,7 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/datasources/local/storage_datasource.dart';
 import '../../data/datasources/remote/firestore_datasource.dart';
 import '../../data/repositories/auth_repository_impl.dart';
-import '../../data/repositories/settings_repository_impl.dart';
+import '../../data/repositories/settings_repository_impl.dart' as impl;
 import '../../data/repositories/work_repository_impl.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../domain/repositories/settings_repository.dart';
@@ -72,7 +72,7 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 
 /// Provider für das SettingsRepository.
 final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
-  return SettingsRepositoryImpl(ref.watch(storageDataSourceProvider));
+  return impl.SettingsRepositoryImpl(ref.watch(sharedPreferencesProvider));
 });
 
 /// Provider für das WorkRepository.

@@ -21,6 +21,20 @@ class WorkEntryEntity extends Equatable {
     this.manualOvertime,
   });
 
+  /// Die gesamte Pausenzeit für diesen Arbeitseintrag.
+  Duration get totalBreakTime {
+    return breaks.fold(
+        Duration.zero, (total, current) => total + current.duration);
+  }
+
+  /// Die gesamte Brutto-Arbeitszeit (ohne Pausen).
+  Duration get totalWorkTime {
+    if (workStart == null || workEnd == null) {
+      return Duration.zero;
+    }
+    return workEnd!.difference(workStart!);
+  }
+
   /// Eine copyWith-Methode zur einfachen Erstellung einer neuen, modifizierten Instanz.
   /// Dies ist ein Kernprinzip der unveränderlichen (immutable) Zustandsverwaltung.
   ///
@@ -47,11 +61,11 @@ class WorkEntryEntity extends Equatable {
 
   @override
   List<Object?> get props => [
-    id,
-    date,
-    workStart,
-    workEnd,
-    breaks,
-    manualOvertime,
-  ];
+        id,
+        date,
+        workStart,
+        workEnd,
+        breaks,
+        manualOvertime,
+      ];
 }
