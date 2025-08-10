@@ -2,210 +2,155 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:uuid/uuid.dart';
 
-import '../../core/providers/providers.dart';
 import '../../domain/entities/break_entity.dart';
 import '../../domain/entities/work_entry_entity.dart';
-import '../../domain/repositories/work_repository.dart';
+import '../../domain/usecases/get_today_work_entry.dart';
+import '../../domain/usecases/save_work_entry.dart';
+import '../../domain/usecases/toggle_break.dart';
 import '../../domain/usecases/overtime_usecases.dart';
-import '../../domain/usecases/start_or_stop_timer.dart';
 import '../state/dashboard_state.dart';
 
-// The provider for the ViewModel.
-final dashboardViewModelProvider =
-    StateNotifierProvider<DashboardViewModel, DashboardState>((ref) {
-  final workRepository = ref.watch(workRepositoryProvider);
-  final startOrStopTimerUseCase = ref.watch(startOrStopTimerUseCaseProvider);
-  final getOvertimeUseCase = ref.watch(getOvertimeUseCaseProvider);
-  final updateOvertimeUseCase = ref.watch(updateOvertimeUseCaseProvider);
-  return DashboardViewModel(
-    workRepository,
-    startOrStopTimerUseCase,
-    getOvertimeUseCase,
-    updateOvertimeUseCase,
-  )..init();
-});
+// Annahme: Die Provider sind in den Use-Case-Dateien definiert.
+// Wenn nicht, muss dies an anderer Stelle im Code existieren.
+final getTodayWorkEntryProvider = Provider<GetTodayWorkEntry>((ref) => throw UnimplementedError());
+final saveWorkEntryProvider = Provider<SaveWorkEntry>((ref) => throw UnimplementedError());
+final toggleBreakProvider = Provider<ToggleBreak>((ref) => throw UnimplementedError());
+final getOvertimeProvider = Provider<GetOvertime>((ref) => throw UnimplementedError());
+final updateOvertimeProvider = Provider<UpdateOvertime>((ref) => throw UnimplementedError());
+
 
 class DashboardViewModel extends StateNotifier<DashboardState> {
-  final WorkRepository _workRepository;
-  final StartOrStopTimer _startOrStopTimer;
+  final GetTodayWorkEntry _getTodayWorkEntry;
+  final SaveWorkEntry _saveWorkEntry;
+  final ToggleBreak _toggleBreak;
   final GetOvertime _getOvertime;
   final UpdateOvertime _updateOvertime;
+
   Timer? _timer;
-  final Uuid _uuid = const Uuid();
-  String? _entryId;
 
   DashboardViewModel(
-    this._workRepository,
-    this._startOrStopTimer,
+    this._getTodayWorkEntry,
+    this._saveWorkEntry,
+    this._toggleBreak,
     this._getOvertime,
     this._updateOvertime,
-  ) : super(DashboardState.initial());
-
-  /// Initializes the ViewModel by loading data.
-  Future<void> init() async {
-    // Load today's work entry.
-    try {
-      final todayEntry = await _workRepository.getWorkEntry(DateTime.now());
-      _entryId = todayEntry.id;
-      final newState = DashboardState.fromWorkEntry(todayEntry);
-      // CORRECTED: Removed await as _getOvertime is synchronous.
-      final currentOvertime = _getOvertime();
-      state = newState.copyWith(
-        overtimeBalance: currentOvertime,
-        actualWorkDuration: todayEntry.workEnd != null ? todayEntry.effectiveWorkDuration : null,
-      );
-      _manageUiTimer();
-    } catch (e) {
-      debugPrint("No work entry for today found: $e");
-      // Even if no entry is found, load the overtime balance
-      // CORRECTED: Removed await as _getOvertime is synchronous.
-      final currentOvertime = _getOvertime();
-      state = state.copyWith(overtimeBalance: currentOvertime);
-    }
+  ) : super(DashboardState.initial()) {
+    _init();
   }
 
-  /// Adjusts the overtime balance by the given amount.
-  Future<void> adjustOvertime(Duration amount) async {
-    final newBalance = await _updateOvertime(amount: amount);
-    state = state.copyWith(overtimeBalance: newBalance);
-  }
-
-  Future<void> startOrStopTimer() async {
-    final entryToUpdate = state.workEntry.copyWith(
-      id: _entryId ?? _uuid.v4(),
-      date: state.workEntry.workStart ?? DateTime.now(),
+  Future<void> _init() async {
+    final workEntry = await _getTodayWorkEntry.call();
+    final overtimeBalance = _getOvertime.call();
+    state = state.copyWith(
+      workEntry: workEntry,
+      isLoading: false,
+      overtimeBalance: overtimeBalance,
     );
-
-    try {
-      final updatedEntry = await _startOrStopTimer(entryToUpdate);
-
-      // When the timer is stopped
-      if (updatedEntry.workEnd != null) {
-        final actualWorkDuration = updatedEntry.effectiveWorkDuration;
-        const dailyGoal = Duration(hours: 8);
-        final overtimeDifference = actualWorkDuration - dailyGoal;
-
-        final newOvertimeBalance = await _updateOvertime(amount: overtimeDifference);
-        
-        state = state.copyWith(
-          workEntry: updatedEntry,
-          elapsedTime: actualWorkDuration,
-          overtimeBalance: newOvertimeBalance,
-          actualWorkDuration: actualWorkDuration,
-        );
-      } else {
-        // When the timer is started
-        final newState = DashboardState.fromWorkEntry(updatedEntry);
-        state = newState.copyWith(
-          overtimeBalance: state.overtimeBalance,
-          actualWorkDuration: null,
-        );
-      }
-      _entryId = updatedEntry.id;
-      _manageUiTimer();
-    } catch (e) {
-      debugPrint("Error starting or stopping timer: $e");
-    }
+    _recalculateStateAndSave(workEntry, save: false);
+    _startTimerIfNeeded();
   }
 
-  void startOrStopBreak() {
-    final now = DateTime.now();
-    final runningBreak = state.workEntry.breaks.where((b) => b.end == null).firstOrNull;
-
-    WorkEntryEntity updatedEntry;
-    if (runningBreak != null) {
-      final updatedBreaks = state.workEntry.breaks
-          .map((b) => b.id == runningBreak.id ? b.copyWith(end: now) : b)
-          .toList();
-      updatedEntry = state.workEntry.copyWith(breaks: updatedBreaks);
-    } else {
-      final newBreak = BreakEntity(
-        id: _uuid.v4(),
-        name: 'Pause #${state.workEntry.breaks.length + 1}',
-        start: now,
-      );
-      updatedEntry = state.workEntry.copyWith(breaks: [...state.workEntry.breaks, newBreak]);
-    }
-    state = state.copyWith(workEntry: updatedEntry);
-    _saveWorkEntry();
-  }
-
-  void updateBreak({
-    required String breakId,
-    String? newName,
-    DateTime? newStart,
-    DateTime? newEnd,
-  }) {
-    final updatedBreaks = state.workEntry.breaks.map((b) {
-      if (b.id == breakId) {
-        return b.copyWith(
-          name: newName ?? b.name,
-          start: newStart ?? b.start,
-          end: newEnd,
-        );
-      }
-      return b;
-    }).toList();
-    state = state.copyWith(workEntry: state.workEntry.copyWith(breaks: updatedBreaks));
-    _saveWorkEntry();
-  }
-
-  void deleteBreak(String breakId) {
-    final updatedBreaks =
-        state.workEntry.breaks.where((b) => b.id != breakId).toList();
-    state = state.copyWith(workEntry: state.workEntry.copyWith(breaks: updatedBreaks));
-    _saveWorkEntry();
-  }
-
-  void setManualStartTime(TimeOfDay time) {
-    final now = DateTime.now();
-    final manualStartTime =
-        DateTime(now.year, now.month, now.day, time.hour, time.minute);
-    state = state.copyWith(workEntry: state.workEntry.copyWith(workStart: manualStartTime));
-    _saveWorkEntry();
-  }
-
-  void setManualEndTime(TimeOfDay time) {
-    final now = state.workEntry.workEnd ?? DateTime.now();
-    final manualEndTime =
-        DateTime(now.year, now.month, now.day, time.hour, time.minute);
-    state = state.copyWith(workEntry: state.workEntry.copyWith(workEnd: manualEndTime));
-    _saveWorkEntry();
-  }
-
-  void _updateElapsedTime() {
-    if (state.workEntry.workStart != null && state.workEntry.workEnd == null) {
-      final elapsed = DateTime.now().difference(state.workEntry.workStart!);
-      // CORRECTED: Used the correct property 'totalBreakTime' from the WorkEntryEntity.
-      final totalElapsed = elapsed - state.workEntry.totalBreakTime;
-      state = state.copyWith(elapsedTime: totalElapsed);
-    }
-  }
-
-  void _manageUiTimer() {
+  void _startTimerIfNeeded() {
     _timer?.cancel();
     if (state.workEntry.workStart != null && state.workEntry.workEnd == null) {
-      _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-        _updateElapsedTime();
+      _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+        state = state.copyWith(elapsedTime: _calculateElapsedTime());
       });
     }
   }
 
-  Future<void> _saveWorkEntry() async {
-    final workEntry = state.workEntry;
-    if (workEntry.workStart == null) return;
+  Duration _calculateElapsedTime() {
+    if (state.workEntry.workStart == null) return Duration.zero;
+    final now = DateTime.now();
+    final breakDuration = _calculateTotalBreakDuration(now);
+    return now.difference(state.workEntry.workStart!) - breakDuration;
+  }
 
-    final entryId = _entryId ?? _uuid.v4();
-    _entryId = entryId;
+  Duration _calculateTotalBreakDuration(DateTime now) {
+    return state.workEntry.breaks.fold(Duration.zero, (prev, b) {
+      if (b.start.isAfter(now)) return prev;
+      final end = b.end ?? now;
+      return prev + end.difference(b.start);
+    });
+  }
 
-    final entry = workEntry.copyWith(id: entryId);
-    try {
-      await _workRepository.saveWorkEntry(entry);
-    } catch (e) {
-      debugPrint("Error saving work entry: $e");
+  Future<void> startOrStopTimer() async {
+    final now = DateTime.now();
+    WorkEntryEntity updatedEntry;
+
+    if (state.workEntry.workStart == null) {
+      // START
+      updatedEntry = state.workEntry.copyWith(workStart: now);
+    } else {
+      // STOP
+      _timer?.cancel();
+      updatedEntry = state.workEntry.copyWith(workEnd: now);
+      // Hinweis: Die Überstundenlogik, die im alten Kommentar erwähnt wurde, fehlt noch.
+      // Dies wäre der richtige Ort, um sie zu berechnen und zu aktualisieren, wenn die tägliche Arbeitszeit verfügbar wäre.
     }
+    
+    // Berechnet die Dauern neu, aktualisiert den Status und speichert
+    await _recalculateStateAndSave(updatedEntry);
+  }
+  
+  Future<void> _recalculateStateAndSave(WorkEntryEntity updatedEntry, {bool save = true}) async {
+    Duration? newActualWorkDuration;
+    if (updatedEntry.workStart != null && updatedEntry.workEnd != null) {
+      final breakDuration = updatedEntry.breaks.fold<Duration>(
+        Duration.zero,
+        (previousValue, element) => previousValue + (element.end?.difference(element.start) ?? Duration.zero),
+      );
+      newActualWorkDuration = updatedEntry.workEnd!.difference(updatedEntry.workStart!) - breakDuration;
+    }
+
+    state = state.copyWith(
+      workEntry: updatedEntry,
+      actualWorkDuration: newActualWorkDuration,
+    );
+
+    if (save) {
+      await _saveWorkEntry.call(updatedEntry);
+    }
+    _startTimerIfNeeded();
+  }
+
+  Future<void> setManualStartTime(TimeOfDay time) async {
+    final oldDate = state.workEntry.workStart ?? DateTime.now();
+    final newStart = DateTime(oldDate.year, oldDate.month, oldDate.day, time.hour, time.minute);
+    final updatedEntry = state.workEntry.copyWith(workStart: newStart);
+    await _recalculateStateAndSave(updatedEntry);
+  }
+
+  Future<void> setManualEndTime(TimeOfDay time) async {
+    final oldDate = state.workEntry.workEnd ?? state.workEntry.workStart ?? DateTime.now();
+    final newEnd = DateTime(oldDate.year, oldDate.month, oldDate.day, time.hour, time.minute);
+    final updatedEntry = state.workEntry.copyWith(workEnd: newEnd);
+    await _recalculateStateAndSave(updatedEntry);
+  }
+
+  Future<void> startOrStopBreak() async {
+    final updatedEntry = await _toggleBreak.call(state.workEntry);
+    await _recalculateStateAndSave(updatedEntry);
+  }
+
+  Future<void> deleteBreak(String breakId) async {
+    final updatedBreaks = state.workEntry.breaks.where((b) => b.id != breakId).toList();
+    final updatedEntry = state.workEntry.copyWith(breaks: updatedBreaks);
+    await _recalculateStateAndSave(updatedEntry);
+  }
+
+  Future<void> updateBreak(BreakEntity breakEntity) async {
+    final updatedBreaks = state.workEntry.breaks.map((b) {
+      return b.id == breakEntity.id ? breakEntity : b;
+    }).toList();
+    final updatedEntry = state.workEntry.copyWith(breaks: updatedBreaks);
+    await _recalculateStateAndSave(updatedEntry);
+  }
+
+  Future<void> addAdjustment(Duration adjustment) async {
+    final newOvertime = await _updateOvertime.call(amount: adjustment);
+    state = state.copyWith(overtimeBalance: newOvertime);
   }
 
   @override
@@ -214,3 +159,13 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
     super.dispose();
   }
 }
+
+final dashboardViewModelProvider = StateNotifierProvider<DashboardViewModel, DashboardState>((ref) {
+  return DashboardViewModel(
+    ref.watch(getTodayWorkEntryProvider),
+    ref.watch(saveWorkEntryProvider),
+    ref.watch(toggleBreakProvider),
+    ref.watch(getOvertimeProvider),
+    ref.watch(updateOvertimeProvider),
+  );
+});

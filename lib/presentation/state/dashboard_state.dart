@@ -6,13 +6,15 @@ class DashboardState extends Equatable {
   final WorkEntryEntity workEntry;
   final Duration elapsedTime;
   final Duration overtimeBalance;
-  final Duration? actualWorkDuration; // Neu: Für die Anzeige der finalen Arbeitszeit
+  final Duration? actualWorkDuration;
+  final bool isLoading;
 
   const DashboardState({
     required this.workEntry,
     required this.elapsedTime,
     required this.overtimeBalance,
     this.actualWorkDuration,
+    this.isLoading = false,
   });
 
   factory DashboardState.initial() {
@@ -24,20 +26,7 @@ class DashboardState extends Equatable {
       elapsedTime: Duration.zero,
       overtimeBalance: Duration.zero,
       actualWorkDuration: null,
-    );
-  }
-
-  factory DashboardState.fromWorkEntry(WorkEntryEntity workEntry) {
-    Duration finalDuration = Duration.zero;
-    if (workEntry.workEnd != null) {
-      finalDuration = workEntry.effectiveWorkDuration;
-    }
-
-    return DashboardState(
-      workEntry: workEntry,
-      elapsedTime: finalDuration,
-      overtimeBalance: Duration.zero, // Wird im ViewModel separat behandelt
-      actualWorkDuration: workEntry.workEnd != null ? finalDuration : null,
+      isLoading: true, // Start with loading
     );
   }
 
@@ -46,12 +35,14 @@ class DashboardState extends Equatable {
     Duration? elapsedTime,
     Duration? overtimeBalance,
     Duration? actualWorkDuration,
+    bool? isLoading,
   }) {
     return DashboardState(
       workEntry: workEntry ?? this.workEntry,
       elapsedTime: elapsedTime ?? this.elapsedTime,
       overtimeBalance: overtimeBalance ?? this.overtimeBalance,
       actualWorkDuration: actualWorkDuration ?? this.actualWorkDuration,
+      isLoading: isLoading ?? this.isLoading,
     );
   }
 
@@ -61,5 +52,6 @@ class DashboardState extends Equatable {
         elapsedTime,
         overtimeBalance,
         actualWorkDuration,
+        isLoading,
       ];
 }

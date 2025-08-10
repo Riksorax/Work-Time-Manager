@@ -36,7 +36,7 @@ class _AddAdjustmentModalState extends ConsumerState<AddAdjustmentModal> {
 
     // Rufen die neue Methode im ViewModel auf
     final duration = Duration(hours: hours, minutes: minutes);
-    ref.read(dashboardViewModelProvider.notifier).adjustOvertime(duration);
+    ref.read(dashboardViewModelProvider.notifier).addAdjustment(duration);
 
     // Modal schließen
     if (mounted) {

@@ -74,12 +74,13 @@ class _EditBreakModalState extends ConsumerState<EditBreakModal> {
       return;
     }
 
-    ref.read(dashboardViewModelProvider.notifier).updateBreak(
-          breakId: widget.breakEntity.id,
-          newName: _nameController.text,
-          newStart: _startTime,
-          newEnd: _endTime,
-        );
+    final updatedBreak = widget.breakEntity.copyWith(
+      name: _nameController.text,
+      start: _startTime,
+      end: _endTime,
+    );
+
+    ref.read(dashboardViewModelProvider.notifier).updateBreak(updatedBreak);
     Navigator.of(context).pop();
   }
 

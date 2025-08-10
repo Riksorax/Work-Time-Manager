@@ -67,9 +67,9 @@ class DashboardScreen extends ConsumerWidget {
             const SizedBox(height: 16),
             _TimeInputField(
               label: 'Endzeit',
-              // Korrekter Zugriff auf workEnd über workEntry
               initialValue: workEntry.workEnd,
-              enabled: false,
+              enabled: workEntry.workStart != null,
+              onTimeSelected: (time) => dashboardViewModel.setManualEndTime(time),
             ),
             const SizedBox(height: 24),
 
@@ -98,6 +98,11 @@ class DashboardScreen extends ConsumerWidget {
                       : 'Pause hinzufügen'),
             ),
             const SizedBox(height: 16),
+
+            // Overtime Balance Display
+            _buildOvertimeBalance(context, dashboardState.overtimeBalance),
+            const SizedBox(height: 16),
+
             ElevatedButton(
               onPressed: () {
                 showDialog(
@@ -107,9 +112,58 @@ class DashboardScreen extends ConsumerWidget {
               },
               child: const Text('Überstunden / Minusstunden hinzufügen'),
             ),
+            const SizedBox(height: 24),
+            _buildActualWorkDuration(context, dashboardState.actualWorkDuration),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildActualWorkDuration(BuildContext context, Duration? actualWorkDuration) {
+    if (actualWorkDuration == null) {
+      return const SizedBox.shrink();
+    }
+    final formattedDuration = _formatDuration(actualWorkDuration);
+    return Column(
+      children: [
+        Text(
+          'Gearbeitete Stunden',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          formattedDuration,
+          style: Theme.of(context).textTheme.headlineMedium,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOvertimeBalance(BuildContext context, Duration overtimeBalance) {
+    final bool isNegative = overtimeBalance.isNegative;
+    final Duration absDuration = overtimeBalance.abs();
+
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final hours = twoDigits(absDuration.inHours);
+    final minutes = twoDigits(absDuration.inMinutes.remainder(60));
+    final sign = isNegative ? '-' : '+';
+    final formattedOvertime = '$sign$hours:$minutes';
+
+    return Column(
+      children: [
+        Text(
+          'Stunden-Bilanz',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          formattedOvertime,
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                color: isNegative ? Colors.red : Colors.green,
+              ),
+        ),
+      ],
     );
   }
 
