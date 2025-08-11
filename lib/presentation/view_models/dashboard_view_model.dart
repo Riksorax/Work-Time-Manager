@@ -1,24 +1,132 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/material.dart';
 
+import '../../data/datasources/local/storage_datasource.dart';
+import '../../data/datasources/remote/firestore_datasource.dart';
+import '../../data/repositories/overtime_repository_impl.dart';
+import '../../data/repositories/work_repository_impl.dart';
 import '../../domain/entities/break_entity.dart';
 import '../../domain/entities/work_entry_entity.dart';
+import '../../domain/repositories/overtime_repository.dart';
+import '../../domain/repositories/work_repository.dart';
 import '../../domain/usecases/get_today_work_entry.dart';
 import '../../domain/usecases/save_work_entry.dart';
 import '../../domain/usecases/toggle_break.dart';
 import '../../domain/usecases/overtime_usecases.dart';
 import '../state/dashboard_state.dart';
 
-// Annahme: Die Provider sind in den Use-Case-Dateien definiert.
-// Wenn nicht, muss dies an anderer Stelle im Code existieren.
-final getTodayWorkEntryProvider = Provider<GetTodayWorkEntry>((ref) => throw UnimplementedError());
-final saveWorkEntryProvider = Provider<SaveWorkEntry>((ref) => throw UnimplementedError());
-final toggleBreakProvider = Provider<ToggleBreak>((ref) => throw UnimplementedError());
-final getOvertimeProvider = Provider<GetOvertime>((ref) => throw UnimplementedError());
-final updateOvertimeProvider = Provider<UpdateOvertime>((ref) => throw UnimplementedError());
+// No-Op Repositories
+class NoOpWorkRepository implements WorkRepository {
+  @override
+  Future<WorkEntryEntity> getWorkEntry(DateTime date) async => WorkEntryEntity(
+        id: 'no-op',
+        date: DateTime.now(),
+      );
 
+  @override
+  Future<List<WorkEntryEntity>> getWorkEntriesForMonth(
+          int year, int month) async =>
+      [];
+
+  @override
+  Future<void> saveWorkEntry(WorkEntryEntity entry) async {}
+}
+
+class NoOpOvertimeRepository implements OvertimeRepository {
+  @override
+  Duration getOvertime() => Duration.zero;
+
+  @override
+  Future<void> saveOvertime(Duration overtime) async {}
+}
+
+class NoOpStorageDataSource implements StorageDataSource {
+  @override
+  ThemeMode getThemeMode() => ThemeMode.system;
+
+  @override
+  Future<void> setThemeMode(ThemeMode mode) async {}
+
+  @override
+  int getTargetWeeklyHours() => 40;
+
+  @override
+  Future<void> setTargetWeeklyHours(int hours) async {}
+
+  @override
+  Duration getOvertime() => Duration.zero;
+
+  @override
+  Future<void> saveOvertime(Duration overtime) async {}
+}
+
+
+// Service Providers
+final firebaseAuthProvider =
+    Provider<firebase.FirebaseAuth>((ref) => firebase.FirebaseAuth.instance);
+final firestoreProvider =
+    Provider<FirebaseFirestore>((ref) => FirebaseFirestore.instance);
+final googleSignInProvider =
+    Provider<GoogleSignIn>((ref) => GoogleSignIn.instance);
+final sharedPreferencesProvider =
+    Provider<SharedPreferences>((ref) => throw UnimplementedError());
+
+// Datasource Provider
+final firestoreDataSourceProvider = Provider<FirestoreDataSource>((ref) {
+  return FirestoreDataSourceImpl(
+    ref.watch(firebaseAuthProvider),
+    ref.watch(firestoreProvider),
+    ref.watch(googleSignInProvider),
+  );
+});
+
+final storageDataSourceProvider = Provider<StorageDataSource>((ref) {
+  try {
+    return StorageDataSourceImpl(ref.watch(sharedPreferencesProvider));
+  } catch (e) {
+    // Return a dummy implementation if SharedPreferences fails
+    return NoOpStorageDataSource();
+  }
+});
+
+// Repository Provider
+final workRepositoryProvider = Provider<WorkRepository>((ref) {
+  final userId = ref.watch(firebaseAuthProvider).currentUser?.uid;
+  if (userId == null) {
+    return NoOpWorkRepository();
+  }
+  return WorkRepositoryImpl(
+    dataSource: ref.watch(firestoreDataSourceProvider),
+    userId: userId,
+  );
+});
+
+final overtimeRepositoryProvider = Provider<OvertimeRepository>((ref) {
+  final userId = ref.watch(firebaseAuthProvider).currentUser?.uid;
+  if (userId == null) {
+    return NoOpOvertimeRepository();
+  }
+  return OvertimeRepositoryImpl(ref.watch(storageDataSourceProvider));
+});
+
+
+// Use Case Providers
+final getTodayWorkEntryProvider = Provider<GetTodayWorkEntry>(
+    (ref) => GetTodayWorkEntry(ref.watch(workRepositoryProvider)));
+final saveWorkEntryProvider = Provider<SaveWorkEntry>(
+    (ref) => SaveWorkEntry(ref.watch(workRepositoryProvider)));
+final toggleBreakProvider =
+    Provider<ToggleBreak>((ref) => ToggleBreak(ref.watch(workRepositoryProvider)));
+final getOvertimeProvider = Provider<GetOvertime>(
+    (ref) => GetOvertime(ref.watch(overtimeRepositoryProvider)));
+final updateOvertimeProvider = Provider<UpdateOvertime>(
+    (ref) => UpdateOvertime(ref.watch(overtimeRepositoryProvider)));
 
 class DashboardViewModel extends StateNotifier<DashboardState> {
   final GetTodayWorkEntry _getTodayWorkEntry;
@@ -86,22 +194,24 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
       // STOP
       _timer?.cancel();
       updatedEntry = state.workEntry.copyWith(workEnd: now);
-      // Hinweis: Die Überstundenlogik, die im alten Kommentar erwähnt wurde, fehlt noch.
-      // Dies wäre der richtige Ort, um sie zu berechnen und zu aktualisieren, wenn die tägliche Arbeitszeit verfügbar wäre.
     }
-    
-    // Berechnet die Dauern neu, aktualisiert den Status und speichert
+
     await _recalculateStateAndSave(updatedEntry);
   }
-  
-  Future<void> _recalculateStateAndSave(WorkEntryEntity updatedEntry, {bool save = true}) async {
+
+  Future<void> _recalculateStateAndSave(WorkEntryEntity updatedEntry,
+      {bool save = true}) async {
     Duration? newActualWorkDuration;
     if (updatedEntry.workStart != null && updatedEntry.workEnd != null) {
       final breakDuration = updatedEntry.breaks.fold<Duration>(
         Duration.zero,
-        (previousValue, element) => previousValue + (element.end?.difference(element.start) ?? Duration.zero),
+        (previousValue, element) =>
+            previousValue +
+            (element.end?.difference(element.start) ?? Duration.zero),
       );
-      newActualWorkDuration = updatedEntry.workEnd!.difference(updatedEntry.workStart!) - breakDuration;
+      newActualWorkDuration =
+          updatedEntry.workEnd!.difference(updatedEntry.workStart!) -
+              breakDuration;
     }
 
     state = state.copyWith(
@@ -117,14 +227,17 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
 
   Future<void> setManualStartTime(TimeOfDay time) async {
     final oldDate = state.workEntry.workStart ?? DateTime.now();
-    final newStart = DateTime(oldDate.year, oldDate.month, oldDate.day, time.hour, time.minute);
+    final newStart =
+        DateTime(oldDate.year, oldDate.month, oldDate.day, time.hour, time.minute);
     final updatedEntry = state.workEntry.copyWith(workStart: newStart);
     await _recalculateStateAndSave(updatedEntry);
   }
 
   Future<void> setManualEndTime(TimeOfDay time) async {
-    final oldDate = state.workEntry.workEnd ?? state.workEntry.workStart ?? DateTime.now();
-    final newEnd = DateTime(oldDate.year, oldDate.month, oldDate.day, time.hour, time.minute);
+    final oldDate =
+        state.workEntry.workEnd ?? state.workEntry.workStart ?? DateTime.now();
+    final newEnd =
+        DateTime(oldDate.year, oldDate.month, oldDate.day, time.hour, time.minute);
     final updatedEntry = state.workEntry.copyWith(workEnd: newEnd);
     await _recalculateStateAndSave(updatedEntry);
   }
@@ -135,7 +248,8 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
   }
 
   Future<void> deleteBreak(String breakId) async {
-    final updatedBreaks = state.workEntry.breaks.where((b) => b.id != breakId).toList();
+    final updatedBreaks =
+        state.workEntry.breaks.where((b) => b.id != breakId).toList();
     final updatedEntry = state.workEntry.copyWith(breaks: updatedBreaks);
     await _recalculateStateAndSave(updatedEntry);
   }
@@ -160,7 +274,8 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
   }
 }
 
-final dashboardViewModelProvider = StateNotifierProvider<DashboardViewModel, DashboardState>((ref) {
+final dashboardViewModelProvider =
+    StateNotifierProvider<DashboardViewModel, DashboardState>((ref) {
   return DashboardViewModel(
     ref.watch(getTodayWorkEntryProvider),
     ref.watch(saveWorkEntryProvider),

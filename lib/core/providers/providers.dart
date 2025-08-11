@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/datasources/local/storage_datasource.dart';
 import '../../data/datasources/remote/firestore_datasource.dart';
 import '../../data/repositories/auth_repository_impl.dart';
+import '../../data/repositories/overtime_repository_impl.dart';
 import '../../data/repositories/settings_repository_impl.dart' as impl;
 import '../../data/repositories/work_repository_impl.dart';
 import '../../domain/entities/work_entry_entity.dart';

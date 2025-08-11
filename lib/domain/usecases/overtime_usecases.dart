@@ -1,26 +1,24 @@
-import '../repositories/overtime_repository.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter_work_time/domain/repositories/overtime_repository.dart';
 
-/// Use Case, um den aktuellen Überstundensaldo abzurufen.
 class GetOvertime {
-  final OvertimeRepository _repository;
+  final OvertimeRepository repository;
 
-  GetOvertime(this._repository);
+  GetOvertime(this.repository);
 
-  Duration call() => _repository.getOvertime();
+  Duration call() {
+    return repository.getOvertime();
+  }
 }
 
-/// Use Case, um den Überstundensaldo zu aktualisieren.
 class UpdateOvertime {
-  final OvertimeRepository _repository;
+  final OvertimeRepository repository;
 
-  UpdateOvertime(this._repository);
+  UpdateOvertime(this.repository);
 
-  /// Passt den Saldo um die angegebene [amount] an und speichert ihn.
   Future<Duration> call({required Duration amount}) async {
-    final currentOvertime = _repository.getOvertime();
+    final currentOvertime = repository.getOvertime();
     final newOvertime = currentOvertime + amount;
-    await _repository.saveOvertime(newOvertime);
+    await repository.saveOvertime(newOvertime);
     return newOvertime;
   }
 }
