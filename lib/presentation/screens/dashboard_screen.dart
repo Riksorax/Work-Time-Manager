@@ -188,7 +188,7 @@ class DashboardScreen extends ConsumerWidget {
       return Column(
         children: [
           Text(
-            'Stunden-Bilanz',
+            'Manuell erfasste Überstunden',
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 4),
@@ -197,16 +197,6 @@ class DashboardScreen extends ConsumerWidget {
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   color: isNegative ? Colors.red : Colors.green,
                 ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                'Manuell erfasst',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
           ),
           const SizedBox(height: 16),
           Text(
@@ -221,6 +211,26 @@ class DashboardScreen extends ConsumerWidget {
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   color: isTotalNegative ? Colors.red : Colors.green,
                 ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'Berücksichtigt alle Einträge und heutige Arbeitszeit',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                '(Diese Informationen werden jetzt auch in den Berichten angezeigt)',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
           ),
         ],
       );

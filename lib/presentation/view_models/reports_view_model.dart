@@ -193,6 +193,16 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
         ? Duration(seconds: totalNetWorkDuration.inSeconds ~/ workDays) 
         : Duration.zero;
 
+    // Berechne die Überstunden für die Woche
+    final targetDailyHours = Duration(hours: 8); // Aus den Einstellungen holen
+    final targetWeeklyHours = Duration(hours: 8 * workDays);
+    final overtime = totalNetWorkDuration - targetWeeklyHours;
+
+    // Berücksichtige auch manuelle Überstunden
+    final manualOvertimes = entriesForWeek.fold<Duration>(
+        Duration.zero, (prev, entry) => prev + (entry.manualOvertime ?? Duration.zero));
+    final totalWeeklyOvertime = overtime + manualOvertimes;
+
     // Tägliche Arbeitszeiten sammeln
     Map<DateTime, Duration> dailyWork = {};
     for (var entry in entriesForWeek) {
@@ -207,7 +217,7 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
       totalBreakDuration: totalBreakDuration,
       totalNetWorkDuration: totalNetWorkDuration,
       averageWorkDuration: averageWorkDuration,
-      overtime: Duration.zero, // Hier könnte eine spezifische Überstundenberechnung erfolgen
+      overtime: totalWeeklyOvertime, // Jetzt werden die berechneten Überstunden zurückgegeben
       dailyWork: dailyWork,
     );
   }
@@ -222,10 +232,15 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
     final averageWorkDuration =
         workDays > 0 ? totalNetWorkDuration ~/ workDays : Duration.zero;
 
-    // Overtime calculation for the month, assuming target hours are weekly
-    final targetWeeklyHours = _settingsRepository.getTargetWeeklyHours();
-    final totalTargetHours = (targetWeeklyHours * 4).toInt(); // Simplification for 4 weeks
+    // Genauere Überstundenberechnung für den Monat basierend auf Arbeitstagen
+    final targetDailyHours = _settingsRepository.getTargetWeeklyHours() / 5; // Typischerweise 5 Arbeitstage pro Woche
+    final totalTargetHours = (targetDailyHours * workDays).toInt(); // Berücksichtigt tatsächliche Arbeitstage
     final overtime = totalNetWorkDuration - Duration(hours: totalTargetHours);
+
+    // Berücksichtige auch manuelle Überstunden
+    final manualOvertimes = _monthlyEntries.fold<Duration>(
+        Duration.zero, (prev, entry) => prev + (entry.manualOvertime ?? Duration.zero));
+    final calculatedMonthlyOvertime = overtime + manualOvertimes;
 
     // Hole die gesamten Überstunden (inkl. manuelle Anpassungen) vom Dashboard
     final dashboardState = _ref.read(dashboardViewModelProvider);
@@ -251,8 +266,8 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
       totalBreakDuration: totalBreakDuration,
       totalNetWorkDuration: totalNetWorkDuration,
       averageWorkDuration: averageWorkDuration,
-      overtime: overtime,
-      totalOvertime: totalOvertime,
+      overtime: calculatedMonthlyOvertime, // Verbesserte Überstundenberechnung
+      totalOvertime: totalOvertime, // Gesamtüberstunden vom Dashboard
       workDays: workDays,
       dailyWork: dailyWork,
       weeklyWork: weeklyWork,

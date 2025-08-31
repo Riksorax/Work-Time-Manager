@@ -78,6 +78,17 @@ class DailyReportView extends ConsumerWidget {
   final Function(WorkEntryEntity) onEntryTap;
   const DailyReportView({required this.onEntryTap, super.key});
 
+  // Hilfsmethode zum Formatieren der Dauer mit Vorzeichen
+  String _formatDuration(Duration duration) {
+    final bool isNegative = duration.isNegative;
+    final Duration absDuration = duration.abs();
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final hours = twoDigits(absDuration.inHours);
+    final minutes = twoDigits(absDuration.inMinutes.remainder(60));
+    final sign = isNegative ? '-' : '+';
+    return '$sign$hours:$minutes';
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final reportsState = ref.watch(reportsViewModelProvider);
@@ -138,8 +149,21 @@ class DailyReportView extends ConsumerWidget {
                             if (entry.manualOvertime != null)
                               Padding(
                                 padding: const EdgeInsets.only(top: 8.0),
-                                child: Text('Überstunden: ${entry.manualOvertime.toString().split('.').first}'),
+                                child: Text('Manuelle Anpassung: ${entry.manualOvertime.toString().split('.').first}'),
                               ),
+                            // Berechnete Überstunden anzeigen
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8.0),
+                              child: Text(
+                                'Überstunden: ${_formatDuration(entry.calculateOvertime(const Duration(hours: 8)))}',
+                                style: TextStyle(
+                                  color: entry.calculateOvertime(const Duration(hours: 8)).isNegative 
+                                      ? Colors.red 
+                                      : Colors.green,
+                                  fontWeight: FontWeight.bold
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -156,6 +180,17 @@ class DailyReportView extends ConsumerWidget {
 
 class WeeklyReportView extends ConsumerWidget {
   const WeeklyReportView({super.key});
+
+  // Hilfsmethode zum Formatieren der Dauer mit Vorzeichen
+  String _formatDuration(Duration duration) {
+    final bool isNegative = duration.isNegative;
+    final Duration absDuration = duration.abs();
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final hours = twoDigits(absDuration.inHours);
+    final minutes = twoDigits(absDuration.inMinutes.remainder(60));
+    final sign = isNegative ? '-' : '+';
+    return '$sign$hours:$minutes';
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -258,6 +293,20 @@ class WeeklyReportView extends ConsumerWidget {
                             Text(weeklyReport.avgWorkDurationPerDay.toString().split('.').first),
                           ],
                         ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Überstunden:', style: TextStyle(fontWeight: FontWeight.bold)),
+                            Text(
+                              _formatDuration(weeklyReport.overtime),
+                              style: TextStyle(
+                                color: weeklyReport.overtime.isNegative ? Colors.red : Colors.green,
+                                fontWeight: FontWeight.bold
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
@@ -289,6 +338,17 @@ class WeeklyReportView extends ConsumerWidget {
 
 class MonthlyReportView extends ConsumerWidget {
   const MonthlyReportView({super.key});
+
+  // Hilfsmethode zum Formatieren der Dauer mit Vorzeichen
+  String _formatDuration(Duration duration) {
+    final bool isNegative = duration.isNegative;
+    final Duration absDuration = duration.abs();
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final hours = twoDigits(absDuration.inHours);
+    final minutes = twoDigits(absDuration.inMinutes.remainder(60));
+    final sign = isNegative ? '-' : '+';
+    return '$sign$hours:$minutes';
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -377,6 +437,34 @@ class MonthlyReportView extends ConsumerWidget {
                         children: [
                           const Text('Ø Arbeitszeit pro Woche:'),
                           Text(monthlyReport.avgWorkDurationPerWeek.toString().split('.').first),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Überstunden Monat:', style: TextStyle(fontWeight: FontWeight.bold)),
+                          Text(
+                            _formatDuration(monthlyReport.overtime),
+                            style: TextStyle(
+                              color: monthlyReport.overtime.isNegative ? Colors.red : Colors.green,
+                              fontWeight: FontWeight.bold
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Gesamt-Überstunden:', style: TextStyle(fontWeight: FontWeight.bold)),
+                          Text(
+                            _formatDuration(monthlyReport.totalOvertime),
+                            style: TextStyle(
+                              color: monthlyReport.totalOvertime.isNegative ? Colors.red : Colors.green,
+                              fontWeight: FontWeight.bold
+                            ),
+                          ),
                         ],
                       ),
                     ],
