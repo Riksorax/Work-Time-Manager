@@ -82,9 +82,10 @@ class _AddAdjustmentModalState extends ConsumerState<AddAdjustmentModal> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Überstunden / Minusstunden'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
           const Text(
             'Manuelle Eingabe für den heutigen Tag. Sie können auch negative Werte direkt eingeben.',
             textAlign: TextAlign.center,
@@ -177,7 +178,7 @@ class _AddAdjustmentModalState extends ConsumerState<AddAdjustmentModal> {
             },
           ),
         ],
-      ),
+      )),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),

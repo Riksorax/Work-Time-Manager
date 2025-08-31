@@ -145,6 +145,20 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
     );
   }
 
+  // Hilfsmethode zur Berechnung der Kalenderwoche
+  int _getWeekNumber(DateTime date) {
+    // Der 4. Januar ist immer in der ersten Woche
+    final firstWeek = DateTime(date.year, 1, 4);
+    // Berechne den Wochentag des 4. Januar (1 = Montag, 7 = Sonntag)
+    final dayOfWeek = firstWeek.weekday;
+    // Berechne den ersten Tag der ersten Woche
+    final firstDayOfFirstWeek = firstWeek.subtract(Duration(days: dayOfWeek - 1));
+    // Differenz in Tagen berechnen
+    final diff = date.difference(firstDayOfFirstWeek).inDays;
+    // Kalenderwoche berechnen (diff / 7 + 1)
+    return (diff / 7).floor() + 1;
+  }
+
   WeeklyReportState _calculateWeeklyReport(DateTime date) {
     final startOfWeek = date.subtract(Duration(days: date.weekday - 1));
     final endOfWeek = startOfWeek.add(const Duration(days: 6));
@@ -165,6 +179,14 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
         ? Duration(seconds: totalNetWorkDuration.inSeconds ~/ workDays) 
         : Duration.zero;
 
+    // Tägliche Arbeitszeiten sammeln
+    Map<DateTime, Duration> dailyWork = {};
+    for (var entry in entriesForWeek) {
+      if (entry.workStart != null && entry.workEnd != null) {
+        dailyWork[entry.date] = entry.effectiveWorkDuration;
+      }
+    }
+
     return WeeklyReportState(
       workDays: workDays,
       totalWorkDuration: totalWorkDuration,
@@ -172,6 +194,7 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
       totalNetWorkDuration: totalNetWorkDuration,
       averageWorkDuration: averageWorkDuration,
       overtime: Duration.zero, // Hier könnte eine spezifische Überstundenberechnung erfolgen
+      dailyWork: dailyWork,
     );
   }
 
@@ -190,6 +213,21 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
     final totalTargetHours = (targetWeeklyHours * 4).toInt(); // Simplification for 4 weeks
     final overtime = totalNetWorkDuration - Duration(hours: totalTargetHours);
 
+    // Tägliche und wöchentliche Arbeitszeiten berechnen
+    final Map<DateTime, Duration> dailyWork = {};
+    final Map<int, Duration> weeklyWork = {};
+
+    for (var entry in _monthlyEntries) {
+      if (entry.workStart != null && entry.workEnd != null) {
+        // Tägliche Arbeitszeit speichern
+        dailyWork[entry.date] = entry.effectiveWorkDuration;
+
+        // Kalenderwoche berechnen
+        final weekNumber = _getWeekNumber(entry.date);
+        weeklyWork[weekNumber] = (weeklyWork[weekNumber] ?? Duration.zero) + entry.effectiveWorkDuration;
+      }
+    }
+
     return MonthlyReportState(
       totalWorkDuration: totalWorkDuration,
       totalBreakDuration: totalBreakDuration,
@@ -197,6 +235,8 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
       averageWorkDuration: averageWorkDuration,
       overtime: overtime,
       workDays: workDays,
+      dailyWork: dailyWork,
+      weeklyWork: weeklyWork,
     );
   }
 }
