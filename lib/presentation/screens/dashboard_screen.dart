@@ -61,6 +61,13 @@ class DashboardScreen extends ConsumerWidget {
               style: Theme.of(context).textTheme.displayLarge,
               textAlign: TextAlign.center,
             ),
+            const SizedBox(height: 8),
+            if (dashboardState.actualWorkDuration != null)
+              Text(
+                'Gearbeitete Zeit: ${_formatDuration(dashboardState.actualWorkDuration!)}',
+                style: Theme.of(context).textTheme.titleMedium,
+                textAlign: TextAlign.center,
+              ),
             const SizedBox(height: 24),
 
             // Time Input Fields
@@ -106,7 +113,7 @@ class DashboardScreen extends ConsumerWidget {
             const SizedBox(height: 16),
 
             // Overtime Balance Display
-            _buildOvertimeBalance(context, dashboardState.overtimeBalance),
+            _buildOvertimeBalance(context, ref, dashboardState.overtimeBalance),
             const SizedBox(height: 16),
 
             ElevatedButton(
@@ -146,7 +153,7 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildOvertimeBalance(BuildContext context, Duration overtimeBalance) {
+  Widget _buildOvertimeBalance(BuildContext context, WidgetRef ref, Duration overtimeBalance) {
     final bool isNegative = overtimeBalance.isNegative;
     final Duration absDuration = overtimeBalance.abs();
 
@@ -156,6 +163,70 @@ class DashboardScreen extends ConsumerWidget {
     final sign = isNegative ? '-' : '+';
     final formattedOvertime = '$sign$hours:$minutes';
 
+    // Die Gesamtbilanz (manuelle Anpassungen + aktuelle Arbeitszeit) wird vom ViewModel berechnet
+    final dashboardState = ref.watch(dashboardViewModelProvider);
+    Duration totalBalance = dashboardState.totalBalance ?? overtimeBalance;
+
+    // Wenn totalBalance nicht gesetzt ist, berechnen wir es hier (Fallback)
+    if (dashboardState.totalBalance == null && dashboardState.actualWorkDuration != null) {
+      // Berechne die tägliche Sollarbeitszeit (8 Stunden oder aus den Einstellungen)
+      final dailyTarget = const Duration(hours: 8); // Kann aus Einstellungen geholt werden
+      final todayBalance = dashboardState.actualWorkDuration! - dailyTarget;
+      totalBalance = overtimeBalance + todayBalance;
+    }
+
+    // Formatiere die Gesamtbilanz
+    final bool isTotalNegative = totalBalance.isNegative;
+    final Duration absTotalDuration = totalBalance.abs();
+    final totalHours = twoDigits(absTotalDuration.inHours);
+    final totalMinutes = twoDigits(absTotalDuration.inMinutes.remainder(60));
+    final totalSign = isTotalNegative ? '-' : '+';
+    final formattedTotalOvertime = '$totalSign$totalHours:$totalMinutes';
+
+    // Wenn aktuelle Arbeitszeit verfügbar ist, zeige detaillierte Überstundenbilanz
+    if (dashboardState.actualWorkDuration != null) {
+      return Column(
+        children: [
+          Text(
+            'Stunden-Bilanz',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            formattedOvertime,
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  color: isNegative ? Colors.red : Colors.green,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'Manuell erfasst',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            isTotalNegative 
+              ? 'Gesamt-Minusstunden inkl. heute' 
+              : 'Gesamt-Überstunden inkl. heute',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            formattedTotalOvertime,
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  color: isTotalNegative ? Colors.red : Colors.green,
+                ),
+          ),
+        ],
+      );
+    }
+
+    // Fallback, wenn keine aktuelle Arbeitszeit verfügbar ist
     return Column(
       children: [
         Text(
@@ -171,6 +242,7 @@ class DashboardScreen extends ConsumerWidget {
         ),
       ],
     );
+      }
   }
 
   Widget _buildBreaksSection(
@@ -229,7 +301,6 @@ class DashboardScreen extends ConsumerWidget {
       ],
     );
   }
-}
 
 class _TimeInputField extends StatefulWidget {
   final String label;

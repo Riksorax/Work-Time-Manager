@@ -7,6 +7,7 @@ class MonthlyReportState {
   final Duration totalNetWorkDuration;
   final Duration averageWorkDuration;
   final Duration overtime;
+  final Duration totalOvertime; // Überstunden inkl. heute
   final int workDays;
   final Map<int, Duration> weeklyWork;
   final Map<DateTime, Duration> dailyWork;
@@ -17,6 +18,7 @@ class MonthlyReportState {
     this.totalNetWorkDuration = Duration.zero,
     this.averageWorkDuration = Duration.zero,
     this.overtime = Duration.zero,
+    this.totalOvertime = Duration.zero,
     this.workDays = 0,
     this.weeklyWork = const {},
     this.dailyWork = const {},
@@ -36,5 +38,7 @@ class MonthlyReportState {
     return Duration(minutes: (totalWorkDuration.inMinutes / weeks).round());
   }
 
-  static const MonthlyReportState initial = MonthlyReportState();
+  static const MonthlyReportState initial = MonthlyReportState(
+    totalOvertime: Duration.zero,
+  );
 }

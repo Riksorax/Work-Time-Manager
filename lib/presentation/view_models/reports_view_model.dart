@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/providers/providers.dart';
+import '../../core/providers/providers.dart' as core_providers;
 import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/services/break_calculator_service.dart';
 import '../../domain/repositories/settings_repository.dart';
@@ -8,6 +8,7 @@ import '../../domain/repositories/work_repository.dart';
 import '../state/monthly_report_state.dart';
 import '../state/reports_state.dart';
 import '../state/weekly_report_state.dart';
+import '../view_models/dashboard_view_model.dart';
 
 // Dummy-Implementierung, um den Provider zu vervollständigen, falls das echte Repository nicht verfügbar ist.
 class DummyWorkRepository implements WorkRepository {
@@ -38,22 +39,25 @@ class DummyWorkRepository implements WorkRepository {
 
 final reportsViewModelProvider =
     StateNotifierProvider<ReportsViewModel, ReportsState>((ref) {
-  final workRepository = ref.watch(workRepositoryProvider);
-  final settingsRepository = ref.watch(settingsRepositoryProvider);
+  final workRepository = ref.watch(core_providers.workRepositoryProvider);
+  final settingsRepository = ref.watch(core_providers.settingsRepositoryProvider);
 
   // Das ViewModel wird erst mit einem echten Repository erstellt, wenn die Abhängigkeiten bereit sind.
   // Bis dahin wird ein Dummy verwendet, um Abstürze zu vermeiden.
   return ReportsViewModel(
     workRepository,
     settingsRepository,
+    ref,
   );
 });
 
 class ReportsViewModel extends StateNotifier<ReportsState> {
-  ReportsViewModel(this._workRepository, this._settingsRepository)
+  ReportsViewModel(this._workRepository, this._settingsRepository, this._ref)
       : super(ReportsState.initial()) {
     init();
   }
+
+  final Ref _ref;
 
   final WorkRepository _workRepository;
   final SettingsRepository _settingsRepository;
@@ -223,6 +227,10 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
     final totalTargetHours = (targetWeeklyHours * 4).toInt(); // Simplification for 4 weeks
     final overtime = totalNetWorkDuration - Duration(hours: totalTargetHours);
 
+    // Hole die gesamten Überstunden (inkl. manuelle Anpassungen) vom Dashboard
+    final dashboardState = _ref.read(dashboardViewModelProvider);
+    final totalOvertime = dashboardState.totalBalance ?? overtime;
+
     // Tägliche und wöchentliche Arbeitszeiten berechnen
     final Map<DateTime, Duration> dailyWork = {};
     final Map<int, Duration> weeklyWork = {};
@@ -244,6 +252,7 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
       totalNetWorkDuration: totalNetWorkDuration,
       averageWorkDuration: averageWorkDuration,
       overtime: overtime,
+      totalOvertime: totalOvertime,
       workDays: workDays,
       dailyWork: dailyWork,
       weeklyWork: weeklyWork,

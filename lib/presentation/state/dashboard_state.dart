@@ -7,6 +7,7 @@ class DashboardState extends Equatable {
   final Duration elapsedTime;
   final Duration overtimeBalance;
   final Duration? actualWorkDuration;
+  final Duration? totalBalance;
   final bool isLoading;
 
   const DashboardState({
@@ -14,6 +15,7 @@ class DashboardState extends Equatable {
     required this.elapsedTime,
     required this.overtimeBalance,
     this.actualWorkDuration,
+    this.totalBalance,
     this.isLoading = false,
   });
 
@@ -35,6 +37,7 @@ class DashboardState extends Equatable {
     Duration? elapsedTime,
     Duration? overtimeBalance,
     Duration? actualWorkDuration,
+    Duration? totalBalance,
     bool? isLoading,
   }) {
     return DashboardState(
@@ -42,6 +45,7 @@ class DashboardState extends Equatable {
       elapsedTime: elapsedTime ?? this.elapsedTime,
       overtimeBalance: overtimeBalance ?? this.overtimeBalance,
       actualWorkDuration: actualWorkDuration ?? this.actualWorkDuration,
+      totalBalance: totalBalance ?? this.totalBalance,
       isLoading: isLoading ?? this.isLoading,
     );
   }
@@ -52,6 +56,7 @@ class DashboardState extends Equatable {
         elapsedTime,
         overtimeBalance,
         actualWorkDuration,
+        totalBalance,
         isLoading,
       ];
 }
