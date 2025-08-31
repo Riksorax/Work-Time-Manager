@@ -8,6 +8,7 @@ class WeeklyReportState {
   final Duration averageWorkDuration;
   final Duration overtime;
   final int workDays;
+  final Map<DateTime, Duration> dailyWork;
 
   const WeeklyReportState({
     this.totalWorkDuration = Duration.zero,
@@ -16,7 +17,12 @@ class WeeklyReportState {
     this.averageWorkDuration = Duration.zero,
     this.overtime = Duration.zero,
     this.workDays = 0,
+    this.dailyWork = const {},
   });
+
+  Duration get avgWorkDurationPerDay => workDays > 0 
+      ? Duration(seconds: totalWorkDuration.inSeconds ~/ workDays) 
+      : Duration.zero;
 
   static const WeeklyReportState initial = WeeklyReportState();
 }

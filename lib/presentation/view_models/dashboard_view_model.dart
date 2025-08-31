@@ -168,6 +168,26 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
     }
   }
 
+  void _updateElapsedTime() {
+    if (state.workEntry.workStart == null) {
+      state = state.copyWith(elapsedTime: Duration.zero);
+      return;
+    }
+
+    final endTime = state.workEntry.workEnd ?? DateTime.now();
+    final totalDuration = endTime.difference(state.workEntry.workStart!);
+
+    // Pausen berücksichtigen
+    Duration breakDuration = Duration.zero;
+    for (final breakItem in state.workEntry.breaks) {
+      final breakEnd = breakItem.end ?? DateTime.now();
+      breakDuration += breakEnd.difference(breakItem.start);
+    }
+
+    final actualDuration = totalDuration - breakDuration;
+    state = state.copyWith(elapsedTime: actualDuration);
+  }
+
   Duration _calculateElapsedTime() {
     if (state.workEntry.workStart == null) return Duration.zero;
     final now = DateTime.now();

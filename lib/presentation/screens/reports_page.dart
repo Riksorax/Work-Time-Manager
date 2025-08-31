@@ -23,6 +23,10 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    // Initiale Daten laden
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(reportsViewModelProvider.notifier).onMonthChanged(DateTime.now());
+    });
   }
 
   @override
@@ -106,10 +110,35 @@ class DailyReportView extends ConsumerWidget {
                     onTap: () => onEntryTap(entry),
                     child: Card(
                       margin: const EdgeInsets.symmetric(vertical: 4.0),
-                      child: ListTile(
-                        title: Text('Arbeitszeit: ${entry.effectiveWorkDuration.toString().split('.').first}'),
-                        subtitle: Text('Pause: ${entry.totalBreakDuration.toString().split('.').first}'),
-                        trailing: const Icon(Icons.edit),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Arbeitszeit: ${entry.effectiveWorkDuration.toString().split('.').first}',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.edit),
+                                  onPressed: () => onEntryTap(entry),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text('Start: ${DateFormat('HH:mm').format(entry.workStart!)}'),
+                            Text('Ende: ${DateFormat('HH:mm').format(entry.workEnd!)}'),
+                            Text('Pause: ${entry.totalBreakDuration.toString().split('.').first}'),
+                            if (entry.manualOvertime != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8.0),
+                                child: Text('Überstunden: ${entry.manualOvertime.toString().split('.').first}'),
+                              ),
+                          ],
+                        ),
                       ),
                     ),
                   );
@@ -128,29 +157,126 @@ class WeeklyReportView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final reportsState = ref.watch(reportsViewModelProvider);
+    final reportsNotifier = ref.read(reportsViewModelProvider.notifier);
 
     if (reportsState.isLoading) {
       return const LoadingIndicator();
     }
 
     final weeklyReport = reportsState.weeklyReportState;
+    final selectedDay = reportsState.selectedDay ?? DateTime.now();
+    final startOfWeek = DateTime(selectedDay.year, selectedDay.month, selectedDay.day - selectedDay.weekday + 1);
+    final endOfWeek = startOfWeek.add(const Duration(days: 6));
 
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Wochenbericht',
-            style: Theme.of(context).textTheme.titleLarge,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.chevron_left),
+                onPressed: () => reportsNotifier.selectDate(
+                  startOfWeek.subtract(const Duration(days: 7))),
+                tooltip: 'Vorherige Woche',
+              ),
+              Expanded(
+                child: Column(
+                  children: [
+                    Text(
+                      'Wochenbericht',
+                      style: Theme.of(context).textTheme.titleLarge,
+                      textAlign: TextAlign.center,
+                    ),
+                    Text(
+                      '${DateFormat.MMMd('de_DE').format(startOfWeek)} - ${DateFormat.MMMd('de_DE').format(endOfWeek)}',
+                      style: Theme.of(context).textTheme.titleMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'KW ${(startOfWeek.difference(DateTime(startOfWeek.year, 1, 1)).inDays / 7).floor() + 1}',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.chevron_right),
+                onPressed: () => reportsNotifier.selectDate(
+                  startOfWeek.add(const Duration(days: 7))),
+                tooltip: 'Nächste Woche',
+              ),
+            ],
           ),
+          const SizedBox(height: 8),
           const SizedBox(height: 16),
           if (weeklyReport.workDays == 0)
             const Center(child: Text('Keine Daten für diese Woche.'))
           else
-            ListTile(
-              title: const Text('Gesamte Arbeitszeit'),
-              trailing: Text(weeklyReport.totalWorkDuration.toString().split('.').first),
+            Column(
+              children: [
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Gesamte Arbeitszeit:', style: TextStyle(fontWeight: FontWeight.bold)),
+                            Text(weeklyReport.totalWorkDuration.toString().split('.').first, style: const TextStyle(fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Gesamte Pausen:'),
+                            Text(weeklyReport.totalBreakDuration.toString().split('.').first),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Arbeitstage:'),
+                            Text('${weeklyReport.workDays}'),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Ø Arbeitszeit pro Tag:'),
+                            Text(weeklyReport.avgWorkDurationPerDay.toString().split('.').first),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text('Tägliche Arbeitszeiten:', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                ...weeklyReport.dailyWork.entries.map((entry) {
+                  final date = entry.key;
+                  final duration = entry.value;
+                  return GestureDetector(
+                    onTap: () => reportsNotifier.selectDate(date),
+                    child: Card(
+                      child: ListTile(
+                        title: Text(DateFormat.EEEE('de_DE').format(date)),
+                        subtitle: Text(DateFormat.yMMMd('de_DE').format(date)),
+                        trailing: Text(duration.toString().split('.').first),
+                      ),
+                    ),
+                  );
+                }),
+              ],
             ),
         ],
       ),
@@ -164,32 +290,131 @@ class MonthlyReportView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final reportsState = ref.watch(reportsViewModelProvider);
+    final reportsNotifier = ref.read(reportsViewModelProvider.notifier);
 
     if (reportsState.isLoading) {
       return const LoadingIndicator();
     }
 
     final monthlyReport = reportsState.monthlyReportState;
+    final selectedMonth = reportsState.selectedMonth ?? DateTime.now();
+    final month = DateFormat.yMMMM('de_DE').format(DateTime(selectedMonth.year, selectedMonth.month));
 
-    return Padding(
+    return ListView(
       padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Monatsbericht',
-            style: Theme.of(context).textTheme.titleLarge,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.chevron_left),
+              onPressed: () => reportsNotifier.onMonthChanged(
+                DateTime(selectedMonth.year, selectedMonth.month - 1)),
+              tooltip: 'Vorheriger Monat',
+            ),
+            Text(
+              'Monatsbericht: $month',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            IconButton(
+              icon: const Icon(Icons.chevron_right),
+              onPressed: () => reportsNotifier.onMonthChanged(
+                DateTime(selectedMonth.year, selectedMonth.month + 1)),
+              tooltip: 'Nächster Monat',
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        const SizedBox(height: 16),
+        if (monthlyReport.workDays == 0)
+          const Center(child: Text('Keine Daten für diesen Monat.'))
+        else
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Gesamte Arbeitszeit:', style: TextStyle(fontWeight: FontWeight.bold)),
+                          Text(monthlyReport.totalWorkDuration.toString().split('.').first, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Gesamte Pausen:'),
+                          Text(monthlyReport.totalBreakDuration.toString().split('.').first),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Arbeitstage:'),
+                          Text('${monthlyReport.workDays}'),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Ø Arbeitszeit pro Tag:'),
+                          Text(monthlyReport.avgWorkDurationPerDay.toString().split('.').first),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Ø Arbeitszeit pro Woche:'),
+                          Text(monthlyReport.avgWorkDurationPerWeek.toString().split('.').first),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              const Text('Wochenübersicht:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+              const SizedBox(height: 8),
+              ...monthlyReport.weeklyWork.entries.map((entry) {
+                final weekNumber = entry.key;
+                final duration = entry.value;
+                return Card(
+                  margin: const EdgeInsets.symmetric(vertical: 4.0),
+                  child: ListTile(
+                    title: Text('Kalenderwoche $weekNumber'),
+                    trailing: Text(duration.toString().split('.').first),
+                  ),
+                );
+              }),
+              const SizedBox(height: 24),
+              const Text('Tagesübersicht:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+              const SizedBox(height: 8),
+              ...monthlyReport.dailyWork.entries.map((entry) {
+                final date = entry.key;
+                final duration = entry.value;
+                return GestureDetector(
+                  onTap: () => reportsNotifier.selectDate(date),
+                  child: Card(
+                    margin: const EdgeInsets.symmetric(vertical: 4.0),
+                    child: ListTile(
+                      title: Text(DateFormat.EEEE('de_DE').format(date)),
+                      subtitle: Text(DateFormat.yMMMd('de_DE').format(date)),
+                      trailing: Text(duration.toString().split('.').first),
+                    ),
+                  ),
+                );
+              }),
+            ],
           ),
-          const SizedBox(height: 16),
-          if (monthlyReport.workDays == 0)
-            const Center(child: Text('Keine Daten für diesen Monat.'))
-          else
-            ListTile(
-              title: const Text('Gesamte Arbeitszeit'),
-              trailing: Text(monthlyReport.totalWorkDuration.toString().split('.').first),
-            )
-        ],
-      ),
+      ],
     );
   }
 }
@@ -199,6 +424,18 @@ class _Calendar extends StatelessWidget {
   final ValueChanged<DateTime> onDateSelected;
 
   const _Calendar({required this.selectedDate, required this.onDateSelected});
+
+  // Hilfsmethode zur Berechnung der Tage im Monat
+  int _getDaysInMonth(int year, int month) {
+    return DateTime(year, month + 1, 0).day;
+  }
+
+  // Hilfsmethode zur Berechnung des Offsets für den ersten Tag des Monats
+  int _getFirstDayOffset(int year, int month) {
+    int weekday = DateTime(year, month, 1).weekday;
+    // In Europa beginnt die Woche mit Montag (1), daher Offset -1
+    return weekday - 1;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -216,8 +453,9 @@ class _Calendar extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: List.generate(7, (index) {
+                // Wir verwenden das aktuelle Jahr und Monat anstatt fest 2023
                 final day =
-                    DateFormat.E('de_DE').format(DateTime(2023, 1, 2 + index));
+                    DateFormat.E('de_DE').format(DateTime(selectedDate.year, selectedDate.month, 2 + index));
                 return Text(day);
               }),
             ),
@@ -227,12 +465,17 @@ class _Calendar extends StatelessWidget {
               physics: const NeverScrollableScrollPhysics(),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 7),
-              itemCount:
-                  DateTime(selectedDate.year, selectedDate.month + 1, 0).day,
+              itemCount: _getDaysInMonth(selectedDate.year, selectedDate.month) +
+                  _getFirstDayOffset(selectedDate.year, selectedDate.month),
               itemBuilder: (context, index) {
-                final day = index + 1;
-                final date =
-                    DateTime(selectedDate.year, selectedDate.month, day);
+                // Berücksichtigung des Monatsanfangs-Offsets
+                final firstDayOffset = _getFirstDayOffset(selectedDate.year, selectedDate.month);
+                if (index < firstDayOffset) {
+                  return const SizedBox.shrink(); // Leere Zellen vor dem Monatsbeginn
+                }
+
+                final day = index - firstDayOffset + 1;
+                final date = DateTime(selectedDate.year, selectedDate.month, day);
                 final isSelected = date.day == selectedDate.day &&
                     date.month == selectedDate.month &&
                     date.year == selectedDate.year;

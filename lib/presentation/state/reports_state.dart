@@ -9,6 +9,7 @@ class ReportsState extends Equatable {
   final bool isLoading;
   final DateTime focusedDay;
   final DateTime? selectedDay;
+  final DateTime? selectedMonth;
   final Map<DateTime, List<WorkEntryEntity>> workEntries;
   final ReportType reportType;
 
@@ -21,6 +22,7 @@ class ReportsState extends Equatable {
     this.isLoading = false,
     required this.focusedDay,
     this.selectedDay,
+    this.selectedMonth,
     required this.workEntries,
     this.reportType = ReportType.daily,
     this.dailyReportState = DailyReportState.initial,
@@ -34,6 +36,7 @@ class ReportsState extends Equatable {
       isLoading: true,
       focusedDay: now,
       selectedDay: now,
+      selectedMonth: now,
       workEntries: const {},
     );
   }
@@ -42,6 +45,7 @@ class ReportsState extends Equatable {
     bool? isLoading,
     DateTime? focusedDay,
     DateTime? selectedDay,
+    DateTime? selectedMonth,
     Map<DateTime, List<WorkEntryEntity>>? workEntries,
     ReportType? reportType,
     DailyReportState? dailyReportState,
@@ -52,6 +56,7 @@ class ReportsState extends Equatable {
       isLoading: isLoading ?? this.isLoading,
       focusedDay: focusedDay ?? this.focusedDay,
       selectedDay: selectedDay ?? this.selectedDay,
+      selectedMonth: selectedMonth ?? this.selectedMonth,
       workEntries: workEntries ?? this.workEntries,
       reportType: reportType ?? this.reportType,
       dailyReportState: dailyReportState ?? this.dailyReportState,
@@ -65,6 +70,7 @@ class ReportsState extends Equatable {
         isLoading,
         focusedDay,
         selectedDay,
+        selectedMonth,
         workEntries,
         reportType,
         dailyReportState,

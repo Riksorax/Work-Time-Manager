@@ -95,6 +95,7 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
   }
 
   void onMonthChanged(DateTime newMonth) {
+    state = state.copyWith(selectedMonth: newMonth);
     selectDate(newMonth);
   }
 
@@ -154,10 +155,23 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
 
     final totalWorkDuration = entriesForWeek.fold<Duration>(
         Duration.zero, (prev, e) => prev + e.effectiveWorkDuration);
+    final totalBreakDuration = entriesForWeek.fold<Duration>(
+        Duration.zero, (prev, e) => prev + e.totalBreakTime);
+    final totalNetWorkDuration = totalWorkDuration - totalBreakDuration;
+
+    // Berechne die durchschnittliche Arbeitszeit pro Tag
+    final workDays = entriesForWeek.length;
+    final averageWorkDuration = workDays > 0 
+        ? Duration(seconds: totalNetWorkDuration.inSeconds ~/ workDays) 
+        : Duration.zero;
 
     return WeeklyReportState(
-      workDays: entriesForWeek.length,
+      workDays: workDays,
       totalWorkDuration: totalWorkDuration,
+      totalBreakDuration: totalBreakDuration,
+      totalNetWorkDuration: totalNetWorkDuration,
+      averageWorkDuration: averageWorkDuration,
+      overtime: Duration.zero, // Hier könnte eine spezifische Überstundenberechnung erfolgen
     );
   }
 

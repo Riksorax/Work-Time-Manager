@@ -8,6 +8,8 @@ class MonthlyReportState {
   final Duration averageWorkDuration;
   final Duration overtime;
   final int workDays;
+  final Map<int, Duration> weeklyWork;
+  final Map<DateTime, Duration> dailyWork;
 
   const MonthlyReportState({
     this.totalWorkDuration = Duration.zero,
@@ -16,7 +18,23 @@ class MonthlyReportState {
     this.averageWorkDuration = Duration.zero,
     this.overtime = Duration.zero,
     this.workDays = 0,
+    this.weeklyWork = const {},
+    this.dailyWork = const {},
   });
+
+  /// Durchschnittliche Arbeitszeit pro Tag
+  Duration get avgWorkDurationPerDay {
+    if (workDays == 0) return Duration.zero;
+    return Duration(minutes: totalWorkDuration.inMinutes ~/ workDays);
+  }
+
+  /// Durchschnittliche Arbeitszeit pro Woche
+  Duration get avgWorkDurationPerWeek {
+    if (workDays == 0) return Duration.zero;
+    // Berechne die Anzahl der Wochen (Arbeitstage / 5)
+    double weeks = workDays / 5;
+    return Duration(minutes: (totalWorkDuration.inMinutes / weeks).round());
+  }
 
   static const MonthlyReportState initial = MonthlyReportState();
 }
