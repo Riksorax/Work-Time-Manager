@@ -29,12 +29,12 @@ class SettingsRepositoryImpl implements SettingsRepository {
   }
 
   @override
-  int getTargetWeeklyHours() {
-    return _prefs.getInt(_targetHoursKey) ?? 40; // Default to 40 hours
+  double getTargetWeeklyHours() {
+    return _prefs.getDouble(_targetHoursKey) ?? 40.0; // Default to 40 hours
   }
 
   @override
-  Future<void> setTargetWeeklyHours(int hours) async {
-    await _prefs.setInt(_targetHoursKey, hours);
+  Future<void> setTargetWeeklyHours(double hours) async {
+    await _prefs.setDouble(_targetHoursKey, hours);
   }
 }

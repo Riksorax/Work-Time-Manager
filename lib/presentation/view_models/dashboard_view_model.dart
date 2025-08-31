@@ -54,10 +54,10 @@ class NoOpStorageDataSource implements StorageDataSource {
   Future<void> setThemeMode(ThemeMode mode) async {}
 
   @override
-  int getTargetWeeklyHours() => 40;
+  double getTargetWeeklyHours() => 40.0;
 
   @override
-  Future<void> setTargetWeeklyHours(int hours) async {}
+  Future<void> setTargetWeeklyHours(double hours) async {}
 
   @override
   Duration getOvertime() => Duration.zero;

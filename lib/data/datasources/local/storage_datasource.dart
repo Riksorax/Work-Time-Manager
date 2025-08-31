@@ -11,10 +11,10 @@ abstract class StorageDataSource {
   Future<void> setThemeMode(ThemeMode mode);
 
   /// Ruft die wöchentlichen Soll-Arbeitsstunden des Benutzers ab.
-  int getTargetWeeklyHours();
+  double getTargetWeeklyHours();
 
   /// Speichert die wöchentlichen Soll-Arbeitsstunden des Benutzers.
-  Future<void> setTargetWeeklyHours(int hours);
+  Future<void> setTargetWeeklyHours(double hours);
 
   /// Ruft den aktuellen Überstundensaldo ab.
   Duration getOvertime();
@@ -55,15 +55,15 @@ class StorageDataSourceImpl implements StorageDataSource {
   }
 
   @override
-  int getTargetWeeklyHours() {
-    // Rufe den Integer-Wert ab. Wenn der Schlüssel nicht existiert (also null ist),
-    // gib den Standardwert 40 zurück.
-    return _prefs.getInt(_targetHoursKey) ?? 40; // Standardwert
+  double getTargetWeeklyHours() {
+    // Rufe den Double-Wert ab. Wenn der Schlüssel nicht existiert (also null ist),
+    // gib den Standardwert 40.0 zurück.
+    return _prefs.getDouble(_targetHoursKey) ?? 40.0; // Standardwert
   }
 
   @override
-  Future<void> setTargetWeeklyHours(int hours) async {
-    await _prefs.setInt(_targetHoursKey, hours);
+  Future<void> setTargetWeeklyHours(double hours) async {
+    await _prefs.setDouble(_targetHoursKey, hours);
   }
 
   @override

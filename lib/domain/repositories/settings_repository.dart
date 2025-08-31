@@ -12,8 +12,8 @@ abstract class SettingsRepository {
   Future<void> setThemeMode(ThemeMode mode);
 
   /// Ruft die wöchentlichen Soll-Arbeitsstunden des Benutzers ab.
-  int getTargetWeeklyHours();
+  double getTargetWeeklyHours();
 
   /// Speichert die wöchentlichen Soll-Arbeitsstunden des Benutzers.
-  Future<void> setTargetWeeklyHours(int hours);
+  Future<void> setTargetWeeklyHours(double hours);
 }

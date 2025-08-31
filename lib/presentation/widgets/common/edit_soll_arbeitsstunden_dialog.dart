@@ -20,7 +20,8 @@ class _EditSollArbeitsstundenDialogState
     super.initState();
     // Safely read the initial value from the async state
     final settingsState = ref.read(settingsViewModelProvider);
-    final initialValue = settingsState.asData?.value.weeklyTargetHours.toString() ?? '';
+    final initialValue = settingsState.asData?.value.weeklyTargetHours
+        .toString() ?? '';
     _controller = TextEditingController(text: initialValue);
   }
 
@@ -31,7 +32,7 @@ class _EditSollArbeitsstundenDialogState
   }
 
   void _save() {
-    final value = int.tryParse(_controller.text);
+    final value = double.tryParse(_controller.text.replaceAll(',', '.'));
     if (value != null && value > 0 && value <= 168) {
       // Call the correct method on the notifier
       ref.read(settingsViewModelProvider.notifier).setTargetWeeklyHours(value);
@@ -40,7 +41,8 @@ class _EditSollArbeitsstundenDialogState
       // Show an error message if the input is invalid
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Bitte geben Sie eine gültige Zahl zwischen 1 und 168 ein.'),
+          content: Text(
+              'Bitte geben Sie eine gültige Zahl zwischen 1 und 168 ein.'),
           backgroundColor: Colors.red,
         ),
       );
@@ -51,12 +53,12 @@ class _EditSollArbeitsstundenDialogState
   Widget build(BuildContext context) {
     // Watch the provider to rebuild if the value changes from outside
     ref.watch(settingsViewModelProvider);
-    
+
     return AlertDialog(
       title: const Text('Soll-Arbeitsstunden festlegen'),
       content: TextField(
         controller: _controller,
-        keyboardType: TextInputType.number,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
         decoration: const InputDecoration(
           labelText: 'Stunden pro Woche',
         ),

@@ -52,7 +52,7 @@ class SettingsPage extends ConsumerWidget {
                 onTap: () {
                   showEditTargetHoursModal(
                     context,
-                    settings.weeklyTargetHours.toInt(),
+                    settings.weeklyTargetHours,
                   );
                 },
               ),

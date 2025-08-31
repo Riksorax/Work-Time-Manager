@@ -60,13 +60,21 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
   // Cache für die Einträge des aktuell angezeigten Monats, um häufige DB-Aufrufe zu vermeiden
   List<WorkEntryEntity> _monthlyEntries = [];
 
-  void init() async {
+  Future<void> init() async {
     final now = DateTime.now();
     // Setze den initialen Zustand, ohne zuerst zu laden
     state = state.copyWith(selectedDay: now, isLoading: true);
     // Löse dann das Laden aus, aber nur, wenn das Repository kein Dummy ist
     if (_workRepository is! DummyWorkRepository) {
       await _loadWorkEntriesForMonth(now.year, now.month);
+    } else {
+      // Bei einem DummyRepository den Ladezustand zurücksetzen und leere Berichte anzeigen
+      state = state.copyWith(
+        isLoading: false,
+        dailyReportState: _calculateDailyReport(now),
+        weeklyReportState: _calculateWeeklyReport(now),
+        monthlyReportState: _calculateMonthlyReport(),
+      );
     }
   }
 
@@ -95,8 +103,9 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
     try {
       final entries = await _workRepository.getWorkEntriesForMonth(year, month);
       _monthlyEntries = entries;
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('Fehler beim Laden der Arbeitseinträge: $e');
+      print('Stacktrace: $stackTrace');
       _monthlyEntries = []; // Stelle sicher, dass die Liste bei einem Fehler leer ist
     } finally {
       // Dieser Block wird immer ausgeführt, egal ob ein Fehler aufgetreten ist oder nicht.
@@ -164,7 +173,7 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
 
     // Overtime calculation for the month, assuming target hours are weekly
     final targetWeeklyHours = _settingsRepository.getTargetWeeklyHours();
-    final totalTargetHours = targetWeeklyHours * 4; // Simplification for 4 weeks
+    final totalTargetHours = (targetWeeklyHours * 4).toInt(); // Simplification for 4 weeks
     final overtime = totalNetWorkDuration - Duration(hours: totalTargetHours);
 
     return MonthlyReportState(

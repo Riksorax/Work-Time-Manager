@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../view_models/settings_view_model.dart';
 
-void showEditTargetHoursModal(BuildContext context, int currentHours) {
+void showEditTargetHoursModal(BuildContext context, double currentHours) {
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
@@ -17,7 +17,7 @@ void showEditTargetHoursModal(BuildContext context, int currentHours) {
 }
 
 class EditTargetHoursModal extends ConsumerStatefulWidget {
-  final int currentHours;
+  final double currentHours;
 
   const EditTargetHoursModal({super.key, required this.currentHours});
 
@@ -44,7 +44,7 @@ class _EditTargetHoursModalState extends ConsumerState<EditTargetHoursModal> {
 
   Future<void> _save() async {
     if (_formKey.currentState!.validate()) {
-      final hours = int.tryParse(_controller.text);
+      final hours = double.tryParse(_controller.text.replaceAll(',', '.'));
       if (hours != null) {
         await ref
             .read(settingsViewModelProvider.notifier)
@@ -82,7 +82,7 @@ class _EditTargetHoursModalState extends ConsumerState<EditTargetHoursModal> {
                 if (value == null || value.isEmpty) {
                   return 'Bitte geben Sie eine Zahl ein.';
                 }
-                final number = int.tryParse(value);
+                final number = double.tryParse(value.replaceAll(',', '.'));
                 if (number == null) {
                   return 'Ungültige Zahl.';
                 }
