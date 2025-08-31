@@ -451,12 +451,15 @@ class _Calendar extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: List.generate(7, (index) {
-                // Wir verwenden das aktuelle Jahr und Monat anstatt fest 2023
+                // Wir generieren Wochentagsabkürzungen von Montag bis Sonntag
                 final day =
-                    DateFormat.E('de_DE').format(DateTime(selectedDate.year, selectedDate.month, 2 + index));
-                return Text(day);
+                    DateFormat.E('de_DE').format(DateTime(2023, 1, 2 + index)); // 2023-01-02 ist ein Montag
+                return Expanded(
+                  child: Center(
+                    child: Text(day),
+                  ),
+                );
               }),
             ),
             const SizedBox(height: 10),
