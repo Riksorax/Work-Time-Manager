@@ -15,12 +15,16 @@ class UserEntity extends Equatable {
   /// Der Anzeigename des Benutzers. Kann null sein.
   final String? displayName;
 
+  /// Die URL zum Profilbild des Benutzers. Kann null sein.
+  final String? photoURL;
+
   const UserEntity({
     required this.id,
     this.email,
     this.displayName,
+    this.photoURL,
   });
 
   @override
-  List<Object?> get props => [id, email, displayName];
+  List<Object?> get props => [id, email, displayName, photoURL];
 }
