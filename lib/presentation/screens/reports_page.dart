@@ -36,10 +36,13 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
   }
 
   void _showEditWorkEntryModal(WorkEntryEntity entry) {
+    // Anwenden der automatischen Pausenberechnung vor dem Anzeigen des Modals
+    final entryWithCalculatedBreaks = ref.read(reportsViewModelProvider.notifier).applyBreakCalculation(entry);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) => EditWorkEntryModal(workEntry: entry),
+      builder: (context) => EditWorkEntryModal(workEntry: entryWithCalculatedBreaks),
     ).then((_) {
       ref.read(reportsViewModelProvider.notifier).onMonthChanged(DateTime.now());
     });

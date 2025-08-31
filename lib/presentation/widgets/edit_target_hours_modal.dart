@@ -29,6 +29,7 @@ class EditTargetHoursModal extends ConsumerStatefulWidget {
 class _EditTargetHoursModalState extends ConsumerState<EditTargetHoursModal> {
   late final TextEditingController _controller;
   final _formKey = GlobalKey<FormState>();
+  bool _isAdjusting = false;
 
   @override
   void initState() {
@@ -46,9 +47,64 @@ class _EditTargetHoursModalState extends ConsumerState<EditTargetHoursModal> {
     if (_formKey.currentState!.validate()) {
       final hours = double.tryParse(_controller.text.replaceAll(',', '.'));
       if (hours != null) {
+        // Hier den alten Wert speichern, bevor er geändert wird
+        final oldHours = widget.currentHours;
+
+        // Arbeitsstunden setzen
         await ref
             .read(settingsViewModelProvider.notifier)
             .setTargetWeeklyHours(hours);
+
+        // Dialog anzeigen, ob alle vorhandenen Einträge angepasst werden sollen
+        if (mounted && oldHours != hours) {
+          final shouldAdjust = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Vorhandene Einträge anpassen?'),
+              content: const Text('Möchten Sie alle vorhandenen Arbeitszeiten proportional zur neuen Soll-Arbeitszeit anpassen?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Nein'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('Ja'),
+                ),
+              ],
+            ),
+          ) ?? false;
+
+          if (shouldAdjust) {
+            // Status auf "Anpassung läuft" setzen und UI aktualisieren
+            setState(() {
+              _isAdjusting = true;
+            });
+
+            try {
+              // Anpassungsfaktor berechnen
+              final adjustmentFactor = hours / oldHours;
+
+              // WorkRepository aufrufen, um alle Einträge anzupassen
+              await ref.read(settingsViewModelProvider.notifier)
+                  .adjustAllWorkEntries(adjustmentFactor);
+
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Alle Arbeitszeiten wurden angepasst')),
+                );
+              }
+            } finally {
+              // Status zurücksetzen, falls wir noch angezeigt werden
+              if (mounted) {
+                setState(() {
+                  _isAdjusting = false;
+                });
+              }
+            }
+          }
+        }
+
         if (mounted) {
           Navigator.of(context).pop();
         }
@@ -66,18 +122,33 @@ class _EditTargetHoursModalState extends ConsumerState<EditTargetHoursModal> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Soll-Arbeitsstunden bearbeiten',
-              style: Theme.of(context).textTheme.titleLarge,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Soll-Arbeitsstunden bearbeiten',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                if (_isAdjusting) 
+                  const SizedBox(
+                    width: 24, 
+                    height: 24, 
+                    child: CircularProgressIndicator(strokeWidth: 2.0),
+                  ),
+              ],
             ),
             const SizedBox(height: 24),
             TextFormField(
               controller: _controller,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Wöchentliche Soll-Stunden',
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
+                // Visuelles Feedback, dass das Feld gesperrt ist
+                filled: _isAdjusting,
+                fillColor: _isAdjusting ? Colors.grey.shade200 : null,
               ),
+              enabled: !_isAdjusting, // Feld sperren während der Anpassung
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Bitte geben Sie eine Zahl ein.';
@@ -97,13 +168,26 @@ class _EditTargetHoursModalState extends ConsumerState<EditTargetHoursModal> {
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: _isAdjusting ? null : () => Navigator.of(context).pop(),
                   child: const Text('Abbrechen'),
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton(
-                  onPressed: _save,
-                  child: const Text('Speichern'),
+                  onPressed: _isAdjusting ? null : _save,
+                  child: _isAdjusting
+                      ? const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SizedBox(
+                              width: 16, 
+                              height: 16, 
+                              child: CircularProgressIndicator(strokeWidth: 2.0, color: Colors.white),
+                            ),
+                            SizedBox(width: 8),
+                            Text('Wird angepasst...'),
+                          ],
+                        )
+                      : const Text('Speichern'),
                 ),
               ],
             ),

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers/providers.dart';
 import '../../domain/entities/work_entry_entity.dart';
+import '../../domain/services/break_calculator_service.dart';
 import '../../domain/repositories/settings_repository.dart';
 import '../../domain/repositories/work_repository.dart';
 import '../state/monthly_report_state.dart';
@@ -85,23 +86,22 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
     if (oldDate == null || date.month != oldDate.month || date.year != oldDate.year) {
       _loadWorkEntriesForMonth(date.year, date.month);
     } else {
-      // Wenn wir im selben Monat sind, berechne die Berichte für den neuen Tag neu
-      state = state.copyWith(
-        dailyReportState: _calculateDailyReport(date),
-        weeklyReportState: _calculateWeeklyReport(date),
-        // Der Monatsbericht ändert sich nicht, wenn sich nur der Tag ändert
-      );
+      // Lade immer die aktuellen Daten, um sicherzustellen, dass die Reports die neuesten Änderungen enthalten
+      _loadWorkEntriesForMonth(date.year, date.month);
     }
   }
 
   void onMonthChanged(DateTime newMonth) {
     state = state.copyWith(selectedMonth: newMonth);
+    // Explizites Laden der aktuellen Daten für den neuen Monat
+    _loadWorkEntriesForMonth(newMonth.year, newMonth.month);
     selectDate(newMonth);
   }
 
   Future<void> _loadWorkEntriesForMonth(int year, int month) async {
     state = state.copyWith(isLoading: true);
     try {
+      // Lade die aktuellen Daten neu vom Repository
       final entries = await _workRepository.getWorkEntriesForMonth(year, month);
       _monthlyEntries = entries;
     } catch (e, stackTrace) {
@@ -110,10 +110,11 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
       _monthlyEntries = []; // Stelle sicher, dass die Liste bei einem Fehler leer ist
     } finally {
       // Dieser Block wird immer ausgeführt, egal ob ein Fehler aufgetreten ist oder nicht.
+      final selectedDay = state.selectedDay ?? DateTime.now();
       state = state.copyWith(
         isLoading: false,
-        dailyReportState: _calculateDailyReport(state.selectedDay!),
-        weeklyReportState: _calculateWeeklyReport(state.selectedDay!),
+        dailyReportState: _calculateDailyReport(selectedDay),
+        weeklyReportState: _calculateWeeklyReport(selectedDay),
         monthlyReportState: _calculateMonthlyReport(),
       );
     }
@@ -157,6 +158,15 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
     final diff = date.difference(firstDayOfFirstWeek).inDays;
     // Kalenderwoche berechnen (diff / 7 + 1)
     return (diff / 7).floor() + 1;
+  }
+
+  /// Wendet die automatische Pausenberechnung auf einen Arbeitseintrag an
+  WorkEntryEntity applyBreakCalculation(WorkEntryEntity entry) {
+    // Wenn Start- und Endzeit vorhanden sind, berechne automatische Pausen
+    if (entry.workStart != null && entry.workEnd != null) {
+      return BreakCalculatorService.calculateAndApplyBreaks(entry);
+    }
+    return entry;
   }
 
   WeeklyReportState _calculateWeeklyReport(DateTime date) {

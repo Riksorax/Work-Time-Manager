@@ -5,8 +5,15 @@ class BreakEntity extends Equatable {
   final String name;
   final DateTime start;
   final DateTime? end;
+  final bool isAutomatic;
 
-  const BreakEntity({required this.id, required this.name, required this.start, this.end});
+  const BreakEntity({
+    required this.id, 
+    required this.name, 
+    required this.start, 
+    this.end,
+    this.isAutomatic = false
+  });
 
   /// Calculates the duration of the break.
   /// Returns [Duration.zero] if the break hasn't ended yet.
@@ -22,15 +29,17 @@ class BreakEntity extends Equatable {
     String? name,
     DateTime? start,
     DateTime? end,
+    bool? isAutomatic,
   }) {
     return BreakEntity(
       id: id ?? this.id,
       name: name ?? this.name,
       start: start ?? this.start,
       end: end ?? this.end,
+      isAutomatic: isAutomatic ?? this.isAutomatic,
     );
   }
 
   @override
-  List<Object?> get props => [id, name, start, end];
+  List<Object?> get props => [id, name, start, end, isAutomatic];
 }

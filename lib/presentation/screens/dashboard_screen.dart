@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../domain/entities/break_entity.dart';
+import '../../domain/services/break_calculator_service.dart';
 import '../view_models/dashboard_view_model.dart';
 import '../widgets/add_adjustment_modal.dart';
 import '../widgets/edit_break_modal.dart';
@@ -24,6 +25,11 @@ class DashboardScreen extends ConsumerWidget {
     final dashboardState = ref.watch(dashboardViewModelProvider);
     final dashboardViewModel = ref.read(dashboardViewModelProvider.notifier);
     final workEntry = dashboardState.workEntry;
+
+    // Berechne automatische Pausen, falls Start- und Endzeit vorhanden sind
+    final workEntryWithAutoBreaks = workEntry.workStart != null && workEntry.workEnd != null
+        ? BreakCalculatorService.calculateAndApplyBreaks(workEntry)
+        : workEntry;
 
     // Den Timer-Status basierend auf den Daten von workEntry ableiten
     final isTimerRunning = workEntry.workStart != null && workEntry.workEnd == null;
@@ -87,8 +93,8 @@ class DashboardScreen extends ConsumerWidget {
             const SizedBox(height: 24),
 
             // Breaks Section
-            // Korrekter Zugriff auf breaks über workEntry
-            _buildBreaksSection(context, ref, workEntry.breaks),
+            // Zugriff auf breaks mit automatischen Pausen
+            _buildBreaksSection(context, ref, workEntryWithAutoBreaks.breaks),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () => dashboardViewModel.startOrStopBreak(),
@@ -181,7 +187,23 @@ class DashboardScreen extends ConsumerWidget {
         ...breaks.map((b) => Card(
               margin: const EdgeInsets.symmetric(vertical: 4),
               child: ListTile(
-                title: Text(b.name),
+                title: Row(
+                  children: [
+                    Text(b.name),
+                    if (b.isAutomatic)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 8.0),
+                        child: Tooltip(
+                          message: 'Automatisch berechnet basierend auf der Arbeitszeit',
+                          child: Chip(
+                            label: const Text('Automatisch'),
+                            backgroundColor: Theme.of(context).colorScheme.secondary.withOpacity(0.3),
+                            labelStyle: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.onSecondary),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
                 subtitle: Text(
                     '${DateFormat.Hm().format(b.start)} - ${b.end != null ? DateFormat.Hm().format(b.end!) : 'läuft...'}'),
                 trailing: Row(
