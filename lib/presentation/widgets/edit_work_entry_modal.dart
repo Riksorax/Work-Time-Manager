@@ -67,7 +67,10 @@ class EditWorkEntryModal extends ConsumerWidget {
     required ValueChanged<TimeOfDay> onTimeSelected,
     bool dense = false,
   }) {
-    final format = MaterialLocalizations.of(context).formatTimeOfDay;
+    final localizations = MaterialLocalizations.of(context);
+    final formatted = selectedTime != null
+        ? localizations.formatTimeOfDay(selectedTime, alwaysUse24HourFormat: true)
+        : '';
     return TextFormField(
       readOnly: true,
       decoration: InputDecoration(
@@ -76,11 +79,17 @@ class EditWorkEntryModal extends ConsumerWidget {
         suffixIcon: const Icon(Icons.access_time),
         isDense: dense,
       ),
-      controller: TextEditingController(text: selectedTime != null ? format(selectedTime) : ''),
+      controller: TextEditingController(text: formatted),
       onTap: () async {
         final time = await showTimePicker(
           context: context,
           initialTime: selectedTime ?? TimeOfDay.now(),
+          builder: (context, child) {
+            return MediaQuery(
+              data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+              child: child ?? const SizedBox.shrink(),
+            );
+          },
         );
         if (time != null) {
           onTimeSelected(time);

@@ -40,7 +40,9 @@ class SettingsPage extends ConsumerWidget {
               // Arbeitszeit
               ListTile(
                 title: const Text('Soll-Arbeitsstunden'),
-                subtitle: Text('${settings.weeklyTargetHours.toStringAsFixed(1)} Stunden pro Woche'),
+                subtitle: Text(
+                  '${settings.weeklyTargetHours.toStringAsFixed(1)} h/Woche\n≈ ${(settings.weeklyTargetHours / 5).toStringAsFixed(1)} h/Tag (bei 5 Arbeitstagen)',
+                ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {
                   showEditTargetHoursModal(

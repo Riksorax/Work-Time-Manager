@@ -120,6 +120,8 @@ class DailyReportView extends ConsumerWidget {
                 const Center(child: Text('Keine Daten für diesen Tag.'))
               else
                 ...dailyReport.entries.map((entry) {
+                  // Automatische Pausen für die Darstellung berücksichtigen
+                  final displayEntry = ref.read(reportsViewModelProvider.notifier).applyBreakCalculation(entry);
                   return GestureDetector(
                     onTap: () => onEntryTap(entry),
                     child: Card(
@@ -133,7 +135,7 @@ class DailyReportView extends ConsumerWidget {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  'Arbeitszeit: ${entry.effectiveWorkDuration.toString().split('.').first}',
+                                  'Arbeitszeit: ${displayEntry.effectiveWorkDuration.toString().split('.').first}',
                                   style: Theme.of(context).textTheme.titleMedium,
                                 ),
                                 IconButton(
@@ -143,21 +145,21 @@ class DailyReportView extends ConsumerWidget {
                               ],
                             ),
                             const SizedBox(height: 8),
-                            Text('Start: ${DateFormat('HH:mm').format(entry.workStart!)}'),
-                            Text('Ende: ${DateFormat('HH:mm').format(entry.workEnd!)}'),
-                            Text('Pause: ${entry.totalBreakDuration.toString().split('.').first}'),
-                            if (entry.manualOvertime != null)
+                            Text('Start: ${DateFormat('HH:mm').format(displayEntry.workStart!)}'),
+                            Text('Ende: ${DateFormat('HH:mm').format(displayEntry.workEnd!)}'),
+                            Text('Pause: ${displayEntry.totalBreakDuration.toString().split('.').first}'),
+                            if (displayEntry.manualOvertime != null)
                               Padding(
                                 padding: const EdgeInsets.only(top: 8.0),
-                                child: Text('Manuelle Anpassung: ${entry.manualOvertime.toString().split('.').first}'),
+                                child: Text('Manuelle Anpassung: ${displayEntry.manualOvertime.toString().split('.').first}'),
                               ),
                             // Berechnete Überstunden anzeigen
                             Padding(
                               padding: const EdgeInsets.only(top: 8.0),
                               child: Text(
-                                'Überstunden: ${_formatDuration(entry.calculateOvertime(const Duration(hours: 8)))}',
+                                'Überstunden: ${_formatDuration(displayEntry.calculateOvertime(const Duration(hours: 8)))}',
                                 style: TextStyle(
-                                  color: entry.calculateOvertime(const Duration(hours: 8)).isNegative 
+                                  color: displayEntry.calculateOvertime(const Duration(hours: 8)).isNegative 
                                       ? Colors.red 
                                       : Colors.green,
                                   fontWeight: FontWeight.bold
@@ -206,7 +208,7 @@ class WeeklyReportView extends ConsumerWidget {
     final startOfWeek = DateTime(selectedDay.year, selectedDay.month, selectedDay.day - selectedDay.weekday + 1);
     final endOfWeek = startOfWeek.add(const Duration(days: 6));
 
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -375,9 +377,14 @@ class MonthlyReportView extends ConsumerWidget {
                 DateTime(selectedMonth.year, selectedMonth.month - 1)),
               tooltip: 'Vorheriger Monat',
             ),
-            Text(
-              'Monatsbericht: $month',
-              style: Theme.of(context).textTheme.titleLarge,
+            Expanded(
+              child: Text(
+                month,
+                style: Theme.of(context).textTheme.titleLarge,
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
             ),
             IconButton(
               icon: const Icon(Icons.chevron_right),

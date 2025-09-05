@@ -271,7 +271,13 @@ class DashboardScreen extends ConsumerWidget {
               child: ListTile(
                 title: Row(
                   children: [
-                    Text(b.name),
+                    Expanded(
+                      child: Text(
+                        b.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                     if (b.isAutomatic)
                       Padding(
                         padding: const EdgeInsets.only(left: 8.0),
