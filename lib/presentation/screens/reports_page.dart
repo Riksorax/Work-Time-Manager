@@ -502,7 +502,14 @@ class WeeklyReportView extends ConsumerWidget {
                   final date = entry.key;
                   final duration = entry.value;
                   return GestureDetector(
-                    onTap: () => reportsNotifier.selectDate(date),
+                    onTap: () {
+                      reportsNotifier.selectDate(date);
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        builder: (_) => DayEntriesBottomSheet(date: date),
+                      );
+                    },
                     child: Card(
                       child: ListTile(
                         title: Text(DateFormat.EEEE('de_DE').format(date)),
@@ -705,7 +712,14 @@ class MonthlyReportView extends ConsumerWidget {
                 final date = entry.key;
                 final duration = entry.value;
                 return GestureDetector(
-                  onTap: () => reportsNotifier.selectDate(date),
+                  onTap: () {
+                    reportsNotifier.selectDate(date);
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      builder: (_) => DayEntriesBottomSheet(date: date),
+                    );
+                  },
                   child: Card(
                     margin: const EdgeInsets.symmetric(vertical: 4.0),
                     child: ListTile(
@@ -816,6 +830,163 @@ class _Calendar extends StatelessWidget {
             )
           ],
         ),
+      ),
+    );
+  }
+}
+
+class DayEntriesBottomSheet extends ConsumerStatefulWidget {
+  final DateTime date;
+  const DayEntriesBottomSheet({super.key, required this.date});
+
+  @override
+  ConsumerState<DayEntriesBottomSheet> createState() =>
+      _DayEntriesBottomSheetState();
+}
+
+class _DayEntriesBottomSheetState
+    extends ConsumerState<DayEntriesBottomSheet> {
+  @override
+  void initState() {
+    super.initState();
+    // Sicherstellen, dass der ausgewählte Tag geladen ist
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(reportsViewModelProvider.notifier).selectDate(widget.date);
+    });
+  }
+
+  void _openEdit(WorkEntryEntity entry) {
+    final entryWithCalculatedBreaks =
+        ref.read(reportsViewModelProvider.notifier).applyBreakCalculation(entry);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) =>
+          EditWorkEntryModal(workEntry: entryWithCalculatedBreaks),
+    ).then((_) {
+      // Nach dem Schließen neu laden
+      ref.read(reportsViewModelProvider.notifier).selectDate(widget.date);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final reportsState = ref.watch(reportsViewModelProvider);
+
+    if (reportsState.isLoading) {
+      return const Padding(
+        padding: EdgeInsets.all(24.0),
+        child: LoadingIndicator(),
+      );
+    }
+
+    final dailyReport = reportsState.dailyReportState;
+    final entries = dailyReport.entries;
+
+    return SafeArea(
+      child: DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.7,
+        minChildSize: 0.3,
+        maxChildSize: 0.95,
+        builder: (context, controller) {
+          return Container(
+            padding: const EdgeInsets.all(16.0),
+            decoration: BoxDecoration(
+              color: Theme.of(context).canvasColor,
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(16)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade400,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                Text(
+                  'Einträge am ${DateFormat.yMMMMd('de_DE').format(widget.date)}',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 12),
+                if (entries.isEmpty)
+                  const Expanded(
+                    child: Center(child: Text('Keine Einträge für diesen Tag.')),
+                  )
+                else
+                  Expanded(
+                    child: ListView.builder(
+                      controller: controller,
+                      itemCount: entries.length,
+                      itemBuilder: (context, index) {
+                        final entry = entries[index];
+                        final displayEntry = ref
+                            .read(reportsViewModelProvider.notifier)
+                            .applyBreakCalculation(entry);
+
+                        final DateTime? start = displayEntry.workStart;
+                        final DateTime? end =
+                            displayEntry.workEnd ?? DateTime.now();
+                        Duration worked = Duration.zero;
+
+                        if (start != null && end != null) {
+                          Duration breakDur = Duration.zero;
+                          for (final b in displayEntry.breaks) {
+                            final DateTime bStart = b.start;
+                            final DateTime bEnd = b.end ?? end;
+                            final DateTime effStart =
+                                bStart.isBefore(start) ? start : bStart;
+                            final DateTime effEnd =
+                                bEnd.isAfter(end) ? end : bEnd;
+                            if (effEnd.isAfter(effStart)) {
+                              breakDur += effEnd.difference(effStart);
+                            }
+                          }
+                          worked = end.difference(start) - breakDur;
+                        }
+
+                        return Card(
+                          margin: const EdgeInsets.symmetric(vertical: 6),
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
+                            title: Text(
+                                'Arbeitszeit: ${worked.toString().split('.').first}'),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                    'Start: ${start != null ? DateFormat('HH:mm').format(start) : '-'}'),
+                                Text(
+                                    'Ende: ${displayEntry.workEnd != null ? DateFormat('HH:mm').format(displayEntry.workEnd!) : 'läuft...'}'),
+                                Text(
+                                    'Pause: ${displayEntry.totalBreakDuration.toString().split('.').first}'),
+                                if (displayEntry.manualOvertime != null)
+                                  Text(
+                                      'Manuelle Anpassung: ${displayEntry.manualOvertime.toString().split('.').first}'),
+                              ],
+                            ),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.edit),
+                              onPressed: () => _openEdit(entry),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

@@ -6,6 +6,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_work_time/app_check_initializer.dart';
 
 import 'core/providers/providers.dart';
 import 'core/theme/app_theme.dart';
@@ -22,6 +23,9 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // App Check aktivieren (Android: Debug/Release-abhängig)
+  await AppBootstrap.ensureInitializedForEnv();
 
   // Initialisiere die Google Sign-In Instanz.
   await GoogleSignIn.instance.initialize();
