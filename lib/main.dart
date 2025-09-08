@@ -27,9 +27,6 @@ Future<void> main() async {
   // App Check aktivieren (Android: Debug/Release-abhängig)
   await AppBootstrap.ensureInitializedForEnv();
 
-  // Initialisiere die Google Sign-In Instanz.
-  await GoogleSignIn.instance.initialize();
-
   final prefs = await SharedPreferences.getInstance();
 
   runApp(

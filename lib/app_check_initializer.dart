@@ -40,10 +40,27 @@ class AppBootstrap {
       await Firebase.initializeApp();
     }
 
-    // App Check aktivieren (Android-only)
-    await FirebaseAppCheck.instance.activate(
-      androidProvider: androidProvider,
-    );
+    // App Check aktivieren (Android-only) mit Fallback für Dev-Installationen
+    try {
+      await FirebaseAppCheck.instance.activate(
+        androidProvider: androidProvider,
+      );
+    } catch (e) {
+      // Häufige Ursache: Play Integrity schlägt fehl bei Side-Load/Emulator
+      if (androidProvider == AndroidProvider.playIntegrity) {
+        debugPrint(
+          '[AppCheck] Play Integrity Aktivierung fehlgeschlagen. Fallback auf AndroidProvider.debug. '
+          'Für Release: über Play (interner Test) installieren.',
+        );
+        try {
+          await FirebaseAppCheck.instance.activate(
+            androidProvider: AndroidProvider.debug,
+          );
+        } catch (_) {
+          // Ignorieren; Fehler wird beim ersten Request sichtbar.
+        }
+      }
+    }
 
     // Token Auto-Refresh aktivieren (empfohlen)
     await FirebaseAppCheck.instance.setTokenAutoRefreshEnabled(autoRefresh);
@@ -51,13 +68,18 @@ class AppBootstrap {
     _initialized = true;
   }
 
-  /// Bequeme Variante: wählt automatisch Debug- oder Produktions-Provider.
-  /// - Debug: AndroidProvider.debug
-  /// - Release: AndroidProvider.playIntegrity
+  /// Bequeme Variante: in Debug App Check überspringen, in Release aktivieren.
   static Future<void> ensureInitializedForEnv() async {
-    return ensureInitialized(
-      androidProvider: kReleaseMode ? AndroidProvider.playIntegrity : AndroidProvider.debug,
-      autoRefresh: true,
-    );
+    if (kReleaseMode) {
+      return ensureInitialized(
+        androidProvider: AndroidProvider.playIntegrity,
+        autoRefresh: true,
+      );
+    } else {
+      // In Debug: App Check nicht aktivieren, um GMS/Phenotype-Rauschen zu vermeiden
+      debugPrint('[AppCheck] Debug-Build erkannt: App Check wird übersprungen.');
+      _initialized = true;
+      return;
+    }
   }
 }
