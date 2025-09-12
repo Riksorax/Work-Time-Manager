@@ -8,6 +8,7 @@ import '../view_models/dashboard_view_model.dart';
 import '../widgets/add_adjustment_modal.dart';
 import '../widgets/edit_break_modal.dart';
 import 'settings_page.dart';
+import '../view_models/settings_view_model.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -169,8 +170,15 @@ class DashboardScreen extends ConsumerWidget {
 
     // Wenn totalBalance nicht gesetzt ist, berechnen wir es hier (Fallback)
     if (dashboardState.totalBalance == null && dashboardState.actualWorkDuration != null) {
-      // Berechne die tägliche Sollarbeitszeit (8 Stunden oder aus den Einstellungen)
-      final dailyTarget = const Duration(hours: 8); // Kann aus Einstellungen geholt werden
+      // Tägliche Sollarbeitszeit aus den Einstellungen berechnen (Fallback: 40h/Woche => 8h/Tag)
+      final settingsState = ref.watch(settingsViewModelProvider);
+      final double weeklyTargetHours = settingsState.maybeWhen(
+        data: (s) => s.weeklyTargetHours,
+        orElse: () => 40.0,
+      );
+      final Duration dailyTarget = Duration(
+        minutes: ((weeklyTargetHours / 5.0) * 60).round(),
+      );
       final todayBalance = dashboardState.actualWorkDuration! - dailyTarget;
       totalBalance = overtimeBalance + todayBalance;
     }

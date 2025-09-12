@@ -17,6 +17,7 @@ class SettingsPage extends ConsumerWidget {
     final settingsState = ref.watch(settingsViewModelProvider);
     final themeMode = ref.watch(themeViewModelProvider);
     final themeNotifier = ref.read(themeViewModelProvider.notifier);
+    final authState = ref.watch(authStateProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -100,6 +101,38 @@ class SettingsPage extends ConsumerWidget {
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {},
               ),
+              if (authState.asData?.value != null) ...[
+                const Divider(height: 1),
+                ListTile(
+                  leading: Icon(Icons.delete_forever, color: theme.colorScheme.error),
+                  title: Text('Account löschen', style: TextStyle(color: theme.colorScheme.error)),
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (dialogContext) => AlertDialog(
+                        title: const Text('Account endgültig löschen'),
+                        content: const Text(
+                            'Warnung: Diese Aktion kann nicht rückgängig gemacht werden. Alle Ihre Daten, einschließlich der Arbeitszeiterfassung, werden dauerhaft gelöscht.'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(dialogContext).pop(),
+                            child: const Text('Abbrechen'),
+                          ),
+                          FilledButton(
+                            onPressed: () {
+                              Navigator.of(dialogContext).pop();
+                            },
+                            style: FilledButton.styleFrom(
+                              backgroundColor: theme.colorScheme.error,
+                            ),
+                            child: const Text('Endgültig löschen'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ],
             ],
           );
         },

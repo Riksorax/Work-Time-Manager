@@ -372,6 +372,8 @@ class WeeklyReportView extends ConsumerWidget {
     final startOfWeek = DateTime(selectedDay.year, selectedDay.month,
         selectedDay.day - selectedDay.weekday + 1);
     final endOfWeek = startOfWeek.add(const Duration(days: 6));
+    final Duration weeklyOvertimeLocal = weeklyReport.dailyWork.entries
+        .fold(Duration.zero, (sum, e) => sum + (e.value - dailyTarget));
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
@@ -481,9 +483,9 @@ class WeeklyReportView extends ConsumerWidget {
                             const Text('Überstunden:',
                                 style: TextStyle(fontWeight: FontWeight.bold)),
                             Text(
-                              _formatDuration(weeklyReport.overtime),
+                              _formatDuration(weeklyOvertimeLocal),
                               style: TextStyle(
-                                  color: weeklyReport.overtime.isNegative
+                                  color: weeklyOvertimeLocal.isNegative
                                       ? Colors.red
                                       : Colors.green,
                                   fontWeight: FontWeight.bold),
@@ -554,6 +556,17 @@ class MonthlyReportView extends ConsumerWidget {
     final selectedMonth = reportsState.selectedMonth ?? DateTime.now();
     final month = DateFormat.yMMMM('de_DE')
         .format(DateTime(selectedMonth.year, selectedMonth.month));
+    // Sollstunden aus den Einstellungen (Fallback 40h/Woche => 8h/Tag)
+    final settingsState = ref.watch(settingsViewModelProvider);
+    final double weeklyTargetHours = settingsState.maybeWhen(
+      data: (s) => s.weeklyTargetHours,
+      orElse: () => 40.0,
+    );
+    final Duration dailyTarget = Duration(
+      minutes: ((weeklyTargetHours / 5.0) * 60).round(),
+    );
+    final Duration monthlyOvertimeLocal = monthlyReport.dailyWork.entries
+        .fold(Duration.zero, (sum, e) => sum + (e.value - dailyTarget));
 
     return ListView(
       padding: const EdgeInsets.all(16.0),
@@ -660,9 +673,9 @@ class MonthlyReportView extends ConsumerWidget {
                           const Text('Überstunden Monat:',
                               style: TextStyle(fontWeight: FontWeight.bold)),
                           Text(
-                            _formatDuration(monthlyReport.overtime),
+                            _formatDuration(monthlyOvertimeLocal),
                             style: TextStyle(
-                                color: monthlyReport.overtime.isNegative
+                                color: monthlyOvertimeLocal.isNegative
                                     ? Colors.red
                                     : Colors.green,
                                 fontWeight: FontWeight.bold),
