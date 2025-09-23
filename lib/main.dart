@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_work_time/app_check_initializer.dart';
 
+import 'core/config/google_sign_in_config.dart'; // Import für GoogleSignInConfig hinzugefügt
 import 'core/providers/providers.dart';
 import 'core/theme/app_theme.dart';
 import 'firebase_options.dart';
@@ -19,6 +20,13 @@ Future<void> main() async {
   // Initialisiere die Datumsformatierung für die deutsche Sprache.
   await initializeDateFormatting('de_DE', null);
   Intl.defaultLocale = 'de_DE';
+
+  // GoogleSignIn initialisieren mit dem serverClientId
+  // Dies sollte vor der Firebase-Initialisierung oder anderen Abhängigkeiten erfolgen,
+  // die möglicherweise auf ein konfiguriertes GoogleSignIn angewiesen sind.
+  await GoogleSignIn.instance.initialize(
+    serverClientId: GoogleSignInConfig.serverClientId,
+  );
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
