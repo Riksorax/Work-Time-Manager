@@ -15,6 +15,7 @@ import '../../domain/repositories/auth_repository.dart';
 import '../../domain/repositories/overtime_repository.dart';
 import '../../domain/repositories/settings_repository.dart';
 import '../../domain/repositories/work_repository.dart';
+import '../../domain/usecases/delete_account.dart';
 import '../../domain/usecases/get_auth_state_changes.dart';
 import '../../domain/usecases/get_theme_mode.dart';
 import '../../domain/usecases/get_today_work_entry.dart';
@@ -113,6 +114,9 @@ final signInWithGoogleUseCaseProvider = Provider(
 );
 final signOutUseCaseProvider = Provider(
   (ref) => SignOut(ref.watch(authRepositoryProvider)),
+);
+final deleteAccountUseCaseProvider = Provider(
+  (ref) => DeleteAccount(ref.watch(authRepositoryProvider)),
 );
 
 // --- Settings Use Cases ---

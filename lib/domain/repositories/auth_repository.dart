@@ -22,4 +22,7 @@ abstract class AuthRepository {
 
   /// Meldet den aktuellen Benutzer ab.
   Future<void> signOut();
+
+  /// Löscht den Account des aktuellen Benutzers.
+  Future<void> deleteAccount();
 }

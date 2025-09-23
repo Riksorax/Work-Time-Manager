@@ -35,6 +35,12 @@ class AuthRepositoryImpl implements AuthRepository {
     await _dataSource.signOut();
   }
 
+  /// Löscht den Account des Benutzers, indem die entsprechende Methode der Datenquelle aufgerufen wird.
+  @override
+  Future<void> deleteAccount() async {
+    await _dataSource.deleteAccount();
+  }
+
   /// Eine private Hilfsmethode, um das Mapping an einer zentralen Stelle zu halten.
   UserEntity _mapFirebaseUserToEntity(firebase.User firebaseUser) {
     return UserEntity(

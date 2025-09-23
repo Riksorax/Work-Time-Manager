@@ -121,6 +121,7 @@ class SettingsPage extends ConsumerWidget {
                           FilledButton(
                             onPressed: () {
                               Navigator.of(dialogContext).pop();
+                              ref.read(deleteAccountProvider)();
                             },
                             style: FilledButton.styleFrom(
                               backgroundColor: theme.colorScheme.error,

@@ -19,3 +19,8 @@ final signInWithGoogleProvider = Provider((ref) {
 final signOutProvider = Provider((ref) {
   return ref.watch(signOutUseCaseProvider);
 });
+
+/// Provider für die Account-Löschen-Aktion.
+final deleteAccountProvider = Provider((ref) {
+  return ref.watch(deleteAccountUseCaseProvider);
+});
