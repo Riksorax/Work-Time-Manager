@@ -50,11 +50,11 @@ jobs:
         run: |
           echo "Decoding keystore for release build..."
           # Dekodiere den Secret-Inhalt und schreibe ihn ins Projekt-Root
-          # Der Dateiname release.jks wird später im Build-Schritt über ENV_VAR verwendet.
-          echo $KEYSTORE_BASE64_SECRET | base64 --decode > release.jks
+          # Der Dateiname release.keystore wird später im Build-Schritt über ENV_VAR verwendet.
+          echo $KEYSTORE_BASE64_SECRET | base64 --decode > release.keystore
           echo "Keystore decoded successfully."
-          echo "Keystore file created at $(pwd)/release.jks" # Debug-Ausgabe
-          ls -lah release.jks # Debug-Ausgabe zur Überprüfung
+          echo "Keystore file created at $(pwd)/release.keystore" # Debug-Ausgabe
+          ls -lah release.keystore # Debug-Ausgabe zur Überprüfung
 
       # 🔹 Debugging Schritt: Überprüfe die erstellte Keystore-Datei
       # Stellt sicher, dass die Keystore-Datei erfolgreich dekodiert wurde und nicht leer ist.
@@ -62,30 +62,30 @@ jobs:
         run: |
           echo "Verifying decoded keystore file..."
           # Prüfe, ob die Datei existiert
-          if [ ! -f release.jks ]; then
-             echo "::error::Keystore file (release.jks) was not created!"
+          if [ ! -f release.keystore ]; then
+             echo "::error::Keystore file (release.keystore) was not created!"
              exit 1
           fi
           # Prüfe, ob die Datei leer ist
-          SIZE=$(stat -c%s release.jks)
+          SIZE=$(stat -c%s release.keystore)
           if [ "$SIZE" -eq 0 ]; then
-            echo "::error::Keystore file (release.jks) is empty after decoding. Check the content of the ANDROID_KEYSTORE_BASE64 secret."
+            echo "::error::Keystore file (release.keystore) is empty after decoding. Check the content of the ANDROID_KEYSTORE_BASE64 secret."
             exit 1
           fi
           echo "Keystore file size check passed ($SIZE bytes)."
           # Optional: Zeige die ersten paar Bytes zur visuellen Prüfung (KEINE PASSWÖRTER!)
-          # head -c 20 release.jks | hexdump -C
+          # head -c 20 release.keystore | hexdump -C
 
       # 🔹 Keystore in das erwartete Android-Verzeichnis verschieben
       - name: Move Keystore to android/app directory
-        run: mv release.jks android/app/release.jks
+        run: mv release.keystore android/app/release.keystore
 
       # 🔹 `key.properties` Datei im Root erstellen
       #- name: Create key.properties for Release
       #  run: |
       #    echo "Creating key.properties..."
       #    # Schreibe direkt ins Root-Verzeichnis
-      #    echo "releaseStoreFile=release-key.jks" > key.properties
+      #    echo "releaseStoreFile=release-key.keystore" > key.properties
       #   echo "releaseStorePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" >> key.properties
       #    echo "releaseKeyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" >> key.properties
       #    echo "releaseKeyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}" >> key.properties
@@ -101,7 +101,7 @@ jobs:
           # ORG_GRADLE_PROJECT_... wird vom Android Gradle Plugin gelesen,
           # um die signingConfig zu konfigurieren/überschreiben.
           # ACHTUNG: Der Pfad zum Keystore muss relativ zum Android-Modul sein (android/).
-          # Da release.jks im Projekt-Root liegt, ist der relative Pfad '../release.jks'.
+          # Da release.keystore im Projekt-Root liegt, ist der relative Pfad '../release.keystore'.
           ORG_GRADLE_PROJECT_android.signing.storeFile: release.keystore
           ORG_GRADLE_PROJECT_android.signing.storePassword: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }} # Secret für Store Password
           ORG_GRADLE_PROJECT_android.signing.keyAlias: ${{ secrets.ANDROID_KEY_ALIAS }}           # Secret für Key Alias
