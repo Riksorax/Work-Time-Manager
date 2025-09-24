@@ -1,5 +1,8 @@
 plugins {
     id "com.android.application"
+    // START: FlutterFire Configuration
+    id 'com.google.gms.google-services'
+    // END: FlutterFire Configuration
     id "kotlin-android"
     id "dev.flutter.flutter-gradle-plugin"
 }
@@ -28,12 +31,12 @@ android {
     ndkVersion flutter.ndkVersion
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = '1.8'
+        jvmTarget = '17'
     }
 
     sourceSets {
@@ -41,21 +44,41 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
+        // TODO: ÄNDERN SIE DIES! Dies muss eine einzigartige ID für Ihre App sein.
         applicationId "com.example.flutterworktime"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://docs.flutter.dev/deployment/android#reviewing-the-gradle-build-configuration.
         minSdkVersion flutter.minSdkVersion
         targetSdkVersion flutter.targetSdkVersion
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
     }
 
+    signingConfigs {
+        debug {
+            storeFile file('C:\\Users\\Frank\\.android\\debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+        release {
+            // Diese Konfiguration liest die Signatur-Details aus den Umgebungsvariablen,
+            // die in der GitHub Action gesetzt werden.
+            if (System.getenv("ORG_GRADLE_PROJECT_android.signing.storeFile") != null) {
+                storeFile file(System.getenv("ORG_GRADLE_PROJECT_android.signing.storeFile"))
+                storePassword System.getenv("ORG_GRADLE_PROJECT_android.signing.storePassword")
+                keyAlias System.getenv("ORG_GRADLE_PROJECT_android.signing.keyAlias")
+                keyPassword System.getenv("ORG_GRADLE_PROJECT_android.signing.keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig signingConfigs.debug
+            // Verwendet die oben definierte 'release' Signatur-Konfiguration.
+            signingConfig signingConfigs.release
+
+            // Aktiviert Code-Verkleinerung, Verschleierung und Optimierung für den Release-Build.
+            minifyEnabled true
+            shrinkResources true
         }
     }
 }
