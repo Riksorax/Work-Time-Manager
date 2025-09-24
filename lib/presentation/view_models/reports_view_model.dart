@@ -194,8 +194,9 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
         : Duration.zero;
 
     // Berechne die Überstunden für die Woche
-    final targetDailyHours = Duration(hours: 8); // Aus den Einstellungen holen
-    final targetWeeklyHours = Duration(hours: 8 * workDays);
+    final targetDailyHoursInDouble = _settingsRepository.getTargetWeeklyHours() / 5;
+    final targetWeeklyHoursInMicroseconds = (targetDailyHoursInDouble * workDays * Duration.microsecondsPerHour).toInt();
+    final targetWeeklyHours = Duration(microseconds: targetWeeklyHoursInMicroseconds);
     final overtime = totalNetWorkDuration - targetWeeklyHours;
 
     // Berücksichtige auch manuelle Überstunden
