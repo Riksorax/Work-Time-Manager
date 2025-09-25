@@ -26,7 +26,7 @@ if (flutterVersionName == null) {
 }
 
 android {
-    namespace "com.example.flutterworktime"
+    namespace "app.work_time_manager"
     compileSdk flutter.compileSdkVersion
     ndkVersion flutter.ndkVersion
 
@@ -45,7 +45,7 @@ android {
 
     defaultConfig {
         // TODO: ÄNDERN SIE DIES! Dies muss eine einzigartige ID für Ihre App sein.
-        applicationId "com.example.flutterworktime"
+        applicationId "app.work_time_manager"
         minSdkVersion flutter.minSdkVersion
         targetSdkVersion flutter.targetSdkVersion
         versionCode flutterVersionCode.toInteger()

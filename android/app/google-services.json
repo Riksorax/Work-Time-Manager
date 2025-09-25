@@ -7,25 +7,25 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:915742606352:android:53d65a429a75b3f121f695",
+        "mobilesdk_app_id": "1:915742606352:android:d660199171018af321f695",
         "android_client_info": {
-          "package_name": "com.example.flutterworktime"
+          "package_name": "app.work_time_manager"
         }
       },
       "oauth_client": [
         {
-          "client_id": "915742606352-2trna9bb7jjmqj6fpf22khvaj5opa6q1.apps.googleusercontent.com",
+          "client_id": "915742606352-f5ab7pk7u7e5eiadgcg5gf7klistpm6h.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.example.flutterworktime",
+            "package_name": "app.work_time_manager",
             "certificate_hash": "4c18e1b60c497584e6f8ba03006235d6cddafc37"
           }
         },
         {
-          "client_id": "915742606352-bq1fqjh62qemg3vof7v55qsd10empfnt.apps.googleusercontent.com",
+          "client_id": "915742606352-ps8djend0h7dvgnp734a4nj1kkeq677a.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.example.flutterworktime",
+            "package_name": "app.work_time_manager",
             "certificate_hash": "efc6b1df7f673ff50dd0ce3fbdd229b14917ed0c"
           }
         },
