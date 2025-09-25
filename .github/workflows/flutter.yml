@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
 
 jobs:
   build:
@@ -28,105 +25,65 @@ jobs:
         with:
           channel: 'stable'
 
-      # Schritt für 'pub get' direkt im Root ausführen
       - name: Get Flutter dependencies
         run: flutter pub get
-        # Kein working-directory nötig, läuft im Root
 
-      # Schritt für 'doctor' direkt im Root ausführen
       - name: Check Flutter Doctor
         run: flutter doctor -v
-        # Kein working-directory nötig
 
       # --- Release Build Schritte ---
-      # 🔹 Release Keystore entschlüsseln und im Root speichern
-      # Dekodiert den Base64-String des Keystores aus dem Secret und speichert ihn als Datei.
-      # Dies ist notwendig, da der Build-Prozess die Keystore-Datei benötigt.
       - name: Decode Release Keystore
-        # Dieser Schritt läuft, da der Trigger auf 'main' ist.
         env:
-          # Zugriff auf das Secret mit dem Base64-String des Keystores
           KEYSTORE_BASE64_SECRET: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
           echo "Decoding keystore for release build..."
-          # Dekodiere den Secret-Inhalt und schreibe ihn ins Projekt-Root
-          # Der Dateiname release.keystore wird später im Build-Schritt über ENV_VAR verwendet.
-          echo $KEYSTORE_BASE64_SECRET | base64 --decode > release.keystore
+          # Dekodiere den Secret-Inhalt und schreibe ihn direkt ins richtige Verzeichnis
+          echo $KEYSTORE_BASE64_SECRET | base64 --decode > android/app/release.keystore
           echo "Keystore decoded successfully."
-          echo "Keystore file created at $(pwd)/release.keystore" # Debug-Ausgabe
-          ls -lah release.keystore # Debug-Ausgabe zur Überprüfung
 
-      # 🔹 Debugging Schritt: Überprüfe die erstellte Keystore-Datei
-      # Stellt sicher, dass die Keystore-Datei erfolgreich dekodiert wurde und nicht leer ist.
       - name: Verify Decoded Keystore File
         run: |
           echo "Verifying decoded keystore file..."
-          # Prüfe, ob die Datei existiert
-          if [ ! -f release.keystore ]; then
-             echo "::error::Keystore file (release.keystore) was not created!"
+          if [ ! -f android/app/release.keystore ]; then
+             echo "::error::Keystore file (android/app/release.keystore) was not created!"
              exit 1
           fi
-          # Prüfe, ob die Datei leer ist
-          SIZE=$(stat -c%s release.keystore)
+          SIZE=$(stat -c%s android/app/release.keystore)
           if [ "$SIZE" -eq 0 ]; then
-            echo "::error::Keystore file (release.keystore) is empty after decoding. Check the content of the ANDROID_KEYSTORE_BASE64 secret."
+            echo "::error::Keystore file is empty after decoding. Check the content of the ANDROID_KEYSTORE_BASE64 secret."
             exit 1
           fi
           echo "Keystore file size check passed ($SIZE bytes)."
-          # Optional: Zeige die ersten paar Bytes zur visuellen Prüfung (KEINE PASSWÖRTER!)
-          # head -c 20 release.keystore | hexdump -C
 
-      # 🔹 Keystore in das erwartete Android-Verzeichnis verschieben
-      - name: Move Keystore to android/app directory
-        run: mv release.keystore android/app/release.keystore
-
-      # 🔹 `key.properties` Datei im Root erstellen
-      #- name: Create key.properties for Release
-      #  run: |
-      #    echo "Creating key.properties..."
-      #    # Schreibe direkt ins Root-Verzeichnis
-      #    echo "releaseStoreFile=release-key.keystore" > key.properties
-      #   echo "releaseStorePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" >> key.properties
-      #    echo "releaseKeyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" >> key.properties
-      #    echo "releaseKeyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}" >> key.properties
-      #    echo "key.properties created successfully."
-
-      # 🔹 App Bundle (Release) erstellen - unter Verwendung von Secrets als Environment Variables
-      # Dieser Schritt führt den tatsächlichen Build aus und übergibt die Signierungsdetails
-      # direkt über Umgebungsvariablen an Gradle.
+      # 🔹 App Bundle (Release) erstellen
       - name: Build Release App Bundle with Direct Credentials
-        # Dieser Schritt läuft, da der Trigger auf 'main' ist.
         env:
-          # Mappe deine Secrets zu den Standard Gradle Environment Variables
-          # ORG_GRADLE_PROJECT_... wird vom Android Gradle Plugin gelesen,
-          # um die signingConfig zu konfigurieren/überschreiben.
-          # ACHTUNG: Der Pfad zum Keystore muss relativ zum Android-Modul sein (android/).
-          # Da release.keystore im Projekt-Root liegt, ist der relative Pfad '../release.keystore'.
+          # Mappe die Secrets zu den Gradle Environment Variables
           ORG_GRADLE_PROJECT_android.signing.storeFile: release.keystore
-          ORG_GRADLE_PROJECT_android.signing.storePassword: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }} # Secret für Store Password
-          ORG_GRADLE_PROJECT_android.signing.keyAlias: ${{ secrets.ANDROID_KEY_ALIAS }}           # Secret für Key Alias
-          ORG_GRADLE_PROJECT_android.signing.keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}           # Secret für Key Password
-
-          # Optional: Mappe weitere Secrets, die dein Build benötigt (z.B. API_KEYs)
-          # API_KEY: ${{ secrets.API_KEY }}
-
+          ORG_GRADLE_PROJECT_android.signing.storePassword: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ORG_GRADLE_PROJECT_android.signing.keyAlias: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ORG_GRADLE_PROJECT_android.signing.keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           echo "Starting release appbundle build using direct credentials..."
-          # Der flutter build Befehl triggert den Gradle Build, der die Environment Variables aufnimmt.
           flutter build appbundle --release
           echo "Build command finished."
 
-      # 🔹 App Bundle im Root erstellen
-      #- name: Build Release App Bundle
-      #  run: flutter build appbundle --release
-      #  # Kein working-directory nötig
-
-      # 🔹 App Bundle als Artifact hochladen (Pfad angepasst)
+      # 🔹 App Bundle als Artifact hochladen
       - name: Upload App Bundle Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Work-Time-Manager-Release
-          # Pfad ohne das Unterverzeichnis
           path: build/app/outputs/bundle/release/app-release.aab
           if-no-files-found: error
           retention-days: 7
+
+      # 🔹 App Bundle in den Google Play Store hochladen
+      - name: Upload to Google Play
+        if: github.ref == 'refs/heads/main' # Nur ausführen, wenn auf dem main-Branch gebaut wird
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_JSON_KEY }}
+          packageName: app.work_time_manager
+          releaseFile: build/app/outputs/bundle/release/app-release.aab
+          track: internal
+          status: draft
