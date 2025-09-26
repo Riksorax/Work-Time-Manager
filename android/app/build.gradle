@@ -44,18 +44,18 @@ android {
     }
 
     defaultConfig {
-        // TODO: ÄNDERN SIE DIES! Dies muss eine einzigartige ID für Ihre App sein.
         applicationId "app.work_time_manager"
         minSdkVersion flutter.minSdkVersion
         targetSdkVersion flutter.targetSdkVersion
-        versionCode flutterVersionCode.toInteger()
+        // Prioritize environment variable for CI, otherwise use local properties.
+        versionCode System.getenv("VERSION_CODE") != null ? System.getenv("VERSION_CODE").toInteger() : flutterVersionCode.toInteger()
         versionName flutterVersionName
     }
 
     signingConfigs {
         release {
-            // Diese Konfiguration liest die Signatur-Details aus den Umgebungsvariablen,
-            // die in der GitHub Action gesetzt werden.
+            // This configuration reads the signature details from the environment variables
+            // set in the GitHub Action.
             if (System.getenv("ORG_GRADLE_PROJECT_android.signing.storeFile") != null) {
                 storeFile file(System.getenv("ORG_GRADLE_PROJECT_android.signing.storeFile"))
                 storePassword System.getenv("ORG_GRADLE_PROJECT_android.signing.storePassword")
@@ -67,10 +67,7 @@ android {
 
     buildTypes {
         release {
-            // Verwendet die oben definierte 'release' Signatur-Konfiguration.
             signingConfig signingConfigs.release
-
-            // Aktiviert Code-Verkleinerung, Verschleierung und Optimierung für den Release-Build.
             minifyEnabled true
             shrinkResources true
         }
