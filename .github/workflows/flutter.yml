@@ -58,6 +58,8 @@ jobs:
       # 🔹 App Bundle (Release) erstellen
       - name: Build Release App Bundle with Direct Credentials
         env:
+          # Setzt den versionCode dynamisch auf die Build-Nummer des Workflows
+          VERSION_CODE: ${{ github.run_number }}
           # Mappe die Secrets zu den Gradle Environment Variables
           ORG_GRADLE_PROJECT_android.signing.storeFile: release.keystore
           ORG_GRADLE_PROJECT_android.signing.storePassword: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -65,6 +67,7 @@ jobs:
           ORG_GRADLE_PROJECT_android.signing.keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           echo "Starting release appbundle build using direct credentials..."
+          # Der Build-Befehl muss nicht geändert werden, da Gradle die Variable automatisch aufnimmt
           flutter build appbundle --release
           echo "Build command finished."
 
