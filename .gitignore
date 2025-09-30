@@ -200,5 +200,6 @@ fabric.properties
 
 firebase.json
 google-services.json
+*.pem
 
 # End of https://www.toptal.com/developers/gitignore/api/flutter,androidstudio
