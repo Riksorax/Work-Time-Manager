@@ -45,7 +45,7 @@ android {
 
     defaultConfig {
         applicationId "app.work_time_manager"
-        minSdkVersion 31//flutter.minSdkVersion
+        minSdkVersion flutter.minSdkVersion
         targetSdkVersion flutter.targetSdkVersion
         // Prioritize environment variable for CI, otherwise use local properties.
         versionCode System.getenv("VERSION_CODE") != null ? System.getenv("VERSION_CODE").toInteger() : flutterVersionCode.toInteger()
