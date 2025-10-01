@@ -35,6 +35,11 @@ class DummyWorkRepository implements WorkRepository {
       manualOvertime: Duration.zero,
     );
   }
+
+  @override
+  Future<void> deleteWorkEntry(String entryId) async {
+    // Im Dummy-Repository passiert nichts
+  }
 }
 
 final reportsViewModelProvider =
@@ -80,6 +85,21 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
         weeklyReportState: _calculateWeeklyReport(now),
         monthlyReportState: _calculateMonthlyReport(),
       );
+    }
+  }
+
+  Future<void> deleteWorkEntry(String entryId) async {
+    state = state.copyWith(isLoading: true);
+    try {
+      await _workRepository.deleteWorkEntry(entryId);
+      // Nach dem Löschen die Einträge für den aktuellen Monat neu laden
+      final selectedDate = state.selectedDay ?? DateTime.now();
+      await _loadWorkEntriesForMonth(selectedDate.year, selectedDate.month);
+    } catch (e, stackTrace) {
+      print('Fehler beim Löschen des Arbeitseintrags: $e');
+      print('Stacktrace: $stackTrace');
+      // Setze den Ladezustand zurück, auch wenn ein Fehler auftritt
+      state = state.copyWith(isLoading: false);
     }
   }
 

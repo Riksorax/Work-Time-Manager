@@ -38,7 +38,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
     super.dispose();
   }
 
-  void _showEditWorkEntryModal(WorkEntryEntity entry) {
+  void _showEditWorkEntryModal(WorkEntryEntity entry, BuildContext context) {
     // Anwenden der automatischen Pausenberechnung vor dem Anzeigen des Modals
     final entryWithCalculatedBreaks = ref
         .read(reportsViewModelProvider.notifier)
@@ -47,12 +47,15 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) =>
+      builder: (ctx) =>
           EditWorkEntryModal(workEntry: entryWithCalculatedBreaks),
     ).then((_) {
-      ref
-          .read(reportsViewModelProvider.notifier)
-          .onMonthChanged(DateTime.now());
+      // Stelle sicher, dass `mounted` geprüft wird, bevor auf `ref` zugegriffen wird.
+      if (mounted) {
+        ref
+            .read(reportsViewModelProvider.notifier)
+            .onMonthChanged(ref.read(reportsViewModelProvider).selectedDay ?? DateTime.now());
+      }
     });
   }
 
@@ -73,7 +76,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
       body: TabBarView(
         controller: _tabController,
         children: [
-          DailyReportView(onEntryTap: _showEditWorkEntryModal),
+          DailyReportView(onEntryTap: (entry) => _showEditWorkEntryModal(entry, context)),
           const WeeklyReportView(),
           const MonthlyReportView(),
         ],
@@ -95,6 +98,36 @@ class DailyReportView extends ConsumerWidget {
     final minutes = twoDigits(absDuration.inMinutes.remainder(60));
     final sign = isNegative ? '-' : '+';
     return '$sign$hours:$minutes';
+  }
+
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref, WorkEntryEntity entry) async {
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Eintrag löschen?'),
+          content: const Text('Möchten Sie diesen Arbeitseintrag wirklich löschen?'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Abbrechen'),
+              onPressed: () {
+                Navigator.of(dialogContext).pop(false);
+              },
+            ),
+            TextButton(
+              child: const Text('Löschen'),
+              onPressed: () {
+                Navigator.of(dialogContext).pop(true);
+              },
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true) {
+      await ref.read(reportsViewModelProvider.notifier).deleteWorkEntry(entry.id);
+    }
   }
 
   @override
@@ -265,62 +298,67 @@ class DailyReportView extends ConsumerWidget {
                     }
                   }
 
-                  return GestureDetector(
-                    onTap: () => onEntryTap(entry),
-                    child: Card(
-                      margin: const EdgeInsets.symmetric(vertical: 4.0),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'Arbeitszeit: ${workedDuration.toString().split('.').first}',
-                                  style:
-                                      Theme.of(context).textTheme.titleMedium,
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.edit),
-                                  onPressed: () => onEntryTap(entry),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                                'Start: ${displayEntry.workStart != null ? DateFormat('HH:mm').format(displayEntry.workStart!) : '-'}'),
-                            Text(
-                                'Ende: ${displayEntry.workEnd != null ? DateFormat('HH:mm').format(displayEntry.workEnd!) : 'läuft...'}'),
-                            Text(
-                                'Pause: ${displayEntry.totalBreakDuration.toString().split('.').first}'),
-                            if (displayEntry.manualOvertime != null)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 8.0),
-                                child: Text(
-                                    'Manuelle Anpassung: ${displayEntry.manualOvertime.toString().split('.').first}'),
+                  return Card(
+                    margin: const EdgeInsets.symmetric(vertical: 4.0),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Arbeitszeit: ${workedDuration.toString().split('.').first}',
+                                style:
+                                    Theme.of(context).textTheme.titleMedium,
                               ),
-                            // Berechnete Überstunden anzeigen (mit dynamischen Sollstunden)
+                              Row(
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.edit),
+                                    onPressed: () => onEntryTap(entry),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete),
+                                    onPressed: () => _confirmDelete(context, ref, entry),
+                                  ),
+                                ],
+                              )
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                              'Start: ${displayEntry.workStart != null ? DateFormat('HH:mm').format(displayEntry.workStart!) : '-'}'),
+                          Text(
+                              'Ende: ${displayEntry.workEnd != null ? DateFormat('HH:mm').format(displayEntry.workEnd!) : 'läuft...'}'),
+                          Text(
+                              'Pause: ${displayEntry.totalBreakDuration.toString().split('.').first}'),
+                          if (displayEntry.manualOvertime != null)
                             Padding(
                               padding: const EdgeInsets.only(top: 8.0),
                               child: Text(
-                                dailyTarget != null
-                                    ? 'Überstunden: ${_formatDuration(displayEntry.calculateOvertime(dailyTarget!))}'
-                                    : 'Überstunden: —',
-                                style: TextStyle(
-                                    color: dailyTarget != null
-                                        ? (displayEntry
-                                                .calculateOvertime(dailyTarget!)
-                                                .isNegative
-                                            ? Colors.red
-                                            : Colors.green)
-                                        : Colors.grey,
-                                    fontWeight: FontWeight.bold),
-                              ),
+                                  'Manuelle Anpassung: ${displayEntry.manualOvertime.toString().split('.').first}'),
                             ),
-                          ],
-                        ),
+                          // Berechnete Überstunden anzeigen (mit dynamischen Sollstunden)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: Text(
+                              dailyTarget != null
+                                  ? 'Überstunden: ${_formatDuration(displayEntry.calculateOvertime(dailyTarget!))}'
+                                  : 'Überstunden: —',
+                              style: TextStyle(
+                                  color: dailyTarget != null
+                                      ? (displayEntry
+                                              .calculateOvertime(dailyTarget!)
+                                              .isNegative
+                                          ? Colors.red
+                                          : Colors.green)
+                                      : Colors.grey,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   );
@@ -506,11 +544,7 @@ class WeeklyReportView extends ConsumerWidget {
                   return GestureDetector(
                     onTap: () {
                       reportsNotifier.selectDate(date);
-                      showModalBottomSheet(
-                        context: context,
-                        isScrollControlled: true,
-                        builder: (_) => DayEntriesBottomSheet(date: date),
-                      );
+                      _showDayEntriesBottomSheet(context, ref, date);
                     },
                     child: Card(
                       child: ListTile(
@@ -527,6 +561,16 @@ class WeeklyReportView extends ConsumerWidget {
       ),
     );
   }
+}
+
+void _showDayEntriesBottomSheet(BuildContext context, WidgetRef ref, DateTime date) {
+  // Ensure the selected day's data is loaded/updated for the bottom sheet
+  ref.read(reportsViewModelProvider.notifier).selectDate(date);
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    builder: (_) => DayEntriesBottomSheet(date: date),
+  );
 }
 
 class MonthlyReportView extends ConsumerWidget {
@@ -726,12 +770,7 @@ class MonthlyReportView extends ConsumerWidget {
                 final duration = entry.value;
                 return GestureDetector(
                   onTap: () {
-                    reportsNotifier.selectDate(date);
-                    showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      builder: (_) => DayEntriesBottomSheet(date: date),
-                    );
+                     _showDayEntriesBottomSheet(context, ref, date);
                   },
                   child: Card(
                     margin: const EdgeInsets.symmetric(vertical: 4.0),
@@ -863,29 +902,85 @@ class _DayEntriesBottomSheetState
   void initState() {
     super.initState();
     // Sicherstellen, dass der ausgewählte Tag geladen ist
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(reportsViewModelProvider.notifier).selectDate(widget.date);
-    });
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+    //   ref.read(reportsViewModelProvider.notifier).selectDate(widget.date);
+    // });
   }
 
   void _openEdit(WorkEntryEntity entry) {
     final entryWithCalculatedBreaks =
         ref.read(reportsViewModelProvider.notifier).applyBreakCalculation(entry);
 
+    // Schließe das aktuelle BottomSheet, bevor das neue geöffnet wird.
+    Navigator.of(context).pop(); 
+
     showModalBottomSheet(
-      context: context,
+      context: context, // Verwende den äußeren Kontext
       isScrollControlled: true,
-      builder: (context) =>
+      builder: (ctx) => // Neuer Kontext für das Modal
           EditWorkEntryModal(workEntry: entryWithCalculatedBreaks),
     ).then((_) {
-      // Nach dem Schließen neu laden
-      ref.read(reportsViewModelProvider.notifier).selectDate(widget.date);
+      // Nach dem Schließen neu laden, wenn das Widget noch gemounted ist.
+      if (mounted) {
+         ref.read(reportsViewModelProvider.notifier).selectDate(widget.date);
+      }
     });
+  }
+
+  Future<void> _confirmDelete(BuildContext btmSheetItemContext, WidgetRef ref, WorkEntryEntity entry) async {
+    final bool? confirmed = await showDialog<bool>(
+      context: btmSheetItemContext, // Kontext vom IconButton
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Eintrag löschen?'),
+          content: const Text('Möchten Sie diesen Arbeitseintrag wirklich löschen?'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Abbrechen'),
+              onPressed: () {
+                if (Navigator.of(dialogContext).canPop()) {
+                    Navigator.of(dialogContext).pop(false);
+                }
+              },
+            ),
+            TextButton(
+              child: const Text('Löschen'),
+              onPressed: () {
+                 if (Navigator.of(dialogContext).canPop()) {
+                    Navigator.of(dialogContext).pop(true);
+                 }
+              },
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true) {
+      await ref.read(reportsViewModelProvider.notifier).deleteWorkEntry(entry.id);
+      // Verwende this.context, um das DayEntriesBottomSheet sicher zu schließen.
+      if (mounted) {
+        Navigator.of(this.context).pop(); 
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final reportsState = ref.watch(reportsViewModelProvider);
+     // Explizit `selectDate` aufrufen, wenn das Widget gebaut wird, um sicherzustellen,
+    // dass die Daten für `widget.date` geladen sind, falls sie nicht schon sind.
+    // Dies sollte idealerweise in initState geschehen, aber da `ref` dort nicht direkt
+    // für Notifier-Aufrufe verwendet werden sollte ohne addPostFrameCallback, ist dies ein Workaround.
+    // Für eine robustere Lösung könnte man den Ladevorgang anders strukturieren.
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+    //   if (mounted) { // Ensure widget is still in the tree
+    //     final currentSelectedDay = ref.read(reportsViewModelProvider).selectedDay;
+    //     if (currentSelectedDay == null || !DateUtils.isSameDay(currentSelectedDay, widget.date)) {
+    //        ref.read(reportsViewModelProvider.notifier).selectDate(widget.date);
+    //     }
+    //   }
+    // });
 
     if (reportsState.isLoading) {
       return const Padding(
@@ -894,8 +989,13 @@ class _DayEntriesBottomSheetState
       );
     }
 
-    final dailyReport = reportsState.dailyReportState;
-    final entries = dailyReport.entries;
+    // Filtere die Einträge für das spezifische Datum dieses BottomSheets.
+    // Dies ist notwendig, da reportsState.dailyReportState den Zustand des global
+    // ausgewählten Tages im ViewModel widerspiegelt, nicht unbedingt widget.date.
+    final entriesForSheetDate = reportsState.dailyReportState.entries
+        .where((entry) => DateUtils.isSameDay(entry.date, widget.date))
+        .toList();
+
 
     return SafeArea(
       child: DraggableScrollableSheet(
@@ -930,7 +1030,7 @@ class _DayEntriesBottomSheetState
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 12),
-                if (entries.isEmpty)
+                if (entriesForSheetDate.isEmpty)
                   const Expanded(
                     child: Center(child: Text('Keine Einträge für diesen Tag.')),
                   )
@@ -938,9 +1038,9 @@ class _DayEntriesBottomSheetState
                   Expanded(
                     child: ListView.builder(
                       controller: controller,
-                      itemCount: entries.length,
+                      itemCount: entriesForSheetDate.length,
                       itemBuilder: (context, index) {
-                        final entry = entries[index];
+                        final entry = entriesForSheetDate[index];
                         final displayEntry = ref
                             .read(reportsViewModelProvider.notifier)
                             .applyBreakCalculation(entry);
@@ -987,9 +1087,18 @@ class _DayEntriesBottomSheetState
                                       'Manuelle Anpassung: ${displayEntry.manualOvertime.toString().split('.').first}'),
                               ],
                             ),
-                            trailing: IconButton(
-                              icon: const Icon(Icons.edit),
-                              onPressed: () => _openEdit(entry),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.edit),
+                                  onPressed: () => _openEdit(entry),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete),
+                                  onPressed: () => _confirmDelete(context, ref, entry),
+                                ),
+                              ],
                             ),
                           ),
                         );

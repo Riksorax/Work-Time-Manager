@@ -36,6 +36,11 @@ class NoOpWorkRepository implements WorkRepository {
 
   @override
   Future<void> saveWorkEntry(WorkEntryEntity entry) async {}
+
+  @override
+  Future<void> deleteWorkEntry(String entryId) async {
+    // No-op
+  }
 }
 
 class NoOpOvertimeRepository implements OvertimeRepository {

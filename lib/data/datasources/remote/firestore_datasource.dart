@@ -34,6 +34,9 @@ abstract class FirestoreDataSource {
       int year,
       int month,
       );
+
+  /// Löscht einen Arbeitseintrag für einen bestimmten Benutzer anhand der Eintrags-ID.
+  Future<void> deleteWorkEntry(String userId, String entryId);
 }
 
 /// Die konkrete Implementierung der FirestoreDataSource.
@@ -215,5 +218,11 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
 
     // Wandle die resultierenden Dokumente in eine Liste von Models um.
     return querySnapshot.docs.map((doc) => WorkEntryModel.fromFirestore(doc)).toList();
+  }
+
+  @override
+  Future<void> deleteWorkEntry(String userId, String entryId) async {
+    final docRef = _getWorkEntryDocRef(userId, entryId);
+    await docRef.delete();
   }
 }
