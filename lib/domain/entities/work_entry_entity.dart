@@ -11,6 +11,8 @@ class WorkEntryEntity extends Equatable {
   final DateTime? workEnd;
   final List<BreakEntity> breaks;
   final Duration? manualOvertime;
+  final bool isManuallyEntered;
+  final String? description; // Added
 
   const WorkEntryEntity({
     required this.id,
@@ -19,6 +21,8 @@ class WorkEntryEntity extends Equatable {
     this.workEnd,
     this.breaks = const [],
     this.manualOvertime,
+    this.isManuallyEntered = false,
+    this.description, // Added
   });
 
   /// Die gesamte Pausenzeit für diesen Arbeitseintrag.
@@ -53,6 +57,8 @@ class WorkEntryEntity extends Equatable {
     DateTime? workEnd,
     List<BreakEntity>? breaks,
     Duration? manualOvertime,
+    bool? isManuallyEntered,
+    String? description, // Added
   }) {
     return WorkEntryEntity(
       id: id ?? this.id,
@@ -61,6 +67,8 @@ class WorkEntryEntity extends Equatable {
       workEnd: workEnd ?? this.workEnd,
       breaks: breaks ?? this.breaks,
       manualOvertime: manualOvertime ?? this.manualOvertime,
+      isManuallyEntered: isManuallyEntered ?? this.isManuallyEntered,
+      description: description ?? this.description, // Added
     );
   }
 
@@ -72,6 +80,7 @@ class WorkEntryEntity extends Equatable {
         workEnd,
         breaks,
         manualOvertime,
-        effectiveWorkDuration,
+        isManuallyEntered,
+        description, // Added
       ];
 }
