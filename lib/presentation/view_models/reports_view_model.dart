@@ -92,6 +92,19 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
       monthlyReportState: _calculateMonthlyReport(),
     );
   }
+  
+  Future<void> saveWorkEntry(WorkEntryEntity entry) async {
+    state = state.copyWith(isLoading: true);
+    try {
+      await _workRepository.saveWorkEntry(entry);
+      final selectedDate = state.selectedDay ?? DateTime.now();
+      await _loadWorkEntriesForMonth(selectedDate.year, selectedDate.month);
+    } catch (e, stackTrace) {
+      print('Fehler beim Speichern des Arbeitseintrags: $e');
+      print('Stacktrace: $stackTrace');
+      state = state.copyWith(isLoading: false);
+    }
+  }
 
   Future<void> deleteWorkEntry(String entryId) async {
     state = state.copyWith(isLoading: true);
@@ -134,12 +147,13 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
   }
 
   void onMonthChanged(DateTime newMonth) {
-    // Wähle einen repräsentativen Tag im neuen Monat, z.B. den ersten.
-    // selectedDay muss ein Tag im neuen Monat sein, damit die Logik korrekt funktioniert.
-    final dayToSelectInNewMonth = DateTime(newMonth.year, newMonth.month, 1);
-
+    // Normalisiere den Monat auf den ersten Tag, um Konsistenz zu gewährleisten.
+    final normalizedMonth = DateTime(newMonth.year, newMonth.month, 1);
+    
+    // Setze den ausgewählten Tag auf den ersten des neuen Monats.
     state = state.copyWith(
-        selectedMonth: newMonth, selectedDay: dayToSelectInNewMonth);
+        selectedMonth: normalizedMonth, 
+        selectedDay: normalizedMonth);
     _loadWorkEntriesForMonth(newMonth.year, newMonth.month);
   }
 
@@ -201,12 +215,17 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
   }
 
   WeeklyReportState _calculateWeeklyReport(DateTime date) {
-    final startOfWeek = date.subtract(Duration(days: date.weekday - 1));
+    // Normalize date to midnight to avoid time-of-day issues in week calculation
+    final reportDate = DateTime(date.year, date.month, date.day);
+    final startOfWeek = reportDate.subtract(Duration(days: reportDate.weekday - 1));
     final endOfWeek = startOfWeek.add(const Duration(days: 6));
-    final entriesForWeek = _monthlyEntries
-        .where((entry) =>
-            !entry.date.isBefore(startOfWeek) && !entry.date.isAfter(endOfWeek))
-        .toList();
+
+    final entriesForWeek = _monthlyEntries.where((entry) {
+      // Normalize entry date to midnight for correct comparison.
+      final entryDate = DateTime(entry.date.year, entry.date.month, entry.date.day);
+      // Check if the entry date is within the week range (inclusive).
+      return !entryDate.isBefore(startOfWeek) && !entryDate.isAfter(endOfWeek);
+    }).toList();
 
     final totalWorkDuration = entriesForWeek.fold<Duration>(
         Duration.zero, (prev, e) => prev + e.effectiveWorkDuration);

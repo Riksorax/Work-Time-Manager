@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:uuid/uuid.dart'; // Import for generating unique IDs
 
 import '../../domain/entities/work_entry_extensions.dart';
 import '../view_models/reports_view_model.dart';
@@ -27,9 +26,10 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
     _tabController = TabController(length: 3, vsync: this);
     // Initiale Daten laden
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      final now = DateTime.now();
       ref
           .read(reportsViewModelProvider.notifier)
-          .onMonthChanged(DateTime.now());
+          .onMonthChanged(DateTime(now.year, now.month, 1));
     });
   }
 
@@ -49,13 +49,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
       isScrollControlled: true,
       builder: (ctx) =>
           EditWorkEntryModal(workEntry: entryWithCalculatedBreaks),
-    ).then((_) {
-      if (mounted) {
-        ref
-            .read(reportsViewModelProvider.notifier)
-            .onMonthChanged(ref.read(reportsViewModelProvider).selectedDay ?? DateTime.now());
-      }
-    });
+    );
   }
 
   @override
@@ -151,12 +145,13 @@ class DailyReportView extends ConsumerWidget {
 
     final dailyReport = reportsState.dailyReportState; // Entries for the selected day
     final selectedDay = reportsState.selectedDay ?? DateTime.now();
+    final selectedMonth = reportsState.selectedMonth ?? DateTime.now();
 
     // Ermitteln der Tage mit Einträgen für den aktuellen Kalendermonat
     final Set<int> daysWithEntriesInMonth = reportsState.monthlyReportState.dailyWork.keys
         .where((date) =>
-            date.year == selectedDay.year && // Filter for the year of the currently displayed month in calendar
-            date.month == selectedDay.month) // Filter for the month of the currently displayed month in calendar
+            date.year == selectedMonth.year && // Korrektur: Filtere nach dem angezeigten Monat
+            date.month == selectedMonth.month) 
         .map((date) => date.day)
         .toSet();
 
@@ -196,10 +191,16 @@ class DailyReportView extends ConsumerWidget {
         _Calendar(
           selectedDate: selectedDay,
           onDateSelected: (date) => reportsNotifier.selectDate(date),
-          onPreviousMonthTapped: () => reportsNotifier.onMonthChanged(
-              DateTime(selectedDay.year, selectedDay.month - 1, 1)),
-          onNextMonthTapped: () => reportsNotifier.onMonthChanged(
-              DateTime(selectedDay.year, selectedDay.month + 1, 1)),
+          onPreviousMonthTapped: () {
+            final currentMonth = reportsState.selectedMonth ?? DateTime.now();
+            reportsNotifier.onMonthChanged(
+                DateTime(currentMonth.year, currentMonth.month - 1, 1));
+          },
+          onNextMonthTapped: () {
+            final currentMonth = reportsState.selectedMonth ?? DateTime.now();
+            reportsNotifier.onMonthChanged(
+                DateTime(currentMonth.year, currentMonth.month + 1, 1));
+          },
           daysWithEntries: daysWithEntriesInMonth, // Pass the correctly calculated set
         ),
         Padding(
@@ -228,7 +229,7 @@ class DailyReportView extends ConsumerWidget {
                             child: ElevatedButton(
                               onPressed: () {
                                 final newEntry = WorkEntryEntity(
-                                  id: const Uuid().v4(),
+                                  id: DateFormat('yyyy-MM-dd').format(selectedDay),
                                   date: selectedDay,
                                   workStart: null,
                                   workEnd: null,
@@ -360,16 +361,20 @@ class DailyReportView extends ConsumerWidget {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                              'Start: ${displayEntry.workStart != null ? DateFormat('HH:mm').format(displayEntry.workStart!) : '-'}'),
+                              'Start: ${displayEntry.workStart != null ? DateFormat('HH:mm').format(displayEntry.workStart!) : '-'}'
+                          ),
                           Text(
-                              'Ende: ${displayEntry.workEnd != null ? DateFormat('HH:mm').format(displayEntry.workEnd!) : 'läuft...'}'),
+                              'Ende: ${displayEntry.workEnd != null ? DateFormat('HH:mm').format(displayEntry.workEnd!) : 'läuft...'}'
+                          ),
                           Text(
-                              'Pause: ${displayEntry.totalBreakDuration.toString().split('.').first}'),
+                              'Pause: ${displayEntry.totalBreakDuration.toString().split('.').first}'
+                          ),
                           if (displayEntry.manualOvertime != null)
                             Padding(
                               padding: const EdgeInsets.only(top: 8.0),
                               child: Text(
-                                  'Manuelle Anpassung: ${displayEntry.manualOvertime.toString().split('.').first}'),
+                                  'Manuelle Anpassung: ${displayEntry.manualOvertime.toString().split('.').first}'
+                              ),
                             ),
                           Padding(
                             padding: const EdgeInsets.only(top: 8.0),
@@ -536,7 +541,7 @@ class WeeklyReportView extends ConsumerWidget {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             const Text('Ø Arbeitszeit pro Tag:'),
-                            Text(weeklyReport.avgWorkDurationPerDay
+                            Text(weeklyReport.averageWorkDuration
                                 .toString()
                                 .split('.')
                                 .first),
@@ -647,7 +652,7 @@ class MonthlyReportView extends ConsumerWidget {
             IconButton(
               icon: const Icon(Icons.chevron_left),
               onPressed: () => reportsNotifier.onMonthChanged(
-                  DateTime(selectedMonth.year, selectedMonth.month - 1)),
+                  DateTime(selectedMonth.year, selectedMonth.month - 1, 1)),
               tooltip: 'Vorheriger Monat',
             ),
             Expanded(
@@ -662,7 +667,7 @@ class MonthlyReportView extends ConsumerWidget {
             IconButton(
               icon: const Icon(Icons.chevron_right),
               onPressed: () => reportsNotifier.onMonthChanged(
-                  DateTime(selectedMonth.year, selectedMonth.month + 1)),
+                  DateTime(selectedMonth.year, selectedMonth.month + 1, 1)),
               tooltip: 'Nächster Monat',
             ),
           ],
@@ -719,7 +724,7 @@ class MonthlyReportView extends ConsumerWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           const Text('Ø Arbeitszeit pro Tag:'),
-                          Text(monthlyReport.avgWorkDurationPerDay
+                          Text(monthlyReport.averageWorkDuration
                               .toString()
                               .split('.')
                               .first),
@@ -926,7 +931,7 @@ class _Calendar extends StatelessWidget {
                           width: 5,
                           height: 5,
                           decoration: BoxDecoration(
-                            color: isSelected ? Colors.white70 : Theme.of(context).primaryColor.withOpacity(0.7),
+                            color: isSelected ? Colors.white70 : Theme.of(context).colorScheme.secondary,
                             shape: BoxShape.circle,
                           ),
                         ),
@@ -995,11 +1000,7 @@ class _DayEntriesBottomSheetState
       isScrollControlled: true,
       builder: (ctx) =>
           EditWorkEntryModal(workEntry: entryWithCalculatedBreaks),
-    ).then((_) {
-      if (mounted) {
-         ref.read(reportsViewModelProvider.notifier).selectDate(widget.date);
-      }
-    });
+    );
   }
 
   Future<void> _confirmDelete(BuildContext btmSheetItemContext, WidgetRef ref, WorkEntryEntity entry) async {
@@ -1104,7 +1105,7 @@ class _DayEntriesBottomSheetState
                                 child: ElevatedButton(
                                   onPressed: () {
                                     final newEntry = WorkEntryEntity(
-                                      id: const Uuid().v4(),
+                                      id: DateFormat('yyyy-MM-dd').format(widget.date),
                                       date: widget.date, 
                                       workStart: null,
                                       workEnd: null,
@@ -1169,14 +1170,18 @@ class _DayEntriesBottomSheetState
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                    'Start: ${start != null ? DateFormat('HH:mm').format(start) : '-'}'),
+                                    'Start: ${start != null ? DateFormat('HH:mm').format(start) : '-'}'
+                                ),
                                 Text(
-                                    'Ende: ${displayEntry.workEnd != null ? DateFormat('HH:mm').format(displayEntry.workEnd!) : 'läuft...'}'),
+                                    'Ende: ${displayEntry.workEnd != null ? DateFormat('HH:mm').format(displayEntry.workEnd!) : 'läuft...'}'
+                                ),
                                 Text(
-                                    'Pause: ${displayEntry.totalBreakDuration.toString().split('.').first}'),
+                                    'Pause: ${displayEntry.totalBreakDuration.toString().split('.').first}'
+                                ),
                                 if (displayEntry.manualOvertime != null)
                                   Text(
-                                      'Manuelle Anpassung: ${displayEntry.manualOvertime.toString().split('.').first}'),
+                                      'Manuelle Anpassung: ${displayEntry.manualOvertime.toString().split('.').first}'
+                                  ),
                               ],
                             ),
                             trailing: Row(
