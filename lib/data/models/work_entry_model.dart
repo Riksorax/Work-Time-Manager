@@ -85,8 +85,8 @@ class WorkEntryModel extends WorkEntryEntity {
   /// in die Datenbank.
   Map<String, dynamic> toFirestore() {
     return {
-      // Wir speichern das Datum ohne Zeitkomponente als Timestamp.
-      'date': Timestamp.fromDate(DateUtils.dateOnly(date)),
+      // Wir speichern das Datum als UTC-Timestamp, um Zeitzonenprobleme zu vermeiden.
+      'date': Timestamp.fromDate(DateTime.utc(date.year, date.month, date.day)),
       // Konvertiere DateTime? in Firestore Timestamp?.
       'workStart': workStart != null ? Timestamp.fromDate(workStart!) : null,
       'workEnd': workEnd != null ? Timestamp.fromDate(workEnd!) : null,
