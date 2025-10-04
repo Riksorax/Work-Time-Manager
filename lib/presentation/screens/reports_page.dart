@@ -26,9 +26,10 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
     _tabController = TabController(length: 3, vsync: this);
     // Initiale Daten laden
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      final now = DateTime.now();
       ref
           .read(reportsViewModelProvider.notifier)
-          .onMonthChanged(DateTime.now());
+          .onMonthChanged(DateTime(now.year, now.month, 1));
     });
   }
 
@@ -38,8 +39,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
     super.dispose();
   }
 
-  void _showEditWorkEntryModal(WorkEntryEntity entry) {
-    // Anwenden der automatischen Pausenberechnung vor dem Anzeigen des Modals
+  void _showEditWorkEntryModal(WorkEntryEntity entry, BuildContext context) {
     final entryWithCalculatedBreaks = ref
         .read(reportsViewModelProvider.notifier)
         .applyBreakCalculation(entry);
@@ -47,13 +47,9 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) =>
+      builder: (ctx) =>
           EditWorkEntryModal(workEntry: entryWithCalculatedBreaks),
-    ).then((_) {
-      ref
-          .read(reportsViewModelProvider.notifier)
-          .onMonthChanged(DateTime.now());
-    });
+    );
   }
 
   @override
@@ -73,7 +69,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
       body: TabBarView(
         controller: _tabController,
         children: [
-          DailyReportView(onEntryTap: _showEditWorkEntryModal),
+          DailyReportView(onEntryTap: (entry) => _showEditWorkEntryModal(entry, context)),
           const WeeklyReportView(),
           const MonthlyReportView(),
         ],
@@ -86,7 +82,6 @@ class DailyReportView extends ConsumerWidget {
   final Function(WorkEntryEntity) onEntryTap;
   const DailyReportView({required this.onEntryTap, super.key});
 
-  // Hilfsmethode zum Formatieren der Dauer mit Vorzeichen
   String _formatDuration(Duration duration) {
     final bool isNegative = duration.isNegative;
     final Duration absDuration = duration.abs();
@@ -97,12 +92,41 @@ class DailyReportView extends ConsumerWidget {
     return '$sign$hours:$minutes';
   }
 
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref, WorkEntryEntity entry) async {
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Eintrag löschen?'),
+          content: const Text('Möchten Sie diesen Arbeitseintrag wirklich löschen?'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Abbrechen'),
+              onPressed: () {
+                Navigator.of(dialogContext).pop(false);
+              },
+            ),
+            TextButton(
+              child: const Text('Löschen'),
+              onPressed: () {
+                Navigator.of(dialogContext).pop(true);
+              },
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true) {
+      await ref.read(reportsViewModelProvider.notifier).deleteWorkEntry(entry.id);
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final reportsState = ref.watch(reportsViewModelProvider);
     final reportsNotifier = ref.read(reportsViewModelProvider.notifier);
 
-    // Sollstunden ausschließlich aus den Einstellungen; kein 8h-Fallback
     final settingsState = ref.watch(settingsViewModelProvider);
     Duration? dailyTarget;
     settingsState.when(
@@ -119,18 +143,28 @@ class DailyReportView extends ConsumerWidget {
       return const LoadingIndicator();
     }
 
-    final dailyReport = reportsState.dailyReportState;
+    final dailyReport = reportsState.dailyReportState; // Entries for the selected day
+    final selectedDay = reportsState.selectedDay ?? DateTime.now();
+    final selectedMonth = reportsState.selectedMonth ?? DateTime.now();
 
-    // Tageswerte aggregiert berechnen
+    // Ermitteln der Tage mit Einträgen für den aktuellen Kalendermonat
+    final Set<int> daysWithEntriesInMonth = reportsState.monthlyReportState.dailyWork.keys
+        .where((date) =>
+            date.year == selectedMonth.year && // Korrektur: Filtere nach dem angezeigten Monat
+            date.month == selectedMonth.month) 
+        .map((date) => date.day)
+        .toSet();
+
     Duration totalWorked = Duration.zero;
     Duration totalManualAdjustment = Duration.zero;
-    for (final e in dailyReport.entries) {
+    // Calculate total worked for the *selected day* (for the summary below the calendar)
+    // This uses dailyReport.entries which should be specific to the selectedDay
+    for (final e in dailyReport.entries) { 
       final dE =
           ref.read(reportsViewModelProvider.notifier).applyBreakCalculation(e);
       final DateTime? start = dE.workStart;
       final DateTime? end = dE.workEnd ?? DateTime.now();
       if (start != null && end != null) {
-        // Laufende/überlappende Pausen auf Arbeitsintervall begrenzen
         Duration breakDur = Duration.zero;
         for (final b in dE.breaks) {
           final DateTime bStart = b.start;
@@ -155,8 +189,19 @@ class DailyReportView extends ConsumerWidget {
     return ListView(
       children: [
         _Calendar(
-          selectedDate: reportsState.selectedDay ?? DateTime.now(),
+          selectedDate: selectedDay,
           onDateSelected: (date) => reportsNotifier.selectDate(date),
+          onPreviousMonthTapped: () {
+            final currentMonth = reportsState.selectedMonth ?? DateTime.now();
+            reportsNotifier.onMonthChanged(
+                DateTime(currentMonth.year, currentMonth.month - 1, 1));
+          },
+          onNextMonthTapped: () {
+            final currentMonth = reportsState.selectedMonth ?? DateTime.now();
+            reportsNotifier.onMonthChanged(
+                DateTime(currentMonth.year, currentMonth.month + 1, 1));
+          },
+          daysWithEntries: daysWithEntriesInMonth, // Pass the correctly calculated set
         ),
         Padding(
           padding: const EdgeInsets.all(16.0),
@@ -164,14 +209,48 @@ class DailyReportView extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Tagesbericht für ${DateFormat.yMMMMd('de_DE').format(reportsState.selectedDay ?? DateTime.now())}',
+                'Tagesbericht für ${DateFormat.yMMMMd('de_DE').format(selectedDay)}',
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 16),
               if (dailyReport.entries.isEmpty)
-                const Center(child: Text('Keine Daten für diesen Tag.'))
+                Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text('Keine Daten für diesen Tag.'),
+                      Builder(builder: (context) {
+                        final today = DateUtils.dateOnly(DateTime.now());
+                        final selectedDateOnly = DateUtils.dateOnly(selectedDay);
+
+                        if (selectedDateOnly.isBefore(today)) {
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 16.0),
+                            child: ElevatedButton(
+                              onPressed: () {
+                                final newEntry = WorkEntryEntity(
+                                  id: DateFormat('yyyy-MM-dd').format(selectedDay),
+                                  date: selectedDay,
+                                  workStart: null,
+                                  workEnd: null,
+                                  breaks: [],
+                                  isManuallyEntered: true,
+                                  description: null,
+                                  manualOvertime: null,
+                                );
+                                onEntryTap(newEntry);
+                              },
+                              child: const Text('Eintrag hinzufügen'),
+                            ),
+                          );
+                        } else {
+                          return const SizedBox.shrink();
+                        }
+                      }),
+                    ],
+                  ),
+                )
               else ...[
-                // Tageszusammenfassung
                 Card(
                   margin: const EdgeInsets.only(bottom: 12.0),
                   child: Padding(
@@ -227,14 +306,10 @@ class DailyReportView extends ConsumerWidget {
                     ),
                   ),
                 ),
-                // Eintragsliste
                 ...dailyReport.entries.map((entry) {
-                  // Automatische Pausen für die Darstellung berücksichtigen
                   final displayEntry = ref
                       .read(reportsViewModelProvider.notifier)
                       .applyBreakCalculation(entry);
-                  // Arbeitszeit ohne Sollstunden: (Ende − Start − Pausen)
-                  // Korrektur: Bei fehlendem Ende bis "jetzt" rechnen und laufende Pausen berücksichtigen
                   final DateTime? _start = displayEntry.workStart;
                   final DateTime? _end = displayEntry.workEnd ?? DateTime.now();
                   Duration _breakDuration = Duration.zero;
@@ -242,7 +317,6 @@ class DailyReportView extends ConsumerWidget {
                     for (final b in displayEntry.breaks) {
                       final DateTime bStart = b.start;
                       final DateTime bEnd = b.end ?? _end;
-                      // Auf das Arbeitszeitintervall begrenzen
                       final DateTime effStart =
                           bStart.isBefore(_start) ? _start : bStart;
                       final DateTime effEnd = bEnd.isAfter(_end) ? _end : bEnd;
@@ -256,71 +330,70 @@ class DailyReportView extends ConsumerWidget {
                           ? _end.difference(_start) - _breakDuration
                           : Duration.zero;
 
-                  // Überstunden/Saldo: gearbeitete Zeit minus Sollzeit (+ manuelle Anpassung)
-                  Duration? overtime;
-                  if (dailyTarget != null) {
-                    overtime = workedDuration - dailyTarget!;
-                    if (displayEntry.manualOvertime != null) {
-                      overtime = overtime + displayEntry.manualOvertime!;
-                    }
-                  }
-
-                  return GestureDetector(
-                    onTap: () => onEntryTap(entry),
-                    child: Card(
-                      margin: const EdgeInsets.symmetric(vertical: 4.0),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'Arbeitszeit: ${workedDuration.toString().split('.').first}',
-                                  style:
-                                      Theme.of(context).textTheme.titleMedium,
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.edit),
-                                  onPressed: () => onEntryTap(entry),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                                'Start: ${displayEntry.workStart != null ? DateFormat('HH:mm').format(displayEntry.workStart!) : '-'}'),
-                            Text(
-                                'Ende: ${displayEntry.workEnd != null ? DateFormat('HH:mm').format(displayEntry.workEnd!) : 'läuft...'}'),
-                            Text(
-                                'Pause: ${displayEntry.totalBreakDuration.toString().split('.').first}'),
-                            if (displayEntry.manualOvertime != null)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 8.0),
-                                child: Text(
-                                    'Manuelle Anpassung: ${displayEntry.manualOvertime.toString().split('.').first}'),
+                  return Card(
+                    margin: const EdgeInsets.symmetric(vertical: 4.0),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Arbeitszeit: ${workedDuration.toString().split('.').first}',
+                                style:
+                                    Theme.of(context).textTheme.titleMedium,
                               ),
-                            // Berechnete Überstunden anzeigen (mit dynamischen Sollstunden)
+                              Row(
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.edit),
+                                    onPressed: () => onEntryTap(entry),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete),
+                                    onPressed: () => _confirmDelete(context, ref, entry),
+                                  ),
+                                ],
+                              )
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                              'Start: ${displayEntry.workStart != null ? DateFormat('HH:mm').format(displayEntry.workStart!) : '-'}'
+                          ),
+                          Text(
+                              'Ende: ${displayEntry.workEnd != null ? DateFormat('HH:mm').format(displayEntry.workEnd!) : 'läuft...'}'
+                          ),
+                          Text(
+                              'Pause: ${displayEntry.totalBreakDuration.toString().split('.').first}'
+                          ),
+                          if (displayEntry.manualOvertime != null)
                             Padding(
                               padding: const EdgeInsets.only(top: 8.0),
                               child: Text(
-                                dailyTarget != null
-                                    ? 'Überstunden: ${_formatDuration(displayEntry.calculateOvertime(dailyTarget!))}'
-                                    : 'Überstunden: —',
-                                style: TextStyle(
-                                    color: dailyTarget != null
-                                        ? (displayEntry
-                                                .calculateOvertime(dailyTarget!)
-                                                .isNegative
-                                            ? Colors.red
-                                            : Colors.green)
-                                        : Colors.grey,
-                                    fontWeight: FontWeight.bold),
+                                  'Manuelle Anpassung: ${displayEntry.manualOvertime.toString().split('.').first}'
                               ),
                             ),
-                          ],
-                        ),
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: Text(
+                              dailyTarget != null
+                                  ? 'Überstunden: ${_formatDuration(displayEntry.calculateOvertime(dailyTarget!))}'
+                                  : 'Überstunden: —',
+                              style: TextStyle(
+                                  color: dailyTarget != null
+                                      ? (displayEntry
+                                              .calculateOvertime(dailyTarget!)
+                                              .isNegative
+                                          ? Colors.red
+                                          : Colors.green)
+                                      : Colors.grey,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   );
@@ -337,7 +410,6 @@ class DailyReportView extends ConsumerWidget {
 class WeeklyReportView extends ConsumerWidget {
   const WeeklyReportView({super.key});
 
-  // Hilfsmethode zum Formatieren der Dauer mit Vorzeichen
   String _formatDuration(Duration duration) {
     final bool isNegative = duration.isNegative;
     final Duration absDuration = duration.abs();
@@ -353,7 +425,6 @@ class WeeklyReportView extends ConsumerWidget {
     final reportsState = ref.watch(reportsViewModelProvider);
     final reportsNotifier = ref.read(reportsViewModelProvider.notifier);
 
-    // Sollstunden aus den Einstellungen (Fallback 40h/Woche => 8h/Tag)
     final settingsState = ref.watch(settingsViewModelProvider);
     final double weeklyTargetHours = settingsState.maybeWhen(
       data: (s) => s.weeklyTargetHours,
@@ -470,7 +541,7 @@ class WeeklyReportView extends ConsumerWidget {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             const Text('Ø Arbeitszeit pro Tag:'),
-                            Text(weeklyReport.avgWorkDurationPerDay
+                            Text(weeklyReport.averageWorkDuration
                                 .toString()
                                 .split('.')
                                 .first),
@@ -506,11 +577,7 @@ class WeeklyReportView extends ConsumerWidget {
                   return GestureDetector(
                     onTap: () {
                       reportsNotifier.selectDate(date);
-                      showModalBottomSheet(
-                        context: context,
-                        isScrollControlled: true,
-                        builder: (_) => DayEntriesBottomSheet(date: date),
-                      );
+                      _showDayEntriesBottomSheet(context, ref, date);
                     },
                     child: Card(
                       child: ListTile(
@@ -529,10 +596,18 @@ class WeeklyReportView extends ConsumerWidget {
   }
 }
 
+void _showDayEntriesBottomSheet(BuildContext context, WidgetRef ref, DateTime date) {
+  ref.read(reportsViewModelProvider.notifier).selectDate(date);
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    builder: (_) => DayEntriesBottomSheet(date: date),
+  );
+}
+
 class MonthlyReportView extends ConsumerWidget {
   const MonthlyReportView({super.key});
 
-  // Hilfsmethode zum Formatieren der Dauer mit Vorzeichen
   String _formatDuration(Duration duration) {
     final bool isNegative = duration.isNegative;
     final Duration absDuration = duration.abs();
@@ -556,7 +631,7 @@ class MonthlyReportView extends ConsumerWidget {
     final selectedMonth = reportsState.selectedMonth ?? DateTime.now();
     final month = DateFormat.yMMMM('de_DE')
         .format(DateTime(selectedMonth.year, selectedMonth.month));
-    // Sollstunden aus den Einstellungen (Fallback 40h/Woche => 8h/Tag)
+
     final settingsState = ref.watch(settingsViewModelProvider);
     final double weeklyTargetHours = settingsState.maybeWhen(
       data: (s) => s.weeklyTargetHours,
@@ -577,7 +652,7 @@ class MonthlyReportView extends ConsumerWidget {
             IconButton(
               icon: const Icon(Icons.chevron_left),
               onPressed: () => reportsNotifier.onMonthChanged(
-                  DateTime(selectedMonth.year, selectedMonth.month - 1)),
+                  DateTime(selectedMonth.year, selectedMonth.month - 1, 1)),
               tooltip: 'Vorheriger Monat',
             ),
             Expanded(
@@ -592,7 +667,7 @@ class MonthlyReportView extends ConsumerWidget {
             IconButton(
               icon: const Icon(Icons.chevron_right),
               onPressed: () => reportsNotifier.onMonthChanged(
-                  DateTime(selectedMonth.year, selectedMonth.month + 1)),
+                  DateTime(selectedMonth.year, selectedMonth.month + 1, 1)),
               tooltip: 'Nächster Monat',
             ),
           ],
@@ -649,7 +724,7 @@ class MonthlyReportView extends ConsumerWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           const Text('Ø Arbeitszeit pro Tag:'),
-                          Text(monthlyReport.avgWorkDurationPerDay
+                          Text(monthlyReport.averageWorkDuration
                               .toString()
                               .split('.')
                               .first),
@@ -726,12 +801,7 @@ class MonthlyReportView extends ConsumerWidget {
                 final duration = entry.value;
                 return GestureDetector(
                   onTap: () {
-                    reportsNotifier.selectDate(date);
-                    showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      builder: (_) => DayEntriesBottomSheet(date: date),
-                    );
+                     _showDayEntriesBottomSheet(context, ref, date);
                   },
                   child: Card(
                     margin: const EdgeInsets.symmetric(vertical: 4.0),
@@ -753,19 +823,26 @@ class MonthlyReportView extends ConsumerWidget {
 class _Calendar extends StatelessWidget {
   final DateTime selectedDate;
   final ValueChanged<DateTime> onDateSelected;
+  final VoidCallback? onPreviousMonthTapped;
+  final VoidCallback? onNextMonthTapped;
+  final Set<int>? daysWithEntries;
 
-  const _Calendar({required this.selectedDate, required this.onDateSelected});
+  const _Calendar({
+    required this.selectedDate,
+    required this.onDateSelected,
+    this.onPreviousMonthTapped,
+    this.onNextMonthTapped,
+    this.daysWithEntries,
+    super.key,
+  });
 
-  // Hilfsmethode zur Berechnung der Tage im Monat
   int _getDaysInMonth(int year, int month) {
     return DateTime(year, month + 1, 0).day;
   }
 
-  // Hilfsmethode zur Berechnung des Offsets für den ersten Tag des Monats
   int _getFirstDayOffset(int year, int month) {
     int weekday = DateTime(year, month, 1).weekday;
-    // In Europa beginnt die Woche mit Montag (1), daher Offset -1
-    return weekday - 1;
+    return weekday - 1; 
   }
 
   @override
@@ -776,16 +853,33 @@ class _Calendar extends StatelessWidget {
         padding: const EdgeInsets.all(8.0),
         child: Column(
           children: [
-            Text(
-              DateFormat.yMMMM('de_DE').format(selectedDate),
-              style: Theme.of(context).textTheme.titleMedium,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.chevron_left),
+                  onPressed: onPreviousMonthTapped,
+                  tooltip: 'Vorheriger Monat',
+                ),
+                Expanded(
+                  child: Text(
+                    DateFormat.yMMMM('de_DE').format(selectedDate),
+                    style: Theme.of(context).textTheme.titleMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.chevron_right),
+                  onPressed: onNextMonthTapped,
+                  tooltip: 'Nächster Monat',
+                ),
+              ],
             ),
             const SizedBox(height: 10),
             Row(
               children: List.generate(7, (index) {
-                // Wir generieren Wochentagsabkürzungen von Montag bis Sonntag
                 final day = DateFormat.E('de_DE').format(
-                    DateTime(2023, 1, 2 + index)); // 2023-01-02 ist ein Montag
+                    DateTime(2023, 1, 2 + index)); // Example year for weekday names
                 return Expanded(
                   child: Center(
                     child: Text(day),
@@ -803,20 +897,49 @@ class _Calendar extends StatelessWidget {
                   _getDaysInMonth(selectedDate.year, selectedDate.month) +
                       _getFirstDayOffset(selectedDate.year, selectedDate.month),
               itemBuilder: (context, index) {
-                // Berücksichtigung des Monatsanfangs-Offsets
                 final firstDayOffset =
                     _getFirstDayOffset(selectedDate.year, selectedDate.month);
                 if (index < firstDayOffset) {
-                  return const SizedBox
-                      .shrink(); // Leere Zellen vor dem Monatsbeginn
+                  return const SizedBox.shrink();
                 }
 
                 final day = index - firstDayOffset + 1;
                 final date =
                     DateTime(selectedDate.year, selectedDate.month, day);
-                final isSelected = date.day == selectedDate.day &&
-                    date.month == selectedDate.month &&
-                    date.year == selectedDate.year;
+                final isSelected = DateUtils.isSameDay(date, selectedDate);
+                final hasEntry = daysWithEntries?.contains(day) ?? false;
+
+                Widget dayWidget = Center(
+                  child: Text(
+                    '$day',
+                    style: TextStyle(
+                      color: isSelected
+                          ? Colors.white
+                          : Theme.of(context).textTheme.bodyLarge?.color,
+                    ),
+                  ),
+                );
+
+                if (hasEntry) {
+                  dayWidget = Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      dayWidget, // The day number text
+                      Positioned(
+                        bottom: 4,
+                        child: Container(
+                          width: 5,
+                          height: 5,
+                          decoration: BoxDecoration(
+                            color: isSelected ? Colors.white70 : Theme.of(context).colorScheme.secondary,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                }
+
                 return InkWell(
                   onTap: () => onDateSelected(date),
                   child: Container(
@@ -827,16 +950,7 @@ class _Calendar extends StatelessWidget {
                           : Colors.transparent,
                       shape: BoxShape.circle,
                     ),
-                    child: Center(
-                      child: Text(
-                        '$day',
-                        style: TextStyle(
-                          color: isSelected
-                              ? Colors.white
-                              : Theme.of(context).textTheme.bodyLarge?.color,
-                        ),
-                      ),
-                    ),
+                    child: dayWidget,
                   ),
                 );
               },
@@ -859,12 +973,17 @@ class DayEntriesBottomSheet extends ConsumerStatefulWidget {
 
 class _DayEntriesBottomSheetState
     extends ConsumerState<DayEntriesBottomSheet> {
+
   @override
   void initState() {
     super.initState();
-    // Sicherstellen, dass der ausgewählte Tag geladen ist
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(reportsViewModelProvider.notifier).selectDate(widget.date);
+      if (mounted) { 
+        final currentSelectedDayInViewModel = ref.read(reportsViewModelProvider).selectedDay;
+        if (currentSelectedDayInViewModel == null || !DateUtils.isSameDay(currentSelectedDayInViewModel, widget.date)) {
+           ref.read(reportsViewModelProvider.notifier).selectDate(widget.date);
+        }
+      }
     });
   }
 
@@ -872,30 +991,69 @@ class _DayEntriesBottomSheetState
     final entryWithCalculatedBreaks =
         ref.read(reportsViewModelProvider.notifier).applyBreakCalculation(entry);
 
+    if (Navigator.of(context).canPop()) {
+       Navigator.of(context).pop();
+    }
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) =>
+      builder: (ctx) =>
           EditWorkEntryModal(workEntry: entryWithCalculatedBreaks),
-    ).then((_) {
-      // Nach dem Schließen neu laden
-      ref.read(reportsViewModelProvider.notifier).selectDate(widget.date);
-    });
+    );
+  }
+
+  Future<void> _confirmDelete(BuildContext btmSheetItemContext, WidgetRef ref, WorkEntryEntity entry) async {
+    final bool? confirmed = await showDialog<bool>(
+      context: btmSheetItemContext,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Eintrag löschen?'),
+          content: const Text('Möchten Sie diesen Arbeitseintrag wirklich löschen?'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Abbrechen'),
+              onPressed: () {
+                if (Navigator.of(dialogContext).canPop()) {
+                    Navigator.of(dialogContext).pop(false);
+                }
+              },
+            ),
+            TextButton(
+              child: const Text('Löschen'),
+              onPressed: () {
+                 if (Navigator.of(dialogContext).canPop()) {
+                    Navigator.of(dialogContext).pop(true);
+                 }
+              },
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true) {
+      await ref.read(reportsViewModelProvider.notifier).deleteWorkEntry(entry.id);
+      if (mounted && Navigator.of(this.context).canPop()) {
+        Navigator.of(this.context).pop();
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final reportsState = ref.watch(reportsViewModelProvider);
 
-    if (reportsState.isLoading) {
+    if (reportsState.isLoading && (reportsState.selectedDay == null || !DateUtils.isSameDay(reportsState.selectedDay, widget.date))) {
       return const Padding(
         padding: EdgeInsets.all(24.0),
-        child: LoadingIndicator(),
+        child: Center(child: LoadingIndicator()),
       );
     }
 
-    final dailyReport = reportsState.dailyReportState;
-    final entries = dailyReport.entries;
+    final entriesForSheetDate = reportsState.dailyReportState.entries
+        .where((entry) => DateUtils.isSameDay(entry.date, widget.date))
+        .toList();
 
     return SafeArea(
       child: DraggableScrollableSheet(
@@ -930,17 +1088,52 @@ class _DayEntriesBottomSheetState
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 12),
-                if (entries.isEmpty)
-                  const Expanded(
-                    child: Center(child: Text('Keine Einträge für diesen Tag.')),
+                if (entriesForSheetDate.isEmpty)
+                  Expanded(
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text('Keine Einträge für diesen Tag.'),
+                          Builder(builder: (context) {
+                            final today = DateUtils.dateOnly(DateTime.now());
+                            final sheetDateOnly = DateUtils.dateOnly(widget.date);
+
+                            if (sheetDateOnly.isBefore(today)) {
+                              return Padding(
+                                padding: const EdgeInsets.only(top: 16.0),
+                                child: ElevatedButton(
+                                  onPressed: () {
+                                    final newEntry = WorkEntryEntity(
+                                      id: DateFormat('yyyy-MM-dd').format(widget.date),
+                                      date: widget.date, 
+                                      workStart: null,
+                                      workEnd: null,
+                                      breaks: [],
+                                      isManuallyEntered: true,
+                                      description: null,
+                                      manualOvertime: null,
+                                    );
+                                    _openEdit(newEntry);
+                                  },
+                                  child: const Text('Eintrag hinzufügen'),
+                                ),
+                              );
+                            } else {
+                              return const SizedBox.shrink();
+                            }
+                          }),
+                        ],
+                      ),
+                    ),
                   )
                 else
                   Expanded(
                     child: ListView.builder(
                       controller: controller,
-                      itemCount: entries.length,
-                      itemBuilder: (context, index) {
-                        final entry = entries[index];
+                      itemCount: entriesForSheetDate.length,
+                      itemBuilder: (ctx, index) {
+                        final entry = entriesForSheetDate[index];
                         final displayEntry = ref
                             .read(reportsViewModelProvider.notifier)
                             .applyBreakCalculation(entry);
@@ -977,19 +1170,32 @@ class _DayEntriesBottomSheetState
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                    'Start: ${start != null ? DateFormat('HH:mm').format(start) : '-'}'),
+                                    'Start: ${start != null ? DateFormat('HH:mm').format(start) : '-'}'
+                                ),
                                 Text(
-                                    'Ende: ${displayEntry.workEnd != null ? DateFormat('HH:mm').format(displayEntry.workEnd!) : 'läuft...'}'),
+                                    'Ende: ${displayEntry.workEnd != null ? DateFormat('HH:mm').format(displayEntry.workEnd!) : 'läuft...'}'
+                                ),
                                 Text(
-                                    'Pause: ${displayEntry.totalBreakDuration.toString().split('.').first}'),
+                                    'Pause: ${displayEntry.totalBreakDuration.toString().split('.').first}'
+                                ),
                                 if (displayEntry.manualOvertime != null)
                                   Text(
-                                      'Manuelle Anpassung: ${displayEntry.manualOvertime.toString().split('.').first}'),
+                                      'Manuelle Anpassung: ${displayEntry.manualOvertime.toString().split('.').first}'
+                                  ),
                               ],
                             ),
-                            trailing: IconButton(
-                              icon: const Icon(Icons.edit),
-                              onPressed: () => _openEdit(entry),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.edit),
+                                  onPressed: () => _openEdit(entry),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete),
+                                  onPressed: () => _confirmDelete(ctx, ref, entry),
+                                ),
+                              ],
                             ),
                           ),
                         );

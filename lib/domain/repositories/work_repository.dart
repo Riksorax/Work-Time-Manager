@@ -27,4 +27,7 @@ abstract class WorkRepository {
   ///
   /// Nützlich für die Kalenderansicht und Monatsberichte.
   Future<List<WorkEntryEntity>> getWorkEntriesForMonth(int year, int month);
+
+  /// Löscht einen Arbeitseintrag anhand seiner ID.
+  Future<void> deleteWorkEntry(String entryId);
 }

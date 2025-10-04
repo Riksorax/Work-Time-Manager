@@ -34,6 +34,9 @@ abstract class FirestoreDataSource {
       int year,
       int month,
       );
+
+  /// Löscht einen Arbeitseintrag für einen bestimmten Benutzer anhand der Eintrags-ID.
+  Future<void> deleteWorkEntry(String userId, String entryId);
 }
 
 /// Die konkrete Implementierung der FirestoreDataSource.
@@ -196,24 +199,31 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
 
   @override
   Future<List<WorkEntryModel>> getWorkEntriesForMonth(
-      String userId,
-      int year,
-      int month,
-      ) async {
-    // Definiere den Datumsbereich für die Abfrage.
-    final startOfMonth = DateTime.utc(year, month, 1);
-    // Der letzte Tag des Monats.
-    final endOfMonth = DateTime.utc(year, month + 1, 0, 23, 59, 59);
+    String userId,
+    int year,
+    int month,
+  ) async {
+    // Definiere den Datumsbereich für die Abfrage in lokaler Zeit.
+    final startOfMonth = DateTime(year, month, 1);
+    // Der Beginn des nächsten Monats (exklusive Obergrenze) in lokaler Zeit.
+    final startOfNextMonth = DateTime(year, month + 1, 1);
 
     final collectionRef = _firestore.collection('users').doc(userId).collection('work_entries');
 
-    // Führe die Abfrage aus.
+    // Führe die Abfrage aus und sortiere nach Datum, damit der früheste Eintrag zuerst kommt.
     final querySnapshot = await collectionRef
         .where('date', isGreaterThanOrEqualTo: startOfMonth)
-        .where('date', isLessThanOrEqualTo: endOfMonth)
+        .where('date', isLessThan: startOfNextMonth) // Obergrenze ist jetzt exklusiv
+        .orderBy('date')
         .get();
 
     // Wandle die resultierenden Dokumente in eine Liste von Models um.
     return querySnapshot.docs.map((doc) => WorkEntryModel.fromFirestore(doc)).toList();
+  }
+
+  @override
+  Future<void> deleteWorkEntry(String userId, String entryId) async {
+    final docRef = _getWorkEntryDocRef(userId, entryId);
+    await docRef.delete();
   }
 }

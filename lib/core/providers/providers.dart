@@ -85,6 +85,11 @@ class NoOpWorkRepository implements WorkRepository {
   Future<List<WorkEntryEntity>> getWorkEntriesForMonth(int year, int month) async {
     return [];
   }
+
+  @override
+  Future<void> deleteWorkEntry(String entryId) async {
+    // No-op
+  }
 }
 
 final workRepositoryProvider = Provider<WorkRepository>((ref) {

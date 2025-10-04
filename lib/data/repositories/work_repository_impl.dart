@@ -34,4 +34,9 @@ class WorkRepositoryImpl implements WorkRepository {
     // Die von der Datenquelle zurückgegebenen Models sind bereits Entities.
     return await dataSource.getWorkEntriesForMonth(userId, year, month);
   }
+
+  @override
+  Future<void> deleteWorkEntry(String entryId) async {
+    await dataSource.deleteWorkEntry(userId, entryId);
+  }
 }
