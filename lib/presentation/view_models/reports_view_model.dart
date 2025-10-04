@@ -238,8 +238,10 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
         ? Duration(seconds: totalNetWorkDuration.inSeconds ~/ workDays)
         : Duration.zero;
 
-    final targetDailyHoursInDouble =
-        _settingsRepository.getTargetWeeklyHours() / 5;
+    final workdaysPerWeek = _settingsRepository.getWorkdaysPerWeek();
+    final targetDailyHoursInDouble = workdaysPerWeek > 0
+        ? _settingsRepository.getTargetWeeklyHours() / workdaysPerWeek
+        : 0.0;
     // Korrekte Berechnung der Soll-Wochenstunden basierend auf tatsächlichen Arbeitstagen in der Woche
     final targetWeeklyHoursForActualWorkdaysInMicroseconds =
         (targetDailyHoursInDouble * workDays * Duration.microsecondsPerHour)
@@ -288,7 +290,10 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
     final averageWorkDuration =
         workDays > 0 ? Duration(microseconds: totalNetWorkDuration.inMicroseconds ~/ workDays) : Duration.zero;
 
-    final targetDailyHours = _settingsRepository.getTargetWeeklyHours() / 5;
+    final workdaysPerWeek = _settingsRepository.getWorkdaysPerWeek();
+    final targetDailyHours = workdaysPerWeek > 0
+        ? _settingsRepository.getTargetWeeklyHours() / workdaysPerWeek
+        : 0.0;
     final totalTargetHoursForActualWorkDays =
         Duration(microseconds: (targetDailyHours * workDays * Duration.microsecondsPerHour).toInt());
     final overtime = totalNetWorkDuration - totalTargetHoursForActualWorkDays;

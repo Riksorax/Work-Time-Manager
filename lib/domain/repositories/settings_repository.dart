@@ -16,4 +16,10 @@ abstract class SettingsRepository {
 
   /// Speichert die wöchentlichen Soll-Arbeitsstunden des Benutzers.
   Future<void> setTargetWeeklyHours(double hours);
+
+  /// Ruft die Anzahl der Arbeitstage pro Woche ab.
+  int getWorkdaysPerWeek();
+
+  /// Speichert die Anzahl der Arbeitstage pro Woche.
+  Future<void> setWorkdaysPerWeek(int days);
 }

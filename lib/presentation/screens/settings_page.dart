@@ -5,6 +5,7 @@ import '../view_models/auth_view_model.dart';
 import '../view_models/settings_view_model.dart';
 import '../view_models/theme_view_model.dart';
 import '../widgets/edit_target_hours_modal.dart';
+import '../widgets/edit_workdays_modal.dart';
 import 'login_page.dart';
 
 class SettingsPage extends ConsumerWidget {
@@ -42,7 +43,7 @@ class SettingsPage extends ConsumerWidget {
               ListTile(
                 title: const Text('Soll-Arbeitsstunden'),
                 subtitle: Text(
-                  '${settings.weeklyTargetHours.toStringAsFixed(1)} h/Woche\n≈ ${(settings.weeklyTargetHours / 5).toStringAsFixed(1)} h/Tag (bei 5 Arbeitstagen)',
+                  '${settings.weeklyTargetHours.toStringAsFixed(1)} h/Woche',
                 ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {
@@ -51,6 +52,25 @@ class SettingsPage extends ConsumerWidget {
                     settings.weeklyTargetHours,
                   );
                 },
+              ),
+              ListTile(
+                title: const Text('Arbeitstage pro Woche'),
+                subtitle: Text(
+                  '${settings.workdaysPerWeek} Tage',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  showEditWorkdaysModal(
+                    context,
+                    settings.workdaysPerWeek,
+                  );
+                },
+              ),
+               ListTile(
+                title: const Text('Tägliche Soll-Arbeitszeit'),
+                subtitle: Text(
+                  '≈ ${settings.workdaysPerWeek > 0 ? (settings.weeklyTargetHours / settings.workdaysPerWeek).toStringAsFixed(1) : '0.0'} h/Tag',
+                ),
               ),
               const Divider(height: 1),
 

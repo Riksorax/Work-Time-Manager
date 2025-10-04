@@ -6,6 +6,7 @@ import '../../domain/repositories/settings_repository.dart';
 class SettingsRepositoryImpl implements SettingsRepository {
   static const String _themeModeKey = 'theme_mode';
   static const String _targetHoursKey = 'target_weekly_hours';
+  static const String _workdaysPerWeekKey = 'workdays_per_week';
 
   final SharedPreferences _prefs;
 
@@ -36,5 +37,15 @@ class SettingsRepositoryImpl implements SettingsRepository {
   @override
   Future<void> setTargetWeeklyHours(double hours) async {
     await _prefs.setDouble(_targetHoursKey, hours);
+  }
+
+  @override
+  int getWorkdaysPerWeek() {
+    return _prefs.getInt(_workdaysPerWeekKey) ?? 5; // Default to 5 days
+  }
+
+  @override
+  Future<void> setWorkdaysPerWeek(int days) async {
+    await _prefs.setInt(_workdaysPerWeekKey, days);
   }
 }

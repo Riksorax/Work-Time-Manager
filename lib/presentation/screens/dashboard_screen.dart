@@ -170,17 +170,21 @@ class DashboardScreen extends ConsumerWidget {
 
     // Wenn totalBalance nicht gesetzt ist, berechnen wir es hier (Fallback)
     if (dashboardState.totalBalance == null && dashboardState.actualWorkDuration != null) {
-      // Tägliche Sollarbeitszeit aus den Einstellungen berechnen (Fallback: 40h/Woche => 8h/Tag)
+      // Tägliche Sollarbeitszeit aus den Einstellungen berechnen
       final settingsState = ref.watch(settingsViewModelProvider);
-      final double weeklyTargetHours = settingsState.maybeWhen(
-        data: (s) => s.weeklyTargetHours,
-        orElse: () => 40.0,
+      totalBalance = settingsState.when(
+        data: (settings) {
+          final dailyTarget = settings.workdaysPerWeek > 0
+              ? Duration(
+                  minutes: ((settings.weeklyTargetHours / settings.workdaysPerWeek) * 60).round(),
+                )
+              : Duration.zero;
+          final todayBalance = dashboardState.actualWorkDuration! - dailyTarget;
+          return overtimeBalance + todayBalance;
+        },
+        loading: () => overtimeBalance,
+        error: (_, __) => overtimeBalance,
       );
-      final Duration dailyTarget = Duration(
-        minutes: ((weeklyTargetHours / 5.0) * 60).round(),
-      );
-      final todayBalance = dashboardState.actualWorkDuration! - dailyTarget;
-      totalBalance = overtimeBalance + todayBalance;
     }
 
     // Formatiere die Gesamtbilanz
@@ -301,7 +305,7 @@ class DashboardScreen extends ConsumerWidget {
                   ],
                 ),
                 subtitle: Text(
-                    '${DateFormat.Hm().format(b.start)} - ${b.end != null ? DateFormat.Hm().format(b.end!) : 'läuft...'}'),
+                    '${DateFormat.Hm().format(b.start)} - ${b.end != null ? DateFormat.Hm().format(b.end!) : 'läuft...'}}'),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
