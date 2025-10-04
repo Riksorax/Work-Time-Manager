@@ -12,19 +12,23 @@ import '../../domain/entities/work_entry_entity.dart';
 class SettingsState {
   final ThemeMode themeMode;
   final double weeklyTargetHours;
+  final int workdaysPerWeek;
 
   const SettingsState({
     required this.themeMode,
     required this.weeklyTargetHours,
+    required this.workdaysPerWeek,
   });
 
   SettingsState copyWith({
     ThemeMode? themeMode,
     double? weeklyTargetHours,
+    int? workdaysPerWeek,
   }) {
     return SettingsState(
       themeMode: themeMode ?? this.themeMode,
       weeklyTargetHours: weeklyTargetHours ?? this.weeklyTargetHours,
+      workdaysPerWeek: workdaysPerWeek ?? this.workdaysPerWeek,
     );
   }
 }
@@ -42,9 +46,10 @@ class SettingsViewModel extends StateNotifier<AsyncValue<SettingsState>> {
     try {
       final themeMode = _repository.getThemeMode();
       final weeklyTargetHours = _repository.getTargetWeeklyHours();
+      final workdaysPerWeek = _repository.getWorkdaysPerWeek();
       state = AsyncValue.data(
         SettingsState(
-            themeMode: themeMode, weeklyTargetHours: weeklyTargetHours),
+            themeMode: themeMode, weeklyTargetHours: weeklyTargetHours, workdaysPerWeek: workdaysPerWeek),
       );
     } catch (e, st) {
       state = AsyncValue.error(e, st);
@@ -67,6 +72,17 @@ class SettingsViewModel extends StateNotifier<AsyncValue<SettingsState>> {
       await _repository.setTargetWeeklyHours(hours);
       state.whenData((value) {
         state = AsyncValue.data(value.copyWith(weeklyTargetHours: hours));
+      });
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
+
+  Future<void> setWorkdaysPerWeek(int days) async {
+    try {
+      await _repository.setWorkdaysPerWeek(days);
+      state.whenData((value) {
+        state = AsyncValue.data(value.copyWith(workdaysPerWeek: days));
       });
     } catch (e, st) {
       state = AsyncValue.error(e, st);
@@ -121,4 +137,3 @@ StateNotifierProvider<SettingsViewModel, AsyncValue<SettingsState>>((ref) {
   final workRepository = ref.watch(workRepositoryProvider);
   return SettingsViewModel(settingsRepository, workRepository);
 });
-
