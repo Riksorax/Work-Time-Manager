@@ -5,6 +5,8 @@ import 'package:flutter_work_time/presentation/screens/settings_page.dart';
 import 'package:flutter_work_time/presentation/screens/login_page.dart';
 import 'package:flutter_work_time/presentation/view_models/auth_view_model.dart';
 
+import '../../core/providers/providers.dart';
+import '../widgets/update_required_dialog.dart';
 import 'dashboard_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -22,6 +24,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void initState() {
     super.initState();
     _selectedIndex = widget.initialIndex;
+
+    // Version-Check beim Start der App
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkForUpdate();
+    });
+  }
+
+  Future<void> _checkForUpdate() async {
+    final versionService = ref.read(versionServiceProvider);
+    if (mounted) {
+      await UpdateRequiredDialog.checkAndShow(context, versionService);
+    }
   }
 
   static const List<Widget> _widgetOptions = <Widget>[

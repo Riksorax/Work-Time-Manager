@@ -5,18 +5,18 @@ import '../../domain/entities/work_entry_entity.dart';
 class DashboardState extends Equatable {
   final WorkEntryEntity workEntry;
   final Duration elapsedTime;
-  final Duration overtimeBalance;
   final Duration? actualWorkDuration;
-  final Duration? totalBalance;
   final bool isLoading;
+  final Duration? overtime;
+  final Duration? dailyOvertime;
 
   const DashboardState({
     required this.workEntry,
     required this.elapsedTime,
-    required this.overtimeBalance,
     this.actualWorkDuration,
-    this.totalBalance,
     this.isLoading = false,
+    this.overtime,
+    this.dailyOvertime,
   });
 
   factory DashboardState.initial() {
@@ -26,27 +26,28 @@ class DashboardState extends Equatable {
         date: DateTime.now(),
       ),
       elapsedTime: Duration.zero,
-      overtimeBalance: Duration.zero,
       actualWorkDuration: null,
       isLoading: true, // Start with loading
+      overtime: null,
+      dailyOvertime: null,
     );
   }
 
   DashboardState copyWith({
     WorkEntryEntity? workEntry,
     Duration? elapsedTime,
-    Duration? overtimeBalance,
     Duration? actualWorkDuration,
-    Duration? totalBalance,
     bool? isLoading,
+    Duration? overtime,
+    Duration? dailyOvertime,
   }) {
     return DashboardState(
       workEntry: workEntry ?? this.workEntry,
       elapsedTime: elapsedTime ?? this.elapsedTime,
-      overtimeBalance: overtimeBalance ?? this.overtimeBalance,
       actualWorkDuration: actualWorkDuration ?? this.actualWorkDuration,
-      totalBalance: totalBalance ?? this.totalBalance,
       isLoading: isLoading ?? this.isLoading,
+      overtime: overtime ?? this.overtime,
+      dailyOvertime: dailyOvertime ?? this.dailyOvertime,
     );
   }
 
@@ -54,9 +55,9 @@ class DashboardState extends Equatable {
   List<Object?> get props => [
         workEntry,
         elapsedTime,
-        overtimeBalance,
         actualWorkDuration,
-        totalBalance,
         isLoading,
+        overtime,
+        dailyOvertime,
       ];
 }

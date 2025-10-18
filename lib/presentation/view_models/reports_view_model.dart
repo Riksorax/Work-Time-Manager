@@ -8,7 +8,6 @@ import '../../domain/repositories/work_repository.dart';
 import '../state/monthly_report_state.dart';
 import '../state/reports_state.dart';
 import '../state/weekly_report_state.dart';
-import '../view_models/dashboard_view_model.dart';
 
 // Dummy-Implementierung, um den Provider zu vervollständigen, falls das echte Repository nicht verfügbar ist.
 class DummyWorkRepository implements WorkRepository {
@@ -50,17 +49,15 @@ final reportsViewModelProvider =
   return ReportsViewModel(
     workRepository,
     settingsRepository,
-    ref,
   );
 });
 
 class ReportsViewModel extends StateNotifier<ReportsState> {
-  ReportsViewModel(this._workRepository, this._settingsRepository, this._ref)
+  ReportsViewModel(this._workRepository, this._settingsRepository)
       : super(ReportsState.initial()) {
     init();
   }
 
-  final Ref _ref;
   final WorkRepository _workRepository;
   final SettingsRepository _settingsRepository;
 
@@ -238,8 +235,10 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
         ? Duration(seconds: totalNetWorkDuration.inSeconds ~/ workDays)
         : Duration.zero;
 
-    final targetDailyHoursInDouble =
-        _settingsRepository.getTargetWeeklyHours() / 5;
+    final workdaysPerWeek = _settingsRepository.getWorkdaysPerWeek();
+    final targetDailyHoursInDouble = workdaysPerWeek > 0
+        ? _settingsRepository.getTargetWeeklyHours() / workdaysPerWeek
+        : 0.0;
     // Korrekte Berechnung der Soll-Wochenstunden basierend auf tatsächlichen Arbeitstagen in der Woche
     final targetWeeklyHoursForActualWorkdaysInMicroseconds =
         (targetDailyHoursInDouble * workDays * Duration.microsecondsPerHour)
@@ -288,7 +287,10 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
     final averageWorkDuration =
         workDays > 0 ? Duration(microseconds: totalNetWorkDuration.inMicroseconds ~/ workDays) : Duration.zero;
 
-    final targetDailyHours = _settingsRepository.getTargetWeeklyHours() / 5;
+    final workdaysPerWeek = _settingsRepository.getWorkdaysPerWeek();
+    final targetDailyHours = workdaysPerWeek > 0
+        ? _settingsRepository.getTargetWeeklyHours() / workdaysPerWeek
+        : 0.0;
     final totalTargetHoursForActualWorkDays =
         Duration(microseconds: (targetDailyHours * workDays * Duration.microsecondsPerHour).toInt());
     final overtime = totalNetWorkDuration - totalTargetHoursForActualWorkDays;
@@ -297,9 +299,6 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
         Duration.zero,
         (prev, entry) => prev + (entry.manualOvertime ?? Duration.zero));
     final calculatedMonthlyOvertime = overtime + manualOvertimes;
-
-    final dashboardState = _ref.read(dashboardViewModelProvider);
-    final totalOvertimeOverall = dashboardState.totalBalance ?? calculatedMonthlyOvertime; // Fallback, falls kein Gesamtstand da
 
     final Map<DateTime, Duration> dailyWork = {};
     final Map<int, Duration> weeklyWork = {};
@@ -329,7 +328,7 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
       totalNetWorkDuration: totalNetWorkDuration,
       averageWorkDuration: averageWorkDuration, // Ø pro Tag
       overtime: calculatedMonthlyOvertime, 
-      totalOvertime: totalOvertimeOverall,
+      totalOvertime: calculatedMonthlyOvertime,
       workDays: workDays, // Anzahl der tatsächlichen Arbeitstage
       dailyWork: dailyWork, // Für Kalendermarkierungen und Tagesübersicht in Monatsansicht
       weeklyWork: weeklyWork,

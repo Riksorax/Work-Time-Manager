@@ -1,10 +1,16 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
+import '../../core/providers/providers.dart';
 import '../view_models/auth_view_model.dart';
 import '../view_models/settings_view_model.dart';
 import '../view_models/theme_view_model.dart';
+import '../widgets/add_adjustment_modal.dart';
 import '../widgets/edit_target_hours_modal.dart';
+import '../widgets/edit_workdays_modal.dart';
+import '../widgets/update_required_dialog.dart';
 import 'login_page.dart';
 
 class SettingsPage extends ConsumerWidget {
@@ -13,8 +19,7 @@ class SettingsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    // Holen der State und Notifier für Settings und Theme
-    final settingsState = ref.watch(settingsViewModelProvider);
+    final settingsValue = ref.watch(settingsViewModelProvider);
     final themeMode = ref.watch(themeViewModelProvider);
     final themeNotifier = ref.read(themeViewModelProvider.notifier);
     final authState = ref.watch(authStateProvider);
@@ -23,26 +28,24 @@ class SettingsPage extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Einstellungen'),
       ),
-      body: settingsState.when(
+      body: settingsValue.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Fehler: $err')),
-        data: (settings) {
+        data: (settingsState) {
+          final settings = settingsState.settings;
           return ListView(
             children: [
               const SizedBox(height: 16),
-              // Profilbereich
               _buildProfileSection(context, ref),
               const SizedBox(height: 8),
               _buildAuthButton(context, ref),
               const SizedBox(height: 8),
               const SizedBox(height: 16),
               const Divider(height: 1),
-
-              // Arbeitszeit
               ListTile(
                 title: const Text('Soll-Arbeitsstunden'),
                 subtitle: Text(
-                  '${settings.weeklyTargetHours.toStringAsFixed(1)} h/Woche\n≈ ${(settings.weeklyTargetHours / 5).toStringAsFixed(1)} h/Tag (bei 5 Arbeitstagen)',
+                  '${settings.weeklyTargetHours.toStringAsFixed(1)} h/Woche',
                 ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {
@@ -52,9 +55,43 @@ class SettingsPage extends ConsumerWidget {
                   );
                 },
               ),
+              ListTile(
+                title: const Text('Arbeitstage pro Woche'),
+                subtitle: Text(
+                  '${settings.workdaysPerWeek} Tage',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  showEditWorkdaysModal(
+                    context,
+                    settings.workdaysPerWeek,
+                  );
+                },
+              ),
+              ListTile(
+                title: const Text('Tägliche Soll-Arbeitszeit'),
+                subtitle: Text(
+                  '≈ ${settings.workdaysPerWeek > 0 ? (settings.weeklyTargetHours / settings.workdaysPerWeek).toStringAsFixed(1) : '0.0'} h/Tag',
+                ),
+              ),
               const Divider(height: 1),
-
-              // Darstellung
+              const SizedBox(height: 16),
+              _buildOvertimeBalance(context, settingsState.overtimeBalance),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: ElevatedButton(
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => const AddAdjustmentModal(),
+                    );
+                  },
+                  child: const Text('Überstunden / Minusstunden anpassen'),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Divider(height: 1),
               SwitchListTile(
                 title: const Text('Design'),
                 subtitle: Text(themeMode == ThemeMode.dark ? 'Dunkel' : 'Hell'),
@@ -64,8 +101,6 @@ class SettingsPage extends ConsumerWidget {
                 },
               ),
               const Divider(height: 1),
-
-              // Benachrichtigungen (Beispiel)
               ListTile(
                 title: Text('Benachrichtigungen', style: theme.textTheme.titleMedium),
               ),
@@ -85,12 +120,62 @@ class SettingsPage extends ConsumerWidget {
                 onChanged: (value) {},
               ),
               const Divider(height: 1),
-
-              // App
-              const ListTile(
-                title: Text('Version'),
-                trailing: Text('1.0.0'),
+              if (authState.asData?.value != null) ...[
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.sync_alt),
+                  title: const Text('Alte Daten migrieren'),
+                  subtitle: const Text('Für neue Speicherstruktur'),
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (dialogContext) => AlertDialog(
+                        title: const Text('Datenmigration'),
+                        content: const Text(
+                            'Möchten Sie Ihre alten Daten jetzt zur neuen monatlichen Struktur migrieren? Dieser Vorgang kann nicht rückgängig gemacht werden.'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(dialogContext).pop(),
+                            child: const Text('Abbrechen'),
+                          ),
+                          FilledButton(
+                            onPressed: () {
+                              Navigator.of(dialogContext).pop();
+                              ref.read(settingsViewModelProvider.notifier).migrateWorkEntries();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Migration wird gestartet...')),
+                              );
+                            },
+                            child: const Text('Migrieren'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ],
+              const Divider(height: 1),
+              FutureBuilder<PackageInfo>(
+                future: PackageInfo.fromPlatform(),
+                builder: (context, snapshot) {
+                  final version = snapshot.data?.version ?? '...';
+                  return ListTile(
+                    title: const Text('Version'),
+                    trailing: Text(version),
+                  );
+                },
               ),
+              // DEBUG: Test-Button für Version-Check (nur im Debug-Modus)
+              if (kDebugMode)
+                ListTile(
+                  leading: const Icon(Icons.bug_report, color: Colors.orange),
+                  title: const Text('🧪 TEST: Version Check'),
+                  subtitle: const Text('Update-Dialog manuell anzeigen'),
+                  onTap: () async {
+                    final versionService = ref.read(versionServiceProvider);
+                    await UpdateRequiredDialog.checkAndShow(context, versionService);
+                  },
+                ),
               ListTile(
                 title: const Text('Impressum'),
                 trailing: const Icon(Icons.chevron_right),
@@ -141,7 +226,33 @@ class SettingsPage extends ConsumerWidget {
     );
   }
 
-  // Profilbereich mit Avatar und Namen
+  Widget _buildOvertimeBalance(BuildContext context, Duration overtimeBalance) {
+    final bool isNegative = overtimeBalance.isNegative;
+    final Duration absDuration = overtimeBalance.abs();
+
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final hours = twoDigits(absDuration.inHours);
+    final minutes = twoDigits(absDuration.inMinutes.remainder(60));
+    final sign = isNegative ? '-' : '+';
+    final formattedOvertime = '$sign$hours:$minutes';
+
+    return Column(
+      children: [
+        Text(
+          'Gleitzeit-Bilanz',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          formattedOvertime,
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                color: isNegative ? Colors.red : Colors.green,
+              ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildProfileSection(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final authState = ref.watch(authStateProvider);
@@ -172,9 +283,9 @@ class SettingsPage extends ConsumerWidget {
               CircleAvatar(
                 radius: 30,
                 backgroundImage: user.photoURL != null ? NetworkImage(user.photoURL!) : null,
-                child: user.photoURL == null 
-                    ? Text(user.displayName?.isNotEmpty == true 
-                        ? user.displayName![0].toUpperCase() 
+                child: user.photoURL == null
+                    ? Text(user.displayName?.isNotEmpty == true
+                        ? user.displayName![0].toUpperCase()
                         : '?')
                     : null,
               ),
@@ -222,14 +333,12 @@ class SettingsPage extends ConsumerWidget {
     );
   }
 
-  // Anmelde- oder Abmeldebutton, je nach Anmeldestatus
   Widget _buildAuthButton(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authStateProvider);
 
     return authState.when(
       data: (user) {
         if (user == null) {
-          // Anmeldebutton für nicht angemeldete Benutzer
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: FilledButton.icon(
@@ -244,12 +353,10 @@ class SettingsPage extends ConsumerWidget {
             ),
           );
         } else {
-          // Abmeldebutton für angemeldete Benutzer
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: OutlinedButton.icon(
               onPressed: () {
-                // Bestätigungsdialog vor dem Abmelden anzeigen
                 showDialog(
                   context: context,
                   builder: (context) => AlertDialog(

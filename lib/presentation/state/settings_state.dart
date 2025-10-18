@@ -1,26 +1,38 @@
-import 'package:flutter/foundation.dart';
+import 'package:equatable/equatable.dart';
 
-@immutable
-class SettingsState {
-  final String? userName;
-  final String? appVersion;
-  final double? targetHours; // Hinzugefügt
+import '../../domain/entities/settings_entity.dart';
+
+class SettingsState extends Equatable {
+  final SettingsEntity settings;
+  final Duration overtimeBalance;
+  final bool isLoading;
 
   const SettingsState({
-    this.userName,
-    this.appVersion,
-    this.targetHours, // Hinzugefügt
+    required this.settings,
+    required this.overtimeBalance,
+    this.isLoading = false,
   });
 
-  SettingsState copyWith({
-    String? userName,
-    String? appVersion,
-    double? targetHours, // Hinzugefügt
-  }) {
+  factory SettingsState.initial() {
     return SettingsState(
-      userName: userName ?? this.userName,
-      appVersion: appVersion ?? this.appVersion,
-      targetHours: targetHours ?? this.targetHours, // Hinzugefügt
+      settings: const SettingsEntity(),
+      overtimeBalance: Duration.zero,
+      isLoading: true,
     );
   }
+
+  SettingsState copyWith({
+    SettingsEntity? settings,
+    Duration? overtimeBalance,
+    bool? isLoading,
+  }) {
+    return SettingsState(
+      settings: settings ?? this.settings,
+      overtimeBalance: overtimeBalance ?? this.overtimeBalance,
+      isLoading: isLoading ?? this.isLoading,
+    );
+  }
+
+  @override
+  List<Object?> get props => [settings, overtimeBalance, isLoading];
 }
