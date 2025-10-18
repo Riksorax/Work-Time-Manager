@@ -201,9 +201,13 @@ fabric.properties
 firebase.json
 google-services.json
 *.pem
+
+# Claude Code settings (local development)
+.claude/
+
+# Documentation files (local development guides)
 FIRESTORE_SECURITY_RULES.md
 TEST_VERSION_CHECK.md
 VERSION_CHECK_SETUP.md
-.claude/*
 
 # End of https://www.toptal.com/developers/gitignore/api/flutter,androidstudio
