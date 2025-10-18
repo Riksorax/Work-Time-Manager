@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../view_models/dashboard_view_model.dart';
+import '../view_models/settings_view_model.dart';
 
 class AddAdjustmentModal extends ConsumerStatefulWidget {
   const AddAdjustmentModal({super.key});
@@ -70,7 +70,7 @@ class _AddAdjustmentModalState extends ConsumerState<AddAdjustmentModal> {
     }
 
     // Rufe die Methode im ViewModel auf
-    ref.read(dashboardViewModelProvider.notifier).addAdjustment(duration);
+    ref.read(settingsViewModelProvider.notifier).setOvertimeBalance(duration);
 
     // Modal schließen
     if (mounted) {

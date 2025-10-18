@@ -132,6 +132,8 @@ final getOvertimeProvider = Provider<GetOvertime>(
     (ref) => GetOvertime(ref.watch(overtimeRepositoryProvider)));
 final updateOvertimeProvider = Provider<UpdateOvertime>(
     (ref) => UpdateOvertime(ref.watch(overtimeRepositoryProvider)));
+final setOvertimeProvider = Provider<SetOvertime>(
+    (ref) => SetOvertime(ref.watch(overtimeRepositoryProvider)));
 
 class DashboardViewModel extends StateNotifier<DashboardState> {
   final GetTodayWorkEntry _getTodayWorkEntry;
@@ -139,6 +141,7 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
   final ToggleBreak _toggleBreak;
   final GetOvertime _getOvertime;
   final UpdateOvertime _updateOvertime;
+  final StorageDataSource _storageDataSource;
 
   Timer? _timer;
 
@@ -148,17 +151,18 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
     this._toggleBreak,
     this._getOvertime,
     this._updateOvertime,
+    this._storageDataSource,
   ) : super(DashboardState.initial()) {
     _init();
   }
 
   Future<void> _init() async {
     final workEntry = await _getTodayWorkEntry.call();
-    final overtimeBalance = _getOvertime.call();
+    final overtime = await _getOvertime.call();
     state = state.copyWith(
       workEntry: workEntry,
       isLoading: false,
-      overtimeBalance: overtimeBalance,
+      overtime: overtime,
     );
     _recalculateStateAndSave(workEntry, save: false);
     _startTimerIfNeeded();
@@ -168,7 +172,9 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
     _timer?.cancel();
     if (state.workEntry.workStart != null && state.workEntry.workEnd == null) {
       _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-        state = state.copyWith(elapsedTime: _calculateElapsedTime());
+        final elapsedTime = _calculateElapsedTime();
+        state = state.copyWith(elapsedTime: elapsedTime);
+        _recalculateOvertime();
       });
     }
   }
@@ -200,6 +206,14 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
     return now.difference(state.workEntry.workStart!) - breakDuration;
   }
 
+  void _recalculateOvertime() {
+    if (state.workEntry.workStart == null) return;
+
+    final targetDailyHours = Duration(microseconds: (_storageDataSource.getTargetWeeklyHours() / 5 * Duration.microsecondsPerHour).round());
+    final dailyOvertime = _calculateElapsedTime() - targetDailyHours;
+    state = state.copyWith(dailyOvertime: dailyOvertime);
+  }
+
   Duration _calculateTotalBreakDuration(DateTime now) {
     return state.workEntry.breaks.fold(Duration.zero, (prev, b) {
       if (b.start.isAfter(now)) return prev;
@@ -224,24 +238,42 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
     await _recalculateStateAndSave(updatedEntry);
   }
 
-  Future<void> _recalculateStateAndSave(WorkEntryEntity updatedEntry,
-      {bool save = true}) async {
+  Future<void> _recalculateStateAndSave(WorkEntryEntity updatedEntry, {bool save = true}) async {
     Duration? newActualWorkDuration;
+    Duration? newOvertime = state.overtime;
+    Duration? dailyOvertime = state.dailyOvertime;
+
+    final wasFinished = state.workEntry.workEnd != null;
+    final oldWorkDuration = state.actualWorkDuration ?? Duration.zero;
+
     if (updatedEntry.workStart != null && updatedEntry.workEnd != null) {
       final breakDuration = updatedEntry.breaks.fold<Duration>(
         Duration.zero,
-        (previousValue, element) =>
-            previousValue +
-            (element.end?.difference(element.start) ?? Duration.zero),
+        (previousValue, element) => previousValue + (element.end?.difference(element.start) ?? Duration.zero),
       );
-      newActualWorkDuration =
-          updatedEntry.workEnd!.difference(updatedEntry.workStart!) -
-              breakDuration;
+      newActualWorkDuration = updatedEntry.workEnd!.difference(updatedEntry.workStart!) - breakDuration;
+
+      if (save) {
+        final targetWeeklyHours = _storageDataSource.getTargetWeeklyHours();
+        final targetDailyHours = Duration(microseconds: (targetWeeklyHours / 5 * Duration.microsecondsPerHour).round());
+
+        final oldDailyOvertime = wasFinished ? oldWorkDuration - targetDailyHours : Duration.zero;
+        final newDailyOvertime = newActualWorkDuration - targetDailyHours;
+
+        final overtimeDelta = newDailyOvertime - oldDailyOvertime;
+        newOvertime = await _updateOvertime.call(amount: overtimeDelta);
+        dailyOvertime = newDailyOvertime;
+      }
+    } else {
+      newActualWorkDuration = null;
+      dailyOvertime = null;
     }
 
     state = state.copyWith(
       workEntry: updatedEntry,
       actualWorkDuration: newActualWorkDuration,
+      overtime: newOvertime,
+      dailyOvertime: dailyOvertime,
     );
 
     if (save) {
@@ -252,17 +284,14 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
 
   Future<void> setManualStartTime(TimeOfDay time) async {
     final oldDate = state.workEntry.workStart ?? DateTime.now();
-    final newStart =
-        DateTime(oldDate.year, oldDate.month, oldDate.day, time.hour, time.minute);
+    final newStart = DateTime(oldDate.year, oldDate.month, oldDate.day, time.hour, time.minute);
     final updatedEntry = state.workEntry.copyWith(workStart: newStart);
     await _recalculateStateAndSave(updatedEntry);
   }
 
   Future<void> setManualEndTime(TimeOfDay time) async {
-    final oldDate =
-        state.workEntry.workEnd ?? state.workEntry.workStart ?? DateTime.now();
-    final newEnd =
-        DateTime(oldDate.year, oldDate.month, oldDate.day, time.hour, time.minute);
+    final oldDate = state.workEntry.workEnd ?? state.workEntry.workStart ?? DateTime.now();
+    final newEnd = DateTime(oldDate.year, oldDate.month, oldDate.day, time.hour, time.minute);
     final updatedEntry = state.workEntry.copyWith(workEnd: newEnd);
     await _recalculateStateAndSave(updatedEntry);
   }
@@ -273,8 +302,7 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
   }
 
   Future<void> deleteBreak(String breakId) async {
-    final updatedBreaks =
-        state.workEntry.breaks.where((b) => b.id != breakId).toList();
+    final updatedBreaks = state.workEntry.breaks.where((b) => b.id != breakId).toList();
     final updatedEntry = state.workEntry.copyWith(breaks: updatedBreaks);
     await _recalculateStateAndSave(updatedEntry);
   }
@@ -287,11 +315,6 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
     await _recalculateStateAndSave(updatedEntry);
   }
 
-  Future<void> addAdjustment(Duration adjustment) async {
-    final newOvertime = await _updateOvertime.call(amount: adjustment);
-    state = state.copyWith(overtimeBalance: newOvertime);
-  }
-
   @override
   void dispose() {
     _timer?.cancel();
@@ -299,13 +322,13 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
   }
 }
 
-final dashboardViewModelProvider =
-    StateNotifierProvider<DashboardViewModel, DashboardState>((ref) {
+final dashboardViewModelProvider = StateNotifierProvider<DashboardViewModel, DashboardState>((ref) {
   return DashboardViewModel(
     ref.watch(getTodayWorkEntryProvider),
     ref.watch(saveWorkEntryProvider),
     ref.watch(toggleBreakProvider),
     ref.watch(getOvertimeProvider),
     ref.watch(updateOvertimeProvider),
+    ref.watch(storageDataSourceProvider),
   );
 });

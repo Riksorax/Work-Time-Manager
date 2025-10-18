@@ -22,3 +22,13 @@ class UpdateOvertime {
     return newOvertime;
   }
 }
+
+class SetOvertime {
+  final OvertimeRepository repository;
+
+  SetOvertime(this.repository);
+
+  Future<void> call({required Duration overtime}) async {
+    await repository.saveOvertime(overtime);
+  }
+}

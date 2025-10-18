@@ -5,10 +5,8 @@ import 'package:intl/intl.dart';
 import '../../domain/entities/break_entity.dart';
 import '../../domain/services/break_calculator_service.dart';
 import '../view_models/dashboard_view_model.dart';
-import '../widgets/add_adjustment_modal.dart';
 import '../widgets/edit_break_modal.dart';
 import 'settings_page.dart';
-import '../view_models/settings_view_model.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -19,6 +17,16 @@ class DashboardScreen extends ConsumerWidget {
     final minutes = twoDigits(duration.inMinutes.remainder(60));
     final seconds = twoDigits(duration.inSeconds.remainder(60));
     return "$hours:$minutes:$seconds";
+  }
+
+  String _formatOvertime(Duration overtime) {
+    final isNegative = overtime.isNegative;
+    final absoluteOvertime = isNegative ? -overtime : overtime;
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final hours = twoDigits(absoluteOvertime.inHours);
+    final minutes = twoDigits(absoluteOvertime.inMinutes.remainder(60));
+    final sign = isNegative ? '-' : '+';
+    return '$sign$hours:$minutes';
   }
 
   @override
@@ -71,6 +79,11 @@ class DashboardScreen extends ConsumerWidget {
               ),
             const SizedBox(height: 24),
 
+            _buildOvertime(context, dashboardState.overtime, 'Überstunden Gesamt'),
+            const SizedBox(height: 16),
+            _buildOvertime(context, dashboardState.dailyOvertime, 'Heutige Überstunden'),
+            const SizedBox(height: 24),
+
             // Time Input Fields
             _TimeInputField(
               label: 'Startzeit',
@@ -111,26 +124,33 @@ class DashboardScreen extends ConsumerWidget {
                       ? 'Pause beenden'
                       : 'Pause hinzufügen'),
             ),
-            const SizedBox(height: 16),
-
-            // Overtime Balance Display
-            _buildOvertimeBalance(context, ref, dashboardState.overtimeBalance),
-            const SizedBox(height: 16),
-
-            ElevatedButton(
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (context) => const AddAdjustmentModal(),
-                );
-              },
-              child: const Text('Überstunden / Minusstunden hinzufügen'),
-            ),
             const SizedBox(height: 24),
             _buildActualWorkDuration(context, dashboardState.actualWorkDuration),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildOvertime(BuildContext context, Duration? overtime, String title) {
+    if (overtime == null) {
+      return const SizedBox.shrink();
+    }
+    final formattedOvertime = _formatOvertime(overtime);
+    final overtimeColor = overtime.isNegative ? Colors.red : Colors.green;
+
+    return Column(
+      children: [
+        Text(
+          title,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          formattedOvertime,
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: overtimeColor),
+        ),
+      ],
     );
   }
 
@@ -152,119 +172,6 @@ class DashboardScreen extends ConsumerWidget {
         ),
       ],
     );
-  }
-
-  Widget _buildOvertimeBalance(BuildContext context, WidgetRef ref, Duration overtimeBalance) {
-    final bool isNegative = overtimeBalance.isNegative;
-    final Duration absDuration = overtimeBalance.abs();
-
-    String twoDigits(int n) => n.toString().padLeft(2, '0');
-    final hours = twoDigits(absDuration.inHours);
-    final minutes = twoDigits(absDuration.inMinutes.remainder(60));
-    final sign = isNegative ? '-' : '+';
-    final formattedOvertime = '$sign$hours:$minutes';
-
-    // Die Gesamtbilanz (manuelle Anpassungen + aktuelle Arbeitszeit) wird vom ViewModel berechnet
-    final dashboardState = ref.watch(dashboardViewModelProvider);
-    Duration totalBalance = dashboardState.totalBalance ?? overtimeBalance;
-
-    // Wenn totalBalance nicht gesetzt ist, berechnen wir es hier (Fallback)
-    if (dashboardState.totalBalance == null && dashboardState.actualWorkDuration != null) {
-      // Tägliche Sollarbeitszeit aus den Einstellungen berechnen
-      final settingsState = ref.watch(settingsViewModelProvider);
-      totalBalance = settingsState.when(
-        data: (settings) {
-          final dailyTarget = settings.workdaysPerWeek > 0
-              ? Duration(
-                  minutes: ((settings.weeklyTargetHours / settings.workdaysPerWeek) * 60).round(),
-                )
-              : Duration.zero;
-          final todayBalance = dashboardState.actualWorkDuration! - dailyTarget;
-          return overtimeBalance + todayBalance;
-        },
-        loading: () => overtimeBalance,
-        error: (_, __) => overtimeBalance,
-      );
-    }
-
-    // Formatiere die Gesamtbilanz
-    final bool isTotalNegative = totalBalance.isNegative;
-    final Duration absTotalDuration = totalBalance.abs();
-    final totalHours = twoDigits(absTotalDuration.inHours);
-    final totalMinutes = twoDigits(absTotalDuration.inMinutes.remainder(60));
-    final totalSign = isTotalNegative ? '-' : '+';
-    final formattedTotalOvertime = '$totalSign$totalHours:$totalMinutes';
-
-    // Wenn aktuelle Arbeitszeit verfügbar ist, zeige detaillierte Überstundenbilanz
-    if (dashboardState.actualWorkDuration != null) {
-      return Column(
-        children: [
-          Text(
-            'Manuell erfasste Überstunden',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            formattedOvertime,
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  color: isNegative ? Colors.red : Colors.green,
-                ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            isTotalNegative 
-              ? 'Gesamt-Minusstunden inkl. heute' 
-              : 'Gesamt-Überstunden inkl. heute',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            formattedTotalOvertime,
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  color: isTotalNegative ? Colors.red : Colors.green,
-                ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                'Berücksichtigt alle Einträge und heutige Arbeitszeit',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                '(Diese Informationen werden jetzt auch in den Berichten angezeigt)',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
-          ),
-        ],
-      );
-    }
-
-    // Fallback, wenn keine aktuelle Arbeitszeit verfügbar ist
-    return Column(
-      children: [
-        Text(
-          'Stunden-Bilanz',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        const SizedBox(height: 4),
-        Text(
-          formattedOvertime,
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                color: isNegative ? Colors.red : Colors.green,
-              ),
-        ),
-      ],
-    );
-      }
   }
 
   Widget _buildBreaksSection(
@@ -305,7 +212,7 @@ class DashboardScreen extends ConsumerWidget {
                   ],
                 ),
                 subtitle: Text(
-                    '${DateFormat.Hm().format(b.start)} - ${b.end != null ? DateFormat.Hm().format(b.end!) : 'läuft...'}}'),
+                    '${DateFormat.Hm().format(b.start)} - ${b.end != null ? DateFormat.Hm().format(b.end!) : 'läuft...'}'),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -329,6 +236,7 @@ class DashboardScreen extends ConsumerWidget {
       ],
     );
   }
+}
 
 class _TimeInputField extends StatefulWidget {
   final String label;

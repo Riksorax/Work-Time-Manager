@@ -1,139 +1,92 @@
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart' show ThemeMode;
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers/providers.dart';
+import '../../data/repositories/settings_repository_impl.dart';
+import '../../domain/entities/settings_entity.dart';
 import '../../domain/repositories/settings_repository.dart';
-import '../../domain/repositories/work_repository.dart';
-import '../../domain/entities/work_entry_entity.dart';
+import '../../domain/usecases/overtime_usecases.dart';
+import '../state/settings_state.dart';
+import 'dashboard_view_model.dart' show getOvertimeProvider, setOvertimeProvider;
 
-// State for the settings page
-@immutable
-class SettingsState {
-  final ThemeMode themeMode;
-  final double weeklyTargetHours;
-  final int workdaysPerWeek;
-
-  const SettingsState({
-    required this.themeMode,
-    required this.weeklyTargetHours,
-    required this.workdaysPerWeek,
-  });
-
-  SettingsState copyWith({
-    ThemeMode? themeMode,
-    double? weeklyTargetHours,
-    int? workdaysPerWeek,
-  }) {
-    return SettingsState(
-      themeMode: themeMode ?? this.themeMode,
-      weeklyTargetHours: weeklyTargetHours ?? this.weeklyTargetHours,
-      workdaysPerWeek: workdaysPerWeek ?? this.workdaysPerWeek,
-    );
-  }
+// Temporary No-op repository
+class NoOpSettingsRepository implements SettingsRepository {
+  @override
+  ThemeMode getThemeMode() => ThemeMode.system;
+  @override
+  Future<void> setThemeMode(ThemeMode mode) async {}
+  @override
+  double getTargetWeeklyHours() => 40.0;
+  @override
+  Future<void> setTargetWeeklyHours(double hours) async {}
+  @override
+  int getWorkdaysPerWeek() => 5;
+  @override
+  Future<void> setWorkdaysPerWeek(int days) async {}
 }
 
-// ViewModel for the settings page
+final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
+  try {
+    return SettingsRepositoryImpl(ref.watch(sharedPreferencesProvider));
+  } catch (e) {
+    return NoOpSettingsRepository();
+  }
+});
+
 class SettingsViewModel extends StateNotifier<AsyncValue<SettingsState>> {
-  final SettingsRepository _repository;
-  final WorkRepository _workRepository;
+  final GetOvertime _getOvertime;
+  final SetOvertime _setOvertime;
+  final SettingsRepository _settingsRepository;
 
-  SettingsViewModel(this._repository, this._workRepository) : super(const AsyncValue.loading()) {
-    _loadSettings();
+  SettingsViewModel(
+    this._getOvertime,
+    this._setOvertime,
+    this._settingsRepository,
+  ) : super(const AsyncValue.loading()) {
+    _init();
   }
 
-  Future<void> _loadSettings() async {
+  Future<void> _init() async {
     try {
-      final themeMode = _repository.getThemeMode();
-      final weeklyTargetHours = _repository.getTargetWeeklyHours();
-      final workdaysPerWeek = _repository.getWorkdaysPerWeek();
-      state = AsyncValue.data(
-        SettingsState(
-            themeMode: themeMode, weeklyTargetHours: weeklyTargetHours, workdaysPerWeek: workdaysPerWeek),
+      final overtimeBalance = _getOvertime.call();
+      final weeklyTargetHours = _settingsRepository.getTargetWeeklyHours();
+      final workdaysPerWeek = _settingsRepository.getWorkdaysPerWeek();
+      final settings = SettingsEntity(
+        weeklyTargetHours: weeklyTargetHours,
+        workdaysPerWeek: workdaysPerWeek,
       );
+      state = AsyncValue.data(SettingsState(
+        settings: settings,
+        overtimeBalance: overtimeBalance,
+      ));
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
   }
 
-  Future<void> setThemeMode(ThemeMode mode) async {
-    try {
-      await _repository.setThemeMode(mode);
-      state.whenData((value) {
-        state = AsyncValue.data(value.copyWith(themeMode: mode));
-      });
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    }
+  Future<void> setOvertimeBalance(Duration overtime) async {
+    await _setOvertime.call(overtime: overtime);
+    state = state.whenData((value) => value.copyWith(overtimeBalance: overtime));
   }
 
-  Future<void> setTargetWeeklyHours(double hours) async {
-    try {
-      await _repository.setTargetWeeklyHours(hours);
-      state.whenData((value) {
-        state = AsyncValue.data(value.copyWith(weeklyTargetHours: hours));
-      });
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    }
+  Future<void> updateWorkdaysPerWeek(int days) async {
+    await _settingsRepository.setWorkdaysPerWeek(days);
+    final newSettings = state.value!.settings.copyWith(workdaysPerWeek: days);
+    state = state.whenData((value) => value.copyWith(settings: newSettings));
   }
 
-  Future<void> setWorkdaysPerWeek(int days) async {
-    try {
-      await _repository.setWorkdaysPerWeek(days);
-      state.whenData((value) {
-        state = AsyncValue.data(value.copyWith(workdaysPerWeek: days));
-      });
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    }
-  }
-
-  /// Passt alle vorhandenen Arbeitszeiten basierend auf einem Anpassungsfaktor an
-  Future<void> adjustAllWorkEntries(double adjustmentFactor) async {
-    try {
-      // Lade alle Einträge für die letzten 12 Monate
-      final now = DateTime.now();
-      final entries = <WorkEntryEntity>[];
-
-      // Hole Einträge für die letzten 12 Monate
-      for (int i = 0; i < 12; i++) {
-        final date = DateTime(now.year, now.month - i);
-        final monthEntries = await _workRepository.getWorkEntriesForMonth(
-          date.year, date.month);
-        entries.addAll(monthEntries);
-      }
-
-      // Passe alle Einträge an
-      // Kurze Verzögerung zwischen den Einträgen, um UI-Updates zu ermöglichen
-      for (final entry in entries) {
-        if (entry.workStart != null && entry.workEnd != null) {
-          // Neue Arbeitsdauer berechnen
-          final oldDuration = entry.workEnd!.difference(entry.workStart!);
-          final newDurationMinutes = (oldDuration.inMinutes * adjustmentFactor).round();
-
-          // Neues Ende berechnen (Start bleibt gleich)
-          final newWorkEnd = entry.workStart!.add(Duration(minutes: newDurationMinutes));
-
-          // Angepassten Eintrag speichern
-          final updatedEntry = entry.copyWith(workEnd: newWorkEnd);
-          await _workRepository.saveWorkEntry(updatedEntry);
-
-          // Kleine Verzögerung, um das UI nicht zu blockieren
-          await Future.delayed(const Duration(milliseconds: 10));
-        }
-      }
-    } catch (e) {
-      // Fehler abfangen, aber weitermachen
-      print('Fehler bei der Anpassung der Arbeitszeiten: $e');
-    }
+  Future<void> updateWeeklyTargetHours(double hours) async {
+    await _settingsRepository.setTargetWeeklyHours(hours);
+    final newSettings = state.value!.settings.copyWith(weeklyTargetHours: hours);
+    state = state.whenData((value) => value.copyWith(settings: newSettings));
   }
 }
 
-// Provider for the SettingsViewModel
 final settingsViewModelProvider =
-StateNotifierProvider<SettingsViewModel, AsyncValue<SettingsState>>((ref) {
-  final settingsRepository = ref.watch(settingsRepositoryProvider);
-  final workRepository = ref.watch(workRepositoryProvider);
-  return SettingsViewModel(settingsRepository, workRepository);
+    StateNotifierProvider<SettingsViewModel, AsyncValue<SettingsState>>((ref) {
+  return SettingsViewModel(
+    ref.watch(getOvertimeProvider),
+    ref.watch(setOvertimeProvider),
+    ref.watch(settingsRepositoryProvider),
+  );
 });
