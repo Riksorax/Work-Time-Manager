@@ -8,7 +8,6 @@ import '../../domain/repositories/work_repository.dart';
 import '../state/monthly_report_state.dart';
 import '../state/reports_state.dart';
 import '../state/weekly_report_state.dart';
-import '../view_models/dashboard_view_model.dart';
 
 // Dummy-Implementierung, um den Provider zu vervollständigen, falls das echte Repository nicht verfügbar ist.
 class DummyWorkRepository implements WorkRepository {
@@ -50,17 +49,15 @@ final reportsViewModelProvider =
   return ReportsViewModel(
     workRepository,
     settingsRepository,
-    ref,
   );
 });
 
 class ReportsViewModel extends StateNotifier<ReportsState> {
-  ReportsViewModel(this._workRepository, this._settingsRepository, this._ref)
+  ReportsViewModel(this._workRepository, this._settingsRepository)
       : super(ReportsState.initial()) {
     init();
   }
 
-  final Ref _ref;
   final WorkRepository _workRepository;
   final SettingsRepository _settingsRepository;
 
@@ -303,9 +300,6 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
         (prev, entry) => prev + (entry.manualOvertime ?? Duration.zero));
     final calculatedMonthlyOvertime = overtime + manualOvertimes;
 
-    final dashboardState = _ref.read(dashboardViewModelProvider);
-    final totalOvertimeOverall = dashboardState.totalBalance ?? calculatedMonthlyOvertime; // Fallback, falls kein Gesamtstand da
-
     final Map<DateTime, Duration> dailyWork = {};
     final Map<int, Duration> weeklyWork = {};
 
@@ -334,7 +328,7 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
       totalNetWorkDuration: totalNetWorkDuration,
       averageWorkDuration: averageWorkDuration, // Ø pro Tag
       overtime: calculatedMonthlyOvertime, 
-      totalOvertime: totalOvertimeOverall,
+      totalOvertime: calculatedMonthlyOvertime,
       workDays: workDays, // Anzahl der tatsächlichen Arbeitstage
       dailyWork: dailyWork, // Für Kalendermarkierungen und Tagesübersicht in Monatsansicht
       weeklyWork: weeklyWork,

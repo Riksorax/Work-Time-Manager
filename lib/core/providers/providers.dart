@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../data/datasources/local/storage_datasource.dart';
 import '../../data/datasources/remote/firestore_datasource.dart';
 import '../../data/repositories/auth_repository_impl.dart';
 import '../../data/repositories/overtime_repository_impl.dart';
@@ -27,6 +26,8 @@ import '../../domain/usecases/sign_in_with_google.dart';
 import '../../domain/usecases/sign_out.dart';
 import '../../domain/usecases/start_or_stop_timer.dart';
 import '../../presentation/view_models/auth_view_model.dart';
+import '../../presentation/view_models/dashboard_view_model.dart' show NoOpOvertimeRepository;
+import '../../presentation/view_models/settings_view_model.dart' show NoOpSettingsRepository;
 
 //==============================================================================
 // SCHICHT 1: DATA SOURCES PROVIDERS
@@ -48,10 +49,6 @@ final firestoreDataSourceProvider = Provider<FirestoreDataSource>((ref) {
   );
 });
 
-final storageDataSourceProvider = Provider<StorageDataSource>((ref) {
-  return StorageDataSourceImpl(ref.watch(sharedPreferencesProvider));
-});
-
 //==============================================================================
 // SCHICHT 2: REPOSITORY PROVIDERS
 //==============================================================================
@@ -61,12 +58,26 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 });
 
 final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
-  return impl.SettingsRepositoryImpl(ref.watch(sharedPreferencesProvider));
+  final userId = ref.watch(firebaseAuthProvider).currentUser?.uid;
+  if (userId == null) {
+    return NoOpSettingsRepository();
+  }
+  return impl.SettingsRepositoryImpl(
+    ref.watch(sharedPreferencesProvider),
+    ref.watch(firestoreDataSourceProvider),
+    userId,
+  );
 });
 
-/// Provider für das OvertimeRepository.
 final overtimeRepositoryProvider = Provider<OvertimeRepository>((ref) {
-  return OvertimeRepositoryImpl(ref.watch(storageDataSourceProvider));
+  final userId = ref.watch(firebaseAuthProvider).currentUser?.uid;
+  if (userId == null) {
+    return NoOpOvertimeRepository();
+  }
+  return OvertimeRepositoryImpl(
+    ref.watch(sharedPreferencesProvider),
+    userId,
+  );
 });
 
 class NoOpWorkRepository implements WorkRepository {
