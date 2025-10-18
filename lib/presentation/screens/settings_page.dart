@@ -1,12 +1,16 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
+import '../../core/providers/providers.dart';
 import '../view_models/auth_view_model.dart';
 import '../view_models/settings_view_model.dart';
 import '../view_models/theme_view_model.dart';
 import '../widgets/add_adjustment_modal.dart';
 import '../widgets/edit_target_hours_modal.dart';
 import '../widgets/edit_workdays_modal.dart';
+import '../widgets/update_required_dialog.dart';
 import 'login_page.dart';
 
 class SettingsPage extends ConsumerWidget {
@@ -151,10 +155,27 @@ class SettingsPage extends ConsumerWidget {
                 ),
               ],
               const Divider(height: 1),
-              const ListTile(
-                title: Text('Version'),
-                trailing: Text('1.0.0'),
+              FutureBuilder<PackageInfo>(
+                future: PackageInfo.fromPlatform(),
+                builder: (context, snapshot) {
+                  final version = snapshot.data?.version ?? '...';
+                  return ListTile(
+                    title: const Text('Version'),
+                    trailing: Text(version),
+                  );
+                },
               ),
+              // DEBUG: Test-Button für Version-Check (nur im Debug-Modus)
+              if (kDebugMode)
+                ListTile(
+                  leading: const Icon(Icons.bug_report, color: Colors.orange),
+                  title: const Text('🧪 TEST: Version Check'),
+                  subtitle: const Text('Update-Dialog manuell anzeigen'),
+                  onTap: () async {
+                    final versionService = ref.read(versionServiceProvider);
+                    await UpdateRequiredDialog.checkAndShow(context, versionService);
+                  },
+                ),
               ListTile(
                 title: const Text('Impressum'),
                 trailing: const Icon(Icons.chevron_right),

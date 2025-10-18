@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../core/services/version_service.dart';
 import '../../data/datasources/remote/firestore_datasource.dart';
 import '../../data/repositories/auth_repository_impl.dart';
 import '../../data/repositories/overtime_repository_impl.dart';
@@ -47,6 +48,14 @@ final firestoreDataSourceProvider = Provider<FirestoreDataSource>((ref) {
     ref.watch(firestoreProvider),
     ref.watch(googleSignInProvider),
   );
+});
+
+//==============================================================================
+// SERVICES
+//==============================================================================
+
+final versionServiceProvider = Provider<VersionService>((ref) {
+  return VersionService(ref.watch(firestoreProvider));
 });
 
 //==============================================================================
