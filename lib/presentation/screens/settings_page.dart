@@ -116,6 +116,41 @@ class SettingsPage extends ConsumerWidget {
                 onChanged: (value) {},
               ),
               const Divider(height: 1),
+              if (authState.asData?.value != null) ...[
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.sync_alt),
+                  title: const Text('Alte Daten migrieren'),
+                  subtitle: const Text('Für neue Speicherstruktur'),
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (dialogContext) => AlertDialog(
+                        title: const Text('Datenmigration'),
+                        content: const Text(
+                            'Möchten Sie Ihre alten Daten jetzt zur neuen monatlichen Struktur migrieren? Dieser Vorgang kann nicht rückgängig gemacht werden.'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(dialogContext).pop(),
+                            child: const Text('Abbrechen'),
+                          ),
+                          FilledButton(
+                            onPressed: () {
+                              Navigator.of(dialogContext).pop();
+                              ref.read(settingsViewModelProvider.notifier).migrateWorkEntries();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Migration wird gestartet...')),
+                              );
+                            },
+                            child: const Text('Migrieren'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ],
+              const Divider(height: 1),
               const ListTile(
                 title: Text('Version'),
                 trailing: Text('1.0.0'),

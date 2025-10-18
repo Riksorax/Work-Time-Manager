@@ -1,18 +1,25 @@
-import 'package:flutter_work_time/data/datasources/local/storage_datasource.dart';
-import 'package:flutter_work_time/domain/repositories/overtime_repository.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../domain/repositories/overtime_repository.dart';
 
 class OvertimeRepositoryImpl implements OvertimeRepository {
-  final StorageDataSource dataSource;
+  static const String _overtimeKey = 'overtime_minutes';
 
-  OvertimeRepositoryImpl(this.dataSource);
+  final SharedPreferences _prefs;
+  final String _userId;
+
+  OvertimeRepositoryImpl(this._prefs, this._userId);
+
+  String get _userPrefKey => '$_userId\_$_overtimeKey';
 
   @override
   Duration getOvertime() {
-    return dataSource.getOvertime();
+    final minutes = _prefs.getInt(_userPrefKey) ?? 0;
+    return Duration(minutes: minutes);
   }
 
   @override
-  Future<void> saveOvertime(Duration overtime) {
-    return dataSource.saveOvertime(overtime);
+  Future<void> saveOvertime(Duration overtime) async {
+    await _prefs.setInt(_userPrefKey, overtime.inMinutes);
   }
 }

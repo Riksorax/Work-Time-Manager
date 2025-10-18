@@ -4,10 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers/providers.dart';
 import '../../data/repositories/settings_repository_impl.dart';
 import '../../domain/entities/settings_entity.dart';
+import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/repositories/settings_repository.dart';
 import '../../domain/usecases/overtime_usecases.dart';
 import '../state/settings_state.dart';
-import 'dashboard_view_model.dart' show getOvertimeProvider, setOvertimeProvider;
+import 'dashboard_view_model.dart' show getOvertimeProvider, setOvertimeProvider, dashboardViewModelProvider;
 
 // Temporary No-op repository
 class NoOpSettingsRepository implements SettingsRepository {
@@ -23,11 +24,29 @@ class NoOpSettingsRepository implements SettingsRepository {
   int getWorkdaysPerWeek() => 5;
   @override
   Future<void> setWorkdaysPerWeek(int days) async {}
+  
+  @override
+  Future<List<WorkEntryEntity>> getAllOldWorkEntries() async => [];
+
+  @override
+  Future<void> saveMigratedWorkEntries(Map<String, List<WorkEntryEntity>> monthlyEntries) async {}
+
+  @override
+  Future<void> deleteAllOldWorkEntries(List<String> entryIds) async {}
 }
 
 final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
   try {
-    return SettingsRepositoryImpl(ref.watch(sharedPreferencesProvider));
+    final firestoreDataSource = ref.watch(firestoreDataSourceProvider);
+    final userId = ref.watch(firebaseAuthProvider).currentUser?.uid;
+    if (userId == null) {
+      return NoOpSettingsRepository();
+    }
+    return SettingsRepositoryImpl(
+      ref.watch(sharedPreferencesProvider),
+      firestoreDataSource,
+      userId,
+    );
   } catch (e) {
     return NoOpSettingsRepository();
   }
@@ -64,9 +83,10 @@ class SettingsViewModel extends StateNotifier<AsyncValue<SettingsState>> {
     }
   }
 
-  Future<void> setOvertimeBalance(Duration overtime) async {
+  Future<void> setOvertimeBalance(WidgetRef ref, Duration overtime) async {
     await _setOvertime.call(overtime: overtime);
     state = state.whenData((value) => value.copyWith(overtimeBalance: overtime));
+    ref.read(dashboardViewModelProvider.notifier).updateOvertimeFromSettings(overtime);
   }
 
   Future<void> updateWorkdaysPerWeek(int days) async {
@@ -79,6 +99,26 @@ class SettingsViewModel extends StateNotifier<AsyncValue<SettingsState>> {
     await _settingsRepository.setTargetWeeklyHours(hours);
     final newSettings = state.value!.settings.copyWith(weeklyTargetHours: hours);
     state = state.whenData((value) => value.copyWith(settings: newSettings));
+  }
+
+  Future<void> migrateWorkEntries() async {
+    try {
+      final oldEntries = await _settingsRepository.getAllOldWorkEntries();
+      if (oldEntries.isEmpty) {
+        return;
+      }
+
+      final monthlyEntries = <String, List<WorkEntryEntity>>{};
+      for (final entry in oldEntries) {
+        final monthId = '${entry.date.year}-${entry.date.month.toString().padLeft(2, '0')}';
+        (monthlyEntries[monthId] ??= []).add(entry);
+      }
+
+      await _settingsRepository.saveMigratedWorkEntries(monthlyEntries);
+      await _settingsRepository.deleteAllOldWorkEntries(oldEntries.map((e) => e.id).toList());
+    } catch (e) {
+      // Handle error
+    }
   }
 }
 

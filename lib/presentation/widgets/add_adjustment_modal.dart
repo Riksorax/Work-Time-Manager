@@ -70,7 +70,7 @@ class _AddAdjustmentModalState extends ConsumerState<AddAdjustmentModal> {
     }
 
     // Rufe die Methode im ViewModel auf
-    ref.read(settingsViewModelProvider.notifier).setOvertimeBalance(duration);
+    ref.read(settingsViewModelProvider.notifier).setOvertimeBalance(ref, duration);
 
     // Modal schließen
     if (mounted) {
@@ -159,7 +159,7 @@ class _AddAdjustmentModalState extends ConsumerState<AddAdjustmentModal> {
               if (value.isNotEmpty && double.tryParse(value) == null) {
                 // Falls '-' allein steht, erlaube es
                 if (value != '-') {
-                  _minutesController.text = value.replaceAll(RegExp(r'[^0-9-]'), '');
+                  _minutesController.text = value.replaceAll(RegExp(r'[^0-g-]'), '');
                   _minutesController.selection = TextSelection.fromPosition(
                     TextPosition(offset: _minutesController.text.length),
                   );

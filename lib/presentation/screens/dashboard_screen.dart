@@ -35,14 +35,17 @@ class DashboardScreen extends ConsumerWidget {
     final dashboardViewModel = ref.read(dashboardViewModelProvider.notifier);
     final workEntry = dashboardState.workEntry;
 
-    // Berechne automatische Pausen, falls Start- und Endzeit vorhanden sind
     final workEntryWithAutoBreaks = workEntry.workStart != null && workEntry.workEnd != null
         ? BreakCalculatorService.calculateAndApplyBreaks(workEntry)
         : workEntry;
 
-    // Den Timer-Status basierend auf den Daten von workEntry ableiten
     final isTimerRunning = workEntry.workStart != null && workEntry.workEnd == null;
     final isBreakRunning = workEntry.breaks.isNotEmpty && workEntry.breaks.last.end == null;
+
+    // KORREKTE BERECHNUNG FÜR DIE ANZEIGE
+    final baseOvertime = dashboardState.overtime ?? Duration.zero;
+    final dailyOvertime = dashboardState.dailyOvertime ?? Duration.zero;
+    final liveTotalOvertime = baseOvertime + dailyOvertime;
 
     return Scaffold(
       appBar: AppBar(
@@ -64,7 +67,6 @@ class DashboardScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Timer Display
             Text(
               _formatDuration(dashboardState.elapsedTime),
               style: Theme.of(context).textTheme.displayLarge,
@@ -79,15 +81,13 @@ class DashboardScreen extends ConsumerWidget {
               ),
             const SizedBox(height: 24),
 
-            _buildOvertime(context, dashboardState.overtime, 'Überstunden Gesamt'),
+            _buildOvertime(context, liveTotalOvertime, 'Überstunden Gesamt'),
             const SizedBox(height: 16),
             _buildOvertime(context, dashboardState.dailyOvertime, 'Heutige Überstunden'),
             const SizedBox(height: 24),
 
-            // Time Input Fields
             _TimeInputField(
               label: 'Startzeit',
-              // Korrekter Zugriff auf workStart über workEntry
               initialValue: workEntry.workStart,
               onTimeSelected: (time) => dashboardViewModel.setManualStartTime(time),
             ),
@@ -100,26 +100,21 @@ class DashboardScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 24),
 
-            // Timer Button
             ElevatedButton(
               onPressed: () => dashboardViewModel.startOrStopTimer(),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
-              // Korrekte Verwendung des abgeleiteten isTimerRunning-Flags
               child: Text(isTimerRunning
                   ? 'Zeiterfassung beenden'
                   : 'Zeiterfassung starten'),
             ),
             const SizedBox(height: 24),
 
-            // Breaks Section
-            // Zugriff auf breaks mit automatischen Pausen
             _buildBreaksSection(context, ref, workEntryWithAutoBreaks.breaks),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () => dashboardViewModel.startOrStopBreak(),
-              // Korrekte Verwendung des abgeleiteten isBreakRunning-Flags
               child: Text(isBreakRunning
                       ? 'Pause beenden'
                       : 'Pause hinzufügen'),

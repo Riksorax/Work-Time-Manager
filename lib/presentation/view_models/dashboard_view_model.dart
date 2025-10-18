@@ -7,13 +7,14 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 
-import '../../data/datasources/local/storage_datasource.dart';
+import '../../core/providers/providers.dart';
 import '../../data/datasources/remote/firestore_datasource.dart';
 import '../../data/repositories/overtime_repository_impl.dart';
 import '../../data/repositories/work_repository_impl.dart';
 import '../../domain/entities/break_entity.dart';
 import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/repositories/overtime_repository.dart';
+import '../../domain/repositories/settings_repository.dart';
 import '../../domain/repositories/work_repository.dart';
 import '../../domain/usecases/get_today_work_entry.dart';
 import '../../domain/usecases/save_work_entry.dart';
@@ -51,27 +52,6 @@ class NoOpOvertimeRepository implements OvertimeRepository {
   Future<void> saveOvertime(Duration overtime) async {}
 }
 
-class NoOpStorageDataSource implements StorageDataSource {
-  @override
-  ThemeMode getThemeMode() => ThemeMode.system;
-
-  @override
-  Future<void> setThemeMode(ThemeMode mode) async {}
-
-  @override
-  double getTargetWeeklyHours() => 40.0;
-
-  @override
-  Future<void> setTargetWeeklyHours(double hours) async {}
-
-  @override
-  Duration getOvertime() => Duration.zero;
-
-  @override
-  Future<void> saveOvertime(Duration overtime) async {}
-}
-
-
 // Service Providers
 final firebaseAuthProvider =
     Provider<firebase.FirebaseAuth>((ref) => firebase.FirebaseAuth.instance);
@@ -79,8 +59,6 @@ final firestoreProvider =
     Provider<FirebaseFirestore>((ref) => FirebaseFirestore.instance);
 final googleSignInProvider =
     Provider<GoogleSignIn>((ref) => GoogleSignIn.instance);
-final sharedPreferencesProvider =
-    Provider<SharedPreferences>((ref) => throw UnimplementedError());
 
 // Datasource Provider
 final firestoreDataSourceProvider = Provider<FirestoreDataSource>((ref) {
@@ -89,15 +67,6 @@ final firestoreDataSourceProvider = Provider<FirestoreDataSource>((ref) {
     ref.watch(firestoreProvider),
     ref.watch(googleSignInProvider),
   );
-});
-
-final storageDataSourceProvider = Provider<StorageDataSource>((ref) {
-  try {
-    return StorageDataSourceImpl(ref.watch(sharedPreferencesProvider));
-  } catch (e) {
-    // Return a dummy implementation if SharedPreferences fails
-    return NoOpStorageDataSource();
-  }
 });
 
 // Repository Provider
@@ -117,7 +86,10 @@ final overtimeRepositoryProvider = Provider<OvertimeRepository>((ref) {
   if (userId == null) {
     return NoOpOvertimeRepository();
   }
-  return OvertimeRepositoryImpl(ref.watch(storageDataSourceProvider));
+  return OvertimeRepositoryImpl(
+    ref.watch(sharedPreferencesProvider),
+    userId,
+  );
 });
 
 
@@ -140,8 +112,8 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
   final SaveWorkEntry _saveWorkEntry;
   final ToggleBreak _toggleBreak;
   final GetOvertime _getOvertime;
-  final UpdateOvertime _updateOvertime;
-  final StorageDataSource _storageDataSource;
+  final SetOvertime _setOvertime;
+  final SettingsRepository _settingsRepository;
 
   Timer? _timer;
 
@@ -150,8 +122,8 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
     this._saveWorkEntry,
     this._toggleBreak,
     this._getOvertime,
-    this._updateOvertime,
-    this._storageDataSource,
+    this._setOvertime,
+    this._settingsRepository,
   ) : super(DashboardState.initial()) {
     _init();
   }
@@ -166,6 +138,10 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
     );
     _recalculateStateAndSave(workEntry, save: false);
     _startTimerIfNeeded();
+  }
+
+  void updateOvertimeFromSettings(Duration newOvertime) {
+    state = state.copyWith(overtime: newOvertime);
   }
 
   void _startTimerIfNeeded() {
@@ -209,7 +185,7 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
   void _recalculateOvertime() {
     if (state.workEntry.workStart == null) return;
 
-    final targetDailyHours = Duration(microseconds: (_storageDataSource.getTargetWeeklyHours() / 5 * Duration.microsecondsPerHour).round());
+    final targetDailyHours = Duration(microseconds: (_settingsRepository.getTargetWeeklyHours() / 5 * Duration.microsecondsPerHour).round());
     final dailyOvertime = _calculateElapsedTime() - targetDailyHours;
     state = state.copyWith(dailyOvertime: dailyOvertime);
   }
@@ -241,7 +217,7 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
   Future<void> _recalculateStateAndSave(WorkEntryEntity updatedEntry, {bool save = true}) async {
     Duration? newActualWorkDuration;
     Duration? newOvertime = state.overtime;
-    Duration? dailyOvertime = state.dailyOvertime;
+    Duration? dailyOvertime;
 
     final wasFinished = state.workEntry.workEnd != null;
     final oldWorkDuration = state.actualWorkDuration ?? Duration.zero;
@@ -253,16 +229,17 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
       );
       newActualWorkDuration = updatedEntry.workEnd!.difference(updatedEntry.workStart!) - breakDuration;
 
+      final targetDailyHours = Duration(microseconds: (_settingsRepository.getTargetWeeklyHours() / 5 * Duration.microsecondsPerHour).round());
+      dailyOvertime = newActualWorkDuration - targetDailyHours;
+
       if (save) {
-        final targetWeeklyHours = _storageDataSource.getTargetWeeklyHours();
-        final targetDailyHours = Duration(microseconds: (targetWeeklyHours / 5 * Duration.microsecondsPerHour).round());
-
         final oldDailyOvertime = wasFinished ? oldWorkDuration - targetDailyHours : Duration.zero;
-        final newDailyOvertime = newActualWorkDuration - targetDailyHours;
+        final newDailyOvertime = dailyOvertime;
 
-        final overtimeDelta = newDailyOvertime - oldDailyOvertime;
-        newOvertime = await _updateOvertime.call(amount: overtimeDelta);
-        dailyOvertime = newDailyOvertime;
+        final currentTotalOvertime = state.overtime ?? await _getOvertime.call();
+        newOvertime = currentTotalOvertime - oldDailyOvertime + newDailyOvertime;
+        
+        await _setOvertime.call(overtime: newOvertime);
       }
     } else {
       newActualWorkDuration = null;
@@ -328,7 +305,7 @@ final dashboardViewModelProvider = StateNotifierProvider<DashboardViewModel, Das
     ref.watch(saveWorkEntryProvider),
     ref.watch(toggleBreakProvider),
     ref.watch(getOvertimeProvider),
-    ref.watch(updateOvertimeProvider),
-    ref.watch(storageDataSourceProvider),
+    ref.watch(setOvertimeProvider),
+    ref.watch(settingsRepositoryProvider),
   );
 });
