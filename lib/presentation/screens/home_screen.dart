@@ -48,11 +48,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // Wenn Reports ausgewählt wird (Index 1) und der Benutzer nicht eingeloggt ist
     if (index == 1) {
       final authState = ref.read(authStateProvider);
-      if (authState.value == null) {
+
+      // Debug: Zeige Auth-State
+      authState.when(
+        data: (user) => print('[HomeScreen] Auth State: ${user != null ? 'Eingeloggt als ${user.email}' : 'NICHT eingeloggt'}'),
+        loading: () => print('[HomeScreen] Auth State: Loading...'),
+        error: (err, stack) => print('[HomeScreen] Auth State: Error - $err'),
+      );
+
+      // Prüfe ob der User nicht eingeloggt ist
+      // AsyncValue.data mit value == null bedeutet: User ist NICHT eingeloggt
+      // AsyncValue.loading oder error bedeutet: Noch am Laden, nicht blockieren
+      final isNotLoggedIn = authState.maybeWhen(
+        data: (user) => user == null,
+        orElse: () => false, // Wenn loading/error, nicht blockieren
+      );
+
+      if (isNotLoggedIn) {
+        print('[HomeScreen] Blockiere Zugriff auf Berichte - User nicht eingeloggt');
         // Zeige Login-Seite mit Hinweis
         _showLoginRequiredDialog();
         return;
       }
+
+      print('[HomeScreen] Erlaube Zugriff auf Berichte');
     }
 
     setState(() {

@@ -7,27 +7,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/services/version_service.dart';
 import '../../data/datasources/remote/firestore_datasource.dart';
 import '../../data/repositories/auth_repository_impl.dart';
-import '../../data/repositories/overtime_repository_impl.dart';
 import '../../data/repositories/settings_repository_impl.dart' as impl;
-import '../../data/repositories/work_repository_impl.dart';
-import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/repositories/auth_repository.dart';
-import '../../domain/repositories/overtime_repository.dart';
 import '../../domain/repositories/settings_repository.dart';
-import '../../domain/repositories/work_repository.dart';
 import '../../domain/usecases/delete_account.dart';
 import '../../domain/usecases/get_auth_state_changes.dart';
 import '../../domain/usecases/get_theme_mode.dart';
-import '../../domain/usecases/get_today_work_entry.dart';
-import '../../domain/usecases/get_work_entries_for_month.dart';
-import '../../domain/usecases/overtime_usecases.dart';
-import '../../domain/usecases/save_work_entry.dart';
 import '../../domain/usecases/set_theme_mode.dart';
 import '../../domain/usecases/sign_in_with_google.dart';
 import '../../domain/usecases/sign_out.dart';
-import '../../domain/usecases/start_or_stop_timer.dart';
-import '../../presentation/view_models/auth_view_model.dart';
-import '../../presentation/view_models/dashboard_view_model.dart' show NoOpOvertimeRepository;
 import '../../presentation/view_models/settings_view_model.dart' show NoOpSettingsRepository;
 
 //==============================================================================
@@ -78,53 +66,8 @@ final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
   );
 });
 
-final overtimeRepositoryProvider = Provider<OvertimeRepository>((ref) {
-  final userId = ref.watch(firebaseAuthProvider).currentUser?.uid;
-  if (userId == null) {
-    return NoOpOvertimeRepository();
-  }
-  return OvertimeRepositoryImpl(
-    ref.watch(sharedPreferencesProvider),
-    userId,
-  );
-});
-
-class NoOpWorkRepository implements WorkRepository {
-  @override
-  Future<WorkEntryEntity> getWorkEntry(DateTime date) async {
-    return WorkEntryEntity(
-      id: date.toIso8601String(),
-      date: date,
-    );
-  }
-
-  @override
-  Future<void> saveWorkEntry(WorkEntryEntity entry) async {}
-
-  @override
-  Future<List<WorkEntryEntity>> getWorkEntriesForMonth(int year, int month) async {
-    return [];
-  }
-
-  @override
-  Future<void> deleteWorkEntry(String entryId) async {
-    // No-op
-  }
-}
-
-final workRepositoryProvider = Provider<WorkRepository>((ref) {
-  final authState = ref.watch(authStateProvider);
-  final userId = authState.valueOrNull?.id;
-
-  if (userId == null) {
-    return NoOpWorkRepository();
-  }
-
-  return WorkRepositoryImpl(
-    dataSource: ref.watch(firestoreDataSourceProvider),
-    userId: userId,
-  );
-});
+// NOTE: workRepositoryProvider and overtimeRepositoryProvider are defined in
+// dashboard_view_model.dart with hybrid implementation (automatic fallback between Firebase and Local)
 
 //==============================================================================
 // SCHICHT 3: USE CASE PROVIDERS
@@ -152,24 +95,5 @@ final setThemeModeUseCaseProvider = Provider(
   (ref) => SetThemeMode(ref.watch(settingsRepositoryProvider)),
 );
 
-// --- Overtime Use Cases ---
-final getOvertimeUseCaseProvider = Provider(
-  (ref) => GetOvertime(ref.watch(overtimeRepositoryProvider)),
-);
-final updateOvertimeUseCaseProvider = Provider(
-  (ref) => UpdateOvertime(ref.watch(overtimeRepositoryProvider)),
-);
-
-// --- Work Entry Use Cases ---
-final getTodayWorkEntryUseCaseProvider = Provider(
-  (ref) => GetTodayWorkEntry(ref.watch(workRepositoryProvider)),
-);
-final saveWorkEntryUseCaseProvider = Provider(
-  (ref) => SaveWorkEntry(ref.watch(workRepositoryProvider)),
-);
-final getWorkEntriesForMonthUseCaseProvider = Provider(
-  (ref) => GetWorkEntriesForMonth(ref.watch(workRepositoryProvider)),
-);
-final startOrStopTimerUseCaseProvider = Provider(
-  (ref) => StartOrStopTimer(ref.watch(workRepositoryProvider)),
-);
+// NOTE: Overtime and Work Entry use case providers are defined in
+// dashboard_view_model.dart to work with the hybrid repository implementation

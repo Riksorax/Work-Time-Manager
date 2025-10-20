@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/providers/providers.dart';
 import '../../../domain/entities/work_entry_entity.dart';
 import '../../../domain/entities/work_entry_extensions.dart';
 
@@ -22,9 +23,11 @@ class TimeSummaryCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Annahme: Die Soll-Stunden kommen aus einem Settings-Provider
-    // final targetDailyHours = ref.watch(settingsProvider).targetDailyHours;
-    const targetDailyHours = Duration(hours: 8);
+    final settingsRepository = ref.watch(settingsRepositoryProvider);
+    final workdaysPerWeek = settingsRepository.getWorkdaysPerWeek();
+    final targetDailyHours = Duration(
+      microseconds: (settingsRepository.getTargetWeeklyHours() / workdaysPerWeek * Duration.microsecondsPerHour).round(),
+    );
 
     return Card(
       elevation: 2,

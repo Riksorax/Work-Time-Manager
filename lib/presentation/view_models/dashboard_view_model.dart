@@ -4,53 +4,28 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/providers/providers.dart';
 import '../../data/datasources/remote/firestore_datasource.dart';
 import '../../data/repositories/overtime_repository_impl.dart';
+import '../../data/repositories/local_overtime_repository_impl.dart';
+import '../../data/repositories/hybrid_overtime_repository_impl.dart';
 import '../../data/repositories/work_repository_impl.dart';
+import '../../data/repositories/local_work_repository_impl.dart';
+import '../../data/repositories/hybrid_work_repository_impl.dart';
 import '../../domain/entities/break_entity.dart';
 import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/repositories/overtime_repository.dart';
 import '../../domain/repositories/settings_repository.dart';
 import '../../domain/repositories/work_repository.dart';
+import '../../domain/services/break_calculator_service.dart';
 import '../../domain/usecases/get_today_work_entry.dart';
 import '../../domain/usecases/save_work_entry.dart';
 import '../../domain/usecases/toggle_break.dart';
 import '../../domain/usecases/overtime_usecases.dart';
 import '../state/dashboard_state.dart';
-
-// No-Op Repositories
-class NoOpWorkRepository implements WorkRepository {
-  @override
-  Future<WorkEntryEntity> getWorkEntry(DateTime date) async => WorkEntryEntity(
-        id: 'no-op',
-        date: DateTime.now(),
-      );
-
-  @override
-  Future<List<WorkEntryEntity>> getWorkEntriesForMonth(
-          int year, int month) async =>
-      [];
-
-  @override
-  Future<void> saveWorkEntry(WorkEntryEntity entry) async {}
-
-  @override
-  Future<void> deleteWorkEntry(String entryId) async {
-    // No-op
-  }
-}
-
-class NoOpOvertimeRepository implements OvertimeRepository {
-  @override
-  Duration getOvertime() => Duration.zero;
-
-  @override
-  Future<void> saveOvertime(Duration overtime) async {}
-}
+import 'auth_view_model.dart' show authStateProvider;
 
 // Service Providers
 final firebaseAuthProvider =
@@ -69,26 +44,55 @@ final firestoreDataSourceProvider = Provider<FirestoreDataSource>((ref) {
   );
 });
 
-// Repository Provider
+// Repository Provider mit automatischem Fallback (Firebase ↔ Local)
 final workRepositoryProvider = Provider<WorkRepository>((ref) {
-  final userId = ref.watch(firebaseAuthProvider).currentUser?.uid;
-  if (userId == null) {
-    return NoOpWorkRepository();
-  }
-  return WorkRepositoryImpl(
-    dataSource: ref.watch(firestoreDataSourceProvider),
+  // Beobachte den Auth-Status für automatisches Umschalten
+  final authState = ref.watch(authStateProvider);
+  final userId = authState.asData?.value?.id;
+  final prefs = ref.watch(sharedPreferencesProvider);
+
+  print('[workRepositoryProvider] Auth State geändert - userId: $userId');
+
+  // Erstelle Local Repository (funktioniert immer)
+  final localRepository = LocalWorkRepositoryImpl(prefs);
+
+  // Erstelle Firebase Repository (nur wenn eingeloggt)
+  final firebaseRepository = userId != null
+      ? WorkRepositoryImpl(
+          dataSource: ref.watch(firestoreDataSourceProvider),
+          userId: userId,
+        )
+      : localRepository; // Fallback zu Local
+
+  // Gib Hybrid Repository zurück
+  return HybridWorkRepositoryImpl(
+    firebaseRepository: firebaseRepository,
+    localRepository: localRepository,
     userId: userId,
   );
 });
 
 final overtimeRepositoryProvider = Provider<OvertimeRepository>((ref) {
-  final userId = ref.watch(firebaseAuthProvider).currentUser?.uid;
-  if (userId == null) {
-    return NoOpOvertimeRepository();
-  }
-  return OvertimeRepositoryImpl(
-    ref.watch(sharedPreferencesProvider),
-    userId,
+  // Beobachte den Auth-Status für automatisches Umschalten
+  final authState = ref.watch(authStateProvider);
+  final userId = authState.asData?.value?.id;
+  final prefs = ref.watch(sharedPreferencesProvider);
+
+  print('[overtimeRepositoryProvider] Auth State geändert - userId: $userId');
+
+  // Erstelle Local Repository (funktioniert immer)
+  final localRepository = LocalOvertimeRepositoryImpl(prefs);
+
+  // Erstelle Firebase Repository (nur wenn eingeloggt)
+  final firebaseRepository = userId != null
+      ? OvertimeRepositoryImpl(prefs, userId)
+      : localRepository; // Fallback zu Local
+
+  // Gib Hybrid Repository zurück
+  return HybridOvertimeRepositoryImpl(
+    firebaseRepository: firebaseRepository,
+    localRepository: localRepository,
+    userId: userId,
   );
 });
 
@@ -116,6 +120,8 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
   final SettingsRepository _settingsRepository;
 
   Timer? _timer;
+  Timer? _autoSaveTimer;
+  int _tickCounter = 0;
 
   DashboardViewModel(
     this._getTodayWorkEntry,
@@ -129,8 +135,10 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
   }
 
   Future<void> _init() async {
+    print('[Dashboard] Initialisiere Dashboard...');
     final workEntry = await _getTodayWorkEntry.call();
     final overtime = await _getOvertime.call();
+    print('[Dashboard] Geladener WorkEntry - Start: ${workEntry.workStart}, End: ${workEntry.workEnd}');
     state = state.copyWith(
       workEntry: workEntry,
       isLoading: false,
@@ -144,14 +152,72 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
     state = state.copyWith(overtime: newOvertime);
   }
 
+  /// Berechnet die Überstunden neu, wenn sich die Einstellungen (Sollstunden/Arbeitstage) ändern
+  void recalculateOvertimeFromSettings() {
+    print('[Dashboard] Neuberechnung nach Einstellungsänderung');
+
+    // Wenn kein abgeschlossener Eintrag vorhanden ist, nichts zu tun
+    if (state.workEntry.workStart == null || state.workEntry.workEnd == null) {
+      // Aber laufende Überstunden neu berechnen, falls Timer läuft
+      if (state.workEntry.workStart != null) {
+        _recalculateOvertime();
+      }
+      return;
+    }
+
+    // Berechne Überstunden mit neuen Einstellungen neu
+    final breakDuration = state.workEntry.breaks.fold<Duration>(
+      Duration.zero,
+      (previousValue, element) => previousValue + (element.end?.difference(element.start) ?? Duration.zero),
+    );
+    final actualWorkDuration = state.workEntry.workEnd!.difference(state.workEntry.workStart!) - breakDuration;
+
+    final workdaysPerWeek = _settingsRepository.getWorkdaysPerWeek();
+    final targetDailyHours = Duration(microseconds: (_settingsRepository.getTargetWeeklyHours() / workdaysPerWeek * Duration.microsecondsPerHour).round());
+    final newDailyOvertime = actualWorkDuration - targetDailyHours;
+
+    print('[Dashboard] Neue tägliche Überstunden: ${newDailyOvertime.inMinutes} Min (war: ${state.dailyOvertime?.inMinutes ?? 0} Min)');
+
+    // Aktualisiere den State mit den neuen Überstunden
+    state = state.copyWith(
+      actualWorkDuration: actualWorkDuration,
+      dailyOvertime: newDailyOvertime,
+    );
+  }
+
   void _startTimerIfNeeded() {
     _timer?.cancel();
+    _autoSaveTimer?.cancel();
     if (state.workEntry.workStart != null && state.workEntry.workEnd == null) {
+      _tickCounter = 0;
       _timer = Timer.periodic(const Duration(seconds: 1), (_) {
         final elapsedTime = _calculateElapsedTime();
         state = state.copyWith(elapsedTime: elapsedTime);
         _recalculateOvertime();
+
+        // Auto-Save alle 30 Sekunden
+        _tickCounter++;
+        if (_tickCounter >= 30) {
+          _tickCounter = 0;
+          _autoSave();
+        }
       });
+    }
+  }
+
+  Future<void> _autoSave() async {
+    // Nur speichern, wenn tatsächlich eine Zeiterfassung läuft
+    if (state.workEntry.workStart == null) {
+      print('[Dashboard] Auto-Save übersprungen: Keine Zeiterfassung aktiv');
+      return;
+    }
+
+    print('[Dashboard] Auto-Save: Speichere aktuellen Stand');
+    try {
+      await _saveWorkEntry.call(state.workEntry);
+      print('[Dashboard] Auto-Save erfolgreich');
+    } catch (e) {
+      print('[Dashboard] Auto-Save Fehler: $e');
     }
   }
 
@@ -185,7 +251,8 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
   void _recalculateOvertime() {
     if (state.workEntry.workStart == null) return;
 
-    final targetDailyHours = Duration(microseconds: (_settingsRepository.getTargetWeeklyHours() / 5 * Duration.microsecondsPerHour).round());
+    final workdaysPerWeek = _settingsRepository.getWorkdaysPerWeek();
+    final targetDailyHours = Duration(microseconds: (_settingsRepository.getTargetWeeklyHours() / workdaysPerWeek * Duration.microsecondsPerHour).round());
     final dailyOvertime = _calculateElapsedTime() - targetDailyHours;
     state = state.copyWith(dailyOvertime: dailyOvertime);
   }
@@ -205,10 +272,22 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
     if (state.workEntry.workStart == null) {
       // START
       updatedEntry = state.workEntry.copyWith(workStart: now);
+      print('[Dashboard] Timer gestartet um $now');
     } else {
       // STOP
       _timer?.cancel();
       updatedEntry = state.workEntry.copyWith(workEnd: now);
+      print('[Dashboard] Timer gestoppt um $now');
+
+      // Berechne automatische Pausen beim Beenden (nur wenn keine Pause läuft)
+      final hasRunningBreak = updatedEntry.breaks.any((b) => b.end == null);
+      if (!hasRunningBreak) {
+        print('[Dashboard] Berechne automatische Pausen...');
+        updatedEntry = BreakCalculatorService.calculateAndApplyBreaks(updatedEntry);
+        print('[Dashboard] Automatische Pausen berechnet: ${updatedEntry.breaks.length} Pausen');
+      } else {
+        print('[Dashboard] Automatische Pausen übersprungen: Pause läuft noch');
+      }
     }
 
     await _recalculateStateAndSave(updatedEntry);
@@ -229,7 +308,8 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
       );
       newActualWorkDuration = updatedEntry.workEnd!.difference(updatedEntry.workStart!) - breakDuration;
 
-      final targetDailyHours = Duration(microseconds: (_settingsRepository.getTargetWeeklyHours() / 5 * Duration.microsecondsPerHour).round());
+      final workdaysPerWeek = _settingsRepository.getWorkdaysPerWeek();
+      final targetDailyHours = Duration(microseconds: (_settingsRepository.getTargetWeeklyHours() / workdaysPerWeek * Duration.microsecondsPerHour).round());
       dailyOvertime = newActualWorkDuration - targetDailyHours;
 
       if (save) {
@@ -254,7 +334,9 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
     );
 
     if (save) {
+      print('[Dashboard] Speichere WorkEntry: ${updatedEntry.id}, Start: ${updatedEntry.workStart}, End: ${updatedEntry.workEnd}');
       await _saveWorkEntry.call(updatedEntry);
+      print('[Dashboard] WorkEntry erfolgreich gespeichert');
     }
     _startTimerIfNeeded();
   }
@@ -262,15 +344,43 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
   Future<void> setManualStartTime(TimeOfDay time) async {
     final oldDate = state.workEntry.workStart ?? DateTime.now();
     final newStart = DateTime(oldDate.year, oldDate.month, oldDate.day, time.hour, time.minute);
-    final updatedEntry = state.workEntry.copyWith(workStart: newStart);
+    var updatedEntry = state.workEntry.copyWith(workStart: newStart);
+
+    print('[Dashboard] Setze manuelle Startzeit: $newStart');
+
+    // Berechne automatische Pausen nur wenn:
+    // 1. Start UND End vorhanden sind
+    // 2. Keine laufende Pause existiert
+    final hasRunningBreak = updatedEntry.breaks.any((b) => b.end == null);
+    if (updatedEntry.workStart != null && updatedEntry.workEnd != null && !hasRunningBreak) {
+      print('[Dashboard] Berechne automatische Pausen...');
+      updatedEntry = BreakCalculatorService.calculateAndApplyBreaks(updatedEntry);
+      print('[Dashboard] Automatische Pausen berechnet: ${updatedEntry.breaks.length} Pausen');
+    }
+
     await _recalculateStateAndSave(updatedEntry);
+    print('[Dashboard] Startzeit gespeichert');
   }
 
   Future<void> setManualEndTime(TimeOfDay time) async {
     final oldDate = state.workEntry.workEnd ?? state.workEntry.workStart ?? DateTime.now();
     final newEnd = DateTime(oldDate.year, oldDate.month, oldDate.day, time.hour, time.minute);
-    final updatedEntry = state.workEntry.copyWith(workEnd: newEnd);
+    var updatedEntry = state.workEntry.copyWith(workEnd: newEnd);
+
+    print('[Dashboard] Setze manuelle Endzeit: $newEnd');
+
+    // Berechne automatische Pausen nur wenn:
+    // 1. Start UND End vorhanden sind
+    // 2. Keine laufende Pause existiert
+    final hasRunningBreak = updatedEntry.breaks.any((b) => b.end == null);
+    if (updatedEntry.workStart != null && updatedEntry.workEnd != null && !hasRunningBreak) {
+      print('[Dashboard] Berechne automatische Pausen...');
+      updatedEntry = BreakCalculatorService.calculateAndApplyBreaks(updatedEntry);
+      print('[Dashboard] Automatische Pausen berechnet: ${updatedEntry.breaks.length} Pausen');
+    }
+
     await _recalculateStateAndSave(updatedEntry);
+    print('[Dashboard] Endzeit gespeichert');
   }
 
   Future<void> startOrStopBreak() async {
@@ -295,6 +405,7 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
   @override
   void dispose() {
     _timer?.cancel();
+    _autoSaveTimer?.cancel();
     super.dispose();
   }
 }
