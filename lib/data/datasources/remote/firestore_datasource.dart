@@ -103,27 +103,39 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
 
   @override
   Future<WorkEntryModel?> getWorkEntry(String userId, DateTime date) async {
+    print('[Firestore] Lade WorkEntry für User: $userId, Datum: $date');
     final docRef = _getMonthDocRef(userId, date);
     final snapshot = await docRef.get();
     final dayKey = date.day.toString();
+    print('[Firestore] Dokument existiert: ${snapshot.exists}, DayKey: $dayKey');
     if (snapshot.exists && snapshot.data() != null) {
       final monthData = snapshot.data()!;
       final dayData = monthData['days']?[dayKey];
+      print('[Firestore] DayData gefunden: ${dayData != null}');
       if (dayData != null) {
-        return WorkEntryModel.fromMap(dayData).copyWith(id: WorkEntryModel.generateId(date));
+        final entry = WorkEntryModel.fromMap(dayData).copyWith(id: WorkEntryModel.generateId(date));
+        print('[Firestore] WorkEntry geladen: Start=${entry.workStart}, End=${entry.workEnd}');
+        return entry;
       }
     }
+    print('[Firestore] Kein WorkEntry gefunden für diesen Tag');
     return null;
   }
 
   @override
   Future<void> saveWorkEntry(String userId, WorkEntryModel model) async {
+    print('[Firestore] Speichere WorkEntry für User: $userId, Datum: ${model.date}');
     final docRef = _getMonthDocRef(userId, model.date);
     final dayKey = model.date.day.toString();
-    await docRef.set(
-      { 'days': { dayKey: model.toMap() } },
-      SetOptions(merge: true),
-    );
+    final data = { 'days': { dayKey: model.toMap() } };
+    print('[Firestore] Daten: workStart=${model.workStart}, workEnd=${model.workEnd}');
+    try {
+      await docRef.set(data, SetOptions(merge: true));
+      print('[Firestore] Erfolgreich gespeichert in Dokument: ${docRef.path}');
+    } catch (e) {
+      print('[Firestore] FEHLER beim Speichern: $e');
+      rethrow;
+    }
   }
 
   @override
