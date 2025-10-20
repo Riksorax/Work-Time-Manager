@@ -48,7 +48,7 @@ class _EditTargetHoursModalState extends ConsumerState<EditTargetHoursModal> {
       if (hours != null) {
         await ref
             .read(settingsViewModelProvider.notifier)
-            .updateWeeklyTargetHours(hours);
+            .updateWeeklyTargetHours(ref, hours);
 
         if (mounted) {
           Navigator.of(context).pop();

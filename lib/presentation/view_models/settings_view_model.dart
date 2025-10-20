@@ -89,16 +89,22 @@ class SettingsViewModel extends StateNotifier<AsyncValue<SettingsState>> {
     ref.read(dashboardViewModelProvider.notifier).updateOvertimeFromSettings(overtime);
   }
 
-  Future<void> updateWorkdaysPerWeek(int days) async {
+  Future<void> updateWorkdaysPerWeek(WidgetRef ref, int days) async {
     await _settingsRepository.setWorkdaysPerWeek(days);
     final newSettings = state.value!.settings.copyWith(workdaysPerWeek: days);
     state = state.whenData((value) => value.copyWith(settings: newSettings));
+
+    // Dashboard über die Änderung informieren
+    ref.read(dashboardViewModelProvider.notifier).recalculateOvertimeFromSettings();
   }
 
-  Future<void> updateWeeklyTargetHours(double hours) async {
+  Future<void> updateWeeklyTargetHours(WidgetRef ref, double hours) async {
     await _settingsRepository.setTargetWeeklyHours(hours);
     final newSettings = state.value!.settings.copyWith(weeklyTargetHours: hours);
     state = state.whenData((value) => value.copyWith(settings: newSettings));
+
+    // Dashboard über die Änderung informieren
+    ref.read(dashboardViewModelProvider.notifier).recalculateOvertimeFromSettings();
   }
 
   Future<void> migrateWorkEntries() async {

@@ -11,6 +11,9 @@ class BreakCalculatorService {
 
   /// Berechnet die automatischen Pausen basierend auf der Arbeitszeit
   /// und gibt einen aktualisierten WorkEntryEntity zurück.
+  ///
+  /// WICHTIG: Diese Funktion behält ALLE manuellen Pausen (isAutomatic: false)
+  /// und passt nur automatische Pausen an.
   static WorkEntryEntity calculateAndApplyBreaks(WorkEntryEntity entry) {
     if (entry.workStart == null || entry.workEnd == null) {
       return entry; // Keine Berechnung möglich ohne Start- und Endzeit
@@ -19,18 +22,22 @@ class BreakCalculatorService {
     final totalWorkTime = entry.totalWorkTime;
     final existingBreaks = entry.breaks;
 
-    // Überprüfe, ob wir die gesetzlichen Mindestpausen einhalten müssen
-    bool needsFirstBreak = totalWorkTime >= minWorkTimeForFirstBreak;
-    bool needsSecondBreak = totalWorkTime >= minWorkTimeForSecondBreak;
+    // Trenne manuelle und automatische Pausen
+    final manualBreaks = existingBreaks.where((b) => !b.isAutomatic).toList();
+    final automaticBreaks = existingBreaks.where((b) => b.isAutomatic).toList();
+
+    print('[BreakCalculator] Bestehende Pausen: ${existingBreaks.length} (${manualBreaks.length} manuell, ${automaticBreaks.length} automatisch)');
 
     // Wenn keine Pausen vorhanden sind, füge automatische Pausen hinzu
     if (existingBreaks.isEmpty) {
       final calculatedBreaks = _calculateBreaks(entry.workStart!, entry.workEnd!, totalWorkTime);
+      print('[BreakCalculator] Keine Pausen vorhanden, füge ${calculatedBreaks.length} automatische hinzu');
       return entry.copyWith(breaks: calculatedBreaks);
     } else {
-      // Wenn Pausen vorhanden sind, passe sie an das Schema an
-      final adjustedBreaks = _adjustExistingBreaks(entry.workStart!, entry.workEnd!, totalWorkTime, existingBreaks);
-      return entry.copyWith(breaks: adjustedBreaks);
+      // Wenn Pausen vorhanden sind, behalte manuelle und passe nur automatische an
+      final adjustedAutoBreaks = _adjustExistingBreaks(entry.workStart!, entry.workEnd!, totalWorkTime, existingBreaks);
+      print('[BreakCalculator] Pausen angepasst: ${adjustedAutoBreaks.length} gesamt');
+      return entry.copyWith(breaks: adjustedAutoBreaks);
     }
   }
 
@@ -88,134 +95,73 @@ class BreakCalculatorService {
   }
 
   static List<BreakEntity> _adjustExistingBreaks(DateTime workStart, DateTime workEnd, Duration totalWorkTime, List<BreakEntity> existingBreaks) {
+    // Trenne manuelle und automatische Pausen
+    final manualBreaks = existingBreaks.where((b) => !b.isAutomatic).toList();
+
     // Berechne die erforderliche Gesamtpausenzeit basierend auf der Arbeitszeit
     Duration requiredBreakTime = Duration.zero;
-    bool needsSecondBreak = false;
 
     if (totalWorkTime >= minWorkTimeForSecondBreak) {
       // Bei 9+ Stunden ist eine Gesamtpausenzeit von genau 45 Minuten erforderlich
       requiredBreakTime = requiredBreakTimeForLongDay;
-      needsSecondBreak = true;
     } else if (totalWorkTime >= minWorkTimeForFirstBreak) {
       // Bei 6+ Stunden ist eine Gesamtpausenzeit von genau 30 Minuten erforderlich
       requiredBreakTime = firstBreakDuration;
     }
 
-    // Berechne die tatsächliche Gesamtpausenzeit
+    // Berechne die tatsächliche Gesamtpausenzeit (manuell + automatisch)
     final Duration actualBreakTime = existingBreaks.fold(
-      Duration.zero, 
+      Duration.zero,
       (total, breakEntity) => total + breakEntity.duration
     );
 
-    // Wenn die tatsächliche Pausenzeit bereits ausreicht
-    // Für 9+ Std: mindestens 45 Min gesamt, idealerweise auf 2 Pausen verteilt
-    // Für 6-9 Std: genau 30 Min
-    if (actualBreakTime >= requiredBreakTime && 
-        ((totalWorkTime >= minWorkTimeForSecondBreak && (existingBreaks.length >= 2 || !needsSecondBreak)) ||
-         (totalWorkTime >= minWorkTimeForFirstBreak && totalWorkTime < minWorkTimeForSecondBreak))) {
+    // Wenn die tatsächliche Pausenzeit bereits ausreicht, behalte alle Pausen
+    if (actualBreakTime >= requiredBreakTime) {
+      print('[BreakCalculator] Pausenzeit ausreichend (${actualBreakTime.inMinutes} Min), behalte alle Pausen');
       return existingBreaks;
     }
 
-    // Bei einer Arbeitszeit von 9+ Stunden und vorhandenen Pausen
-    if (totalWorkTime >= minWorkTimeForSecondBreak) {
-      final uuid = Uuid();
-      List<BreakEntity> adjustedBreaks = List.from(existingBreaks);
+    // WICHTIG: Manuelle Pausen IMMER behalten!
+    // Nur automatische Pausen werden hinzugefügt, wenn nötig
 
-      // Berechne die aktuelle Gesamtpausenzeit
-      final Duration actualBreakTime = existingBreaks.fold(
-        Duration.zero, 
-        (total, breakEntity) => total + breakEntity.duration
-      );
+    // Berechne fehlende Pausenzeit
+    final Duration missingBreakTime = requiredBreakTime - actualBreakTime;
 
-      // Wenn die Gesamtpause bereits 45 Minuten beträgt oder länger ist, keine Änderung nötig
-      if (actualBreakTime >= requiredBreakTimeForLongDay) {
-        return existingBreaks;
-      }
-
-      // Berechne die fehlende Pausenzeit, um genau 45 Minuten zu erreichen
-      final Duration missingBreakTime = requiredBreakTimeForLongDay - actualBreakTime;
-
-      // Füge eine neue automatische Pause für die fehlende Zeit hinzu
-      if (missingBreakTime > Duration.zero) {
-        // Bestimme eine gute Position für die automatische Pause
-        DateTime autoBreakStart;
-
-        if (existingBreaks.isNotEmpty && existingBreaks.last.end != null) {
-          // Setze die automatische Pause nach der letzten vorhandenen Pause
-          autoBreakStart = existingBreaks.last.end!.add(Duration(hours: 1));
-        } else {
-          // Wenn keine beendeten Pausen vorhanden sind, setze sie etwa in die Mitte der Arbeitszeit
-          autoBreakStart = workStart.add(totalWorkTime ~/ 2);
-        }
-
-        // Stelle sicher, dass die automatische Pause vor dem Arbeitsende liegt
-        if (autoBreakStart.add(missingBreakTime).isBefore(workEnd)) {
-          adjustedBreaks.add(BreakEntity(
-            id: uuid.v4(),
-            name: 'Automatische Pause',
-            start: autoBreakStart,
-            end: autoBreakStart.add(missingBreakTime),
-            isAutomatic: true,
-          ));
-
-          return adjustedBreaks;
-        }
-      }
+    // Wenn keine zusätzlichen Pausen nötig sind, behalte alle existierenden
+    if (missingBreakTime <= Duration.zero) {
+      print('[BreakCalculator] Pausenzeit ausreichend, keine zusätzlichen Pausen nötig');
+      return existingBreaks;
     }
 
-    // Für Arbeitszeit unter 9 Stunden
+    // Füge automatische Pause(n) hinzu, um die fehlende Zeit zu ergänzen
     final uuid = Uuid();
-    List<BreakEntity> adjustedBreaks = List.from(existingBreaks);
-    final additionalTime = requiredBreakTime - actualBreakTime;
+    final List<BreakEntity> result = List.from(manualBreaks); // Starte mit manuellen Pausen
 
-    // Für Arbeitszeiten zwischen 6-9 Stunden: genau 30 Minuten Pause
-    if (totalWorkTime >= minWorkTimeForFirstBreak && 
-        totalWorkTime < minWorkTimeForSecondBreak) {
+    // Bestimme Position für die automatische Pause
+    DateTime autoBreakStart;
 
-      // Wenn die tatsächliche Pausenzeit bereits genau 30 Minuten beträgt, keine Änderung nötig
-      if (actualBreakTime == firstBreakDuration) {
-        return existingBreaks;
-      }
-
-      // Falls existierende Pausen vorhanden sind, aber die Gesamtzeit nicht exakt 30 Minuten ist
-      if (existingBreaks.isNotEmpty) {
-        // Wenn die Gesamtpausenzeit zu kurz ist, verlängere die letzte Pause
-        if (actualBreakTime < firstBreakDuration) {
-          final lastBreak = existingBreaks.last;
-
-          // Verlängere die letzte Pause, wenn sie einen Endpunkt hat
-          if (lastBreak.end != null) {
-            final newEnd = lastBreak.end!.add(additionalTime);
-            if (newEnd.isBefore(workEnd)) {
-              final adjustedBreak = lastBreak.copyWith(end: newEnd);
-              adjustedBreaks[adjustedBreaks.length - 1] = adjustedBreak;
-              return adjustedBreaks;
-            }
-          }
-        }
-        // Wenn die Gesamtpausenzeit zu lang ist, kürze oder entferne Pausen
-        else if (actualBreakTime > firstBreakDuration) {
-          // Hier könnten wir Pausen kürzen, um genau 30 Minuten zu erreichen
-          // Für jetzt belassen wir die bestehenden Pausen
-          return existingBreaks;
-        }
-      }
-
-      // Wenn keine Pause verlängert werden konnte, füge eine neue hinzu
-      final breakStart = workStart.add(Duration(hours: 4)); // Pause typischerweise nach 4 Stunden
-      final breakEnd = breakStart.add(firstBreakDuration);
-
-      if (breakEnd.isBefore(workEnd)) {
-        adjustedBreaks.add(BreakEntity(
-          id: uuid.v4(),
-          name: 'Automatische Pause',
-          start: breakStart,
-          end: breakEnd,
-          isAutomatic: true,
-        ));
-      }
+    if (existingBreaks.isNotEmpty && existingBreaks.last.end != null) {
+      // Setze die automatische Pause nach der letzten vorhandenen Pause
+      autoBreakStart = existingBreaks.last.end!.add(const Duration(hours: 1));
+    } else {
+      // Setze sie etwa nach 4 Stunden Arbeit
+      autoBreakStart = workStart.add(const Duration(hours: 4));
     }
 
-    return adjustedBreaks;
+    // Stelle sicher, dass die automatische Pause vor dem Arbeitsende liegt
+    if (autoBreakStart.add(missingBreakTime).isBefore(workEnd)) {
+      result.add(BreakEntity(
+        id: uuid.v4(),
+        name: 'Automatische Pause',
+        start: autoBreakStart,
+        end: autoBreakStart.add(missingBreakTime),
+        isAutomatic: true,
+      ));
+      print('[BreakCalculator] Füge ${missingBreakTime.inMinutes} Min automatische Pause hinzu (${manualBreaks.length} manuelle bleiben erhalten)');
+    } else {
+      print('[BreakCalculator] Kann keine automatische Pause hinzufügen (würde nach Arbeitsende liegen)');
+    }
+
+    return result;
   }
 }

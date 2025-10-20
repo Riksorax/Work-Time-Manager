@@ -74,7 +74,7 @@ class _EditWorkdaysModalState extends ConsumerState<EditWorkdaysModal> {
                   onPressed: () {
                     ref
                         .read(settingsViewModelProvider.notifier)
-                        .updateWorkdaysPerWeek(_selectedWorkdays);
+                        .updateWorkdaysPerWeek(ref, _selectedWorkdays);
                     Navigator.of(context).pop();
                   },
                   child: const Text('Speichern'),
