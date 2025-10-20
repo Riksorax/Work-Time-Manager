@@ -4,7 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../core/providers/providers.dart';
+import '../../data/repositories/hybrid_work_repository_impl.dart';
+import '../../data/repositories/hybrid_overtime_repository_impl.dart';
+import '../../domain/services/data_sync_service.dart';
 import '../view_models/auth_view_model.dart';
+import '../view_models/dashboard_view_model.dart' as dashboard_vm;
 import '../view_models/settings_view_model.dart';
 import '../view_models/theme_view_model.dart';
 import '../widgets/add_adjustment_modal.dart';
@@ -90,6 +94,8 @@ class SettingsPage extends ConsumerWidget {
                   child: const Text('Überstunden / Minusstunden anpassen'),
                 ),
               ),
+              const SizedBox(height: 16),
+              _buildDataSyncSection(context, ref, authState),
               const SizedBox(height: 16),
               const Divider(height: 1),
               SwitchListTile(
@@ -189,6 +195,145 @@ class SettingsPage extends ConsumerWidget {
         },
       ),
     );
+  }
+
+  Widget _buildDataSyncSection(BuildContext context, WidgetRef ref, AsyncValue authState) {
+    final isLoggedIn = authState.asData?.value != null;
+
+    if (!isLoggedIn) {
+      // Zeige Hinweis, dass Daten lokal gespeichert werden
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+        child: Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.cloud_off, color: Theme.of(context).colorScheme.primary),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Offline-Modus',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Ihre Daten werden lokal auf diesem Gerät gespeichert. '
+                  'Melden Sie sich an, um Ihre Daten in der Cloud zu sichern und geräteübergreifend zu synchronisieren.',
+                  style: TextStyle(fontSize: 14),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Zeige Sync-Button für eingeloggte Benutzer
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: ElevatedButton.icon(
+        onPressed: () => _performSync(context, ref),
+        icon: const Icon(Icons.cloud_sync),
+        label: const Text('Lokale Daten zu Cloud synchronisieren'),
+      ),
+    );
+  }
+
+  Future<void> _performSync(BuildContext context, WidgetRef ref) async {
+    final messenger = ScaffoldMessenger.of(context);
+
+    // Zeige Loading-Dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Synchronisiere Daten...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      // Hole die Repositories
+      final workRepository = ref.read(dashboard_vm.workRepositoryProvider);
+      final overtimeRepository = ref.read(dashboard_vm.overtimeRepositoryProvider);
+
+      // Prüfe ob sie Hybrid-Repositories sind
+      if (workRepository is! HybridWorkRepositoryImpl ||
+          overtimeRepository is! HybridOvertimeRepositoryImpl) {
+        throw Exception('Repositories sind nicht vom Typ Hybrid');
+      }
+
+      // Führe Sync durch
+      final result = await DataSyncService.syncAll(
+        localWorkRepository: workRepository.localRepository,
+        firebaseWorkRepository: workRepository.firebaseRepository,
+        localOvertimeRepository: overtimeRepository.localRepository,
+        firebaseOvertimeRepository: overtimeRepository.firebaseRepository,
+      );
+
+      // Schließe Loading-Dialog
+      if (context.mounted) {
+        Navigator.of(context).pop();
+      }
+
+      // Zeige Ergebnis
+      final workEntriesSynced = result['workEntriesSynced'] as int;
+      final overtimeSynced = result['overtimeSynced'] as bool;
+      final errors = result['errors'] as List<String>;
+
+      if (errors.isEmpty) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              'Synchronisierung erfolgreich!\n'
+              'Arbeitseinträge: $workEntriesSynced\n'
+              'Überstunden: ${overtimeSynced ? "Ja" : "Nein"}',
+            ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+
+        // Aktualisiere Dashboard nach Sync
+        ref.invalidate(dashboard_vm.dashboardViewModelProvider);
+      } else {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              'Synchronisierung mit Fehlern:\n'
+              'Arbeitseinträge: $workEntriesSynced\n'
+              'Fehler: ${errors.join(", ")}',
+            ),
+            backgroundColor: Colors.orange,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    } catch (e) {
+      // Schließe Loading-Dialog bei Fehler
+      if (context.mounted) {
+        Navigator.of(context).pop();
+      }
+
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Fehler bei der Synchronisierung: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
   }
 
   Widget _buildOvertimeBalance(BuildContext context, Duration overtimeBalance) {
@@ -336,6 +481,10 @@ class SettingsPage extends ConsumerWidget {
                         onPressed: () {
                           Navigator.of(context).pop();
                           ref.read(signOutProvider)();
+                          // Invalidiere Repositories und Dashboard nach Abmeldung
+                          ref.invalidate(dashboard_vm.workRepositoryProvider);
+                          ref.invalidate(dashboard_vm.overtimeRepositoryProvider);
+                          ref.invalidate(dashboard_vm.dashboardViewModelProvider);
                         },
                         child: const Text('Abmelden'),
                       ),

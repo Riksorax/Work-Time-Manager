@@ -9,7 +9,11 @@ import 'package:flutter/material.dart';
 import '../../core/providers/providers.dart';
 import '../../data/datasources/remote/firestore_datasource.dart';
 import '../../data/repositories/overtime_repository_impl.dart';
+import '../../data/repositories/local_overtime_repository_impl.dart';
+import '../../data/repositories/hybrid_overtime_repository_impl.dart';
 import '../../data/repositories/work_repository_impl.dart';
+import '../../data/repositories/local_work_repository_impl.dart';
+import '../../data/repositories/hybrid_work_repository_impl.dart';
 import '../../domain/entities/break_entity.dart';
 import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/repositories/overtime_repository.dart';
@@ -21,36 +25,7 @@ import '../../domain/usecases/save_work_entry.dart';
 import '../../domain/usecases/toggle_break.dart';
 import '../../domain/usecases/overtime_usecases.dart';
 import '../state/dashboard_state.dart';
-
-// No-Op Repositories
-class NoOpWorkRepository implements WorkRepository {
-  @override
-  Future<WorkEntryEntity> getWorkEntry(DateTime date) async => WorkEntryEntity(
-        id: 'no-op',
-        date: DateTime.now(),
-      );
-
-  @override
-  Future<List<WorkEntryEntity>> getWorkEntriesForMonth(
-          int year, int month) async =>
-      [];
-
-  @override
-  Future<void> saveWorkEntry(WorkEntryEntity entry) async {}
-
-  @override
-  Future<void> deleteWorkEntry(String entryId) async {
-    // No-op
-  }
-}
-
-class NoOpOvertimeRepository implements OvertimeRepository {
-  @override
-  Duration getOvertime() => Duration.zero;
-
-  @override
-  Future<void> saveOvertime(Duration overtime) async {}
-}
+import 'auth_view_model.dart' show authStateProvider;
 
 // Service Providers
 final firebaseAuthProvider =
@@ -69,26 +44,55 @@ final firestoreDataSourceProvider = Provider<FirestoreDataSource>((ref) {
   );
 });
 
-// Repository Provider
+// Repository Provider mit automatischem Fallback (Firebase ↔ Local)
 final workRepositoryProvider = Provider<WorkRepository>((ref) {
-  final userId = ref.watch(firebaseAuthProvider).currentUser?.uid;
-  if (userId == null) {
-    return NoOpWorkRepository();
-  }
-  return WorkRepositoryImpl(
-    dataSource: ref.watch(firestoreDataSourceProvider),
+  // Beobachte den Auth-Status für automatisches Umschalten
+  final authState = ref.watch(authStateProvider);
+  final userId = authState.asData?.value?.id;
+  final prefs = ref.watch(sharedPreferencesProvider);
+
+  print('[workRepositoryProvider] Auth State geändert - userId: $userId');
+
+  // Erstelle Local Repository (funktioniert immer)
+  final localRepository = LocalWorkRepositoryImpl(prefs);
+
+  // Erstelle Firebase Repository (nur wenn eingeloggt)
+  final firebaseRepository = userId != null
+      ? WorkRepositoryImpl(
+          dataSource: ref.watch(firestoreDataSourceProvider),
+          userId: userId,
+        )
+      : localRepository; // Fallback zu Local
+
+  // Gib Hybrid Repository zurück
+  return HybridWorkRepositoryImpl(
+    firebaseRepository: firebaseRepository,
+    localRepository: localRepository,
     userId: userId,
   );
 });
 
 final overtimeRepositoryProvider = Provider<OvertimeRepository>((ref) {
-  final userId = ref.watch(firebaseAuthProvider).currentUser?.uid;
-  if (userId == null) {
-    return NoOpOvertimeRepository();
-  }
-  return OvertimeRepositoryImpl(
-    ref.watch(sharedPreferencesProvider),
-    userId,
+  // Beobachte den Auth-Status für automatisches Umschalten
+  final authState = ref.watch(authStateProvider);
+  final userId = authState.asData?.value?.id;
+  final prefs = ref.watch(sharedPreferencesProvider);
+
+  print('[overtimeRepositoryProvider] Auth State geändert - userId: $userId');
+
+  // Erstelle Local Repository (funktioniert immer)
+  final localRepository = LocalOvertimeRepositoryImpl(prefs);
+
+  // Erstelle Firebase Repository (nur wenn eingeloggt)
+  final firebaseRepository = userId != null
+      ? OvertimeRepositoryImpl(prefs, userId)
+      : localRepository; // Fallback zu Local
+
+  // Gib Hybrid Repository zurück
+  return HybridOvertimeRepositoryImpl(
+    firebaseRepository: firebaseRepository,
+    localRepository: localRepository,
+    userId: userId,
   );
 });
 

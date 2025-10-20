@@ -4,8 +4,8 @@ import 'package:uuid/uuid.dart';
 import '../../domain/entities/break_entity.dart';
 import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/repositories/work_repository.dart';
-import '../../core/providers/providers.dart';
 import '../state/edit_work_entry_state.dart';
+import 'dashboard_view_model.dart' show workRepositoryProvider;
 import 'reports_view_model.dart';
 
 final editWorkEntryViewModelProvider = StateNotifierProvider.autoDispose
