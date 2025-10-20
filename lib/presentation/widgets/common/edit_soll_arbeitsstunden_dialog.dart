@@ -35,7 +35,7 @@ class _EditSollArbeitsstundenDialogState
     final value = double.tryParse(_controller.text.replaceAll(',', '.'));
     if (value != null && value > 0 && value <= 168) {
       // Call the correct method on the notifier
-      ref.read(settingsViewModelProvider.notifier).updateWeeklyTargetHours(value);
+      ref.read(settingsViewModelProvider.notifier).updateWeeklyTargetHours(ref, value);
       Navigator.of(context).pop();
     } else {
       // Show an error message if the input is invalid

@@ -8,6 +8,7 @@ import '../../domain/repositories/work_repository.dart';
 import '../state/monthly_report_state.dart';
 import '../state/reports_state.dart';
 import '../state/weekly_report_state.dart';
+import 'dashboard_view_model.dart' show workRepositoryProvider;
 
 // Dummy-Implementierung, um den Provider zu vervollständigen, falls das echte Repository nicht verfügbar ist.
 class DummyWorkRepository implements WorkRepository {
@@ -43,7 +44,7 @@ class DummyWorkRepository implements WorkRepository {
 
 final reportsViewModelProvider =
     StateNotifierProvider<ReportsViewModel, ReportsState>((ref) {
-  final workRepository = ref.watch(core_providers.workRepositoryProvider);
+  final workRepository = ref.watch(workRepositoryProvider);
   final settingsRepository = ref.watch(core_providers.settingsRepositoryProvider);
 
   return ReportsViewModel(
