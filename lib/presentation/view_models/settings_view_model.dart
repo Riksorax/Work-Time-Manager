@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/providers/providers.dart';
-import '../../data/repositories/settings_repository_impl.dart';
+import '../../core/providers/providers.dart' as core_providers;
 import '../../domain/entities/settings_entity.dart';
 import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/repositories/settings_repository.dart';
@@ -10,7 +9,7 @@ import '../../domain/usecases/overtime_usecases.dart';
 import '../state/settings_state.dart';
 import 'dashboard_view_model.dart' show getOvertimeProvider, setOvertimeProvider, dashboardViewModelProvider;
 
-// Temporary No-op repository
+// Temporary No-op repository - wird nur für Fallback-Fälle benötigt
 class NoOpSettingsRepository implements SettingsRepository {
   @override
   ThemeMode getThemeMode() => ThemeMode.system;
@@ -24,7 +23,7 @@ class NoOpSettingsRepository implements SettingsRepository {
   int getWorkdaysPerWeek() => 5;
   @override
   Future<void> setWorkdaysPerWeek(int days) async {}
-  
+
   @override
   Future<List<WorkEntryEntity>> getAllOldWorkEntries() async => [];
 
@@ -34,23 +33,6 @@ class NoOpSettingsRepository implements SettingsRepository {
   @override
   Future<void> deleteAllOldWorkEntries(List<String> entryIds) async {}
 }
-
-final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
-  try {
-    final firestoreDataSource = ref.watch(firestoreDataSourceProvider);
-    final userId = ref.watch(firebaseAuthProvider).currentUser?.uid;
-    if (userId == null) {
-      return NoOpSettingsRepository();
-    }
-    return SettingsRepositoryImpl(
-      ref.watch(sharedPreferencesProvider),
-      firestoreDataSource,
-      userId,
-    );
-  } catch (e) {
-    return NoOpSettingsRepository();
-  }
-});
 
 class SettingsViewModel extends StateNotifier<AsyncValue<SettingsState>> {
   final GetOvertime _getOvertime;
@@ -133,6 +115,6 @@ final settingsViewModelProvider =
   return SettingsViewModel(
     ref.watch(getOvertimeProvider),
     ref.watch(setOvertimeProvider),
-    ref.watch(settingsRepositoryProvider),
+    ref.watch(core_providers.settingsRepositoryProvider),
   );
 });
