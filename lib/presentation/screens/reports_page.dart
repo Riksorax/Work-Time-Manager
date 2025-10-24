@@ -5,9 +5,14 @@ import 'package:intl/intl.dart';
 import '../../domain/entities/work_entry_extensions.dart';
 import '../view_models/reports_view_model.dart';
 import '../view_models/settings_view_model.dart';
+import '../view_models/auth_view_model.dart';
 import '../widgets/common/loading_indicator.dart';
 import '../widgets/edit_work_entry_modal.dart';
 import '../../domain/entities/work_entry_entity.dart';
+import 'login_page.dart';
+
+// Provider für den gewünschten Tab-Index nach Login
+final pendingReportTabIndexProvider = StateProvider<int?>((ref) => null);
 
 class ReportsPage extends ConsumerStatefulWidget {
   const ReportsPage({super.key});
@@ -24,12 +29,28 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+
+    // Listener für Tab-Änderungen hinzufügen
+    _tabController.addListener(() {
+      // Prüfe nur bei tatsächlichen Index-Änderungen
+      if (!_tabController.indexIsChanging && _tabController.index != _tabController.previousIndex) {
+        _handleTabChange(_tabController.index);
+      }
+    });
+
     // Initiale Daten laden
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final now = DateTime.now();
       ref
           .read(reportsViewModelProvider.notifier)
           .onMonthChanged(DateTime(now.year, now.month, 1));
+
+      // Prüfe ob ein Tab-Index nach Login wartet
+      final pendingTabIndex = ref.read(pendingReportTabIndexProvider);
+      if (pendingTabIndex != null) {
+        _tabController.index = pendingTabIndex;
+        ref.read(pendingReportTabIndexProvider.notifier).state = null;
+      }
     });
   }
 
@@ -37,6 +58,64 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  void _handleTabChange(int index) {
+    // Wenn Wochen- (Index 1) oder Monatsberichte (Index 2) ausgewählt werden
+    if (index == 1 || index == 2) {
+      final authState = ref.read(authStateProvider);
+
+      // Prüfe ob der User nicht eingeloggt ist
+      final isNotLoggedIn = authState.maybeWhen(
+        data: (user) => user == null,
+        orElse: () => false,
+      );
+
+      if (isNotLoggedIn) {
+        // Speichere den gewünschten Tab-Index im Provider
+        ref.read(pendingReportTabIndexProvider.notifier).state = index;
+
+        // Zeige Login-Dialog und wechsle SOFORT zurück zu Täglich-Tab
+        // Ohne PostFrameCallback, um Race-Conditions zu vermeiden
+        _tabController.index = 0;
+
+        // Dialog nach dem Tab-Wechsel anzeigen
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _showLoginRequiredDialog();
+        });
+
+        return; // Verhindere weitere Verarbeitung
+      }
+    }
+  }
+
+  void _showLoginRequiredDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Anmeldung erforderlich'),
+        content: const Text('Wochen- und Monatsberichte sind nur für angemeldete Benutzer verfügbar.'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              ref.read(pendingReportTabIndexProvider.notifier).state = null; // Abbruch - Tab-Wechsel zurücksetzen
+              Navigator.of(context).pop();
+            },
+            child: const Text('Abbrechen'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const LoginPage(returnToReports: true)),
+              );
+              // Der pendingReportTabIndexProvider wird beim nächsten Aufbau der ReportsPage ausgewertet
+            },
+            child: const Text('Anmelden'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showEditWorkEntryModal(WorkEntryEntity entry, BuildContext context) {
