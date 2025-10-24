@@ -40,10 +40,11 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
 
     // Initiale Daten laden
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final now = DateTime.now();
+      // Verwende loadCurrentMonthData() statt onMonthChanged(),
+      // um den aktuellen Tag beizubehalten (nicht auf den 1. zu springen)
       ref
           .read(reportsViewModelProvider.notifier)
-          .onMonthChanged(DateTime(now.year, now.month, 1));
+          .loadCurrentMonthData();
 
       // Prüfe ob ein Tab-Index nach Login wartet
       final pendingTabIndex = ref.read(pendingReportTabIndexProvider);

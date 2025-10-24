@@ -170,6 +170,19 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
     _loadWorkEntriesForMonth(newMonth.year, newMonth.month);
   }
 
+  /// Lädt Daten für den aktuellen Monat ohne selectedDay zu ändern
+  /// Wird beim initialen Laden verwendet, um den aktuellen Tag beizubehalten
+  void loadCurrentMonthData() {
+    if (!mounted) return;
+
+    final now = DateTime.now();
+    final normalizedMonth = DateTime(now.year, now.month, 1);
+
+    // Aktualisiere nur selectedMonth, behalte selectedDay (sollte bereits auf heute gesetzt sein)
+    state = state.copyWith(selectedMonth: normalizedMonth);
+    _loadWorkEntriesForMonth(now.year, now.month);
+  }
+
   Future<void> _loadWorkEntriesForMonth(int year, int month) async {
     if (!mounted) return;
 
