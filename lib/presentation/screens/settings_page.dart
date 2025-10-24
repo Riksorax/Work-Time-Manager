@@ -16,6 +16,7 @@ import '../widgets/edit_target_hours_modal.dart';
 import '../widgets/edit_workdays_modal.dart';
 import '../widgets/update_required_dialog.dart';
 import '../widgets/privacy_policy_dialog.dart';
+import '../widgets/imprint_dialog.dart';
 import 'login_page.dart';
 
 class SettingsPage extends ConsumerWidget {
@@ -151,7 +152,7 @@ class SettingsPage extends ConsumerWidget {
               ListTile(
                 title: const Text('Impressum'),
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () {},
+                onTap: () => ImprintDialog.show(context),
               ),
               ListTile(
                 title: const Text('Datenschutz'),
