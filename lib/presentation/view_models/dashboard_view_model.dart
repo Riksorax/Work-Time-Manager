@@ -313,12 +313,27 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
       dailyOvertime = newActualWorkDuration - targetDailyHours;
 
       if (save) {
-        final oldDailyOvertime = wasFinished ? oldWorkDuration - targetDailyHours : Duration.zero;
-        final newDailyOvertime = dailyOvertime;
+        // WICHTIG: Die Gesamtüberstunden werden bereits live berechnet als baseOvertime + dailyOvertime
+        // Beim Speichern müssen wir nur die alte dailyOvertime ersetzen durch die neue
+        final currentBaseOvertime = state.overtime ?? await _getOvertime.call();
 
-        final currentTotalOvertime = state.overtime ?? await _getOvertime.call();
-        newOvertime = currentTotalOvertime - oldDailyOvertime + newDailyOvertime;
-        
+        if (wasFinished) {
+          // Der Tag war bereits beendet - ersetze alte tägliche Überstunden durch neue
+          final oldDailyOvertime = oldWorkDuration - targetDailyHours;
+          final newDailyOvertime = dailyOvertime;
+
+          print('[Dashboard] Tag bereits beendet - Update: oldDaily=${oldDailyOvertime.inMinutes}min -> newDaily=${newDailyOvertime.inMinutes}min');
+
+          newOvertime = currentBaseOvertime - oldDailyOvertime + newDailyOvertime;
+        } else {
+          // Der Tag wird gerade beendet - die dailyOvertime sind NEU und müssen zu base addiert werden
+          print('[Dashboard] Tag wird beendet - addiere dailyOvertime=${dailyOvertime.inMinutes}min zu base=${currentBaseOvertime.inMinutes}min');
+
+          newOvertime = currentBaseOvertime + dailyOvertime;
+        }
+
+        print('[Dashboard] Überstunden-Update: ${currentBaseOvertime.inMinutes}min -> ${newOvertime.inMinutes}min');
+
         await _setOvertime.call(overtime: newOvertime);
       }
     } else {
