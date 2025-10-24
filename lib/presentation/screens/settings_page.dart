@@ -15,6 +15,7 @@ import '../widgets/add_adjustment_modal.dart';
 import '../widgets/edit_target_hours_modal.dart';
 import '../widgets/edit_workdays_modal.dart';
 import '../widgets/update_required_dialog.dart';
+import '../widgets/privacy_policy_dialog.dart';
 import 'login_page.dart';
 
 class SettingsPage extends ConsumerWidget {
@@ -155,7 +156,7 @@ class SettingsPage extends ConsumerWidget {
               ListTile(
                 title: const Text('Datenschutz'),
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () {},
+                onTap: () => PrivacyPolicyDialog.show(context),
               ),
               if (authState.asData?.value != null) ...[
                 const Divider(height: 1),

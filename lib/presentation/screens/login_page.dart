@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -6,26 +7,66 @@ import '../../data/repositories/hybrid_overtime_repository_impl.dart';
 import '../../domain/services/data_sync_service.dart';
 import '../view_models/auth_view_model.dart';
 import '../view_models/dashboard_view_model.dart' as dashboard_vm;
+import '../widgets/privacy_policy_dialog.dart';
 import 'home_screen.dart';
 
-class LoginPage extends ConsumerWidget {
+class LoginPage extends ConsumerStatefulWidget {
   final bool returnToReports;
   const LoginPage({this.returnToReports = false, Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends ConsumerState<LoginPage> {
+  bool _acceptedPrivacyPolicy = false;
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Anmelden'),
       ),
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            ElevatedButton.icon(
-              icon: const Icon(Icons.login), // Hier könnte ein Google-Icon stehen
-              label: const Text('Mit Google anmelden'),
-              onPressed: () async {
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Datenschutz-Checkbox
+              CheckboxListTile(
+                value: _acceptedPrivacyPolicy,
+                onChanged: (value) {
+                  setState(() {
+                    _acceptedPrivacyPolicy = value ?? false;
+                  });
+                },
+                controlAffinity: ListTileControlAffinity.leading,
+                title: RichText(
+                  text: TextSpan(
+                    style: Theme.of(context).textTheme.bodyMedium,
+                    children: [
+                      const TextSpan(text: 'Ich akzeptiere die '),
+                      TextSpan(
+                        text: 'Datenschutzerklärung',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary,
+                          decoration: TextDecoration.underline,
+                        ),
+                        recognizer: TapGestureRecognizer()
+                          ..onTap = () {
+                            PrivacyPolicyDialog.show(context);
+                          },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.login), // Hier könnte ein Google-Icon stehen
+                label: const Text('Mit Google anmelden'),
+                onPressed: !_acceptedPrivacyPolicy ? null : () async {
                 // Zeige Loading-Dialog
                 if (context.mounted) {
                   showDialog(
@@ -157,18 +198,19 @@ class LoginPage extends ConsumerWidget {
                   }
                 }
               },
-            ),
-            TextButton(
-              child: const Text('Überspringen'),
-              onPressed: () {
-                Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (context) => HomeScreen(
-                    initialIndex: returnToReports ? 1 : 0,
-                  )),
-                );
-              },
-            ),
-          ],
+              ),
+              TextButton(
+                child: const Text('Überspringen'),
+                onPressed: () {
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(builder: (context) => HomeScreen(
+                      initialIndex: widget.returnToReports ? 1 : 0,
+                    )),
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
