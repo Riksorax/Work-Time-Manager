@@ -16,7 +16,6 @@ import '../../domain/usecases/get_theme_mode.dart';
 import '../../domain/usecases/set_theme_mode.dart';
 import '../../domain/usecases/sign_in_with_google.dart';
 import '../../domain/usecases/sign_out.dart';
-import '../../presentation/view_models/settings_view_model.dart' show NoOpSettingsRepository;
 
 //==============================================================================
 // SCHICHT 1: DATA SOURCES PROVIDERS
@@ -56,13 +55,12 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 
 final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
   final userId = ref.watch(firebaseAuthProvider).currentUser?.uid;
-  if (userId == null) {
-    return NoOpSettingsRepository();
-  }
+  // Verwende immer SettingsRepositoryImpl mit SharedPreferences
+  // Theme-Einstellungen sollen auch ohne Login funktionieren
   return impl.SettingsRepositoryImpl(
     ref.watch(sharedPreferencesProvider),
     ref.watch(firestoreDataSourceProvider),
-    userId,
+    userId ?? 'local', // Fallback zu 'local' wenn nicht eingeloggt
   );
 });
 
