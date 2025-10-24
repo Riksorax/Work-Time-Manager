@@ -65,6 +65,8 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
   List<WorkEntryEntity> _monthlyEntries = [];
 
   Future<void> init() async {
+    if (!mounted) return;
+
     final now = DateTime.now();
     // Setze den initialen Zustand, inklusive selectedMonth
     state = state.copyWith(
@@ -82,6 +84,11 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
   }
 
   void _updateCalculatedReports() {
+    // Prüfe ob das ViewModel noch mounted ist
+    if (!mounted) {
+      return;
+    }
+
     final currentSelectedDay = state.selectedDay ?? DateTime.now();
     state = state.copyWith(
       isLoading: false,
@@ -92,41 +99,47 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
   }
   
   Future<void> saveWorkEntry(WorkEntryEntity entry) async {
+    if (!mounted) return;
+
     state = state.copyWith(isLoading: true);
     try {
       await _workRepository.saveWorkEntry(entry);
+      if (!mounted) return;
+
       final selectedDate = state.selectedDay ?? DateTime.now();
       await _loadWorkEntriesForMonth(selectedDate.year, selectedDate.month);
     } catch (e, stackTrace) {
       print('Fehler beim Speichern des Arbeitseintrags: $e');
       print('Stacktrace: $stackTrace');
+      if (!mounted) return;
+
       state = state.copyWith(isLoading: false);
     }
   }
 
   Future<void> deleteWorkEntry(String entryId) async {
+    if (!mounted) return;
+
     state = state.copyWith(isLoading: true);
     try {
       await _workRepository.deleteWorkEntry(entryId);
+      if (!mounted) return;
+
       // Nach dem Löschen die Einträge für den aktuellen Monat neu laden
       final selectedDate = state.selectedDay ?? DateTime.now();
       await _loadWorkEntriesForMonth(selectedDate.year, selectedDate.month);
     } catch (e, stackTrace) {
       print('Fehler beim Löschen des Arbeitseintrags: $e');
       print('Stacktrace: $stackTrace');
-      // Setze den Ladezustand zurück und aktualisiere Berichte, auch wenn ein Fehler auftritt
-      // _loadWorkEntriesForMonth wird _updateCalculatedReports im finally aufrufen,
-      // aber falls hier ein Fehler vorher auftritt:
+      if (!mounted) return;
+
       state = state.copyWith(isLoading: false);
-      // Es könnte sinnvoll sein, _updateCalculatedReports() hier aufzurufen, um sicherzustellen,
-      // dass der State konsistent ist, falls _loadWorkEntriesForMonth nicht erreicht wird.
-      // Da _loadWorkEntriesForMonth jedoch im Erfolgsfall aufgerufen wird und dessen finally
-      // _updateCalculatedReports ausführt, sollte der Ladezustand korrekt gehandhabt werden.
-      // Für den Fall, dass deleteWorkEntry selbst fehlschlägt, ist isLoading: false hier wichtig.
     }
   }
 
   void selectDate(DateTime date) {
+    if (!mounted) return;
+
     final oldSelectedDay = state.selectedDay;
     state = state.copyWith(selectedDay: date); // Update selectedDay sofort
 
@@ -145,29 +158,46 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
   }
 
   void onMonthChanged(DateTime newMonth) {
+    if (!mounted) return;
+
     // Normalisiere den Monat auf den ersten Tag, um Konsistenz zu gewährleisten.
     final normalizedMonth = DateTime(newMonth.year, newMonth.month, 1);
-    
+
     // Setze den ausgewählten Tag auf den ersten des neuen Monats.
     state = state.copyWith(
-        selectedMonth: normalizedMonth, 
+        selectedMonth: normalizedMonth,
         selectedDay: normalizedMonth);
     _loadWorkEntriesForMonth(newMonth.year, newMonth.month);
   }
 
   Future<void> _loadWorkEntriesForMonth(int year, int month) async {
+    if (!mounted) return;
+
     state = state.copyWith(isLoading: true);
     try {
       final entries = await _workRepository.getWorkEntriesForMonth(year, month);
+      if (!mounted) return;
+
       _monthlyEntries = entries;
     } catch (e, stackTrace) {
-      print('Fehler beim Laden der Arbeitseinträge: $e');
-      print('Stacktrace: $stackTrace');
+      if (!mounted) return;
+
+      // Prüfe, ob es sich um einen Permission-Fehler handelt
+      final errorMessage = e.toString();
+      if (errorMessage.contains('permission-denied')) {
+        print('[ReportsViewModel] Firebase Permission-Fehler erkannt - User wahrscheinlich nicht eingeloggt. Verwende leere Daten.');
+      } else {
+        print('Fehler beim Laden der Arbeitseinträge: $e');
+        print('Stacktrace: $stackTrace');
+      }
       _monthlyEntries = []; // Stelle sicher, dass die Liste bei einem Fehler leer ist
     } finally {
       // Dieser Block wird immer ausgeführt.
       // _updateCalculatedReports setzt isLoading auf false und aktualisiert alle Report-States.
-      _updateCalculatedReports();
+      // Aber nur, wenn das ViewModel noch mounted ist
+      if (mounted) {
+        _updateCalculatedReports();
+      }
     }
   }
 
