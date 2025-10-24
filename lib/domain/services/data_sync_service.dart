@@ -82,13 +82,18 @@ class DataSyncService {
       final firebaseOvertime = firebaseRepository.getOvertime();
       print('[DataSyncService] Firebase Überstunden: ${firebaseOvertime.inMinutes} Min');
 
-      // Merge: Nehme den höheren Wert (oder addiere beide?)
-      // Hier: Addieren, falls beide Werte vorhanden
-      final totalOvertime = firebaseOvertime + localOvertime;
+      // Firebase ist die Quelle der Wahrheit nach dem Sync
+      // Lokale Überstunden werden nur verwendet, wenn Firebase leer ist (erster Sync)
+      final totalOvertime = firebaseOvertime == Duration.zero ? localOvertime : firebaseOvertime;
+      print('[DataSyncService] Verwende ${firebaseOvertime == Duration.zero ? "lokale" : "Firebase"} Überstunden als Quelle');
 
-      // Speichere zu Firebase
-      await firebaseRepository.saveOvertime(totalOvertime);
-      print('[DataSyncService] Überstunden synchronisiert: ${totalOvertime.inMinutes} Min');
+      // Speichere zu Firebase (nur wenn Firebase leer war)
+      if (firebaseOvertime == Duration.zero) {
+        await firebaseRepository.saveOvertime(totalOvertime);
+        print('[DataSyncService] Überstunden zu Firebase synchronisiert: ${totalOvertime.inMinutes} Min');
+      } else {
+        print('[DataSyncService] Firebase Überstunden bereits vorhanden, keine Synchronisierung nötig');
+      }
 
       // Lösche lokale Überstunden nur wenn Firebase erfolgreich
       if (localRepository is LocalOvertimeRepositoryImpl) {
