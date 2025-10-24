@@ -7,15 +7,18 @@ import '../datasources/remote/firestore_datasource.dart';
 import '../models/work_entry_model.dart';
 
 class SettingsRepositoryImpl implements SettingsRepository {
+  // Theme ist global (nicht userId-spezifisch)
   static const String _themeModeKey = 'theme_mode';
-  static const String _targetHoursKey = 'target_weekly_hours';
-  static const String _workdaysPerWeekKey = 'workdays_per_week';
 
   final SharedPreferences _prefs;
   final FirestoreDataSource _firestoreDataSource;
   final String _userId;
 
   SettingsRepositoryImpl(this._prefs, this._firestoreDataSource, this._userId);
+
+  // Generiere userId-spezifische Keys für Einstellungen
+  String get _targetHoursKey => 'target_weekly_hours_$_userId';
+  String get _workdaysPerWeekKey => 'workdays_per_week_$_userId';
 
   @override
   ThemeMode getThemeMode() {
@@ -36,21 +39,27 @@ class SettingsRepositoryImpl implements SettingsRepository {
 
   @override
   double getTargetWeeklyHours() {
-    return _prefs.getDouble(_targetHoursKey) ?? 40.0;
+    final value = _prefs.getDouble(_targetHoursKey);
+    print('[SettingsRepository] getTargetWeeklyHours for user $_userId: $value');
+    return value ?? 40.0;
   }
 
   @override
   Future<void> setTargetWeeklyHours(double hours) async {
+    print('[SettingsRepository] setTargetWeeklyHours for user $_userId: $hours');
     await _prefs.setDouble(_targetHoursKey, hours);
   }
 
   @override
   int getWorkdaysPerWeek() {
-    return _prefs.getInt(_workdaysPerWeekKey) ?? 5;
+    final value = _prefs.getInt(_workdaysPerWeekKey);
+    print('[SettingsRepository] getWorkdaysPerWeek for user $_userId: $value');
+    return value ?? 5;
   }
 
   @override
   Future<void> setWorkdaysPerWeek(int days) async {
+    print('[SettingsRepository] setWorkdaysPerWeek for user $_userId: $days');
     await _prefs.setInt(_workdaysPerWeekKey, days);
   }
 
