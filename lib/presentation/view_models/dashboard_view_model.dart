@@ -254,7 +254,26 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
     final workdaysPerWeek = _settingsRepository.getWorkdaysPerWeek();
     final targetDailyHours = Duration(microseconds: (_settingsRepository.getTargetWeeklyHours() / workdaysPerWeek * Duration.microsecondsPerHour).round());
     final dailyOvertime = _calculateElapsedTime() - targetDailyHours;
-    state = state.copyWith(dailyOvertime: dailyOvertime);
+
+    // Berechne voraussichtliche Feierabendzeit für ±0
+    final expectedEndTime = _calculateExpectedEndTime(targetDailyHours);
+
+    state = state.copyWith(
+      dailyOvertime: dailyOvertime,
+      expectedEndTime: expectedEndTime,
+    );
+  }
+
+  /// Berechnet die voraussichtliche Feierabendzeit für ±0 heutige Überstunden
+  DateTime? _calculateExpectedEndTime(Duration targetDailyHours) {
+    if (state.workEntry.workStart == null) return null;
+
+    // Startzeit + Soll-Stunden + bereits gemachte Pausen
+    final now = DateTime.now();
+    final breakDuration = _calculateTotalBreakDuration(now);
+
+    // Voraussichtliches Ende = Start + Soll-Stunden + Pausen
+    return state.workEntry.workStart!.add(targetDailyHours).add(breakDuration);
   }
 
   Duration _calculateTotalBreakDuration(DateTime now) {

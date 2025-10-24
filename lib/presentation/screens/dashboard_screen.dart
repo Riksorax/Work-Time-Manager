@@ -84,6 +84,8 @@ class DashboardScreen extends ConsumerWidget {
             _buildOvertime(context, liveTotalOvertime, 'Überstunden Gesamt'),
             const SizedBox(height: 16),
             _buildOvertime(context, dashboardState.dailyOvertime, 'Heutige Überstunden'),
+            _buildExpectedEndTime(context, dashboardState.expectedEndTime),
+            _buildExpectedEndTimeWithBalance(context, dashboardState.expectedEndTime, dashboardState.overtime),
             const SizedBox(height: 24),
 
             _TimeInputField(
@@ -146,6 +148,49 @@ class DashboardScreen extends ConsumerWidget {
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: overtimeColor),
         ),
       ],
+    );
+  }
+
+  Widget _buildExpectedEndTime(BuildContext context, DateTime? expectedEndTime) {
+    if (expectedEndTime == null) {
+      return const SizedBox.shrink();
+    }
+
+    final formattedTime = DateFormat.Hm().format(expectedEndTime);
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 4.0),
+      child: Text(
+        'Voraussichtlicher Feierabend (±0): $formattedTime Uhr',
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: Colors.grey[600],
+          fontStyle: FontStyle.italic,
+        ),
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
+
+  Widget _buildExpectedEndTimeWithBalance(BuildContext context, DateTime? expectedEndTime, Duration? overtime) {
+    if (expectedEndTime == null || overtime == null) {
+      return const SizedBox.shrink();
+    }
+
+    // Berechne Feierabend-Zeit, um die Gleitzeit-Bilanz auf 0 zu bringen
+    final expectedEndTimeWithBalance = expectedEndTime.subtract(overtime);
+    final formattedTimeWithBalance = DateFormat.Hm().format(expectedEndTimeWithBalance);
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 2.0),
+      child: Text(
+        'Mit Gleitzeit-Bilanz auf 0: $formattedTimeWithBalance Uhr',
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: Colors.grey[500],
+          fontStyle: FontStyle.italic,
+          fontSize: 11,
+        ),
+        textAlign: TextAlign.center,
+      ),
     );
   }
 
