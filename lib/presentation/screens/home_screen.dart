@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_work_time/presentation/screens/reports_page.dart';
 import 'package:flutter_work_time/presentation/screens/settings_page.dart';
-import 'package:flutter_work_time/presentation/screens/login_page.dart';
-import 'package:flutter_work_time/presentation/view_models/auth_view_model.dart';
 
 import '../../core/providers/providers.dart';
 import '../widgets/update_required_dialog.dart';
@@ -45,63 +43,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   ];
 
   void _onItemTapped(int index) {
-    // Wenn Reports ausgewählt wird (Index 1) und der Benutzer nicht eingeloggt ist
-    if (index == 1) {
-      final authState = ref.read(authStateProvider);
-
-      // Debug: Zeige Auth-State
-      authState.when(
-        data: (user) => print('[HomeScreen] Auth State: ${user != null ? 'Eingeloggt als ${user.email}' : 'NICHT eingeloggt'}'),
-        loading: () => print('[HomeScreen] Auth State: Loading...'),
-        error: (err, stack) => print('[HomeScreen] Auth State: Error - $err'),
-      );
-
-      // Prüfe ob der User nicht eingeloggt ist
-      // AsyncValue.data mit value == null bedeutet: User ist NICHT eingeloggt
-      // AsyncValue.loading oder error bedeutet: Noch am Laden, nicht blockieren
-      final isNotLoggedIn = authState.maybeWhen(
-        data: (user) => user == null,
-        orElse: () => false, // Wenn loading/error, nicht blockieren
-      );
-
-      if (isNotLoggedIn) {
-        print('[HomeScreen] Blockiere Zugriff auf Berichte - User nicht eingeloggt');
-        // Zeige Login-Seite mit Hinweis
-        _showLoginRequiredDialog();
-        return;
-      }
-
-      print('[HomeScreen] Erlaube Zugriff auf Berichte');
-    }
-
     setState(() {
       _selectedIndex = index;
     });
-  }
-
-  void _showLoginRequiredDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Anmeldung erforderlich'),
-        content: const Text('Berichte sind nur für angemeldete Benutzer verfügbar.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Abbrechen'),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (context) => const LoginPage(returnToReports: true)),
-              );
-            },
-            child: const Text('Anmelden'),
-          ),
-        ],
-      ),
-    );
   }
 
   @override

@@ -5,6 +5,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/services/version_service.dart';
+import '../../core/services/notification_service.dart';
 import '../../data/datasources/remote/firestore_datasource.dart';
 import '../../data/repositories/auth_repository_impl.dart';
 import '../../data/repositories/settings_repository_impl.dart' as impl;
@@ -16,7 +17,6 @@ import '../../domain/usecases/get_theme_mode.dart';
 import '../../domain/usecases/set_theme_mode.dart';
 import '../../domain/usecases/sign_in_with_google.dart';
 import '../../domain/usecases/sign_out.dart';
-import '../../presentation/view_models/settings_view_model.dart' show NoOpSettingsRepository;
 
 //==============================================================================
 // SCHICHT 1: DATA SOURCES PROVIDERS
@@ -56,13 +56,12 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 
 final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
   final userId = ref.watch(firebaseAuthProvider).currentUser?.uid;
-  if (userId == null) {
-    return NoOpSettingsRepository();
-  }
+  // Verwende immer SettingsRepositoryImpl mit SharedPreferences
+  // Theme-Einstellungen sollen auch ohne Login funktionieren
   return impl.SettingsRepositoryImpl(
     ref.watch(sharedPreferencesProvider),
     ref.watch(firestoreDataSourceProvider),
-    userId,
+    userId ?? 'local', // Fallback zu 'local' wenn nicht eingeloggt
   );
 });
 
@@ -93,6 +92,14 @@ final getThemeModeUseCaseProvider = Provider(
 );
 final setThemeModeUseCaseProvider = Provider(
   (ref) => SetThemeMode(ref.watch(settingsRepositoryProvider)),
+);
+
+//==============================================================================
+// SERVICES
+//==============================================================================
+
+final notificationServiceProvider = Provider<NotificationService>(
+  (ref) => NotificationService(),
 );
 
 // NOTE: Overtime and Work Entry use case providers are defined in

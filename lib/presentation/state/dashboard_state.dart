@@ -9,6 +9,7 @@ class DashboardState extends Equatable {
   final bool isLoading;
   final Duration? overtime;
   final Duration? dailyOvertime;
+  final DateTime? expectedEndTime; // Voraussichtliche Feierabendzeit für ±0
 
   const DashboardState({
     required this.workEntry,
@@ -17,6 +18,7 @@ class DashboardState extends Equatable {
     this.isLoading = false,
     this.overtime,
     this.dailyOvertime,
+    this.expectedEndTime,
   });
 
   factory DashboardState.initial() {
@@ -30,6 +32,7 @@ class DashboardState extends Equatable {
       isLoading: true, // Start with loading
       overtime: null,
       dailyOvertime: null,
+      expectedEndTime: null,
     );
   }
 
@@ -40,6 +43,7 @@ class DashboardState extends Equatable {
     bool? isLoading,
     Duration? overtime,
     Duration? dailyOvertime,
+    DateTime? expectedEndTime,
   }) {
     return DashboardState(
       workEntry: workEntry ?? this.workEntry,
@@ -48,6 +52,7 @@ class DashboardState extends Equatable {
       isLoading: isLoading ?? this.isLoading,
       overtime: overtime ?? this.overtime,
       dailyOvertime: dailyOvertime ?? this.dailyOvertime,
+      expectedEndTime: expectedEndTime ?? this.expectedEndTime,
     );
   }
 
@@ -59,5 +64,6 @@ class DashboardState extends Equatable {
         isLoading,
         overtime,
         dailyOvertime,
+        expectedEndTime,
       ];
 }

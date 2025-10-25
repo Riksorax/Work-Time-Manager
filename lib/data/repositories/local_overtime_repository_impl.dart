@@ -14,12 +14,18 @@ class LocalOvertimeRepositoryImpl implements OvertimeRepository {
   @override
   Duration getOvertime() {
     final minutes = _prefs.getInt(_overtimeKey) ?? 0;
+    print('[LocalOvertimeRepository] getOvertime, key: $_overtimeKey, value: $minutes min');
     return Duration(minutes: minutes);
   }
 
   @override
   Future<void> saveOvertime(Duration overtime) async {
-    await _prefs.setInt(_overtimeKey, overtime.inMinutes);
-    print('[LocalOvertimeRepository] Gespeichert: ${overtime.inMinutes} Min');
+    print('[LocalOvertimeRepository] saveOvertime, key: $_overtimeKey, value: ${overtime.inMinutes} min');
+    final success = await _prefs.setInt(_overtimeKey, overtime.inMinutes);
+    print('[LocalOvertimeRepository] Save success: $success');
+
+    // Verifiziere, dass der Wert gespeichert wurde
+    final savedValue = _prefs.getInt(_overtimeKey);
+    print('[LocalOvertimeRepository] Verification - saved value: $savedValue min');
   }
 }
