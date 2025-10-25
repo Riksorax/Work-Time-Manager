@@ -33,4 +33,16 @@ abstract class SettingsRepository {
 
   /// Löscht die alten, tagesbasierten Arbeitseinträge.
   Future<void> deleteAllOldWorkEntries(List<String> entryIds);
+
+  /// Ruft ab, ob die AGB akzeptiert wurden.
+  bool hasAcceptedTermsOfService();
+
+  /// Speichert, dass die AGB akzeptiert wurden.
+  Future<void> setAcceptedTermsOfService(bool accepted);
+
+  /// Ruft ab, ob die Datenschutzerklärung akzeptiert wurde.
+  bool hasAcceptedPrivacyPolicy();
+
+  /// Speichert, dass die Datenschutzerklärung akzeptiert wurde.
+  Future<void> setAcceptedPrivacyPolicy(bool accepted);
 }

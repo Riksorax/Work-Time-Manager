@@ -2,71 +2,103 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/providers/providers.dart';
 import '../../data/repositories/hybrid_work_repository_impl.dart';
 import '../../data/repositories/hybrid_overtime_repository_impl.dart';
 import '../../domain/services/data_sync_service.dart';
 import '../view_models/auth_view_model.dart';
 import '../view_models/dashboard_view_model.dart' as dashboard_vm;
 import '../widgets/privacy_policy_dialog.dart';
+import '../widgets/terms_of_service_dialog.dart';
 import 'home_screen.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
-  final bool returnToReports;
-  const LoginPage({this.returnToReports = false, Key? key}) : super(key: key);
+  final int returnToIndex;
+  const LoginPage({this.returnToIndex = 0, Key? key}) : super(key: key);
 
   @override
   ConsumerState<LoginPage> createState() => _LoginPageState();
 }
 
 class _LoginPageState extends ConsumerState<LoginPage> {
-  bool _acceptedPrivacyPolicy = false;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Anmelden'),
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Datenschutz-Checkbox
-              CheckboxListTile(
-                value: _acceptedPrivacyPolicy,
-                onChanged: (value) {
-                  setState(() {
-                    _acceptedPrivacyPolicy = value ?? false;
-                  });
-                },
-                controlAffinity: ListTileControlAffinity.leading,
-                title: RichText(
-                  text: TextSpan(
-                    style: Theme.of(context).textTheme.bodyMedium,
-                    children: [
-                      const TextSpan(text: 'Ich akzeptiere die '),
-                      TextSpan(
-                        text: 'Datenschutzerklärung',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.primary,
-                          decoration: TextDecoration.underline,
-                        ),
-                        recognizer: TapGestureRecognizer()
-                          ..onTap = () {
-                            PrivacyPolicyDialog.show(context);
-                          },
-                      ),
-                    ],
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // App Icon/Logo
+                Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: colorScheme.primaryContainer,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.access_time_rounded,
+                    size: 56,
+                    color: colorScheme.onPrimaryContainer,
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                icon: const Icon(Icons.login), // Hier könnte ein Google-Icon stehen
-                label: const Text('Mit Google anmelden'),
-                onPressed: !_acceptedPrivacyPolicy ? null : () async {
+                const SizedBox(height: 32),
+
+                // Title
+                Text(
+                  'Work Time Manager',
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Erfassen Sie Ihre Arbeitszeit',
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 48),
+
+                // Login Card
+                Card(
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: BorderSide(
+                      color: colorScheme.outlineVariant,
+                      width: 1,
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Login Button
+                        FilledButton.icon(
+                          icon: const Icon(Icons.login),
+                          label: const Text('Mit Google anmelden'),
+                          style: FilledButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          onPressed: () async {
+                // Speichere die Zustimmungen
+                final settingsRepository = ref.read(settingsRepositoryProvider);
+                await settingsRepository.setAcceptedTermsOfService(true);
+                await settingsRepository.setAcceptedPrivacyPolicy(true);
+
                 // Zeige Loading-Dialog
                 if (context.mounted) {
                   showDialog(
@@ -178,9 +210,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   }
 
                   if (context.mounted) {
-                    // Nach erfolgreicher Anmeldung zur Startseite oder Berichtsseite navigieren
+                    // Nach erfolgreicher Anmeldung zurück zur ursprünglichen Seite navigieren
                     Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(builder: (context) => const HomeScreen(initialIndex: 1)),
+                      MaterialPageRoute(builder: (context) => HomeScreen(initialIndex: widget.returnToIndex)),
                     );
                   }
                 } catch (loginError) {
@@ -198,18 +230,81 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   }
                 }
               },
-              ),
-              TextButton(
-                child: const Text('Überspringen'),
-                onPressed: () {
-                  Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (context) => HomeScreen(
-                      initialIndex: widget.returnToReports ? 1 : 0,
-                    )),
-                  );
-                },
-              ),
-            ],
+                        ),
+                        const SizedBox(height: 16),
+                        // Legal Notice
+                        Center(
+                          child: RichText(
+                            textAlign: TextAlign.center,
+                            text: TextSpan(
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                              children: [
+                                const TextSpan(text: 'Mit der Anmeldung akzeptieren Sie unsere '),
+                                TextSpan(
+                                  text: 'AGB',
+                                  style: TextStyle(
+                                    color: colorScheme.primary,
+                                    fontWeight: FontWeight.w600,
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                  recognizer: TapGestureRecognizer()
+                                    ..onTap = () => TermsOfServiceDialog.show(context),
+                                ),
+                                const TextSpan(text: ' und '),
+                                TextSpan(
+                                  text: 'Datenschutzerklärung',
+                                  style: TextStyle(
+                                    color: colorScheme.primary,
+                                    fontWeight: FontWeight.w600,
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                  recognizer: TapGestureRecognizer()
+                                    ..onTap = () => PrivacyPolicyDialog.show(context),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        // Divider
+                        Row(
+                          children: [
+                            Expanded(child: Divider(color: colorScheme.outlineVariant)),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              child: Text(
+                                'oder',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                            Expanded(child: Divider(color: colorScheme.outlineVariant)),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        // Skip Button
+                        TextButton(
+                          onPressed: () {
+                            Navigator.of(context).pushReplacement(
+                              MaterialPageRoute(builder: (context) => HomeScreen(
+                                initialIndex: widget.returnToIndex,
+                              )),
+                            );
+                          },
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                          ),
+                          child: const Text('Ohne Anmeldung fortfahren'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

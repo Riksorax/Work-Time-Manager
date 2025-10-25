@@ -108,7 +108,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
             onPressed: () {
               Navigator.of(context).pop();
               Navigator.of(context).push(
-                MaterialPageRoute(builder: (context) => const LoginPage(returnToReports: true)),
+                MaterialPageRoute(builder: (context) => const LoginPage(returnToIndex: 1)),
               );
               // Der pendingReportTabIndexProvider wird beim nächsten Aufbau der ReportsPage ausgewertet
             },

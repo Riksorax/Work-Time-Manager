@@ -32,6 +32,18 @@ class NoOpSettingsRepository implements SettingsRepository {
 
   @override
   Future<void> deleteAllOldWorkEntries(List<String> entryIds) async {}
+
+  @override
+  bool hasAcceptedTermsOfService() => false;
+
+  @override
+  Future<void> setAcceptedTermsOfService(bool accepted) async {}
+
+  @override
+  bool hasAcceptedPrivacyPolicy() => false;
+
+  @override
+  Future<void> setAcceptedPrivacyPolicy(bool accepted) async {}
 }
 
 class SettingsViewModel extends StateNotifier<AsyncValue<SettingsState>> {
