@@ -5,6 +5,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/services/version_service.dart';
+import '../../core/services/notification_service.dart';
 import '../../data/datasources/remote/firestore_datasource.dart';
 import '../../data/repositories/auth_repository_impl.dart';
 import '../../data/repositories/settings_repository_impl.dart' as impl;
@@ -91,6 +92,14 @@ final getThemeModeUseCaseProvider = Provider(
 );
 final setThemeModeUseCaseProvider = Provider(
   (ref) => SetThemeMode(ref.watch(settingsRepositoryProvider)),
+);
+
+//==============================================================================
+// SERVICES
+//==============================================================================
+
+final notificationServiceProvider = Provider<NotificationService>(
+  (ref) => NotificationService(),
 );
 
 // NOTE: Overtime and Work Entry use case providers are defined in
