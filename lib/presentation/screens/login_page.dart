@@ -37,16 +37,23 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               children: [
                 // App Icon/Logo
                 Container(
-                  width: 100,
-                  height: 100,
+                  width: 120,
+                  height: 120,
                   decoration: BoxDecoration(
-                    color: colorScheme.primaryContainer,
                     shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: colorScheme.primary.withOpacity(0.1),
+                        blurRadius: 20,
+                        spreadRadius: 5,
+                      ),
+                    ],
                   ),
-                  child: Icon(
-                    Icons.access_time_rounded,
-                    size: 56,
-                    color: colorScheme.onPrimaryContainer,
+                  child: ClipOval(
+                    child: Image.asset(
+                      'assets/icon/WorkTimeManagerLogo.png',
+                      fit: BoxFit.cover,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 32),
