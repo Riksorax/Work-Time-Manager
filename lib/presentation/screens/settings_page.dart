@@ -18,6 +18,7 @@ import '../widgets/update_required_dialog.dart';
 import '../widgets/privacy_policy_dialog.dart';
 import '../widgets/imprint_dialog.dart';
 import '../widgets/terms_of_service_dialog.dart';
+import '../widgets/notification_settings_dialog.dart';
 import 'login_page.dart';
 
 class SettingsPage extends ConsumerWidget {
@@ -111,22 +112,14 @@ class SettingsPage extends ConsumerWidget {
               ),
               const Divider(height: 1),
               ListTile(
-                title: Text('Benachrichtigungen', style: theme.textTheme.titleMedium),
-              ),
-              SwitchListTile(
-                title: const Text('Arbeitsbeginn'),
-                value: false,
-                onChanged: (value) {},
-              ),
-              SwitchListTile(
-                title: const Text('Arbeitsende'),
-                value: false,
-                onChanged: (value) {},
-              ),
-              SwitchListTile(
-                title: const Text('Pausen'),
-                value: false,
-                onChanged: (value) {},
+                title: const Text('Benachrichtigungen'),
+                subtitle: settingsState.settings.notificationsEnabled
+                    ? Text('Aktiviert um ${settingsState.settings.notificationTime} Uhr')
+                    : const Text('Deaktiviert'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  NotificationSettingsDialog.show(context, settingsState.settings);
+                },
               ),
               const Divider(height: 1),
               FutureBuilder<PackageInfo>(

@@ -44,6 +44,42 @@ class NoOpSettingsRepository implements SettingsRepository {
 
   @override
   Future<void> setAcceptedPrivacyPolicy(bool accepted) async {}
+
+  @override
+  bool getNotificationsEnabled() => false;
+
+  @override
+  Future<void> setNotificationsEnabled(bool enabled) async {}
+
+  @override
+  String getNotificationTime() => '18:00';
+
+  @override
+  Future<void> setNotificationTime(String time) async {}
+
+  @override
+  List<int> getNotificationDays() => [1, 2, 3, 4, 5];
+
+  @override
+  Future<void> setNotificationDays(List<int> days) async {}
+
+  @override
+  bool getNotifyWorkStart() => true;
+
+  @override
+  Future<void> setNotifyWorkStart(bool enabled) async {}
+
+  @override
+  bool getNotifyWorkEnd() => true;
+
+  @override
+  Future<void> setNotifyWorkEnd(bool enabled) async {}
+
+  @override
+  bool getNotifyBreaks() => true;
+
+  @override
+  Future<void> setNotifyBreaks(bool enabled) async {}
 }
 
 class SettingsViewModel extends StateNotifier<AsyncValue<SettingsState>> {
@@ -64,9 +100,22 @@ class SettingsViewModel extends StateNotifier<AsyncValue<SettingsState>> {
       final overtimeBalance = _getOvertime.call();
       final weeklyTargetHours = _settingsRepository.getTargetWeeklyHours();
       final workdaysPerWeek = _settingsRepository.getWorkdaysPerWeek();
+      final notificationsEnabled = _settingsRepository.getNotificationsEnabled();
+      final notificationTime = _settingsRepository.getNotificationTime();
+      final notificationDays = _settingsRepository.getNotificationDays();
+      final notifyWorkStart = _settingsRepository.getNotifyWorkStart();
+      final notifyWorkEnd = _settingsRepository.getNotifyWorkEnd();
+      final notifyBreaks = _settingsRepository.getNotifyBreaks();
+
       final settings = SettingsEntity(
         weeklyTargetHours: weeklyTargetHours,
         workdaysPerWeek: workdaysPerWeek,
+        notificationsEnabled: notificationsEnabled,
+        notificationTime: notificationTime,
+        notificationDays: notificationDays,
+        notifyWorkStart: notifyWorkStart,
+        notifyWorkEnd: notifyWorkEnd,
+        notifyBreaks: notifyBreaks,
       );
       state = AsyncValue.data(SettingsState(
         settings: settings,
@@ -119,6 +168,42 @@ class SettingsViewModel extends StateNotifier<AsyncValue<SettingsState>> {
     } catch (e) {
       // Handle error
     }
+  }
+
+  Future<void> updateNotificationsEnabled(bool enabled) async {
+    await _settingsRepository.setNotificationsEnabled(enabled);
+    final newSettings = state.value!.settings.copyWith(notificationsEnabled: enabled);
+    state = state.whenData((value) => value.copyWith(settings: newSettings));
+  }
+
+  Future<void> updateNotificationTime(String time) async {
+    await _settingsRepository.setNotificationTime(time);
+    final newSettings = state.value!.settings.copyWith(notificationTime: time);
+    state = state.whenData((value) => value.copyWith(settings: newSettings));
+  }
+
+  Future<void> updateNotificationDays(List<int> days) async {
+    await _settingsRepository.setNotificationDays(days);
+    final newSettings = state.value!.settings.copyWith(notificationDays: days);
+    state = state.whenData((value) => value.copyWith(settings: newSettings));
+  }
+
+  Future<void> updateNotifyWorkStart(bool enabled) async {
+    await _settingsRepository.setNotifyWorkStart(enabled);
+    final newSettings = state.value!.settings.copyWith(notifyWorkStart: enabled);
+    state = state.whenData((value) => value.copyWith(settings: newSettings));
+  }
+
+  Future<void> updateNotifyWorkEnd(bool enabled) async {
+    await _settingsRepository.setNotifyWorkEnd(enabled);
+    final newSettings = state.value!.settings.copyWith(notifyWorkEnd: enabled);
+    state = state.whenData((value) => value.copyWith(settings: newSettings));
+  }
+
+  Future<void> updateNotifyBreaks(bool enabled) async {
+    await _settingsRepository.setNotifyBreaks(enabled);
+    final newSettings = state.value!.settings.copyWith(notifyBreaks: enabled);
+    state = state.whenData((value) => value.copyWith(settings: newSettings));
   }
 }
 

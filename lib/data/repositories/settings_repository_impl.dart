@@ -12,6 +12,13 @@ class SettingsRepositoryImpl implements SettingsRepository {
   // Rechtliche Zustimmungen sind global (nicht userId-spezifisch)
   static const String _acceptedTermsOfServiceKey = 'accepted_terms_of_service';
   static const String _acceptedPrivacyPolicyKey = 'accepted_privacy_policy';
+  // Benachrichtigungen sind global (nicht userId-spezifisch)
+  static const String _notificationsEnabledKey = 'notifications_enabled';
+  static const String _notificationTimeKey = 'notification_time';
+  static const String _notificationDaysKey = 'notification_days';
+  static const String _notifyWorkStartKey = 'notify_work_start';
+  static const String _notifyWorkEndKey = 'notify_work_end';
+  static const String _notifyBreaksKey = 'notify_breaks';
 
   final SharedPreferences _prefs;
   final FirestoreDataSource _firestoreDataSource;
@@ -103,5 +110,69 @@ class SettingsRepositoryImpl implements SettingsRepository {
   @override
   Future<void> setAcceptedPrivacyPolicy(bool accepted) async {
     await _prefs.setBool(_acceptedPrivacyPolicyKey, accepted);
+  }
+
+  @override
+  bool getNotificationsEnabled() {
+    return _prefs.getBool(_notificationsEnabledKey) ?? false;
+  }
+
+  @override
+  Future<void> setNotificationsEnabled(bool enabled) async {
+    await _prefs.setBool(_notificationsEnabledKey, enabled);
+  }
+
+  @override
+  String getNotificationTime() {
+    return _prefs.getString(_notificationTimeKey) ?? '18:00';
+  }
+
+  @override
+  Future<void> setNotificationTime(String time) async {
+    await _prefs.setString(_notificationTimeKey, time);
+  }
+
+  @override
+  List<int> getNotificationDays() {
+    final daysString = _prefs.getString(_notificationDaysKey);
+    if (daysString == null || daysString.isEmpty) {
+      return [1, 2, 3, 4, 5]; // Default: Monday to Friday
+    }
+    return daysString.split(',').map((e) => int.parse(e)).toList();
+  }
+
+  @override
+  Future<void> setNotificationDays(List<int> days) async {
+    await _prefs.setString(_notificationDaysKey, days.join(','));
+  }
+
+  @override
+  bool getNotifyWorkStart() {
+    return _prefs.getBool(_notifyWorkStartKey) ?? true;
+  }
+
+  @override
+  Future<void> setNotifyWorkStart(bool enabled) async {
+    await _prefs.setBool(_notifyWorkStartKey, enabled);
+  }
+
+  @override
+  bool getNotifyWorkEnd() {
+    return _prefs.getBool(_notifyWorkEndKey) ?? true;
+  }
+
+  @override
+  Future<void> setNotifyWorkEnd(bool enabled) async {
+    await _prefs.setBool(_notifyWorkEndKey, enabled);
+  }
+
+  @override
+  bool getNotifyBreaks() {
+    return _prefs.getBool(_notifyBreaksKey) ?? true;
+  }
+
+  @override
+  Future<void> setNotifyBreaks(bool enabled) async {
+    await _prefs.setBool(_notifyBreaksKey, enabled);
   }
 }
