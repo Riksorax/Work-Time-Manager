@@ -17,6 +17,7 @@ import '../widgets/edit_workdays_modal.dart';
 import '../widgets/update_required_dialog.dart';
 import '../widgets/privacy_policy_dialog.dart';
 import '../widgets/imprint_dialog.dart';
+import '../widgets/terms_of_service_dialog.dart';
 import 'login_page.dart';
 
 class SettingsPage extends ConsumerWidget {
@@ -153,6 +154,11 @@ class SettingsPage extends ConsumerWidget {
                 title: const Text('Impressum'),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => ImprintDialog.show(context),
+              ),
+              ListTile(
+                title: const Text('AGB'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => TermsOfServiceDialog.show(context),
               ),
               ListTile(
                 title: const Text('Datenschutz'),
@@ -457,7 +463,7 @@ class SettingsPage extends ConsumerWidget {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const LoginPage()),
+                  MaterialPageRoute(builder: (context) => const LoginPage(returnToIndex: 2)),
                 );
               },
               icon: const Icon(Icons.login),

@@ -9,6 +9,9 @@ import '../models/work_entry_model.dart';
 class SettingsRepositoryImpl implements SettingsRepository {
   // Theme ist global (nicht userId-spezifisch)
   static const String _themeModeKey = 'theme_mode';
+  // Rechtliche Zustimmungen sind global (nicht userId-spezifisch)
+  static const String _acceptedTermsOfServiceKey = 'accepted_terms_of_service';
+  static const String _acceptedPrivacyPolicyKey = 'accepted_privacy_policy';
 
   final SharedPreferences _prefs;
   final FirestoreDataSource _firestoreDataSource;
@@ -80,5 +83,25 @@ class SettingsRepositoryImpl implements SettingsRepository {
   @override
   Future<void> deleteAllOldWorkEntries(List<String> entryIds) async {
     await _firestoreDataSource.deleteAllOldWorkEntries(_userId, entryIds);
+  }
+
+  @override
+  bool hasAcceptedTermsOfService() {
+    return _prefs.getBool(_acceptedTermsOfServiceKey) ?? false;
+  }
+
+  @override
+  Future<void> setAcceptedTermsOfService(bool accepted) async {
+    await _prefs.setBool(_acceptedTermsOfServiceKey, accepted);
+  }
+
+  @override
+  bool hasAcceptedPrivacyPolicy() {
+    return _prefs.getBool(_acceptedPrivacyPolicyKey) ?? false;
+  }
+
+  @override
+  Future<void> setAcceptedPrivacyPolicy(bool accepted) async {
+    await _prefs.setBool(_acceptedPrivacyPolicyKey, accepted);
   }
 }
