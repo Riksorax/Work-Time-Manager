@@ -54,9 +54,14 @@ Future<void> main() async {
   if (notificationsEnabled) {
     final notificationTime = prefs.getString('notification_time') ?? '18:00';
     final notificationDaysString = prefs.getString('notification_days');
-    final notificationDays = notificationDaysString != null && notificationDaysString.isNotEmpty
-        ? notificationDaysString.split(',').map((e) => int.parse(e)).toList()
-        : [1, 2, 3, 4, 5];
+    final List<int> notificationDays;
+    if (notificationDaysString == null) {
+      notificationDays = [1, 2, 3, 4, 5]; // Default for first run
+    } else if (notificationDaysString.isEmpty) {
+      notificationDays = []; // No days selected
+    } else {
+      notificationDays = notificationDaysString.split(',').map((e) => int.parse(e)).toList();
+    }
     final notifyWorkStart = prefs.getBool('notify_work_start') ?? true;
     final notifyWorkEnd = prefs.getBool('notify_work_end') ?? true;
     final notifyBreaks = prefs.getBool('notify_breaks') ?? true;

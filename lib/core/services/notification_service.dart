@@ -151,6 +151,10 @@ class NotificationService {
     required bool checkWorkEnd,
     required bool checkBreaks,
   }) async {
+    if (day < 1 || day > 7) {
+      logger.w('Ungültiger Tag für die Benachrichtigungsplanung: $day');
+      return;
+    }
     final now = tz.TZDateTime.now(tz.local);
     var scheduledDate = tz.TZDateTime(
       tz.local,
