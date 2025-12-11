@@ -3,24 +3,20 @@ import 'package:uuid/uuid.dart';
 
 import '../../domain/entities/break_entity.dart';
 import '../../domain/entities/work_entry_entity.dart';
-import '../../domain/repositories/work_repository.dart';
 import '../state/edit_work_entry_state.dart';
-import 'dashboard_view_model.dart' show workRepositoryProvider;
 import 'reports_view_model.dart';
 
 final editWorkEntryViewModelProvider = StateNotifierProvider.autoDispose
     .family<EditWorkEntryViewModel, EditWorkEntryState, WorkEntryEntity>(
         (ref, entry) {
-  final workRepository = ref.watch(workRepositoryProvider);
-  return EditWorkEntryViewModel(workRepository, entry, ref);
+  return EditWorkEntryViewModel(entry, ref);
 });
 
 class EditWorkEntryViewModel extends StateNotifier<EditWorkEntryState> {
-  final WorkRepository _workRepository;
   final Uuid _uuid = const Uuid();
   final Ref _ref;
 
-  EditWorkEntryViewModel(this._workRepository, WorkEntryEntity entry, this._ref)
+  EditWorkEntryViewModel(WorkEntryEntity entry, this._ref)
       : super(EditWorkEntryState.fromWorkEntry(entry));
 
   void setStartTime(DateTime startTime) {

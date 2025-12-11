@@ -1,4 +1,5 @@
 import 'package:uuid/uuid.dart';
+import 'package:flutter_work_time/core/utils/logger.dart';
 import '../entities/break_entity.dart';
 import '../entities/work_entry_entity.dart';
 
@@ -26,17 +27,17 @@ class BreakCalculatorService {
     final manualBreaks = existingBreaks.where((b) => !b.isAutomatic).toList();
     final automaticBreaks = existingBreaks.where((b) => b.isAutomatic).toList();
 
-    print('[BreakCalculator] Bestehende Pausen: ${existingBreaks.length} (${manualBreaks.length} manuell, ${automaticBreaks.length} automatisch)');
+    logger.i('[BreakCalculator] Bestehende Pausen: ${existingBreaks.length} (${manualBreaks.length} manuell, ${automaticBreaks.length} automatisch)');
 
     // Wenn keine Pausen vorhanden sind, füge automatische Pausen hinzu
     if (existingBreaks.isEmpty) {
       final calculatedBreaks = _calculateBreaks(entry.workStart!, entry.workEnd!, totalWorkTime);
-      print('[BreakCalculator] Keine Pausen vorhanden, füge ${calculatedBreaks.length} automatische hinzu');
+      logger.i('[BreakCalculator] Keine Pausen vorhanden, füge ${calculatedBreaks.length} automatische hinzu');
       return entry.copyWith(breaks: calculatedBreaks);
     } else {
       // Wenn Pausen vorhanden sind, behalte manuelle und passe nur automatische an
       final adjustedAutoBreaks = _adjustExistingBreaks(entry.workStart!, entry.workEnd!, totalWorkTime, existingBreaks);
-      print('[BreakCalculator] Pausen angepasst: ${adjustedAutoBreaks.length} gesamt');
+      logger.i('[BreakCalculator] Pausen angepasst: ${adjustedAutoBreaks.length} gesamt');
       return entry.copyWith(breaks: adjustedAutoBreaks);
     }
   }
@@ -117,7 +118,7 @@ class BreakCalculatorService {
 
     // Wenn die tatsächliche Pausenzeit bereits ausreicht, behalte alle Pausen
     if (actualBreakTime >= requiredBreakTime) {
-      print('[BreakCalculator] Pausenzeit ausreichend (${actualBreakTime.inMinutes} Min), behalte alle Pausen');
+      logger.i('[BreakCalculator] Pausenzeit ausreichend (${actualBreakTime.inMinutes} Min), behalte alle Pausen');
       return existingBreaks;
     }
 
@@ -129,7 +130,7 @@ class BreakCalculatorService {
 
     // Wenn keine zusätzlichen Pausen nötig sind, behalte alle existierenden
     if (missingBreakTime <= Duration.zero) {
-      print('[BreakCalculator] Pausenzeit ausreichend, keine zusätzlichen Pausen nötig');
+      logger.i('[BreakCalculator] Pausenzeit ausreichend, keine zusätzlichen Pausen nötig');
       return existingBreaks;
     }
 
@@ -157,9 +158,9 @@ class BreakCalculatorService {
         end: autoBreakStart.add(missingBreakTime),
         isAutomatic: true,
       ));
-      print('[BreakCalculator] Füge ${missingBreakTime.inMinutes} Min automatische Pause hinzu (${manualBreaks.length} manuelle bleiben erhalten)');
+      logger.i('[BreakCalculator] Füge ${missingBreakTime.inMinutes} Min automatische Pause hinzu (${manualBreaks.length} manuelle bleiben erhalten)');
     } else {
-      print('[BreakCalculator] Kann keine automatische Pause hinzufügen (würde nach Arbeitsende liegen)');
+      logger.i('[BreakCalculator] Kann keine automatische Pause hinzufügen (würde nach Arbeitsende liegen)');
     }
 
     return result;

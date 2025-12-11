@@ -1,5 +1,6 @@
 import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/repositories/work_repository.dart';
+import 'package:flutter_work_time/core/utils/logger.dart';
 
 /// Hybrid Repository, das automatisch zwischen Firebase und Local wechselt.
 ///
@@ -21,10 +22,10 @@ class HybridWorkRepositoryImpl implements WorkRepository {
   /// Gibt das aktive Repository zurück
   WorkRepository get _activeRepository {
     if (_userId != null && _userId!.isNotEmpty) {
-      print('[HybridWorkRepository] Verwende Firebase (User: $_userId)');
+      logger.i('[HybridWorkRepository] Verwende Firebase (User: $_userId)');
       return _firebaseRepository;
     } else {
-      print('[HybridWorkRepository] Verwende Local (Offline)');
+      logger.i('[HybridWorkRepository] Verwende Local (Offline)');
       return _localRepository;
     }
   }

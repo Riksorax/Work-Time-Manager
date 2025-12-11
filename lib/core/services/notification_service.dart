@@ -1,6 +1,7 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'package:flutter_work_time/core/utils/logger.dart';
 
 import 'work_entry_checker_service.dart';
 import '../../domain/repositories/work_repository.dart';
@@ -36,7 +37,7 @@ class NotificationService {
   }
 
   void _onNotificationTapped(NotificationResponse response) {
-    print('[NotificationService] Notification tapped: ${response.payload}');
+    logger.i('[NotificationService] Notification tapped: ${response.payload}');
     if (_onNotificationTapCallback != null && response.payload != null) {
       _onNotificationTapCallback!(response.payload!);
     }
@@ -111,7 +112,7 @@ class NotificationService {
     final missing = await checker.checkMissingEntries();
 
     if (!missing.hasMissingEntries) {
-      print('[NotificationService] Keine fehlenden Einträge, keine Benachrichtigung gesendet');
+      logger.i('[NotificationService] Keine fehlenden Einträge, keine Benachrichtigung gesendet');
       return;
     }
 
@@ -122,7 +123,7 @@ class NotificationService {
     if (notifyBreaks && missing.missingBreaks) typesToNotify.add('Pausen');
 
     if (typesToNotify.isEmpty) {
-      print('[NotificationService] Fehlende Einträge, aber nicht für aktivierte Typen');
+      logger.i('[NotificationService] Fehlende Einträge, aber nicht für aktivierte Typen');
       return;
     }
 

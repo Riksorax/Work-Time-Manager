@@ -9,9 +9,9 @@ class TimerCard extends ConsumerWidget {
   final WorkEntryEntity workEntry;
 
   const TimerCard({
-    Key? key,
+    super.key,
     required this.workEntry,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

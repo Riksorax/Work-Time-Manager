@@ -220,8 +220,8 @@ class DailyReportView extends ConsumerWidget {
         }
 
         final dailyReport = reportsState.dailyReportState;
-        final selectedDay = reportsState.selectedDay ?? DateTime.now();
-        final selectedMonth = reportsState.selectedMonth ?? DateTime.now();
+        final DateTime selectedDay = reportsState.selectedDay ?? DateTime.now();
+        final DateTime selectedMonth = reportsState.selectedMonth ?? DateTime.now();
 
         final Set<int> daysWithEntriesInMonth = reportsState.monthlyReportState.dailyWork.keys
             .where((date) =>
@@ -374,24 +374,24 @@ class DailyReportView extends ConsumerWidget {
                       final displayEntry = ref
                           .read(reportsViewModelProvider.notifier)
                           .applyBreakCalculation(entry);
-                      final DateTime? _start = displayEntry.workStart;
-                      final DateTime? _end = displayEntry.workEnd ?? DateTime.now();
-                      Duration _breakDuration = Duration.zero;
-                      if (_start != null && _end != null) {
+                      final DateTime? start = displayEntry.workStart;
+                      final DateTime end = displayEntry.workEnd ?? DateTime.now();
+                      Duration breakDuration = Duration.zero;
+                      if (start != null) {
                         for (final b in displayEntry.breaks) {
                           final DateTime bStart = b.start;
-                          final DateTime bEnd = b.end ?? _end;
+                          final DateTime bEnd = b.end ?? end;
                           final DateTime effStart =
-                              bStart.isBefore(_start) ? _start : bStart;
-                          final DateTime effEnd = bEnd.isAfter(_end) ? _end : bEnd;
+                              bStart.isBefore(start) ? start : bStart;
+                          final DateTime effEnd = bEnd.isAfter(end) ? end : bEnd;
                           if (effEnd.isAfter(effStart)) {
-                            _breakDuration += effEnd.difference(effStart);
+                            breakDuration += effEnd.difference(effStart);
                           }
                         }
                       }
                       final Duration workedDuration =
-                          (_start != null && _end != null)
-                              ? _end.difference(_start) - _breakDuration
+                          (start != null)
+                              ? end.difference(start) - breakDuration
                               : Duration.zero;
 
                       return Card(
@@ -909,7 +909,6 @@ class _Calendar extends StatelessWidget {
     this.onPreviousMonthTapped,
     this.onNextMonthTapped,
     this.daysWithEntries,
-    super.key,
   });
 
   int _getDaysInMonth(int year, int month) {
@@ -1110,8 +1109,8 @@ class _DayEntriesBottomSheetState
 
     if (confirmed == true) {
       await ref.read(reportsViewModelProvider.notifier).deleteWorkEntry(entry.id);
-      if (mounted && Navigator.of(this.context).canPop()) {
-        Navigator.of(this.context).pop();
+      if (mounted && Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
       }
     }
   }
@@ -1127,7 +1126,7 @@ class _DayEntriesBottomSheetState
       );
     }
 
-    final entriesForSheetDate = reportsState.dailyReportState.entries
+    final List<WorkEntryEntity> entriesForSheetDate = reportsState.dailyReportState.entries
         .where((entry) => DateUtils.isSameDay(entry.date, widget.date))
         .toList();
 

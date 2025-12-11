@@ -244,7 +244,7 @@ class DashboardScreen extends ConsumerWidget {
                           message: 'Automatisch berechnet basierend auf der Arbeitszeit',
                           child: Chip(
                             label: const Text('Automatisch'),
-                            backgroundColor: Theme.of(context).colorScheme.secondary.withOpacity(0.3),
+                            backgroundColor: Theme.of(context).colorScheme.secondary.withAlpha(77),
                             labelStyle: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.onSecondary),
                           ),
                         ),

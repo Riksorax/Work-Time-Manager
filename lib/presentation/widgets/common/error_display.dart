@@ -4,10 +4,10 @@ class ErrorDisplay extends StatelessWidget {
   final String error;
   final VoidCallback? onRetry;
   const ErrorDisplay({
-    Key? key,
+    super.key,
     required this.error,
     this.onRetry,
-  }) : super(key: key);
+  });
   @override
   Widget build(BuildContext context) {
     return Center(

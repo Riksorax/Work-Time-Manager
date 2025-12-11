@@ -1,6 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_work_time/core/utils/logger.dart';
 
 import '../../core/providers/providers.dart';
 import '../../data/repositories/hybrid_work_repository_impl.dart';
@@ -14,7 +15,7 @@ import 'home_screen.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   final int returnToIndex;
-  const LoginPage({this.returnToIndex = 0, Key? key}) : super(key: key);
+  const LoginPage({this.returnToIndex = 0, super.key});
 
   @override
   ConsumerState<LoginPage> createState() => _LoginPageState();
@@ -43,7 +44,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: colorScheme.primary.withOpacity(0.1),
+                        color: colorScheme.primary.withAlpha(26),
                         blurRadius: 20,
                         spreadRadius: 5,
                       ),
@@ -202,7 +203,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       }
                     }
                   } catch (syncError) {
-                    print('[LoginPage] Fehler bei der Synchronisierung: $syncError');
+                    logger.e('[LoginPage] Fehler bei der Synchronisierung: $syncError');
                     // Schließe Sync-Dialog bei Fehler
                     if (context.mounted) {
                       Navigator.of(context).pop();
@@ -223,7 +224,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     );
                   }
                 } catch (loginError) {
-                  print('[LoginPage] Fehler beim Login: $loginError');
+                  logger.e('[LoginPage] Fehler beim Login: $loginError');
                   // Schließe Loading-Dialog bei Fehler
                   if (context.mounted) {
                     Navigator.of(context).pop();
