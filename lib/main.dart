@@ -10,7 +10,7 @@ import 'package:flutter_work_time/app_check_initializer.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tz_data;
-import 'package:flutter_native_timezone/flutter_native_timezone.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 
 import 'core/config/google_sign_in_config.dart';
 import 'core/providers/providers.dart';
@@ -28,7 +28,7 @@ Future<void> main() async {
   // Initialize timezone
   tz_data.initializeTimeZones();
   try {
-    final String timeZoneName = await FlutterNativeTimezone.getLocalTimezone();
+    final String timeZoneName = await FlutterTimezone.getLocalTimezone();
     tz.setLocalLocation(tz.getLocation(timeZoneName));
   } catch (e) {
     logger.e("Could not get local timezone, falling back to 'Europe/Berlin'", error: e);
