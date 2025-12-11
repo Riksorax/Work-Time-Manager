@@ -52,6 +52,7 @@ dependencies:
   flutter_local_notifications: ^18.0.1
   timezone: ^0.9.4
   logger: ^2.3.0
+  flutter_native_timezone: ^2.0.0
 
 dependency_overrides:
   meta: ^1.17.0

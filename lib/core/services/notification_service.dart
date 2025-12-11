@@ -20,9 +20,6 @@ class NotificationService {
 
     _onNotificationTapCallback = onNotificationTap;
 
-    // Initialize timezone
-    tz.initializeTimeZones();
-
     const androidSettings = AndroidInitializationSettings('@mipmap/launcher_icon');
     const initSettings = InitializationSettings(
       android: androidSettings,

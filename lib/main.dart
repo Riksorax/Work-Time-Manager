@@ -1,14 +1,16 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_work_time/presentation/screens/home_screen.dart'; // Geändert
+import 'package:flutter_work_time/presentation/screens/home_screen.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_work_time/app_check_initializer.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
-import 'package:timezone/timezone.dart' as tz; // Added this line
+import 'package:timezone/timezone.dart' as tz;
+import 'package:timezone/data/latest_all.dart' as tz_data;
+import 'package:flutter_native_timezone/flutter_native_timezone.dart';
 
 import 'core/config/google_sign_in_config.dart';
 import 'core/providers/providers.dart';
@@ -22,6 +24,17 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize timezone
+  tz_data.initializeTimeZones();
+  try {
+    final String timeZoneName = await FlutterNativeTimezone.getLocalTimezone();
+    tz.setLocalLocation(tz.getLocation(timeZoneName));
+  } catch (e) {
+    logger.e("Could not get local timezone, falling back to 'Europe/Berlin'", error: e);
+    tz.setLocalLocation(tz.getLocation('Europe/Berlin'));
+  }
+
 
   await initializeDateFormatting('de_DE', null);
   Intl.defaultLocale = 'de_DE';
@@ -50,9 +63,6 @@ Future<void> main() async {
       }
     },
   );
-
-  // Set local location for timezone package
-  tz.setLocalLocation(tz.getLocation(tz.local.name));
 
   // Reschedule notifications if enabled
   final notificationsEnabled = prefs.getBool('notifications_enabled') ?? false;
@@ -105,7 +115,7 @@ class MyApp extends ConsumerWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: themeMode,
-      home: const HomeScreen(), // Geändert von AuthGate zu HomeScreen
+      home: const HomeScreen(),
     );
   }
 }

@@ -51,7 +51,6 @@ class SettingsRepositoryImpl implements SettingsRepository {
   @override
   double getTargetWeeklyHours() {
     final value = _prefs.getDouble(_targetHoursKey);
-    logger.i('[SettingsRepository] getTargetWeeklyHours for user $_userId: $value');
     return value ?? 40.0;
   }
 
