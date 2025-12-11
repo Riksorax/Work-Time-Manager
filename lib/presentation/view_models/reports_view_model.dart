@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_work_time/core/utils/logger.dart';
 
 import '../../core/providers/providers.dart' as core_providers;
 import '../../domain/entities/work_entry_entity.dart';
@@ -109,8 +110,7 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
       final selectedDate = state.selectedDay ?? DateTime.now();
       await _loadWorkEntriesForMonth(selectedDate.year, selectedDate.month);
     } catch (e, stackTrace) {
-      print('Fehler beim Speichern des Arbeitseintrags: $e');
-      print('Stacktrace: $stackTrace');
+      logger.e('Fehler beim Speichern des Arbeitseintrags: $e', stackTrace: stackTrace);
       if (!mounted) return;
 
       state = state.copyWith(isLoading: false);
@@ -129,8 +129,7 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
       final selectedDate = state.selectedDay ?? DateTime.now();
       await _loadWorkEntriesForMonth(selectedDate.year, selectedDate.month);
     } catch (e, stackTrace) {
-      print('Fehler beim Löschen des Arbeitseintrags: $e');
-      print('Stacktrace: $stackTrace');
+      logger.e('Fehler beim Löschen des Arbeitseintrags: $e', stackTrace: stackTrace);
       if (!mounted) return;
 
       state = state.copyWith(isLoading: false);
@@ -198,10 +197,9 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
       // Prüfe, ob es sich um einen Permission-Fehler handelt
       final errorMessage = e.toString();
       if (errorMessage.contains('permission-denied')) {
-        print('[ReportsViewModel] Firebase Permission-Fehler erkannt - User wahrscheinlich nicht eingeloggt. Verwende leere Daten.');
+        logger.w('[ReportsViewModel] Firebase Permission-Fehler erkannt - User wahrscheinlich nicht eingeloggt. Verwende leere Daten.');
       } else {
-        print('Fehler beim Laden der Arbeitseinträge: $e');
-        print('Stacktrace: $stackTrace');
+        logger.e('Fehler beim Laden der Arbeitseinträge: $e', stackTrace: stackTrace);
       }
       _monthlyEntries = []; // Stelle sicher, dass die Liste bei einem Fehler leer ist
     } finally {

@@ -9,9 +9,9 @@ class TimeSummaryCard extends ConsumerWidget {
   final WorkEntryEntity workEntry;
 
   const TimeSummaryCard({
-    Key? key,
+    super.key,
     required this.workEntry,
-  }) : super(key: key);
+  });
 
   // Helper zum Formatieren einer Duration
   String _formatDuration(Duration duration) {

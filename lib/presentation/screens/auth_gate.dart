@@ -7,7 +7,7 @@ import 'home_screen.dart';
 import 'login_page.dart';
 
 class AuthGate extends ConsumerWidget {
-  const AuthGate({Key? key}) : super(key: key);
+  const AuthGate({super.key});
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authStateProvider);

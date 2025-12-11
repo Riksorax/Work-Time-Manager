@@ -11,7 +11,7 @@ import 'package:firebase_app_check/firebase_app_check.dart';
 /// // Variante A: Explizit Provider setzen
 /// Future<void> main() async {
 ///   await AppBootstrap.ensureInitialized(
-///     androidProvider: AndroidProvider.playIntegrity, // Dev: AndroidProvider.debug
+///     androidProvider: `AndroidProvider.playIntegrity`, // Dev: `AndroidProvider.debug`
 ///   );
 ///   runApp(const MyApp());
 /// }
@@ -25,7 +25,7 @@ class AppBootstrap {
   static bool _initialized = false;
 
   /// Initialisiert Firebase und aktiviert App Check.
-  /// - androidProvider: Produktion PlayIntegrity, Entwicklung AndroidProvider.debug.
+  /// - androidProvider: Produktion `PlayIntegrity`, Entwicklung `AndroidProvider.debug`.
   /// - autoRefresh: Hält das App-Check-Token automatisch aktuell.
   static Future<void> ensureInitialized({
     AndroidProvider androidProvider = AndroidProvider.playIntegrity,

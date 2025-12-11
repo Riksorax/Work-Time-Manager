@@ -1,4 +1,5 @@
 import '../../domain/repositories/overtime_repository.dart';
+import 'package:flutter_work_time/core/utils/logger.dart';
 
 /// Hybrid Repository für Überstunden, das automatisch zwischen Firebase und Local wechselt.
 class HybridOvertimeRepositoryImpl implements OvertimeRepository {
@@ -17,10 +18,10 @@ class HybridOvertimeRepositoryImpl implements OvertimeRepository {
   /// Gibt das aktive Repository zurück
   OvertimeRepository get _activeRepository {
     if (_userId != null && _userId!.isNotEmpty) {
-      print('[HybridOvertimeRepository] Verwende Firebase (User: $_userId)');
+      logger.i('[HybridOvertimeRepository] Verwende Firebase (User: $_userId)');
       return _firebaseRepository;
     } else {
-      print('[HybridOvertimeRepository] Verwende Local (Offline)');
+      logger.i('[HybridOvertimeRepository] Verwende Local (Offline)');
       return _localRepository;
     }
   }

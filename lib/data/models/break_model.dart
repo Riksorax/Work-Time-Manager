@@ -27,7 +27,7 @@ class BreakModel extends BreakEntity {
 
   /// Deserialisierung: Erstellt ein BreakModel aus einer Map.
   ///
-  /// Firestore speichert Listen von Objekten als List<dynamic>, wobei jedes
+  /// Firestore speichert Listen von Objekten als `List<dynamic>`, wobei jedes
   /// Element eine Map ist. Diese Factory wird von WorkEntryModel.fromFirestore
   /// aufgerufen, um jede Pause in der Liste zu deserialisieren.
   factory BreakModel.fromMap(Map<String, dynamic> map) {
