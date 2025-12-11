@@ -7,6 +7,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_work_time/app_check_initializer.dart';
+import 'package:flutter_work_time/core/utils/logger.dart';
 
 import 'core/config/google_sign_in_config.dart';
 import 'core/providers/providers.dart';
@@ -66,6 +67,7 @@ Future<void> main() async {
     final notifyWorkEnd = prefs.getBool('notify_work_end') ?? true;
     final notifyBreaks = prefs.getBool('notify_breaks') ?? true;
 
+    logger.i('Scheduling daily reminder with time: $notificationTime, days: $notificationDays, checkWorkStart: $notifyWorkStart, checkWorkEnd: $notifyWorkEnd, checkBreaks: $notifyBreaks');
     await notificationService.scheduleDailyReminder(
       time: notificationTime,
       days: notificationDays,

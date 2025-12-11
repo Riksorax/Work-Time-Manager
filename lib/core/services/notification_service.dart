@@ -191,6 +191,7 @@ class NotificationService {
       body = 'Haben Sie ${checkTypes.join(", ")} und $last eingetragen?';
     }
 
+    logger.i('Scheduling notification with id $id for $scheduledDate (Day: $day, Hour: $hour, Minute: $minute)');
     await _notifications.zonedSchedule(
       id,
       'Arbeitszeit-Erinnerung',
