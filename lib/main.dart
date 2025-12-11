@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_work_time/app_check_initializer.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
+import 'package:timezone/timezone.dart' as tz; // Added this line
 
 import 'core/config/google_sign_in_config.dart';
 import 'core/providers/providers.dart';
@@ -49,6 +50,9 @@ Future<void> main() async {
       }
     },
   );
+
+  // Set local location for timezone package
+  tz.setLocalLocation(tz.getLocation(tz.local.name));
 
   // Reschedule notifications if enabled
   final notificationsEnabled = prefs.getBool('notifications_enabled') ?? false;
