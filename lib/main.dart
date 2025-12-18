@@ -28,8 +28,8 @@ Future<void> main() async {
   // Initialize timezone
   tz_data.initializeTimeZones();
   try {
-    final String timeZoneName = await FlutterTimezone.getLocalTimezone();
-    tz.setLocalLocation(tz.getLocation(timeZoneName));
+    final timeZoneName = await FlutterTimezone.getLocalTimezone();
+    tz.setLocalLocation(tz.getLocation(timeZoneName.toString()));
   } catch (e) {
     logger.e("Could not get local timezone, falling back to 'Europe/Berlin'", error: e);
     tz.setLocalLocation(tz.getLocation('Europe/Berlin'));
@@ -63,6 +63,9 @@ Future<void> main() async {
       }
     },
   );
+
+  // Request notification permissions
+  await notificationService.requestPermissions();
 
   // Reschedule notifications if enabled
   final notificationsEnabled = prefs.getBool('notifications_enabled') ?? false;
