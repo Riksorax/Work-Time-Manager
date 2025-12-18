@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers/providers.dart' as core_providers;
+import '../../core/services/notification_service.dart';
 import '../../domain/entities/settings_entity.dart';
 import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/repositories/settings_repository.dart';
@@ -86,11 +87,13 @@ class SettingsViewModel extends StateNotifier<AsyncValue<SettingsState>> {
   final GetOvertime _getOvertime;
   final SetOvertime _setOvertime;
   final SettingsRepository _settingsRepository;
+  final NotificationService _notificationService;
 
   SettingsViewModel(
     this._getOvertime,
     this._setOvertime,
     this._settingsRepository,
+    this._notificationService,
   ) : super(const AsyncValue.loading()) {
     _init();
   }
@@ -174,36 +177,65 @@ class SettingsViewModel extends StateNotifier<AsyncValue<SettingsState>> {
     await _settingsRepository.setNotificationsEnabled(enabled);
     final newSettings = state.value!.settings.copyWith(notificationsEnabled: enabled);
     state = state.whenData((value) => value.copyWith(settings: newSettings));
+    await _rescheduleNotifications();
   }
 
   Future<void> updateNotificationTime(String time) async {
     await _settingsRepository.setNotificationTime(time);
     final newSettings = state.value!.settings.copyWith(notificationTime: time);
     state = state.whenData((value) => value.copyWith(settings: newSettings));
+    await _rescheduleNotifications();
   }
 
   Future<void> updateNotificationDays(List<int> days) async {
     await _settingsRepository.setNotificationDays(days);
     final newSettings = state.value!.settings.copyWith(notificationDays: days);
     state = state.whenData((value) => value.copyWith(settings: newSettings));
+    await _rescheduleNotifications();
   }
 
   Future<void> updateNotifyWorkStart(bool enabled) async {
     await _settingsRepository.setNotifyWorkStart(enabled);
     final newSettings = state.value!.settings.copyWith(notifyWorkStart: enabled);
     state = state.whenData((value) => value.copyWith(settings: newSettings));
+    await _rescheduleNotifications();
   }
 
   Future<void> updateNotifyWorkEnd(bool enabled) async {
     await _settingsRepository.setNotifyWorkEnd(enabled);
     final newSettings = state.value!.settings.copyWith(notifyWorkEnd: enabled);
     state = state.whenData((value) => value.copyWith(settings: newSettings));
+    await _rescheduleNotifications();
   }
 
   Future<void> updateNotifyBreaks(bool enabled) async {
     await _settingsRepository.setNotifyBreaks(enabled);
     final newSettings = state.value!.settings.copyWith(notifyBreaks: enabled);
     state = state.whenData((value) => value.copyWith(settings: newSettings));
+    await _rescheduleNotifications();
+  }
+
+  // --- Notification Rescheduling Logic ---
+  Future<void> _rescheduleNotifications() async {
+    final notificationsEnabled = _settingsRepository.getNotificationsEnabled();
+    if (notificationsEnabled) {
+      final notificationTime = _settingsRepository.getNotificationTime();
+      final notificationDays = _settingsRepository.getNotificationDays();
+      final notifyWorkStart = _settingsRepository.getNotifyWorkStart();
+      final notifyWorkEnd = _settingsRepository.getNotifyWorkEnd();
+      final notifyBreaks = _settingsRepository.getNotifyBreaks();
+
+      await _notificationService.scheduleDailyReminder(
+        time: notificationTime,
+        days: notificationDays,
+        checkWorkStart: notifyWorkStart,
+        checkWorkEnd: notifyWorkEnd,
+        checkBreaks: notifyBreaks,
+      );
+    } else {
+      // Wenn Benachrichtigungen deaktiviert sind, alle Benachrichtigungen abbrechen
+      await _notificationService.cancelAllNotifications();
+    }
   }
 }
 
@@ -213,5 +245,6 @@ final settingsViewModelProvider =
     ref.watch(getOvertimeProvider),
     ref.watch(setOvertimeProvider),
     ref.watch(core_providers.settingsRepositoryProvider),
+    ref.watch(core_providers.notificationServiceProvider),
   );
 });

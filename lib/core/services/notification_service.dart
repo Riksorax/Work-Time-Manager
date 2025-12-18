@@ -1,5 +1,4 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter_work_time/core/utils/logger.dart';
 
@@ -19,9 +18,6 @@ class NotificationService {
     if (_initialized) return;
 
     _onNotificationTapCallback = onNotificationTap;
-
-    // Initialize timezone
-    tz.initializeTimeZones();
 
     const androidSettings = AndroidInitializationSettings('@mipmap/launcher_icon');
     const initSettings = InitializationSettings(
@@ -151,6 +147,10 @@ class NotificationService {
     required bool checkWorkEnd,
     required bool checkBreaks,
   }) async {
+    if (day < 1 || day > 7) {
+      logger.w('Ungültiger Tag für die Benachrichtigungsplanung: $day');
+      return;
+    }
     final now = tz.TZDateTime.now(tz.local);
     var scheduledDate = tz.TZDateTime(
       tz.local,
@@ -187,6 +187,7 @@ class NotificationService {
       body = 'Haben Sie ${checkTypes.join(", ")} und $last eingetragen?';
     }
 
+    logger.i('Scheduling notification with id $id for $scheduledDate (Day: $day, Hour: $hour, Minute: $minute)');
     await _notifications.zonedSchedule(
       id,
       'Arbeitszeit-Erinnerung',
