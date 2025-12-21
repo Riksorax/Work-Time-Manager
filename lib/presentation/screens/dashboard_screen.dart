@@ -47,6 +47,16 @@ class DashboardScreen extends ConsumerWidget {
     final dailyOvertime = dashboardState.dailyOvertime ?? Duration.zero;
     final liveTotalOvertime = baseOvertime + dailyOvertime;
 
+    final netDuration = dashboardState.actualWorkDuration ?? dashboardState.elapsedTime;
+    
+    // Berechne Pausendauer für Brutto-Anzeige
+    final totalBreakDuration = workEntryWithAutoBreaks.breaks.fold(Duration.zero, (prev, b) {
+      final end = b.end ?? DateTime.now();
+      return prev + end.difference(b.start);
+    });
+
+    final grossDuration = netDuration + totalBreakDuration;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Arbeitszeit'),
@@ -68,17 +78,16 @@ class DashboardScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              _formatDuration(dashboardState.elapsedTime),
+              _formatDuration(netDuration),
               style: Theme.of(context).textTheme.displayLarge,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
-            if (dashboardState.actualWorkDuration != null)
-              Text(
-                'Gearbeitete Zeit: ${_formatDuration(dashboardState.actualWorkDuration!)}',
-                style: Theme.of(context).textTheme.titleMedium,
-                textAlign: TextAlign.center,
-              ),
+            Text(
+              'Anwesenheit (Brutto): ${_formatDuration(grossDuration)}',
+              style: Theme.of(context).textTheme.titleMedium,
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 24),
 
             _buildOvertime(context, liveTotalOvertime, 'Überstunden Gesamt'),
@@ -99,6 +108,7 @@ class DashboardScreen extends ConsumerWidget {
               initialValue: workEntry.workEnd,
               enabled: workEntry.workStart != null,
               onTimeSelected: (time) => dashboardViewModel.setManualEndTime(time),
+              onClear: workEntry.workEnd != null ? () => dashboardViewModel.clearEndTime() : null,
             ),
             const SizedBox(height: 24),
 
@@ -122,7 +132,6 @@ class DashboardScreen extends ConsumerWidget {
                       : 'Pause hinzufügen'),
             ),
             const SizedBox(height: 24),
-            _buildActualWorkDuration(context, dashboardState.actualWorkDuration),
           ],
         ),
       ),
@@ -194,26 +203,6 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildActualWorkDuration(BuildContext context, Duration? actualWorkDuration) {
-    if (actualWorkDuration == null) {
-      return const SizedBox.shrink();
-    }
-    final formattedDuration = _formatDuration(actualWorkDuration);
-    return Column(
-      children: [
-        Text(
-          'Gearbeitete Stunden',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        const SizedBox(height: 4),
-        Text(
-          formattedDuration,
-          style: Theme.of(context).textTheme.headlineMedium,
-        ),
-      ],
-    );
-  }
-
   Widget _buildBreaksSection(
       BuildContext context, WidgetRef ref, List<BreakEntity> breaks) {
     final dashboardViewModel = ref.read(dashboardViewModelProvider.notifier);
@@ -282,12 +271,14 @@ class _TimeInputField extends StatefulWidget {
   final String label;
   final DateTime? initialValue;
   final ValueChanged<TimeOfDay>? onTimeSelected;
+  final VoidCallback? onClear;
   final bool enabled;
 
   const _TimeInputField({
     required this.label,
     this.initialValue,
     this.onTimeSelected,
+    this.onClear,
     this.enabled = true,
   });
 
@@ -353,7 +344,13 @@ class _TimeInputFieldState extends State<_TimeInputField> {
       decoration: InputDecoration(
         labelText: widget.label,
         border: const OutlineInputBorder(),
-        suffixIcon: widget.enabled ? const Icon(Icons.access_time) : null,
+        suffixIcon: widget.initialValue != null && widget.onClear != null
+            ? IconButton(
+                icon: const Icon(Icons.clear),
+                onPressed: widget.onClear,
+                tooltip: '${widget.label} entfernen',
+              )
+            : (widget.enabled ? const Icon(Icons.access_time) : null),
       ),
       onTap: _selectTime,
     );

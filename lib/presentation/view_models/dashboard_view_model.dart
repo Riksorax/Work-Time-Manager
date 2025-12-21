@@ -189,8 +189,16 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
   void _startTimerIfNeeded() {
     _timer?.cancel();
     _autoSaveTimer?.cancel();
+    
     if (state.workEntry.workStart != null && state.workEntry.workEnd == null) {
+      logger.i('[Dashboard] Starte Timer...');
       _tickCounter = 0;
+      
+      // Sofortiges Update
+      final initialElapsedTime = _calculateElapsedTime();
+      state = state.copyWith(elapsedTime: initialElapsedTime);
+      _recalculateOvertime();
+      
       _timer = Timer.periodic(const Duration(seconds: 1), (_) {
         final elapsedTime = _calculateElapsedTime();
         state = state.copyWith(elapsedTime: elapsedTime);
@@ -203,6 +211,8 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
           _autoSave();
         }
       });
+    } else {
+      logger.i('[Dashboard] Timer nicht gestartet (Start: ${state.workEntry.workStart}, End: ${state.workEntry.workEnd})');
     }
   }
 
@@ -396,6 +406,26 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
 
     await _recalculateStateAndSave(updatedEntry);
     logger.i('[Dashboard] Endzeit gespeichert');
+  }
+
+  Future<void> clearEndTime() async {
+    logger.i('[Dashboard] Entferne Endzeit...');
+    
+    // Manuelles Kopieren, da copyWith null-Werte ignoriert
+    final updatedEntry = WorkEntryEntity(
+      id: state.workEntry.id,
+      date: state.workEntry.date,
+      workStart: state.workEntry.workStart,
+      workEnd: null, // Explizit null setzen
+      breaks: state.workEntry.breaks,
+      manualOvertime: state.workEntry.manualOvertime,
+      isManuallyEntered: state.workEntry.isManuallyEntered,
+      description: state.workEntry.description,
+      type: state.workEntry.type,
+    );
+
+    await _recalculateStateAndSave(updatedEntry);
+    logger.i('[Dashboard] Endzeit entfernt');
   }
 
   Future<void> startOrStopBreak() async {
