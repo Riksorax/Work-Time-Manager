@@ -259,12 +259,38 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
   DateTime? _calculateExpectedEndTime(Duration targetDailyHours) {
     if (state.workEntry.workStart == null) return null;
 
-    // Startzeit + Soll-Stunden + bereits gemachte Pausen
+    final start = state.workEntry.workStart!;
     final now = DateTime.now();
-    final breakDuration = _calculateTotalBreakDuration(now);
+    
+    // Bereits genommene Pausen (bis jetzt)
+    var currentBreaks = _calculateTotalBreakDuration(now);
+    
+    // Iterative Berechnung, da zusätzliche Pausen die Brutto-Zeit erhöhen
+    // und dadurch ggf. weitere Pausenregeln greifen (z.B. Sprung über 9h).
+    var projectedEnd = start.add(targetDailyHours).add(currentBreaks);
+    
+    for (int i = 0; i < 2; i++) { // Max 2 Iterationen reichen für 6h/9h Regeln
+      final grossDuration = projectedEnd.difference(start);
+      Duration requiredBreaks = Duration.zero;
 
-    // Voraussichtliches Ende = Start + Soll-Stunden + Pausen
-    return state.workEntry.workStart!.add(targetDailyHours).add(breakDuration);
+      if (grossDuration >= BreakCalculatorService.minWorkTimeForSecondBreak) {
+        requiredBreaks = BreakCalculatorService.requiredBreakTimeForLongDay; // 45 min
+      } else if (grossDuration >= BreakCalculatorService.minWorkTimeForFirstBreak) {
+        requiredBreaks = BreakCalculatorService.firstBreakDuration; // 30 min
+      }
+
+      final missingBreak = requiredBreaks - currentBreaks;
+      if (missingBreak > Duration.zero) {
+        // Wir müssen die Pause verlängern/ergänzen
+        currentBreaks += missingBreak;
+        projectedEnd = start.add(targetDailyHours).add(currentBreaks);
+      } else {
+        // Keine zusätzlichen Pausen nötig
+        break;
+      }
+    }
+
+    return projectedEnd;
   }
 
   Duration _calculateTotalBreakDuration(DateTime now) {
