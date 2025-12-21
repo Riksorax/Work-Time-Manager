@@ -202,7 +202,7 @@ class _NotificationSettingsDialogState
                               Icon(Icons.access_time, color: colorScheme.primary),
                               const SizedBox(width: 16),
                               Text(
-                                _time.format(context),
+                                '${_time.hour.toString().padLeft(2, '0')}:${_time.minute.toString().padLeft(2, '0')}',
                                 style: theme.textTheme.titleLarge,
                               ),
                               const Spacer(),
