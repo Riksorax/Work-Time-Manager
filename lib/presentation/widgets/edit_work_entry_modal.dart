@@ -34,17 +34,44 @@ class EditWorkEntryModal extends ConsumerWidget {
                 'Eintrag für den ${DateFormat.yMd('de_DE').format(workEntry.date)} bearbeiten',
                 style: Theme.of(context).textTheme.titleLarge,
               ),
-              const SizedBox(height: 24),
-              Expanded(
-                child: ListView(
-                  controller: controller,
-                  children: [
-                    _buildTimeSection(context, state, viewModel),
-                    const SizedBox(height: 24),
-                    _buildBreaksSection(context, state, viewModel),
-                  ],
+              const SizedBox(height: 16),
+              DropdownButtonFormField<WorkEntryType>(
+                value: state.type,
+                decoration: const InputDecoration(
+                  labelText: 'Typ',
+                  border: OutlineInputBorder(),
                 ),
+                items: const [
+                  DropdownMenuItem(value: WorkEntryType.work, child: Text('Arbeit')),
+                  DropdownMenuItem(value: WorkEntryType.vacation, child: Text('Urlaub')),
+                  DropdownMenuItem(value: WorkEntryType.sick, child: Text('Krankheit')),
+                  DropdownMenuItem(value: WorkEntryType.holiday, child: Text('Feiertag')),
+                ],
+                onChanged: (val) {
+                  if (val != null) viewModel.setType(val);
+                },
               ),
+              const SizedBox(height: 24),
+              if (state.type == WorkEntryType.work) ...[
+                Expanded(
+                  child: ListView(
+                    controller: controller,
+                    children: [
+                      _buildTimeSection(context, state, viewModel),
+                      const SizedBox(height: 24),
+                      _buildBreaksSection(context, state, viewModel),
+                    ],
+                  ),
+                ),
+              ] else
+                const Expanded(
+                  child: Center(
+                    child: Text(
+                      'Ganztägiges Ereignis.\nKeine detaillierte Zeiterfassung notwendig.',
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () async {

@@ -19,6 +19,10 @@ class EditWorkEntryViewModel extends StateNotifier<EditWorkEntryState> {
   EditWorkEntryViewModel(WorkEntryEntity entry, this._ref)
       : super(EditWorkEntryState.fromWorkEntry(entry));
 
+  void setType(WorkEntryType type) {
+    state = state.copyWith(type: type);
+  }
+
   void setStartTime(DateTime startTime) {
     state = state.copyWith(newStartTime: startTime);
   }
@@ -65,12 +69,18 @@ class EditWorkEntryViewModel extends StateNotifier<EditWorkEntryState> {
   }
 
   Future<void> saveChanges() async {
-    if (state.newStartTime == null) return;
+    // Wenn Typ 'work' ist, MUSS eine Startzeit existieren.
+    if (state.type == WorkEntryType.work && state.newStartTime == null) return;
+
+    final isStandardWork = state.type == WorkEntryType.work;
 
     final updatedEntry = state.originalEntry.copyWith(
-      workStart: state.newStartTime,
-      workEnd: state.newEndTime,
-      breaks: state.breaks,
+      workStart: isStandardWork ? state.newStartTime : null,
+      workEnd: isStandardWork ? state.newEndTime : null,
+      breaks: isStandardWork ? state.breaks : [],
+      type: state.type,
+      // ManuallyEntered ist true, wenn wir hier speichern.
+      isManuallyEntered: true,
     );
     await _ref.read(reportsViewModelProvider.notifier).saveWorkEntry(updatedEntry);
   }
