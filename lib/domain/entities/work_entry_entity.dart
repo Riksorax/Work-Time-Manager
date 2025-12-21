@@ -2,6 +2,13 @@ import 'package:equatable/equatable.dart';
 
 import 'break_entity.dart';
 
+enum WorkEntryType {
+  work,
+  vacation,
+  sick,
+  holiday,
+}
+
 /// Die WorkEntryEntity ist ein reines Datenobjekt der Domain-Schicht.
 /// Sie repräsentiert alle Informationen für einen einzelnen Arbeitstag.
 class WorkEntryEntity extends Equatable {
@@ -13,6 +20,7 @@ class WorkEntryEntity extends Equatable {
   final Duration? manualOvertime;
   final bool isManuallyEntered;
   final String? description; // Added
+  final WorkEntryType type;
 
   const WorkEntryEntity({
     required this.id,
@@ -23,6 +31,7 @@ class WorkEntryEntity extends Equatable {
     this.manualOvertime,
     this.isManuallyEntered = false,
     this.description, // Added
+    this.type = WorkEntryType.work,
   });
 
   /// Die gesamte Pausenzeit für diesen Arbeitseintrag.
@@ -59,6 +68,7 @@ class WorkEntryEntity extends Equatable {
     Duration? manualOvertime,
     bool? isManuallyEntered,
     String? description, // Added
+    WorkEntryType? type,
   }) {
     return WorkEntryEntity(
       id: id ?? this.id,
@@ -69,6 +79,7 @@ class WorkEntryEntity extends Equatable {
       manualOvertime: manualOvertime ?? this.manualOvertime,
       isManuallyEntered: isManuallyEntered ?? this.isManuallyEntered,
       description: description ?? this.description, // Added
+      type: type ?? this.type,
     );
   }
 
@@ -82,5 +93,6 @@ class WorkEntryEntity extends Equatable {
         manualOvertime,
         isManuallyEntered,
         description, // Added
+        type,
       ];
 }

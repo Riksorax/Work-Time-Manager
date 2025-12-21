@@ -31,6 +31,12 @@ extension WorkEntryCalculations on WorkEntryEntity {
   ///
   /// [targetDailyHours] Die tägliche Soll-Arbeitszeit.
   Duration calculateOvertime(Duration targetDailyHours) {
+    // Bei Sonder-Einträgen (Urlaub, Krank, Feiertag) gilt die Sollzeit als erfüllt.
+    // Die Überstunden sind daher 0, es sei denn, es wurden manuelle Korrekturen vorgenommen.
+    if (type == WorkEntryType.vacation || type == WorkEntryType.sick || type == WorkEntryType.holiday) {
+      return manualOvertime ?? Duration.zero;
+    }
+
     // Überstunden können erst berechnet werden, wenn der Arbeitstag abgeschlossen ist.
     if (workEnd == null) return Duration.zero;
 
