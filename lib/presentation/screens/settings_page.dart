@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
-import '../../core/providers/providers.dart';
+import '../../core/providers/providers.dart' as core_providers;
 import '../../data/repositories/hybrid_work_repository_impl.dart';
 import '../../data/repositories/hybrid_overtime_repository_impl.dart';
 import '../../domain/services/data_sync_service.dart';
@@ -139,7 +139,7 @@ class SettingsPage extends ConsumerWidget {
                   title: const Text('🧪 TEST: Version Check'),
                   subtitle: const Text('Update-Dialog manuell anzeigen'),
                   onTap: () async {
-                    final versionService = ref.read(versionServiceProvider);
+                    final versionService = ref.read(core_providers.versionServiceProvider);
                     await UpdateRequiredDialog.checkAndShow(context, versionService);
                   },
                 ),
@@ -266,8 +266,8 @@ class SettingsPage extends ConsumerWidget {
 
     try {
       // Hole die Repositories
-      final workRepository = ref.read(dashboard_vm.workRepositoryProvider);
-      final overtimeRepository = ref.read(dashboard_vm.overtimeRepositoryProvider);
+      final workRepository = ref.read(core_providers.workRepositoryProvider);
+      final overtimeRepository = ref.read(core_providers.overtimeRepositoryProvider);
 
       // Prüfe ob sie Hybrid-Repositories sind
       if (workRepository is! HybridWorkRepositoryImpl ||
@@ -483,8 +483,8 @@ class SettingsPage extends ConsumerWidget {
                           Navigator.of(context).pop();
                           ref.read(signOutProvider)();
                           // Invalidiere Repositories und Dashboard nach Abmeldung
-                          ref.invalidate(dashboard_vm.workRepositoryProvider);
-                          ref.invalidate(dashboard_vm.overtimeRepositoryProvider);
+                          ref.invalidate(core_providers.workRepositoryProvider);
+                          ref.invalidate(core_providers.overtimeRepositoryProvider);
                           ref.invalidate(dashboard_vm.dashboardViewModelProvider);
                         },
                         child: const Text('Abmelden'),

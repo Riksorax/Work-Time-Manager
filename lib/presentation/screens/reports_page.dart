@@ -13,7 +13,14 @@ import '../../domain/entities/work_entry_entity.dart';
 import 'login_page.dart';
 
 // Provider für den gewünschten Tab-Index nach Login
-final pendingReportTabIndexProvider = StateProvider<int?>((ref) => null);
+final pendingReportTabIndexProvider = NotifierProvider<PendingTabIndexNotifier, int?>(PendingTabIndexNotifier.new);
+
+class PendingTabIndexNotifier extends Notifier<int?> {
+  @override
+  int? build() => null;
+
+  set state(int? value) => super.state = value;
+}
 
 class ReportsPage extends ConsumerStatefulWidget {
   const ReportsPage({super.key});
@@ -1320,7 +1327,7 @@ class _DayEntriesBottomSheetState
 }
 
 Future<void> _handleQuickEntry(BuildContext context, WidgetRef ref, DateTime date) async {
-  final settingsState = ref.read(settingsViewModelProvider).valueOrNull;
+  final settingsState = ref.read(settingsViewModelProvider).asData?.value;
   Duration? dailyTarget;
   
   if (settingsState != null) {

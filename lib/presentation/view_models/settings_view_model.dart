@@ -2,13 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers/providers.dart' as core_providers;
-import '../../core/services/notification_service.dart';
 import '../../domain/entities/settings_entity.dart';
 import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/repositories/settings_repository.dart';
-import '../../domain/usecases/overtime_usecases.dart';
 import '../state/settings_state.dart';
-import 'dashboard_view_model.dart' show getOvertimeProvider, setOvertimeProvider, dashboardViewModelProvider;
+import 'dashboard_view_model.dart' show dashboardViewModelProvider;
 
 // Temporary No-op repository - wird nur für Fallback-Fälle benötigt
 class NoOpSettingsRepository implements SettingsRepository {
@@ -83,32 +81,31 @@ class NoOpSettingsRepository implements SettingsRepository {
   Future<void> setNotifyBreaks(bool enabled) async {}
 }
 
-class SettingsViewModel extends StateNotifier<AsyncValue<SettingsState>> {
-  final GetOvertime _getOvertime;
-  final SetOvertime _setOvertime;
-  final SettingsRepository _settingsRepository;
-  final NotificationService _notificationService;
+class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
+  @override
+  AsyncValue<SettingsState> build() {
+    // Watch dependencies to trigger rebuild on updates (e.g. Auth change)
+    ref.watch(core_providers.getOvertimeUseCaseProvider);
+    ref.watch(core_providers.settingsRepositoryProvider);
 
-  SettingsViewModel(
-    this._getOvertime,
-    this._setOvertime,
-    this._settingsRepository,
-    this._notificationService,
-  ) : super(const AsyncValue.loading()) {
-    _init();
+    Future.microtask(() => _init());
+    return const AsyncValue.loading();
   }
 
   Future<void> _init() async {
     try {
-      final overtimeBalance = _getOvertime.call();
-      final weeklyTargetHours = _settingsRepository.getTargetWeeklyHours();
-      final workdaysPerWeek = _settingsRepository.getWorkdaysPerWeek();
-      final notificationsEnabled = _settingsRepository.getNotificationsEnabled();
-      final notificationTime = _settingsRepository.getNotificationTime();
-      final notificationDays = _settingsRepository.getNotificationDays();
-      final notifyWorkStart = _settingsRepository.getNotifyWorkStart();
-      final notifyWorkEnd = _settingsRepository.getNotifyWorkEnd();
-      final notifyBreaks = _settingsRepository.getNotifyBreaks();
+      final getOvertime = ref.read(core_providers.getOvertimeUseCaseProvider);
+      final settingsRepository = ref.read(core_providers.settingsRepositoryProvider);
+
+      final overtimeBalance = getOvertime.call();
+      final weeklyTargetHours = settingsRepository.getTargetWeeklyHours();
+      final workdaysPerWeek = settingsRepository.getWorkdaysPerWeek();
+      final notificationsEnabled = settingsRepository.getNotificationsEnabled();
+      final notificationTime = settingsRepository.getNotificationTime();
+      final notificationDays = settingsRepository.getNotificationDays();
+      final notifyWorkStart = settingsRepository.getNotifyWorkStart();
+      final notifyWorkEnd = settingsRepository.getNotifyWorkEnd();
+      final notifyBreaks = settingsRepository.getNotifyBreaks();
 
       final settings = SettingsEntity(
         weeklyTargetHours: weeklyTargetHours,
@@ -130,13 +127,15 @@ class SettingsViewModel extends StateNotifier<AsyncValue<SettingsState>> {
   }
 
   Future<void> setOvertimeBalance(WidgetRef ref, Duration overtime) async {
-    await _setOvertime.call(overtime: overtime);
+    final setOvertime = ref.read(core_providers.setOvertimeUseCaseProvider);
+    await setOvertime.call(overtime: overtime);
     state = state.whenData((value) => value.copyWith(overtimeBalance: overtime));
     ref.read(dashboardViewModelProvider.notifier).updateOvertimeFromSettings(overtime);
   }
 
   Future<void> updateWorkdaysPerWeek(WidgetRef ref, int days) async {
-    await _settingsRepository.setWorkdaysPerWeek(days);
+    final settingsRepository = ref.read(core_providers.settingsRepositoryProvider);
+    await settingsRepository.setWorkdaysPerWeek(days);
     final newSettings = state.value!.settings.copyWith(workdaysPerWeek: days);
     state = state.whenData((value) => value.copyWith(settings: newSettings));
 
@@ -145,7 +144,8 @@ class SettingsViewModel extends StateNotifier<AsyncValue<SettingsState>> {
   }
 
   Future<void> updateWeeklyTargetHours(WidgetRef ref, double hours) async {
-    await _settingsRepository.setTargetWeeklyHours(hours);
+    final settingsRepository = ref.read(core_providers.settingsRepositoryProvider);
+    await settingsRepository.setTargetWeeklyHours(hours);
     final newSettings = state.value!.settings.copyWith(weeklyTargetHours: hours);
     state = state.whenData((value) => value.copyWith(settings: newSettings));
 
@@ -155,7 +155,8 @@ class SettingsViewModel extends StateNotifier<AsyncValue<SettingsState>> {
 
   Future<void> migrateWorkEntries() async {
     try {
-      final oldEntries = await _settingsRepository.getAllOldWorkEntries();
+      final settingsRepository = ref.read(core_providers.settingsRepositoryProvider);
+      final oldEntries = await settingsRepository.getAllOldWorkEntries();
       if (oldEntries.isEmpty) {
         return;
       }
@@ -166,50 +167,56 @@ class SettingsViewModel extends StateNotifier<AsyncValue<SettingsState>> {
         (monthlyEntries[monthId] ??= []).add(entry);
       }
 
-      await _settingsRepository.saveMigratedWorkEntries(monthlyEntries);
-      await _settingsRepository.deleteAllOldWorkEntries(oldEntries.map((e) => e.id).toList());
+      await settingsRepository.saveMigratedWorkEntries(monthlyEntries);
+      await settingsRepository.deleteAllOldWorkEntries(oldEntries.map((e) => e.id).toList());
     } catch (e) {
       // Handle error
     }
   }
 
   Future<void> updateNotificationsEnabled(bool enabled) async {
-    await _settingsRepository.setNotificationsEnabled(enabled);
+    final settingsRepository = ref.read(core_providers.settingsRepositoryProvider);
+    await settingsRepository.setNotificationsEnabled(enabled);
     final newSettings = state.value!.settings.copyWith(notificationsEnabled: enabled);
     state = state.whenData((value) => value.copyWith(settings: newSettings));
     await _rescheduleNotifications();
   }
 
   Future<void> updateNotificationTime(String time) async {
-    await _settingsRepository.setNotificationTime(time);
+    final settingsRepository = ref.read(core_providers.settingsRepositoryProvider);
+    await settingsRepository.setNotificationTime(time);
     final newSettings = state.value!.settings.copyWith(notificationTime: time);
     state = state.whenData((value) => value.copyWith(settings: newSettings));
     await _rescheduleNotifications();
   }
 
   Future<void> updateNotificationDays(List<int> days) async {
-    await _settingsRepository.setNotificationDays(days);
+    final settingsRepository = ref.read(core_providers.settingsRepositoryProvider);
+    await settingsRepository.setNotificationDays(days);
     final newSettings = state.value!.settings.copyWith(notificationDays: days);
     state = state.whenData((value) => value.copyWith(settings: newSettings));
     await _rescheduleNotifications();
   }
 
   Future<void> updateNotifyWorkStart(bool enabled) async {
-    await _settingsRepository.setNotifyWorkStart(enabled);
+    final settingsRepository = ref.read(core_providers.settingsRepositoryProvider);
+    await settingsRepository.setNotifyWorkStart(enabled);
     final newSettings = state.value!.settings.copyWith(notifyWorkStart: enabled);
     state = state.whenData((value) => value.copyWith(settings: newSettings));
     await _rescheduleNotifications();
   }
 
   Future<void> updateNotifyWorkEnd(bool enabled) async {
-    await _settingsRepository.setNotifyWorkEnd(enabled);
+    final settingsRepository = ref.read(core_providers.settingsRepositoryProvider);
+    await settingsRepository.setNotifyWorkEnd(enabled);
     final newSettings = state.value!.settings.copyWith(notifyWorkEnd: enabled);
     state = state.whenData((value) => value.copyWith(settings: newSettings));
     await _rescheduleNotifications();
   }
 
   Future<void> updateNotifyBreaks(bool enabled) async {
-    await _settingsRepository.setNotifyBreaks(enabled);
+    final settingsRepository = ref.read(core_providers.settingsRepositoryProvider);
+    await settingsRepository.setNotifyBreaks(enabled);
     final newSettings = state.value!.settings.copyWith(notifyBreaks: enabled);
     state = state.whenData((value) => value.copyWith(settings: newSettings));
     await _rescheduleNotifications();
@@ -217,15 +224,18 @@ class SettingsViewModel extends StateNotifier<AsyncValue<SettingsState>> {
 
   // --- Notification Rescheduling Logic ---
   Future<void> _rescheduleNotifications() async {
-    final notificationsEnabled = _settingsRepository.getNotificationsEnabled();
+    final settingsRepository = ref.read(core_providers.settingsRepositoryProvider);
+    final notificationService = ref.read(core_providers.notificationServiceProvider);
+    
+    final notificationsEnabled = settingsRepository.getNotificationsEnabled();
     if (notificationsEnabled) {
-      final notificationTime = _settingsRepository.getNotificationTime();
-      final notificationDays = _settingsRepository.getNotificationDays();
-      final notifyWorkStart = _settingsRepository.getNotifyWorkStart();
-      final notifyWorkEnd = _settingsRepository.getNotifyWorkEnd();
-      final notifyBreaks = _settingsRepository.getNotifyBreaks();
+      final notificationTime = settingsRepository.getNotificationTime();
+      final notificationDays = settingsRepository.getNotificationDays();
+      final notifyWorkStart = settingsRepository.getNotifyWorkStart();
+      final notifyWorkEnd = settingsRepository.getNotifyWorkEnd();
+      final notifyBreaks = settingsRepository.getNotifyBreaks();
 
-      await _notificationService.scheduleDailyReminder(
+      await notificationService.scheduleDailyReminder(
         time: notificationTime,
         days: notificationDays,
         checkWorkStart: notifyWorkStart,
@@ -234,17 +244,10 @@ class SettingsViewModel extends StateNotifier<AsyncValue<SettingsState>> {
       );
     } else {
       // Wenn Benachrichtigungen deaktiviert sind, alle Benachrichtigungen abbrechen
-      await _notificationService.cancelAllNotifications();
+      await notificationService.cancelAllNotifications();
     }
   }
 }
 
 final settingsViewModelProvider =
-    StateNotifierProvider<SettingsViewModel, AsyncValue<SettingsState>>((ref) {
-  return SettingsViewModel(
-    ref.watch(getOvertimeProvider),
-    ref.watch(setOvertimeProvider),
-    ref.watch(core_providers.settingsRepositoryProvider),
-    ref.watch(core_providers.notificationServiceProvider),
-  );
-});
+    NotifierProvider<SettingsViewModel, AsyncValue<SettingsState>>(SettingsViewModel.new);

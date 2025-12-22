@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
 
-import '../../core/providers/providers.dart';
+import '../../core/providers/providers.dart' as core_providers;
 import '../../data/repositories/hybrid_work_repository_impl.dart';
 import '../../data/repositories/hybrid_overtime_repository_impl.dart';
 import '../../domain/services/data_sync_service.dart';
@@ -103,7 +103,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           ),
                           onPressed: () async {
                 // Speichere die Zustimmungen
-                final settingsRepository = ref.read(settingsRepositoryProvider);
+                final settingsRepository = ref.read(core_providers.settingsRepositoryProvider);
                 await settingsRepository.setAcceptedTermsOfService(true);
                 await settingsRepository.setAcceptedPrivacyPolicy(true);
 
@@ -154,8 +154,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
                   try {
                     // Hole die Repositories
-                    final workRepository = ref.read(dashboard_vm.workRepositoryProvider);
-                    final overtimeRepository = ref.read(dashboard_vm.overtimeRepositoryProvider);
+                    final workRepository = ref.read(core_providers.workRepositoryProvider);
+                    final overtimeRepository = ref.read(core_providers.overtimeRepositoryProvider);
 
                     // Prüfe ob sie Hybrid-Repositories sind
                     if (workRepository is HybridWorkRepositoryImpl &&

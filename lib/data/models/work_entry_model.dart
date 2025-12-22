@@ -56,7 +56,7 @@ class WorkEntryModel extends WorkEntryEntity {
               .toList() ??
           [],
       manualOvertime: map['manualOvertimeMinutes'] != null
-          ? Duration(minutes: map['manualOvertimeMinutes'] as int)
+          ? Duration(minutes: (map['manualOvertimeMinutes'] as num).toInt())
           : null,
       description: map['description'] as String?,
       isManuallyEntered: map['isManuallyEntered'] as bool? ?? false,

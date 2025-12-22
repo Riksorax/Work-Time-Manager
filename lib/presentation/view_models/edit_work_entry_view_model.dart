@@ -1,4 +1,4 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../domain/entities/break_entity.dart';
@@ -6,18 +6,16 @@ import '../../domain/entities/work_entry_entity.dart';
 import '../state/edit_work_entry_state.dart';
 import 'reports_view_model.dart';
 
-final editWorkEntryViewModelProvider = StateNotifierProvider.autoDispose
-    .family<EditWorkEntryViewModel, EditWorkEntryState, WorkEntryEntity>(
-        (ref, entry) {
-  return EditWorkEntryViewModel(entry, ref);
-});
+part 'edit_work_entry_view_model.g.dart';
 
-class EditWorkEntryViewModel extends StateNotifier<EditWorkEntryState> {
+@riverpod
+class EditWorkEntryViewModel extends _$EditWorkEntryViewModel {
   final Uuid _uuid = const Uuid();
-  final Ref _ref;
 
-  EditWorkEntryViewModel(WorkEntryEntity entry, this._ref)
-      : super(EditWorkEntryState.fromWorkEntry(entry));
+  @override
+  EditWorkEntryState build(WorkEntryEntity entry) {
+    return EditWorkEntryState.fromWorkEntry(entry);
+  }
 
   void setType(WorkEntryType type) {
     state = state.copyWith(type: type);
@@ -82,6 +80,7 @@ class EditWorkEntryViewModel extends StateNotifier<EditWorkEntryState> {
       // ManuallyEntered ist true, wenn wir hier speichern.
       isManuallyEntered: true,
     );
-    await _ref.read(reportsViewModelProvider.notifier).saveWorkEntry(updatedEntry);
+    // In Notifier we use ref.read directly
+    await ref.read(reportsViewModelProvider.notifier).saveWorkEntry(updatedEntry);
   }
 }
