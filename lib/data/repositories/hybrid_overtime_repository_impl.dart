@@ -36,6 +36,16 @@ class HybridOvertimeRepositoryImpl implements OvertimeRepository {
     await _activeRepository.saveOvertime(overtime);
   }
 
+  @override
+  DateTime? getLastUpdateDate() {
+    return _activeRepository.getLastUpdateDate();
+  }
+
+  @override
+  Future<void> saveLastUpdateDate(DateTime date) async {
+    await _activeRepository.saveLastUpdateDate(date);
+  }
+
   /// Gibt true zurück, wenn Firebase verwendet wird
   bool get isUsingFirebase => _userId != null && _userId!.isNotEmpty;
 

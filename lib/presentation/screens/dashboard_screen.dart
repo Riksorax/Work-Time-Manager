@@ -43,9 +43,7 @@ class DashboardScreen extends ConsumerWidget {
     final isBreakRunning = workEntry.breaks.isNotEmpty && workEntry.breaks.last.end == null;
 
     // KORREKTE BERECHNUNG FÜR DIE ANZEIGE
-    final baseOvertime = dashboardState.overtime ?? Duration.zero;
-    final dailyOvertime = dashboardState.dailyOvertime ?? Duration.zero;
-    final liveTotalOvertime = baseOvertime + dailyOvertime;
+    final totalOvertime = dashboardState.totalOvertime ?? Duration.zero;
 
     final netDuration = dashboardState.actualWorkDuration ?? dashboardState.elapsedTime;
     
@@ -55,7 +53,7 @@ class DashboardScreen extends ConsumerWidget {
       return prev + end.difference(b.start);
     });
 
-    final grossDuration = netDuration + totalBreakDuration;
+    final grossDuration = dashboardState.grossWorkDuration ?? (netDuration + totalBreakDuration);
 
     return Scaffold(
       appBar: AppBar(
@@ -90,11 +88,11 @@ class DashboardScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 24),
 
-            _buildOvertime(context, liveTotalOvertime, 'Überstunden Gesamt'),
+            _buildOvertime(context, totalOvertime, 'Überstunden Gesamt'),
             const SizedBox(height: 16),
             _buildOvertime(context, dashboardState.dailyOvertime, 'Heutige Überstunden'),
             _buildExpectedEndTime(context, dashboardState.expectedEndTime),
-            _buildExpectedEndTimeWithBalance(context, dashboardState.expectedEndTime, dashboardState.overtime),
+            _buildExpectedEndTimeWithBalance(context, dashboardState.expectedEndTime, dashboardState.totalOvertime),
             const SizedBox(height: 24),
 
             _TimeInputField(

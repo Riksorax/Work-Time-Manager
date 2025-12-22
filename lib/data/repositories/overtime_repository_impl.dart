@@ -5,6 +5,7 @@ import '../../domain/repositories/overtime_repository.dart';
 
 class OvertimeRepositoryImpl implements OvertimeRepository {
   static const String _overtimeKey = 'overtime_minutes';
+  static const String _overtimeDateKey = 'overtime_date';
 
   final SharedPreferences _prefs;
   final String _userId;
@@ -12,6 +13,7 @@ class OvertimeRepositoryImpl implements OvertimeRepository {
   OvertimeRepositoryImpl(this._prefs, this._userId);
 
   String get _userPrefKey => '${_userId}_$_overtimeKey';
+  String get _userDatePrefKey => '${_userId}_$_overtimeDateKey';
 
   @override
   Duration getOvertime() {
@@ -29,5 +31,16 @@ class OvertimeRepositoryImpl implements OvertimeRepository {
     // Verifiziere, dass der Wert gespeichert wurde
     final savedValue = _prefs.getInt(_userPrefKey);
     logger.i('[OvertimeRepository] Verification - saved value: $savedValue min');
+  }
+
+  @override
+  DateTime? getLastUpdateDate() {
+    final dateString = _prefs.getString(_userDatePrefKey);
+    return dateString != null ? DateTime.tryParse(dateString) : null;
+  }
+
+  @override
+  Future<void> saveLastUpdateDate(DateTime date) async {
+    await _prefs.setString(_userDatePrefKey, date.toIso8601String());
   }
 }

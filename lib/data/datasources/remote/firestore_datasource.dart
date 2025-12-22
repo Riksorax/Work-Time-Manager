@@ -147,10 +147,15 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
       final monthData = snapshot.data()!;
       final daysMap = monthData['days'] as Map<String, dynamic>? ?? {};
       return daysMap.entries.map((entry) {
-        final dayData = entry.value as Map<String, dynamic>;
-        final entryDate = DateTime(year, month, int.parse(entry.key));
-        return WorkEntryModel.fromMap(dayData).copyWith(id: WorkEntryModel.generateId(entryDate));
-      }).toList()
+        try {
+          final dayData = entry.value as Map<String, dynamic>;
+          final entryDate = DateTime(year, month, int.parse(entry.key));
+          return WorkEntryModel.fromMap(dayData).copyWith(id: WorkEntryModel.generateId(entryDate));
+        } catch (e) {
+          logger.w('[Firestore] Fehler beim Parsen eines Eintrags (Tag ${entry.key}): $e');
+          return null;
+        }
+      }).where((element) => element != null).cast<WorkEntryModel>().toList()
         ..sort((a, b) => a.date.compareTo(b.date));
     }
     return [];

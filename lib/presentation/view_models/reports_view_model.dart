@@ -4,70 +4,29 @@ import 'package:flutter_work_time/core/utils/logger.dart';
 import '../../core/providers/providers.dart' as core_providers;
 import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/services/break_calculator_service.dart';
-import '../../domain/repositories/settings_repository.dart';
-import '../../domain/repositories/work_repository.dart';
 import '../state/monthly_report_state.dart';
 import '../state/reports_state.dart';
 import '../state/weekly_report_state.dart';
-import 'dashboard_view_model.dart' show workRepositoryProvider;
-
-// Dummy-Implementierung, um den Provider zu vervollständigen, falls das echte Repository nicht verfügbar ist.
-class DummyWorkRepository implements WorkRepository {
-  const DummyWorkRepository();
-
-  @override
-  Future<List<WorkEntryEntity>> getWorkEntriesForMonth(
-      int year, int month) async {
-    return [];
-  }
-
-  @override
-  Future<void> saveWorkEntry(WorkEntryEntity entry) async {}
-
-  @override
-  Future<WorkEntryEntity> getWorkEntry(DateTime date) async {
-    // Gemäß dem Interface eine leere, aber gültige Entität zurückgeben.
-    return WorkEntryEntity(
-      id: 'dummy',
-      date: date,
-      workStart: date,
-      workEnd: date,
-      breaks: [],
-      manualOvertime: Duration.zero,
-    );
-  }
-
-  @override
-  Future<void> deleteWorkEntry(String entryId) async {
-    // Im Dummy-Repository passiert nichts
-  }
-}
 
 final reportsViewModelProvider =
-    StateNotifierProvider<ReportsViewModel, ReportsState>((ref) {
-  final workRepository = ref.watch(workRepositoryProvider);
-  final settingsRepository = ref.watch(core_providers.settingsRepositoryProvider);
+    NotifierProvider<ReportsViewModel, ReportsState>(ReportsViewModel.new);
 
-  return ReportsViewModel(
-    workRepository,
-    settingsRepository,
-  );
-});
-
-class ReportsViewModel extends StateNotifier<ReportsState> {
-  ReportsViewModel(this._workRepository, this._settingsRepository)
-      : super(ReportsState.initial()) {
-    init();
-  }
-
-  final WorkRepository _workRepository;
-  final SettingsRepository _settingsRepository;
-
+class ReportsViewModel extends Notifier<ReportsState> {
   List<WorkEntryEntity> _monthlyEntries = [];
 
-  Future<void> init() async {
-    if (!mounted) return;
+  @override
+  ReportsState build() {
+    // Watch repositories to trigger rebuild on auth change
+    ref.watch(core_providers.workRepositoryProvider);
+    ref.watch(core_providers.settingsRepositoryProvider);
 
+    // Initial load logic
+    Future.microtask(() => init());
+    
+    return ReportsState.initial();
+  }
+
+  Future<void> init() async {
     final now = DateTime.now();
     // Setze den initialen Zustand, inklusive selectedMonth
     state = state.copyWith(
@@ -75,21 +34,10 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
         selectedMonth: DateTime(now.year, now.month),
         isLoading: true);
 
-    if (_workRepository is! DummyWorkRepository) {
-      await _loadWorkEntriesForMonth(now.year, now.month);
-    } else {
-      // Bei einem DummyRepository leere Einträge verwenden und Reports berechnen
-      _monthlyEntries = [];
-      _updateCalculatedReports();
-    }
+    await _loadWorkEntriesForMonth(now.year, now.month);
   }
 
   void _updateCalculatedReports() {
-    // Prüfe ob das ViewModel noch mounted ist
-    if (!mounted) {
-      return;
-    }
-
     final currentSelectedDay = state.selectedDay ?? DateTime.now();
     state = state.copyWith(
       isLoading: false,
@@ -100,45 +48,35 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
   }
   
   Future<void> saveWorkEntry(WorkEntryEntity entry) async {
-    if (!mounted) return;
-
     state = state.copyWith(isLoading: true);
     try {
-      await _workRepository.saveWorkEntry(entry);
-      if (!mounted) return;
-
+      final workRepository = ref.read(core_providers.workRepositoryProvider);
+      await workRepository.saveWorkEntry(entry);
+      
       final selectedDate = state.selectedDay ?? DateTime.now();
       await _loadWorkEntriesForMonth(selectedDate.year, selectedDate.month);
     } catch (e, stackTrace) {
       logger.e('Fehler beim Speichern des Arbeitseintrags: $e', stackTrace: stackTrace);
-      if (!mounted) return;
-
       state = state.copyWith(isLoading: false);
     }
   }
 
   Future<void> deleteWorkEntry(String entryId) async {
-    if (!mounted) return;
-
     state = state.copyWith(isLoading: true);
     try {
-      await _workRepository.deleteWorkEntry(entryId);
-      if (!mounted) return;
-
+      final workRepository = ref.read(core_providers.workRepositoryProvider);
+      await workRepository.deleteWorkEntry(entryId);
+      
       // Nach dem Löschen die Einträge für den aktuellen Monat neu laden
       final selectedDate = state.selectedDay ?? DateTime.now();
       await _loadWorkEntriesForMonth(selectedDate.year, selectedDate.month);
     } catch (e, stackTrace) {
       logger.e('Fehler beim Löschen des Arbeitseintrags: $e', stackTrace: stackTrace);
-      if (!mounted) return;
-
       state = state.copyWith(isLoading: false);
     }
   }
 
   void selectDate(DateTime date) {
-    if (!mounted) return;
-
     final oldSelectedDay = state.selectedDay;
     state = state.copyWith(selectedDay: date); // Update selectedDay sofort
 
@@ -157,8 +95,6 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
   }
 
   void onMonthChanged(DateTime newMonth) {
-    if (!mounted) return;
-
     // Normalisiere den Monat auf den ersten Tag, um Konsistenz zu gewährleisten.
     final normalizedMonth = DateTime(newMonth.year, newMonth.month, 1);
 
@@ -172,8 +108,6 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
   /// Lädt Daten für den aktuellen Monat ohne selectedDay zu ändern
   /// Wird beim initialen Laden verwendet, um den aktuellen Tag beizubehalten
   void loadCurrentMonthData() {
-    if (!mounted) return;
-
     final now = DateTime.now();
     final normalizedMonth = DateTime(now.year, now.month, 1);
 
@@ -183,17 +117,12 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
   }
 
   Future<void> _loadWorkEntriesForMonth(int year, int month) async {
-    if (!mounted) return;
-
     state = state.copyWith(isLoading: true);
     try {
-      final entries = await _workRepository.getWorkEntriesForMonth(year, month);
-      if (!mounted) return;
-
+      final workRepository = ref.read(core_providers.workRepositoryProvider);
+      final entries = await workRepository.getWorkEntriesForMonth(year, month);
       _monthlyEntries = entries;
     } catch (e, stackTrace) {
-      if (!mounted) return;
-
       // Prüfe, ob es sich um einen Permission-Fehler handelt
       final errorMessage = e.toString();
       if (errorMessage.contains('permission-denied')) {
@@ -205,10 +134,7 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
     } finally {
       // Dieser Block wird immer ausgeführt.
       // _updateCalculatedReports setzt isLoading auf false und aktualisiert alle Report-States.
-      // Aber nur, wenn das ViewModel noch mounted ist
-      if (mounted) {
-        _updateCalculatedReports();
-      }
+      _updateCalculatedReports();
     }
   }
 
@@ -254,6 +180,7 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
   }
 
   WeeklyReportState _calculateWeeklyReport(DateTime date) {
+    final settingsRepository = ref.read(core_providers.settingsRepositoryProvider);
     // Normalize date to midnight to avoid time-of-day issues in week calculation
     final reportDate = DateTime(date.year, date.month, date.day);
     final startOfWeek = reportDate.subtract(Duration(days: reportDate.weekday - 1));
@@ -277,9 +204,9 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
         ? Duration(seconds: totalNetWorkDuration.inSeconds ~/ workDays)
         : Duration.zero;
 
-    final workdaysPerWeek = _settingsRepository.getWorkdaysPerWeek();
+    final workdaysPerWeek = settingsRepository.getWorkdaysPerWeek();
     final targetDailyHoursInDouble = workdaysPerWeek > 0
-        ? _settingsRepository.getTargetWeeklyHours() / workdaysPerWeek
+        ? settingsRepository.getTargetWeeklyHours() / workdaysPerWeek
         : 0.0;
     // Korrekte Berechnung der Soll-Wochenstunden basierend auf tatsächlichen Arbeitstagen in der Woche
     final targetWeeklyHoursForActualWorkdaysInMicroseconds =
@@ -314,6 +241,7 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
   }
 
   MonthlyReportState _calculateMonthlyReport() {
+    final settingsRepository = ref.read(core_providers.settingsRepositoryProvider);
     // _monthlyEntries enthält bereits alle Einträge für den ausgewählten Monat
     final totalWorkDuration = _monthlyEntries.fold<Duration>(
         Duration.zero, (prev, e) => prev + e.totalWorkTime);
@@ -329,9 +257,9 @@ class ReportsViewModel extends StateNotifier<ReportsState> {
     final averageWorkDuration =
         workDays > 0 ? Duration(microseconds: totalNetWorkDuration.inMicroseconds ~/ workDays) : Duration.zero;
 
-    final workdaysPerWeek = _settingsRepository.getWorkdaysPerWeek();
+    final workdaysPerWeek = settingsRepository.getWorkdaysPerWeek();
     final targetDailyHours = workdaysPerWeek > 0
-        ? _settingsRepository.getTargetWeeklyHours() / workdaysPerWeek
+        ? settingsRepository.getTargetWeeklyHours() / workdaysPerWeek
         : 0.0;
     final totalTargetHoursForActualWorkDays =
         Duration(microseconds: (targetDailyHours * workDays * Duration.microsecondsPerHour).toInt());
