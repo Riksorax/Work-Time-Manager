@@ -1,27 +1,25 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../domain/entities/break_entity.dart';
 import '../../domain/entities/work_entry_entity.dart';
-import '../../domain/repositories/work_repository.dart';
 import '../state/edit_work_entry_state.dart';
-import 'dashboard_view_model.dart' show workRepositoryProvider;
 import 'reports_view_model.dart';
 
-final editWorkEntryViewModelProvider = StateNotifierProvider.autoDispose
-    .family<EditWorkEntryViewModel, EditWorkEntryState, WorkEntryEntity>(
-        (ref, entry) {
-  final workRepository = ref.watch(workRepositoryProvider);
-  return EditWorkEntryViewModel(workRepository, entry, ref);
-});
+part 'edit_work_entry_view_model.g.dart';
 
-class EditWorkEntryViewModel extends StateNotifier<EditWorkEntryState> {
-  final WorkRepository _workRepository;
+@riverpod
+class EditWorkEntryViewModel extends _$EditWorkEntryViewModel {
   final Uuid _uuid = const Uuid();
-  final Ref _ref;
 
-  EditWorkEntryViewModel(this._workRepository, WorkEntryEntity entry, this._ref)
-      : super(EditWorkEntryState.fromWorkEntry(entry));
+  @override
+  EditWorkEntryState build(WorkEntryEntity entry) {
+    return EditWorkEntryState.fromWorkEntry(entry);
+  }
+
+  void setType(WorkEntryType type) {
+    state = state.copyWith(type: type);
+  }
 
   void setStartTime(DateTime startTime) {
     state = state.copyWith(newStartTime: startTime);
@@ -69,13 +67,20 @@ class EditWorkEntryViewModel extends StateNotifier<EditWorkEntryState> {
   }
 
   Future<void> saveChanges() async {
-    if (state.newStartTime == null) return;
+    // Wenn Typ 'work' ist, MUSS eine Startzeit existieren.
+    if (state.type == WorkEntryType.work && state.newStartTime == null) return;
+
+    final isStandardWork = state.type == WorkEntryType.work;
 
     final updatedEntry = state.originalEntry.copyWith(
-      workStart: state.newStartTime,
-      workEnd: state.newEndTime,
-      breaks: state.breaks,
+      workStart: isStandardWork ? state.newStartTime : null,
+      workEnd: isStandardWork ? state.newEndTime : null,
+      breaks: isStandardWork ? state.breaks : [],
+      type: state.type,
+      // ManuallyEntered ist true, wenn wir hier speichern.
+      isManuallyEntered: true,
     );
-    await _ref.read(reportsViewModelProvider.notifier).saveWorkEntry(updatedEntry);
+    // In Notifier we use ref.read directly
+    await ref.read(reportsViewModelProvider.notifier).saveWorkEntry(updatedEntry);
   }
 }

@@ -16,6 +16,7 @@ class WorkEntryModel extends WorkEntryEntity {
     super.manualOvertime,
     super.description,
     super.isManuallyEntered,
+    super.type,
   });
 
   static String generateId(DateTime date) => DateFormat('yyyy-MM-dd').format(date);
@@ -40,6 +41,7 @@ class WorkEntryModel extends WorkEntryEntity {
       breaks: entity.breaks.map((e) => BreakModel.fromEntity(e)).toList(),
       description: entity.description,
       isManuallyEntered: entity.isManuallyEntered,
+      type: entity.type,
     );
   }
 
@@ -54,10 +56,16 @@ class WorkEntryModel extends WorkEntryEntity {
               .toList() ??
           [],
       manualOvertime: map['manualOvertimeMinutes'] != null
-          ? Duration(minutes: map['manualOvertimeMinutes'] as int)
+          ? Duration(minutes: (map['manualOvertimeMinutes'] as num).toInt())
           : null,
       description: map['description'] as String?,
       isManuallyEntered: map['isManuallyEntered'] as bool? ?? false,
+      type: map['type'] != null
+          ? WorkEntryType.values.firstWhere(
+              (e) => e.name == map['type'],
+              orElse: () => WorkEntryType.work,
+            )
+          : WorkEntryType.work,
     );
   }
 
@@ -78,6 +86,7 @@ class WorkEntryModel extends WorkEntryEntity {
       'manualOvertimeMinutes': manualOvertime?.inMinutes,
       'description': description,
       'isManuallyEntered': isManuallyEntered,
+      'type': type.name,
     };
   }
 
@@ -95,6 +104,7 @@ class WorkEntryModel extends WorkEntryEntity {
     Duration? manualOvertime,
     String? description,
     bool? isManuallyEntered,
+    WorkEntryType? type,
   }) {
     return WorkEntryModel(
       id: id ?? this.id,
@@ -105,6 +115,7 @@ class WorkEntryModel extends WorkEntryEntity {
       manualOvertime: manualOvertime ?? this.manualOvertime,
       description: description ?? this.description,
       isManuallyEntered: isManuallyEntered ?? this.isManuallyEntered,
+      type: type ?? this.type,
     );
   }
 }

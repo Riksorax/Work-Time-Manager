@@ -1,106 +1,226 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/services/version_service.dart';
 import '../../core/services/notification_service.dart';
+import '../../core/utils/logger.dart';
 import '../../data/datasources/remote/firestore_datasource.dart';
 import '../../data/repositories/auth_repository_impl.dart';
-import '../../data/repositories/settings_repository_impl.dart' as impl;
+import '../../data/repositories/hybrid_overtime_repository_impl.dart';
+import '../../data/repositories/hybrid_work_repository_impl.dart';
+import '../../data/repositories/local_overtime_repository_impl.dart';
+import '../../data/repositories/local_work_repository_impl.dart';
+import '../../data/repositories/overtime_repository_impl.dart';
+import '../../data/repositories/settings_repository_impl.dart';
+import '../../data/repositories/work_repository_impl.dart';
+import '../../domain/entities/user_entity.dart';
 import '../../domain/repositories/auth_repository.dart';
+import '../../domain/repositories/overtime_repository.dart';
 import '../../domain/repositories/settings_repository.dart';
+import '../../domain/repositories/work_repository.dart';
 import '../../domain/usecases/delete_account.dart';
 import '../../domain/usecases/get_auth_state_changes.dart';
 import '../../domain/usecases/get_theme_mode.dart';
+import '../../domain/usecases/get_today_work_entry.dart';
+import '../../domain/usecases/get_work_entries_for_month.dart';
+import '../../domain/usecases/overtime_usecases.dart';
+import '../../domain/usecases/save_work_entry.dart';
 import '../../domain/usecases/set_theme_mode.dart';
 import '../../domain/usecases/sign_in_with_google.dart';
 import '../../domain/usecases/sign_out.dart';
+import '../../domain/usecases/start_or_stop_timer.dart';
+import '../../domain/usecases/toggle_break.dart';
+
+part 'providers.g.dart';
 
 //==============================================================================
-// SCHICHT 1: DATA SOURCES PROVIDERS
+// DATA SOURCES & 3RD PARTY
 //==============================================================================
 
-final firebaseAuthProvider = Provider<FirebaseAuth>((ref) => FirebaseAuth.instance);
-final firestoreProvider = Provider<FirebaseFirestore>((ref) => FirebaseFirestore.instance);
-final googleSignInProvider = Provider<GoogleSignIn>((ref) => GoogleSignIn.instance);
+@Riverpod(keepAlive: true)
+FirebaseAuth firebaseAuth(Ref ref) => FirebaseAuth.instance;
 
-final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
-  throw UnimplementedError('SharedPreferencesProvider wurde nicht überschrieben');
-});
+@Riverpod(keepAlive: true)
+FirebaseFirestore firestore(Ref ref) => FirebaseFirestore.instance;
 
-final firestoreDataSourceProvider = Provider<FirestoreDataSource>((ref) {
+@Riverpod(keepAlive: true)
+GoogleSignIn googleSignIn(Ref ref) => GoogleSignIn.instance;
+
+@Riverpod(keepAlive: true)
+SharedPreferences sharedPreferences(Ref ref) {
+  throw UnimplementedError('SharedPreferencesProvider muss in main.dart überschrieben werden!');
+}
+
+@riverpod
+FirestoreDataSource firestoreDataSource(Ref ref) {
   return FirestoreDataSourceImpl(
     ref.watch(firebaseAuthProvider),
     ref.watch(firestoreProvider),
     ref.watch(googleSignInProvider),
   );
-});
+}
 
 //==============================================================================
 // SERVICES
 //==============================================================================
 
-final versionServiceProvider = Provider<VersionService>((ref) {
+@riverpod
+VersionService versionService(Ref ref) {
   return VersionService(ref.watch(firestoreProvider));
-});
+}
+
+@riverpod
+NotificationService notificationService(Ref ref) {
+  return NotificationService();
+}
 
 //==============================================================================
-// SCHICHT 2: REPOSITORY PROVIDERS
+// REPOSITORIES
 //==============================================================================
 
-final authRepositoryProvider = Provider<AuthRepository>((ref) {
+@riverpod
+AuthRepository authRepository(Ref ref) {
   return AuthRepositoryImpl(ref.watch(firestoreDataSourceProvider));
-});
+}
 
-final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
+@riverpod
+SettingsRepository settingsRepository(Ref ref) {
   final userId = ref.watch(firebaseAuthProvider).currentUser?.uid;
-  // Verwende immer SettingsRepositoryImpl mit SharedPreferences
-  // Theme-Einstellungen sollen auch ohne Login funktionieren
-  return impl.SettingsRepositoryImpl(
+  return SettingsRepositoryImpl(
     ref.watch(sharedPreferencesProvider),
     ref.watch(firestoreDataSourceProvider),
-    userId ?? 'local', // Fallback zu 'local' wenn nicht eingeloggt
+    userId ?? 'local',
   );
-});
+}
 
-// NOTE: workRepositoryProvider and overtimeRepositoryProvider are defined in
-// dashboard_view_model.dart with hybrid implementation (automatic fallback between Firebase and Local)
+@riverpod
+WorkRepository workRepository(Ref ref) {
+  final authState = ref.watch(authStateProvider);
+  final userId = authState.asData?.value?.id;
+  final prefs = ref.watch(sharedPreferencesProvider);
+
+  logger.i('[workRepositoryProvider] Auth State geändert - userId: $userId');
+
+  final localRepository = LocalWorkRepositoryImpl(prefs);
+
+  final firebaseRepository = userId != null
+      ? WorkRepositoryImpl(
+          dataSource: ref.watch(firestoreDataSourceProvider),
+          userId: userId,
+        )
+      : localRepository;
+
+  return HybridWorkRepositoryImpl(
+    firebaseRepository: firebaseRepository,
+    localRepository: localRepository,
+    userId: userId,
+  );
+}
+
+@riverpod
+OvertimeRepository overtimeRepository(Ref ref) {
+  final authState = ref.watch(authStateProvider);
+  final userId = authState.asData?.value?.id;
+  final prefs = ref.watch(sharedPreferencesProvider);
+
+  logger.i('[overtimeRepositoryProvider] Auth State geändert - userId: $userId');
+
+  final localRepository = LocalOvertimeRepositoryImpl(prefs);
+
+  final firebaseRepository = userId != null
+      ? OvertimeRepositoryImpl(prefs, userId)
+      : localRepository;
+
+  return HybridOvertimeRepositoryImpl(
+    firebaseRepository: firebaseRepository,
+    localRepository: localRepository,
+    userId: userId,
+  );
+}
 
 //==============================================================================
-// SCHICHT 3: USE CASE PROVIDERS
+// USE CASES
 //==============================================================================
 
-// --- Auth Use Cases ---
-final getAuthStateChangesUseCaseProvider = Provider(
-  (ref) => GetAuthStateChanges(ref.watch(authRepositoryProvider)),
-);
-final signInWithGoogleUseCaseProvider = Provider(
-  (ref) => SignInWithGoogle(ref.watch(authRepositoryProvider)),
-);
-final signOutUseCaseProvider = Provider(
-  (ref) => SignOut(ref.watch(authRepositoryProvider)),
-);
-final deleteAccountUseCaseProvider = Provider(
-  (ref) => DeleteAccount(ref.watch(authRepositoryProvider)),
-);
+// --- Auth ---
+@riverpod
+GetAuthStateChanges getAuthStateChangesUseCase(Ref ref) {
+  return GetAuthStateChanges(ref.watch(authRepositoryProvider));
+}
 
-// --- Settings Use Cases ---
-final getThemeModeUseCaseProvider = Provider(
-  (ref) => GetThemeMode(ref.watch(settingsRepositoryProvider)),
-);
-final setThemeModeUseCaseProvider = Provider(
-  (ref) => SetThemeMode(ref.watch(settingsRepositoryProvider)),
-);
+@riverpod
+Stream<UserEntity?> authState(Ref ref) {
+  final useCase = ref.watch(getAuthStateChangesUseCaseProvider);
+  return useCase();
+}
 
-//==============================================================================
-// SERVICES
-//==============================================================================
+@riverpod
+SignInWithGoogle signInWithGoogleUseCase(Ref ref) {
+  return SignInWithGoogle(ref.watch(authRepositoryProvider));
+}
 
-final notificationServiceProvider = Provider<NotificationService>(
-  (ref) => NotificationService(),
-);
+@riverpod
+SignOut signOutUseCase(Ref ref) {
+  return SignOut(ref.watch(authRepositoryProvider));
+}
 
-// NOTE: Overtime and Work Entry use case providers are defined in
-// dashboard_view_model.dart to work with the hybrid repository implementation
+@riverpod
+DeleteAccount deleteAccountUseCase(Ref ref) {
+  return DeleteAccount(ref.watch(authRepositoryProvider));
+}
+
+// --- Settings ---
+@riverpod
+GetThemeMode getThemeModeUseCase(Ref ref) {
+  return GetThemeMode(ref.watch(settingsRepositoryProvider));
+}
+
+@riverpod
+SetThemeMode setThemeModeUseCase(Ref ref) {
+  return SetThemeMode(ref.watch(settingsRepositoryProvider));
+}
+
+// --- Work Entries ---
+@riverpod
+GetTodayWorkEntry getTodayWorkEntryUseCase(Ref ref) {
+  return GetTodayWorkEntry(ref.watch(workRepositoryProvider));
+}
+
+@riverpod
+SaveWorkEntry saveWorkEntryUseCase(Ref ref) {
+  return SaveWorkEntry(ref.watch(workRepositoryProvider));
+}
+
+@riverpod
+ToggleBreak toggleBreakUseCase(Ref ref) {
+  return ToggleBreak(ref.watch(workRepositoryProvider));
+}
+
+@riverpod
+GetWorkEntriesForMonth getWorkEntriesForMonthUseCase(Ref ref) {
+  return GetWorkEntriesForMonth(ref.watch(workRepositoryProvider));
+}
+
+@riverpod
+StartOrStopTimer startOrStopTimerUseCase(Ref ref) {
+  return StartOrStopTimer(ref.watch(workRepositoryProvider));
+}
+
+// --- Overtime ---
+@riverpod
+GetOvertime getOvertimeUseCase(Ref ref) {
+  return GetOvertime(ref.watch(overtimeRepositoryProvider));
+}
+
+@riverpod
+UpdateOvertime updateOvertimeUseCase(Ref ref) {
+  return UpdateOvertime(ref.watch(overtimeRepositoryProvider));
+}
+
+@riverpod
+SetOvertime setOvertimeUseCase(Ref ref) {
+  return SetOvertime(ref.watch(overtimeRepositoryProvider));
+}

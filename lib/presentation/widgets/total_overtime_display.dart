@@ -7,8 +7,8 @@ class TotalOvertimeDisplay extends StatelessWidget {
   const TotalOvertimeDisplay({
     required this.totalOvertime,
     this.title = 'Gesamtüberstunden',
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -1,8 +1,9 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_work_time/core/utils/logger.dart';
 
-import '../../core/providers/providers.dart';
+import '../../core/providers/providers.dart' as core_providers;
 import '../../data/repositories/hybrid_work_repository_impl.dart';
 import '../../data/repositories/hybrid_overtime_repository_impl.dart';
 import '../../domain/services/data_sync_service.dart';
@@ -14,7 +15,7 @@ import 'home_screen.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   final int returnToIndex;
-  const LoginPage({this.returnToIndex = 0, Key? key}) : super(key: key);
+  const LoginPage({this.returnToIndex = 0, super.key});
 
   @override
   ConsumerState<LoginPage> createState() => _LoginPageState();
@@ -43,7 +44,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: colorScheme.primary.withOpacity(0.1),
+                        color: colorScheme.primary.withAlpha(26),
                         blurRadius: 20,
                         spreadRadius: 5,
                       ),
@@ -102,7 +103,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           ),
                           onPressed: () async {
                 // Speichere die Zustimmungen
-                final settingsRepository = ref.read(settingsRepositoryProvider);
+                final settingsRepository = ref.read(core_providers.settingsRepositoryProvider);
                 await settingsRepository.setAcceptedTermsOfService(true);
                 await settingsRepository.setAcceptedPrivacyPolicy(true);
 
@@ -153,8 +154,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
                   try {
                     // Hole die Repositories
-                    final workRepository = ref.read(dashboard_vm.workRepositoryProvider);
-                    final overtimeRepository = ref.read(dashboard_vm.overtimeRepositoryProvider);
+                    final workRepository = ref.read(core_providers.workRepositoryProvider);
+                    final overtimeRepository = ref.read(core_providers.overtimeRepositoryProvider);
 
                     // Prüfe ob sie Hybrid-Repositories sind
                     if (workRepository is HybridWorkRepositoryImpl &&
@@ -202,7 +203,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       }
                     }
                   } catch (syncError) {
-                    print('[LoginPage] Fehler bei der Synchronisierung: $syncError');
+                    logger.e('[LoginPage] Fehler bei der Synchronisierung: $syncError');
                     // Schließe Sync-Dialog bei Fehler
                     if (context.mounted) {
                       Navigator.of(context).pop();
@@ -223,7 +224,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     );
                   }
                 } catch (loginError) {
-                  print('[LoginPage] Fehler beim Login: $loginError');
+                  logger.e('[LoginPage] Fehler beim Login: $loginError');
                   // Schließe Loading-Dialog bei Fehler
                   if (context.mounted) {
                     Navigator.of(context).pop();

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_work_time/core/utils/logger.dart';
 
 import '../../domain/entities/break_entity.dart';
 import '../../domain/entities/work_entry_entity.dart';
@@ -92,12 +93,12 @@ class LocalWorkRepositoryImpl implements WorkRepository {
     final monthKey = _getMonthKey(date.year, date.month);
     final dayKey = _getDayKey(date);
 
-    print('[LocalWorkRepository] Lade Eintrag für $date (monthKey: $monthKey, dayKey: $dayKey)');
+    logger.i('[LocalWorkRepository] Lade Eintrag für $date (monthKey: $monthKey, dayKey: $dayKey)');
 
     // Lade Monatsdaten
     final monthDataJson = _prefs.getString(monthKey);
     if (monthDataJson == null) {
-      print('[LocalWorkRepository] Kein Eintrag für Monat $monthKey gefunden');
+      logger.i('[LocalWorkRepository] Kein Eintrag für Monat $monthKey gefunden');
       return WorkEntryModel.empty(date);
     }
 
@@ -107,24 +108,23 @@ class LocalWorkRepositoryImpl implements WorkRepository {
       final daysMapRaw = monthData['days'];
 
       if (daysMapRaw == null) {
-        print('[LocalWorkRepository] Keine Tage in $monthKey gefunden');
+        logger.i('[LocalWorkRepository] Keine Tage in $monthKey gefunden');
         return WorkEntryModel.empty(date);
       }
 
       final daysMap = Map<String, dynamic>.from(daysMapRaw as Map);
 
       if (!daysMap.containsKey(dayKey)) {
-        print('[LocalWorkRepository] Kein Eintrag für Tag $dayKey gefunden');
+        logger.i('[LocalWorkRepository] Kein Eintrag für Tag $dayKey gefunden');
         return WorkEntryModel.empty(date);
       }
 
       final dayDataRaw = daysMap[dayKey];
       final dayData = Map<String, dynamic>.from(dayDataRaw as Map);
-      print('[LocalWorkRepository] Eintrag gefunden: $dayData');
+      logger.i('[LocalWorkRepository] Eintrag gefunden: $dayData');
       return _fromLocalJson(dayData, date);
     } catch (e, stackTrace) {
-      print('[LocalWorkRepository] Fehler beim Laden: $e');
-      print('[LocalWorkRepository] StackTrace: $stackTrace');
+      logger.e('[LocalWorkRepository] Fehler beim Laden: $e', stackTrace: stackTrace);
       return WorkEntryModel.empty(date);
     }
   }
@@ -162,8 +162,7 @@ class LocalWorkRepositoryImpl implements WorkRepository {
       entries.sort((a, b) => a.date.compareTo(b.date));
       return entries;
     } catch (e, stackTrace) {
-      print('[LocalWorkRepository] Fehler beim Laden der Monatseinträge: $e');
-      print('[LocalWorkRepository] StackTrace: $stackTrace');
+      logger.e('[LocalWorkRepository] Fehler beim Laden der Monatseinträge: $e', stackTrace: stackTrace);
       return [];
     }
   }
@@ -173,7 +172,7 @@ class LocalWorkRepositoryImpl implements WorkRepository {
     final monthKey = _getMonthKey(entry.date.year, entry.date.month);
     final dayKey = _getDayKey(entry.date);
 
-    print('[LocalWorkRepository] Speichere Eintrag für ${entry.date} (monthKey: $monthKey, dayKey: $dayKey)');
+    logger.i('[LocalWorkRepository] Speichere Eintrag für ${entry.date} (monthKey: $monthKey, dayKey: $dayKey)');
 
     // Lade existierende Monatsdaten oder erstelle neue
     Map<String, dynamic> monthData;
@@ -190,7 +189,7 @@ class LocalWorkRepositoryImpl implements WorkRepository {
           monthData['days'] = <String, dynamic>{};
         }
       } catch (e) {
-        print('[LocalWorkRepository] Fehler beim Parsen, erstelle neue Daten: $e');
+        logger.w('[LocalWorkRepository] Fehler beim Parsen, erstelle neue Daten: $e');
         monthData = {'days': <String, dynamic>{}};
       }
     } else {
@@ -208,10 +207,10 @@ class LocalWorkRepositoryImpl implements WorkRepository {
       // Merke den Monatsschlüssel für spätere Sync
       await _addMonthKeyToIndex(monthKey);
 
-      print('[LocalWorkRepository] Erfolgreich gespeichert: ${entry.date}');
-      print('[LocalWorkRepository] Gespeicherte Daten: ${_toLocalJson(entry)}');
+      logger.i('[LocalWorkRepository] Erfolgreich gespeichert: ${entry.date}');
+      logger.i('[LocalWorkRepository] Gespeicherte Daten: ${_toLocalJson(entry)}');
     } catch (e) {
-      print('[LocalWorkRepository] Fehler beim Speichern: $e');
+      logger.e('[LocalWorkRepository] Fehler beim Speichern: $e');
       rethrow;
     }
   }
@@ -247,12 +246,11 @@ class LocalWorkRepositoryImpl implements WorkRepository {
             await _prefs.setString(monthKey, json.encode(monthData));
           }
 
-          print('[LocalWorkRepository] Gelöscht: $entryId');
+          logger.i('[LocalWorkRepository] Gelöscht: $entryId');
         }
       }
     } catch (e, stackTrace) {
-      print('[LocalWorkRepository] Fehler beim Löschen: $e');
-      print('[LocalWorkRepository] StackTrace: $stackTrace');
+      logger.e('[LocalWorkRepository] Fehler beim Löschen: $e', stackTrace: stackTrace);
       rethrow;
     }
   }
@@ -304,8 +302,7 @@ class LocalWorkRepositoryImpl implements WorkRepository {
           allEntries.add(_fromLocalJson(dayData, entryDate));
         }
       } catch (e, stackTrace) {
-        print('[LocalWorkRepository] Fehler beim Laden von $monthKey: $e');
-        print('[LocalWorkRepository] StackTrace: $stackTrace');
+        logger.e('[LocalWorkRepository] Fehler beim Laden von $monthKey: $e', stackTrace: stackTrace);
       }
     }
 
@@ -321,6 +318,6 @@ class LocalWorkRepositoryImpl implements WorkRepository {
     }
 
     await _prefs.remove(_monthlyKeysKey);
-    print('[LocalWorkRepository] Alle lokalen Einträge gelöscht');
+    logger.i('[LocalWorkRepository] Alle lokalen Einträge gelöscht');
   }
 }

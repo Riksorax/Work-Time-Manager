@@ -7,8 +7,10 @@ class DashboardState extends Equatable {
   final Duration elapsedTime;
   final Duration? actualWorkDuration;
   final bool isLoading;
-  final Duration? overtime;
+  final Duration? totalOvertime;
+  final Duration? initialOvertime; // Überstundenstand zu Beginn des Tages/Session
   final Duration? dailyOvertime;
+  final Duration? grossWorkDuration; // Brutto-Arbeitszeit (inkl. Pausen)
   final DateTime? expectedEndTime; // Voraussichtliche Feierabendzeit für ±0
 
   const DashboardState({
@@ -16,8 +18,10 @@ class DashboardState extends Equatable {
     required this.elapsedTime,
     this.actualWorkDuration,
     this.isLoading = false,
-    this.overtime,
+    this.totalOvertime,
+    this.initialOvertime,
     this.dailyOvertime,
+    this.grossWorkDuration,
     this.expectedEndTime,
   });
 
@@ -30,8 +34,10 @@ class DashboardState extends Equatable {
       elapsedTime: Duration.zero,
       actualWorkDuration: null,
       isLoading: true, // Start with loading
-      overtime: null,
+      totalOvertime: null,
+      initialOvertime: null,
       dailyOvertime: null,
+      grossWorkDuration: null,
       expectedEndTime: null,
     );
   }
@@ -41,8 +47,10 @@ class DashboardState extends Equatable {
     Duration? elapsedTime,
     Duration? actualWorkDuration,
     bool? isLoading,
-    Duration? overtime,
+    Duration? totalOvertime,
+    Duration? initialOvertime,
     Duration? dailyOvertime,
+    Duration? grossWorkDuration,
     DateTime? expectedEndTime,
   }) {
     return DashboardState(
@@ -50,8 +58,10 @@ class DashboardState extends Equatable {
       elapsedTime: elapsedTime ?? this.elapsedTime,
       actualWorkDuration: actualWorkDuration ?? this.actualWorkDuration,
       isLoading: isLoading ?? this.isLoading,
-      overtime: overtime ?? this.overtime,
+      totalOvertime: totalOvertime ?? this.totalOvertime,
+      initialOvertime: initialOvertime ?? this.initialOvertime,
       dailyOvertime: dailyOvertime ?? this.dailyOvertime,
+      grossWorkDuration: grossWorkDuration ?? this.grossWorkDuration,
       expectedEndTime: expectedEndTime ?? this.expectedEndTime,
     );
   }
@@ -62,8 +72,10 @@ class DashboardState extends Equatable {
         elapsedTime,
         actualWorkDuration,
         isLoading,
-        overtime,
+        totalOvertime,
+        initialOvertime,
         dailyOvertime,
+        grossWorkDuration,
         expectedEndTime,
       ];
 }

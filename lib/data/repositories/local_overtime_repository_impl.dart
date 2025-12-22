@@ -1,4 +1,5 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_work_time/core/utils/logger.dart';
 
 import '../../domain/repositories/overtime_repository.dart';
 
@@ -6,6 +7,7 @@ import '../../domain/repositories/overtime_repository.dart';
 /// Funktioniert auch ohne Login.
 class LocalOvertimeRepositoryImpl implements OvertimeRepository {
   static const String _overtimeKey = 'local_overtime_minutes';
+  static const String _overtimeDateKey = 'local_overtime_date';
 
   final SharedPreferences _prefs;
 
@@ -14,18 +16,29 @@ class LocalOvertimeRepositoryImpl implements OvertimeRepository {
   @override
   Duration getOvertime() {
     final minutes = _prefs.getInt(_overtimeKey) ?? 0;
-    print('[LocalOvertimeRepository] getOvertime, key: $_overtimeKey, value: $minutes min');
+    logger.i('[LocalOvertimeRepository] getOvertime, key: $_overtimeKey, value: $minutes min');
     return Duration(minutes: minutes);
   }
 
   @override
   Future<void> saveOvertime(Duration overtime) async {
-    print('[LocalOvertimeRepository] saveOvertime, key: $_overtimeKey, value: ${overtime.inMinutes} min');
+    logger.i('[LocalOvertimeRepository] saveOvertime, key: $_overtimeKey, value: ${overtime.inMinutes} min');
     final success = await _prefs.setInt(_overtimeKey, overtime.inMinutes);
-    print('[LocalOvertimeRepository] Save success: $success');
+    logger.i('[LocalOvertimeRepository] Save success: $success');
 
     // Verifiziere, dass der Wert gespeichert wurde
     final savedValue = _prefs.getInt(_overtimeKey);
-    print('[LocalOvertimeRepository] Verification - saved value: $savedValue min');
+    logger.i('[LocalOvertimeRepository] Verification - saved value: $savedValue min');
+  }
+
+  @override
+  DateTime? getLastUpdateDate() {
+    final dateString = _prefs.getString(_overtimeDateKey);
+    return dateString != null ? DateTime.tryParse(dateString) : null;
+  }
+
+  @override
+  Future<void> saveLastUpdateDate(DateTime date) async {
+    await _prefs.setString(_overtimeDateKey, date.toIso8601String());
   }
 }

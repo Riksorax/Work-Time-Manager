@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:in_app_update/in_app_update.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_work_time/core/utils/logger.dart';
 
 /// Service für Version-Checks und Update-Management
 class VersionService {
@@ -23,7 +24,7 @@ class VersionService {
       final configDoc = await _firestore.collection('app_config').doc('version').get();
 
       if (!configDoc.exists) {
-        print('ℹ️ Version-Check: Kein app_config/version Dokument in Firestore gefunden');
+        logger.i('Version-Check: Kein app_config/version Dokument in Firestore gefunden');
         return null; // Keine Version-Konfiguration vorhanden
       }
 
@@ -33,15 +34,15 @@ class VersionService {
       final updateMessage = data['update_message'] as String?;
 
       if (minVersion == null) {
-        print('ℹ️ Version-Check: Kein min_version Feld gefunden');
+        logger.i('Version-Check: Kein min_version Feld gefunden');
         return null;
       }
 
-      print('✅ Version-Check: Aktuelle Version: $currentVersion, Min Version: $minVersion');
+      logger.i('Version-Check: Aktuelle Version: $currentVersion, Min Version: $minVersion');
 
       // Vergleiche Versionen
       if (_isUpdateRequired(currentVersion, minVersion)) {
-        print('⚠️ Update erforderlich: $currentVersion < $minVersion');
+        logger.w('Update erforderlich: $currentVersion < $minVersion');
         return UpdateInfo(
           currentVersion: currentVersion,
           minVersion: minVersion,
@@ -50,19 +51,19 @@ class VersionService {
         );
       }
 
-      print('✅ Version-Check: Keine Aktualisierung erforderlich');
+      logger.i('Version-Check: Keine Aktualisierung erforderlich');
       return null;
     } on FirebaseException catch (e) {
       if (e.code == 'permission-denied') {
-        print('⚠️ Version-Check: Firestore Permission Denied');
-        print('   Bitte Firestore Security Rules anpassen:');
-        print('   match /app_config/{document} { allow read: if true; }');
+        logger.w('Version-Check: Firestore Permission Denied');
+        logger.w('   Bitte Firestore Security Rules anpassen:');
+        logger.w('   match /app_config/{document} { allow read: if true; }');
       } else {
-        print('❌ Version-Check Fehler: ${e.code} - ${e.message}');
+        logger.e('Version-Check Fehler: ${e.code} - ${e.message}');
       }
       return null; // Bei Fehler: Kein Update-Dialog anzeigen
     } catch (e) {
-      print('❌ Version-Check Fehler: $e');
+      logger.e('Version-Check Fehler: $e');
       return null; // Bei Fehler: Kein Update-Dialog anzeigen
     }
   }
@@ -85,7 +86,7 @@ class VersionService {
         return true;
       }
     } catch (e) {
-      print('Fehler beim Android In-App-Update: $e');
+      logger.e('Fehler beim Android In-App-Update: $e');
     }
 
     return false;

@@ -8,11 +8,19 @@ import '../view_models/settings_view_model.dart';
 import '../view_models/auth_view_model.dart';
 import '../widgets/common/loading_indicator.dart';
 import '../widgets/edit_work_entry_modal.dart';
+import '../widgets/quick_entry_dialog.dart';
 import '../../domain/entities/work_entry_entity.dart';
 import 'login_page.dart';
 
 // Provider für den gewünschten Tab-Index nach Login
-final pendingReportTabIndexProvider = StateProvider<int?>((ref) => null);
+final pendingReportTabIndexProvider = NotifierProvider<PendingTabIndexNotifier, int?>(PendingTabIndexNotifier.new);
+
+class PendingTabIndexNotifier extends Notifier<int?> {
+  @override
+  int? build() => null;
+
+  set state(int? value) => super.state = value;
+}
 
 class ReportsPage extends ConsumerStatefulWidget {
   const ReportsPage({super.key});
@@ -220,8 +228,8 @@ class DailyReportView extends ConsumerWidget {
         }
 
         final dailyReport = reportsState.dailyReportState;
-        final selectedDay = reportsState.selectedDay ?? DateTime.now();
-        final selectedMonth = reportsState.selectedMonth ?? DateTime.now();
+        final DateTime selectedDay = reportsState.selectedDay ?? DateTime.now();
+        final DateTime selectedMonth = reportsState.selectedMonth ?? DateTime.now();
 
         final Set<int> daysWithEntriesInMonth = reportsState.monthlyReportState.dailyWork.keys
             .where((date) =>
@@ -296,21 +304,30 @@ class DailyReportView extends ConsumerWidget {
                             if (selectedDateOnly.isBefore(today)) {
                               return Padding(
                                 padding: const EdgeInsets.only(top: 16.0),
-                                child: ElevatedButton(
-                                  onPressed: () {
-                                    final newEntry = WorkEntryEntity(
-                                      id: DateFormat('yyyy-MM-dd').format(selectedDay),
-                                      date: selectedDay,
-                                      workStart: null,
-                                      workEnd: null,
-                                      breaks: [],
-                                      isManuallyEntered: true,
-                                      description: null,
-                                      manualOvertime: null,
-                                    );
-                                    onEntryTap(newEntry);
-                                  },
-                                  child: const Text('Eintrag hinzufügen'),
+                                child: Column(
+                                  children: [
+                                    ElevatedButton(
+                                      onPressed: () {
+                                        final newEntry = WorkEntryEntity(
+                                          id: DateFormat('yyyy-MM-dd').format(selectedDay),
+                                          date: selectedDay,
+                                          workStart: null,
+                                          workEnd: null,
+                                          breaks: [],
+                                          isManuallyEntered: true,
+                                          description: null,
+                                          manualOvertime: null,
+                                        );
+                                        onEntryTap(newEntry);
+                                      },
+                                      child: const Text('Eintrag hinzufügen'),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    OutlinedButton(
+                                      onPressed: () => _handleQuickEntry(context, ref, selectedDay),
+                                      child: const Text('Schnell-Eintrag (Urlaub, Krank...)'),
+                                    ),
+                                  ],
                                 ),
                               );
                             } else {
@@ -374,25 +391,27 @@ class DailyReportView extends ConsumerWidget {
                       final displayEntry = ref
                           .read(reportsViewModelProvider.notifier)
                           .applyBreakCalculation(entry);
-                      final DateTime? _start = displayEntry.workStart;
-                      final DateTime? _end = displayEntry.workEnd ?? DateTime.now();
-                      Duration _breakDuration = Duration.zero;
-                      if (_start != null && _end != null) {
+                      final DateTime? start = displayEntry.workStart;
+                      final DateTime end = displayEntry.workEnd ?? DateTime.now();
+                      Duration breakDuration = Duration.zero;
+                      if (start != null) {
                         for (final b in displayEntry.breaks) {
                           final DateTime bStart = b.start;
-                          final DateTime bEnd = b.end ?? _end;
+                          final DateTime bEnd = b.end ?? end;
                           final DateTime effStart =
-                              bStart.isBefore(_start) ? _start : bStart;
-                          final DateTime effEnd = bEnd.isAfter(_end) ? _end : bEnd;
+                              bStart.isBefore(start) ? start : bStart;
+                          final DateTime effEnd = bEnd.isAfter(end) ? end : bEnd;
                           if (effEnd.isAfter(effStart)) {
-                            _breakDuration += effEnd.difference(effStart);
+                            breakDuration += effEnd.difference(effStart);
                           }
                         }
                       }
                       final Duration workedDuration =
-                          (_start != null && _end != null)
-                              ? _end.difference(_start) - _breakDuration
+                          (start != null)
+                              ? end.difference(start) - breakDuration
                               : Duration.zero;
+
+                      final isSpecialType = displayEntry.type != WorkEntryType.work;
 
                       return Card(
                         margin: const EdgeInsets.symmetric(vertical: 4.0),
@@ -405,7 +424,9 @@ class DailyReportView extends ConsumerWidget {
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Arbeitszeit: ${workedDuration.toString().split('.').first}',
+                                    isSpecialType
+                                        ? _getWorkEntryTypeLabel(displayEntry.type)
+                                        : 'Arbeitszeit: ${workedDuration.toString().split('.').first}',
                                     style:
                                         Theme.of(context).textTheme.titleMedium,
                                   ),
@@ -423,16 +444,19 @@ class DailyReportView extends ConsumerWidget {
                                   )
                                 ],
                               ),
-                              const SizedBox(height: 8),
-                              Text(
-                                  'Start: ${displayEntry.workStart != null ? DateFormat('HH:mm').format(displayEntry.workStart!) : '-'}'
-                              ),
-                              Text(
-                                  'Ende: ${displayEntry.workEnd != null ? DateFormat('HH:mm').format(displayEntry.workEnd!) : 'läuft...'}'
-                              ),
-                              Text(
-                                  'Pause: ${displayEntry.totalBreakDuration.toString().split('.').first}'
-                              ),
+                              if (!isSpecialType || displayEntry.workStart != null || displayEntry.workEnd != null) ...[
+                                const SizedBox(height: 8),
+                                Text(
+                                    'Start: ${displayEntry.workStart != null ? DateFormat('HH:mm').format(displayEntry.workStart!) : '-'}'
+                                ),
+                                Text(
+                                    'Ende: ${displayEntry.workEnd != null ? DateFormat('HH:mm').format(displayEntry.workEnd!) : (isSpecialType ? '-' : 'läuft...')}'
+                                ),
+                                if (!isSpecialType)
+                                  Text(
+                                      'Pause: ${displayEntry.totalBreakDuration.toString().split('.').first}'
+                                  ),
+                              ],
                               if (displayEntry.manualOvertime != null)
                                 Padding(
                                   padding: const EdgeInsets.only(top: 8.0),
@@ -909,7 +933,6 @@ class _Calendar extends StatelessWidget {
     this.onPreviousMonthTapped,
     this.onNextMonthTapped,
     this.daysWithEntries,
-    super.key,
   });
 
   int _getDaysInMonth(int year, int month) {
@@ -1110,8 +1133,8 @@ class _DayEntriesBottomSheetState
 
     if (confirmed == true) {
       await ref.read(reportsViewModelProvider.notifier).deleteWorkEntry(entry.id);
-      if (mounted && Navigator.of(this.context).canPop()) {
-        Navigator.of(this.context).pop();
+      if (mounted && Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
       }
     }
   }
@@ -1127,7 +1150,7 @@ class _DayEntriesBottomSheetState
       );
     }
 
-    final entriesForSheetDate = reportsState.dailyReportState.entries
+    final List<WorkEntryEntity> entriesForSheetDate = reportsState.dailyReportState.entries
         .where((entry) => DateUtils.isSameDay(entry.date, widget.date))
         .toList();
 
@@ -1178,21 +1201,30 @@ class _DayEntriesBottomSheetState
                             if (sheetDateOnly.isBefore(today)) {
                               return Padding(
                                 padding: const EdgeInsets.only(top: 16.0),
-                                child: ElevatedButton(
-                                  onPressed: () {
-                                    final newEntry = WorkEntryEntity(
-                                      id: DateFormat('yyyy-MM-dd').format(widget.date),
-                                      date: widget.date, 
-                                      workStart: null,
-                                      workEnd: null,
-                                      breaks: [],
-                                      isManuallyEntered: true,
-                                      description: null,
-                                      manualOvertime: null,
-                                    );
-                                    _openEdit(newEntry);
-                                  },
-                                  child: const Text('Eintrag hinzufügen'),
+                                child: Column(
+                                  children: [
+                                    ElevatedButton(
+                                      onPressed: () {
+                                        final newEntry = WorkEntryEntity(
+                                          id: DateFormat('yyyy-MM-dd').format(widget.date),
+                                          date: widget.date,
+                                          workStart: null,
+                                          workEnd: null,
+                                          breaks: [],
+                                          isManuallyEntered: true,
+                                          description: null,
+                                          manualOvertime: null,
+                                        );
+                                        _openEdit(newEntry);
+                                      },
+                                      child: const Text('Eintrag hinzufügen'),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    OutlinedButton(
+                                      onPressed: () => _handleQuickEntry(context, ref, widget.date),
+                                      child: const Text('Schnell-Eintrag (Urlaub, Krank...)'),
+                                    ),
+                                  ],
                                 ),
                               );
                             } else {
@@ -1213,6 +1245,8 @@ class _DayEntriesBottomSheetState
                         final displayEntry = ref
                             .read(reportsViewModelProvider.notifier)
                             .applyBreakCalculation(entry);
+
+                        final isSpecialType = displayEntry.type != WorkEntryType.work;
 
                         final DateTime? start = displayEntry.workStart;
                         final DateTime? end =
@@ -1241,25 +1275,30 @@ class _DayEntriesBottomSheetState
                             contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 12, vertical: 8),
                             title: Text(
-                                'Arbeitszeit: ${worked.toString().split('.').first}'),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                    'Start: ${start != null ? DateFormat('HH:mm').format(start) : '-'}'
-                                ),
-                                Text(
-                                    'Ende: ${displayEntry.workEnd != null ? DateFormat('HH:mm').format(displayEntry.workEnd!) : 'läuft...'}'
-                                ),
-                                Text(
-                                    'Pause: ${displayEntry.totalBreakDuration.toString().split('.').first}'
-                                ),
-                                if (displayEntry.manualOvertime != null)
-                                  Text(
-                                      'Manuelle Anpassung: ${displayEntry.manualOvertime.toString().split('.').first}'
+                                isSpecialType
+                                    ? _getWorkEntryTypeLabel(displayEntry.type)
+                                    : 'Arbeitszeit: ${worked.toString().split('.').first}'),
+                            subtitle: (isSpecialType && displayEntry.workStart == null && displayEntry.workEnd == null)
+                                ? null
+                                : Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                          'Start: ${start != null ? DateFormat('HH:mm').format(start) : '-'}'
+                                      ),
+                                      Text(
+                                          'Ende: ${displayEntry.workEnd != null ? DateFormat('HH:mm').format(displayEntry.workEnd!) : (isSpecialType ? '-' : 'läuft...')}'
+                                      ),
+                                      if (!isSpecialType)
+                                        Text(
+                                            'Pause: ${displayEntry.totalBreakDuration.toString().split('.').first}'
+                                        ),
+                                      if (displayEntry.manualOvertime != null)
+                                        Text(
+                                            'Manuelle Anpassung: ${displayEntry.manualOvertime.toString().split('.').first}'
+                                        ),
+                                    ],
                                   ),
-                              ],
-                            ),
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -1284,5 +1323,43 @@ class _DayEntriesBottomSheetState
         },
       ),
     );
+  }
+}
+
+Future<void> _handleQuickEntry(BuildContext context, WidgetRef ref, DateTime date) async {
+  final settingsState = ref.read(settingsViewModelProvider).asData?.value;
+  Duration? dailyTarget;
+  
+  if (settingsState != null) {
+     dailyTarget = Duration(
+        minutes: ((settingsState.settings.weeklyTargetHours / settingsState.settings.workdaysPerWeek) * 60).round(),
+      );
+  }
+
+  final WorkEntryEntity? newEntry = await showDialog<WorkEntryEntity>(
+    context: context,
+    builder: (BuildContext context) {
+      return QuickEntryDialog(
+        date: date,
+        dailyTarget: dailyTarget,
+      );
+    },
+  );
+
+  if (newEntry != null) {
+    await ref.read(reportsViewModelProvider.notifier).saveWorkEntry(newEntry);
+  }
+}
+
+String _getWorkEntryTypeLabel(WorkEntryType type) {
+  switch (type) {
+    case WorkEntryType.vacation:
+      return 'Urlaub';
+    case WorkEntryType.sick:
+      return 'Krankheit';
+    case WorkEntryType.holiday:
+      return 'Feiertag';
+    case WorkEntryType.work:
+      return 'Arbeit';
   }
 }

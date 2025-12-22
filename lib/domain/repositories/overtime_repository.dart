@@ -6,4 +6,10 @@ abstract class OvertimeRepository {
 
   /// Speichert den neuen Überstundensaldo.
   Future<void> saveOvertime(Duration overtime);
+
+  /// Ruft das Datum der letzten Überstunden-Aktualisierung ab.
+  DateTime? getLastUpdateDate();
+
+  /// Speichert das Datum der letzten Überstunden-Aktualisierung.
+  Future<void> saveLastUpdateDate(DateTime date);
 }

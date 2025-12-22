@@ -1,8 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase;
-import 'package:flutter/material.dart' show DateUtils;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_work_time/core/utils/logger.dart';
 
 import '../../models/work_entry_model.dart';
 
@@ -43,7 +43,7 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
       final firebase.AuthCredential credential = firebase.GoogleAuthProvider.credential(idToken: googleAuth.idToken);
       await _firebaseAuth.signInWithCredential(credential);
     } catch (e) {
-      print("Fehler beim Google Sign-In: $e");
+      logger.e("Fehler beim Google Sign-In: $e");
       rethrow;
     }
   }
@@ -69,11 +69,11 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
         await user.reauthenticateWithCredential(credential);
         await user.delete();
       } else {
-        print("Fehler beim Löschen des Accounts: $e");
+        logger.e("Fehler beim Löschen des Accounts: $e");
         rethrow;
       }
     } catch (e) {
-      print("Unerwarteter Fehler beim Löschen des Accounts: $e");
+      logger.e("Unerwarteter Fehler beim Löschen des Accounts: $e");
       rethrow;
     }
     try {
@@ -86,7 +86,7 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
       await batch.commit();
       await _firestore.collection('users').doc(userId).delete();
     } catch (e) {
-      print("KRITISCH: Fehler beim Löschen der Firestore-Daten nach Account-Löschung: $e");
+      logger.e("KRITISCH: Fehler beim Löschen der Firestore-Daten nach Account-Löschung: $e");
       rethrow;
     }
     await _googleSignIn.signOut();
@@ -103,37 +103,37 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
 
   @override
   Future<WorkEntryModel?> getWorkEntry(String userId, DateTime date) async {
-    print('[Firestore] Lade WorkEntry für User: $userId, Datum: $date');
+    logger.i('[Firestore] Lade WorkEntry für User: $userId, Datum: $date');
     final docRef = _getMonthDocRef(userId, date);
     final snapshot = await docRef.get();
     final dayKey = date.day.toString();
-    print('[Firestore] Dokument existiert: ${snapshot.exists}, DayKey: $dayKey');
+    logger.i('[Firestore] Dokument existiert: ${snapshot.exists}, DayKey: $dayKey');
     if (snapshot.exists && snapshot.data() != null) {
       final monthData = snapshot.data()!;
       final dayData = monthData['days']?[dayKey];
-      print('[Firestore] DayData gefunden: ${dayData != null}');
+      logger.i('[Firestore] DayData gefunden: ${dayData != null}');
       if (dayData != null) {
         final entry = WorkEntryModel.fromMap(dayData).copyWith(id: WorkEntryModel.generateId(date));
-        print('[Firestore] WorkEntry geladen: Start=${entry.workStart}, End=${entry.workEnd}');
+        logger.i('[Firestore] WorkEntry geladen: Start=${entry.workStart}, End=${entry.workEnd}');
         return entry;
       }
     }
-    print('[Firestore] Kein WorkEntry gefunden für diesen Tag');
+    logger.i('[Firestore] Kein WorkEntry gefunden für diesen Tag');
     return null;
   }
 
   @override
   Future<void> saveWorkEntry(String userId, WorkEntryModel model) async {
-    print('[Firestore] Speichere WorkEntry für User: $userId, Datum: ${model.date}');
+    logger.i('[Firestore] Speichere WorkEntry für User: $userId, Datum: ${model.date}');
     final docRef = _getMonthDocRef(userId, model.date);
     final dayKey = model.date.day.toString();
     final data = { 'days': { dayKey: model.toMap() } };
-    print('[Firestore] Daten: workStart=${model.workStart}, workEnd=${model.workEnd}');
+    logger.i('[Firestore] Daten: workStart=${model.workStart}, workEnd=${model.workEnd}');
     try {
       await docRef.set(data, SetOptions(merge: true));
-      print('[Firestore] Erfolgreich gespeichert in Dokument: ${docRef.path}');
+      logger.i('[Firestore] Erfolgreich gespeichert in Dokument: ${docRef.path}');
     } catch (e) {
-      print('[Firestore] FEHLER beim Speichern: $e');
+      logger.e('[Firestore] FEHLER beim Speichern: $e');
       rethrow;
     }
   }
@@ -147,10 +147,15 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
       final monthData = snapshot.data()!;
       final daysMap = monthData['days'] as Map<String, dynamic>? ?? {};
       return daysMap.entries.map((entry) {
-        final dayData = entry.value as Map<String, dynamic>;
-        final entryDate = DateTime(year, month, int.parse(entry.key));
-        return WorkEntryModel.fromMap(dayData).copyWith(id: WorkEntryModel.generateId(entryDate));
-      }).toList()
+        try {
+          final dayData = entry.value as Map<String, dynamic>;
+          final entryDate = DateTime(year, month, int.parse(entry.key));
+          return WorkEntryModel.fromMap(dayData).copyWith(id: WorkEntryModel.generateId(entryDate));
+        } catch (e) {
+          logger.w('[Firestore] Fehler beim Parsen eines Eintrags (Tag ${entry.key}): $e');
+          return null;
+        }
+      }).where((element) => element != null).cast<WorkEntryModel>().toList()
         ..sort((a, b) => a.date.compareTo(b.date));
     }
     return [];

@@ -1,8 +1,7 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'package:flutter_work_time/core/utils/logger.dart';
 
-import 'work_entry_checker_service.dart';
 import '../../domain/repositories/work_repository.dart';
 
 class NotificationService {
@@ -19,9 +18,6 @@ class NotificationService {
 
     _onNotificationTapCallback = onNotificationTap;
 
-    // Initialize timezone
-    tz.initializeTimeZones();
-
     const androidSettings = AndroidInitializationSettings('@mipmap/launcher_icon');
     const initSettings = InitializationSettings(
       android: androidSettings,
@@ -36,7 +32,7 @@ class NotificationService {
   }
 
   void _onNotificationTapped(NotificationResponse response) {
-    print('[NotificationService] Notification tapped: ${response.payload}');
+    logger.i('[NotificationService] Notification tapped: ${response.payload}');
     if (_onNotificationTapCallback != null && response.payload != null) {
       _onNotificationTapCallback!(response.payload!);
     }
@@ -100,47 +96,6 @@ class NotificationService {
     );
   }
 
-  /// Prüft und sendet intelligente Benachrichtigungen basierend auf fehlenden Einträgen
-  Future<void> checkAndNotify({
-    required WorkRepository workRepository,
-    required bool notifyWorkStart,
-    required bool notifyWorkEnd,
-    required bool notifyBreaks,
-  }) async {
-    final checker = WorkEntryCheckerService(workRepository);
-    final missing = await checker.checkMissingEntries();
-
-    if (!missing.hasMissingEntries) {
-      print('[NotificationService] Keine fehlenden Einträge, keine Benachrichtigung gesendet');
-      return;
-    }
-
-    // Filtere basierend auf Einstellungen
-    final typesToNotify = <String>[];
-    if (notifyWorkStart && missing.missingWorkStart) typesToNotify.add('Arbeitsbeginn');
-    if (notifyWorkEnd && missing.missingWorkEnd) typesToNotify.add('Arbeitsende');
-    if (notifyBreaks && missing.missingBreaks) typesToNotify.add('Pausen');
-
-    if (typesToNotify.isEmpty) {
-      print('[NotificationService] Fehlende Einträge, aber nicht für aktivierte Typen');
-      return;
-    }
-
-    String body;
-    if (typesToNotify.length == 1) {
-      body = 'Bitte tragen Sie Ihren ${typesToNotify[0]} ein!';
-    } else {
-      final last = typesToNotify.removeLast();
-      body = 'Bitte tragen Sie ${typesToNotify.join(", ")} und $last ein!';
-    }
-
-    await showImmediateNotification(
-      title: 'Arbeitszeit-Erinnerung',
-      body: body,
-      payload: 'open_dashboard',
-    );
-  }
-
   Future<void> _scheduleWeeklyNotification({
     required int id,
     required int day, // 1 = Monday, 7 = Sunday
@@ -150,6 +105,10 @@ class NotificationService {
     required bool checkWorkEnd,
     required bool checkBreaks,
   }) async {
+    if (day < 1 || day > 7) {
+      logger.w('Ungültiger Tag für die Benachrichtigungsplanung: $day');
+      return;
+    }
     final now = tz.TZDateTime.now(tz.local);
     var scheduledDate = tz.TZDateTime(
       tz.local,
@@ -186,6 +145,7 @@ class NotificationService {
       body = 'Haben Sie ${checkTypes.join(", ")} und $last eingetragen?';
     }
 
+    logger.i('Scheduling notification with id $id for $scheduledDate (Day: $day, Hour: $hour, Minute: $minute)');
     await _notifications.zonedSchedule(
       id,
       'Arbeitszeit-Erinnerung',
@@ -201,7 +161,6 @@ class NotificationService {
         ),
       ),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
       payload: 'open_dashboard',
     );

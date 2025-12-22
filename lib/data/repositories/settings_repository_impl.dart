@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_work_time/core/utils/logger.dart';
 
 import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/repositories/settings_repository.dart';
@@ -50,26 +51,25 @@ class SettingsRepositoryImpl implements SettingsRepository {
   @override
   double getTargetWeeklyHours() {
     final value = _prefs.getDouble(_targetHoursKey);
-    print('[SettingsRepository] getTargetWeeklyHours for user $_userId: $value');
     return value ?? 40.0;
   }
 
   @override
   Future<void> setTargetWeeklyHours(double hours) async {
-    print('[SettingsRepository] setTargetWeeklyHours for user $_userId: $hours');
+    logger.i('[SettingsRepository] setTargetWeeklyHours for user $_userId: $hours');
     await _prefs.setDouble(_targetHoursKey, hours);
   }
 
   @override
   int getWorkdaysPerWeek() {
     final value = _prefs.getInt(_workdaysPerWeekKey);
-    print('[SettingsRepository] getWorkdaysPerWeek for user $_userId: $value');
+    logger.i('[SettingsRepository] getWorkdaysPerWeek for user $_userId: $value');
     return value ?? 5;
   }
 
   @override
   Future<void> setWorkdaysPerWeek(int days) async {
-    print('[SettingsRepository] setWorkdaysPerWeek for user $_userId: $days');
+    logger.i('[SettingsRepository] setWorkdaysPerWeek for user $_userId: $days');
     await _prefs.setInt(_workdaysPerWeekKey, days);
   }
 
