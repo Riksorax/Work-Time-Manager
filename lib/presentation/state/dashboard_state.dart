@@ -11,7 +11,8 @@ class DashboardState extends Equatable {
   final Duration? initialOvertime; // Überstundenstand zu Beginn des Tages/Session
   final Duration? dailyOvertime;
   final Duration? grossWorkDuration; // Brutto-Arbeitszeit (inkl. Pausen)
-  final DateTime? expectedEndTime; // Voraussichtliche Feierabendzeit für ±0
+  final DateTime? expectedEndTime; // Voraussichtliche Feierabendzeit für ±0 (Tagesziel)
+  final DateTime? expectedEndTotalZero; // Voraussichtlicher Feierabend für ±0 (Gesamtbilanz)
 
   const DashboardState({
     required this.workEntry,
@@ -23,6 +24,7 @@ class DashboardState extends Equatable {
     this.dailyOvertime,
     this.grossWorkDuration,
     this.expectedEndTime,
+    this.expectedEndTotalZero,
   });
 
   factory DashboardState.initial() {
@@ -39,6 +41,7 @@ class DashboardState extends Equatable {
       dailyOvertime: null,
       grossWorkDuration: null,
       expectedEndTime: null,
+      expectedEndTotalZero: null,
     );
   }
 
@@ -52,6 +55,7 @@ class DashboardState extends Equatable {
     Duration? dailyOvertime,
     Duration? grossWorkDuration,
     DateTime? expectedEndTime,
+    DateTime? expectedEndTotalZero,
   }) {
     return DashboardState(
       workEntry: workEntry ?? this.workEntry,
@@ -63,6 +67,7 @@ class DashboardState extends Equatable {
       dailyOvertime: dailyOvertime ?? this.dailyOvertime,
       grossWorkDuration: grossWorkDuration ?? this.grossWorkDuration,
       expectedEndTime: expectedEndTime ?? this.expectedEndTime,
+      expectedEndTotalZero: expectedEndTotalZero ?? this.expectedEndTotalZero,
     );
   }
 
@@ -77,5 +82,6 @@ class DashboardState extends Equatable {
         dailyOvertime,
         grossWorkDuration,
         expectedEndTime,
+        expectedEndTotalZero,
       ];
 }

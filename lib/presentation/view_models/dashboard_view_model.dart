@@ -192,13 +192,21 @@ class DashboardViewModel extends Notifier<DashboardState> {
     final base = state.initialOvertime ?? Duration.zero;
     final total = base + dailyOvertime;
 
-    // Berechne voraussichtliche Feierabendzeit für ±0
+    // Berechne voraussichtliche Feierabendzeit für ±0 (Tagesziel)
     final expectedEndTime = _calculateExpectedEndTime(targetDailyHours);
+
+    // Berechne voraussichtliche Feierabendzeit für Gesamtbilanz ±0
+    // Wenn wir z.B. 1h Plus haben, müssen wir heute 1h weniger arbeiten.
+    // Wenn wir 10h Plus haben und 8h Soll, müssen wir gar nicht arbeiten (Ende = Start).
+    final Duration remainingForTotalZero = targetDailyHours - base;
+    final Duration targetForTotalZero = remainingForTotalZero.isNegative ? Duration.zero : remainingForTotalZero;
+    final expectedEndTotalZero = _calculateExpectedEndTime(targetForTotalZero);
 
     state = state.copyWith(
       dailyOvertime: dailyOvertime,
       totalOvertime: total,
       expectedEndTime: expectedEndTime,
+      expectedEndTotalZero: expectedEndTotalZero,
     );
   }
 

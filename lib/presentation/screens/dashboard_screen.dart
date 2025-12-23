@@ -92,7 +92,7 @@ class DashboardScreen extends ConsumerWidget {
             const SizedBox(height: 16),
             _buildOvertime(context, dashboardState.dailyOvertime, 'Heutige Überstunden'),
             _buildExpectedEndTime(context, dashboardState.expectedEndTime),
-            _buildExpectedEndTimeWithBalance(context, dashboardState.expectedEndTime, dashboardState.totalOvertime),
+            _buildExpectedEndTimeWithBalance(context, dashboardState.expectedEndTotalZero),
             const SizedBox(height: 24),
 
             _TimeInputField(
@@ -178,13 +178,11 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildExpectedEndTimeWithBalance(BuildContext context, DateTime? expectedEndTime, Duration? overtime) {
-    if (expectedEndTime == null || overtime == null) {
+  Widget _buildExpectedEndTimeWithBalance(BuildContext context, DateTime? expectedEndTimeWithBalance) {
+    if (expectedEndTimeWithBalance == null) {
       return const SizedBox.shrink();
     }
 
-    // Berechne Feierabend-Zeit, um die Gleitzeit-Bilanz auf 0 zu bringen
-    final expectedEndTimeWithBalance = expectedEndTime.subtract(overtime);
     final formattedTimeWithBalance = DateFormat.Hm().format(expectedEndTimeWithBalance);
 
     return Padding(
