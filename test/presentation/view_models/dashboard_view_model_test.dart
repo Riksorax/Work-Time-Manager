@@ -7,7 +7,6 @@ import 'package:flutter_work_time/domain/entities/work_entry_entity.dart';
 import 'package:flutter_work_time/domain/repositories/overtime_repository.dart';
 import 'package:flutter_work_time/domain/repositories/settings_repository.dart';
 import 'package:flutter_work_time/domain/usecases/get_today_work_entry.dart';
-import 'package:flutter_work_time/domain/usecases/get_today_work_entry.dart';
 import 'package:flutter_work_time/domain/usecases/overtime_usecases.dart';
 import 'package:flutter_work_time/domain/usecases/save_work_entry.dart';
 import 'package:flutter_work_time/presentation/view_models/dashboard_view_model.dart';
@@ -132,6 +131,40 @@ void main() {
       
       expect(state.expectedEndTime!.hour, 18);
       expect(state.expectedEndTime!.minute, 15);
+    });
+
+    test('expectedEndTotalZero should be clamped to start time if initial overtime exceeds daily target', () async {
+      // Arrange
+      // Target: 8h. Initial Overtime: +10h.
+      // Remaining needed: 8 - 10 = -2h -> Clamped to 0.
+      // Expected End = Start + 0 = Start.
+      
+      when(mockSettingsRepository.getTargetWeeklyHours()).thenReturn(40.0);
+      
+      final now = DateTime.now();
+      final todayStart = DateTime(now.year, now.month, now.day, 8, 0);
+      
+      final entry = WorkEntryEntity(
+        id: '1',
+        date: now,
+        workStart: todayStart,
+        workEnd: null,
+      );
+
+      when(mockGetTodayWorkEntry()).thenAnswer((_) async => entry);
+      // Mock Overtime Repository to return +10h
+      when(mockOvertimeRepository.getOvertime()).thenReturn(const Duration(hours: 10));
+      // Last update was yesterday (so it's fully initial)
+      when(mockOvertimeRepository.getLastUpdateDate()).thenReturn(now.subtract(const Duration(days: 1)));
+
+      final viewModel = container.read(dashboardViewModelProvider.notifier);
+      await Future.delayed(Duration.zero);
+      
+      final state = container.read(dashboardViewModelProvider);
+
+      expect(state.expectedEndTotalZero, isNotNull);
+      expect(state.expectedEndTotalZero!.hour, 8);
+      expect(state.expectedEndTotalZero!.minute, 0);
     });
   });
 }

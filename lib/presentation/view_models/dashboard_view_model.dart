@@ -51,9 +51,21 @@ class DashboardViewModel extends Notifier<DashboardState> {
       final targetDailyHours = Duration(microseconds: (settingsRepository.getTargetWeeklyHours() / workdaysPerWeek * Duration.microsecondsPerHour).round());
       initialDailyOvertime = actualWorkDuration - targetDailyHours;
     } else if (workEntry.workStart != null) {
-      // Laufender Tag -> Overtime wird im Timer berechnet, initial 0 oder minus Soll?
-      // Für die Initialisierung: Wir berechnen es gleich im Timer/Recalculate korrekt.
-      // Hier nehmen wir an, dass storedOvertime die Basis ist.
+      // Laufender Tag -> Overtime wird im Timer berechnet.
+      // Um initialOvertime (Basis) korrekt wiederherzustellen, müssen wir den aktuellen "Tagesfortschritt" vom gespeicherten Gesamtwert abziehen.
+      final now = DateTime.now();
+      
+      // Berechne aktuelle Pausenzeit
+      final breakDuration = _calculateTotalBreakDuration(now);
+      
+      // Berechne aktuelle Arbeitszeit (Brutto - Pause)
+      final elapsedTime = now.difference(workEntry.workStart!) - breakDuration;
+      
+      final workdaysPerWeek = settingsRepository.getWorkdaysPerWeek();
+      final targetDailyHours = Duration(microseconds: (settingsRepository.getTargetWeeklyHours() / workdaysPerWeek * Duration.microsecondsPerHour).round());
+      
+      // Aktueller Überstunden-Stand für heute (wird meist negativ sein, da Tag noch läuft)
+      initialDailyOvertime = elapsedTime - targetDailyHours;
     }
 
     Duration initialOvertime;
@@ -192,13 +204,21 @@ class DashboardViewModel extends Notifier<DashboardState> {
     final base = state.initialOvertime ?? Duration.zero;
     final total = base + dailyOvertime;
 
-    // Berechne voraussichtliche Feierabendzeit für ±0
+    // Berechne voraussichtliche Feierabendzeit für ±0 (Tagesziel)
     final expectedEndTime = _calculateExpectedEndTime(targetDailyHours);
+
+    // Berechne voraussichtliche Feierabendzeit für Gesamtbilanz ±0
+    // Wenn wir z.B. 1h Plus haben, müssen wir heute 1h weniger arbeiten.
+    // Wenn wir 10h Plus haben und 8h Soll, müssen wir gar nicht arbeiten (Ende = Start).
+    final Duration remainingForTotalZero = targetDailyHours - base;
+    final Duration targetForTotalZero = remainingForTotalZero.isNegative ? Duration.zero : remainingForTotalZero;
+    final expectedEndTotalZero = _calculateExpectedEndTime(targetForTotalZero);
 
     state = state.copyWith(
       dailyOvertime: dailyOvertime,
       totalOvertime: total,
       expectedEndTime: expectedEndTime,
+      expectedEndTotalZero: expectedEndTotalZero,
     );
   }
 
