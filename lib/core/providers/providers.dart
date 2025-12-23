@@ -1,9 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../core/config/google_sign_in_config.dart';
 import '../../core/services/version_service.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/utils/logger.dart';
@@ -47,7 +49,12 @@ FirebaseAuth firebaseAuth(Ref ref) => FirebaseAuth.instance;
 FirebaseFirestore firestore(Ref ref) => FirebaseFirestore.instance;
 
 @Riverpod(keepAlive: true)
-GoogleSignIn googleSignIn(Ref ref) => GoogleSignIn.instance;
+GoogleSignIn googleSignIn(Ref ref) {
+  // GoogleSignIn.instance ist ein vorkonfiguriertes Singleton
+  // Für Web wird die clientId aus der index.html meta-tag gelesen
+  // Für Android/iOS wird die Konfiguration aus den nativen Config-Dateien gelesen
+  return GoogleSignIn.instance;
+}
 
 @Riverpod(keepAlive: true)
 SharedPreferences sharedPreferences(Ref ref) {

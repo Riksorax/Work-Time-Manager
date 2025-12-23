@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../domain/entities/break_entity.dart';
 import '../../domain/services/break_calculator_service.dart';
 import '../view_models/dashboard_view_model.dart';
+import '../widgets/common/responsive_center.dart';
 import '../widgets/edit_break_modal.dart';
 import 'settings_page.dart';
 
@@ -42,12 +43,9 @@ class DashboardScreen extends ConsumerWidget {
     final isTimerRunning = workEntry.workStart != null && workEntry.workEnd == null;
     final isBreakRunning = workEntry.breaks.isNotEmpty && workEntry.breaks.last.end == null;
 
-    // KORREKTE BERECHNUNG FÜR DIE ANZEIGE
     final totalOvertime = dashboardState.totalOvertime ?? Duration.zero;
-
     final netDuration = dashboardState.actualWorkDuration ?? dashboardState.elapsedTime;
     
-    // Berechne Pausendauer für Brutto-Anzeige
     final totalBreakDuration = workEntryWithAutoBreaks.breaks.fold(Duration.zero, (prev, b) {
       final end = b.end ?? DateTime.now();
       return prev + end.difference(b.start);
@@ -70,67 +68,69 @@ class DashboardScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              _formatDuration(netDuration),
-              style: Theme.of(context).textTheme.displayLarge,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Anwesenheit (Brutto): ${_formatDuration(grossDuration)}',
-              style: Theme.of(context).textTheme.titleMedium,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-
-            _buildOvertime(context, totalOvertime, 'Überstunden Gesamt'),
-            const SizedBox(height: 16),
-            _buildOvertime(context, dashboardState.dailyOvertime, 'Heutige Überstunden'),
-            _buildExpectedEndTime(context, dashboardState.expectedEndTime),
-            _buildExpectedEndTimeWithBalance(context, dashboardState.expectedEndTotalZero),
-            const SizedBox(height: 24),
-
-            _TimeInputField(
-              label: 'Startzeit',
-              initialValue: workEntry.workStart,
-              onTimeSelected: (time) => dashboardViewModel.setManualStartTime(time),
-            ),
-            const SizedBox(height: 16),
-            _TimeInputField(
-              label: 'Endzeit',
-              initialValue: workEntry.workEnd,
-              enabled: workEntry.workStart != null,
-              onTimeSelected: (time) => dashboardViewModel.setManualEndTime(time),
-              onClear: workEntry.workEnd != null ? () => dashboardViewModel.clearEndTime() : null,
-            ),
-            const SizedBox(height: 24),
-
-            ElevatedButton(
-              onPressed: () => dashboardViewModel.startOrStopTimer(),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
+      body: ResponsiveCenter(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                _formatDuration(netDuration),
+                style: Theme.of(context).textTheme.displayLarge,
+                textAlign: TextAlign.center,
               ),
-              child: Text(isTimerRunning
-                  ? 'Zeiterfassung beenden'
-                  : 'Zeiterfassung starten'),
-            ),
-            const SizedBox(height: 24),
+              const SizedBox(height: 8),
+              Text(
+                'Anwesenheit (Brutto): ${_formatDuration(grossDuration)}',
+                style: Theme.of(context).textTheme.titleMedium,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
 
-            _buildBreaksSection(context, ref, workEntryWithAutoBreaks.breaks),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () => dashboardViewModel.startOrStopBreak(),
-              child: Text(isBreakRunning
-                      ? 'Pause beenden'
-                      : 'Pause hinzufügen'),
-            ),
-            const SizedBox(height: 24),
-          ],
+              _buildOvertime(context, totalOvertime, 'Überstunden Gesamt'),
+              const SizedBox(height: 16),
+              _buildOvertime(context, dashboardState.dailyOvertime, 'Heutige Überstunden'),
+              _buildExpectedEndTime(context, dashboardState.expectedEndTime),
+              _buildExpectedEndTimeWithBalance(context, dashboardState.expectedEndTotalZero),
+              const SizedBox(height: 24),
+
+              _TimeInputField(
+                label: 'Startzeit',
+                initialValue: workEntry.workStart,
+                onTimeSelected: (time) => dashboardViewModel.setManualStartTime(time),
+              ),
+              const SizedBox(height: 16),
+              _TimeInputField(
+                label: 'Endzeit',
+                initialValue: workEntry.workEnd,
+                enabled: workEntry.workStart != null,
+                onTimeSelected: (time) => dashboardViewModel.setManualEndTime(time),
+                onClear: workEntry.workEnd != null ? () => dashboardViewModel.clearEndTime() : null,
+              ),
+              const SizedBox(height: 24),
+
+              ElevatedButton(
+                onPressed: () => dashboardViewModel.startOrStopTimer(),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: Text(isTimerRunning
+                    ? 'Zeiterfassung beenden'
+                    : 'Zeiterfassung starten'),
+              ),
+              const SizedBox(height: 24),
+
+              _buildBreaksSection(context, ref, workEntryWithAutoBreaks.breaks),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => dashboardViewModel.startOrStopBreak(),
+                child: Text(isBreakRunning
+                        ? 'Pause beenden'
+                        : 'Pause hinzufügen'),
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
         ),
       ),
     );

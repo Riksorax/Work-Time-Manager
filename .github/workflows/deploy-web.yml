@@ -1,0 +1,56 @@
+name: Build, Push, and Deploy Work Time Manager
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/work-time-manager:latest
+
+      - name: Deploy to Server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HETZNER_HOST }}
+          username: ${{ secrets.HETZNER_USER }}
+          key: ${{ secrets.HETZNER_SSH_PRIVATE_KEY }}
+          script: |
+            # Projektverzeichnis definieren
+            PROJECT_DIR="~/projekte/${{ github.event.repository.name }}"
+
+            # Projekt klonen, falls es noch nicht existiert
+            if [ ! -d "$PROJECT_DIR" ]; then
+              git clone https://github.com/${{ github.repository }}.git "$PROJECT_DIR"
+            fi
+
+            # In das Projektverzeichnis wechseln und die neuesten Änderungen holen
+            cd "$PROJECT_DIR"
+            git pull origin main
+
+            # Das neueste Docker-Image herunterladen
+            sudo docker compose pull
+
+            # Die Anwendung mit der neuen Konfiguration und dem neuen Image starten/aktualisieren
+            sudo docker compose up -d
+
+            # Alte, ungenutzte Docker-Images aufräumen
+            sudo docker image prune -af
