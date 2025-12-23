@@ -51,9 +51,21 @@ class DashboardViewModel extends Notifier<DashboardState> {
       final targetDailyHours = Duration(microseconds: (settingsRepository.getTargetWeeklyHours() / workdaysPerWeek * Duration.microsecondsPerHour).round());
       initialDailyOvertime = actualWorkDuration - targetDailyHours;
     } else if (workEntry.workStart != null) {
-      // Laufender Tag -> Overtime wird im Timer berechnet, initial 0 oder minus Soll?
-      // Für die Initialisierung: Wir berechnen es gleich im Timer/Recalculate korrekt.
-      // Hier nehmen wir an, dass storedOvertime die Basis ist.
+      // Laufender Tag -> Overtime wird im Timer berechnet.
+      // Um initialOvertime (Basis) korrekt wiederherzustellen, müssen wir den aktuellen "Tagesfortschritt" vom gespeicherten Gesamtwert abziehen.
+      final now = DateTime.now();
+      
+      // Berechne aktuelle Pausenzeit
+      final breakDuration = _calculateTotalBreakDuration(now);
+      
+      // Berechne aktuelle Arbeitszeit (Brutto - Pause)
+      final elapsedTime = now.difference(workEntry.workStart!) - breakDuration;
+      
+      final workdaysPerWeek = settingsRepository.getWorkdaysPerWeek();
+      final targetDailyHours = Duration(microseconds: (settingsRepository.getTargetWeeklyHours() / workdaysPerWeek * Duration.microsecondsPerHour).round());
+      
+      // Aktueller Überstunden-Stand für heute (wird meist negativ sein, da Tag noch läuft)
+      initialDailyOvertime = elapsedTime - targetDailyHours;
     }
 
     Duration initialOvertime;
