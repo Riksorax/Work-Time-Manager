@@ -6,10 +6,18 @@ import '../../domain/repositories/work_repository.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
-  factory NotificationService() => _instance;
+  
+  // Allow injection for testing
+  factory NotificationService({FlutterLocalNotificationsPlugin? notificationsPlugin}) {
+    if (notificationsPlugin != null) {
+      _instance._notifications = notificationsPlugin;
+    }
+    return _instance;
+  }
+  
   NotificationService._internal();
 
-  final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
+  FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
   bool _initialized = false;
   Function(String)? _onNotificationTapCallback;
 

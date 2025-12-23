@@ -1,6 +1,7 @@
 import 'package:collection/collection.dart';
+import 'package:uuid/uuid.dart';
 
-import '../../data/models/break_model.dart';
+import '../entities/break_entity.dart';
 import '../entities/work_entry_entity.dart';
 import '../repositories/work_repository.dart';
 
@@ -25,7 +26,7 @@ class ToggleBreak {
       final updatedBreaks = currentEntry.breaks.map((b) {
         if (b == activeBreak) {
           // Erstelle eine neue Instanz der Pause mit gesetzter Endzeit.
-          return (b as BreakModel).copyWith(end: DateTime.now());
+          return b.copyWith(end: DateTime.now());
         }
         return b;
       }).toList();
@@ -33,7 +34,8 @@ class ToggleBreak {
       updatedEntry = currentEntry.copyWith(breaks: updatedBreaks);
     } else {
       // --- Fall 2: Keine Pause ist aktiv -> Starte eine neue ---
-      final newBreak = BreakModel(
+      final newBreak = BreakEntity(
+        id: const Uuid().v4(),
         name: 'Pause ${currentEntry.breaks.length + 1}',
         start: DateTime.now(),
       );
