@@ -82,7 +82,7 @@ class WorkEntryModel extends WorkEntryEntity {
       'date': Timestamp.fromDate(DateTime.utc(date.year, date.month, date.day)),
       'workStart': workStart != null ? Timestamp.fromDate(workStart!) : null,
       'workEnd': workEnd != null ? Timestamp.fromDate(workEnd!) : null,
-      'breaks': (breaks as List<BreakModel>).map((b) => b.toMap()).toList(),
+      'breaks': breaks.map((b) => BreakModel.fromEntity(b).toMap()).toList(),
       'manualOvertimeMinutes': manualOvertime?.inMinutes,
       'description': description,
       'isManuallyEntered': isManuallyEntered,

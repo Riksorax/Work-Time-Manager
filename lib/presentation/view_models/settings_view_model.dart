@@ -24,15 +24,6 @@ class NoOpSettingsRepository implements SettingsRepository {
   Future<void> setWorkdaysPerWeek(int days) async {}
 
   @override
-  Future<List<WorkEntryEntity>> getAllOldWorkEntries() async => [];
-
-  @override
-  Future<void> saveMigratedWorkEntries(Map<String, List<WorkEntryEntity>> monthlyEntries) async {}
-
-  @override
-  Future<void> deleteAllOldWorkEntries(List<String> entryIds) async {}
-
-  @override
   bool hasAcceptedTermsOfService() => false;
 
   @override
@@ -151,27 +142,6 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
 
     // Dashboard über die Änderung informieren
     ref.read(dashboardViewModelProvider.notifier).recalculateOvertimeFromSettings();
-  }
-
-  Future<void> migrateWorkEntries() async {
-    try {
-      final settingsRepository = ref.read(core_providers.settingsRepositoryProvider);
-      final oldEntries = await settingsRepository.getAllOldWorkEntries();
-      if (oldEntries.isEmpty) {
-        return;
-      }
-
-      final monthlyEntries = <String, List<WorkEntryEntity>>{};
-      for (final entry in oldEntries) {
-        final monthId = '${entry.date.year}-${entry.date.month.toString().padLeft(2, '0')}';
-        (monthlyEntries[monthId] ??= []).add(entry);
-      }
-
-      await settingsRepository.saveMigratedWorkEntries(monthlyEntries);
-      await settingsRepository.deleteAllOldWorkEntries(oldEntries.map((e) => e.id).toList());
-    } catch (e) {
-      // Handle error
-    }
   }
 
   Future<void> updateNotificationsEnabled(bool enabled) async {

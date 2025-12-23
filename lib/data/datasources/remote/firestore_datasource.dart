@@ -20,8 +20,6 @@ abstract class FirestoreDataSource {
   Future<void> saveWorkEntry(String userId, WorkEntryModel model);
   Future<List<WorkEntryModel>> getWorkEntriesForMonth(String userId, int year, int month);
   Future<void> deleteWorkEntry(String userId, String entryId);
-  Future<List<WorkEntryModel>> getAllOldWorkEntries(String userId);
-  Future<void> deleteAllOldWorkEntries(String userId, List<String> entryIds);
 }
 
 class FirestoreDataSourceImpl implements FirestoreDataSource {
@@ -167,31 +165,5 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
     final docRef = _getMonthDocRef(userId, date);
     final dayKey = date.day.toString();
     await docRef.update({ 'days.$dayKey': FieldValue.delete() });
-  }
-
-  @override
-  Future<List<WorkEntryModel>> getAllOldWorkEntries(String userId) async {
-    final collectionRef = _firestore.collection('users').doc(userId).collection('work_entries');
-    final querySnapshot = await collectionRef.get();
-    
-    final oldEntries = <WorkEntryModel>[];
-    final oldIdRegex = RegExp(r'^\d{4}-\d{2}-\d{2}$');
-
-    for (final doc in querySnapshot.docs) {
-      if (oldIdRegex.hasMatch(doc.id)) {
-        oldEntries.add(WorkEntryModel.fromFirestore(doc));
-      }
-    }
-    return oldEntries;
-  }
-
-  @override
-  Future<void> deleteAllOldWorkEntries(String userId, List<String> entryIds) async {
-    final collectionRef = _firestore.collection('users').doc(userId).collection('work_entries');
-    final batch = _firestore.batch();
-    for (final id in entryIds) {
-      batch.delete(collectionRef.doc(id));
-    }
-    await batch.commit();
   }
 }
