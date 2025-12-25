@@ -26,7 +26,7 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/work-time-manager:latest
+          tags: ${{ vars.DOCKERHUB_USERNAME }}/work-time-manager:latest
 
       - name: Deploy to Server
         uses: appleboy/ssh-action@v1.0.3
