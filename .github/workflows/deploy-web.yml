@@ -3,6 +3,7 @@ name: Build, Push, and Deploy Work Time Manager
 on:
   push:
     branches:
+      - feature/
       - main
   workflow_dispatch:
 
