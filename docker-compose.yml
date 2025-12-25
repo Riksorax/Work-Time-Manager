@@ -1,0 +1,26 @@
+services:
+  work-time-manager:
+    image: riksorax/work-time-manager:latest
+    container_name: work-time-manager
+    restart: unless-stopped
+    networks:
+      - traefik-proxy
+    labels:
+      # Traefik für diesen Container aktivieren
+      - "traefik.enable=true"
+      # HTTPS-Router, der auf die Domain hört
+      - "traefik.http.routers.work-time-manager.rule=Host(`work-time-manager.app`)"
+      - "traefik.http.routers.work-time-manager.entrypoints=websecure"
+      - "traefik.http.routers.work-time-manager.tls.certresolver=letsencrypt"
+      # Service-Definition: Sagt Traefik, auf welchem Port die App im Container läuft
+      - "traefik.http.services.work-time-manager.loadbalancer.server.port=8080"
+      # HTTP-Router für die automatische Umleitung auf HTTPS
+      - "traefik.http.routers.work-time-manager-web.rule=Host(`work-time-manager.app`)"
+      - "traefik.http.routers.work-time-manager-web.entrypoints=web"
+      - "traefik.http.routers.work-time-manager-web.middlewares=https-redirect"
+      # Definition der Umleitungs-Middleware
+      - "traefik.http.middlewares.https-redirect.redirectscheme.scheme=https"
+
+networks:
+  traefik-proxy:
+    external: true

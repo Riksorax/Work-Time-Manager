@@ -130,7 +130,7 @@ final class GoogleSignInProvider
   }
 }
 
-String _$googleSignInHash() => r'be6e657edfb1790d127cff1d3820a50c34e65011';
+String _$googleSignInHash() => r'b08618d1263b8c22e3118041afeb06fc87c4fcd6';
 
 @ProviderFor(sharedPreferences)
 const sharedPreferencesProvider = SharedPreferencesProvider._();

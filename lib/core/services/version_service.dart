@@ -1,5 +1,4 @@
-import 'dart:io';
-
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:in_app_update/in_app_update.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -13,19 +12,16 @@ class VersionService {
   VersionService(this._firestore);
 
   /// Prüft ob ein Update erforderlich ist
-  /// Gibt null zurück wenn kein Update nötig ist
-  /// Gibt UpdateInfo zurück wenn Update benötigt wird
   Future<UpdateInfo?> checkForRequiredUpdate() async {
     try {
       final packageInfo = await PackageInfo.fromPlatform();
       final currentVersion = packageInfo.version;
 
-      // Hole minimale erforderliche Version aus Firestore
       final configDoc = await _firestore.collection('app_config').doc('version').get();
 
       if (!configDoc.exists) {
         logger.i('Version-Check: Kein app_config/version Dokument in Firestore gefunden');
-        return null; // Keine Version-Konfiguration vorhanden
+        return null;
       }
 
       final data = configDoc.data()!;
@@ -40,7 +36,6 @@ class VersionService {
 
       logger.i('Version-Check: Aktuelle Version: $currentVersion, Min Version: $minVersion');
 
-      // Vergleiche Versionen
       if (_isUpdateRequired(currentVersion, minVersion)) {
         logger.w('Update erforderlich: $currentVersion < $minVersion');
         return UpdateInfo(
@@ -56,22 +51,19 @@ class VersionService {
     } on FirebaseException catch (e) {
       if (e.code == 'permission-denied') {
         logger.w('Version-Check: Firestore Permission Denied');
-        logger.w('   Bitte Firestore Security Rules anpassen:');
-        logger.w('   match /app_config/{document} { allow read: if true; }');
       } else {
         logger.e('Version-Check Fehler: ${e.code} - ${e.message}');
       }
-      return null; // Bei Fehler: Kein Update-Dialog anzeigen
+      return null;
     } catch (e) {
       logger.e('Version-Check Fehler: $e');
-      return null; // Bei Fehler: Kein Update-Dialog anzeigen
+      return null;
     }
   }
 
   /// Startet den Android In-App-Update Flow (falls verfügbar)
-  /// Gibt true zurück wenn erfolgreich gestartet
   Future<bool> startAndroidInAppUpdate({bool immediate = false}) async {
-    if (!Platform.isAndroid) return false;
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return false;
 
     try {
       final updateInfo = await InAppUpdate.checkForUpdate();
@@ -81,7 +73,6 @@ class VersionService {
           await InAppUpdate.performImmediateUpdate();
         } else {
           await InAppUpdate.startFlexibleUpdate();
-          // Nach Download: InAppUpdate.completeFlexibleUpdate() aufrufen
         }
         return true;
       }
@@ -99,11 +90,12 @@ class VersionService {
 
     Uri? storeUrl;
 
-    if (Platform.isAndroid) {
+    if (kIsWeb) {
+       // Web fallback: Keine Store URL oder spezifische URL
+       return; 
+    } else if (defaultTargetPlatform == TargetPlatform.android) {
       storeUrl = Uri.parse('https://play.google.com/store/apps/details?id=$packageName');
-    } else if (Platform.isIOS) {
-      // iOS App Store ID muss hier eingetragen werden
-      // storeUrl = Uri.parse('https://apps.apple.com/app/idXXXXXXXXX');
+    } else if (defaultTargetPlatform == TargetPlatform.iOS) {
       storeUrl = Uri.parse('https://apps.apple.com/');
     }
 
@@ -112,8 +104,6 @@ class VersionService {
     }
   }
 
-  /// Vergleicht zwei Versions-Strings (Semantic Versioning)
-  /// Gibt true zurück wenn currentVersion < minVersion
   bool _isUpdateRequired(String currentVersion, String minVersion) {
     final current = _parseVersion(currentVersion);
     final minimum = _parseVersion(minVersion);
@@ -123,10 +113,9 @@ class VersionService {
       if (current[i] > minimum[i]) return false;
     }
 
-    return false; // Versionen sind gleich
+    return false;
   }
 
-  /// Parsed einen Version-String in eine Liste von Zahlen
   List<int> _parseVersion(String version) {
     final parts = version.split('.');
     return [
@@ -137,7 +126,6 @@ class VersionService {
   }
 }
 
-/// Informationen über ein verfügbares Update
 class UpdateInfo {
   final String currentVersion;
   final String minVersion;
