@@ -14,7 +14,7 @@ RUN flutter pub get
 COPY . .
 
 # Baue die Web-App im Release-Modus
-RUN flutter build web --release --web-renderer canvaskit
+RUN flutter build web --release
 
 # Stage 2: Nginx Server für die Web-App
 FROM nginx:alpine
