@@ -49,7 +49,12 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  await AppBootstrap.ensureInitializedForEnv();
+  // Der Site Key wird sicher via --dart-define=RECAPTCHA_SITE_KEY=your_key beim Build injiziert
+  const String kWebRecaptchaSiteKey = String.fromEnvironment('RECAPTCHA_SITE_KEY');
+  
+  await AppBootstrap.ensureInitializedForEnv(
+    webRecaptchaSiteKey: kWebRecaptchaSiteKey.isEmpty ? null : kWebRecaptchaSiteKey,
+  );
 
   final prefs = await SharedPreferences.getInstance();
 
