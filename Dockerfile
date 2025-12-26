@@ -3,6 +3,8 @@ FROM ghcr.io/cirruslabs/flutter:stable AS build
 
 # Arbeitsverzeichnis setzen
 WORKDIR /app
+EXPOSE 8080
+EXPOSE 8081
 
 # Kopiere pubspec-Dateien zuerst für besseres Caching
 COPY pubspec.* ./
