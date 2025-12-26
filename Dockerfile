@@ -27,8 +27,5 @@ COPY --from=build /app/build/web /usr/share/nginx/html
 # Kopiere nginx-Konfiguration
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Exponiere Port 80
-EXPOSE 80
-
 # Starte nginx
 CMD ["nginx", "-g", "daemon off;"]
