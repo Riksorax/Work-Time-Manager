@@ -3,6 +3,8 @@ FROM ghcr.io/cirruslabs/flutter:stable AS build
 
 # Arbeitsverzeichnis setzen
 WORKDIR /app
+EXPOSE 8080
+EXPOSE 8081
 
 # Kopiere pubspec-Dateien zuerst für besseres Caching
 COPY pubspec.* ./
@@ -24,9 +26,6 @@ COPY --from=build /app/build/web /usr/share/nginx/html
 
 # Kopiere nginx-Konfiguration
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-# Exponiere Port 80
-EXPOSE 80
 
 # Starte nginx
 CMD ["nginx", "-g", "daemon off;"]
