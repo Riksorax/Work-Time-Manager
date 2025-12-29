@@ -7,7 +7,6 @@ import '../../domain/services/break_calculator_service.dart';
 import '../view_models/dashboard_view_model.dart';
 import '../widgets/common/responsive_center.dart';
 import '../widgets/edit_break_modal.dart';
-import 'settings_page.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -56,22 +55,13 @@ class DashboardScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Arbeitszeit'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const SettingsPage()),
-              );
-            },
-          ),
-        ],
       ),
-      body: ResponsiveCenter(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final isWide = constraints.maxWidth > 900;
+          final double contentWidth = isWide ? 1200.0 : 800.0;
+
+          final timerDisplay = Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
@@ -85,15 +75,23 @@ class DashboardScreen extends ConsumerWidget {
                 style: Theme.of(context).textTheme.titleMedium,
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 24),
+            ],
+          );
 
+          final overtimeStats = Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
               _buildOvertime(context, totalOvertime, 'Überstunden Gesamt'),
               const SizedBox(height: 16),
               _buildOvertime(context, dashboardState.dailyOvertime, 'Heutige Überstunden'),
               _buildExpectedEndTime(context, dashboardState.expectedEndTime),
               _buildExpectedEndTimeWithBalance(context, dashboardState.expectedEndTotalZero),
-              const SizedBox(height: 24),
+            ],
+          );
 
+          final timerControls = Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
               _TimeInputField(
                 label: 'Startzeit',
                 initialValue: workEntry.workStart,
@@ -108,7 +106,6 @@ class DashboardScreen extends ConsumerWidget {
                 onClear: workEntry.workEnd != null ? () => dashboardViewModel.clearEndTime() : null,
               ),
               const SizedBox(height: 24),
-
               ElevatedButton(
                 onPressed: () => dashboardViewModel.startOrStopTimer(),
                 style: ElevatedButton.styleFrom(
@@ -118,8 +115,12 @@ class DashboardScreen extends ConsumerWidget {
                     ? 'Zeiterfassung beenden'
                     : 'Zeiterfassung starten'),
               ),
-              const SizedBox(height: 24),
+            ],
+          );
 
+          final breaksSection = Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
               _buildBreaksSection(context, ref, workEntryWithAutoBreaks.breaks),
               const SizedBox(height: 16),
               ElevatedButton(
@@ -128,10 +129,56 @@ class DashboardScreen extends ConsumerWidget {
                         ? 'Pause beenden'
                         : 'Pause hinzufügen'),
               ),
-              const SizedBox(height: 24),
             ],
-          ),
-        ),
+          );
+
+          return ResponsiveCenter(
+            maxContentWidth: contentWidth,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: isWide
+                  ? Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              timerDisplay,
+                              const SizedBox(height: 32),
+                              overtimeStats,
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 32),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              timerControls,
+                              const SizedBox(height: 32),
+                              breaksSection,
+                            ],
+                          ),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        timerDisplay,
+                        const SizedBox(height: 24),
+                        overtimeStats,
+                        const SizedBox(height: 24),
+                        timerControls,
+                        const SizedBox(height: 24),
+                        breaksSection,
+                        const SizedBox(height: 24),
+                      ],
+                    ),
+            ),
+          );
+        },
       ),
     );
   }
