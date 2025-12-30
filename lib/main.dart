@@ -1,5 +1,5 @@
-import 'package:flutter/foundation.dart'; // Added for kIsWeb
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_work_time/presentation/screens/home_screen.dart';
@@ -12,6 +12,8 @@ import 'package:flutter_work_time/core/utils/logger.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:purchases_flutter/purchases_flutter.dart';
+import 'dart:io' show Platform;
 
 import 'core/config/google_sign_in_config.dart';
 import 'core/providers/providers.dart';
@@ -48,6 +50,26 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // RevenueCat Setup
+  await Purchases.setLogLevel(LogLevel.debug);
+  PurchasesConfiguration configuration;
+  
+  // Lese Keys aus Environment Variables (via --dart-define)
+  const rcAndroidKey = String.fromEnvironment('RC_ANDROID_KEY', defaultValue: 'goog_api_key_placeholder');
+  const rcIosKey = String.fromEnvironment('RC_IOS_KEY', defaultValue: 'appl_api_key_placeholder');
+  const rcWebKey = String.fromEnvironment('RC_WEB_KEY', defaultValue: 'web_api_key_placeholder');
+
+  if (kIsWeb) {
+    configuration = PurchasesConfiguration(rcWebKey);
+  } else if (Platform.isAndroid) {
+    configuration = PurchasesConfiguration(rcAndroidKey);
+  } else if (Platform.isIOS) {
+    configuration = PurchasesConfiguration(rcIosKey);
+  } else {
+    configuration = PurchasesConfiguration("other_platform_key_placeholder");
+  }
+  await Purchases.configure(configuration);
 
   // Der Site Key wird sicher via --dart-define=RECAPTCHA_SITE_KEY=your_key beim Build injiziert
   const String kWebRecaptchaSiteKey = String.fromEnvironment('RECAPTCHA_SITE_KEY');
