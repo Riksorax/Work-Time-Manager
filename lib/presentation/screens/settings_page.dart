@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/providers/providers.dart' as core_providers;
 import '../../data/repositories/hybrid_work_repository_impl.dart';
@@ -19,6 +20,7 @@ import '../widgets/privacy_policy_dialog.dart';
 import '../widgets/imprint_dialog.dart';
 import '../widgets/terms_of_service_dialog.dart';
 import '../widgets/notification_settings_dialog.dart';
+import '../widgets/common/responsive_center.dart';
 import 'login_page.dart';
 
 class SettingsPage extends ConsumerWidget {
@@ -28,7 +30,6 @@ class SettingsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final settingsValue = ref.watch(settingsViewModelProvider);
-    final themeMode = ref.watch(themeViewModelProvider);
     final themeNotifier = ref.read(themeViewModelProvider.notifier);
     final authState = ref.watch(authStateProvider);
 
@@ -41,157 +42,226 @@ class SettingsPage extends ConsumerWidget {
         error: (err, stack) => Center(child: Text('Fehler: $err')),
         data: (settingsState) {
           final settings = settingsState.settings;
-          return ListView(
-            children: [
-              const SizedBox(height: 16),
-              _buildProfileSection(context, ref),
-              const SizedBox(height: 8),
-              _buildAuthButton(context, ref),
-              const SizedBox(height: 8),
-              const SizedBox(height: 16),
-              const Divider(height: 1),
-              ListTile(
-                title: const Text('Soll-Arbeitsstunden'),
-                subtitle: Text(
-                  '${settings.weeklyTargetHours.toStringAsFixed(1)} h/Woche',
-                ),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  showEditTargetHoursModal(
-                    context,
-                    settings.weeklyTargetHours,
+
+          final topSection = [
+            const SizedBox(height: 16),
+            _buildProfileSection(context, ref),
+            const SizedBox(height: 8),
+            _buildAuthButton(context, ref),
+            const SizedBox(height: 8),
+            const SizedBox(height: 16),
+          ];
+
+          final leftColumnChildren = [
+            ...topSection,
+            const Divider(height: 1),
+            ListTile(
+              title: const Text('Soll-Arbeitsstunden'),
+              subtitle: Text(
+                '${settings.weeklyTargetHours.toStringAsFixed(1)} h/Woche',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                showEditTargetHoursModal(
+                  context,
+                  settings.weeklyTargetHours,
+                );
+              },
+            ),
+            ListTile(
+              title: const Text('Arbeitstage pro Woche'),
+              subtitle: Text(
+                '${settings.workdaysPerWeek} Tage',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                showEditWorkdaysModal(
+                  context,
+                  settings.workdaysPerWeek,
+                );
+              },
+            ),
+            ListTile(
+              title: const Text('Tägliche Soll-Arbeitszeit'),
+              subtitle: Text(
+                '≈ ${settings.workdaysPerWeek > 0 ? (settings.weeklyTargetHours / settings.workdaysPerWeek).toStringAsFixed(1) : '0.0'} h/Tag',
+              ),
+            ),
+            const Divider(height: 1),
+            const SizedBox(height: 16),
+            _buildOvertimeBalance(context, settingsState.overtimeBalance),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: ElevatedButton(
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => const AddAdjustmentModal(),
                   );
                 },
+                child: const Text('Überstunden / Minusstunden anpassen'),
               ),
+            ),
+            const SizedBox(height: 16),
+            _buildDataSyncSection(context, ref, authState),
+            const SizedBox(height: 16),
+          ];
+
+          final rightColumnChildren = [
+            const Divider(height: 1),
+            SwitchListTile(
+              title: const Text('Design'),
+              subtitle: Text(Theme.of(context).brightness == Brightness.dark ? 'Dunkel' : 'Hell'),
+              value: Theme.of(context).brightness == Brightness.dark,
+              onChanged: (isDark) {
+                themeNotifier.setTheme(isDark ? ThemeMode.dark : ThemeMode.light);
+              },
+            ),
+            const Divider(height: 1),
+            ListTile(
+              title: const Text('Benachrichtigungen'),
+              subtitle: settingsState.settings.notificationsEnabled
+                  ? Text('Aktiviert um ${settingsState.settings.notificationTime} Uhr')
+                  : const Text('Deaktiviert'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                NotificationSettingsDialog.show(context, settingsState.settings);
+              },
+            ),
+            const Divider(height: 1),
+            FutureBuilder<PackageInfo>(
+              future: PackageInfo.fromPlatform(),
+              builder: (context, snapshot) {
+                final version = snapshot.data?.version ?? '...';
+                return ListTile(
+                  title: const Text('Version'),
+                  trailing: Text(version),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.shop, color: Colors.green),
+              title: const Text('App im Google Play Store herunterladen'),
+              subtitle: const Text('Installieren Sie die offizielle Android-App'),
+              trailing: const Icon(Icons.open_in_new),
+              onTap: () async {
+                final url = Uri.parse(
+                  'https://play.google.com/store/apps/details?id=app.work_time_manager',
+                );
+                if (await canLaunchUrl(url)) {
+                  await launchUrl(url, mode: LaunchMode.externalApplication);
+                }
+              },
+            ),
+            const Divider(height: 1),
+            if (kDebugMode)
               ListTile(
-                title: const Text('Arbeitstage pro Woche'),
-                subtitle: Text(
-                  '${settings.workdaysPerWeek} Tage',
-                ),
-                trailing: const Icon(Icons.chevron_right),
+                leading: const Icon(Icons.bug_report, color: Colors.orange),
+                title: const Text('🧪 TEST: Version Check'),
+                subtitle: const Text('Update-Dialog manuell anzeigen'),
+                onTap: () async {
+                  final versionService = ref.read(core_providers.versionServiceProvider);
+                  await UpdateRequiredDialog.checkAndShow(context, versionService);
+                },
+              ),
+            ListTile(
+              title: const Text('Impressum'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => ImprintDialog.show(context),
+            ),
+            ListTile(
+              title: const Text('AGB'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => TermsOfServiceDialog.show(context),
+            ),
+            ListTile(
+              title: const Text('Datenschutz'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => PrivacyPolicyDialog.show(context),
+            ),
+            if (authState.asData?.value != null) ...[
+              const Divider(height: 1),
+              ListTile(
+                leading: Icon(Icons.delete_forever, color: theme.colorScheme.error),
+                title: Text('Account löschen', style: TextStyle(color: theme.colorScheme.error)),
                 onTap: () {
-                  showEditWorkdaysModal(
-                    context,
-                    settings.workdaysPerWeek,
-                  );
-                },
-              ),
-              ListTile(
-                title: const Text('Tägliche Soll-Arbeitszeit'),
-                subtitle: Text(
-                  '≈ ${settings.workdaysPerWeek > 0 ? (settings.weeklyTargetHours / settings.workdaysPerWeek).toStringAsFixed(1) : '0.0'} h/Tag',
-                ),
-              ),
-              const Divider(height: 1),
-              const SizedBox(height: 16),
-              _buildOvertimeBalance(context, settingsState.overtimeBalance),
-              const SizedBox(height: 16),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: ElevatedButton(
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (context) => const AddAdjustmentModal(),
-                    );
-                  },
-                  child: const Text('Überstunden / Minusstunden anpassen'),
-                ),
-              ),
-              const SizedBox(height: 16),
-              _buildDataSyncSection(context, ref, authState),
-              const SizedBox(height: 16),
-              const Divider(height: 1),
-              SwitchListTile(
-                title: const Text('Design'),
-                subtitle: Text(themeMode == ThemeMode.dark ? 'Dunkel' : 'Hell'),
-                value: themeMode == ThemeMode.dark,
-                onChanged: (isDark) {
-                  themeNotifier.setTheme(isDark ? ThemeMode.dark : ThemeMode.light);
-                },
-              ),
-              const Divider(height: 1),
-              ListTile(
-                title: const Text('Benachrichtigungen'),
-                subtitle: settingsState.settings.notificationsEnabled
-                    ? Text('Aktiviert um ${settingsState.settings.notificationTime} Uhr')
-                    : const Text('Deaktiviert'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  NotificationSettingsDialog.show(context, settingsState.settings);
-                },
-              ),
-              const Divider(height: 1),
-              FutureBuilder<PackageInfo>(
-                future: PackageInfo.fromPlatform(),
-                builder: (context, snapshot) {
-                  final version = snapshot.data?.version ?? '...';
-                  return ListTile(
-                    title: const Text('Version'),
-                    trailing: Text(version),
-                  );
-                },
-              ),
-              // DEBUG: Test-Button für Version-Check (nur im Debug-Modus)
-              if (kDebugMode)
-                ListTile(
-                  leading: const Icon(Icons.bug_report, color: Colors.orange),
-                  title: const Text('🧪 TEST: Version Check'),
-                  subtitle: const Text('Update-Dialog manuell anzeigen'),
-                  onTap: () async {
-                    final versionService = ref.read(core_providers.versionServiceProvider);
-                    await UpdateRequiredDialog.checkAndShow(context, versionService);
-                  },
-                ),
-              ListTile(
-                title: const Text('Impressum'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => ImprintDialog.show(context),
-              ),
-              ListTile(
-                title: const Text('AGB'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => TermsOfServiceDialog.show(context),
-              ),
-              ListTile(
-                title: const Text('Datenschutz'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => PrivacyPolicyDialog.show(context),
-              ),
-              if (authState.asData?.value != null) ...[
-                const Divider(height: 1),
-                ListTile(
-                  leading: Icon(Icons.delete_forever, color: theme.colorScheme.error),
-                  title: Text('Account löschen', style: TextStyle(color: theme.colorScheme.error)),
-                  onTap: () {
-                    showDialog(
-                      context: context,
-                      builder: (dialogContext) => AlertDialog(
-                        title: const Text('Account endgültig löschen'),
-                        content: const Text(
-                            'Warnung: Diese Aktion kann nicht rückgängig gemacht werden. Alle Ihre Daten, einschließlich der Arbeitszeiterfassung, werden dauerhaft gelöscht.'),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.of(dialogContext).pop(),
-                            child: const Text('Abbrechen'),
+                  showDialog(
+                    context: context,
+                    builder: (dialogContext) => AlertDialog(
+                      title: const Text('Account endgültig löschen'),
+                      content: const Text(
+                          'Warnung: Diese Aktion kann nicht rückgängig gemacht werden. Alle Ihre Daten, einschließlich der Arbeitszeiterfassung, werden dauerhaft gelöscht.'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(dialogContext).pop(),
+                          child: const Text('Abbrechen'),
+                        ),
+                        FilledButton(
+                          onPressed: () {
+                            Navigator.of(dialogContext).pop();
+                            ref.read(deleteAccountProvider)();
+                          },
+                          style: FilledButton.styleFrom(
+                            backgroundColor: theme.colorScheme.error,
                           ),
-                          FilledButton(
-                            onPressed: () {
-                              Navigator.of(dialogContext).pop();
-                              ref.read(deleteAccountProvider)();
-                            },
-                            style: FilledButton.styleFrom(
-                              backgroundColor: theme.colorScheme.error,
-                            ),
-                            child: const Text('Endgültig löschen'),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ],
+                          child: const Text('Endgültig löschen'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
             ],
+          ];
+
+          return ResponsiveCenter(
+            maxContentWidth: 1200,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth > 900) {
+                  return SingleChildScrollView(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: leftColumnChildren,
+                          ),
+                        ),
+                        const SizedBox(width: 32),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              // Invisible spacer to match left column's top section
+                              Visibility(
+                                maintainSize: true,
+                                maintainAnimation: true,
+                                maintainState: true,
+                                visible: false,
+                                child: Column(
+                                  children: topSection,
+                                ),
+                              ),
+                              ...rightColumnChildren,
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                } else {
+                  return ListView(
+                    children: [
+                      ...leftColumnChildren,
+                      ...rightColumnChildren,
+                    ],
+                  );
+                }
+              },
+            ),
           );
         },
       ),

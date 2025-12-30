@@ -209,5 +209,8 @@ google-services.json
 FIRESTORE_SECURITY_RULES.md
 TEST_VERSION_CHECK.md
 VERSION_CHECK_SETUP.md
+PR_DESCRIPTION.md
+TEST_REPORT.md
+README_DEPLOYMENT.md
 
 # End of https://www.toptal.com/developers/gitignore/api/flutter,androidstudio

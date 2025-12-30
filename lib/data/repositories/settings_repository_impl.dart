@@ -74,25 +74,6 @@ class SettingsRepositoryImpl implements SettingsRepository {
   }
 
   @override
-  Future<List<WorkEntryEntity>> getAllOldWorkEntries() async {
-    return await _firestoreDataSource.getAllOldWorkEntries(_userId);
-  }
-
-  @override
-  Future<void> saveMigratedWorkEntries(Map<String, List<WorkEntryEntity>> monthlyEntries) async {
-    for (final entry in monthlyEntries.entries) {
-      for (final workEntry in entry.value) {
-        await _firestoreDataSource.saveWorkEntry(_userId, WorkEntryModel.fromEntity(workEntry));
-      }
-    }
-  }
-
-  @override
-  Future<void> deleteAllOldWorkEntries(List<String> entryIds) async {
-    await _firestoreDataSource.deleteAllOldWorkEntries(_userId, entryIds);
-  }
-
-  @override
   bool hasAcceptedTermsOfService() {
     return _prefs.getBool(_acceptedTermsOfServiceKey) ?? false;
   }

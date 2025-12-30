@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart'; // Added for kIsWeb
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -31,23 +32,29 @@ Future<void> main() async {
     final timeZoneName = await FlutterTimezone.getLocalTimezone();
     tz.setLocalLocation(tz.getLocation(timeZoneName.toString()));
   } catch (e) {
-    logger.e("Could not get local timezone, falling back to 'Europe/Berlin'", error: e);
-    tz.setLocalLocation(tz.getLocation('Europe/Berlin'));
+    logger.w("Could not get local timezone, falling back to UTC/Europe/Berlin");
+    // Fallback logic
+    try {
+      tz.setLocalLocation(tz.getLocation('Europe/Berlin'));
+    } catch (_) {
+      tz.setLocalLocation(tz.getLocation('UTC'));
+    }
   }
 
 
   await initializeDateFormatting('de_DE', null);
   Intl.defaultLocale = 'de_DE';
 
-  await GoogleSignIn.instance.initialize(
-    serverClientId: GoogleSignInConfig.serverClientId,
-  );
-
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  await AppBootstrap.ensureInitializedForEnv();
+  // Der Site Key wird sicher via --dart-define=RECAPTCHA_SITE_KEY=your_key beim Build injiziert
+  const String kWebRecaptchaSiteKey = String.fromEnvironment('RECAPTCHA_SITE_KEY');
+  
+  await AppBootstrap.ensureInitializedForEnv(
+    webRecaptchaSiteKey: kWebRecaptchaSiteKey.isEmpty ? null : kWebRecaptchaSiteKey,
+  );
 
   final prefs = await SharedPreferences.getInstance();
 

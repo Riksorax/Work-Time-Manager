@@ -26,9 +26,11 @@ class AppBootstrap {
 
   /// Initialisiert Firebase und aktiviert App Check.
   /// - androidProvider: Produktion `PlayIntegrity`, Entwicklung `AndroidProvider.debug`.
+  /// - webRecaptchaSiteKey: Der ReCaptcha V3 Site Key für Web Support.
   /// - autoRefresh: Hält das App-Check-Token automatisch aktuell.
   static Future<void> ensureInitialized({
     AndroidProvider androidProvider = AndroidProvider.playIntegrity,
+    String? webRecaptchaSiteKey,
     bool autoRefresh = true,
   }) async {
     if (_initialized) return;
@@ -40,14 +42,18 @@ class AppBootstrap {
       await Firebase.initializeApp();
     }
 
-    // App Check aktivieren (Android-only) mit Fallback für Dev-Installationen
+    // App Check aktivieren
     try {
       await FirebaseAppCheck.instance.activate(
         androidProvider: androidProvider,
+        appleProvider: AppleProvider.appAttest,
+        webProvider: kIsWeb && webRecaptchaSiteKey != null 
+            ? ReCaptchaV3Provider(webRecaptchaSiteKey) 
+            : null,
       );
     } catch (e) {
       // Häufige Ursache: Play Integrity schlägt fehl bei Side-Load/Emulator
-      if (androidProvider == AndroidProvider.playIntegrity) {
+      if (!kIsWeb && androidProvider == AndroidProvider.playIntegrity) {
         debugPrint(
           '[AppCheck] Play Integrity Aktivierung fehlgeschlagen. Fallback auf AndroidProvider.debug. '
           'Für Release: über Play (interner Test) installieren.',
@@ -55,10 +61,13 @@ class AppBootstrap {
         try {
           await FirebaseAppCheck.instance.activate(
             androidProvider: AndroidProvider.debug,
+            appleProvider: AppleProvider.debug,
           );
         } catch (_) {
           // Ignorieren; Fehler wird beim ersten Request sichtbar.
         }
+      } else {
+        debugPrint('[AppCheck] Fehler bei der Aktivierung: $e');
       }
     }
 
@@ -69,14 +78,24 @@ class AppBootstrap {
   }
 
   /// Bequeme Variante: in Debug App Check überspringen, in Release aktivieren.
-  static Future<void> ensureInitializedForEnv() async {
+  static Future<void> ensureInitializedForEnv({String? webRecaptchaSiteKey}) async {
     if (kReleaseMode) {
       return ensureInitialized(
         androidProvider: AndroidProvider.playIntegrity,
+        webRecaptchaSiteKey: webRecaptchaSiteKey,
         autoRefresh: true,
       );
     } else {
       // In Debug: App Check nicht aktivieren, um GMS/Phenotype-Rauschen zu vermeiden
+      // Ausnahme: Wenn wir explizit Web debuggen wollen und einen Key haben
+      if (kIsWeb && webRecaptchaSiteKey != null) {
+         debugPrint('[AppCheck] Debug-Build (Web): App Check wird aktiviert.');
+         return ensureInitialized(
+           webRecaptchaSiteKey: webRecaptchaSiteKey,
+           autoRefresh: true,
+         );
+      }
+      
       debugPrint('[AppCheck] Debug-Build erkannt: App Check wird übersprungen.');
       _initialized = true;
       return;

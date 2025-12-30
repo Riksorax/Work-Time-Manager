@@ -88,6 +88,7 @@ class BreakCalculatorService {
           name: 'Mittagspause',
           start: breakStart,
           end: breakEnd,
+          isAutomatic: true,
         ));
       }
     }

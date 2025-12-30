@@ -1,0 +1,60 @@
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Flutter Build-Artefakte
+build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# Android/iOS (nicht für Web benötigt)
+android/
+ios/
+macos/
+linux/
+windows/
+
+# Tests
+test/
+coverage/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs und temporäre Dateien
+*.log
+*.tmp
+*.temp
+*.pyc
+*.swp
+
+# Environment
+.env
+.env.local
+
+# Dokumentation
+*.md
+README.md
+LICENSE
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
