@@ -17,9 +17,10 @@ COPY . .
 
 # Argument für ReCaptcha Site Key (wird via --build-arg übergeben)
 ARG RECAPTCHA_SITE_KEY
+ARG RC_WEB_KEY
 
 # Baue die Web-App im Release-Modus mit dem injizierten Key
-RUN flutter build web --release --dart-define=RECAPTCHA_SITE_KEY=$RECAPTCHA_SITE_KEY
+RUN flutter build web --release --dart-define=RECAPTCHA_SITE_KEY=$RECAPTCHA_SITE_KEY --dart-define=RC_WEB_KEY=$RC_WEB_KEY
 
 # Stage 2: Nginx Server für die Web-App
 FROM nginx:alpine
