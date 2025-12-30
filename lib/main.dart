@@ -52,24 +52,27 @@ Future<void> main() async {
   );
 
   // RevenueCat Setup
-  await Purchases.setLogLevel(LogLevel.debug);
-  PurchasesConfiguration configuration;
-  
-  // Lese Keys aus Environment Variables (via --dart-define)
-  const rcAndroidKey = String.fromEnvironment('RC_ANDROID_KEY', defaultValue: 'goog_api_key_placeholder');
-  const rcIosKey = String.fromEnvironment('RC_IOS_KEY', defaultValue: 'appl_api_key_placeholder');
-  const rcWebKey = String.fromEnvironment('RC_WEB_KEY', defaultValue: 'web_api_key_placeholder');
+  // Wir initialisieren RevenueCat NUR auf mobilen Plattformen (Android/iOS),
+  // da wir im Web aktuell keine Zahlungen unterstützen und die Initialisierung
+  // ohne gültigen Web-Billing-Key sonst zu einem Absturz führt.
+  if (!kIsWeb) {
+    await Purchases.setLogLevel(LogLevel.debug);
+    PurchasesConfiguration configuration;
+    
+    // Lese Keys aus Environment Variables (via --dart-define)
+    const rcAndroidKey = String.fromEnvironment('RC_ANDROID_KEY', defaultValue: 'goog_api_key_placeholder');
+    const rcIosKey = String.fromEnvironment('RC_IOS_KEY', defaultValue: 'appl_api_key_placeholder');
 
-  if (kIsWeb) {
-    configuration = PurchasesConfiguration(rcWebKey);
-  } else if (Platform.isAndroid) {
-    configuration = PurchasesConfiguration(rcAndroidKey);
-  } else if (Platform.isIOS) {
-    configuration = PurchasesConfiguration(rcIosKey);
-  } else {
-    configuration = PurchasesConfiguration("other_platform_key_placeholder");
+    if (Platform.isAndroid) {
+      configuration = PurchasesConfiguration(rcAndroidKey);
+    } else if (Platform.isIOS) {
+      configuration = PurchasesConfiguration(rcIosKey);
+    } else {
+      // Fallback für andere Plattformen, falls nötig
+      configuration = PurchasesConfiguration("other_platform_key_placeholder");
+    }
+    await Purchases.configure(configuration);
   }
-  await Purchases.configure(configuration);
 
   // Der Site Key wird sicher via --dart-define=RECAPTCHA_SITE_KEY=your_key beim Build injiziert
   const String kWebRecaptchaSiteKey = String.fromEnvironment('RECAPTCHA_SITE_KEY');
