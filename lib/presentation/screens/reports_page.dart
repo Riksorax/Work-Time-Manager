@@ -41,13 +41,6 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
 
-    _tabController.addListener(() {
-      if (!_tabController.indexIsChanging &&
-          _tabController.index != _tabController.previousIndex) {
-        _handleTabChange(_tabController.index);
-      }
-    });
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(reportsViewModelProvider.notifier).loadCurrentMonthData();
 
@@ -63,58 +56,6 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
   void dispose() {
     _tabController.dispose();
     super.dispose();
-  }
-
-  void _handleTabChange(int index) {
-    if (index == 1 || index == 2) {
-      final authState = ref.read(authStateProvider);
-
-      final isNotLoggedIn = authState.maybeWhen(
-        data: (user) => user == null,
-        orElse: () => false,
-      );
-
-      if (isNotLoggedIn) {
-        ref.read(pendingReportTabIndexProvider.notifier).state = index;
-        _tabController.index = 0;
-
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _showLoginRequiredDialog();
-        });
-
-        return;
-      }
-    }
-  }
-
-  void _showLoginRequiredDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Anmeldung erforderlich'),
-        content: const Text(
-            'Wochen- und Monatsberichte sind nur für angemeldete Benutzer verfügbar.'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              ref.read(pendingReportTabIndexProvider.notifier).state = null;
-              Navigator.of(context).pop();
-            },
-            child: const Text('Abbrechen'),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                    builder: (context) => const LoginPage(returnToIndex: 1)),
-              );
-            },
-            child: const Text('Anmelden'),
-          ),
-        ],
-      ),
-    );
   }
 
   void _showEditWorkEntryModal(WorkEntryEntity entry, BuildContext context) {
@@ -268,245 +209,275 @@ class DailyReportView extends ConsumerWidget {
         }
         final dayOvertime = totalWorked - dailyTarget + totalManualAdjustment;
 
-        return ResponsiveCenter(
-          child: ListView(
-            children: [
-              _Calendar(
-                selectedDate: selectedDay,
-                onDateSelected: (date) => reportsNotifier.selectDate(date),
-                onPreviousMonthTapped: () {
-                  final currentMonth =
-                      reportsState.selectedMonth ?? DateTime.now();
-                  reportsNotifier.onMonthChanged(
-                      DateTime(currentMonth.year, currentMonth.month - 1, 1));
-                },
-                onNextMonthTapped: () {
-                  final currentMonth =
-                      reportsState.selectedMonth ?? DateTime.now();
-                  reportsNotifier.onMonthChanged(
-                      DateTime(currentMonth.year, currentMonth.month + 1, 1));
-                },
-                daysWithEntries: daysWithEntriesInMonth,
-              ),
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Tagesbericht für ${DateFormat.yMMMMd('de_DE').format(selectedDay)}',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 16),
-                    if (dailyReport.entries.isEmpty)
-                      Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Text('Keine Daten für diesen Tag.'),
-                            Builder(builder: (context) {
-                              final today = DateUtils.dateOnly(DateTime.now());
-                              final selectedDateOnly =
-                                  DateUtils.dateOnly(selectedDay);
+        // --- Widgets Construction ---
 
-                              if (selectedDateOnly.isBefore(today)) {
-                                return Padding(
-                                  padding: const EdgeInsets.only(top: 16.0),
-                                  child: Column(
-                                    children: [
-                                      ElevatedButton(
-                                        onPressed: () {
-                                          final newEntry = WorkEntryEntity(
-                                            id: DateFormat('yyyy-MM-dd')
-                                                .format(selectedDay),
-                                            date: selectedDay,
-                                            workStart: null,
-                                            workEnd: null,
-                                            breaks: [],
-                                            isManuallyEntered: true,
-                                            description: null,
-                                            manualOvertime: null,
-                                          );
-                                          onEntryTap(newEntry);
-                                        },
-                                        child: const Text('Eintrag hinzufügen'),
-                                      ),
-                                      const SizedBox(height: 12),
-                                      OutlinedButton(
-                                        onPressed: () => _handleQuickEntry(
-                                            context, ref, selectedDay),
-                                        child: const Text(
-                                            'Schnell-Eintrag (Urlaub, Krank...)'),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              } else {
-                                return const SizedBox.shrink();
-                              }
-                            }),
-                          ],
-                        ),
-                      )
-                    else ...[
-                      Card(
-                        margin: const EdgeInsets.only(bottom: 12.0),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12.0),
+        final calendarWidget = _Calendar(
+          selectedDate: selectedDay,
+          onDateSelected: (date) => reportsNotifier.selectDate(date),
+          onPreviousMonthTapped: () {
+            final currentMonth = reportsState.selectedMonth ?? DateTime.now();
+            reportsNotifier.onMonthChanged(
+                DateTime(currentMonth.year, currentMonth.month - 1, 1));
+          },
+          onNextMonthTapped: () {
+            final currentMonth = reportsState.selectedMonth ?? DateTime.now();
+            reportsNotifier.onMonthChanged(
+                DateTime(currentMonth.year, currentMonth.month + 1, 1));
+          },
+          daysWithEntries: daysWithEntriesInMonth,
+        );
+
+        final detailsWidget = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Tagesbericht für ${DateFormat.yMMMMd('de_DE').format(selectedDay)}',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 16),
+            if (dailyReport.entries.isEmpty)
+              Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text('Keine Daten für diesen Tag.'),
+                    Builder(builder: (context) {
+                      final today = DateUtils.dateOnly(DateTime.now());
+                      final selectedDateOnly = DateUtils.dateOnly(selectedDay);
+
+                      if (selectedDateOnly.isBefore(today)) {
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 16.0),
                           child: Column(
                             children: [
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text('Soll (Tag):',
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.bold)),
-                                  Text(
-                                    '${dailyTarget.inHours.toString().padLeft(2, '0')}:${dailyTarget.inMinutes.remainder(60).toString().padLeft(2, '0')}',
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.bold),
-                                  ),
-                                ],
+                              SizedBox(
+                                width: 280,
+                                child: ElevatedButton.icon(
+                                  onPressed: () {
+                                    final newEntry = WorkEntryEntity(
+                                      id: DateFormat('yyyy-MM-dd')
+                                          .format(selectedDay),
+                                      date: selectedDay,
+                                      workStart: null,
+                                      workEnd: null,
+                                      breaks: [],
+                                      isManuallyEntered: true,
+                                      description: null,
+                                      manualOvertime: null,
+                                    );
+                                    onEntryTap(newEntry);
+                                  },
+                                  icon: const Icon(Icons.add),
+                                  label: const Text('Eintrag hinzufügen'),
+                                ),
                               ),
-                              const SizedBox(height: 6),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text('Ist (Tag):'),
-                                  Text(
-                                    '${totalWorked.inHours.toString().padLeft(2, '0')}:${totalWorked.inMinutes.remainder(60).toString().padLeft(2, '0')}',
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                width: 280,
+                                child: ElevatedButton.icon(
+                                  onPressed: () => _handleQuickEntry(
+                                      context, ref, selectedDay),
+                                  icon: const Icon(Icons.flash_on),
+                                  label: const Text(
+                                      'Schnell-Eintrag (Urlaub, Krank...)'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+                                    foregroundColor: Theme.of(context).colorScheme.onSecondaryContainer,
                                   ),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text('Saldo (Tag):',
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.bold)),
-                                  Text(
-                                    _formatDuration(dayOvertime),
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: (dayOvertime.isNegative
-                                          ? Colors.red
-                                          : Colors.green),
-                                    ),
-                                  ),
-                                ],
+                                ),
                               ),
                             ],
                           ),
-                        ),
-                      ),
-                      ...dailyReport.entries.map((entry) {
-                        final displayEntry = ref
-                            .read(reportsViewModelProvider.notifier)
-                            .applyBreakCalculation(entry);
-                        final DateTime? start = displayEntry.workStart;
-                        final DateTime end =
-                            displayEntry.workEnd ?? DateTime.now();
-                        Duration breakDuration = Duration.zero;
-                        if (start != null) {
-                          for (final b in displayEntry.breaks) {
-                            final DateTime bStart = b.start;
-                            final DateTime bEnd = b.end ?? end;
-                            final DateTime effStart =
-                                bStart.isBefore(start) ? start : bStart;
-                            final DateTime effEnd =
-                                bEnd.isAfter(end) ? end : bEnd;
-                            if (effEnd.isAfter(effStart)) {
-                              breakDuration += effEnd.difference(effStart);
-                            }
-                          }
-                        }
-                        final Duration workedDuration = (start != null)
-                            ? end.difference(start) - breakDuration
-                            : Duration.zero;
-
-                        final isSpecialType =
-                            displayEntry.type != WorkEntryType.work;
-
-                        return Card(
-                          margin: const EdgeInsets.symmetric(vertical: 4.0),
-                          child: Padding(
-                            padding: const EdgeInsets.all(12.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      isSpecialType
-                                          ? _getWorkEntryTypeLabel(
-                                              displayEntry.type)
-                                          : 'Arbeitszeit: ${workedDuration.toString().split('.').first}',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium,
-                                    ),
-                                    Row(
-                                      children: [
-                                        IconButton(
-                                          icon: const Icon(Icons.edit),
-                                          onPressed: () => onEntryTap(entry),
-                                        ),
-                                        IconButton(
-                                          icon: const Icon(Icons.delete),
-                                          onPressed: () => _confirmDelete(
-                                              context, ref, entry),
-                                        ),
-                                      ],
-                                    )
-                                  ],
-                                ),
-                                if (!isSpecialType ||
-                                    displayEntry.workStart != null ||
-                                    displayEntry.workEnd != null) ...[
-                                  const SizedBox(height: 8),
-                                  Text(
-                                      'Start: ${displayEntry.workStart != null ? DateFormat('HH:mm').format(displayEntry.workStart!) : '-'}'),
-                                  Text(
-                                      'Ende: ${displayEntry.workEnd != null ? DateFormat('HH:mm').format(displayEntry.workEnd!) : (isSpecialType ? '-' : 'läuft...')}'),
-                                  if (!isSpecialType)
-                                    Text(
-                                        'Pause: ${displayEntry.totalBreakDuration.toString().split('.').first}'),
-                                ],
-                                if (displayEntry.manualOvertime != null)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 8.0),
-                                    child: Text(
-                                        'Manuelle Anpassung: ${displayEntry.manualOvertime.toString().split('.').first}'),
-                                  ),
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 8.0),
-                                  child: Text(
-                                    'Überstunden: ${_formatDuration(displayEntry.calculateOvertime(dailyTarget))}',
-                                    style: TextStyle(
-                                        color: (displayEntry
-                                                .calculateOvertime(dailyTarget)
-                                                .isNegative
-                                            ? Colors.red
-                                            : Colors.green),
-                                        fontWeight: FontWeight.bold),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
                         );
-                      }),
-                    ],
+                      } else {
+                        return const SizedBox.shrink();
+                      }
+                    }),
                   ],
                 ),
+              )
+            else ...[
+              Card(
+                margin: const EdgeInsets.only(bottom: 12.0),
+                child: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Soll (Tag):',
+                              style: TextStyle(fontWeight: FontWeight.bold)),
+                          Text(
+                            '${dailyTarget.inHours.toString().padLeft(2, '0')}:${dailyTarget.inMinutes.remainder(60).toString().padLeft(2, '0')}',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Ist (Tag):'),
+                          Text(
+                            '${totalWorked.inHours.toString().padLeft(2, '0')}:${totalWorked.inMinutes.remainder(60).toString().padLeft(2, '0')}',
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Saldo (Tag):',
+                              style: TextStyle(fontWeight: FontWeight.bold)),
+                          Text(
+                            _formatDuration(dayOvertime),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: (dayOvertime.isNegative
+                                  ? Colors.red
+                                  : Colors.green),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ),
+              ...dailyReport.entries.map((entry) {
+                final displayEntry = ref
+                    .read(reportsViewModelProvider.notifier)
+                    .applyBreakCalculation(entry);
+                final DateTime? start = displayEntry.workStart;
+                final DateTime end = displayEntry.workEnd ?? DateTime.now();
+                Duration breakDuration = Duration.zero;
+                if (start != null) {
+                  for (final b in displayEntry.breaks) {
+                    final DateTime bStart = b.start;
+                    final DateTime bEnd = b.end ?? end;
+                    final DateTime effStart =
+                        bStart.isBefore(start) ? start : bStart;
+                    final DateTime effEnd = bEnd.isAfter(end) ? end : bEnd;
+                    if (effEnd.isAfter(effStart)) {
+                      breakDuration += effEnd.difference(effStart);
+                    }
+                  }
+                }
+                final Duration workedDuration = (start != null)
+                    ? end.difference(start) - breakDuration
+                    : Duration.zero;
+
+                final isSpecialType = displayEntry.type != WorkEntryType.work;
+
+                return Card(
+                  margin: const EdgeInsets.symmetric(vertical: 4.0),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              isSpecialType
+                                  ? _getWorkEntryTypeLabel(displayEntry.type)
+                                  : 'Arbeitszeit: ${workedDuration.toString().split('.').first}',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            Row(
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.edit),
+                                  onPressed: () => onEntryTap(entry),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete),
+                                  onPressed: () =>
+                                      _confirmDelete(context, ref, entry),
+                                ),
+                              ],
+                            )
+                          ],
+                        ),
+                        if (!isSpecialType ||
+                            displayEntry.workStart != null ||
+                            displayEntry.workEnd != null) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                              'Start: ${displayEntry.workStart != null ? DateFormat('HH:mm').format(displayEntry.workStart!) : '-'}'),
+                          Text(
+                              'Ende: ${displayEntry.workEnd != null ? DateFormat('HH:mm').format(displayEntry.workEnd!) : (isSpecialType ? '-' : 'läuft...')}'),
+                          if (!isSpecialType)
+                            Text(
+                                'Pause: ${displayEntry.totalBreakDuration.toString().split('.').first}'),
+                        ],
+                        if (displayEntry.manualOvertime != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: Text(
+                                'Manuelle Anpassung: ${displayEntry.manualOvertime.toString().split('.').first}'),
+                          ),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Text(
+                            'Überstunden: ${_formatDuration(displayEntry.calculateOvertime(dailyTarget))}',
+                            style: TextStyle(
+                                color: (displayEntry
+                                        .calculateOvertime(dailyTarget)
+                                        .isNegative
+                                    ? Colors.red
+                                    : Colors.green),
+                                fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
             ],
+          ],
+        );
+
+        return ResponsiveCenter(
+          maxContentWidth: 1200, // Increased for side-by-side view
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth > 900) {
+                // Side-by-side layout for desktop/wide tablets
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 400,
+                      child: SingleChildScrollView(
+                        child: calendarWidget,
+                      ),
+                    ),
+                    const SizedBox(width: 24),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.only(top: 8.0, bottom: 24.0),
+                        child: detailsWidget,
+                      ),
+                    ),
+                  ],
+                );
+              } else {
+                // Vertical layout for mobile
+                return ListView(
+                  children: [
+                    calendarWidget,
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: detailsWidget,
+                    ),
+                  ],
+                );
+              }
+            },
           ),
         );
       },
@@ -533,6 +504,31 @@ class WeeklyReportView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authStateProvider);
+    final user = authState.asData?.value;
+
+    if (user == null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('Anmeldung erforderlich'),
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: () {
+                ref.read(pendingReportTabIndexProvider.notifier).state = 1;
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                      builder: (context) => const LoginPage(returnToIndex: 1)),
+                );
+              },
+              child: const Text('Anmelden'),
+            ),
+          ],
+        ),
+      );
+    }
+
     final reportsState = ref.watch(reportsViewModelProvider);
     final reportsNotifier = ref.read(reportsViewModelProvider.notifier);
 
@@ -753,6 +749,31 @@ class MonthlyReportView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authStateProvider);
+    final user = authState.asData?.value;
+
+    if (user == null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('Anmeldung erforderlich'),
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: () {
+                ref.read(pendingReportTabIndexProvider.notifier).state = 2;
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                      builder: (context) => const LoginPage(returnToIndex: 1)),
+                );
+              },
+              child: const Text('Anmelden'),
+            ),
+          ],
+        ),
+      );
+    }
+
     final reportsState = ref.watch(reportsViewModelProvider);
     final reportsNotifier = ref.read(reportsViewModelProvider.notifier);
 
@@ -1265,29 +1286,41 @@ class _DayEntriesBottomSheetState extends ConsumerState<DayEntriesBottomSheet> {
                                 padding: const EdgeInsets.only(top: 16.0),
                                 child: Column(
                                   children: [
-                                    ElevatedButton(
-                                      onPressed: () {
-                                        final newEntry = WorkEntryEntity(
-                                          id: DateFormat('yyyy-MM-dd')
-                                              .format(widget.date),
-                                          date: widget.date,
-                                          workStart: null,
-                                          workEnd: null,
-                                          breaks: [],
-                                          isManuallyEntered: true,
-                                          description: null,
-                                          manualOvertime: null,
-                                        );
-                                        _openEdit(newEntry);
-                                      },
-                                      child: const Text('Eintrag hinzufügen'),
+                                    SizedBox(
+                                      width: 280,
+                                      child: ElevatedButton.icon(
+                                        onPressed: () {
+                                          final newEntry = WorkEntryEntity(
+                                            id: DateFormat('yyyy-MM-dd')
+                                                .format(widget.date),
+                                            date: widget.date,
+                                            workStart: null,
+                                            workEnd: null,
+                                            breaks: [],
+                                            isManuallyEntered: true,
+                                            description: null,
+                                            manualOvertime: null,
+                                          );
+                                          _openEdit(newEntry);
+                                        },
+                                        icon: const Icon(Icons.add),
+                                        label: const Text('Eintrag hinzufügen'),
+                                      ),
                                     ),
                                     const SizedBox(height: 12),
-                                    OutlinedButton(
-                                      onPressed: () => _handleQuickEntry(
-                                          context, ref, widget.date),
-                                      child: const Text(
-                                          'Schnell-Eintrag (Urlaub, Krank...)'),
+                                    SizedBox(
+                                      width: 280,
+                                      child: ElevatedButton.icon(
+                                        onPressed: () => _handleQuickEntry(
+                                            context, ref, widget.date),
+                                        icon: const Icon(Icons.flash_on),
+                                        label: const Text(
+                                            'Schnell-Eintrag (Urlaub, Krank...)'),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+                                          foregroundColor: Theme.of(context).colorScheme.onSecondaryContainer,
+                                        ),
+                                      ),
                                     ),
                                   ],
                                 ),

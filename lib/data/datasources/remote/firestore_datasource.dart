@@ -38,6 +38,9 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
         await _firebaseAuth.signInWithPopup(firebase.GoogleAuthProvider());
       } else {
         // Auf Mobile: Verwende google_sign_in mit authenticate()
+        // WICHTIG: initialize() muss vor authenticate() aufgerufen werden (seit google_sign_in 7.0)
+        await _googleSignIn.initialize();
+        
         final GoogleSignInAccount? googleUser = await _googleSignIn.authenticate(
           scopeHint: ['email', 'profile'],
         );
@@ -68,7 +71,10 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
 
   @override
   Future<void> signOut() async {
-    await Future.wait([_firebaseAuth.signOut(), _googleSignIn.signOut()]);
+    await _firebaseAuth.signOut();
+    if (!kIsWeb) {
+      await _googleSignIn.signOut();
+    }
   }
 
   @override
@@ -87,6 +93,8 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
           await userCredential.user?.delete();
         } else {
           // Auf Mobile: authenticate()
+          await _googleSignIn.initialize();
+          
           final GoogleSignInAccount? googleUser = await _googleSignIn.authenticate(
             scopeHint: ['email', 'profile'],
           );
