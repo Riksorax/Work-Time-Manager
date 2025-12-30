@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 
 import '../../domain/entities/work_entry_extensions.dart';
 import '../widgets/common/responsive_center.dart';
@@ -509,22 +511,41 @@ class WeeklyReportView extends ConsumerWidget {
 
     if (user == null) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text('Anmeldung erforderlich'),
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: () {
-                ref.read(pendingReportTabIndexProvider.notifier).state = 1;
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                      builder: (context) => const LoginPage(returnToIndex: 1)),
-                );
-              },
-              child: const Text('Anmelden'),
-            ),
-          ],
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text('Anmeldung erforderlich'),
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: () {
+                  ref.read(pendingReportTabIndexProvider.notifier).state = 1;
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                        builder: (context) => const LoginPage(returnToIndex: 1)),
+                  );
+                },
+                child: const Text('Anmelden'),
+              ),
+              const SizedBox(height: 32),
+              const Divider(),
+              const SizedBox(height: 16),
+              const Text('Oder Abonnement verwalten:', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              if (kIsWeb)
+                const Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Text(
+                      'Abonnements können derzeit nur in der mobilen App verwaltet werden.',
+                      textAlign: TextAlign.center),
+                )
+              else
+                SizedBox(
+                  height: 500,
+                  child: PaywallView(),
+                ),
+            ],
+          ),
         ),
       );
     }
@@ -754,22 +775,41 @@ class MonthlyReportView extends ConsumerWidget {
 
     if (user == null) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text('Anmeldung erforderlich'),
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: () {
-                ref.read(pendingReportTabIndexProvider.notifier).state = 2;
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                      builder: (context) => const LoginPage(returnToIndex: 1)),
-                );
-              },
-              child: const Text('Anmelden'),
-            ),
-          ],
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text('Anmeldung erforderlich'),
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: () {
+                  ref.read(pendingReportTabIndexProvider.notifier).state = 2;
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                        builder: (context) => const LoginPage(returnToIndex: 1)),
+                  );
+                },
+                child: const Text('Anmelden'),
+              ),
+              const SizedBox(height: 32),
+              const Divider(),
+              const SizedBox(height: 16),
+              const Text('Oder Abonnement verwalten:', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              if (kIsWeb)
+                const Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Text(
+                      'Abonnements können derzeit nur in der mobilen App verwaltet werden.',
+                      textAlign: TextAlign.center),
+                )
+              else
+                SizedBox(
+                  height: 500,
+                  child: PaywallView(),
+                ),
+            ],
+          ),
         ),
       );
     }

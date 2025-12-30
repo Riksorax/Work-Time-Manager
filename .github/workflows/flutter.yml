@@ -3,6 +3,7 @@ name: Build Flutter Release App Bundle
 on:
   push:
     branches:
+      - develop
       - main
 
 jobs:
@@ -73,7 +74,7 @@ jobs:
         run: |
           echo "Starting release appbundle build using direct credentials..."
           # Der Build-Befehl muss nicht geändert werden, da Gradle die Variable automatisch aufnimmt
-          flutter build appbundle --release
+          flutter build appbundle --release --dart-define=RC_ANDROID_KEY="${{ secrets.RC_ANDROID_KEY }}" --dart-define=RC_IOS_KEY="${{ secrets.RC_IOS_KEY }}"
           echo "Build command finished."
 
       # 🔹 App Bundle als Artifact hochladen
