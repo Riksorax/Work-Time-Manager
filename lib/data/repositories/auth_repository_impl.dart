@@ -1,4 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart' as firebase;
+import 'package:flutter/foundation.dart';
+import 'package:purchases_flutter/purchases_flutter.dart';
 import '../../domain/entities/user_entity.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../datasources/remote/firestore_datasource.dart';
@@ -15,6 +17,18 @@ class AuthRepositoryImpl implements AuthRepository {
   Stream<UserEntity?> get authStateChanges {
     // Rufe den Stream der Datenquelle ab, der Firebase-Benutzerobjekte liefert.
     return _dataSource.authStateChanges.map((firebaseUser) {
+      
+      // RevenueCat Synchronisation (nur Mobile)
+      if (!kIsWeb) {
+        if (firebaseUser != null) {
+          // User hat sich eingeloggt oder App wurde mit eingeloggtem User gestartet
+          Purchases.logIn(firebaseUser.uid);
+        } else {
+          // User hat sich ausgeloggt
+          Purchases.logOut();
+        }
+      }
+
       // Wandle das Firebase-Benutzerobjekt in unsere eigene UserEntity um.
       // Wenn der Firebase-Benutzer null ist (abgemeldet), gib auch null zurück.
       return firebaseUser != null
