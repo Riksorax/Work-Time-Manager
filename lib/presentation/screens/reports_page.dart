@@ -1,6 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
+import '../../core/providers/subscription_provider.dart';
 
 import '../../domain/entities/work_entry_extensions.dart';
 import '../widgets/common/responsive_center.dart';
@@ -23,6 +26,25 @@ class PendingTabIndexNotifier extends Notifier<int?> {
   int? build() => null;
 
   set state(int? value) => super.state = value;
+}
+
+/// Zeigt die RevenueCat Paywall in einem Fullscreen-Modal an.
+void _showPaywall(BuildContext context) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    backgroundColor: Colors.transparent,
+    builder: (context) => Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: PaywallView(
+        onDismiss: () => Navigator.of(context).pop(),
+      ),
+    ),
+  );
 }
 
 class ReportsPage extends ConsumerStatefulWidget {
@@ -507,12 +529,13 @@ class WeeklyReportView extends ConsumerWidget {
     final authState = ref.watch(authStateProvider);
     final user = authState.asData?.value;
 
+    // 1. Nicht eingeloggt: Nur Anmelde-Aufforderung
     if (user == null) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('Anmeldung erforderlich'),
+            const Text('Anmeldung erforderlich für Wochenberichte'),
             const SizedBox(height: 16),
             FilledButton(
               onPressed: () {
@@ -529,6 +552,69 @@ class WeeklyReportView extends ConsumerWidget {
       );
     }
 
+    // 2. Eingeloggt: Prüfe Premium-Status
+    final isPremium = ref.watch(isPremiumProvider);
+
+    if (!isPremium) {
+      return Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.lock_outline, size: 64, color: Colors.orange),
+              ),
+              const SizedBox(height: 24),
+              const Text('Premium-Funktion',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.0),
+                child: Text(
+                  'Wochenberichte sind nur für Premium-Nutzer verfügbar. Behalte den vollen Überblick über deine Überstunden und Exporte.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+              ),
+              const SizedBox(height: 32),
+              if (kIsWeb)
+                const Card(
+                  child: Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Text(
+                      'Abonnements können derzeit nur in der mobilen App verwaltet werden.',
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                )
+              else
+                SizedBox(
+                  width: 280,
+                  height: 56,
+                  child: FilledButton.icon(
+                    onPressed: () => _showPaywall(context),
+                    icon: const Icon(Icons.workspace_premium),
+                    label: const Text('Premium freischalten',
+                        style: TextStyle(fontSize: 18)),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // 3. Eingeloggt & Premium: Zeige Bericht
     final reportsState = ref.watch(reportsViewModelProvider);
     final reportsNotifier = ref.read(reportsViewModelProvider.notifier);
 
@@ -752,12 +838,13 @@ class MonthlyReportView extends ConsumerWidget {
     final authState = ref.watch(authStateProvider);
     final user = authState.asData?.value;
 
+    // 1. Nicht eingeloggt: Nur Anmelde-Aufforderung
     if (user == null) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('Anmeldung erforderlich'),
+            const Text('Anmeldung erforderlich für Monatsberichte'),
             const SizedBox(height: 16),
             FilledButton(
               onPressed: () {
@@ -774,6 +861,69 @@ class MonthlyReportView extends ConsumerWidget {
       );
     }
 
+    // 2. Eingeloggt: Prüfe Premium-Status
+    final isPremium = ref.watch(isPremiumProvider);
+
+    if (!isPremium) {
+      return Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.star_border, size: 64, color: Colors.amber),
+              ),
+              const SizedBox(height: 24),
+              const Text('Premium-Funktion',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.0),
+                child: Text(
+                  'Monatsberichte und detaillierte Analysen sind nur für Premium-Nutzer verfügbar. Werde jetzt Teil der Pro-Community.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+              ),
+              const SizedBox(height: 32),
+              if (kIsWeb)
+                const Card(
+                  child: Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Text(
+                      'Abonnements können derzeit nur in der mobilen App verwaltet werden.',
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                )
+              else
+                SizedBox(
+                  width: 280,
+                  height: 56,
+                  child: FilledButton.icon(
+                    onPressed: () => _showPaywall(context),
+                    icon: const Icon(Icons.workspace_premium),
+                    label: const Text('Premium freischalten',
+                        style: TextStyle(fontSize: 18)),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.amber.shade700,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // 3. Eingeloggt & Premium: Zeige Bericht
     final reportsState = ref.watch(reportsViewModelProvider);
     final reportsNotifier = ref.read(reportsViewModelProvider.notifier);
 

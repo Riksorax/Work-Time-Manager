@@ -3,7 +3,6 @@ name: Build, Push, and Deploy Work Time Manager
 on:
   push:
     branches:
-      - feature/
       - main
   workflow_dispatch:
 
@@ -29,6 +28,7 @@ jobs:
           tags: ${{ vars.DOCKERHUB_USERNAME }}/work-time-manager:latest
           build-args: |
             RECAPTCHA_SITE_KEY=${{ secrets.RECAPTCHA_SITE_KEY }}
+            RC_WEB_KEY=${{ secrets.RC_WEB_KEY }}
 
       - name: Deploy to Server
         uses: appleboy/ssh-action@v1.0.3
