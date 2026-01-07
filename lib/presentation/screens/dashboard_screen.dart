@@ -50,7 +50,10 @@ class DashboardScreen extends ConsumerWidget {
       return prev + end.difference(b.start);
     });
 
-    final grossDuration = dashboardState.grossWorkDuration ?? (netDuration + totalBreakDuration);
+    final grossDuration = dashboardState.grossWorkDuration ??
+        (workEntry.workStart != null && workEntry.workEnd != null
+            ? workEntry.workEnd!.difference(workEntry.workStart!)
+            : (netDuration + totalBreakDuration));
 
     return Scaffold(
       appBar: AppBar(
