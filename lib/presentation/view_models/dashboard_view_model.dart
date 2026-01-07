@@ -303,7 +303,10 @@ class DashboardViewModel extends Notifier<DashboardState> {
 
     final settingsRepository = ref.read(settingsRepositoryProvider);
 
+    Duration? newGrossWorkDuration;
     if (updatedEntry.workStart != null && updatedEntry.workEnd != null) {
+      newGrossWorkDuration = updatedEntry.workEnd!.difference(updatedEntry.workStart!);
+      
       final breakDuration = updatedEntry.breaks.fold<Duration>(
         Duration.zero,
         (previousValue, element) => previousValue + (element.end?.difference(element.start) ?? Duration.zero),
@@ -327,6 +330,12 @@ class DashboardViewModel extends Notifier<DashboardState> {
       }
     } else {
       newActualWorkDuration = null;
+      // Wenn der Timer läuft, wird grossWorkDuration vom Timer aktualisiert.
+      // Wir setzen es hier auf null, damit der Timer (oder die UI Logik) übernimmt.
+      // Außer wir wollen einen initialen Wert für den Start setzen?
+      // Der Timer startet sofort in _startTimerIfNeeded und setzt den Wert.
+      newGrossWorkDuration = null;
+      
       // dailyOvertime bleibt null oder wird neu berechnet wenn Timer läuft, 
       // aber hier (bei Start/Stop) ist es nur relevant wenn gestoppt.
       // Wenn gestartet: dailyOvertime wird im Timer Loop berechnet.
@@ -335,6 +344,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
     state = state.copyWith(
       workEntry: updatedEntry,
       actualWorkDuration: newActualWorkDuration,
+      grossWorkDuration: newGrossWorkDuration,
       totalOvertime: newTotalOvertime,
       dailyOvertime: dailyOvertime,
     );
