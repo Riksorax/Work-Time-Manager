@@ -15,6 +15,8 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'dart:io' show Platform;
 
+import 'package:flutter_localizations/flutter_localizations.dart';
+
 import 'core/config/google_sign_in_config.dart';
 import 'core/providers/providers.dart';
 import 'core/services/notification_service.dart';
@@ -150,6 +152,15 @@ class MyApp extends ConsumerWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: themeMode,
+      locale: const Locale('de', 'DE'),
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('de', 'DE'),
+      ],
       home: const HomeScreen(),
     );
   }
