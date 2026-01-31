@@ -2,23 +2,29 @@
 
 ## Angaben gemäß § 5 TMG
 
-[Ihr Name / Firmenname]  
-[Straße und Hausnummer]  
-[PLZ Ort]  
-[Land]
+Speulmans, Frank Web & App Entwicklung am Niederrhein \
+Thielenstr. 3 \
+47574 Goch \
+Deutschland
 
 ## Kontakt
 
-Telefon: [Ihre Telefonnummer]  
-E-Mail: [Ihre E-Mail-Adresse]
+Telefon: 015256818526  
+E-Mail: Franksp20.fs@gmail.com
 
 ## Verantwortlich für den Inhalt
 
 Verantwortlich für den Inhalt nach § 55 Abs. 2 RStV:
 
-[Ihr Name]  
-[Straße und Hausnummer]  
-[PLZ Ort]
+Frank Speulmans \
+Thielenstr. 3 \
+47574 Goch \
+Deutschland
+
+## Umsatzsteuer-ID
+
+Umsatzsteuer-Identifikationsnummer gemäß §27a Umsatzsteuergesetz:\
+DE455372560
 
 ## EU-Streitschlichtung
 

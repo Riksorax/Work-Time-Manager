@@ -1,5 +1,5 @@
 # Allgemeine Geschäftsbedingungen
-Stand: Dezember 2025
+Stand: Januar 2026
 
 ## 1. Geltungsbereich
 Diese Allgemeinen Geschäftsbedingungen (AGB) gelten für die Nutzung der Work Time Manager App. Mit der Nutzung der App akzeptieren Sie diese Bedingungen in vollem Umfang.
@@ -11,6 +11,8 @@ Work Time Manager ist eine App zur Erfassung und Verwaltung von Arbeitszeiten. D
 * Verwaltung von Pausen
 * Lokale oder Cloud-basierte Datenspeicherung
 * Synchronisierung über mehrere Geräte (bei Anmeldung)
+
+**Wichtiger Hinweis:** Die App dient ausschließlich der persönlichen Selbstkontrolle und Übersicht. Sie ersetzt keine gesetzlich vorgeschriebene oder betriebliche Arbeitszeiterfassung und stellt kein offizielles Dokument gegenüber Arbeitgebern oder Behörden dar. Für die Einhaltung arbeitszeitrechtlicher Vorschriften (z.B. Arbeitszeitgesetz) ist der Nutzer selbst verantwortlich.
 
 ## 3. Nutzungsvoraussetzungen
 Die Nutzung der App setzt voraus:
