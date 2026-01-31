@@ -415,7 +415,8 @@ class DailyReportView extends ConsumerWidget {
                                   onPressed: () => onEntryTap(entry),
                                 ),
                                 IconButton(
-                                  icon: const Icon(Icons.delete),
+                                  icon: Icon(Icons.delete,
+                                      color: Colors.red.shade700),
                                   onPressed: () =>
                                       _confirmDelete(context, ref, entry),
                                 ),
@@ -1554,7 +1555,8 @@ class _DayEntriesBottomSheetState extends ConsumerState<DayEntriesBottomSheet> {
                                   onPressed: () => _openEdit(entry),
                                 ),
                                 IconButton(
-                                  icon: const Icon(Icons.delete),
+                                  icon: Icon(Icons.delete,
+                                      color: Colors.red.shade700),
                                   onPressed: () =>
                                       _confirmDelete(ctx, ref, entry),
                                 ),
