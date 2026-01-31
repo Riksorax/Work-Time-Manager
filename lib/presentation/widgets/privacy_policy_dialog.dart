@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'common/markdown_dialog.dart';
+import 'imprint_dialog.dart';
 
 class PrivacyPolicyDialog extends StatelessWidget {
   const PrivacyPolicyDialog({super.key});
@@ -9,6 +10,9 @@ class PrivacyPolicyDialog extends StatelessWidget {
       context,
       title: 'Datenschutzerklärung',
       assetPath: 'assets/legal/privacy.md',
+      customLinkHandlers: {
+        'imprint.html': () => ImprintDialog.show(context),
+      },
     );
   }
 

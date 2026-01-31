@@ -230,9 +230,9 @@ void main() {
         authState: const AsyncValue.data(UserEntity(id: '1', email: 'user@test.com')),
       ));
 
-      final deleteTile = find.text('Account löschen');
-      await tester.scrollUntilVisible(deleteTile, 500);
-      await tester.tap(deleteTile);
+      final deleteButton = find.byTooltip('Account löschen');
+      await tester.scrollUntilVisible(deleteButton, 500);
+      await tester.tap(deleteButton);
       await tester.pumpAndSettle();
 
       expect(find.text('Account endgültig löschen'), findsOneWidget);

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'common/markdown_dialog.dart';
+import 'imprint_dialog.dart';
 
 class TermsOfServiceDialog extends StatelessWidget {
   const TermsOfServiceDialog({super.key});
@@ -7,8 +8,11 @@ class TermsOfServiceDialog extends StatelessWidget {
   static void show(BuildContext context) {
     MarkdownDialog.show(
       context,
-      title: 'AGB',
+      title: 'Allgemeine Geschäftsbedingungen',
       assetPath: 'assets/legal/terms.md',
+      customLinkHandlers: {
+        'imprint.html': () => ImprintDialog.show(context),
+      },
     );
   }
 

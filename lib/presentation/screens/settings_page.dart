@@ -1,8 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:package_info_plus/package_info_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/providers/providers.dart' as core_providers;
 import '../../data/repositories/hybrid_work_repository_impl.dart';
@@ -15,12 +13,9 @@ import '../view_models/theme_view_model.dart';
 import '../widgets/add_adjustment_modal.dart';
 import '../widgets/edit_target_hours_modal.dart';
 import '../widgets/edit_workdays_modal.dart';
-import '../widgets/update_required_dialog.dart';
-import '../widgets/privacy_policy_dialog.dart';
-import '../widgets/imprint_dialog.dart';
-import '../widgets/terms_of_service_dialog.dart';
 import '../widgets/notification_settings_dialog.dart';
 import '../widgets/common/responsive_center.dart';
+import 'app_info_page.dart';
 import 'login_page.dart';
 
 class SettingsPage extends ConsumerWidget {
@@ -130,89 +125,17 @@ class SettingsPage extends ConsumerWidget {
               },
             ),
             const Divider(height: 1),
-            FutureBuilder<PackageInfo>(
-              future: PackageInfo.fromPlatform(),
-              builder: (context, snapshot) {
-                final version = snapshot.data?.version ?? '...';
-                return ListTile(
-                  title: const Text('Version'),
-                  trailing: Text(version),
+            ListTile(
+              title: const Text('Über die App'),
+              subtitle: const Text('Version, Impressum, Datenschutz & mehr'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AppInfoPage()),
                 );
               },
             ),
-            ListTile(
-              leading: const Icon(Icons.shop, color: Colors.green),
-              title: const Text('App im Google Play Store herunterladen'),
-              subtitle: const Text('Installieren Sie die offizielle Android-App'),
-              trailing: const Icon(Icons.open_in_new),
-              onTap: () async {
-                final url = Uri.parse(
-                  'https://play.google.com/store/apps/details?id=app.work_time_manager',
-                );
-                if (await canLaunchUrl(url)) {
-                  await launchUrl(url, mode: LaunchMode.externalApplication);
-                }
-              },
-            ),
-            const Divider(height: 1),
-            if (kDebugMode)
-              ListTile(
-                leading: const Icon(Icons.bug_report, color: Colors.orange),
-                title: const Text('🧪 TEST: Version Check'),
-                subtitle: const Text('Update-Dialog manuell anzeigen'),
-                onTap: () async {
-                  final versionService = ref.read(core_providers.versionServiceProvider);
-                  await UpdateRequiredDialog.checkAndShow(context, versionService);
-                },
-              ),
-            ListTile(
-              title: const Text('Impressum'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => ImprintDialog.show(context),
-            ),
-            ListTile(
-              title: const Text('AGB'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => TermsOfServiceDialog.show(context),
-            ),
-            ListTile(
-              title: const Text('Datenschutz'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => PrivacyPolicyDialog.show(context),
-            ),
-            if (authState.asData?.value != null) ...[
-              const Divider(height: 1),
-              ListTile(
-                leading: Icon(Icons.delete_forever, color: theme.colorScheme.error),
-                title: Text('Account löschen', style: TextStyle(color: theme.colorScheme.error)),
-                onTap: () {
-                  showDialog(
-                    context: context,
-                    builder: (dialogContext) => AlertDialog(
-                      title: const Text('Account endgültig löschen'),
-                      content: const Text(
-                          'Warnung: Diese Aktion kann nicht rückgängig gemacht werden. Alle Ihre Daten, einschließlich der Arbeitszeiterfassung, werden dauerhaft gelöscht.'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(dialogContext).pop(),
-                          child: const Text('Abbrechen'),
-                        ),
-                        FilledButton(
-                          onPressed: () {
-                            Navigator.of(dialogContext).pop();
-                            ref.read(deleteAccountProvider)();
-                          },
-                          style: FilledButton.styleFrom(
-                            backgroundColor: theme.colorScheme.error,
-                          ),
-                          child: const Text('Endgültig löschen'),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ],
           ];
 
           return ResponsiveCenter(
@@ -488,6 +411,36 @@ class SettingsPage extends ConsumerWidget {
                       ),
                   ],
                 ),
+              ),
+              IconButton(
+                icon: Icon(Icons.delete_forever, color: theme.colorScheme.error),
+                tooltip: 'Account löschen',
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (dialogContext) => AlertDialog(
+                      title: const Text('Account endgültig löschen'),
+                      content: const Text(
+                          'Warnung: Diese Aktion kann nicht rückgängig gemacht werden. Alle Ihre Daten, einschließlich der Arbeitszeiterfassung, werden dauerhaft gelöscht.'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(dialogContext).pop(),
+                          child: const Text('Abbrechen'),
+                        ),
+                        FilledButton(
+                          onPressed: () {
+                            Navigator.of(dialogContext).pop();
+                            ref.read(deleteAccountProvider)();
+                          },
+                          style: FilledButton.styleFrom(
+                            backgroundColor: theme.colorScheme.error,
+                          ),
+                          child: const Text('Endgültig löschen'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
             ],
           ),

@@ -1,5 +1,5 @@
 # Datenschutzerklärung
-Stand: Dezember 2025
+Stand: Januar 2026
 
 ## Einleitung
 Wir nehmen den Schutz Ihrer persönlichen Daten ernst. Diese Datenschutzerklärung informiert Sie über die Verarbeitung personenbezogener Daten bei der Nutzung unserer Work Time Manager App.
@@ -7,10 +7,12 @@ Wir nehmen den Schutz Ihrer persönlichen Daten ernst. Diese Datenschutzerkläru
 ## Verantwortlicher
 Verantwortlich für die Datenverarbeitung ist:
 
-[Ihr Name/Ihre Firma]  
-[Adresse]  
-[E-Mail]  
-[Telefonnummer]
+Speulmans, Frank Web & App Entwicklung am Niederrhein \
+Thielenstr. 3 \
+47574 Goch \
+Deutschland
+Telefon: 015256818526  
+E-Mail: Franksp20.fs@gmail.com
 
 ## Welche Daten werden erhoben?
 Bei der Nutzung der App werden folgende Daten verarbeitet:
