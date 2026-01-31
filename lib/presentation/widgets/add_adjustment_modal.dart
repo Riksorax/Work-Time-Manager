@@ -24,14 +24,6 @@ class _AddAdjustmentModalState extends ConsumerState<AddAdjustmentModal> {
   }
 
   void _save() {
-    // Überprüfen auf leere Eingaben
-    if (_hoursController.text.isEmpty && _minutesController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Bitte geben Sie mindestens Stunden oder Minuten ein')),
-      );
-      return;
-    }
-
     // Stunden und Minuten als positive Werte parsen
     int parsedHours = int.tryParse(_hoursController.text) ?? 0;
     int parsedMinutes = int.tryParse(_minutesController.text) ?? 0;
@@ -40,14 +32,6 @@ class _AddAdjustmentModalState extends ConsumerState<AddAdjustmentModal> {
     if (parsedMinutes > 59) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Minuten müssen zwischen 0 und 59 liegen')),
-      );
-      return;
-    }
-
-    // Mindestens einer der Werte muss größer als 0 sein
-    if (parsedHours == 0 && parsedMinutes == 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Bitte geben Sie einen Wert größer als 0 ein')),
       );
       return;
     }
@@ -65,6 +49,16 @@ class _AddAdjustmentModalState extends ConsumerState<AddAdjustmentModal> {
     }
   }
 
+  void _reset() {
+    // Setze die Gleitzeit-Bilanz auf 0 zurück
+    ref.read(settingsViewModelProvider.notifier).setOvertimeBalance(ref, Duration.zero);
+
+    // Modal schließen
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
@@ -74,7 +68,7 @@ class _AddAdjustmentModalState extends ConsumerState<AddAdjustmentModal> {
           mainAxisSize: MainAxisSize.min,
           children: [
           const Text(
-            'Manuelle Eingabe für den heutigen Tag. Wählen Sie zuerst Überstunden oder Minusstunden.',
+            'Geben Sie einen neuen Wert ein oder setzen Sie die Bilanz auf 0 zurück.',
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
@@ -163,6 +157,10 @@ class _AddAdjustmentModalState extends ConsumerState<AddAdjustmentModal> {
         ],
       )),
       actions: [
+        TextButton(
+          onPressed: _reset,
+          child: const Text('Auf 0 zurücksetzen'),
+        ),
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Abbrechen'),
