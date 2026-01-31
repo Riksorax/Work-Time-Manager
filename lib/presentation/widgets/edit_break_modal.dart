@@ -55,8 +55,16 @@ class _EditBreakModalState extends ConsumerState<EditBreakModal> {
           now.year, now.month, now.day, selectedTime.hour, selectedTime.minute);
       setState(() {
         if (isStartTime) {
+          // Berechne die bisherige Dauer, um die Endzeit mitzuverschieben
+          final Duration? previousDuration = _endTime?.difference(_startTime);
           _startTime = newDateTime;
           _startController.text = DateFormat.Hm().format(_startTime);
+
+          // Verschiebe die Endzeit, um die Dauer beizubehalten
+          if (previousDuration != null) {
+            _endTime = _startTime.add(previousDuration);
+            _endController.text = DateFormat.Hm().format(_endTime!);
+          }
         } else {
           _endTime = newDateTime;
           _endController.text = DateFormat.Hm().format(_endTime!);
