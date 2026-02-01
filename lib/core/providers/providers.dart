@@ -1,11 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-import '../../core/config/google_sign_in_config.dart';
 import '../../core/services/version_service.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/utils/logger.dart';
@@ -15,7 +12,7 @@ import '../../data/repositories/hybrid_overtime_repository_impl.dart';
 import '../../data/repositories/hybrid_work_repository_impl.dart';
 import '../../data/repositories/local_overtime_repository_impl.dart';
 import '../../data/repositories/local_work_repository_impl.dart';
-import '../../data/repositories/overtime_repository_impl.dart';
+import '../../data/repositories/firebase_overtime_repository_impl.dart';
 import '../../data/repositories/settings_repository_impl.dart';
 import '../../data/repositories/work_repository_impl.dart';
 import '../../domain/entities/user_entity.dart';
@@ -138,7 +135,10 @@ OvertimeRepository overtimeRepository(Ref ref) {
   final localRepository = LocalOvertimeRepositoryImpl(prefs);
 
   final firebaseRepository = userId != null
-      ? OvertimeRepositoryImpl(prefs, userId)
+      ? FirebaseOvertimeRepositoryImpl(
+          dataSource: ref.watch(firestoreDataSourceProvider),
+          userId: userId,
+        )
       : localRepository;
 
   return HybridOvertimeRepositoryImpl(
@@ -230,4 +230,9 @@ UpdateOvertime updateOvertimeUseCase(Ref ref) {
 @riverpod
 SetOvertime setOvertimeUseCase(Ref ref) {
   return SetOvertime(ref.watch(overtimeRepositoryProvider));
+}
+
+@riverpod
+GetLastOvertimeUpdate getLastOvertimeUpdateUseCase(Ref ref) {
+  return GetLastOvertimeUpdate(ref.watch(overtimeRepositoryProvider));
 }

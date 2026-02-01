@@ -12,12 +12,14 @@ void main() {
   late GetOvertime getOvertime;
   late UpdateOvertime updateOvertime;
   late SetOvertime setOvertime;
+  late GetLastOvertimeUpdate getLastOvertimeUpdate;
 
   setUp(() {
     mockRepository = MockOvertimeRepository();
     getOvertime = GetOvertime(mockRepository);
     updateOvertime = UpdateOvertime(mockRepository);
     setOvertime = SetOvertime(mockRepository);
+    getLastOvertimeUpdate = GetLastOvertimeUpdate(mockRepository);
   });
 
   group('GetOvertime', () {
@@ -64,7 +66,7 @@ void main() {
   });
 
   group('SetOvertime', () {
-    test('should save exact overtime', () async {
+    test('should save exact overtime without date when isManual is false', () async {
       const overtime = Duration(hours: 20);
 
       when(mockRepository.saveOvertime(any)).thenAnswer((_) async {});
@@ -72,6 +74,51 @@ void main() {
       await setOvertime(overtime: overtime);
 
       verify(mockRepository.saveOvertime(overtime)).called(1);
+      verifyNever(mockRepository.saveLastUpdateDate(any));
+    });
+
+    test('should save exact overtime', () async {
+      const overtime = Duration(hours: 20);
+
+      when(mockRepository.saveOvertime(any)).thenAnswer((_) async {});
+
+      await setOvertime(overtime: overtime, isManual: false);
+
+      verify(mockRepository.saveOvertime(overtime)).called(1);
+      verifyNever(mockRepository.saveLastUpdateDate(any));
+    });
+
+    test('should save overtime and update date when isManual is true', () async {
+      const overtime = Duration(hours: 15);
+
+      when(mockRepository.saveOvertime(any)).thenAnswer((_) async {});
+      when(mockRepository.saveLastUpdateDate(any)).thenAnswer((_) async {});
+
+      await setOvertime(overtime: overtime, isManual: true);
+
+      verify(mockRepository.saveOvertime(overtime)).called(1);
+      verify(mockRepository.saveLastUpdateDate(any)).called(1);
+    });
+  });
+
+  group('GetLastOvertimeUpdate', () {
+    test('should return last update date from repository', () {
+      final expectedDate = DateTime(2026, 1, 29, 10, 30);
+      when(mockRepository.getLastUpdateDate()).thenReturn(expectedDate);
+
+      final result = getLastOvertimeUpdate();
+
+      expect(result, expectedDate);
+      verify(mockRepository.getLastUpdateDate()).called(1);
+    });
+
+    test('should return null when no update date exists', () {
+      when(mockRepository.getLastUpdateDate()).thenReturn(null);
+
+      final result = getLastOvertimeUpdate();
+
+      expect(result, isNull);
+      verify(mockRepository.getLastUpdateDate()).called(1);
     });
   });
 }

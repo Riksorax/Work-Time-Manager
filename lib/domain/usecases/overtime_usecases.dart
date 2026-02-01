@@ -28,7 +28,21 @@ class SetOvertime {
 
   SetOvertime(this.repository);
 
-  Future<void> call({required Duration overtime}) async {
+  Future<void> call({required Duration overtime, bool isManual = false}) async {
     await repository.saveOvertime(overtime);
+    // Bei manueller Änderung das Datum speichern
+    if (isManual) {
+      await repository.saveLastUpdateDate(DateTime.now());
+    }
+  }
+}
+
+class GetLastOvertimeUpdate {
+  final OvertimeRepository repository;
+
+  GetLastOvertimeUpdate(this.repository);
+
+  DateTime? call() {
+    return repository.getLastUpdateDate();
   }
 }

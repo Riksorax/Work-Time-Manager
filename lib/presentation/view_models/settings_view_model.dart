@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers/providers.dart' as core_providers;
+import '../../data/repositories/hybrid_overtime_repository_impl.dart';
 import '../../domain/entities/settings_entity.dart';
-import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/repositories/settings_repository.dart';
 import '../state/settings_state.dart';
 import 'dashboard_view_model.dart' show dashboardViewModelProvider;
@@ -85,10 +85,22 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
 
   Future<void> _init() async {
     try {
-      final getOvertime = ref.read(core_providers.getOvertimeUseCaseProvider);
+      final overtimeRepository = ref.read(core_providers.overtimeRepositoryProvider);
       final settingsRepository = ref.read(core_providers.settingsRepositoryProvider);
 
-      final overtimeBalance = getOvertime.call();
+      // Für Firebase: Stelle sicher, dass Überstunden async geladen werden
+      Duration overtimeBalance;
+      DateTime? lastOvertimeUpdate;
+
+      if (overtimeRepository is HybridOvertimeRepositoryImpl) {
+        overtimeBalance = await overtimeRepository.ensureOvertimeLoaded();
+        lastOvertimeUpdate = await overtimeRepository.ensureLastUpdateLoaded();
+      } else {
+        final getOvertime = ref.read(core_providers.getOvertimeUseCaseProvider);
+        final getLastUpdate = ref.read(core_providers.getLastOvertimeUpdateUseCaseProvider);
+        overtimeBalance = getOvertime.call();
+        lastOvertimeUpdate = getLastUpdate.call();
+      }
       final weeklyTargetHours = settingsRepository.getTargetWeeklyHours();
       final workdaysPerWeek = settingsRepository.getWorkdaysPerWeek();
       final notificationsEnabled = settingsRepository.getNotificationsEnabled();
@@ -111,6 +123,7 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
       state = AsyncValue.data(SettingsState(
         settings: settings,
         overtimeBalance: overtimeBalance,
+        lastOvertimeUpdate: lastOvertimeUpdate,
       ));
     } catch (e, st) {
       state = AsyncValue.error(e, st);
@@ -119,8 +132,12 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
 
   Future<void> setOvertimeBalance(WidgetRef ref, Duration overtime) async {
     final setOvertime = ref.read(core_providers.setOvertimeUseCaseProvider);
-    await setOvertime.call(overtime: overtime);
-    state = state.whenData((value) => value.copyWith(overtimeBalance: overtime));
+    await setOvertime.call(overtime: overtime, isManual: true);
+    final now = DateTime.now();
+    state = state.whenData((value) => value.copyWith(
+      overtimeBalance: overtime,
+      lastOvertimeUpdate: now,
+    ));
     ref.read(dashboardViewModelProvider.notifier).updateOvertimeFromSettings(overtime);
   }
 

@@ -130,7 +130,7 @@ final class GoogleSignInProvider
   }
 }
 
-String _$googleSignInHash() => r'b08618d1263b8c22e3118041afeb06fc87c4fcd6';
+String _$googleSignInHash() => r'6b68e7785a816a60cd0c722d8a0ef9c87c7cdc7d';
 
 @ProviderFor(sharedPreferences)
 const sharedPreferencesProvider = SharedPreferencesProvider._();
@@ -472,7 +472,7 @@ final class OvertimeRepositoryProvider extends $FunctionalProvider<
 }
 
 String _$overtimeRepositoryHash() =>
-    r'bf02e8d5e2e75c47adbb506503ac4668e9dc5e38';
+    r'5189433b30e6fdc5d05986962fb3770f313c5699';
 
 @ProviderFor(getAuthStateChangesUseCase)
 const getAuthStateChangesUseCaseProvider =
@@ -1104,3 +1104,48 @@ final class SetOvertimeUseCaseProvider
 
 String _$setOvertimeUseCaseHash() =>
     r'936ce8199bf7b8f484def7a3fbd09c3877cc1da4';
+
+@ProviderFor(getLastOvertimeUpdateUseCase)
+const getLastOvertimeUpdateUseCaseProvider =
+    GetLastOvertimeUpdateUseCaseProvider._();
+
+final class GetLastOvertimeUpdateUseCaseProvider extends $FunctionalProvider<
+    GetLastOvertimeUpdate,
+    GetLastOvertimeUpdate,
+    GetLastOvertimeUpdate> with $Provider<GetLastOvertimeUpdate> {
+  const GetLastOvertimeUpdateUseCaseProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'getLastOvertimeUpdateUseCaseProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$getLastOvertimeUpdateUseCaseHash();
+
+  @$internal
+  @override
+  $ProviderElement<GetLastOvertimeUpdate> $createElement(
+          $ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  GetLastOvertimeUpdate create(Ref ref) {
+    return getLastOvertimeUpdateUseCase(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(GetLastOvertimeUpdate value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<GetLastOvertimeUpdate>(value),
+    );
+  }
+}
+
+String _$getLastOvertimeUpdateUseCaseHash() =>
+    r'1acfcd3c1c348feed234c9692ed3dba1b77418ee';

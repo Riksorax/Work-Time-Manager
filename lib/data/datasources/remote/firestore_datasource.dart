@@ -13,10 +13,17 @@ abstract class FirestoreDataSource {
   Future<void> signOut();
   Future<void> deleteAccount();
 
+  // Work Entries
   Future<WorkEntryModel?> getWorkEntry(String userId, DateTime date);
   Future<void> saveWorkEntry(String userId, WorkEntryModel model);
   Future<List<WorkEntryModel>> getWorkEntriesForMonth(String userId, int year, int month);
   Future<void> deleteWorkEntry(String userId, String entryId);
+
+  // Overtime
+  Future<Duration> getOvertime(String userId);
+  Future<void> saveOvertime(String userId, Duration overtime);
+  Future<DateTime?> getLastOvertimeUpdate(String userId);
+  Future<void> saveLastOvertimeUpdate(String userId, DateTime date);
 }
 
 class FirestoreDataSourceImpl implements FirestoreDataSource {
@@ -125,14 +132,25 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
     
     // Cleanup Firestore
     try {
-      final workEntriesCollection = _firestore.collection('users').doc(userId).collection('work_entries');
+      final userDocRef = _firestore.collection('users').doc(userId);
+
+      // Work Entries löschen
+      final workEntriesCollection = userDocRef.collection('work_entries');
       final workEntriesSnapshot = await workEntriesCollection.get();
       final batch = _firestore.batch();
       for (final doc in workEntriesSnapshot.docs) {
         batch.delete(doc.reference);
       }
+
+      // Overtime-Daten löschen
+      final overtimeCollection = userDocRef.collection('overtime');
+      final overtimeSnapshot = await overtimeCollection.get();
+      for (final doc in overtimeSnapshot.docs) {
+        batch.delete(doc.reference);
+      }
+
       await batch.commit();
-      await _firestore.collection('users').doc(userId).delete();
+      await userDocRef.delete();
     } catch (e) {
       logger.e("KRITISCH: Fehler beim Löschen der Firestore-Daten nach Account-Löschung: $e");
       rethrow;
@@ -213,5 +231,64 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
     final docRef = _getMonthDocRef(userId, date);
     final dayKey = date.day.toString();
     await docRef.update({ 'days.$dayKey': FieldValue.delete() });
+  }
+
+  // ============================================================================
+  // OVERTIME METHODS
+  // ============================================================================
+
+  DocumentReference<Map<String, dynamic>> _getOvertimeDocRef(String userId) {
+    return _firestore.collection('users').doc(userId).collection('overtime').doc('balance');
+  }
+
+  @override
+  Future<Duration> getOvertime(String userId) async {
+    logger.i('[Firestore] Lade Overtime für User: $userId');
+    final docRef = _getOvertimeDocRef(userId);
+    final snapshot = await docRef.get();
+
+    if (snapshot.exists && snapshot.data() != null) {
+      final data = snapshot.data()!;
+      final minutes = data['minutes'] as int? ?? 0;
+      logger.i('[Firestore] Overtime geladen: $minutes Minuten');
+      return Duration(minutes: minutes);
+    }
+
+    logger.i('[Firestore] Keine Overtime-Daten gefunden, gebe 0 zurück');
+    return Duration.zero;
+  }
+
+  @override
+  Future<void> saveOvertime(String userId, Duration overtime) async {
+    logger.i('[Firestore] Speichere Overtime für User: $userId, Wert: ${overtime.inMinutes} Minuten');
+    final docRef = _getOvertimeDocRef(userId);
+
+    await docRef.set({
+      'minutes': overtime.inMinutes,
+    }, SetOptions(merge: true));
+  }
+
+  @override
+  Future<DateTime?> getLastOvertimeUpdate(String userId) async {
+    final docRef = _getOvertimeDocRef(userId);
+    final snapshot = await docRef.get();
+
+    if (snapshot.exists && snapshot.data() != null) {
+      final data = snapshot.data()!;
+      final timestamp = data['lastUpdated'] as Timestamp?;
+      return timestamp?.toDate();
+    }
+
+    return null;
+  }
+
+  @override
+  Future<void> saveLastOvertimeUpdate(String userId, DateTime date) async {
+    logger.i('[Firestore] Speichere Overtime-Update-Datum für User: $userId');
+    final docRef = _getOvertimeDocRef(userId);
+
+    await docRef.set({
+      'lastUpdated': Timestamp.fromDate(date),
+    }, SetOptions(merge: true));
   }
 }
