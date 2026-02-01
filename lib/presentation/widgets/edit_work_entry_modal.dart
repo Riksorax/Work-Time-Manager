@@ -234,7 +234,7 @@ class EditWorkEntryModal extends ConsumerWidget {
               ),
             ),
             IconButton(
-              icon: const Icon(Icons.delete, color: Colors.red),
+              icon: Icon(Icons.delete, color: Colors.red.shade700),
               onPressed: () => viewModel.deleteBreak(breakEntry.id),
             ),
           ],

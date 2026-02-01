@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../../domain/entities/break_entity.dart';
 import '../../../domain/entities/work_entry_entity.dart';
+import '../../../domain/services/break_calculator_service.dart';
 import '../../view_models/dashboard_view_model.dart';
 
 /// Eine Karte zur Anzeige und Verwaltung von Pausen.
@@ -60,6 +61,8 @@ class BreaksCard extends ConsumerWidget {
                 ),
               ),
             ),
+            // Warnung bei unzureichenden Pausen (Arbeitszeitgesetz)
+            _buildBreakComplianceWarning(context),
             const SizedBox(height: 16),
             ElevatedButton.icon(
               icon: Icon(
@@ -80,6 +83,52 @@ class BreaksCard extends ConsumerWidget {
                 // Rufe die neue ViewModel-Methode auf, die wir erstellt haben.
                 ref.read(dashboardViewModelProvider.notifier).startOrStopBreak();
               },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Zeigt eine Warnung an, wenn die Pausen nicht den Anforderungen
+  /// des Arbeitszeitgesetzes entsprechen.
+  Widget _buildBreakComplianceWarning(BuildContext context) {
+    // Nur prüfen, wenn Arbeit gestartet wurde
+    if (workEntry.workStart == null) {
+      return const SizedBox.shrink();
+    }
+
+    final compliance = BreakCalculatorService.validateBreakCompliance(workEntry);
+
+    // Keine Warnung nötig, wenn Pausen ausreichend sind oder keine Pause erforderlich ist
+    if (compliance.isCompliant || compliance.requiredBreakTime == Duration.zero) {
+      return const SizedBox.shrink();
+    }
+
+    final missingMinutes = compliance.missingBreakTime.inMinutes;
+    final requiredMinutes = compliance.requiredBreakTime.inMinutes;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 12.0),
+      child: Container(
+        padding: const EdgeInsets.all(12.0),
+        decoration: BoxDecoration(
+          color: Colors.orange.shade50,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.orange.shade200),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.info_outline, color: Colors.orange.shade700, size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Hinweis: Laut Arbeitszeitgesetz sind bei dieser Arbeitszeit mind. $requiredMinutes Min. Pause vorgeschrieben. Es fehlen noch $missingMinutes Min.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.orange.shade900,
+                ),
+              ),
             ),
           ],
         ),
