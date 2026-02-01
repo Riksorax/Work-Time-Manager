@@ -87,8 +87,11 @@ class DashboardScreen extends ConsumerWidget {
               _buildOvertime(context, totalOvertime, 'Überstunden Gesamt'),
               const SizedBox(height: 16),
               _buildOvertime(context, dashboardState.dailyOvertime, 'Heutige Überstunden'),
-              _buildExpectedEndTime(context, dashboardState.expectedEndTime),
-              _buildExpectedEndTimeWithBalance(context, dashboardState.expectedEndTotalZero),
+              // Voraussichtlichen Feierabend nur anzeigen, wenn Arbeit noch läuft
+              if (workEntry.workEnd == null) ...[
+                _buildExpectedEndTime(context, dashboardState.expectedEndTime),
+                _buildExpectedEndTimeWithBalance(context, dashboardState.expectedEndTotalZero),
+              ],
             ],
           );
 
