@@ -273,11 +273,11 @@ class DashboardViewModel extends Notifier<DashboardState> {
     WorkEntryEntity updatedEntry;
 
     if (state.workEntry.workStart == null) {
-      // START
+      // START - Erster Start des Tages
       updatedEntry = state.workEntry.copyWith(workStart: now);
       logger.i('[Dashboard] Timer gestartet um $now');
-    } else {
-      // STOP
+    } else if (state.workEntry.workEnd == null) {
+      // STOP - Arbeit beenden
       _timer?.cancel();
       updatedEntry = state.workEntry.copyWith(workEnd: now);
       logger.i('[Dashboard] Timer gestoppt um $now');
@@ -291,8 +291,49 @@ class DashboardViewModel extends Notifier<DashboardState> {
       } else {
         logger.i('[Dashboard] Automatische Pausen übersprungen: Pause läuft noch');
       }
+    } else {
+      // Arbeit wurde bereits beendet - Benutzer muss entscheiden
+      // Diese Methode wird vom UI mit dem gewählten Modus aufgerufen
+      logger.i('[Dashboard] Arbeit bereits beendet - Benutzer muss Aktion wählen');
+      return; // UI zeigt Dialog an
     }
 
+    await _recalculateStateAndSave(updatedEntry);
+  }
+
+  /// Startet eine komplett neue Session (Start, End und Pausen zurücksetzen)
+  Future<void> startNewSession() async {
+    final now = DateTime.now();
+    final updatedEntry = WorkEntryEntity(
+      id: state.workEntry.id,
+      date: state.workEntry.date,
+      workStart: now,
+      workEnd: null,
+      breaks: const [], // Pausen zurücksetzen
+      manualOvertime: state.workEntry.manualOvertime,
+      isManuallyEntered: false,
+      description: state.workEntry.description,
+      type: state.workEntry.type,
+    );
+    logger.i('[Dashboard] Komplett neue Session gestartet um $now (Start, End, Pausen zurückgesetzt)');
+    await _recalculateStateAndSave(updatedEntry);
+  }
+
+  /// Neue Session mit Pausen behalten (nur Start und Endzeit zurücksetzen)
+  Future<void> startNewSessionKeepBreaks() async {
+    final now = DateTime.now();
+    final updatedEntry = WorkEntryEntity(
+      id: state.workEntry.id,
+      date: state.workEntry.date,
+      workStart: now,
+      workEnd: null, // Endzeit entfernen
+      breaks: state.workEntry.breaks, // Pausen behalten
+      manualOvertime: state.workEntry.manualOvertime,
+      isManuallyEntered: false,
+      description: state.workEntry.description,
+      type: state.workEntry.type,
+    );
+    logger.i('[Dashboard] Neue Session gestartet um $now (Pausen behalten)');
     await _recalculateStateAndSave(updatedEntry);
   }
 

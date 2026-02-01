@@ -113,7 +113,14 @@ class DashboardScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: () => dashboardViewModel.startOrStopTimer(),
+                onPressed: () {
+                  // Wenn Arbeit bereits beendet wurde, zeige Bestätigungsdialog
+                  if (workEntry.workStart != null && workEntry.workEnd != null) {
+                    _showRestartDialog(context, dashboardViewModel);
+                  } else {
+                    dashboardViewModel.startOrStopTimer();
+                  }
+                },
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
@@ -312,6 +319,40 @@ class DashboardScreen extends ConsumerWidget {
               ),
             )),
       ],
+    );
+  }
+
+  void _showRestartDialog(BuildContext context, DashboardViewModel viewModel) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Neue Session starten'),
+        content: const Text(
+          'Möchten Sie eine neue Session starten?\n\n'
+          '• Pausen behalten: Nur Start- und Endzeit werden zurückgesetzt\n'
+          '• Komplett neu: Start, End und Pausen werden zurückgesetzt',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Abbrechen'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              viewModel.startNewSessionKeepBreaks();
+            },
+            child: const Text('Pausen behalten'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              viewModel.startNewSession();
+            },
+            child: const Text('Komplett neu'),
+          ),
+        ],
+      ),
     );
   }
 }
