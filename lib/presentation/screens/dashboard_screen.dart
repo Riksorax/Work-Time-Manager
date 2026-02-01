@@ -301,7 +301,7 @@ class DashboardScreen extends ConsumerWidget {
                       },
                     ),
                     IconButton(
-                      icon: const Icon(Icons.delete),
+                      icon: Icon(Icons.delete, color: Colors.red.shade700),
                       onPressed: () => dashboardViewModel.deleteBreak(b.id),
                     ),
                   ],
