@@ -1,10 +1,11 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../core/providers/providers.dart' as core_providers;
 import '../../data/repositories/hybrid_work_repository_impl.dart';
 import '../../data/repositories/hybrid_overtime_repository_impl.dart';
+import '../../data/repositories/firebase_overtime_repository_impl.dart';
 import '../../domain/services/data_sync_service.dart';
 import '../view_models/auth_view_model.dart';
 import '../view_models/dashboard_view_model.dart' as dashboard_vm;
@@ -23,7 +24,6 @@ class SettingsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
     final settingsValue = ref.watch(settingsViewModelProvider);
     final themeNotifier = ref.read(themeViewModelProvider.notifier);
     final authState = ref.watch(authStateProvider);
@@ -84,7 +84,7 @@ class SettingsPage extends ConsumerWidget {
             ),
             const Divider(height: 1),
             const SizedBox(height: 16),
-            _buildOvertimeBalance(context, settingsState.overtimeBalance),
+            _buildOvertimeBalance(context, settingsState.overtimeBalance, settingsState.lastOvertimeUpdate),
             const SizedBox(height: 16),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -262,18 +262,29 @@ class SettingsPage extends ConsumerWidget {
       final workRepository = ref.read(core_providers.workRepositoryProvider);
       final overtimeRepository = ref.read(core_providers.overtimeRepositoryProvider);
 
-      // Prüfe ob sie Hybrid-Repositories sind
+      // Hole die aktuelle userId
+      final currentUser = ref.read(core_providers.firebaseAuthProvider).currentUser;
+      final userId = currentUser?.uid;
+
+      // Prüfe ob sie Hybrid-Repositories sind und User eingeloggt ist
       if (workRepository is! HybridWorkRepositoryImpl ||
-          overtimeRepository is! HybridOvertimeRepositoryImpl) {
-        throw Exception('Repositories sind nicht vom Typ Hybrid');
+          overtimeRepository is! HybridOvertimeRepositoryImpl ||
+          userId == null) {
+        throw Exception('Repositories sind nicht vom Typ Hybrid oder User nicht eingeloggt');
       }
+
+      // Erstelle frisches Firebase-Repository mit korrekter userId
+      final freshFirebaseOvertimeRepo = FirebaseOvertimeRepositoryImpl(
+        dataSource: ref.read(core_providers.firestoreDataSourceProvider),
+        userId: userId,
+      );
 
       // Führe Sync durch
       final result = await DataSyncService.syncAll(
         localWorkRepository: workRepository.localRepository,
         firebaseWorkRepository: workRepository.firebaseRepository,
         localOvertimeRepository: overtimeRepository.localRepository,
-        firebaseOvertimeRepository: overtimeRepository.firebaseRepository,
+        firebaseOvertimeRepository: freshFirebaseOvertimeRepo,
       );
 
       // Schließe Loading-Dialog
@@ -330,7 +341,7 @@ class SettingsPage extends ConsumerWidget {
     }
   }
 
-  Widget _buildOvertimeBalance(BuildContext context, Duration overtimeBalance) {
+  Widget _buildOvertimeBalance(BuildContext context, Duration overtimeBalance, DateTime? lastUpdate) {
     final bool isNegative = overtimeBalance.isNegative;
     final Duration absDuration = overtimeBalance.abs();
 
@@ -353,6 +364,16 @@ class SettingsPage extends ConsumerWidget {
                 color: isNegative ? Colors.red : Colors.green,
               ),
         ),
+        if (lastUpdate != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            'Letzte manuelle Änderung: ${DateFormat('dd.MM.yyyy').format(lastUpdate)}',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Colors.grey[600],
+                  fontStyle: FontStyle.italic,
+                ),
+          ),
+        ],
       ],
     );
   }

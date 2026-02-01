@@ -4,6 +4,7 @@ import '../repositories/work_repository.dart';
 import '../repositories/overtime_repository.dart';
 import '../../data/repositories/local_work_repository_impl.dart';
 import '../../data/repositories/local_overtime_repository_impl.dart';
+import '../../data/repositories/firebase_overtime_repository_impl.dart';
 
 /// Service zum Synchronisieren lokaler Daten mit Firebase
 class DataSyncService {
@@ -72,34 +73,60 @@ class DataSyncService {
     try {
       // Hole lokale Überstunden
       final localOvertime = localRepository.getOvertime();
-
-      if (localOvertime == Duration.zero) {
-        logger.i('[DataSyncService] Keine lokalen Überstunden zum Synchronisieren');
-        return true;
-      }
+      final localLastUpdate = localRepository.getLastUpdateDate();
 
       logger.i('[DataSyncService] Lokale Überstunden: ${localOvertime.inMinutes} Min');
 
-      // Hole Firebase Überstunden
-      final firebaseOvertime = firebaseRepository.getOvertime();
-      logger.i('[DataSyncService] Firebase Überstunden: ${firebaseOvertime.inMinutes} Min');
+      // Hole Firebase Überstunden - WICHTIG: Async laden für korrekte Werte!
+      Duration firebaseOvertime;
+      DateTime? firebaseLastUpdate;
 
-      // Firebase ist die Quelle der Wahrheit nach dem Sync
-      // Lokale Überstunden werden nur verwendet, wenn Firebase leer ist (erster Sync)
-      final totalOvertime = firebaseOvertime == Duration.zero ? localOvertime : firebaseOvertime;
-      logger.i('[DataSyncService] Verwende ${firebaseOvertime == Duration.zero ? "lokale" : "Firebase"} Überstunden als Quelle');
-
-      // Speichere zu Firebase (nur wenn Firebase leer war)
-      if (firebaseOvertime == Duration.zero) {
-        await firebaseRepository.saveOvertime(totalOvertime);
-        logger.i('[DataSyncService] Überstunden zu Firebase synchronisiert: ${totalOvertime.inMinutes} Min');
+      if (firebaseRepository is FirebaseOvertimeRepositoryImpl) {
+        // Explizit von Firestore laden (nicht aus leerem Cache)
+        firebaseOvertime = await firebaseRepository.loadOvertimeAsync();
+        firebaseLastUpdate = await firebaseRepository.loadLastUpdateAsync();
+        logger.i('[DataSyncService] Firebase Überstunden (async geladen): ${firebaseOvertime.inMinutes} Min');
       } else {
-        logger.i('[DataSyncService] Firebase Überstunden bereits vorhanden, keine Synchronisierung nötig');
+        firebaseOvertime = firebaseRepository.getOvertime();
+        firebaseLastUpdate = firebaseRepository.getLastUpdateDate();
+        logger.i('[DataSyncService] Firebase Überstunden: ${firebaseOvertime.inMinutes} Min');
       }
 
-      // Lösche lokale Überstunden nur wenn Firebase erfolgreich
+      // Entscheide welche Daten verwendet werden sollen
+      // Firebase ist die Quelle der Wahrheit, außer wenn:
+      // 1. Firebase ist leer (erster Sync) ODER
+      // 2. Lokale Daten sind neuer als Firebase
+      bool useLocalData = false;
+
+      if (firebaseOvertime == Duration.zero && localOvertime != Duration.zero) {
+        // Firebase leer, lokale Daten vorhanden → lokale verwenden
+        useLocalData = true;
+        logger.i('[DataSyncService] Firebase leer, verwende lokale Überstunden');
+      } else if (localLastUpdate != null && firebaseLastUpdate != null) {
+        // Beide haben Daten, vergleiche Zeitstempel
+        if (localLastUpdate.isAfter(firebaseLastUpdate)) {
+          useLocalData = true;
+          logger.i('[DataSyncService] Lokale Daten sind neuer, verwende lokale Überstunden');
+        }
+      } else if (localOvertime != Duration.zero && firebaseOvertime == Duration.zero) {
+        useLocalData = true;
+      }
+
+      if (useLocalData) {
+        // Lokale Daten zu Firebase synchronisieren
+        await firebaseRepository.saveOvertime(localOvertime);
+        if (localLastUpdate != null) {
+          await firebaseRepository.saveLastUpdateDate(localLastUpdate);
+        }
+        logger.i('[DataSyncService] Überstunden zu Firebase synchronisiert: ${localOvertime.inMinutes} Min');
+      } else {
+        logger.i('[DataSyncService] Firebase Überstunden werden beibehalten: ${firebaseOvertime.inMinutes} Min');
+      }
+
+      // Lösche lokale Überstunden nach erfolgreicher Sync
       if (localRepository is LocalOvertimeRepositoryImpl) {
         await localRepository.saveOvertime(Duration.zero);
+        await localRepository.saveLastUpdateDate(DateTime.fromMillisecondsSinceEpoch(0));
         logger.i('[DataSyncService] Lokale Überstunden zurückgesetzt');
       }
 
