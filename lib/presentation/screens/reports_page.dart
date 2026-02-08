@@ -177,19 +177,16 @@ class DailyReportView extends ConsumerWidget {
 
     return settingsValue.when(
       data: (settingsState) {
-        final dailyTarget = Duration(
-          minutes: ((settingsState.settings.weeklyTargetHours /
-                      settingsState.settings.workdaysPerWeek) *
-                  60)
-              .round(),
-        );
-
         if (reportsState.isLoading) {
           return const LoadingIndicator();
         }
 
         final dailyReport = reportsState.dailyReportState;
         final DateTime selectedDay = reportsState.selectedDay ?? DateTime.now();
+
+        // Effektives Tages-Soll: 0 für Zusatztage (mehr Arbeitstage als konfiguriert)
+        final dailyTarget = reportsNotifier.getEffectiveDailyTargetForDate(selectedDay);
+        final isExtraDay = dailyTarget == Duration.zero && dailyReport.entries.isNotEmpty;
         final DateTime selectedMonth =
             reportsState.selectedMonth ?? DateTime.now();
 
@@ -328,8 +325,8 @@ class DailyReportView extends ConsumerWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('Soll (Tag):',
-                              style: TextStyle(fontWeight: FontWeight.bold)),
+                          Text(isExtraDay ? 'Soll (Zusatztag):' : 'Soll (Tag):',
+                              style: const TextStyle(fontWeight: FontWeight.bold)),
                           Text(
                             '${dailyTarget.inHours.toString().padLeft(2, '0')}:${dailyTarget.inMinutes.remainder(60).toString().padLeft(2, '0')}',
                             style: const TextStyle(fontWeight: FontWeight.bold),
