@@ -28,7 +28,6 @@ import 'presentation/view_models/theme_view_model.dart';
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize timezone
   tz_data.initializeTimeZones();
@@ -36,6 +35,7 @@ Future<void> main() async {
     final timeZoneName = await FlutterTimezone.getLocalTimezone();
     tz.setLocalLocation(tz.getLocation(timeZoneName.toString()));
   } catch (e) {
+    WidgetsFlutterBinding.ensureInitialized();
     logger.w("Could not get local timezone, falling back to UTC/Europe/Berlin");
     // Fallback logic
     try {

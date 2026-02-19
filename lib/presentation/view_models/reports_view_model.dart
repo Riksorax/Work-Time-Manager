@@ -1,9 +1,12 @@
+import 'dart:math';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
 
 import '../../core/providers/providers.dart' as core_providers;
 import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/services/break_calculator_service.dart';
+import '../../domain/utils/overtime_utils.dart';
 import '../state/monthly_report_state.dart';
 import '../state/reports_state.dart';
 import '../state/weekly_report_state.dart';
@@ -179,6 +182,29 @@ class ReportsViewModel extends Notifier<ReportsState> {
     return entry;
   }
 
+  /// Berechnet das effektive Tages-Soll für ein bestimmtes Datum.
+  /// Gibt Duration.zero zurück, wenn der Tag ein Zusatztag ist
+  /// (mehr Arbeitstage in der Woche als konfiguriert).
+  Duration getEffectiveDailyTargetForDate(DateTime date) {
+    final settingsRepository = ref.read(core_providers.settingsRepositoryProvider);
+    final workdaysPerWeek = settingsRepository.getWorkdaysPerWeek();
+    if (workdaysPerWeek <= 0) return Duration.zero;
+    final regularDailyTarget = Duration(
+      microseconds: (settingsRepository.getTargetWeeklyHours() /
+              workdaysPerWeek *
+              Duration.microsecondsPerHour)
+          .round(),
+    );
+
+    final weekEntries = getWeekEntriesForDate(date, _monthlyEntries);
+    return getEffectiveDailyTarget(
+      date: date,
+      weekEntries: weekEntries,
+      workdaysPerWeek: workdaysPerWeek,
+      regularDailyTarget: regularDailyTarget,
+    );
+  }
+
   WeeklyReportState _calculateWeeklyReport(DateTime date) {
     final settingsRepository = ref.read(core_providers.settingsRepositoryProvider);
     // Normalize date to midnight to avoid time-of-day issues in week calculation
@@ -199,18 +225,25 @@ class ReportsViewModel extends Notifier<ReportsState> {
         Duration.zero, (prev, e) => prev + e.totalBreakTime);
     final totalNetWorkDuration = totalWorkDuration - totalBreakDuration;
 
-    final workDays = entriesForWeek.length; // Korrekt: Anzahl der Einträge als Arbeitstage
-    final averageWorkDuration = workDays > 0
-        ? Duration(seconds: totalNetWorkDuration.inSeconds ~/ workDays)
+    // Unique Arbeitstage zählen (nicht Einträge, da mehrere Einträge pro Tag möglich)
+    final uniqueWorkDays = entriesForWeek
+        .where((e) => e.workStart != null)
+        .map((e) => DateTime(e.date.year, e.date.month, e.date.day))
+        .toSet()
+        .length;
+    final averageWorkDuration = uniqueWorkDays > 0
+        ? Duration(seconds: totalNetWorkDuration.inSeconds ~/ uniqueWorkDays)
         : Duration.zero;
 
     final workdaysPerWeek = settingsRepository.getWorkdaysPerWeek();
     final targetDailyHoursInDouble = workdaysPerWeek > 0
         ? settingsRepository.getTargetWeeklyHours() / workdaysPerWeek
         : 0.0;
-    // Korrekte Berechnung der Soll-Wochenstunden basierend auf tatsächlichen Arbeitstagen in der Woche
+    // Wochen-Soll begrenzen: max. workdaysPerWeek Tage zählen,
+    // damit Zusatztage das Soll nicht erhöhen
+    final effectiveWorkDays = min(uniqueWorkDays, workdaysPerWeek);
     final targetWeeklyHoursForActualWorkdaysInMicroseconds =
-        (targetDailyHoursInDouble * workDays * Duration.microsecondsPerHour)
+        (targetDailyHoursInDouble * effectiveWorkDays * Duration.microsecondsPerHour)
             .toInt();
     final targetWeeklyHours =
         Duration(microseconds: targetWeeklyHoursForActualWorkdaysInMicroseconds);
@@ -261,8 +294,24 @@ class ReportsViewModel extends Notifier<ReportsState> {
     final targetDailyHours = workdaysPerWeek > 0
         ? settingsRepository.getTargetWeeklyHours() / workdaysPerWeek
         : 0.0;
+
+    // Arbeitstage pro Woche gruppieren und jeweils auf workdaysPerWeek deckeln,
+    // damit Zusatztage das Monats-Soll nicht erhöhen
+    final Map<int, Set<DateTime>> weekToWorkDays = {};
+    for (var entry in _monthlyEntries) {
+      if (entry.workStart != null) {
+        final weekNum = _getWeekNumber(entry.date);
+        final dayOnly = DateTime(entry.date.year, entry.date.month, entry.date.day);
+        weekToWorkDays.putIfAbsent(weekNum, () => {}).add(dayOnly);
+      }
+    }
+    int effectiveTotalWorkDays = 0;
+    for (var weekDays in weekToWorkDays.values) {
+      effectiveTotalWorkDays += min(weekDays.length, workdaysPerWeek);
+    }
+
     final totalTargetHoursForActualWorkDays =
-        Duration(microseconds: (targetDailyHours * workDays * Duration.microsecondsPerHour).toInt());
+        Duration(microseconds: (targetDailyHours * effectiveTotalWorkDays * Duration.microsecondsPerHour).toInt());
     final overtime = totalNetWorkDuration - totalTargetHoursForActualWorkDays;
 
     final manualOvertimes = _monthlyEntries.fold<Duration>(
