@@ -328,7 +328,9 @@ class DailyReportView extends ConsumerWidget {
                           Text(isExtraDay ? 'Soll (Zusatztag):' : 'Soll (Tag):',
                               style: const TextStyle(fontWeight: FontWeight.bold)),
                           Text(
-                            '${dailyTarget.inHours.toString().padLeft(2, '0')}:${dailyTarget.inMinutes.remainder(60).toString().padLeft(2, '0')}',
+                            isExtraDay
+                                ? '-' // Deutliche Kennzeichnung: kein Tages-Soll
+                                : '${dailyTarget.inHours.toString().padLeft(2, '0')}:${dailyTarget.inMinutes.remainder(60).toString().padLeft(2, '0')}',
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ],
@@ -563,7 +565,7 @@ class WeeklyReportView extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.1),
+                  color: Colors.orange.withAlpha(26),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.lock_outline, size: 64, color: Colors.orange),
@@ -872,7 +874,7 @@ class MonthlyReportView extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.amber.withOpacity(0.1),
+                  color: Colors.amber.withAlpha(26),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.star_border, size: 64, color: Colors.amber),
@@ -948,189 +950,161 @@ class MonthlyReportView extends ConsumerWidget {
         final Duration monthlyOvertimeLocal = monthlyReport.dailyWork.entries
             .fold(Duration.zero, (sum, e) => sum + (e.value - dailyTarget));
 
-        return ResponsiveCenter(
-            child: ListView(
-          padding: const EdgeInsets.all(16.0),
+        // Baue children explizit in einer Liste auf, um Verschachtelungs-/Parserprobleme zu vermeiden
+        final List<Widget> monthChildren = [];
+
+        // Header-Row (Monatsnavigation)
+        monthChildren.add(Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.chevron_left),
-                  onPressed: () => reportsNotifier.onMonthChanged(
-                      DateTime(selectedMonth.year, selectedMonth.month - 1, 1)),
-                  tooltip: 'Vorheriger Monat',
-                ),
-                Expanded(
-                  child: Text(
-                    month,
-                    style: Theme.of(context).textTheme.titleLarge,
-                    textAlign: TextAlign.center,
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.chevron_right),
-                  onPressed: () => reportsNotifier.onMonthChanged(
-                      DateTime(selectedMonth.year, selectedMonth.month + 1, 1)),
-                  tooltip: 'Nächster Monat',
-                ),
-              ],
+            IconButton(
+              icon: const Icon(Icons.chevron_left),
+              onPressed: () => reportsNotifier.onMonthChanged(
+                  DateTime(selectedMonth.year, selectedMonth.month - 1, 1)),
+              tooltip: 'Vorheriger Monat',
             ),
-            const SizedBox(height: 8),
-            const SizedBox(height: 16),
-            if (monthlyReport.workDays == 0)
-              const Center(child: Text('Keine Daten für diesen Monat.'))
-            else
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text('Gesamte Arbeitszeit:',
-                                  style:
-                                      TextStyle(fontWeight: FontWeight.bold)),
-                              Text(
-                                  monthlyReport.dailyWork.values
-                                      .fold(
-                                          Duration.zero, (prev, d) => prev + d)
-                                      .toString()
-                                      .split('.')
-                                      .first,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold)),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text('Gesamte Pausen:'),
-                              Text(monthlyReport.totalBreakDuration
-                                  .toString()
-                                  .split('.')
-                                  .first),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text('Arbeitstage:'),
-                              Text('${monthlyReport.workDays}'),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text('Ø Arbeitszeit pro Tag:'),
-                              Text(monthlyReport.averageWorkDuration
-                                  .toString()
-                                  .split('.')
-                                  .first),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text('Ø Arbeitszeit pro Woche:'),
-                              Text(monthlyReport.avgWorkDurationPerWeek
-                                  .toString()
-                                  .split('.')
-                                  .first),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text('Überstunden Monat:',
-                                  style:
-                                      TextStyle(fontWeight: FontWeight.bold)),
-                              Text(
-                                _formatDuration(monthlyOvertimeLocal),
-                                style: TextStyle(
-                                    color: monthlyOvertimeLocal.isNegative
-                                        ? Colors.red
-                                        : Colors.green,
-                                    fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text('Gesamt-Überstunden:',
-                                  style:
-                                      TextStyle(fontWeight: FontWeight.bold)),
-                              Text(
-                                _formatDuration(monthlyReport.totalOvertime),
-                                style: TextStyle(
-                                    color:
-                                        monthlyReport.totalOvertime.isNegative
-                                            ? Colors.red
-                                            : Colors.green,
-                                    fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  const Text('Wochenübersicht:',
-                      style:
-                          TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                  const SizedBox(height: 8),
-                  ...monthlyReport.weeklyWork.entries.map((entry) {
-                    final weekNumber = entry.key;
-                    final duration = entry.value;
-                    return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 4.0),
-                      child: ListTile(
-                        title: Text('Kalenderwoche $weekNumber'),
-                        trailing: Text(duration.toString().split('.').first),
-                      ),
-                    );
-                  }),
-                  const SizedBox(height: 24),
-                  const Text('Tagesübersicht:',
-                      style:
-                          TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                  const SizedBox(height: 8),
-                  ...monthlyReport.dailyWork.entries.map((entry) {
-                    final date = entry.key;
-                    final duration = entry.value;
-                    return GestureDetector(
-                      onTap: () {
-                        _showDayEntriesBottomSheet(context, ref, date);
-                      },
-                      child: Card(
-                        margin: const EdgeInsets.symmetric(vertical: 4.0),
-                        child: ListTile(
-                          title: Text(DateFormat.EEEE('de_DE').format(date)),
-                          subtitle:
-                              Text(DateFormat.yMMMd('de_DE').format(date)),
-                          trailing: Text(duration.toString().split('.').first),
-                        ),
-                      ),
-                    );
-                  }),
-                ],
+            Expanded(
+              child: Text(
+                month,
+                style: Theme.of(context).textTheme.titleLarge,
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
               ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.chevron_right),
+              onPressed: () => reportsNotifier.onMonthChanged(
+                  DateTime(selectedMonth.year, selectedMonth.month + 1, 1)),
+              tooltip: 'Nächster Monat',
+            ),
           ],
         ));
+
+        monthChildren.add(const SizedBox(height: 8));
+        monthChildren.add(const SizedBox(height: 16));
+
+        if (monthlyReport.workDays == 0) {
+          monthChildren.add(const Center(child: Text('Keine Daten für diesen Monat.')));
+        } else {
+          // Statistikkarte
+          monthChildren.add(Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Gesamte Arbeitszeit:', style: TextStyle(fontWeight: FontWeight.bold)),
+                      Text(monthlyReport.dailyWork.values.fold(Duration.zero, (prev, d) => prev + d).toString().split('.').first,
+                          style: const TextStyle(fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Gesamte Pausen:'),
+                      Text(monthlyReport.totalBreakDuration.toString().split('.').first),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Arbeitstage:'),
+                      Text('${monthlyReport.workDays}'),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Ø Arbeitszeit pro Tag:'),
+                      Text(monthlyReport.averageWorkDuration.toString().split('.').first),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Ø Arbeitszeit pro Woche:'),
+                      Text(monthlyReport.avgWorkDurationPerWeek.toString().split('.').first),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Überstunden Monat:', style: TextStyle(fontWeight: FontWeight.bold)),
+                      Text(_formatDuration(monthlyOvertimeLocal),
+                          style: TextStyle(color: monthlyOvertimeLocal.isNegative ? Colors.red : Colors.green, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Gesamt-Überstunden:', style: TextStyle(fontWeight: FontWeight.bold)),
+                      Text(_formatDuration(monthlyReport.totalOvertime),
+                          style: TextStyle(color: monthlyReport.totalOvertime.isNegative ? Colors.red : Colors.green, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ));
+
+          monthChildren.add(const SizedBox(height: 24));
+          monthChildren.add(const Text('Wochenübersicht:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)));
+          monthChildren.add(const SizedBox(height: 8));
+
+          // Weekly entries
+          for (final entry in monthlyReport.weeklyWork.entries) {
+            final weekNumber = entry.key;
+            final duration = entry.value;
+            monthChildren.add(Card(
+              margin: const EdgeInsets.symmetric(vertical: 4.0),
+              child: ListTile(
+                title: Text('Kalenderwoche $weekNumber'),
+                trailing: Text(duration.toString().split('.').first),
+              ),
+            ));
+          }
+
+          monthChildren.add(const SizedBox(height: 24));
+          monthChildren.add(const Text('Tagesübersicht:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)));
+          monthChildren.add(const SizedBox(height: 8));
+
+          // Daily entries
+          for (final entry in monthlyReport.dailyWork.entries) {
+            final date = entry.key;
+            final duration = entry.value;
+            monthChildren.add(
+              GestureDetector(
+                onTap: () {
+                  _showDayEntriesBottomSheet(context, ref, date);
+                },
+                child: Card(
+                  margin: const EdgeInsets.symmetric(vertical: 4.0),
+                  child: ListTile(
+                    title: Text(DateFormat.EEEE('de_DE').format(date)),
+                    subtitle: Text(DateFormat.yMMMd('de_DE').format(date)),
+                    trailing: Text(duration.toString().split('.').first),
+                  ),
+                ),
+              ),
+            );
+          }
+        }
+
+        return ResponsiveCenter(
+          child: ListView(
+            padding: const EdgeInsets.all(16.0),
+            children: monthChildren,
+          ),
+        );
       },
       loading: () => const LoadingIndicator(),
       error: (error, stackTrace) => Center(
@@ -1507,8 +1481,7 @@ class _DayEntriesBottomSheetState extends ConsumerState<DayEntriesBottomSheet> {
                             final DateTime bEnd = b.end ?? end;
                             final DateTime effStart =
                                 bStart.isBefore(start) ? start : bStart;
-                            final DateTime effEnd =
-                                bEnd.isAfter(end) ? end : bEnd;
+                            final DateTime effEnd = bEnd.isAfter(end) ? end : bEnd;
                             if (effEnd.isAfter(effStart)) {
                               breakDur += effEnd.difference(effStart);
                             }
