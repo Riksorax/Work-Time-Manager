@@ -1,13 +1,18 @@
 {
-    "name": "work_time_manager",
-    "short_name": "work_time_manager",
+    "name": "Work Time Manager",
+    "short_name": "WorkTime",
     "start_url": ".",
+    "scope": ".",
     "display": "standalone",
-    "background_color": "#hexcode",
-    "theme_color": "#hexcode",
-    "description": "A new Flutter project.",
+    "background_color": "#ffffff",
+    "theme_color": "#1976D2",
+    "description": "Einfache Zeiterfassung für Privatpersonen – Arbeitszeiten, Pausen und Überstunden bequem tracken und exportieren.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
+    "categories": [
+        "productivity",
+        "business"
+    ],
     "icons": [
         {
             "src": "icons/Icon-192.png",

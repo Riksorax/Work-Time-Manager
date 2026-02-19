@@ -5,7 +5,15 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <!-- Viewport für mobiles SEO -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Verbesserte Beschreibung (auf Deutsch) -->
+  <meta name="description" content="Einfache Zeiterfassung für Privatpersonen: Verwalte Arbeitszeiten, Pausen und Überstunden intuitiv. Inklusive praktischer detaillierter Reports.">
+  <meta name="keywords" content="Arbeitszeit, Zeiterfassung, Überstunden, Pausen, Work Time Manager">
+  <meta name="robots" content="index, follow">
+
+  <link rel="canonical" href="https://work-time-manager.app/">
 
   <!-- Google Sign-In Meta Tag -->
   <meta name="google-signin-client_id" content="915742606352-rsrquuo91q9jk44avt26fklgdb9hv7ho.apps.googleusercontent.com">
@@ -13,14 +21,58 @@
   <!-- iOS meta tags & icons -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="work_time_manager">
+  <meta name="apple-mobile-web-app-title" content="Work Time Manager">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>work_time_manager</title>
+  <title>Work Time Manager — Arbeitszeitverwaltung</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- Theme color for mobile browsers -->
+  <meta name="theme-color" content="#1976D2">
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Work Time Manager — Arbeitszeitverwaltung">
+  <meta property="og:description" content="Einfache Zeiterfassung für Privatpersonen: Verwalte Arbeitszeiten, Pausen und Überstunden intuitiv. Inklusive praktischer detaillierter Reports.">
+  <meta property="og:image" content="https://work-time-manager.app/icons/Icon-512.png">
+  <meta property="og:url" content="https://work-time-manager.app/">
+  <meta property="og:site_name" content="Work Time Manager">
+  <meta property="og:locale" content="de_DE">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Work Time Manager — Arbeitszeitverwaltung">
+  <meta name="twitter:description" content="Einfache Zeiterfassung für Privatpersonen: Verwalte Arbeitszeiten, Pausen und Überstunden intuitiv. Inklusive praktischer detaillierter Reports.">
+  <meta name="twitter:image" content="https://work-time-manager.app//icons/Icon-512.png">
+
+  <!-- JSON-LD strukturiertes Daten-Markup (Bitte DOMAIN & ggf. Firma anpassen) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "url": "https://work-time-manager.app/",
+        "name": "Work Time Manager",
+        "description": "Einfache Zeiterfassung für Privatpersonen – Arbeitszeiten, Pausen und Überstunden bequem tracken und exportieren.",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://work-time-manager.app/?s={search_term_string}",
+          "query-input": "required name=search_term_string"
+        }
+      },
+      {
+        "@type": "Organization",
+        "name": "Work Time Manager",
+        "url": "https://work-time-manager.app/",
+        "logo": "https://work-time-manager.app/icons/Icon-512.png"
+      }
+    ]
+  }
+  </script>
 
   <!-- Google Identity Services -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
