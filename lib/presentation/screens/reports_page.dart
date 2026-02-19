@@ -204,28 +204,43 @@ class DailyReportView extends ConsumerWidget {
           final dE = ref
               .read(reportsViewModelProvider.notifier)
               .applyBreakCalculation(e);
-          final DateTime? start = dE.workStart;
-          // FIX: DateTime type, not DateTime? to ensure non-null usage later
-          final DateTime end = dE.workEnd ?? DateTime.now();
-          if (start != null) {
-            // end is always not null due to ??
-            Duration breakDur = Duration.zero;
-            for (final b in dE.breaks) {
-              final DateTime bStart = b.start;
-              // b.end is nullable, end is not
-              final DateTime bEnd = b.end ?? end;
-              final DateTime effStart = bStart.isBefore(start) ? start : bStart;
-              final DateTime effEnd = bEnd.isAfter(end) ? end : bEnd;
-              if (effEnd.isAfter(effStart)) {
-                breakDur += effEnd.difference(effStart);
+
+          // Nur Arbeitseinträge zählen zur Arbeitszeit
+          // Urlaub, Krankheit und Feiertage erfüllen das Soll automatisch
+          if (dE.type == WorkEntryType.work) {
+            final DateTime? start = dE.workStart;
+            // FIX: DateTime type, not DateTime? to ensure non-null usage later
+            final DateTime end = dE.workEnd ?? DateTime.now();
+            if (start != null) {
+              // end is always not null due to ??
+              Duration breakDur = Duration.zero;
+              for (final b in dE.breaks) {
+                final DateTime bStart = b.start;
+                // b.end is nullable, end is not
+                final DateTime bEnd = b.end ?? end;
+                final DateTime effStart = bStart.isBefore(start) ? start : bStart;
+                final DateTime effEnd = bEnd.isAfter(end) ? end : bEnd;
+                if (effEnd.isAfter(effStart)) {
+                  breakDur += effEnd.difference(effStart);
+                }
               }
+              totalWorked += end.difference(start) - breakDur;
             }
-            totalWorked += end.difference(start) - breakDur;
           }
+
           if (dE.manualOvertime != null) {
             totalManualAdjustment += dE.manualOvertime!;
           }
         }
+
+        // Bei speziellen Tagen (Urlaub, Krankheit, Feiertag) wird das Soll als erfüllt betrachtet
+        // Daher: Wenn kein normaler Arbeitseintrag vorhanden ist, aber ein spezieller,
+        // zählt totalWorked als erfüllt
+        bool hasSpecialEntry = dailyReport.entries.any((e) => e.type != WorkEntryType.work);
+        if (hasSpecialEntry && totalWorked == Duration.zero) {
+          totalWorked = dailyTarget;
+        }
+
         final dayOvertime = totalWorked - dailyTarget + totalManualAdjustment;
 
         // --- Widgets Construction ---
