@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../domain/entities/break_entity.dart';
+import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/services/break_calculator_service.dart';
 import '../view_models/dashboard_view_model.dart';
 import '../widgets/common/responsive_center.dart';
@@ -35,7 +36,7 @@ class DashboardScreen extends ConsumerWidget {
     final dashboardViewModel = ref.read(dashboardViewModelProvider.notifier);
     final workEntry = dashboardState.workEntry;
 
-    final workEntryWithAutoBreaks = workEntry.workStart != null && workEntry.workEnd != null
+    final workEntryWithAutoBreaks = workEntry.workStart != null && workEntry.workEnd != null && workEntry.type == WorkEntryType.work
         ? BreakCalculatorService.calculateAndApplyBreaks(workEntry)
         : workEntry;
 

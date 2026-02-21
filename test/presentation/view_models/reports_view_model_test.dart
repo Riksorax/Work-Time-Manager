@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
@@ -48,7 +49,7 @@ void main() {
           .thenAnswer((_) async => []);
 
       // Act
-      final viewModel = container.read(reportsViewModelProvider.notifier);
+      container.read(reportsViewModelProvider.notifier);
       // init is called in build via microtask, so we wait for pump
       await Future.delayed(Duration.zero); 
 
@@ -262,6 +263,115 @@ void main() {
       // Mo-Fr sollten reguläres Soll haben
       final mondayTarget = viewModel.getEffectiveDailyTargetForDate(DateTime(2023, 10, 23));
       expect(mondayTarget, const Duration(hours: 8));
+    });
+
+    group('Multi-Select Mode', () {
+      test('toggleMultiSelectMode should toggle the mode and clear selection', () async {
+        final now = DateTime.now();
+        when(mockWorkRepository.getWorkEntriesForMonth(now.year, now.month))
+            .thenAnswer((_) async => []);
+
+        final viewModel = container.read(reportsViewModelProvider.notifier);
+        await Future.delayed(Duration.zero);
+
+        expect(viewModel.state.multiSelectMode, false);
+        expect(viewModel.state.selectedDates, isEmpty);
+
+        viewModel.toggleMultiSelectMode();
+        expect(viewModel.state.multiSelectMode, true);
+
+        viewModel.toggleMultiSelectMode();
+        expect(viewModel.state.multiSelectMode, false);
+      });
+
+      test('addDateToSelection should add past and future dates', () async {
+        final now = DateTime.now();
+        when(mockWorkRepository.getWorkEntriesForMonth(now.year, now.month))
+            .thenAnswer((_) async => []);
+
+        final viewModel = container.read(reportsViewModelProvider.notifier);
+        await Future.delayed(Duration.zero);
+
+        final pastDate = DateTime.now().subtract(const Duration(days: 5));
+        final futureDate = DateTime.now().add(const Duration(days: 5));
+
+        viewModel.addDateToSelection(pastDate);
+        expect(viewModel.state.selectedDates.length, 1);
+
+        viewModel.addDateToSelection(futureDate);
+        expect(viewModel.state.selectedDates.length, 2); // Future dates are now allowed
+      });
+
+      test('toggleDateSelection should add/remove dates', () async {
+        final now = DateTime.now();
+        when(mockWorkRepository.getWorkEntriesForMonth(now.year, now.month))
+            .thenAnswer((_) async => []);
+
+        final viewModel = container.read(reportsViewModelProvider.notifier);
+        await Future.delayed(Duration.zero);
+
+        final testDate = DateTime.now().subtract(const Duration(days: 3));
+
+        viewModel.toggleDateSelection(testDate);
+        expect(viewModel.state.selectedDates, contains(DateTime(testDate.year, testDate.month, testDate.day)));
+
+        viewModel.toggleDateSelection(testDate);
+        expect(viewModel.state.selectedDates, isEmpty);
+      });
+
+      test('clearDateSelection should empty selected dates', () async {
+        final now = DateTime.now();
+        when(mockWorkRepository.getWorkEntriesForMonth(now.year, now.month))
+            .thenAnswer((_) async => []);
+
+        final viewModel = container.read(reportsViewModelProvider.notifier);
+        await Future.delayed(Duration.zero);
+
+        final date1 = DateTime.now().subtract(const Duration(days: 1));
+        final date2 = DateTime.now().subtract(const Duration(days: 2));
+
+        viewModel.addDateToSelection(date1);
+        viewModel.addDateToSelection(date2);
+        expect(viewModel.state.selectedDates.length, 2);
+
+        viewModel.clearDateSelection();
+        expect(viewModel.state.selectedDates, isEmpty);
+      });
+
+      test('saveBatchWorkEntries should create entries for all selected dates', () async {
+        final now = DateTime.now();
+        when(mockWorkRepository.getWorkEntriesForMonth(now.year, now.month))
+            .thenAnswer((_) async => []);
+
+        when(mockWorkRepository.saveWorkEntry(any))
+            .thenAnswer((_) async => {});
+
+        final viewModel = container.read(reportsViewModelProvider.notifier);
+        await Future.delayed(Duration.zero);
+
+        final dates = [
+          DateTime.now().subtract(const Duration(days: 3)),
+          DateTime.now().subtract(const Duration(days: 2)),
+          DateTime.now().subtract(const Duration(days: 1)),
+        ];
+
+        viewModel.toggleMultiSelectMode();
+        for (final date in dates) {
+          viewModel.addDateToSelection(date);
+        }
+
+        await viewModel.saveBatchWorkEntries(
+          dates,
+          WorkEntryType.vacation,
+          TimeOfDay(hour: 8, minute: 0),
+          TimeOfDay(hour: 16, minute: 0),
+        );
+
+        // Verify that saveWorkEntry was called for each date
+        verify(mockWorkRepository.saveWorkEntry(any)).called(3);
+        expect(viewModel.state.selectedDates, isEmpty);
+        expect(viewModel.state.multiSelectMode, false);
+      });
     });
   });
 }
