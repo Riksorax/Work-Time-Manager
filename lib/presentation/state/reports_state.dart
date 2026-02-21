@@ -17,6 +17,9 @@ class ReportsState extends Equatable {
   final DailyReportState dailyReportState;
   final WeeklyReportState weeklyReportState;
   final MonthlyReportState monthlyReportState;
+  // Multi-Select Fields
+  final Set<DateTime> selectedDates;
+  final bool multiSelectMode;
 
   const ReportsState({
     this.isLoading = false,
@@ -28,6 +31,8 @@ class ReportsState extends Equatable {
     this.dailyReportState = DailyReportState.initial,
     this.weeklyReportState = WeeklyReportState.initial,
     this.monthlyReportState = MonthlyReportState.initial,
+    this.selectedDates = const {},
+    this.multiSelectMode = false,
   });
 
   factory ReportsState.initial() {
@@ -51,6 +56,8 @@ class ReportsState extends Equatable {
     DailyReportState? dailyReportState,
     WeeklyReportState? weeklyReportState,
     MonthlyReportState? monthlyReportState,
+    Set<DateTime>? selectedDates,
+    bool? multiSelectMode,
   }) {
     return ReportsState(
       isLoading: isLoading ?? this.isLoading,
@@ -62,6 +69,8 @@ class ReportsState extends Equatable {
       dailyReportState: dailyReportState ?? this.dailyReportState,
       weeklyReportState: weeklyReportState ?? this.weeklyReportState,
       monthlyReportState: monthlyReportState ?? this.monthlyReportState,
+      selectedDates: selectedDates ?? this.selectedDates,
+      multiSelectMode: multiSelectMode ?? this.multiSelectMode,
     );
   }
 
@@ -76,6 +85,8 @@ class ReportsState extends Equatable {
         dailyReportState,
         weeklyReportState,
         monthlyReportState,
+        selectedDates,
+        multiSelectMode,
       ];
 }
 

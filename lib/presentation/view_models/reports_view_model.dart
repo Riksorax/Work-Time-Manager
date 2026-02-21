@@ -1,7 +1,9 @@
 import 'dart:math';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
+import 'package:intl/intl.dart';
 
 import '../../core/providers/providers.dart' as core_providers;
 import '../../domain/entities/work_entry_entity.dart';
@@ -176,6 +178,11 @@ class ReportsViewModel extends Notifier<ReportsState> {
   }
 
   WorkEntryEntity applyBreakCalculation(WorkEntryEntity entry) {
+    // Keine Pausenberechnung für Urlaub, Krank oder Feiertag —
+    // diese Eintragstypen erfüllen das Soll automatisch ohne Pausenabzug.
+    if (entry.type != WorkEntryType.work) {
+      return entry;
+    }
     if (entry.workStart != null && entry.workEnd != null) {
       return BreakCalculatorService.calculateAndApplyBreaks(entry);
     }
@@ -354,4 +361,77 @@ class ReportsViewModel extends Notifier<ReportsState> {
       avgWorkDurationPerWeek: avgWorkDurationPerWeek,
     );
   }
+
+  // Multi-Select Methods (Range Selection via Drag)
+  void toggleMultiSelectMode() {
+    state = state.copyWith(multiSelectMode: !state.multiSelectMode);
+    if (!state.multiSelectMode) {
+      clearDateSelection();
+    }
+  }
+
+  void addDateToSelection(DateTime date) {
+    final dateOnly = DateTime(date.year, date.month, date.day);
+    final newSelectedDates = Set<DateTime>.from(state.selectedDates);
+    newSelectedDates.add(dateOnly);
+    state = state.copyWith(selectedDates: newSelectedDates);
+  }
+
+  void removeDateFromSelection(DateTime date) {
+    final dateOnly = DateTime(date.year, date.month, date.day);
+    final newSelectedDates = Set<DateTime>.from(state.selectedDates);
+    newSelectedDates.remove(dateOnly);
+    state = state.copyWith(selectedDates: newSelectedDates);
+  }
+
+  void toggleDateSelection(DateTime date) {
+    final dateOnly = DateTime(date.year, date.month, date.day);
+    if (state.selectedDates.contains(dateOnly)) {
+      removeDateFromSelection(dateOnly);
+    } else {
+      addDateToSelection(dateOnly);
+    }
+  }
+
+  void clearDateSelection() {
+    state = state.copyWith(selectedDates: const {});
+  }
+
+  Future<void> saveBatchWorkEntries(
+    List<DateTime> dates,
+    WorkEntryType type,
+    TimeOfDay? startTime,
+    TimeOfDay? endTime,
+  ) async {
+    state = state.copyWith(isLoading: true);
+    try {
+      final workRepository = ref.read(core_providers.workRepositoryProvider);
+
+      for (final date in dates) {
+        final entry = WorkEntryEntity(
+          id: DateFormat('yyyy-MM-dd').format(date),
+          date: date,
+          type: type,
+          isManuallyEntered: true,
+          workStart: startTime != null
+              ? DateTime(date.year, date.month, date.day, startTime.hour, startTime.minute)
+              : null,
+          workEnd: endTime != null
+              ? DateTime(date.year, date.month, date.day, endTime.hour, endTime.minute)
+              : null,
+        );
+        await workRepository.saveWorkEntry(entry);
+      }
+
+      // Clear selection, reset multi-select mode and reload data
+      final selectedDate = state.selectedDay ?? DateTime.now();
+      clearDateSelection();
+      state = state.copyWith(multiSelectMode: false);
+      await _loadWorkEntriesForMonth(selectedDate.year, selectedDate.month);
+    } catch (e, stackTrace) {
+      logger.e('Fehler beim Speichern von Batch-Einträgen: $e', stackTrace: stackTrace);
+      state = state.copyWith(isLoading: false);
+    }
+  }
 }
+

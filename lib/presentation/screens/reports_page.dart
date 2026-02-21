@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -7,12 +8,14 @@ import '../../core/providers/subscription_provider.dart';
 
 import '../../domain/entities/work_entry_extensions.dart';
 import '../widgets/common/responsive_center.dart';
+import '../state/reports_state.dart';
 import '../view_models/reports_view_model.dart';
 import '../view_models/settings_view_model.dart';
 import '../view_models/auth_view_model.dart';
 import '../widgets/common/loading_indicator.dart';
 import '../widgets/edit_work_entry_modal.dart';
 import '../widgets/quick_entry_dialog.dart';
+import '../widgets/batch_quick_entry_dialog.dart';
 import '../../domain/entities/work_entry_entity.dart';
 import 'login_page.dart';
 
@@ -245,20 +248,24 @@ class DailyReportView extends ConsumerWidget {
 
         // --- Widgets Construction ---
 
-        final calendarWidget = _Calendar(
-          selectedDate: selectedDay,
-          onDateSelected: (date) => reportsNotifier.selectDate(date),
-          onPreviousMonthTapped: () {
-            final currentMonth = reportsState.selectedMonth ?? DateTime.now();
-            reportsNotifier.onMonthChanged(
-                DateTime(currentMonth.year, currentMonth.month - 1, 1));
-          },
-          onNextMonthTapped: () {
-            final currentMonth = reportsState.selectedMonth ?? DateTime.now();
-            reportsNotifier.onMonthChanged(
-                DateTime(currentMonth.year, currentMonth.month + 1, 1));
-          },
-          daysWithEntries: daysWithEntriesInMonth,
+        final calendarWidget = Column(
+          children: [
+            _Calendar(
+              selectedDate: selectedDay,
+              onDateSelected: (date) => reportsNotifier.selectDate(date),
+              onPreviousMonthTapped: () {
+                final currentMonth = reportsState.selectedMonth ?? DateTime.now();
+                reportsNotifier.onMonthChanged(
+                    DateTime(currentMonth.year, currentMonth.month - 1, 1));
+              },
+              onNextMonthTapped: () {
+                final currentMonth = reportsState.selectedMonth ?? DateTime.now();
+                reportsNotifier.onMonthChanged(
+                    DateTime(currentMonth.year, currentMonth.month + 1, 1));
+              },
+              daysWithEntries: daysWithEntriesInMonth,
+            ),
+          ],
         );
 
         final detailsWidget = Column(
@@ -275,62 +282,91 @@ class DailyReportView extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text('Keine Daten für diesen Tag.'),
-                    Builder(builder: (context) {
-                      final today = DateUtils.dateOnly(DateTime.now());
-                      final selectedDateOnly = DateUtils.dateOnly(selectedDay);
-
-                      if (selectedDateOnly.isBefore(today)) {
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 16.0),
-                          child: Column(
-                            children: [
-                              SizedBox(
-                                width: 280,
-                                child: ElevatedButton.icon(
-                                  onPressed: () {
-                                    final newEntry = WorkEntryEntity(
-                                      id: DateFormat('yyyy-MM-dd')
-                                          .format(selectedDay),
-                                      date: selectedDay,
-                                      workStart: null,
-                                      workEnd: null,
-                                      breaks: [],
-                                      isManuallyEntered: true,
-                                      description: null,
-                                      manualOvertime: null,
-                                    );
-                                    onEntryTap(newEntry);
-                                  },
-                                  icon: const Icon(Icons.add),
-                                  label: const Text('Eintrag hinzufügen'),
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              SizedBox(
-                                width: 280,
-                                child: ElevatedButton.icon(
-                                  onPressed: () => _handleQuickEntry(
-                                      context, ref, selectedDay),
-                                  icon: const Icon(Icons.flash_on),
-                                  label: const Text(
-                                      'Schnell-Eintrag (Urlaub, Krank...)'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
-                                    foregroundColor: Theme.of(context).colorScheme.onSecondaryContainer,
-                                  ),
-                                ),
-                              ),
-                            ],
+                    Padding(
+                      padding: const EdgeInsets.only(top: 16.0),
+                      child: Column(
+                        children: [
+                          SizedBox(
+                            width: 280,
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                final newEntry = WorkEntryEntity(
+                                  id: DateFormat('yyyy-MM-dd')
+                                      .format(selectedDay),
+                                  date: selectedDay,
+                                  workStart: null,
+                                  workEnd: null,
+                                  breaks: [],
+                                  isManuallyEntered: true,
+                                  description: null,
+                                  manualOvertime: null,
+                                );
+                                onEntryTap(newEntry);
+                              },
+                              icon: const Icon(Icons.add),
+                              label: const Text('Eintrag hinzufügen'),
+                            ),
                           ),
-                        );
-                      } else {
-                        return const SizedBox.shrink();
-                      }
-                    }),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: 280,
+                            child: ElevatedButton.icon(
+                              onPressed: () async {
+                                if (reportsState.selectedDates.isNotEmpty) {
+                                  await _handleBatchQuickEntry(
+                                      context, ref, reportsState, reportsNotifier);
+                                } else {
+                                  await _handleQuickEntry(
+                                      context, ref, selectedDay);
+                                }
+                              },
+                              icon: const Icon(Icons.flash_on),
+                              label: reportsState.selectedDates.isNotEmpty
+                                  ? Text(
+                                      'Schnell-Eintrag für ${reportsState.selectedDates.length} Tage')
+                                  : const Text('Schnell-Eintrag (Urlaub, Krank...)'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Theme.of(context)
+                                    .colorScheme
+                                    .secondaryContainer,
+                                foregroundColor: Theme.of(context)
+                                    .colorScheme
+                                    .onSecondaryContainer,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               )
             else ...[
+              // Batch-Button auch wenn aktueller Tag bereits Einträge hat
+              if (reportsState.selectedDates.isNotEmpty)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 12.0),
+                    child: SizedBox(
+                      width: 280,
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          await _handleBatchQuickEntry(
+                              context, ref, reportsState, reportsNotifier);
+                        },
+                        icon: const Icon(Icons.flash_on),
+                        label: Text(
+                            'Schnell-Eintrag für ${reportsState.selectedDates.length} Tage'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              Theme.of(context).colorScheme.secondaryContainer,
+                          foregroundColor:
+                              Theme.of(context).colorScheme.onSecondaryContainer,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               Card(
                 margin: const EdgeInsets.only(bottom: 12.0),
                 child: Padding(
@@ -1129,7 +1165,7 @@ class MonthlyReportView extends ConsumerWidget {
   }
 }
 
-class _Calendar extends StatelessWidget {
+class _Calendar extends ConsumerStatefulWidget {
   final DateTime selectedDate;
   final ValueChanged<DateTime> onDateSelected;
   final VoidCallback? onPreviousMonthTapped;
@@ -1144,6 +1180,16 @@ class _Calendar extends StatelessWidget {
     this.daysWithEntries,
   });
 
+  @override
+  ConsumerState<_Calendar> createState() => _CalendarState();
+}
+
+class _CalendarState extends ConsumerState<_Calendar> {
+  DateTime? _dragStartDate; // Tracks where drag started
+  DateTime? _dragEndDate;   // Tracks current drag position
+  bool _isDragging = false;
+  final GlobalKey _gridKey = GlobalKey();
+
   int _getDaysInMonth(int year, int month) {
     return DateTime(year, month + 1, 0).day;
   }
@@ -1153,8 +1199,125 @@ class _Calendar extends StatelessWidget {
     return weekday - 1;
   }
 
+  /// Prüft, ob ein bestimmtes Datum ein konfigurierter Arbeitstag ist
+  /// Wochentag: 1 = Montag, 7 = Sonntag
+  bool _isWorkday(DateTime date, int workdaysPerWeek) {
+    // Wochentag des Datums (1 = Montag, 7 = Sonntag)
+    int weekday = date.weekday;
+
+    // Arbeitstage sind von Montag (1) bis zu (workdaysPerWeek)
+    // z.B. bei 5 Arbeitstagen: 1-5 (Mo-Fr)
+    return weekday <= workdaysPerWeek;
+  }
+
+  void _selectDateRange(DateTime startDate, DateTime endDate, int workdaysPerWeek) {
+    final reportsNotifier = ref.read(reportsViewModelProvider.notifier);
+
+    // Normalize dates
+    final start = DateTime(startDate.year, startDate.month, startDate.day);
+    final end = DateTime(endDate.year, endDate.month, endDate.day);
+
+    // Ensure start is before end
+    final minDate = start.isBefore(end) ? start : end;
+    final maxDate = start.isBefore(end) ? end : start;
+
+    // Clear previous selection and select all dates in range
+    reportsNotifier.clearDateSelection();
+
+    DateTime currentDate = minDate;
+    while (!currentDate.isAfter(maxDate)) {
+      if (_isWorkday(currentDate, workdaysPerWeek)) {
+        reportsNotifier.addDateToSelection(currentDate);
+      }
+      currentDate = currentDate.add(const Duration(days: 1));
+    }
+  }
+
+  /// Berechnet das Datum anhand einer globalen Bildschirm-Position innerhalb des Kalender-Grids.
+  DateTime? _getDateFromGlobalPosition(Offset globalPosition) {
+    final RenderBox? renderBox =
+        _gridKey.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox == null) return null;
+
+    final localPosition = renderBox.globalToLocal(globalPosition);
+    final gridSize = renderBox.size;
+
+    // Außerhalb des Grids → kein Datum
+    if (localPosition.dx < 0 ||
+        localPosition.dy < 0 ||
+        localPosition.dx > gridSize.width ||
+        localPosition.dy > gridSize.height) {
+      return null;
+    }
+
+    // crossAxisCount: 7, childAspectRatio: 1.0 → quadratische Zellen
+    final cellWidth = gridSize.width / 7;
+    final col = (localPosition.dx / cellWidth).floor().clamp(0, 6);
+    final row = (localPosition.dy / cellWidth).floor();
+
+    final gridIndex = row * 7 + col;
+    final firstDayOffset = _getFirstDayOffset(
+      widget.selectedDate.year,
+      widget.selectedDate.month,
+    );
+
+    if (gridIndex < firstDayOffset) return null;
+
+    final day = gridIndex - firstDayOffset + 1;
+    final daysInMonth = _getDaysInMonth(
+      widget.selectedDate.year,
+      widget.selectedDate.month,
+    );
+
+    if (day < 1 || day > daysInMonth) return null;
+
+    return DateTime(widget.selectedDate.year, widget.selectedDate.month, day);
+  }
+
+  void _startDragAt(Offset globalPosition, int workdaysPerWeek) {
+    final date = _getDateFromGlobalPosition(globalPosition);
+    if (date == null || !_isWorkday(date, workdaysPerWeek)) return;
+
+    final reportsNotifier = ref.read(reportsViewModelProvider.notifier);
+    setState(() {
+      _dragStartDate = date;
+      _dragEndDate = date;
+      _isDragging = true;
+    });
+    reportsNotifier.clearDateSelection();
+    reportsNotifier.addDateToSelection(date);
+  }
+
+  void _updateDragAt(Offset globalPosition, int workdaysPerWeek) {
+    if (!_isDragging || _dragStartDate == null) return;
+    final date = _getDateFromGlobalPosition(globalPosition);
+    if (date == null) return;
+    if (!DateUtils.isSameDay(date, _dragEndDate)) {
+      setState(() => _dragEndDate = date);
+      _selectDateRange(_dragStartDate!, date, workdaysPerWeek);
+    }
+  }
+
+  void _endDrag(int workdaysPerWeek) {
+    if (_dragStartDate != null && _dragEndDate != null) {
+      _selectDateRange(_dragStartDate!, _dragEndDate!, workdaysPerWeek);
+    }
+    setState(() {
+      _dragStartDate = null;
+      _dragEndDate = null;
+      _isDragging = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    final reportsState = ref.watch(reportsViewModelProvider);
+    final reportsNotifier = ref.read(reportsViewModelProvider.notifier);
+    final settingsState = ref.watch(settingsViewModelProvider);
+
+    // Hole workdaysPerWeek aus den Settings (default 5)
+    final workdaysPerWeek = settingsState.whenData((s) => s.settings.workdaysPerWeek).value ?? 5;
+
     return Card(
       margin: const EdgeInsets.all(8.0),
       child: Padding(
@@ -1166,28 +1329,61 @@ class _Calendar extends StatelessWidget {
               children: [
                 IconButton(
                   icon: const Icon(Icons.chevron_left),
-                  onPressed: onPreviousMonthTapped,
+                  onPressed: widget.onPreviousMonthTapped,
                   tooltip: 'Vorheriger Monat',
                 ),
                 Expanded(
                   child: Text(
-                    DateFormat.yMMMM('de_DE').format(selectedDate),
+                    DateFormat.yMMMM('de_DE').format(widget.selectedDate),
                     style: Theme.of(context).textTheme.titleMedium,
                     textAlign: TextAlign.center,
                   ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.chevron_right),
-                  onPressed: onNextMonthTapped,
+                  onPressed: widget.onNextMonthTapped,
                   tooltip: 'Nächster Monat',
                 ),
               ],
             ),
             const SizedBox(height: 10),
+            // Range Selection Hint
+            if (reportsState.selectedDates.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '${reportsState.selectedDates.length} Tage ausgewählt',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => reportsNotifier.clearDateSelection(),
+                      child: const Text('Zurücksetzen'),
+                    ),
+                  ],
+                ),
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: Text(
+                  'Gedrückt halten und ziehen (Mobilgerät) oder klicken und ziehen (Web) zum Auswählen eines Datumsbereichs',
+                  style: TextStyle(
+                    color: Theme.of(context).textTheme.bodySmall?.color,
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
             Row(
               children: List.generate(7, (index) {
                 final day = DateFormat.E('de_DE').format(DateTime(
-                    2023, 1, 2 + index)); // Example year for weekday names
+                    2023, 1, 2 + index));
                 return Expanded(
                   child: Center(
                     child: Text(day),
@@ -1196,74 +1392,121 @@ class _Calendar extends StatelessWidget {
               }),
             ),
             const SizedBox(height: 10),
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 7),
-              itemCount:
-                  _getDaysInMonth(selectedDate.year, selectedDate.month) +
-                      _getFirstDayOffset(selectedDate.year, selectedDate.month),
-              itemBuilder: (context, index) {
-                final firstDayOffset =
-                    _getFirstDayOffset(selectedDate.year, selectedDate.month);
-                if (index < firstDayOffset) {
-                  return const SizedBox.shrink();
+            // Grid-level Gesture-Handling für Mehrfachauswahl per Drag.
+            // Mobile: Long-Press + Ziehen → onLongPressStart/MoveUpdate/End
+            // Web/Desktop: Mausklick + Ziehen → Listener.onPointerDown/Move/Up
+            GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onLongPressStart: (details) {
+                if (!_isDragging) {
+                  _startDragAt(details.globalPosition, workdaysPerWeek);
                 }
+              },
+              onLongPressMoveUpdate: (details) {
+                _updateDragAt(details.globalPosition, workdaysPerWeek);
+              },
+              onLongPressEnd: (_) => _endDrag(workdaysPerWeek),
+              onLongPressCancel: () => _endDrag(workdaysPerWeek),
+              child: Listener(
+                behavior: HitTestBehavior.translucent,
+                onPointerDown: (event) {
+                  // Nur für Maus: Drag sofort starten (kein Long-Press nötig)
+                  if (event.kind == PointerDeviceKind.mouse && event.buttons == 1) {
+                    _startDragAt(event.position, workdaysPerWeek);
+                  }
+                },
+                onPointerMove: (event) {
+                  if (event.kind == PointerDeviceKind.mouse && _isDragging) {
+                    _updateDragAt(event.position, workdaysPerWeek);
+                  }
+                },
+                onPointerUp: (event) {
+                  if (event.kind == PointerDeviceKind.mouse && _isDragging) {
+                    _endDrag(workdaysPerWeek);
+                  }
+                },
+                child: GridView.builder(
+                  key: _gridKey,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 7),
+                  itemCount:
+                      _getDaysInMonth(widget.selectedDate.year, widget.selectedDate.month) +
+                          _getFirstDayOffset(widget.selectedDate.year, widget.selectedDate.month),
+                  itemBuilder: (context, index) {
+                    final firstDayOffset =
+                        _getFirstDayOffset(widget.selectedDate.year, widget.selectedDate.month);
+                    if (index < firstDayOffset) {
+                      return const SizedBox.shrink();
+                    }
 
-                final day = index - firstDayOffset + 1;
-                final date =
-                    DateTime(selectedDate.year, selectedDate.month, day);
-                final isSelected = DateUtils.isSameDay(date, selectedDate);
-                final hasEntry = daysWithEntries?.contains(day) ?? false;
+                    final day = index - firstDayOffset + 1;
+                    final date =
+                        DateTime(widget.selectedDate.year, widget.selectedDate.month, day);
+                    final isSelected = DateUtils.isSameDay(date, widget.selectedDate);
+                    final isMultiSelected = reportsState.selectedDates
+                        .contains(DateTime(date.year, date.month, date.day));
+                    final hasEntry = widget.daysWithEntries?.contains(day) ?? false;
+                    final isWorkday = _isWorkday(date, workdaysPerWeek);
 
-                Widget dayWidget = Center(
-                  child: Text(
-                    '$day',
-                    style: TextStyle(
-                      color: isSelected
-                          ? Colors.white
-                          : Theme.of(context).textTheme.bodyLarge?.color,
-                    ),
-                  ),
-                );
-
-                if (hasEntry) {
-                  dayWidget = Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      dayWidget, // The day number text
-                      Positioned(
-                        bottom: 4,
-                        child: Container(
-                          width: 5,
-                          height: 5,
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? Colors.white70
-                                : Theme.of(context).colorScheme.secondary,
-                            shape: BoxShape.circle,
-                          ),
+                    Widget dayWidget = Center(
+                      child: Text(
+                        '$day',
+                        style: TextStyle(
+                          color: isSelected || isMultiSelected
+                              ? Colors.white
+                              : (isWorkday ? Theme.of(context).textTheme.bodyLarge?.color : Colors.grey),
                         ),
                       ),
-                    ],
-                  );
-                }
+                    );
 
-                return InkWell(
-                  onTap: () => onDateSelected(date),
-                  child: Container(
-                    margin: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? Theme.of(context).primaryColor
-                          : Colors.transparent,
-                      shape: BoxShape.circle,
-                    ),
-                    child: dayWidget,
-                  ),
-                );
-              },
+                    if (hasEntry) {
+                      dayWidget = Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          dayWidget,
+                          Positioned(
+                            bottom: 4,
+                            child: Container(
+                              width: 5,
+                              height: 5,
+                              decoration: BoxDecoration(
+                                color: isSelected || isMultiSelected
+                                    ? Colors.white70
+                                    : Theme.of(context).colorScheme.secondary,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    }
+
+                    return GestureDetector(
+                      onTap: () => widget.onDateSelected(date),
+                      child: Container(
+                        margin: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: isMultiSelected
+                              ? Theme.of(context).colorScheme.secondary
+                              : isSelected
+                                  ? Theme.of(context).primaryColor
+                                  : Colors.transparent,
+                          shape: BoxShape.circle,
+                          border: isMultiSelected
+                              ? Border.all(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  width: 2,
+                                )
+                              : null,
+                        ),
+                        child: dayWidget,
+                      ),
+                    );
+                  },
+                ),
+              ),
             )
           ],
         ),
@@ -1413,59 +1656,49 @@ class _DayEntriesBottomSheetState extends ConsumerState<DayEntriesBottomSheet> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           const Text('Keine Einträge für diesen Tag.'),
-                          Builder(builder: (context) {
-                            final today = DateUtils.dateOnly(DateTime.now());
-                            final sheetDateOnly =
-                                DateUtils.dateOnly(widget.date);
-
-                            if (sheetDateOnly.isBefore(today)) {
-                              return Padding(
-                                padding: const EdgeInsets.only(top: 16.0),
-                                child: Column(
-                                  children: [
-                                    SizedBox(
-                                      width: 280,
-                                      child: ElevatedButton.icon(
-                                        onPressed: () {
-                                          final newEntry = WorkEntryEntity(
-                                            id: DateFormat('yyyy-MM-dd')
-                                                .format(widget.date),
-                                            date: widget.date,
-                                            workStart: null,
-                                            workEnd: null,
-                                            breaks: [],
-                                            isManuallyEntered: true,
-                                            description: null,
-                                            manualOvertime: null,
-                                          );
-                                          _openEdit(newEntry);
-                                        },
-                                        icon: const Icon(Icons.add),
-                                        label: const Text('Eintrag hinzufügen'),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    SizedBox(
-                                      width: 280,
-                                      child: ElevatedButton.icon(
-                                        onPressed: () => _handleQuickEntry(
-                                            context, ref, widget.date),
-                                        icon: const Icon(Icons.flash_on),
-                                        label: const Text(
-                                            'Schnell-Eintrag (Urlaub, Krank...)'),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
-                                          foregroundColor: Theme.of(context).colorScheme.onSecondaryContainer,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                          Padding(
+                            padding: const EdgeInsets.only(top: 16.0),
+                            child: Column(
+                              children: [
+                                SizedBox(
+                                  width: 280,
+                                  child: ElevatedButton.icon(
+                                    onPressed: () {
+                                      final newEntry = WorkEntryEntity(
+                                        id: DateFormat('yyyy-MM-dd')
+                                            .format(widget.date),
+                                        date: widget.date,
+                                        workStart: null,
+                                        workEnd: null,
+                                        breaks: [],
+                                        isManuallyEntered: true,
+                                        description: null,
+                                        manualOvertime: null,
+                                      );
+                                      _openEdit(newEntry);
+                                    },
+                                    icon: const Icon(Icons.add),
+                                    label: const Text('Eintrag hinzufügen'),
+                                  ),
                                 ),
-                              );
-                            } else {
-                              return const SizedBox.shrink();
-                            }
-                          }),
+                                const SizedBox(height: 12),
+                                SizedBox(
+                                  width: 280,
+                                  child: ElevatedButton.icon(
+                                    onPressed: () => _handleQuickEntry(
+                                        context, ref, widget.date),
+                                    icon: const Icon(Icons.flash_on),
+                                    label: const Text(
+                                        'Schnell-Eintrag (Urlaub, Krank...)'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+                                      foregroundColor: Theme.of(context).colorScheme.onSecondaryContainer,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -1600,5 +1833,50 @@ String _getWorkEntryTypeLabel(WorkEntryType type) {
       return 'Feiertag';
     case WorkEntryType.work:
       return 'Arbeit';
+  }
+}
+
+Future<void> _handleBatchQuickEntry(
+  BuildContext context,
+  WidgetRef ref,
+  ReportsState reportsState,
+  ReportsViewModel reportsNotifier,
+) async {
+  final settingsState = ref.read(settingsViewModelProvider).asData?.value;
+  Duration? dailyTarget;
+  if (settingsState != null) {
+    dailyTarget = Duration(
+      minutes: ((settingsState.settings.weeklyTargetHours /
+                  settingsState.settings.workdaysPerWeek) *
+              60)
+          .round(),
+    );
+  }
+
+  final result = await showDialog<Map<String, dynamic>>(
+    context: context,
+    builder: (BuildContext dialogContext) {
+      return BatchQuickEntryDialog(
+        dates: List<DateTime>.from(reportsState.selectedDates)..sort(),
+        dailyTarget: dailyTarget,
+      );
+    },
+  );
+
+  if (result != null) {
+    final count = reportsState.selectedDates.length;
+    await reportsNotifier.saveBatchWorkEntries(
+      List<DateTime>.from(reportsState.selectedDates),
+      result['type'] as WorkEntryType,
+      result['startTime'] as TimeOfDay?,
+      result['endTime'] as TimeOfDay?,
+    );
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Schnell-Einträge für $count Tage erstellt'),
+        ),
+      );
+    }
   }
 }

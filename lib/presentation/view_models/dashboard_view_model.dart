@@ -336,14 +336,14 @@ class DashboardViewModel extends Notifier<DashboardState> {
       updatedEntry = state.workEntry.copyWith(workEnd: now);
       logger.i('[Dashboard] Timer gestoppt um $now');
 
-      // Berechne automatische Pausen beim Beenden (nur wenn keine Pause läuft)
+      // Berechne automatische Pausen beim Beenden (nur wenn keine Pause läuft und Typ Arbeit ist)
       final hasRunningBreak = updatedEntry.breaks.any((b) => b.end == null);
-      if (!hasRunningBreak) {
+      if (!hasRunningBreak && updatedEntry.type == WorkEntryType.work) {
         logger.i('[Dashboard] Berechne automatische Pausen...');
         updatedEntry = BreakCalculatorService.calculateAndApplyBreaks(updatedEntry);
         logger.i('[Dashboard] Automatische Pausen berechnet: ${updatedEntry.breaks.length} Pausen');
       } else {
-        logger.i('[Dashboard] Automatische Pausen übersprungen: Pause läuft noch');
+        logger.i('[Dashboard] Automatische Pausen übersprungen: Pause läuft noch oder Sonder-Eintrag');
       }
     } else {
       // Arbeit wurde bereits beendet - Benutzer muss entscheiden
@@ -460,8 +460,9 @@ class DashboardViewModel extends Notifier<DashboardState> {
     // Berechne automatische Pausen nur wenn:
     // 1. Start UND End vorhanden sind
     // 2. Keine laufende Pause existiert
+    // 3. Eintrag ist vom Typ Arbeit (nicht Urlaub/Krank/Feiertag)
     final hasRunningBreak = updatedEntry.breaks.any((b) => b.end == null);
-    if (updatedEntry.workStart != null && updatedEntry.workEnd != null && !hasRunningBreak) {
+    if (updatedEntry.workStart != null && updatedEntry.workEnd != null && !hasRunningBreak && updatedEntry.type == WorkEntryType.work) {
       logger.i('[Dashboard] Berechne automatische Pausen...');
       updatedEntry = BreakCalculatorService.calculateAndApplyBreaks(updatedEntry);
       logger.i('[Dashboard] Automatische Pausen berechnet: ${updatedEntry.breaks.length} Pausen');
@@ -481,8 +482,9 @@ class DashboardViewModel extends Notifier<DashboardState> {
     // Berechne automatische Pausen nur wenn:
     // 1. Start UND End vorhanden sind
     // 2. Keine laufende Pause existiert
+    // 3. Eintrag ist vom Typ Arbeit (nicht Urlaub/Krank/Feiertag)
     final hasRunningBreak = updatedEntry.breaks.any((b) => b.end == null);
-    if (updatedEntry.workStart != null && updatedEntry.workEnd != null && !hasRunningBreak) {
+    if (updatedEntry.workStart != null && updatedEntry.workEnd != null && !hasRunningBreak && updatedEntry.type == WorkEntryType.work) {
       logger.i('[Dashboard] Berechne automatische Pausen...');
       updatedEntry = BreakCalculatorService.calculateAndApplyBreaks(updatedEntry);
       logger.i('[Dashboard] Automatische Pausen berechnet: ${updatedEntry.breaks.length} Pausen');

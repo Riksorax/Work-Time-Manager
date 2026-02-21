@@ -51,6 +51,12 @@ class LocalWorkRepositoryImpl implements WorkRepository {
           : null,
       description: data['description'] as String?,
       isManuallyEntered: data['isManuallyEntered'] as bool? ?? false,
+      type: data['type'] != null
+          ? WorkEntryType.values.firstWhere(
+              (e) => e.name == data['type'],
+              orElse: () => WorkEntryType.work,
+            )
+          : WorkEntryType.work,
     );
   }
 
@@ -63,6 +69,7 @@ class LocalWorkRepositoryImpl implements WorkRepository {
       'manualOvertimeMinutes': entry.manualOvertime?.inMinutes,
       'description': entry.description,
       'isManuallyEntered': entry.isManuallyEntered,
+      'type': entry.type.name,
     };
   }
 
