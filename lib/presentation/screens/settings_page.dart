@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/providers/providers.dart' as core_providers;
+import '../../core/providers/subscription_provider.dart';
 import '../../data/repositories/hybrid_work_repository_impl.dart';
 import '../../data/repositories/hybrid_overtime_repository_impl.dart';
 import '../../data/repositories/firebase_overtime_repository_impl.dart';
@@ -381,6 +382,7 @@ class SettingsPage extends ConsumerWidget {
   Widget _buildProfileSection(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final authState = ref.watch(authStateProvider);
+    final isPremium = ref.watch(isPremiumProvider);
 
     return authState.when(
       data: (user) {
@@ -430,6 +432,10 @@ class SettingsPage extends ConsumerWidget {
                         style: theme.textTheme.bodyMedium,
                         overflow: TextOverflow.ellipsis,
                       ),
+                    if (isPremium) ...[
+                      const SizedBox(height: 4),
+                      const _PremiumBadge(),
+                    ],
                   ],
                 ),
               ),
@@ -548,6 +554,36 @@ class SettingsPage extends ConsumerWidget {
       },
       loading: () => const SizedBox.shrink(),
       error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+}
+
+class _PremiumBadge extends StatelessWidget {
+  const _PremiumBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: Colors.orange,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.workspace_premium, size: 14, color: Colors.white),
+          SizedBox(width: 4),
+          Text(
+            'Premium',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

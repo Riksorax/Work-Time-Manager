@@ -13,6 +13,7 @@ import 'package:flutter_work_time/presentation/view_models/theme_view_model.dart
 import 'package:flutter_work_time/presentation/widgets/add_adjustment_modal.dart';
 import 'package:flutter_work_time/domain/usecases/sign_out.dart';
 import 'package:flutter_work_time/domain/usecases/delete_account.dart';
+import 'package:flutter_work_time/core/providers/subscription_provider.dart';
 
 import 'settings_page_test.mocks.dart';
 
@@ -50,6 +51,7 @@ void main() {
     required SettingsViewModel settingsViewModel,
     required ThemeViewModel themeViewModel,
     required AsyncValue<UserEntity?> authState,
+    bool isPremium = false,
   }) {
     return ProviderScope(
       overrides: [
@@ -58,6 +60,7 @@ void main() {
         authStateProvider.overrideWithValue(authState),
         signOutProvider.overrideWithValue(mockSignOut),
         deleteAccountProvider.overrideWithValue(mockDeleteAccount),
+        isPremiumProvider.overrideWithValue(isPremium),
       ],
       child: MaterialApp(
         home: const SettingsPage(),
@@ -121,6 +124,84 @@ void main() {
 
       expect(find.text('Anmelden'), findsOneWidget);
       expect(find.text('Nicht angemeldet'), findsOneWidget);
+    });
+
+    testWidgets('zeigt Premium-Badge wenn eingeloggt und Premium aktiv', (tester) async {
+      final settingsViewModel = FakeSettingsViewModel(
+        initialState: const AsyncValue.data(SettingsState(
+          settings: SettingsEntity(),
+          overtimeBalance: Duration.zero,
+        )),
+        actions: mockActions,
+      );
+      final themeViewModel = FakeThemeViewModel(
+        initialState: ThemeMode.system,
+        actions: mockActions,
+      );
+
+      await tester.pumpWidget(createSubject(
+        settingsViewModel: settingsViewModel,
+        themeViewModel: themeViewModel,
+        authState: const AsyncValue.data(UserEntity(
+          id: '1',
+          email: 'test@example.com',
+          displayName: 'Max Mustermann',
+        )),
+        isPremium: true,
+      ));
+
+      expect(find.text('Premium'), findsOneWidget);
+      expect(find.byIcon(Icons.workspace_premium), findsOneWidget);
+    });
+
+    testWidgets('zeigt kein Premium-Badge wenn nicht eingeloggt', (tester) async {
+      final settingsViewModel = FakeSettingsViewModel(
+        initialState: const AsyncValue.data(SettingsState(
+          settings: SettingsEntity(),
+          overtimeBalance: Duration.zero,
+        )),
+        actions: mockActions,
+      );
+      final themeViewModel = FakeThemeViewModel(
+        initialState: ThemeMode.system,
+        actions: mockActions,
+      );
+
+      await tester.pumpWidget(createSubject(
+        settingsViewModel: settingsViewModel,
+        themeViewModel: themeViewModel,
+        authState: const AsyncValue.data(null),
+        isPremium: true, // selbst wenn Premium: kein User → kein Badge
+      ));
+
+      expect(find.text('Premium'), findsNothing);
+    });
+
+    testWidgets('zeigt kein Premium-Badge wenn eingeloggt aber kein Premium', (tester) async {
+      final settingsViewModel = FakeSettingsViewModel(
+        initialState: const AsyncValue.data(SettingsState(
+          settings: SettingsEntity(),
+          overtimeBalance: Duration.zero,
+        )),
+        actions: mockActions,
+      );
+      final themeViewModel = FakeThemeViewModel(
+        initialState: ThemeMode.system,
+        actions: mockActions,
+      );
+
+      await tester.pumpWidget(createSubject(
+        settingsViewModel: settingsViewModel,
+        themeViewModel: themeViewModel,
+        authState: const AsyncValue.data(UserEntity(
+          id: '1',
+          email: 'test@example.com',
+          displayName: 'Max Mustermann',
+        )),
+        isPremium: false,
+      ));
+
+      expect(find.text('Premium'), findsNothing);
     });
 
     testWidgets('shows Profile and Logout button when authenticated', (tester) async {

@@ -26,14 +26,14 @@ void main() {
       controller.add(null);
       await tester.pump(); // Process stream event
 
-      expect(find.text('Anmelden erforderlich für Wochenberichte'), findsOneWidget);
+      expect(find.text('Anmeldung erforderlich für Wochenberichte'), findsOneWidget);
       expect(find.text('Anmelden'), findsOneWidget);
       expect(find.text('Premium-Funktion'), findsNothing);
       
       await controller.close();
     });
 
-    testWidgets('WeeklyReportView shows premium lock when user is logged in but NO premium', (tester) async {
+    testWidgets('WeeklyReportView shows premium blur gate when user is logged in but NO premium', (tester) async {
       const user = UserEntity(id: '123', email: 'test@test.com', displayName: 'Test User');
 
       await tester.pumpWidget(
@@ -51,11 +51,11 @@ void main() {
 
       // Login Screen sollte weg sein
       expect(find.text('Anmelden erforderlich für Wochenberichte'), findsNothing);
-      
-      // Premium Lock Screen sollte da sein
-      expect(find.text('Premium-Funktion'), findsOneWidget);
-      expect(find.text('Wochenberichte sind nur für Premium-Nutzer verfügbar. Behalte den vollen Überblick über deine Überstunden.'), findsOneWidget);
-      expect(find.byIcon(Icons.lock_outline), findsOneWidget);
+
+      // Blur-Gate mit Kaufanreiz sollte da sein
+      expect(find.text('Wochenberichte'), findsOneWidget);
+      expect(find.text('Premium freischalten'), findsOneWidget);
+      expect(find.byIcon(Icons.workspace_premium), findsWidgets);
     });
 
     testWidgets('MonthlyReportView shows login button when user is null', (tester) async {
@@ -75,13 +75,13 @@ void main() {
       controller.add(null);
       await tester.pump();
 
-      expect(find.text('Anmelden erforderlich für Monatsberichte'), findsOneWidget);
+      expect(find.text('Anmeldung erforderlich für Monatsberichte'), findsOneWidget);
       expect(find.text('Anmelden'), findsOneWidget);
       
       await controller.close();
     });
 
-    testWidgets('MonthlyReportView shows premium lock when user is logged in but NO premium', (tester) async {
+    testWidgets('MonthlyReportView shows premium blur gate when user is logged in but NO premium', (tester) async {
       const user = UserEntity(id: '123', email: 'test@test.com', displayName: 'Test User');
 
       await tester.pumpWidget(
@@ -100,10 +100,10 @@ void main() {
       // Login Screen sollte weg sein
       expect(find.text('Anmelden erforderlich für Monatsberichte'), findsNothing);
 
-      // Premium Lock Screen sollte da sein
-      expect(find.text('Premium-Funktion'), findsOneWidget);
-      expect(find.text('Monatsberichte und detaillierte Analysen sind nur für Premium-Nutzer verfügbar.'), findsOneWidget);
-      expect(find.byIcon(Icons.star_border), findsOneWidget);
+      // Blur-Gate mit Kaufanreiz sollte da sein
+      expect(find.text('Monatsberichte'), findsOneWidget);
+      expect(find.text('Premium freischalten'), findsOneWidget);
+      expect(find.byIcon(Icons.workspace_premium), findsWidgets);
     });
   });
 }
