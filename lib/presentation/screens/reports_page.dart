@@ -8,6 +8,7 @@ import '../../core/providers/subscription_provider.dart';
 
 import '../../domain/entities/work_entry_extensions.dart';
 import '../widgets/common/responsive_center.dart';
+import '../widgets/premium_blur_gate.dart';
 import '../state/reports_state.dart';
 import '../view_models/reports_view_model.dart';
 import '../view_models/settings_view_model.dart';
@@ -607,61 +608,12 @@ class WeeklyReportView extends ConsumerWidget {
     final isPremium = ref.watch(isPremiumProvider);
 
     if (!isPremium) {
-      return Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withAlpha(26),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.lock_outline, size: 64, color: Colors.orange),
-              ),
-              const SizedBox(height: 24),
-              const Text('Premium-Funktion',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 12),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.0),
-                child: Text(
-                  'Wochenberichte sind nur für Premium-Nutzer verfügbar. Behalte den vollen Überblick über deine Überstunden und Exporte.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16, color: Colors.grey),
-                ),
-              ),
-              const SizedBox(height: 32),
-              if (kIsWeb)
-                const Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Text(
-                      'Abonnements können derzeit nur in der mobilen App verwaltet werden.',
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                )
-              else
-                SizedBox(
-                  width: 280,
-                  height: 56,
-                  child: FilledButton.icon(
-                    onPressed: () => _showPaywall(context),
-                    icon: const Icon(Icons.workspace_premium),
-                    label: const Text('Premium freischalten',
-                        style: TextStyle(fontSize: 18)),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: Colors.orange,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
+      return PremiumBlurGate(
+        featureTitle: 'Wochenberichte',
+        featureText:
+            'Behalte den vollen Überblick über deine wöchentlichen Überstunden und Arbeitsmuster.',
+        onUpgrade: kIsWeb ? null : () => _showPaywall(context),
+        child: const _WeeklyReportPlaceholder(),
       );
     }
 
@@ -916,61 +868,12 @@ class MonthlyReportView extends ConsumerWidget {
     final isPremium = ref.watch(isPremiumProvider);
 
     if (!isPremium) {
-      return Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.amber.withAlpha(26),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.star_border, size: 64, color: Colors.amber),
-              ),
-              const SizedBox(height: 24),
-              const Text('Premium-Funktion',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 12),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.0),
-                child: Text(
-                  'Monatsberichte und detaillierte Analysen sind nur für Premium-Nutzer verfügbar. Werde jetzt Teil der Pro-Community.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16, color: Colors.grey),
-                ),
-              ),
-              const SizedBox(height: 32),
-              if (kIsWeb)
-                const Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Text(
-                      'Abonnements können derzeit nur in der mobilen App verwaltet werden.',
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                )
-              else
-                SizedBox(
-                  width: 280,
-                  height: 56,
-                  child: FilledButton.icon(
-                    onPressed: () => _showPaywall(context),
-                    icon: const Icon(Icons.workspace_premium),
-                    label: const Text('Premium freischalten',
-                        style: TextStyle(fontSize: 18)),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: Colors.amber.shade700,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
+      return PremiumBlurGate(
+        featureTitle: 'Monatsberichte',
+        featureText:
+            'Detaillierte Monatsanalysen mit Überstunden-Tracking und Urlaubsübersicht.',
+        onUpgrade: kIsWeb ? null : () => _showPaywall(context),
+        child: const _MonthlyReportPlaceholder(),
       );
     }
 
@@ -1382,11 +1285,15 @@ class _CalendarState extends ConsumerState<_Calendar> {
               ),
             Row(
               children: List.generate(7, (index) {
-                final day = DateFormat.E('de_DE').format(DateTime(
-                    2023, 1, 2 + index));
+                final day = DateFormat.E('de_DE').format(DateTime(2023, 1, 2 + index));
+                final fullDay = DateFormat.EEEE('de_DE').format(DateTime(2023, 1, 2 + index));
                 return Expanded(
-                  child: Center(
-                    child: Text(day),
+                  child: Semantics(
+                    label: fullDay,
+                    excludeSemantics: true,
+                    child: Center(
+                      child: Text(day),
+                    ),
                   ),
                 );
               }),
@@ -1483,25 +1390,32 @@ class _CalendarState extends ConsumerState<_Calendar> {
                       );
                     }
 
-                    return GestureDetector(
-                      onTap: () => widget.onDateSelected(date),
-                      child: Container(
-                        margin: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: isMultiSelected
-                              ? Theme.of(context).colorScheme.secondary
-                              : isSelected
-                                  ? Theme.of(context).primaryColor
-                                  : Colors.transparent,
-                          shape: BoxShape.circle,
-                          border: isMultiSelected
-                              ? Border.all(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  width: 2,
-                                )
-                              : null,
+                    final semanticLabel = DateFormat('EEEE, d. MMMM yyyy', 'de_DE').format(date);
+                    return Semantics(
+                      label: semanticLabel,
+                      button: true,
+                      selected: isSelected || isMultiSelected,
+                      excludeSemantics: true,
+                      child: GestureDetector(
+                        onTap: () => widget.onDateSelected(date),
+                        child: Container(
+                          margin: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: isMultiSelected
+                                ? Theme.of(context).colorScheme.secondary
+                                : isSelected
+                                    ? Theme.of(context).primaryColor
+                                    : Colors.transparent,
+                            shape: BoxShape.circle,
+                            border: isMultiSelected
+                                ? Border.all(
+                                    color: Theme.of(context).colorScheme.primary,
+                                    width: 2,
+                                  )
+                                : null,
+                          ),
+                          child: dayWidget,
                         ),
-                        child: dayWidget,
                       ),
                     );
                   },
@@ -1878,5 +1792,213 @@ Future<void> _handleBatchQuickEntry(
         ),
       );
     }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Platzhalter-Widgets für den Blur-Effekt (nicht-Premium-Nutzer)
+// ---------------------------------------------------------------------------
+
+class _WeeklyReportPlaceholder extends StatelessWidget {
+  const _WeeklyReportPlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Navigations-Header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Icon(Icons.chevron_left),
+              Column(
+                children: [
+                  Text(
+                    'Wochenbericht',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  Container(
+                    width: 160,
+                    height: 14,
+                    margin: const EdgeInsets.only(top: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ],
+              ),
+              const Icon(Icons.chevron_right),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Summary-Card
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: List.generate(
+                  4,
+                  (i) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          width: 120,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade300,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                        Container(
+                          width: 60,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade300,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Tages-Einträge
+          ...List.generate(
+            4,
+            (i) => Card(
+              child: ListTile(
+                title: Container(
+                  width: 80,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                trailing: Container(
+                  width: 48,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MonthlyReportPlaceholder extends StatelessWidget {
+  const _MonthlyReportPlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Navigations-Header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Icon(Icons.chevron_left),
+              Column(
+                children: [
+                  Text(
+                    'Monatsbericht',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  Container(
+                    width: 140,
+                    height: 14,
+                    margin: const EdgeInsets.only(top: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ],
+              ),
+              const Icon(Icons.chevron_right),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Summary-Card
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: List.generate(
+                  5,
+                  (i) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          width: 130,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade300,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                        Container(
+                          width: 60,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade300,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Tages-Einträge
+          ...List.generate(
+            4,
+            (i) => Card(
+              child: ListTile(
+                title: Container(
+                  width: 80,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                trailing: Container(
+                  width: 48,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

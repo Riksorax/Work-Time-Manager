@@ -204,6 +204,8 @@ google-services.json
 
 # Claude Code settings (local development)
 .claude/
+CLAUDE.md
+thoughts/*
 
 # Documentation files (local development guides)
 FIRESTORE_SECURITY_RULES.md
