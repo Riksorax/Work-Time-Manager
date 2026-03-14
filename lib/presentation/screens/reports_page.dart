@@ -33,19 +33,35 @@ class PendingTabIndexNotifier extends Notifier<int?> {
 }
 
 /// Zeigt die RevenueCat Paywall in einem Fullscreen-Modal an.
+const _rcAndroidKey = String.fromEnvironment('RC_ANDROID_KEY');
+
 void _showPaywall(BuildContext context) {
+  // Im lokalen Test ohne gültigen RC-Key kein Paywall öffnen
+  if (_rcAndroidKey.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Paywall nicht verfügbar – App ohne RC_ANDROID_KEY gestartet.',
+        ),
+      ),
+    );
+    return;
+  }
+
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
     backgroundColor: Colors.transparent,
-    builder: (context) => Container(
+    builder: (ctx) => Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
+        color: Theme.of(ctx).scaffoldBackgroundColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: PaywallView(
-        onDismiss: () => Navigator.of(context).pop(),
+        onDismiss: () {
+          if (Navigator.of(ctx).canPop()) Navigator.of(ctx).pop();
+        },
       ),
     ),
   );
@@ -612,7 +628,9 @@ class WeeklyReportView extends ConsumerWidget {
         featureTitle: 'Wochenberichte',
         featureText:
             'Behalte den vollen Überblick über deine wöchentlichen Überstunden und Arbeitsmuster.',
-        onUpgrade: kIsWeb ? null : () => _showPaywall(context),
+        onUpgrade: kIsWeb ? null : () {
+          if (context.mounted) _showPaywall(context);
+        },
         child: const _WeeklyReportPlaceholder(),
       );
     }
@@ -872,7 +890,9 @@ class MonthlyReportView extends ConsumerWidget {
         featureTitle: 'Monatsberichte',
         featureText:
             'Detaillierte Monatsanalysen mit Überstunden-Tracking und Urlaubsübersicht.',
-        onUpgrade: kIsWeb ? null : () => _showPaywall(context),
+        onUpgrade: kIsWeb ? null : () {
+          if (context.mounted) _showPaywall(context);
+        },
         child: const _MonthlyReportPlaceholder(),
       );
     }

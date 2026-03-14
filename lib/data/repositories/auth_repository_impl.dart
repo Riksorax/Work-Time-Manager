@@ -13,24 +13,31 @@ class AuthRepositoryImpl implements AuthRepository {
   AuthRepositoryImpl(this._dataSource);
 
   /// Implementiert den Stream, der auf An- und Abmeldeereignisse lauscht.
+  static const _rcAndroidKey = String.fromEnvironment('RC_ANDROID_KEY');
+  static const _rcIosKey = String.fromEnvironment('RC_IOS_KEY');
+  static bool get _isRcInitialized =>
+      !kIsWeb && (_rcAndroidKey.isNotEmpty || _rcIosKey.isNotEmpty);
+
   @override
   Stream<UserEntity?> get authStateChanges {
-    // Rufe den Stream der Datenquelle ab, der Firebase-Benutzerobjekte liefert.
-    return _dataSource.authStateChanges.map((firebaseUser) {
-      
-      // RevenueCat Synchronisation (nur Mobile)
-      if (!kIsWeb) {
+    return _dataSource.authStateChanges.asyncMap((firebaseUser) async {
+      // RevenueCat Synchronisation (nur Mobile, nur wenn RC initialisiert)
+      if (_isRcInitialized) {
         if (firebaseUser != null) {
-          // User hat sich eingeloggt oder App wurde mit eingeloggtem User gestartet
-          Purchases.logIn(firebaseUser.uid);
+          try {
+            await Purchases.logIn(firebaseUser.uid);
+          } catch (_) {
+            // Fehler ignorieren – kein gültiger Key oder Netzwerkproblem
+          }
         } else {
-          // User hat sich ausgeloggt
-          Purchases.logOut();
+          try {
+            await Purchases.logOut();
+          } catch (_) {
+            // Wird geworfen wenn der RC-User anonym ist – sicher ignorieren
+          }
         }
       }
 
-      // Wandle das Firebase-Benutzerobjekt in unsere eigene UserEntity um.
-      // Wenn der Firebase-Benutzer null ist (abgemeldet), gib auch null zurück.
       return firebaseUser != null
           ? _mapFirebaseUserToEntity(firebaseUser)
           : null;
