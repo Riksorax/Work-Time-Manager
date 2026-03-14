@@ -6,9 +6,11 @@ import 'package:flutter_work_time/core/utils/logger.dart';
 import '../../core/providers/providers.dart' as core_providers;
 import '../../data/repositories/hybrid_work_repository_impl.dart';
 import '../../data/repositories/hybrid_overtime_repository_impl.dart';
+import '../../data/repositories/firebase_overtime_repository_impl.dart';
 import '../../domain/services/data_sync_service.dart';
 import '../view_models/auth_view_model.dart';
 import '../view_models/dashboard_view_model.dart' as dashboard_vm;
+import '../view_models/settings_view_model.dart';
 import '../widgets/privacy_policy_dialog.dart';
 import '../widgets/terms_of_service_dialog.dart';
 import 'home_screen.dart';
@@ -157,15 +159,27 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     final workRepository = ref.read(core_providers.workRepositoryProvider);
                     final overtimeRepository = ref.read(core_providers.overtimeRepositoryProvider);
 
-                    // Prüfe ob sie Hybrid-Repositories sind
+                    // Hole die aktuelle userId direkt von FirebaseAuth
+                    // (der Provider wurde möglicherweise noch nicht aktualisiert)
+                    final currentUser = ref.read(core_providers.firebaseAuthProvider).currentUser;
+                    final userId = currentUser?.uid;
+
+                    // Prüfe ob sie Hybrid-Repositories sind und User eingeloggt ist
                     if (workRepository is HybridWorkRepositoryImpl &&
-                        overtimeRepository is HybridOvertimeRepositoryImpl) {
+                        overtimeRepository is HybridOvertimeRepositoryImpl &&
+                        userId != null) {
+                      // Erstelle frisches Firebase-Repository mit korrekter userId
+                      final freshFirebaseOvertimeRepo = FirebaseOvertimeRepositoryImpl(
+                        dataSource: ref.read(core_providers.firestoreDataSourceProvider),
+                        userId: userId,
+                      );
+
                       // Führe Sync durch
                       final result = await DataSyncService.syncAll(
                         localWorkRepository: workRepository.localRepository,
                         firebaseWorkRepository: workRepository.firebaseRepository,
                         localOvertimeRepository: overtimeRepository.localRepository,
-                        firebaseOvertimeRepository: overtimeRepository.firebaseRepository,
+                        firebaseOvertimeRepository: freshFirebaseOvertimeRepo,
                       );
 
                       // Schließe Sync-Dialog
@@ -194,8 +208,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         }
                       }
 
-                      // Aktualisiere Dashboard nach Sync
+                      // Aktualisiere Dashboard und Settings nach Sync
                       ref.invalidate(dashboard_vm.dashboardViewModelProvider);
+                      ref.invalidate(settingsViewModelProvider);
                     } else {
                       // Schließe Sync-Dialog
                       if (context.mounted) {

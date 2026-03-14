@@ -24,21 +24,9 @@ class _AddAdjustmentModalState extends ConsumerState<AddAdjustmentModal> {
   }
 
   void _save() {
-    // Überprüfen auf leere Eingaben
-    if (_hoursController.text.isEmpty && _minutesController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Bitte geben Sie mindestens Stunden oder Minuten ein')),
-      );
-      return;
-    }
-
-    // Stunden und Minuten als Werte parsen
-    int parsedHours = int.tryParse(_hoursController.text.replaceFirst('-', '')) ?? 0;
-    int parsedMinutes = int.tryParse(_minutesController.text.replaceFirst('-', '')) ?? 0;
-
-    // Überprüfen ob die Eingabe negativ ist
-    bool hoursNegative = _hoursController.text.startsWith('-');
-    bool minutesNegative = _minutesController.text.startsWith('-');
+    // Stunden und Minuten als positive Werte parsen
+    int parsedHours = int.tryParse(_hoursController.text) ?? 0;
+    int parsedMinutes = int.tryParse(_minutesController.text) ?? 0;
 
     // Bei Minuten auf gültige Werte prüfen (0-59)
     if (parsedMinutes > 59) {
@@ -48,29 +36,22 @@ class _AddAdjustmentModalState extends ConsumerState<AddAdjustmentModal> {
       return;
     }
 
-    // Mindestens einer der Werte muss größer als 0 sein
-    if (parsedHours == 0 && parsedMinutes == 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Bitte geben Sie einen Wert größer als 0 ein')),
-      );
-      return;
-    }
-
-    // Erstelle die Dauer unter Berücksichtigung separater negativer Werte
-    int totalHoursMinutes = parsedHours * 60 + parsedMinutes;
-    if (hoursNegative || minutesNegative) {
-      // Wenn eines der Felder negativ ist, behandle beide als negativ
-      totalHoursMinutes = -totalHoursMinutes;
-    }
-
-    // Wenn negativ ausgewählt wurde, erstelle eine negative Dauer
-    Duration duration = Duration(minutes: totalHoursMinutes);
-    if (_isNegative) {
-      duration = -duration;
-    }
+    // Erstelle die Dauer - Vorzeichen wird nur durch ChoiceChip bestimmt
+    int totalMinutes = parsedHours * 60 + parsedMinutes;
+    Duration duration = Duration(minutes: _isNegative ? -totalMinutes : totalMinutes);
 
     // Rufe die Methode im ViewModel auf
     ref.read(settingsViewModelProvider.notifier).setOvertimeBalance(ref, duration);
+
+    // Modal schließen
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
+  }
+
+  void _reset() {
+    // Setze die Gleitzeit-Bilanz auf 0 zurück
+    ref.read(settingsViewModelProvider.notifier).setOvertimeBalance(ref, Duration.zero);
 
     // Modal schließen
     if (mounted) {
@@ -87,7 +68,7 @@ class _AddAdjustmentModalState extends ConsumerState<AddAdjustmentModal> {
           mainAxisSize: MainAxisSize.min,
           children: [
           const Text(
-            'Manuelle Eingabe für den heutigen Tag. Sie können auch negative Werte direkt eingeben.',
+            'Geben Sie einen neuen Wert ein oder setzen Sie die Bilanz auf 0 zurück.',
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
@@ -126,18 +107,18 @@ class _AddAdjustmentModalState extends ConsumerState<AddAdjustmentModal> {
           const SizedBox(height: 16),
           TextField(
             controller: _hoursController,
-            keyboardType: TextInputType.numberWithOptions(signed: true),
+            keyboardType: TextInputType.number,
             decoration: const InputDecoration(
               labelText: 'Stunden',
               border: OutlineInputBorder(),
               helperText: 'Leer lassen für 0 Stunden',
             ),
             onChanged: (value) {
-              // Prüfen ob gültige Zahl
-              if (value.isNotEmpty && double.tryParse(value) == null) {
-                // Falls '-' allein steht, erlaube es
-                if (value != '-') {
-                  _hoursController.text = value.replaceAll(RegExp(r'[^0-9-]'), '');
+              // Nur positive Zahlen erlauben
+              if (value.isNotEmpty) {
+                final cleanedValue = value.replaceAll(RegExp(r'[^0-9]'), '');
+                if (cleanedValue != value) {
+                  _hoursController.text = cleanedValue;
                   _hoursController.selection = TextSelection.fromPosition(
                     TextPosition(offset: _hoursController.text.length),
                   );
@@ -148,28 +129,24 @@ class _AddAdjustmentModalState extends ConsumerState<AddAdjustmentModal> {
           const SizedBox(height: 16),
           TextField(
             controller: _minutesController,
-            keyboardType: TextInputType.numberWithOptions(signed: true),
+            keyboardType: TextInputType.number,
             decoration: const InputDecoration(
               labelText: 'Minuten (0-59)',
               border: OutlineInputBorder(),
               helperText: 'Leer lassen für 0 Minuten',
             ),
             onChanged: (value) {
-              // Prüfen ob gültige Zahl
-              if (value.isNotEmpty && double.tryParse(value) == null) {
-                // Falls '-' allein steht, erlaube es
-                if (value != '-') {
-                  _minutesController.text = value.replaceAll(RegExp(r'[^0-g-]'), '');
+              // Nur positive Zahlen erlauben und auf 59 begrenzen
+              if (value.isNotEmpty) {
+                final cleanedValue = value.replaceAll(RegExp(r'[^0-9]'), '');
+                int? minutes = int.tryParse(cleanedValue);
+                if (minutes != null && minutes > 59) {
+                  _minutesController.text = '59';
                   _minutesController.selection = TextSelection.fromPosition(
                     TextPosition(offset: _minutesController.text.length),
                   );
-                }
-              } else if (value.isNotEmpty && value != '-') {
-                // Begrenze den absoluten Wert auf 59
-                String valueWithoutSign = value.startsWith('-') ? value.substring(1) : value;
-                int? minutes = int.tryParse(valueWithoutSign);
-                if (minutes != null && minutes > 59) {
-                  _minutesController.text = value.startsWith('-') ? '-59' : '59';
+                } else if (cleanedValue != value) {
+                  _minutesController.text = cleanedValue;
                   _minutesController.selection = TextSelection.fromPosition(
                     TextPosition(offset: _minutesController.text.length),
                   );
@@ -180,6 +157,10 @@ class _AddAdjustmentModalState extends ConsumerState<AddAdjustmentModal> {
         ],
       )),
       actions: [
+        TextButton(
+          onPressed: _reset,
+          child: const Text('Auf 0 zurücksetzen'),
+        ),
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Abbrechen'),

@@ -1,12 +1,12 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:package_info_plus/package_info_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:intl/intl.dart';
 
 import '../../core/providers/providers.dart' as core_providers;
+import '../../core/providers/subscription_provider.dart';
 import '../../data/repositories/hybrid_work_repository_impl.dart';
 import '../../data/repositories/hybrid_overtime_repository_impl.dart';
+import '../../data/repositories/firebase_overtime_repository_impl.dart';
 import '../../domain/services/data_sync_service.dart';
 import '../view_models/auth_view_model.dart';
 import '../view_models/dashboard_view_model.dart' as dashboard_vm;
@@ -15,12 +15,9 @@ import '../view_models/theme_view_model.dart';
 import '../widgets/add_adjustment_modal.dart';
 import '../widgets/edit_target_hours_modal.dart';
 import '../widgets/edit_workdays_modal.dart';
-import '../widgets/update_required_dialog.dart';
-import '../widgets/privacy_policy_dialog.dart';
-import '../widgets/imprint_dialog.dart';
-import '../widgets/terms_of_service_dialog.dart';
 import '../widgets/notification_settings_dialog.dart';
 import '../widgets/common/responsive_center.dart';
+import 'app_info_page.dart';
 import 'login_page.dart';
 
 class SettingsPage extends ConsumerWidget {
@@ -28,7 +25,6 @@ class SettingsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
     final settingsValue = ref.watch(settingsViewModelProvider);
     final themeNotifier = ref.read(themeViewModelProvider.notifier);
     final authState = ref.watch(authStateProvider);
@@ -89,7 +85,7 @@ class SettingsPage extends ConsumerWidget {
             ),
             const Divider(height: 1),
             const SizedBox(height: 16),
-            _buildOvertimeBalance(context, settingsState.overtimeBalance),
+            _buildOvertimeBalance(context, settingsState.overtimeBalance, settingsState.lastOvertimeUpdate),
             const SizedBox(height: 16),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -130,89 +126,17 @@ class SettingsPage extends ConsumerWidget {
               },
             ),
             const Divider(height: 1),
-            FutureBuilder<PackageInfo>(
-              future: PackageInfo.fromPlatform(),
-              builder: (context, snapshot) {
-                final version = snapshot.data?.version ?? '...';
-                return ListTile(
-                  title: const Text('Version'),
-                  trailing: Text(version),
+            ListTile(
+              title: const Text('Über die App'),
+              subtitle: const Text('Version, Impressum, Datenschutz & mehr'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AppInfoPage()),
                 );
               },
             ),
-            ListTile(
-              leading: const Icon(Icons.shop, color: Colors.green),
-              title: const Text('App im Google Play Store herunterladen'),
-              subtitle: const Text('Installieren Sie die offizielle Android-App'),
-              trailing: const Icon(Icons.open_in_new),
-              onTap: () async {
-                final url = Uri.parse(
-                  'https://play.google.com/store/apps/details?id=app.work_time_manager',
-                );
-                if (await canLaunchUrl(url)) {
-                  await launchUrl(url, mode: LaunchMode.externalApplication);
-                }
-              },
-            ),
-            const Divider(height: 1),
-            if (kDebugMode)
-              ListTile(
-                leading: const Icon(Icons.bug_report, color: Colors.orange),
-                title: const Text('🧪 TEST: Version Check'),
-                subtitle: const Text('Update-Dialog manuell anzeigen'),
-                onTap: () async {
-                  final versionService = ref.read(core_providers.versionServiceProvider);
-                  await UpdateRequiredDialog.checkAndShow(context, versionService);
-                },
-              ),
-            ListTile(
-              title: const Text('Impressum'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => ImprintDialog.show(context),
-            ),
-            ListTile(
-              title: const Text('AGB'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => TermsOfServiceDialog.show(context),
-            ),
-            ListTile(
-              title: const Text('Datenschutz'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => PrivacyPolicyDialog.show(context),
-            ),
-            if (authState.asData?.value != null) ...[
-              const Divider(height: 1),
-              ListTile(
-                leading: Icon(Icons.delete_forever, color: theme.colorScheme.error),
-                title: Text('Account löschen', style: TextStyle(color: theme.colorScheme.error)),
-                onTap: () {
-                  showDialog(
-                    context: context,
-                    builder: (dialogContext) => AlertDialog(
-                      title: const Text('Account endgültig löschen'),
-                      content: const Text(
-                          'Warnung: Diese Aktion kann nicht rückgängig gemacht werden. Alle Ihre Daten, einschließlich der Arbeitszeiterfassung, werden dauerhaft gelöscht.'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(dialogContext).pop(),
-                          child: const Text('Abbrechen'),
-                        ),
-                        FilledButton(
-                          onPressed: () {
-                            Navigator.of(dialogContext).pop();
-                            ref.read(deleteAccountProvider)();
-                          },
-                          style: FilledButton.styleFrom(
-                            backgroundColor: theme.colorScheme.error,
-                          ),
-                          child: const Text('Endgültig löschen'),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ],
           ];
 
           return ResponsiveCenter(
@@ -339,18 +263,29 @@ class SettingsPage extends ConsumerWidget {
       final workRepository = ref.read(core_providers.workRepositoryProvider);
       final overtimeRepository = ref.read(core_providers.overtimeRepositoryProvider);
 
-      // Prüfe ob sie Hybrid-Repositories sind
+      // Hole die aktuelle userId
+      final currentUser = ref.read(core_providers.firebaseAuthProvider).currentUser;
+      final userId = currentUser?.uid;
+
+      // Prüfe ob sie Hybrid-Repositories sind und User eingeloggt ist
       if (workRepository is! HybridWorkRepositoryImpl ||
-          overtimeRepository is! HybridOvertimeRepositoryImpl) {
-        throw Exception('Repositories sind nicht vom Typ Hybrid');
+          overtimeRepository is! HybridOvertimeRepositoryImpl ||
+          userId == null) {
+        throw Exception('Repositories sind nicht vom Typ Hybrid oder User nicht eingeloggt');
       }
+
+      // Erstelle frisches Firebase-Repository mit korrekter userId
+      final freshFirebaseOvertimeRepo = FirebaseOvertimeRepositoryImpl(
+        dataSource: ref.read(core_providers.firestoreDataSourceProvider),
+        userId: userId,
+      );
 
       // Führe Sync durch
       final result = await DataSyncService.syncAll(
         localWorkRepository: workRepository.localRepository,
         firebaseWorkRepository: workRepository.firebaseRepository,
         localOvertimeRepository: overtimeRepository.localRepository,
-        firebaseOvertimeRepository: overtimeRepository.firebaseRepository,
+        firebaseOvertimeRepository: freshFirebaseOvertimeRepo,
       );
 
       // Schließe Loading-Dialog
@@ -407,7 +342,7 @@ class SettingsPage extends ConsumerWidget {
     }
   }
 
-  Widget _buildOvertimeBalance(BuildContext context, Duration overtimeBalance) {
+  Widget _buildOvertimeBalance(BuildContext context, Duration overtimeBalance, DateTime? lastUpdate) {
     final bool isNegative = overtimeBalance.isNegative;
     final Duration absDuration = overtimeBalance.abs();
 
@@ -430,6 +365,16 @@ class SettingsPage extends ConsumerWidget {
                 color: isNegative ? Colors.red : Colors.green,
               ),
         ),
+        if (lastUpdate != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            'Letzte manuelle Änderung: ${DateFormat('dd.MM.yyyy').format(lastUpdate)}',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Colors.grey[600],
+                  fontStyle: FontStyle.italic,
+                ),
+          ),
+        ],
       ],
     );
   }
@@ -437,6 +382,7 @@ class SettingsPage extends ConsumerWidget {
   Widget _buildProfileSection(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final authState = ref.watch(authStateProvider);
+    final isPremium = ref.watch(isPremiumProvider);
 
     return authState.when(
       data: (user) {
@@ -486,8 +432,42 @@ class SettingsPage extends ConsumerWidget {
                         style: theme.textTheme.bodyMedium,
                         overflow: TextOverflow.ellipsis,
                       ),
+                    if (isPremium) ...[
+                      const SizedBox(height: 4),
+                      const _PremiumBadge(),
+                    ],
                   ],
                 ),
+              ),
+              IconButton(
+                icon: Icon(Icons.delete_forever, color: theme.colorScheme.error),
+                tooltip: 'Account löschen',
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (dialogContext) => AlertDialog(
+                      title: const Text('Account endgültig löschen'),
+                      content: const Text(
+                          'Warnung: Diese Aktion kann nicht rückgängig gemacht werden. Alle Ihre Daten, einschließlich der Arbeitszeiterfassung, werden dauerhaft gelöscht.'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(dialogContext).pop(),
+                          child: const Text('Abbrechen'),
+                        ),
+                        FilledButton(
+                          onPressed: () {
+                            Navigator.of(dialogContext).pop();
+                            ref.read(deleteAccountProvider)();
+                          },
+                          style: FilledButton.styleFrom(
+                            backgroundColor: theme.colorScheme.error,
+                          ),
+                          child: const Text('Endgültig löschen'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
             ],
           ),
@@ -574,6 +554,36 @@ class SettingsPage extends ConsumerWidget {
       },
       loading: () => const SizedBox.shrink(),
       error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+}
+
+class _PremiumBadge extends StatelessWidget {
+  const _PremiumBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: Colors.orange,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.workspace_premium, size: 14, color: Colors.white),
+          SizedBox(width: 4),
+          Text(
+            'Premium',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

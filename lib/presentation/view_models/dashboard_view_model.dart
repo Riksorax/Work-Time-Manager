@@ -8,12 +8,14 @@ import '../../core/providers/providers.dart';
 import '../../domain/entities/break_entity.dart';
 import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/services/break_calculator_service.dart';
+import '../../domain/utils/overtime_utils.dart';
 import '../state/dashboard_state.dart';
 
 class DashboardViewModel extends Notifier<DashboardState> {
   Timer? _timer;
   Timer? _autoSaveTimer;
   int _tickCounter = 0;
+  List<WorkEntryEntity> _weekEntries = [];
 
   @override
   DashboardState build() {
@@ -35,11 +37,15 @@ class DashboardViewModel extends Notifier<DashboardState> {
     final workEntry = await getTodayWorkEntry.call();
     final storedOvertime = overtimeRepository.getOvertime();
     final lastUpdateDate = overtimeRepository.getLastUpdateDate();
-    
+
+    // Lade Wocheneinträge um zu prüfen ob heute ein Zusatztag ist
+    await _loadWeekEntries(workEntry);
+
     // Berechne dailyOvertime für den initialen Stand
-    final settingsRepository = ref.read(settingsRepositoryProvider);
+    final targetDailyHours = _getEffectiveTargetDailyHours();
+    final isExtraDay = targetDailyHours == Duration.zero;
     Duration initialDailyOvertime = Duration.zero;
-    
+
     if (workEntry.workStart != null && workEntry.workEnd != null) {
       // Wenn der Tag bereits abgeschlossen ist, berechne Overtime basierend auf dem Eintrag
       final breakDuration = workEntry.breaks.fold<Duration>(
@@ -47,23 +53,18 @@ class DashboardViewModel extends Notifier<DashboardState> {
         (previousValue, element) => previousValue + (element.end?.difference(element.start) ?? Duration.zero),
       );
       final actualWorkDuration = workEntry.workEnd!.difference(workEntry.workStart!) - breakDuration;
-      final workdaysPerWeek = settingsRepository.getWorkdaysPerWeek();
-      final targetDailyHours = Duration(microseconds: (settingsRepository.getTargetWeeklyHours() / workdaysPerWeek * Duration.microsecondsPerHour).round());
       initialDailyOvertime = actualWorkDuration - targetDailyHours;
     } else if (workEntry.workStart != null) {
       // Laufender Tag -> Overtime wird im Timer berechnet.
       // Um initialOvertime (Basis) korrekt wiederherzustellen, müssen wir den aktuellen "Tagesfortschritt" vom gespeicherten Gesamtwert abziehen.
       final now = DateTime.now();
-      
+
       // Berechne aktuelle Pausenzeit
       final breakDuration = _calculateTotalBreakDuration(now);
-      
+
       // Berechne aktuelle Arbeitszeit (Brutto - Pause)
       final elapsedTime = now.difference(workEntry.workStart!) - breakDuration;
-      
-      final workdaysPerWeek = settingsRepository.getWorkdaysPerWeek();
-      final targetDailyHours = Duration(microseconds: (settingsRepository.getTargetWeeklyHours() / workdaysPerWeek * Duration.microsecondsPerHour).round());
-      
+
       // Aktueller Überstunden-Stand für heute (wird meist negativ sein, da Tag noch läuft)
       initialDailyOvertime = elapsedTime - targetDailyHours;
     }
@@ -87,17 +88,72 @@ class DashboardViewModel extends Notifier<DashboardState> {
     final totalOvertime = initialOvertime + initialDailyOvertime;
 
     logger.i('[Dashboard] Geladener WorkEntry - Start: ${workEntry.workStart}, End: ${workEntry.workEnd}');
-    logger.i('[Dashboard] Overtime Init: Stored=$storedOvertime, InitialBase=$initialOvertime, Daily=$initialDailyOvertime, Total=$totalOvertime');
-    
+    logger.i('[Dashboard] Overtime Init: Stored=$storedOvertime, InitialBase=$initialOvertime, Daily=$initialDailyOvertime, Total=$totalOvertime, ExtraDay=$isExtraDay');
+
     state = state.copyWith(
       workEntry: workEntry,
       isLoading: false,
       totalOvertime: totalOvertime,
       initialOvertime: initialOvertime,
       dailyOvertime: initialDailyOvertime,
+      isExtraDay: isExtraDay,
     );
     _recalculateStateAndSave(workEntry, save: false);
     _startTimerIfNeeded();
+  }
+
+  /// Lädt die Einträge für die aktuelle Woche, um zu bestimmen ob heute ein Zusatztag ist.
+  Future<void> _loadWeekEntries(WorkEntryEntity todayEntry) async {
+    try {
+      final workRepository = ref.read(workRepositoryProvider);
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final startOfWeek = today.subtract(Duration(days: today.weekday - 1));
+
+      // Einträge des aktuellen Monats laden
+      var entries = await workRepository.getWorkEntriesForMonth(now.year, now.month);
+
+      // Falls die Woche in den vorherigen Monat reicht, auch dessen Einträge laden
+      if (startOfWeek.month != now.month) {
+        final prevEntries = await workRepository.getWorkEntriesForMonth(
+            startOfWeek.year, startOfWeek.month);
+        entries = [...prevEntries, ...entries];
+      }
+
+      // Für aktuelle Woche filtern
+      _weekEntries = getWeekEntriesForDate(now, entries);
+
+      // Heutigen Eintrag hinzufügen falls noch nicht enthalten (z.B. neuer Tag)
+      final todayInEntries = _weekEntries.any((e) =>
+          e.date.year == today.year &&
+          e.date.month == today.month &&
+          e.date.day == today.day);
+      if (!todayInEntries && todayEntry.workStart != null) {
+        _weekEntries = [..._weekEntries, todayEntry];
+      }
+    } catch (e) {
+      logger.e('[Dashboard] Fehler beim Laden der Wocheneinträge: $e');
+      _weekEntries = [];
+    }
+  }
+
+  /// Berechnet das effektive Tages-Soll unter Berücksichtigung von Zusatztagen.
+  Duration _getEffectiveTargetDailyHours() {
+    final settingsRepository = ref.read(settingsRepositoryProvider);
+    final workdaysPerWeek = settingsRepository.getWorkdaysPerWeek();
+    if (workdaysPerWeek <= 0) return Duration.zero;
+    final regularDailyTarget = Duration(
+      microseconds: (settingsRepository.getTargetWeeklyHours() /
+              workdaysPerWeek *
+              Duration.microsecondsPerHour)
+          .round(),
+    );
+    return getEffectiveDailyTarget(
+      date: DateTime.now(),
+      weekEntries: _weekEntries,
+      workdaysPerWeek: workdaysPerWeek,
+      regularDailyTarget: regularDailyTarget,
+    );
   }
 
   void updateOvertimeFromSettings(Duration newOvertime) {
@@ -195,9 +251,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
   void _recalculateOvertime() {
     if (state.workEntry.workStart == null) return;
 
-    final settingsRepository = ref.read(settingsRepositoryProvider);
-    final workdaysPerWeek = settingsRepository.getWorkdaysPerWeek();
-    final targetDailyHours = Duration(microseconds: (settingsRepository.getTargetWeeklyHours() / workdaysPerWeek * Duration.microsecondsPerHour).round());
+    final targetDailyHours = _getEffectiveTargetDailyHours();
     final dailyOvertime = _calculateElapsedTime() - targetDailyHours;
 
     // Berechne Total = Base (initialOvertime) + Daily
@@ -273,26 +327,67 @@ class DashboardViewModel extends Notifier<DashboardState> {
     WorkEntryEntity updatedEntry;
 
     if (state.workEntry.workStart == null) {
-      // START
+      // START - Erster Start des Tages
       updatedEntry = state.workEntry.copyWith(workStart: now);
       logger.i('[Dashboard] Timer gestartet um $now');
-    } else {
-      // STOP
+    } else if (state.workEntry.workEnd == null) {
+      // STOP - Arbeit beenden
       _timer?.cancel();
       updatedEntry = state.workEntry.copyWith(workEnd: now);
       logger.i('[Dashboard] Timer gestoppt um $now');
 
-      // Berechne automatische Pausen beim Beenden (nur wenn keine Pause läuft)
+      // Berechne automatische Pausen beim Beenden (nur wenn keine Pause läuft und Typ Arbeit ist)
       final hasRunningBreak = updatedEntry.breaks.any((b) => b.end == null);
-      if (!hasRunningBreak) {
+      if (!hasRunningBreak && updatedEntry.type == WorkEntryType.work) {
         logger.i('[Dashboard] Berechne automatische Pausen...');
         updatedEntry = BreakCalculatorService.calculateAndApplyBreaks(updatedEntry);
         logger.i('[Dashboard] Automatische Pausen berechnet: ${updatedEntry.breaks.length} Pausen');
       } else {
-        logger.i('[Dashboard] Automatische Pausen übersprungen: Pause läuft noch');
+        logger.i('[Dashboard] Automatische Pausen übersprungen: Pause läuft noch oder Sonder-Eintrag');
       }
+    } else {
+      // Arbeit wurde bereits beendet - Benutzer muss entscheiden
+      // Diese Methode wird vom UI mit dem gewählten Modus aufgerufen
+      logger.i('[Dashboard] Arbeit bereits beendet - Benutzer muss Aktion wählen');
+      return; // UI zeigt Dialog an
     }
 
+    await _recalculateStateAndSave(updatedEntry);
+  }
+
+  /// Startet eine komplett neue Session (Start, End und Pausen zurücksetzen)
+  Future<void> startNewSession() async {
+    final now = DateTime.now();
+    final updatedEntry = WorkEntryEntity(
+      id: state.workEntry.id,
+      date: state.workEntry.date,
+      workStart: now,
+      workEnd: null,
+      breaks: const [], // Pausen zurücksetzen
+      manualOvertime: state.workEntry.manualOvertime,
+      isManuallyEntered: false,
+      description: state.workEntry.description,
+      type: state.workEntry.type,
+    );
+    logger.i('[Dashboard] Komplett neue Session gestartet um $now (Start, End, Pausen zurückgesetzt)');
+    await _recalculateStateAndSave(updatedEntry);
+  }
+
+  /// Neue Session mit Pausen behalten (nur Start und Endzeit zurücksetzen)
+  Future<void> startNewSessionKeepBreaks() async {
+    final now = DateTime.now();
+    final updatedEntry = WorkEntryEntity(
+      id: state.workEntry.id,
+      date: state.workEntry.date,
+      workStart: now,
+      workEnd: null, // Endzeit entfernen
+      breaks: state.workEntry.breaks, // Pausen behalten
+      manualOvertime: state.workEntry.manualOvertime,
+      isManuallyEntered: false,
+      description: state.workEntry.description,
+      type: state.workEntry.type,
+    );
+    logger.i('[Dashboard] Neue Session gestartet um $now (Pausen behalten)');
     await _recalculateStateAndSave(updatedEntry);
   }
 
@@ -301,20 +396,17 @@ class DashboardViewModel extends Notifier<DashboardState> {
     Duration? newTotalOvertime = state.totalOvertime;
     Duration? dailyOvertime;
 
-    final settingsRepository = ref.read(settingsRepositoryProvider);
-
     Duration? newGrossWorkDuration;
     if (updatedEntry.workStart != null && updatedEntry.workEnd != null) {
       newGrossWorkDuration = updatedEntry.workEnd!.difference(updatedEntry.workStart!);
-      
+
       final breakDuration = updatedEntry.breaks.fold<Duration>(
         Duration.zero,
         (previousValue, element) => previousValue + (element.end?.difference(element.start) ?? Duration.zero),
       );
       newActualWorkDuration = updatedEntry.workEnd!.difference(updatedEntry.workStart!) - breakDuration;
 
-      final workdaysPerWeek = settingsRepository.getWorkdaysPerWeek();
-      final targetDailyHours = Duration(microseconds: (settingsRepository.getTargetWeeklyHours() / workdaysPerWeek * Duration.microsecondsPerHour).round());
+      final targetDailyHours = _getEffectiveTargetDailyHours();
       dailyOvertime = newActualWorkDuration - targetDailyHours;
 
       // Total = Base + Daily
@@ -368,8 +460,9 @@ class DashboardViewModel extends Notifier<DashboardState> {
     // Berechne automatische Pausen nur wenn:
     // 1. Start UND End vorhanden sind
     // 2. Keine laufende Pause existiert
+    // 3. Eintrag ist vom Typ Arbeit (nicht Urlaub/Krank/Feiertag)
     final hasRunningBreak = updatedEntry.breaks.any((b) => b.end == null);
-    if (updatedEntry.workStart != null && updatedEntry.workEnd != null && !hasRunningBreak) {
+    if (updatedEntry.workStart != null && updatedEntry.workEnd != null && !hasRunningBreak && updatedEntry.type == WorkEntryType.work) {
       logger.i('[Dashboard] Berechne automatische Pausen...');
       updatedEntry = BreakCalculatorService.calculateAndApplyBreaks(updatedEntry);
       logger.i('[Dashboard] Automatische Pausen berechnet: ${updatedEntry.breaks.length} Pausen');
@@ -389,8 +482,9 @@ class DashboardViewModel extends Notifier<DashboardState> {
     // Berechne automatische Pausen nur wenn:
     // 1. Start UND End vorhanden sind
     // 2. Keine laufende Pause existiert
+    // 3. Eintrag ist vom Typ Arbeit (nicht Urlaub/Krank/Feiertag)
     final hasRunningBreak = updatedEntry.breaks.any((b) => b.end == null);
-    if (updatedEntry.workStart != null && updatedEntry.workEnd != null && !hasRunningBreak) {
+    if (updatedEntry.workStart != null && updatedEntry.workEnd != null && !hasRunningBreak && updatedEntry.type == WorkEntryType.work) {
       logger.i('[Dashboard] Berechne automatische Pausen...');
       updatedEntry = BreakCalculatorService.calculateAndApplyBreaks(updatedEntry);
       logger.i('[Dashboard] Automatische Pausen berechnet: ${updatedEntry.breaks.length} Pausen');

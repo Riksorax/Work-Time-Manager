@@ -3,12 +3,56 @@ import 'package:flutter_work_time/core/utils/logger.dart';
 import '../entities/break_entity.dart';
 import '../entities/work_entry_entity.dart';
 
+/// Ergebnis der Pausen-Validierung gemäß Arbeitszeitgesetz
+class BreakComplianceResult {
+  final bool isCompliant;
+  final Duration requiredBreakTime;
+  final Duration actualBreakTime;
+  final Duration missingBreakTime;
+
+  const BreakComplianceResult({
+    required this.isCompliant,
+    required this.requiredBreakTime,
+    required this.actualBreakTime,
+    required this.missingBreakTime,
+  });
+}
+
 class BreakCalculatorService {
   static const Duration minWorkTimeForFirstBreak = Duration(hours: 6);
   static const Duration minWorkTimeForSecondBreak = Duration(hours: 9);
   static const Duration firstBreakDuration = Duration(minutes: 30); // Gesetzlich vorgeschriebene Pausenzeit bei 6+ Stunden
   static const Duration secondBreakDuration = Duration(minutes: 15);
   static const Duration requiredBreakTimeForLongDay = Duration(minutes: 45); // Gesetzlich vorgeschriebene Pausenzeit bei 9+ Stunden
+
+  /// Prüft, ob die Pausen den Anforderungen des Arbeitszeitgesetzes entsprechen.
+  /// Gibt ein BreakComplianceResult mit Details zur Compliance zurück.
+  ///
+  /// WICHTIG: Das Arbeitszeitgesetz bezieht sich auf die EFFEKTIVE Arbeitszeit
+  /// (Netto = ohne Pausen), nicht auf die Anwesenheitszeit (Brutto).
+  static BreakComplianceResult validateBreakCompliance(WorkEntryEntity entry) {
+    final actualBreakTime = entry.totalBreakTime;
+    // Verwende effektive Arbeitszeit (Netto) für die Berechnung
+    final effectiveWorkTime = entry.effectiveWorkDuration;
+
+    // Berechne die erforderliche Pausenzeit basierend auf der Netto-Arbeitszeit
+    Duration requiredBreakTime = Duration.zero;
+    if (effectiveWorkTime >= minWorkTimeForSecondBreak) {
+      requiredBreakTime = requiredBreakTimeForLongDay; // 45 Min bei 9+ Stunden Netto
+    } else if (effectiveWorkTime >= minWorkTimeForFirstBreak) {
+      requiredBreakTime = firstBreakDuration; // 30 Min bei 6-9 Stunden Netto
+    }
+
+    final missingBreakTime = requiredBreakTime - actualBreakTime;
+    final isCompliant = missingBreakTime <= Duration.zero;
+
+    return BreakComplianceResult(
+      isCompliant: isCompliant,
+      requiredBreakTime: requiredBreakTime,
+      actualBreakTime: actualBreakTime,
+      missingBreakTime: isCompliant ? Duration.zero : missingBreakTime,
+    );
+  }
 
   /// Berechnet die automatischen Pausen basierend auf der Arbeitszeit
   /// und gibt einen aktualisierten WorkEntryEntity zurück.

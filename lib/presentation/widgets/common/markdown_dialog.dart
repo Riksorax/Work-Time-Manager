@@ -7,17 +7,28 @@ import 'package:url_launcher/url_launcher.dart';
 class MarkdownDialog extends StatelessWidget {
   final String title;
   final String assetPath;
+  final Map<String, VoidCallback>? customLinkHandlers;
 
   const MarkdownDialog({
     super.key,
     required this.title,
     required this.assetPath,
+    this.customLinkHandlers,
   });
 
-  static Future<void> show(BuildContext context, {required String title, required String assetPath}) {
+  static Future<void> show(
+    BuildContext context, {
+    required String title,
+    required String assetPath,
+    Map<String, VoidCallback>? customLinkHandlers,
+  }) {
     return showDialog(
       context: context,
-      builder: (context) => MarkdownDialog(title: title, assetPath: assetPath),
+      builder: (context) => MarkdownDialog(
+        title: title,
+        assetPath: assetPath,
+        customLinkHandlers: customLinkHandlers,
+      ),
     );
   }
 
@@ -86,6 +97,12 @@ class MarkdownDialog extends StatelessWidget {
                     ),
                     onTapLink: (text, href, title) async {
                       if (href != null) {
+                        if (customLinkHandlers != null &&
+                            customLinkHandlers!.containsKey(href)) {
+                          customLinkHandlers![href]!();
+                          return;
+                        }
+
                         final uri = Uri.parse(href);
                         if (await canLaunchUrl(uri)) {
                           await launchUrl(uri, mode: LaunchMode.externalApplication);

@@ -13,6 +13,7 @@ class DashboardState extends Equatable {
   final Duration? grossWorkDuration; // Brutto-Arbeitszeit (inkl. Pausen)
   final DateTime? expectedEndTime; // Voraussichtliche Feierabendzeit für ±0 (Tagesziel)
   final DateTime? expectedEndTotalZero; // Voraussichtlicher Feierabend für ±0 (Gesamtbilanz)
+  final bool isExtraDay; // Zusatztag (mehr Arbeitstage als konfiguriert in dieser Woche)
 
   const DashboardState({
     required this.workEntry,
@@ -25,6 +26,7 @@ class DashboardState extends Equatable {
     this.grossWorkDuration,
     this.expectedEndTime,
     this.expectedEndTotalZero,
+    this.isExtraDay = false,
   });
 
   factory DashboardState.initial() {
@@ -42,6 +44,7 @@ class DashboardState extends Equatable {
       grossWorkDuration: null,
       expectedEndTime: null,
       expectedEndTotalZero: null,
+      isExtraDay: false,
     );
   }
 
@@ -56,6 +59,7 @@ class DashboardState extends Equatable {
     Duration? grossWorkDuration,
     DateTime? expectedEndTime,
     DateTime? expectedEndTotalZero,
+    bool? isExtraDay,
   }) {
     return DashboardState(
       workEntry: workEntry ?? this.workEntry,
@@ -68,6 +72,7 @@ class DashboardState extends Equatable {
       grossWorkDuration: grossWorkDuration ?? this.grossWorkDuration,
       expectedEndTime: expectedEndTime ?? this.expectedEndTime,
       expectedEndTotalZero: expectedEndTotalZero ?? this.expectedEndTotalZero,
+      isExtraDay: isExtraDay ?? this.isExtraDay,
     );
   }
 
@@ -83,5 +88,6 @@ class DashboardState extends Equatable {
         grossWorkDuration,
         expectedEndTime,
         expectedEndTotalZero,
+        isExtraDay,
       ];
 }

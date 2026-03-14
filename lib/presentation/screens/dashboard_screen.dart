@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../domain/entities/break_entity.dart';
+import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/services/break_calculator_service.dart';
 import '../view_models/dashboard_view_model.dart';
 import '../widgets/common/responsive_center.dart';
@@ -35,7 +36,7 @@ class DashboardScreen extends ConsumerWidget {
     final dashboardViewModel = ref.read(dashboardViewModelProvider.notifier);
     final workEntry = dashboardState.workEntry;
 
-    final workEntryWithAutoBreaks = workEntry.workStart != null && workEntry.workEnd != null
+    final workEntryWithAutoBreaks = workEntry.workStart != null && workEntry.workEnd != null && workEntry.type == WorkEntryType.work
         ? BreakCalculatorService.calculateAndApplyBreaks(workEntry)
         : workEntry;
 
@@ -87,8 +88,11 @@ class DashboardScreen extends ConsumerWidget {
               _buildOvertime(context, totalOvertime, 'Überstunden Gesamt'),
               const SizedBox(height: 16),
               _buildOvertime(context, dashboardState.dailyOvertime, 'Heutige Überstunden'),
-              _buildExpectedEndTime(context, dashboardState.expectedEndTime),
-              _buildExpectedEndTimeWithBalance(context, dashboardState.expectedEndTotalZero),
+              // Voraussichtlichen Feierabend nur anzeigen, wenn Arbeit noch läuft
+              if (workEntry.workEnd == null) ...[
+                _buildExpectedEndTime(context, dashboardState.expectedEndTime),
+                _buildExpectedEndTimeWithBalance(context, dashboardState.expectedEndTotalZero),
+              ],
             ],
           );
 
@@ -110,7 +114,14 @@ class DashboardScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: () => dashboardViewModel.startOrStopTimer(),
+                onPressed: () {
+                  // Wenn Arbeit bereits beendet wurde, zeige Bestätigungsdialog
+                  if (workEntry.workStart != null && workEntry.workEnd != null) {
+                    _showRestartDialog(context, dashboardViewModel);
+                  } else {
+                    dashboardViewModel.startOrStopTimer();
+                  }
+                },
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
@@ -301,7 +312,7 @@ class DashboardScreen extends ConsumerWidget {
                       },
                     ),
                     IconButton(
-                      icon: const Icon(Icons.delete),
+                      icon: Icon(Icons.delete, color: Colors.red.shade700),
                       onPressed: () => dashboardViewModel.deleteBreak(b.id),
                     ),
                   ],
@@ -309,6 +320,40 @@ class DashboardScreen extends ConsumerWidget {
               ),
             )),
       ],
+    );
+  }
+
+  void _showRestartDialog(BuildContext context, DashboardViewModel viewModel) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Neue Session starten'),
+        content: const Text(
+          'Möchten Sie eine neue Session starten?\n\n'
+          '• Pausen behalten: Nur Start- und Endzeit werden zurückgesetzt\n'
+          '• Komplett neu: Start, End und Pausen werden zurückgesetzt',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Abbrechen'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              viewModel.startNewSessionKeepBreaks();
+            },
+            child: const Text('Pausen behalten'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              viewModel.startNewSession();
+            },
+            child: const Text('Komplett neu'),
+          ),
+        ],
+      ),
     );
   }
 }

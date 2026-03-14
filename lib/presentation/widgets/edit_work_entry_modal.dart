@@ -210,7 +210,13 @@ class EditWorkEntryModal extends ConsumerWidget {
                     selectedTime: TimeOfDay.fromDateTime(breakEntry.start),
                     onTimeSelected: (time) {
                       final newStart = DateTime(workEntry.date.year, workEntry.date.month, workEntry.date.day, time.hour, time.minute);
-                      viewModel.updateBreak(breakEntry.id, newStart: newStart, newEnd: breakEntry.end);
+                      // Berechne die bisherige Dauer, um die Endzeit mitzuverschieben
+                      DateTime? newEnd = breakEntry.end;
+                      if (breakEntry.end != null) {
+                        final duration = breakEntry.end!.difference(breakEntry.start);
+                        newEnd = newStart.add(duration);
+                      }
+                      viewModel.updateBreak(breakEntry.id, newStart: newStart, newEnd: newEnd);
                     },
                   ),
                   const SizedBox(height: 8),
@@ -228,7 +234,7 @@ class EditWorkEntryModal extends ConsumerWidget {
               ),
             ),
             IconButton(
-              icon: const Icon(Icons.delete, color: Colors.red),
+              icon: Icon(Icons.delete, color: Colors.red.shade700),
               onPressed: () => viewModel.deleteBreak(breakEntry.id),
             ),
           ],
