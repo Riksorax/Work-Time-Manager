@@ -59,21 +59,22 @@ Future<void> main() async {
   // ohne gültigen Web-Billing-Key sonst zu einem Absturz führt.
   if (!kIsWeb) {
     await Purchases.setLogLevel(LogLevel.debug);
-    PurchasesConfiguration configuration;
-    
-    // Lese Keys aus Environment Variables (via --dart-define)
-    const rcAndroidKey = String.fromEnvironment('RC_ANDROID_KEY', defaultValue: 'goog_api_key_placeholder');
-    const rcIosKey = String.fromEnvironment('RC_IOS_KEY', defaultValue: 'appl_api_key_placeholder');
 
-    if (Platform.isAndroid) {
-      configuration = PurchasesConfiguration(rcAndroidKey);
-    } else if (Platform.isIOS) {
-      configuration = PurchasesConfiguration(rcIosKey);
+    // Lese Keys aus Environment Variables (via --dart-define)
+    const rcAndroidKey = String.fromEnvironment('RC_ANDROID_KEY');
+    const rcIosKey = String.fromEnvironment('RC_IOS_KEY');
+
+    final String? activeKey = Platform.isAndroid
+        ? (rcAndroidKey.isEmpty ? null : rcAndroidKey)
+        : Platform.isIOS
+            ? (rcIosKey.isEmpty ? null : rcIosKey)
+            : null;
+
+    if (activeKey != null) {
+      await Purchases.configure(PurchasesConfiguration(activeKey));
     } else {
-      // Fallback für andere Plattformen, falls nötig
-      configuration = PurchasesConfiguration("other_platform_key_placeholder");
+      logger.w('RevenueCat nicht initialisiert – kein API-Key via --dart-define übergeben.');
     }
-    await Purchases.configure(configuration);
   }
 
   // Der Site Key wird sicher via --dart-define=RECAPTCHA_SITE_KEY=your_key beim Build injiziert
