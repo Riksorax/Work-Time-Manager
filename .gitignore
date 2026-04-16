@@ -3,8 +3,6 @@
 Thumbs.db
 *.swp
 *.swo
-.vscode/
-
 # ─── Flutter / Dart  (Details: mobile/.gitignore) ────────────────────────────
 mobile/.dart_tool/
 mobile/build/
@@ -20,6 +18,9 @@ web/dist/
 web/.angular/
 web/.sass-cache/
 web/coverage/
+
+# ─── VS Code (nur lokale Session-Dateien ausschließen) ───────────────────────
+.vscode/settings.local.json
 
 # ─── Claude Code (local session state) ───────────────────────────────────────
 .claude/settings.local.json
