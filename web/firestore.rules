@@ -1,0 +1,80 @@
+// firestore.rules
+// Agent 2 — Security
+// In Firebase Console unter Firestore → Rules deployen
+// Oder: firebase deploy --only firestore:rules
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Hilfsfunktionen ────────────────────────────────────────────────────
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidWorkSession() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['startTime', 'isRunning', 'isPaused', 'pauseDuration', 'userId', 'createdAt'])
+          && data.isRunning is bool
+          && data.isPaused is bool
+          && data.pauseDuration is number
+          && data.pauseDuration >= 0
+          && data.userId == request.auth.uid;
+    }
+
+    function isValidProfile() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['name', 'color', 'weeklyTargetHours', 'isDefault'])
+          && data.weeklyTargetHours is number
+          && data.weeklyTargetHours > 0
+          && data.weeklyTargetHours <= 168;
+    }
+
+    // ─── User-Profil ────────────────────────────────────────────────────────
+
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId)
+                    && request.resource.data.uid == userId;
+      allow update: if isOwner(userId)
+                    // uid und createdAt dürfen nicht geändert werden
+                    && !request.resource.data.diff(resource.data).affectedKeys()
+                        .hasAny(['uid', 'createdAt']);
+      allow delete: if false; // Account-Löschen nur via Cloud Function
+    }
+
+    // ─── Work Sessions ───────────────────────────────────────────────────────
+
+    match /users/{userId}/workSessions/{sessionId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidWorkSession();
+      allow update: if isOwner(userId)
+                    // userId und createdAt dürfen nicht geändert werden
+                    && request.resource.data.userId == userId
+                    && !request.resource.data.diff(resource.data).affectedKeys()
+                        .hasAny(['userId', 'createdAt']);
+      // Bug #108 Fix: Löschen erlaubt, aber nur eigene Sessions
+      allow delete: if isOwner(userId);
+    }
+
+    // ─── Work Profiles (Premium: Multi-Arbeitgeber) ──────────────────────────
+
+    match /users/{userId}/profiles/{profileId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidProfile();
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+
+    // ─── Alle anderen Pfade: verweigern ─────────────────────────────────────
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,177 @@
+# Agent 11 — CI/CD & Deployment
+# .github/workflows/deploy.yml
+#
+# Required GitHub Secrets:
+#   FIREBASE_API_KEY, FIREBASE_AUTH_DOMAIN, FIREBASE_PROJECT_ID,
+#   FIREBASE_STORAGE_BUCKET, FIREBASE_MESSAGING_SENDER_ID, FIREBASE_APP_ID,
+#   RECAPTCHA_SITE_KEY, REVENUECAT_WEB_BILLING_KEY, FCM_VAPID_KEY,
+#   GHCR_TOKEN (GitHub Packages write access),
+#   HETZNER_HOST, HETZNER_USER, HETZNER_SSH_KEY
+
+name: Build & Deploy Angular Web
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+
+env:
+  IMAGE_NAME: ghcr.io/riksorax/work-time-manager-web
+
+jobs:
+  # ─── Test & Build ──────────────────────────────────────────────────────────
+  build:
+    name: Test & Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node.js 20 Setup
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Dependencies installieren
+        run: npm ci
+
+      - name: Unit Tests
+        run: npm run test:ci
+        # package.json: "test:ci": "ng test --watch=false --browsers=ChromeHeadless --code-coverage"
+
+      - name: Environment für Production befüllen (envsubst)
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+        env:
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
+          FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+          RECAPTCHA_SITE_KEY: ${{ secrets.RECAPTCHA_SITE_KEY }}
+          REVENUECAT_WEB_BILLING_KEY: ${{ secrets.REVENUECAT_WEB_BILLING_KEY }}
+          FCM_VAPID_KEY: ${{ secrets.FCM_VAPID_KEY }}
+        run: |
+          # environment.prod.ts aus Template befüllen
+          envsubst < src/environments/environment.prod.template.ts \
+                   > src/environments/environment.prod.ts
+
+          # Service Worker Firebase-Config ebenfalls befüllen
+          envsubst < public/firebase-messaging-sw.js \
+                   > public/firebase-messaging-sw.filled.js
+          mv public/firebase-messaging-sw.filled.js public/firebase-messaging-sw.js
+
+      - name: Angular Production Build
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+        run: npm run build -- --configuration production
+
+      - name: Build-Artefakt sichern
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+        uses: actions/upload-artifact@v4
+        with:
+          name: angular-build
+          path: dist/
+          retention-days: 1
+
+  # ─── Docker Build & Push ───────────────────────────────────────────────────
+  docker:
+    name: Docker Build & Push
+    needs: build
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.meta.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build-Artefakt laden
+        uses: actions/download-artifact@v4
+        with:
+          name: angular-build
+          path: dist/
+
+      - name: Docker Buildx Setup
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Image-Metadaten
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=sha-
+            type=ref,event=branch
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+      - name: Docker Build & Push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ─── Deploy to Hetzner (nur main) ──────────────────────────────────────────
+  deploy:
+    name: Deploy to Hetzner
+    needs: docker
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.HETZNER_HOST }}
+          username: ${{ secrets.HETZNER_USER }}
+          key: ${{ secrets.HETZNER_SSH_KEY }}
+          script: |
+            cd /opt/work-time-manager-web
+
+            # Neues Image pullen
+            docker pull ${{ env.IMAGE_NAME }}:${{ needs.docker.outputs.image_tag }}
+            docker pull ${{ env.IMAGE_NAME }}:latest
+
+            # IMAGE_TAG setzen für docker-compose
+            export IMAGE_TAG=${{ needs.docker.outputs.image_tag }}
+
+            # Zero-Downtime Restart (Traefik routet weiter)
+            docker compose up -d --no-deps --pull always work-time-manager-web
+
+            # Alte Images aufräumen
+            docker image prune -f
+
+            echo "✅ Deployed: ${{ env.IMAGE_NAME }}:${{ needs.docker.outputs.image_tag }}"
+
+  # ─── PR-Check (kein Deployment) ───────────────────────────────────────────
+  pr-check:
+    name: PR Check
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run test:ci
+      - run: npm run lint
+      # Kein Production-Build ohne Secrets
+      - name: Dev-Build (Syntax-Check)
+        run: npm run build -- --configuration development
