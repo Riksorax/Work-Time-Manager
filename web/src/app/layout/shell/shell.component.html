@@ -1,0 +1,27 @@
+<mat-sidenav-container class="shell-container">
+
+  <mat-sidenav
+    #sidenav
+    [mode]="isHandset() ? 'over' : 'side'"
+    [opened]="!isHandset()"
+    class="shell-sidenav">
+    <wtm-sidebar />
+  </mat-sidenav>
+
+  <mat-sidenav-content class="shell-content">
+    <mat-toolbar color="primary" class="shell-toolbar">
+      @if (isHandset()) {
+        <button mat-icon-button (click)="sidenav.toggle()" aria-label="Menü öffnen">
+          <mat-icon>menu</mat-icon>
+        </button>
+      }
+      <span class="shell-title">Work Time Manager</span>
+      <span class="flex-spacer"></span>
+    </mat-toolbar>
+
+    <main class="shell-main">
+      <router-outlet />
+    </main>
+  </mat-sidenav-content>
+
+</mat-sidenav-container>

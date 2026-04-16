@@ -40,3 +40,11 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+// ─── Toast Snackbar Styles ────────────────────────────────────────────────────
+.toast-success .mdc-snackbar__surface { background: #2e7d32 !important; }
+.toast-error   .mdc-snackbar__surface { background: #c62828 !important; }
+.toast-info    .mdc-snackbar__surface { background: #1565c0 !important; }
+.toast-success, .toast-error, .toast-info {
+  .mdc-snackbar__label, .mat-mdc-snack-bar-action { color: #fff !important; }
+}

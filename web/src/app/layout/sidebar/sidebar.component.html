@@ -1,0 +1,42 @@
+<div class="sidebar">
+
+  <div class="sidebar-brand">
+    <mat-icon class="brand-icon">schedule</mat-icon>
+    <span class="brand-name">Work Time Manager</span>
+  </div>
+
+  <mat-nav-list class="sidebar-nav">
+    <a mat-list-item routerLink="/dashboard" routerLinkActive="active-link" ariaCurrentWhenActive="page">
+      <mat-icon matListItemIcon>dashboard</mat-icon>
+      <span matListItemTitle>{{ 'nav.dashboard' | translate }}</span>
+    </a>
+    <a mat-list-item routerLink="/time-tracking" routerLinkActive="active-link" ariaCurrentWhenActive="page">
+      <mat-icon matListItemIcon>timer</mat-icon>
+      <span matListItemTitle>{{ 'nav.timeTracking' | translate }}</span>
+    </a>
+    <a mat-list-item routerLink="/reports" routerLinkActive="active-link" ariaCurrentWhenActive="page">
+      <mat-icon matListItemIcon>bar_chart</mat-icon>
+      <span matListItemTitle>{{ 'nav.reports' | translate }}</span>
+    </a>
+    <a mat-list-item routerLink="/settings" routerLinkActive="active-link" ariaCurrentWhenActive="page">
+      <mat-icon matListItemIcon>settings</mat-icon>
+      <span matListItemTitle>{{ 'nav.settings' | translate }}</span>
+    </a>
+  </mat-nav-list>
+
+  <div class="sidebar-footer">
+    <div class="user-section">
+      <div class="user-avatar" aria-hidden="true">{{ userInitial() }}</div>
+      <div class="user-info">
+        <span class="user-name">{{ userName() }}</span>
+        @if (premium.isPremium()) {
+          <span class="pro-badge">PRO</span>
+        }
+      </div>
+    </div>
+    <button mat-icon-button (click)="logout()" [attr.aria-label]="'auth.logout' | translate">
+      <mat-icon>logout</mat-icon>
+    </button>
+  </div>
+
+</div>
