@@ -7,10 +7,15 @@ Arbeitszeiterfassung mit Premium-Features. Zwei Plattformen, eine Firebase-Daten
 ## Repo-Struktur
 
 ```
-work-time-manager/           ← Flutter Mobile App (Repo-Root)
-├── lib/                     # Source — Clean Architecture (domain/data/presentation/core)
-├── test/                    # Tests — Riverpod + Mockito
-├── pubspec.yaml
+work-time-manager/
+├── mobile/                  # Flutter Mobile App
+│   ├── lib/                 # Source — Clean Architecture (domain/data/presentation/core)
+│   ├── test/                # Tests — Riverpod + Mockito
+│   ├── android/             # Android platform files
+│   ├── assets/              # Icons, Legal
+│   ├── pubspec.yaml
+│   ├── CLAUDE.md            # Architektur & Workflow-Regeln für Claude
+│   └── thoughts/            # Ticket-Research + Pläne
 │
 ├── web/                     # Angular Web-App (eigenständiges Projekt)
 │   ├── angular.json
@@ -52,6 +57,7 @@ work-time-manager/           ← Flutter Mobile App (Repo-Root)
 ### Commands
 
 ```bash
+cd mobile
 flutter run
 flutter test
 flutter analyze && dart run custom_lint
@@ -68,7 +74,7 @@ dart run build_runner build   # nach @riverpod-Änderungen
 /review TICKET-123    → Phase 5: Reviewer + PR
 ```
 
-Vollständige Regeln: [`mobile/CLAUDE.md`](mobile/CLAUDE.md) *(auf bugfix-Branch)* / [CLAUDE.md](CLAUDE.md)
+Vollständige Regeln: [`mobile/CLAUDE.md`](mobile/CLAUDE.md)
 
 ---
 
