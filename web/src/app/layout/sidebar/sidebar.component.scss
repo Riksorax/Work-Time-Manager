@@ -93,6 +93,25 @@
   white-space: nowrap;
 }
 
+.guest-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+
+  .guest-icon { color: var(--mat-sys-on-surface-variant); font-size: 28px; width: 28px; height: 28px; flex-shrink: 0; }
+}
+
+.guest-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+
+  .guest-label { font-size: 13px; font-weight: 500; color: var(--mat-sys-on-surface); }
+  .guest-hint { font-size: 11px; color: var(--mat-sys-on-surface-variant); }
+}
+
 .pro-badge {
   display: inline-block;
   padding: 1px 7px;

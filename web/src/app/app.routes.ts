@@ -30,12 +30,11 @@ export const routes: Routes = [
     ],
   },
 
-  // ─── App (AuthGuard) ────────────────────────────────────────────────────
+  // ─── App (kein AuthGuard — App ist ohne Login nutzbar, Daten lokal gespeichert) ──
   {
     path: '',
     loadComponent: () => import('./layout/shell/shell.component')
       .then(m => m.ShellComponent),
-    canActivate: [authGuard],
     children: [
       // Dashboard
       {

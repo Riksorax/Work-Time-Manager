@@ -40,4 +40,8 @@ export class SidebarComponent {
   protected logout(): void {
     this.auth.signOut();
   }
+
+  protected login(): void {
+    this.auth.signInWithGoogle();
+  }
 }

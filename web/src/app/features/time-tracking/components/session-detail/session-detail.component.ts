@@ -3,27 +3,31 @@ import {
   Component,
   inject,
   signal,
-  OnInit,
   input,
   effect,
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
-import { switchMap, of } from 'rxjs';
-import { Firestore, doc, docData } from '@angular/fire/firestore';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslateModule } from '@ngx-translate/core';
 import { WorkSessionService } from '../../services/work-session.service';
 import { ToastService } from '../../../../shared/components/toast/toast.service';
-import { AuthService } from '../../../../core/auth/auth.service';
-import { WorkSession } from '../../../../shared/models';
+import { WorkSession, WorkSessionType } from '../../../../shared/models';
 import { DurationPipe } from '../../../../shared/pipes/duration.pipe';
 import { calculateNetMinutes } from '../../utils/time-calculations.util';
+
+const SESSION_TYPE_ICONS: Record<WorkSessionType, string> = {
+  work: 'work',
+  vacation: 'beach_access',
+  sick: 'sick',
+  holiday: 'celebration',
+};
 
 @Component({
   selector: 'wtm-session-detail',
@@ -34,6 +38,7 @@ import { calculateNetMinutes } from '../../utils/time-calculations.util';
     MatButtonModule,
     MatFormFieldModule,
     MatInputModule,
+    MatSelectModule,
     MatIconModule,
     MatProgressSpinnerModule,
     TranslateModule,
@@ -66,6 +71,13 @@ import { calculateNetMinutes } from '../../utils/time-calculations.util';
     form { display: flex; flex-direction: column; gap: 12px; }
 
     mat-form-field { width: 100%; }
+
+    .type-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.9rem;
+    }
 
     .form-actions {
       display: flex;
@@ -110,6 +122,20 @@ import { calculateNetMinutes } from '../../utils/time-calculations.util';
 
       <form [formGroup]="form" (ngSubmit)="save()">
         <mat-form-field appearance="outline">
+          <mat-label>Typ</mat-label>
+          <mat-select formControlName="type">
+            @for (t of sessionTypes; track t) {
+              <mat-option [value]="t">
+                <span class="type-row">
+                  <mat-icon style="font-size:16px;width:16px;height:16px">{{ typeIcon(t) }}</mat-icon>
+                  {{ typeLabel(t) }}
+                </span>
+              </mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
           <mat-label>{{ 'sessions.note' | translate }}</mat-label>
           <textarea matInput formControlName="note" rows="3"></textarea>
         </mat-form-field>
@@ -140,12 +166,10 @@ import { calculateNetMinutes } from '../../utils/time-calculations.util';
     }
   `,
 })
-export class SessionDetailComponent implements OnInit {
+export class SessionDetailComponent {
   readonly id = input.required<string>();
 
   private sessionService = inject(WorkSessionService);
-  private auth = inject(AuthService);
-  private firestore = inject(Firestore);
   private router = inject(Router);
   private toast = inject(ToastService);
   private fb = inject(FormBuilder);
@@ -153,7 +177,10 @@ export class SessionDetailComponent implements OnInit {
   readonly saving = signal(false);
   readonly session = signal<WorkSession | null>(null);
 
+  readonly sessionTypes: WorkSessionType[] = ['work', 'vacation', 'sick', 'holiday'];
+
   readonly form = this.fb.nonNullable.group({
+    type: ['work' as WorkSessionType],
     note: [''],
     category: [''],
   });
@@ -161,23 +188,29 @@ export class SessionDetailComponent implements OnInit {
   constructor() {
     effect(() => {
       const id = this.id();
-      const user = this.auth.currentUser();
-      if (!user || !id) return;
-      docData(
-        doc(this.firestore, `users/${user.uid}/workSessions/${id}`),
-        { idField: 'id' }
-      ).subscribe(s => {
-        const session = s as WorkSession | undefined;
-        this.session.set(session ?? null);
-        if (session) this.form.patchValue({ note: session.note ?? '', category: session.category ?? '' });
+      if (!id) return;
+      this.sessionService.getSession$(id).subscribe(s => {
+        this.session.set(s);
+        if (s) {
+          this.form.patchValue({
+            type: s.type ?? 'work',
+            note: s.note ?? '',
+            category: s.category ?? '',
+          });
+        }
       });
     });
   }
 
-  ngOnInit(): void {}
+  typeIcon(type: WorkSessionType): string {
+    return SESSION_TYPE_ICONS[type];
+  }
 
-  private patchForm(s: WorkSession): void {
-    this.form.patchValue({ note: s.note ?? '', category: s.category ?? '' });
+  typeLabel(type: WorkSessionType): string {
+    const labels: Record<WorkSessionType, string> = {
+      work: 'Arbeit', vacation: 'Urlaub', sick: 'Krank', holiday: 'Feiertag',
+    };
+    return labels[type];
   }
 
   netMinutes(): number {
@@ -190,8 +223,9 @@ export class SessionDetailComponent implements OnInit {
     if (!s) return;
     this.saving.set(true);
     try {
-      const { note, category } = this.form.getRawValue();
+      const { type, note, category } = this.form.getRawValue();
       await this.sessionService.updateSession(s.id, {
+        type,
         note: note || undefined,
         category: category || undefined,
       });

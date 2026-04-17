@@ -7,7 +7,8 @@ import {
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { Router } from '@angular/router';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { toSignal, toObservable } from '@angular/core/rxjs-interop';
+import { switchMap } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
@@ -21,7 +22,7 @@ import { LiveTimerComponent } from '../live-timer/live-timer.component';
 import { DurationPipe } from '../../../../shared/pipes/duration.pipe';
 import { ConfirmDialogComponent } from '../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { ToastService } from '../../../../shared/components/toast/toast.service';
-import { WorkSession } from '../../../../shared/models';
+import { WorkSession, WorkSessionType } from '../../../../shared/models';
 import {
   calculateDailyTotal,
   calculateNetMinutes,
@@ -101,6 +102,12 @@ import {
       .session-duration { font-weight: 600; color: var(--mat-sys-primary); white-space: nowrap; }
     }
 
+    .type-icon {
+      font-size: 18px; width: 18px; height: 18px;
+      color: var(--mat-sys-on-surface-variant);
+      flex-shrink: 0;
+    }
+
     .empty-state {
       text-align: center;
       padding: 40px 16px;
@@ -145,6 +152,7 @@ import {
         } @else {
           @for (session of sessions(); track session.id; let last = $last) {
             <div class="session-item">
+              <mat-icon class="type-icon">{{ typeIcon(session.type) }}</mat-icon>
               <div class="session-info">
                 <div class="session-time">
                   {{ session.startTime.toDate() | date:'HH:mm' }}
@@ -197,14 +205,21 @@ export class SessionListComponent {
   readonly selectedDate = signal(new Date());
 
   readonly sessions = toSignal(
-    // re-subscribe when selectedDate changes via computed observable
-    // simple approach: listen to service with current date
-    this.sessionService.getSessionsForDay(new Date()),
+    toObservable(this.selectedDate).pipe(
+      switchMap(date => this.sessionService.getSessionsForDay(date))
+    ),
     { initialValue: [] }
   );
 
   readonly isToday = computed(() => isSameDay(this.selectedDate(), new Date()));
   readonly dayTotal = computed(() => calculateDailyTotal(this.sessions()));
+
+  typeIcon(type: WorkSessionType): string {
+    const icons: Record<WorkSessionType, string> = {
+      work: 'work', vacation: 'beach_access', sick: 'sick', holiday: 'celebration',
+    };
+    return icons[type] ?? 'work';
+  }
 
   netMinutes(session: WorkSession): number {
     return calculateNetMinutes(session);

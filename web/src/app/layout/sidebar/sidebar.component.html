@@ -25,18 +25,31 @@
   </mat-nav-list>
 
   <div class="sidebar-footer">
-    <div class="user-section">
-      <div class="user-avatar" aria-hidden="true">{{ userInitial() }}</div>
-      <div class="user-info">
-        <span class="user-name">{{ userName() }}</span>
-        @if (premium.isPremium()) {
-          <span class="pro-badge">PRO</span>
-        }
+    @if (auth.isLoggedIn()) {
+      <div class="user-section">
+        <div class="user-avatar" aria-hidden="true">{{ userInitial() }}</div>
+        <div class="user-info">
+          <span class="user-name">{{ userName() }}</span>
+          @if (premium.isPremium()) {
+            <span class="pro-badge">PRO</span>
+          }
+        </div>
       </div>
-    </div>
-    <button mat-icon-button (click)="logout()" [attr.aria-label]="'auth.logout' | translate">
-      <mat-icon>logout</mat-icon>
-    </button>
+      <button mat-icon-button (click)="logout()" [attr.aria-label]="'auth.logout' | translate">
+        <mat-icon>logout</mat-icon>
+      </button>
+    } @else {
+      <div class="guest-section">
+        <mat-icon class="guest-icon">person_outline</mat-icon>
+        <div class="guest-info">
+          <span class="guest-label">Gast-Modus</span>
+          <span class="guest-hint">Daten nur lokal</span>
+        </div>
+        <button mat-icon-button (click)="login()" aria-label="Anmelden">
+          <mat-icon>login</mat-icon>
+        </button>
+      </div>
+    }
   </div>
 
 </div>

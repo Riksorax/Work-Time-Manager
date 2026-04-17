@@ -54,7 +54,7 @@ export class UserProfileService {
 
   // ─── Profil aktualisieren ─────────────────────────────────────────────────
 
-  async updateProfile(updates: Partial<Pick<UserProfile, 'displayName' | 'photoURL' | 'weeklyTargetHours' | 'dailyTargetHours' | 'defaultPauseDuration' | 'activeProfileId'>>): Promise<void> {
+  async updateProfile(updates: Partial<Pick<UserProfile, 'displayName' | 'photoURL' | 'weeklyTargetHours' | 'dailyTargetHours' | 'defaultPauseDuration' | 'overtimeAdjustmentMinutes' | 'activeProfileId'>>): Promise<void> {
     const uid = this.auth.uid();
     if (!uid) throw new Error('Nicht eingeloggt');
 

@@ -5,7 +5,6 @@ import {
   signal,
   computed,
 } from '@angular/core';
-import { ReactiveFormsModule, FormBuilder } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -14,16 +13,26 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslateModule } from '@ngx-translate/core';
 import { NotificationService } from '../../../../core/notifications/notification.service';
 import { UserProfileService } from '../../../settings/services/user-profile.service';
 import { ToastService } from '../../../../shared/components/toast/toast.service';
 
+const WEEKDAYS = [
+  { iso: 1, label: 'Mo' },
+  { iso: 2, label: 'Di' },
+  { iso: 3, label: 'Mi' },
+  { iso: 4, label: 'Do' },
+  { iso: 5, label: 'Fr' },
+  { iso: 6, label: 'Sa' },
+  { iso: 0, label: 'So' },
+];
+
 @Component({
   selector: 'wtm-notification-settings',
   standalone: true,
   imports: [
-    ReactiveFormsModule,
     MatCardModule,
     MatButtonModule,
     MatIconModule,
@@ -32,6 +41,7 @@ import { ToastService } from '../../../../shared/components/toast/toast.service'
     MatInputModule,
     MatProgressSpinnerModule,
     MatDividerModule,
+    MatTooltipModule,
     TranslateModule,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -63,6 +73,23 @@ import { ToastService } from '../../../../shared/components/toast/toast.service'
 
       label { font-size: 0.875rem; color: var(--mat-sys-on-surface-variant); width: 180px; }
       mat-form-field { flex: 1; }
+    }
+
+    .weekday-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      padding: 8px 0 12px;
+
+      button {
+        min-width: 36px;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        padding: 0;
+        font-size: 0.75rem;
+        font-weight: 600;
+      }
     }
 
     .permission-banner {
@@ -132,6 +159,38 @@ import { ToastService } from '../../../../shared/components/toast/toast.service'
 
           <div class="setting-row">
             <div class="setting-label">
+              <label>Pausenerinnerung</label>
+              <span>Hinweis bei fälliger gesetzlicher Pause</span>
+            </div>
+            <mat-slide-toggle
+              [checked]="breakReminderEnabled()"
+              (change)="toggleBreakReminder($event.checked)"
+            />
+          </div>
+
+          <mat-divider />
+
+          <div class="setting-row" style="flex-direction:column;align-items:flex-start;gap:4px">
+            <div class="setting-label">
+              <label>Benachrichtigungs-Tage</label>
+              <span>An welchen Tagen sollen Erinnerungen gesendet werden?</span>
+            </div>
+            <div class="weekday-row">
+              @for (day of weekdays; track day.iso) {
+                <button
+                  mat-flat-button
+                  [color]="isDayActive(day.iso) ? 'primary' : ''"
+                  [style.opacity]="isDayActive(day.iso) ? '1' : '0.4'"
+                  (click)="toggleDay(day.iso)"
+                >{{ day.label }}</button>
+              }
+            </div>
+          </div>
+
+          <mat-divider />
+
+          <div class="setting-row">
+            <div class="setting-label">
               <label>{{ 'settings.notifications.testNotification' | translate }}</label>
             </div>
             <button mat-stroked-button (click)="sendTest()">
@@ -152,6 +211,8 @@ export class NotificationSettingsComponent {
   readonly saving = signal(false);
   readonly permissionDenied = signal(false);
 
+  readonly weekdays = WEEKDAYS;
+
   readonly isEnabled = computed(
     () => this.profileService.profile()?.settings.notificationsEnabled ?? false
   );
@@ -161,6 +222,16 @@ export class NotificationSettingsComponent {
   readonly workEndTime = computed(
     () => this.profileService.profile()?.settings.workEndReminder ?? '17:00'
   );
+  readonly breakReminderEnabled = computed(
+    () => this.profileService.profile()?.settings.breakReminder ?? false
+  );
+  readonly activeDays = computed(
+    () => this.profileService.profile()?.settings.notificationDays ?? [1, 2, 3, 4, 5]
+  );
+
+  isDayActive(iso: number): boolean {
+    return this.activeDays().includes(iso);
+  }
 
   async toggleNotifications(enable: boolean): Promise<void> {
     this.saving.set(true);
@@ -195,6 +266,26 @@ export class NotificationSettingsComponent {
         await this.profileService.updateSettings({ workEndReminder: time });
         this.notificationService.scheduleWorkEndReminder(time);
       }
+    } catch {
+      this.toast.error('common.error');
+    }
+  }
+
+  async toggleBreakReminder(enabled: boolean): Promise<void> {
+    try {
+      await this.profileService.updateSettings({ breakReminder: enabled });
+    } catch {
+      this.toast.error('common.error');
+    }
+  }
+
+  async toggleDay(iso: number): Promise<void> {
+    const current = this.activeDays();
+    const next = current.includes(iso)
+      ? current.filter(d => d !== iso)
+      : [...current, iso];
+    try {
+      await this.profileService.updateSettings({ notificationDays: next });
     } catch {
       this.toast.error('common.error');
     }
