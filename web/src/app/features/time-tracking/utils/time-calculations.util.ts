@@ -3,7 +3,7 @@
 // Alle Berechnungen hier zentralisieren, NIE in Komponenten berechnen
 
 import { Timestamp } from 'firebase/firestore';
-import { WorkSession } from '../models';
+import { WorkSession } from '../../../shared/models';
 
 // ─── Nettoarbeitszeit ─────────────────────────────────────────────────────────
 
