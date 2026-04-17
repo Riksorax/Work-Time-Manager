@@ -42,9 +42,9 @@ service cloud.firestore {
       allow create: if isOwner(userId)
                     && request.resource.data.uid == userId;
       allow update: if isOwner(userId)
-                    // uid und createdAt dürfen nicht geändert werden
+                    // Schreibgeschützte Felder — nur via Cloud Function (Admin SDK) änderbar
                     && !request.resource.data.diff(resource.data).affectedKeys()
-                        .hasAny(['uid', 'createdAt']);
+                        .hasAny(['uid', 'createdAt', 'isPremium', 'premiumExpiresAt', 'settings.fcmToken']);
       allow delete: if false; // Account-Löschen nur via Cloud Function
     }
 
@@ -64,7 +64,7 @@ service cloud.firestore {
 
     // ─── Work Profiles (Premium: Multi-Arbeitgeber) ──────────────────────────
 
-    match /users/{userId}/profiles/{profileId} {
+    match /users/{userId}/workProfiles/{profileId} {
       allow read: if isOwner(userId);
       allow create: if isOwner(userId) && isValidProfile();
       allow update: if isOwner(userId);

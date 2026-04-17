@@ -19,6 +19,8 @@ export class AppComponent implements OnInit {
   ngOnInit(): void {
     this.translate.setDefaultLang('de');
     this.translate.use('de');
+    // SECURITY: bypassSecurityTrustResourceUrl nur für statische Bundle-Assets erlaubt.
+    // Niemals für user-supplied URLs (z.B. photoURL) verwenden.
     this.iconRegistry.addSvgIcon(
       'google',
       this.sanitizer.bypassSecurityTrustResourceUrl('assets/icons/google.svg')

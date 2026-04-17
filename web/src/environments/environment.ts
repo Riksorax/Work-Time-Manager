@@ -16,4 +16,7 @@ export const environment = {
   revenueCatWebBillingKey: 'YOUR_RC_WEB_BILLING_SANDBOX_KEY',
   vapidKey: 'YOUR_FCM_VAPID_KEY',
   premiumEntitlementId: 'premium',
+  // Spezifisches UUID aus Firebase Console → App Check → Debug-Tokens
+  // Niemals auf true setzen (würde Token in Konsole loggen)
+  appCheckDebugToken: '' as string | undefined,
 };

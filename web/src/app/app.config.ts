@@ -41,10 +41,13 @@ export const appConfig: ApplicationConfig = {
     provideMessaging(() => getMessaging()),
 
     // ─── Firebase App Check (reCAPTCHA v3) ────────────────────────────────
+    // SECURITY: Kein automatisches Debug-Token (= true) — würde Token in die
+    // Browser-Konsole loggen und ermöglicht Registrierung als permanenter Bypass.
+    // Für lokale Entwicklung: spezifisches UUID-Token in environment.ts eintragen
+    // und manuell in der Firebase Console als Debug-Token hinterlegen.
     provideAppCheck(() => {
-      if (isDevMode()) {
-        // In Dev: Debug-Token nutzen (in Firebase Console eintragen)
-        (self as any).FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+      if (isDevMode() && environment.appCheckDebugToken) {
+        (self as any).FIREBASE_APPCHECK_DEBUG_TOKEN = environment.appCheckDebugToken;
       }
       return initializeAppCheck(undefined, {
         provider: new ReCaptchaV3Provider(environment.recaptchaSiteKey),

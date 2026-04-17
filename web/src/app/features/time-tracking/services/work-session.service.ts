@@ -180,8 +180,11 @@ export class WorkSessionService {
     const user = this.auth.currentUser();
     if (!user) throw new Error('Nicht eingeloggt');
 
+    // Immutable/server-only Felder explizit ausschließen
+    const { id, userId, createdAt, ...safeUpdates } = updates as WorkSession;
+
     await updateDoc(this.sessionDoc(user.uid, sessionId), {
-      ...updates,
+      ...safeUpdates,
       updatedAt: Timestamp.now(),
     });
   }
