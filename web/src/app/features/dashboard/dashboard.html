@@ -1,59 +1,92 @@
-<div class="dashboard-container">
-  <div class="stats-row">
-    <!-- Timer Card -->
-    <mat-card class="timer-card">
-      <mat-card-header>
-        <mat-card-title>Heute</mat-card-title>
-        <mat-card-subtitle>{{ todayEntry()?.date | date:'fullDate' }}</mat-card-subtitle>
-      </mat-card-header>
-      <mat-card-content>
-        <div class="timer-display">
-          <h1>{{ formattedTime() }}</h1>
-          <p>Netto-Arbeitszeit</p>
-        </div>
-      </mat-card-content>
-    </mat-card>
+<div class="dashboard-wrapper">
+  <div class="dashboard-content">
+    
+    <!-- Linke Spalte / Oberer Teil: Timer & Stats -->
+    <div class="main-column">
+      <section class="timer-section">
+        <h1 class="display-time">{{ formattedNetTime() }}</h1>
+        <p class="gross-time">Anwesenheit (Brutto): {{ formattedGrossTime() }}</p>
+      </section>
 
-    <!-- Details Card -->
-    <mat-card class="details-card">
-      <mat-card-header>
-        <mat-card-title>Statistik</mat-card-title>
-      </mat-card-header>
-      <mat-card-content>
-        <div class="detail-item">
-          <mat-icon>play_arrow</mat-icon>
-          <span>Start: <strong>{{ todayEntry()?.workStart | date:'HH:mm' }} Uhr</strong></span>
+      <section class="overtime-stats">
+        <div class="stat-item">
+          <span class="stat-label">Heutige Überstunden</span>
+          <span class="stat-value" [style.color]="dailyOvertime() >= 0 ? 'var(--mat-sys-primary)' : 'var(--mat-sys-error)'">
+            {{ formattedDailyOvertime() }}
+          </span>
         </div>
-        <div class="detail-item">
-          <mat-icon>coffee</mat-icon>
-          <span>Pause: <strong>{{ todayEntry()?.breaks?.length || 0 }} mal</strong></span>
-        </div>
-        <div class="detail-item">
-          <mat-icon>timer</mat-icon>
-          <span>Status: <strong>{{ todayEntry()?.workEnd ? 'Beendet' : (todayEntry()?.workStart ? 'Läuft' : 'Nicht gestartet') }}</strong></span>
-        </div>
-      </mat-card-content>
-    </mat-card>
-  </div>
+        
+        @if (isTimerRunning() && expectedEndTime()) {
+          <div class="prediction-hint">
+            Voraussichtlicher Feierabend (±0): {{ expectedEndTime() | date:'HH:mm' }} Uhr
+          </div>
+        }
+      </section>
+    </div>
 
-  <!-- Actions -->
-  <div class="action-buttons">
-    @if (!todayEntry()?.workStart) {
-      <button mat-fab extended color="primary" (click)="startTimer()">
-        <mat-icon>play_arrow</mat-icon>
-        Einstempeln
-      </button>
-    } @else if (!todayEntry()?.workEnd) {
-      <button mat-fab extended color="warn" (click)="stopTimer()">
-        <mat-icon>stop</mat-icon>
-        Ausstempeln
-      </button>
-      <button mat-fab extended [color]="isBreakActive() ? 'accent' : ''" (click)="toggleBreak()">
-        <mat-icon>{{ isBreakActive() ? 'play_arrow' : 'coffee' }}</mat-icon>
-        {{ isBreakActive() ? 'Pause beenden' : 'Pause starten' }}
-      </button>
-    } @else {
-      <p class="done-msg">Schönen Feierabend! 🎉</p>
-    }
+    <!-- Rechte Spalte / Unterer Teil: Controls & Pausen -->
+    <div class="side-column">
+      <section class="controls-section">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Startzeit</mat-label>
+          <input matInput type="time" [value]="getTimeValue(todayEntry()?.workStart)" (change)="setStartTime(startInput.value)" #startInput>
+          <mat-icon matSuffix>access_time</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Endzeit</mat-label>
+          <input matInput type="time" [value]="getTimeValue(todayEntry()?.workEnd)" (change)="setEndTime(endInput.value)" #endInput [disabled]="!todayEntry()?.workStart">
+          @if (todayEntry()?.workEnd) {
+            <button mat-icon-button matSuffix (click)="clearEndTime()">
+              <mat-icon>clear</mat-icon>
+            </button>
+          } @else {
+            <mat-icon matSuffix>access_time</mat-icon>
+          }
+        </mat-form-field>
+
+        <button mat-flat-button color="primary" class="main-action-btn" (click)="startOrStopTimer()">
+          {{ isTimerRunning() ? 'Zeiterfassung beenden' : 'Zeiterfassung starten' }}
+        </button>
+      </section>
+
+      <section class="breaks-section">
+        <div class="section-header">
+          <h3>Pausen</h3>
+          <button mat-stroked-button (click)="toggleBreak()">
+            <mat-icon>{{ isBreakActive() ? 'stop' : 'add' }}</mat-icon>
+            {{ isBreakActive() ? 'Pause beenden' : 'Pause hinzufügen' }}
+          </button>
+        </div>
+
+        <mat-list class="breaks-list">
+          @if ((todayEntry()?.breaks || []).length === 0) {
+            <p class="empty-hint">Noch keine Pausen vorhanden.</p>
+          }
+          @for (b of todayEntry()?.breaks; track b.id) {
+            <mat-list-item class="break-item">
+              <mat-icon matListItemIcon>coffee</mat-icon>
+              <div matListItemTitle class="break-title">
+                {{ b.name }}
+                @if (b.isAutomatic) {
+                  <mat-chip-set class="auto-chip">
+                    <mat-chip>Automatisch</mat-chip>
+                  </mat-chip-set>
+                }
+              </div>
+              <div matListItemLine class="break-subtitle">
+                {{ b.start | date:'HH:mm' }} - {{ b.end ? (b.end | date:'HH:mm') : 'läuft...' }}
+              </div>
+              <div matListItemMeta>
+                <button mat-icon-button color="warn" (click)="deleteBreak(b.id)">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+            </mat-list-item>
+          }
+        </mat-list>
+      </section>
+    </div>
+
   </div>
 </div>

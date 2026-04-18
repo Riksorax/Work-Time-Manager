@@ -1,0 +1,114 @@
+<div class="settings-wrapper">
+  <div class="settings-content">
+    
+    <!-- Linke Spalte: Profil & Arbeitszeit -->
+    <div class="column">
+      <section class="profile-section">
+        <div class="profile-header">
+          <div class="avatar">
+            @if (profile()?.photoURL) {
+              <img [src]="profile()?.photoURL" alt="Profile">
+            } @else {
+              <div class="avatar-placeholder">
+                {{ (profile()?.displayName || '?')[0].toUpperCase() }}
+              </div>
+            }
+          </div>
+          <div class="profile-info">
+            <h3>{{ profile()?.displayName || 'Benutzer' }}</h3>
+            <p>{{ profile()?.email }}</p>
+            @if (isPremium()) {
+              <mat-chip-set>
+                <mat-chip class="premium-chip">
+                  <mat-icon matChipAvatar>workspace_premium</mat-icon>
+                  Premium
+                </mat-chip>
+              </mat-chip-set>
+            }
+          </div>
+        </div>
+        <button mat-stroked-button color="warn" class="logout-btn" (click)="logout()">
+          <mat-icon>logout</mat-icon> Abmelden
+        </button>
+      </section>
+
+      <mat-divider></mat-divider>
+
+      <section class="config-section">
+        <form [formGroup]="form" (ngSubmit)="save()">
+          <mat-list>
+            <div mat-subheader>Arbeitszeit</div>
+            
+            <mat-list-item>
+              <mat-icon matListItemIcon>timer</mat-icon>
+              <div matListItemTitle>Soll-Arbeitsstunden</div>
+              <div matListItemLine>{{ form.value.weeklyTargetHours }} h/Woche</div>
+              <div matListItemMeta>
+                <mat-form-field appearance="fill" class="compact-field">
+                  <input matInput type="number" formControlName="weeklyTargetHours">
+                </mat-form-field>
+              </div>
+            </mat-list-item>
+
+            <mat-list-item>
+              <mat-icon matListItemIcon>calendar_today</mat-icon>
+              <div matListItemTitle>Arbeitstage pro Woche</div>
+              <div matListItemLine>{{ form.value.workdaysPerWeek }} Tage</div>
+              <div matListItemMeta>
+                <mat-form-field appearance="fill" class="compact-field">
+                  <mat-select formControlName="workdaysPerWeek">
+                    @for (d of [1,2,3,4,5,6,7]; track d) {
+                      <mat-option [value]="d">{{ d }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+              </div>
+            </mat-list-item>
+          </mat-list>
+          
+          <div class="save-actions">
+            <button mat-flat-button color="primary" type="submit" [disabled]="form.invalid || loading()">
+              Speichern
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <!-- Rechte Spalte: Sonstiges -->
+    <div class="column">
+      <mat-list>
+        <div mat-subheader>App-Einstellungen</div>
+        
+        <mat-list-item>
+          <mat-icon matListItemIcon>notifications</mat-icon>
+          <div matListItemTitle>Benachrichtigungen</div>
+          <div matListItemLine>Browser-Support in Kürze</div>
+          <mat-icon matListItemMeta>chevron_right</mat-icon>
+        </mat-list-item>
+
+        <mat-divider></mat-divider>
+
+        <mat-list-item>
+          <mat-icon matListItemIcon>info</mat-icon>
+          <div matListItemTitle>Über die App</div>
+          <div matListItemLine>Version 1.0.0 (Web)</div>
+          <mat-icon matListItemMeta>chevron_right</mat-icon>
+        </mat-list-item>
+      </mat-list>
+
+      <section class="sync-card-wrapper">
+        <mat-card class="sync-card">
+          <mat-card-header>
+            <mat-icon mat-card-avatar>cloud_done</mat-icon>
+            <mat-card-title>Cloud-Sync</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            Ihre Daten werden automatisch mit der Firebase Cloud synchronisiert.
+          </mat-card-content>
+        </mat-card>
+      </section>
+    </div>
+
+  </div>
+</div>

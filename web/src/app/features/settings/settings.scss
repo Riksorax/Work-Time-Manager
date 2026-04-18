@@ -1,0 +1,99 @@
+.settings-wrapper {
+  padding: 24px;
+  display: flex;
+  justify-content: center;
+}
+
+.settings-content {
+  width: 100%;
+  max-width: 1000px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 64px;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+// Profile Section
+.profile-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  .profile-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+
+    .avatar {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      overflow: hidden;
+      background: var(--mat-sys-primary-container);
+      
+      img { width: 100%; height: 100%; object-fit: cover; }
+      
+      .avatar-placeholder {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        font-weight: 500;
+        color: var(--mat-sys-on-primary-container);
+      }
+    }
+
+    .profile-info {
+      h3 { margin: 0; font-size: 1.25rem; }
+      p { margin: 0; opacity: 0.7; font-size: 0.9rem; }
+    }
+  }
+
+  .premium-chip {
+    background-color: #ffa500 !important;
+    color: white !important;
+    font-weight: bold;
+    mat-icon { color: white !important; }
+  }
+
+  .logout-btn {
+    align-self: flex-start;
+  }
+}
+
+// Config Section
+.config-section {
+  .compact-field {
+    width: 80px;
+    margin-left: 16px;
+    ::ng-deep .mat-mdc-form-field-subscript-wrapper { display: none; }
+  }
+
+  .save-actions {
+    margin-top: 16px;
+    display: flex;
+    justify-content: flex-end;
+  }
+}
+
+// Sync Card
+.sync-card {
+  background: var(--mat-sys-surface-container-low);
+  border-radius: 16px;
+  
+  mat-icon[mat-card-avatar] {
+    color: var(--mat-sys-primary);
+  }
+}

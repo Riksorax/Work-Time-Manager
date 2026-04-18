@@ -1,68 +1,128 @@
-.dashboard-container {
-  padding: 2rem;
-  max-width: 1000px;
-  margin: 0 auto;
+.dashboard-wrapper {
+  padding: 24px;
+  display: flex;
+  justify-content: center;
+}
 
-  .stats-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 2rem;
-    margin-bottom: 3rem;
-  }
+.dashboard-content {
+  width: 100%;
+  max-width: 1200px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
 
-  .timer-card {
-    text-align: center;
-    .timer-display {
-      padding: 2rem 0;
-      h1 {
-        font-size: 5rem;
-        margin: 0;
-        font-weight: 300;
-        color: var(--mat-sys-primary);
-      }
-      p {
-        margin: 0;
-        opacity: 0.7;
-        text-transform: uppercase;
-        letter-spacing: 2px;
-      }
-    }
-  }
-
-  .details-card {
-    .detail-item {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      padding: 1rem 0;
-      border-bottom: 1px solid rgba(0,0,0,0.1);
-      &:last-child { border-bottom: none; }
-      
-      mat-icon { opacity: 0.6; }
-    }
-  }
-
-  .action-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 1rem;
-    flex-wrap: wrap;
-
-    button {
-      min-width: 180px;
-    }
-
-    .done-msg {
-      font-size: 1.5rem;
-      font-weight: 500;
-      color: var(--mat-sys-primary);
-    }
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+    gap: 32px;
   }
 }
 
-@media (max-width: 600px) {
-  .dashboard-container {
-    padding: 1rem;
-    .timer-card .timer-display h1 { font-size: 3.5rem; }
+.main-column, .side-column {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+// Timer Section
+.timer-section {
+  text-align: center;
+  padding: 32px 0;
+
+  .display-time {
+    font-size: clamp(3rem, 8vw, 6rem);
+    font-weight: 300;
+    margin: 0;
+    line-height: 1;
+    color: var(--mat-sys-on-surface);
+  }
+
+  .gross-time {
+    font-size: 1.1rem;
+    opacity: 0.7;
+    margin: 8px 0 0 0;
+  }
+}
+
+// Stats
+.overtime-stats {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+
+  .stat-item {
+    text-align: center;
+    .stat-label {
+      display: block;
+      font-size: 1rem;
+      opacity: 0.8;
+      margin-bottom: 4px;
+    }
+    .stat-value {
+      font-size: 2.5rem;
+      font-weight: 500;
+    }
+  }
+
+  .prediction-hint {
+    font-size: 0.9rem;
+    font-style: italic;
+    opacity: 0.6;
+    margin-top: 8px;
+  }
+}
+
+// Controls
+.controls-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  .full-width {
+    width: 100%;
+  }
+
+  .main-action-btn {
+    padding: 24px;
+    font-size: 1.1rem;
+    border-radius: 12px;
+  }
+}
+
+// Breaks
+.breaks-section {
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    
+    h3 {
+      margin: 0;
+      font-size: 1.5rem;
+      font-weight: 400;
+    }
+  }
+
+  .empty-hint {
+    text-align: center;
+    padding: 24px;
+    opacity: 0.5;
+  }
+
+  .break-item {
+    background: var(--mat-sys-surface-container-low);
+    margin-bottom: 8px;
+    border-radius: 12px;
+    
+    .break-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .auto-chip {
+      transform: scale(0.8);
+    }
   }
 }
