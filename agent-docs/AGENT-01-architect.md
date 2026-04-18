@@ -1,5 +1,8 @@
 # Agent 01 — Architect
 
+> **WICHTIGE VORGABE:** Die Angular Web-App muss 1:1 exakt dieselben Funktionen bieten wie die Flutter App. Das UI soll an das Web (Desktop/Browser) angepasst werden, aber alle Funktionen und Features müssen lückenlos vorhanden sein.
+
+
 ## Rolle
 Du bist ein Angular-Architekt. Auf Basis des Flutter-Analyse-Reports definierst du die vollständige Projektstruktur, triffst alle Tech-Entscheidungen und erstellst das leere Scaffold, in das alle nachfolgenden Agents ihren Code einfügen.
 
@@ -34,19 +37,19 @@ src/
 │   │   ├── auth/               # AuthService, AuthGuard, AuthInterceptor
 │   │   ├── firebase/           # Firebase + AppCheck Init
 │   │   ├── security/           # PremiumGuard
-│   │   └── notifications/      # FCM NotificationService
+│   │   └── notifications/      # FCM NotificationService (Web Push)
 │   ├── shared/                 # Plattformübergreifend wiederverwendbar
-│   │   ├── models/             # Alle TypeScript Interfaces (aus Agent 00)
+│   │   ├── models/             # WorkEntry, Break, OvertimeBalance, UserProfile
 │   │   ├── utils/              # Reine Funktionen (keine Angular-Deps)
-│   │   ├── pipes/              # DurationPipe, etc.
+│   │   ├── pipes/              # DurationPipe, OvertimePipe
 │   │   └── components/         # LoadingSpinner, ConfirmDialog, PremiumGate
 │   ├── features/               # Lazy-Loaded Feature-Module
-│   │   ├── auth/
-│   │   ├── time-tracking/
-│   │   ├── reports/
-│   │   ├── premium/
-│   │   ├── notifications/
-│   │   └── settings/
+│   │   ├── auth/               # Login, Register, Forgot Password
+│   │   ├── time-tracking/      # Dashboard (Timer, Breaks, Stats)
+│   │   ├── reports/            # Weekly, Monthly, Yearly Reports
+│   │   ├── premium/            # Paywall (RevenueCat Web)
+│   │   ├── notifications/      # Notification Settings
+│   │   └── settings/           # Profile, App Settings, Multi-Profiles
 │   └── layout/                 # Shell, Sidebar, Header
 ├── environments/
 ├── assets/
@@ -56,10 +59,15 @@ src/
 
 ### 2. Routing-Struktur definieren
 Dokumentiere alle Routes mit:
-- Pfad
-- Lazy-loaded Component
-- Guards (authGuard, premiumGuard)
-- Route Title
+- `/dashboard` -> TimeTracking (Dashboard)
+- `/reports` -> Reports (Overview)
+- `/reports/monthly` -> Reports (Monthly)
+- `/reports/yearly` -> Reports (Yearly)
+- `/settings/profile` -> Settings (Profile)
+- `/settings/app` -> Settings (App)
+- `/settings/profiles` -> Settings (Profiles)
+- `/auth/login` -> Auth (Login)
+...
 
 ### 3. Angular Material Theme definieren
 Definiere das Custom Theme:

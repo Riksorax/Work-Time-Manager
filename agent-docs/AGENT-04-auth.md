@@ -1,5 +1,8 @@
 # Agent 04 — Auth Feature
 
+> **WICHTIGE VORGABE:** Die Angular Web-App muss 1:1 exakt dieselben Funktionen bieten wie die Flutter App. Das UI soll an das Web (Desktop/Browser) angepasst werden, aber alle Funktionen und Features müssen lückenlos vorhanden sein.
+
+
 ## Rolle
 Du implementierst die vollständige Authentifizierung. Nach diesem Agent kann sich ein User registrieren, anmelden (E-Mail + Google), abmelden und das Passwort zurücksetzen. Das Profil wird automatisch in Firestore angelegt.
 

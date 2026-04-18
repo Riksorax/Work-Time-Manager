@@ -1,5 +1,8 @@
 # Agent 03 — Core / Foundation
 
+> **WICHTIGE VORGABE:** Die Angular Web-App muss 1:1 exakt dieselben Funktionen bieten wie die Flutter App. Das UI soll an das Web (Desktop/Browser) angepasst werden, aber alle Funktionen und Features müssen lückenlos vorhanden sein.
+
+
 ## Rolle
 Du baust das laufende Fundament der App: Firebase-Initialisierung, alle Datenmodelle, i18n-Setup, Shell-Layout und geteilte Komponenten. Erst wenn dieser Agent fertig ist, können Feature-Agents (04–09) starten.
 
@@ -33,8 +36,58 @@ importProvidersFrom(TranslateModule.forRoot(...))  // ngx-translate
 Datei: `src/app/shared/models/index.ts`
 
 Erstelle TypeScript Interfaces für **alle** Modelle aus `AGENT-00-flutter-analysis-report.md`. Exakt:
-- `UserProfile` + `UserSettings` + `DEFAULT_USER_PROFILE` Konstante
-- `WorkSession` (alle Felder inkl. Multi-Profile `profileId?`)
+
+```typescript
+export type WorkEntryType = 'work' | 'vacation' | 'sick' | 'holiday';
+
+export interface Break {
+  id: string;
+  name: string;
+  start: Date;
+  end?: Date;
+  isAutomatic: boolean;
+}
+
+export interface WorkEntry {
+  id: string; // Wird als YYYY-MM-DD formatiert
+  date: Date;
+  workStart?: Date;
+  workEnd?: Date;
+  type: WorkEntryType;
+  description?: string;
+  isManuallyEntered: boolean;
+  manualOvertimeMinutes?: number;
+  breaks: Break[];
+}
+
+export interface WorkMonth {
+  id: string; // YYYY-MM
+  days: { [day: string]: WorkEntry };
+}
+
+export interface OvertimeBalance {
+  minutes: number;
+  lastUpdated: Date;
+}
+
+export interface UserProfile {
+  uid: string;
+  email: string;
+  displayName?: string;
+  photoURL?: string;
+  isPremium: boolean;
+  settings: UserSettings;
+}
+
+export interface UserSettings {
+  language: 'de' | 'en';
+  theme: 'light' | 'dark' | 'system';
+  weeklyTargetHours: number;
+  dailyTargetHours: number;
+}
+```
+
+- `DEFAULT_USER_PROFILE` Konstante
 - `WorkProfile` (Premium: Mehrere Arbeitgeber)
 - `DailyReport`, `WeeklyReport`, `MonthlyReport`, `YearlyReport`
 - `CategoryBreakdown`

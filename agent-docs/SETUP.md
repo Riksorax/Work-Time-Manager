@@ -1,5 +1,8 @@
 # Setup-Anleitung: Work-Time-Manager Angular Web
 
+> **WICHTIGE VORGABE:** Die Angular Web-App muss 1:1 exakt dieselben Funktionen bieten wie die Flutter App. Das UI soll an das Web (Desktop/Browser) angepasst werden, aber alle Funktionen und Features müssen lückenlos vorhanden sein.
+
+
 ## Voraussetzungen
 
 - Node.js 20+
@@ -107,34 +110,7 @@ ng serve --open
 
 ## 6. Firestore Composite Indexes
 
-Folgende Indexes müssen in der Firebase Console angelegt werden
-(oder per `firebase.json` / CLI deployed werden):
-
-```json
-{
-  "indexes": [
-    {
-      "collectionGroup": "workSessions",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "isRunning", "order": "ASCENDING" },
-        { "fieldPath": "startTime", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "workSessions",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "startTime", "order": "ASCENDING" },
-        { "fieldPath": "startTime", "order": "DESCENDING" }
-      ]
-    }
-  ]
-}
-```
-
-> Tipp: Beim ersten Start erscheinen Firestore-Fehler mit direkten Links zum
-> Index-Erstellen. Diese Links einfach aufrufen.
+Da die Datenstruktur auf Monats-Dokumenten basiert (`work_entries/{year-month}`), sind für die Standard-Abfragen keine Composite-Indizes erforderlich. Falls später Suchfilter über Kategorien oder Beschreibungen hinzugefügt werden, können Indizes über die Firebase Console angelegt werden.
 
 ---
 
@@ -193,7 +169,7 @@ IMAGE_TAG=latest docker compose up -d
 - [ ] Agent 3: Firebase + App.config + Modelle ✅
 - [ ] Agent 2: Security (Guards, Interceptor, Firestore Rules, nginx) ✅
 - [ ] Agent 4: Auth (AuthService, Guards, Login/Register Komponenten) — Komponenten implementieren
-- [ ] Agent 5: Time Tracking (WorkSessionService + Kalkulationen + Komponenten) ✅ (Services + Utils)
+- [ ] Agent 5: Time Tracking (WorkEntryService + Kalkulationen + Komponenten) ✅ (Services + Utils)
 - [ ] Agent 6: Reports (ReportService + Komponenten) ✅ (Service)
 - [ ] Agent 7: Premium/RevenueCat Web Billing ✅ (PremiumService)
 - [ ] Agent 8: Notifications (FCM + Service Worker) ✅

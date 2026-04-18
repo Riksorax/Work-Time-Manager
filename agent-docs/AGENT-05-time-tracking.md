@@ -1,20 +1,14 @@
-# Agent 05 — Time Tracking Feature ⭐ Kritischer Pfad
+# Agent 05 — Time Tracking & Dashboard ⭐ Kritischer Pfad
+
+> **WICHTIGE VORGABE:** Die Angular Web-App muss 1:1 exakt dieselben Funktionen bieten wie die Flutter App. Das UI soll an das Web (Desktop/Browser) angepasst werden, aber alle Funktionen und Features müssen lückenlos vorhanden sein.
+
 
 ## Rolle
-Du implementierst das Herzstück der App: die Arbeitszeiterfassung. Alle Berechnungsformeln werden **exakt** aus `AGENT-00-flutter-analysis-report.md` übernommen — keine eigene Interpretation. Dies ist der kritischste Agent; Fehler hier propagieren in alle anderen Features.
+Du implementierst das Herzstück der App: das Dashboard und die Arbeitszeiterfassung. Alle Berechnungsformeln und die Datenstruktur werden **exakt** aus `AGENT-00-flutter-analysis-report.md` (aktualisierte Version) übernommen.
 
 ## Input
-- `AGENT-00-flutter-analysis-report.md` (Berechnungsformeln, WorkSession-Modell)
+- `AGENT-00-flutter-analysis-report.md` (WorkEntry Struktur, Logik)
 - Outputs von Agent 02, 03, 04
-
-## Flutter → Angular Mapping
-
-| Flutter | Angular |
-|---|---|
-| `StreamProvider` (Riverpod) | `collectionData()` Observable |
-| `AsyncNotifier` | Angular Service + Signals |
-| `flutter_local_notifications` Timer | `interval(1000)` + `Signal` |
-| Riverpod `ref.watch()` | `toSignal()` in Components |
 
 ## Deine Aufgaben
 
@@ -22,173 +16,98 @@ Du implementierst das Herzstück der App: die Arbeitszeiterfassung. Alle Berechn
 
 Datei: `src/app/features/time-tracking/utils/time-calculations.util.ts`
 
-**Alle Formeln aus Agent-00-Report, 1:1 ohne Abweichung:**
+**Logik 1:1 aus der Flutter App:**
 
 ```typescript
-// Nettoarbeitszeit (Kern-Algorithmus)
-export function calculateNetMinutes(session: WorkSession): number {
-  // end = session.endTime?.toDate() ?? new Date()  [laufende Session: jetzt]
-  // gross = (end - startTime) in Minuten
-  // currentPause = wenn isPaused && pauseStartTime: (jetzt - pauseStartTime) in Minuten, sonst 0
-  // totalPause = session.pauseDuration + currentPause
-  // return Math.max(0, gross - totalPause)   [niemals negativ]
+// Nettoarbeitszeit berechnen
+export function calculateNetDuration(entry: WorkEntry): number {
+  if (!entry.workStart) return 0;
+  const end = entry.workEnd || new Date();
+  const grossMinutes = (end.getTime() - entry.workStart.getTime()) / 60000;
+  const totalBreakMinutes = entry.breaks.reduce((total, b) => {
+    const bEnd = b.end || new Date();
+    return total + (bEnd.getTime() - b.start.getTime()) / 60000;
+  }, 0);
+  return Math.max(0, grossMinutes - totalBreakMinutes);
 }
 
-export function calculateDailyTotal(sessions: WorkSession[]): number { ... }
-export function calculateOvertimeMinutes(worked: number, target: number): number { ... }
-export function formatDuration(totalMinutes: number): string { ... }  // "8h 30min" / "-1h 30min"
-export function formatTimer(totalSeconds: number): string { ... }     // "HH:MM:SS"
-export function getElapsedSeconds(session: WorkSession): number { ... }
+// Überstunden berechnen (Minuten)
+export function calculateOvertime(netMinutes: number, targetMinutes: number): number {
+  return netMinutes - targetMinutes;
+}
 
-// Datum-Hilfsfunktionen
-export function startOfDay(date: Date): Date { ... }
-export function endOfDay(date: Date): Date { ... }
-export function startOfWeek(date: Date): Date { ... }  // Montag = Wochenstart!
-export function endOfWeek(date: Date): Date { ... }
-export function startOfMonth(date: Date): Date { ... }
-export function endOfMonth(date: Date): Date { ... }
-export function isSameDay(a: Date, b: Date): boolean { ... }
-
-// Kategorie-Auswertung (Premium)
-export function calculateCategoryBreakdown(sessions: WorkSession[]): CategoryBreakdown[] { ... }
+// Voraussichtlicher Feierabend (±0)
+export function calculateExpectedEnd(entry: WorkEntry, targetMinutes: number): Date {
+  if (!entry.workStart) return new Date();
+  const totalBreakMinutes = entry.breaks.reduce((total, b) => {
+    const bEnd = b.end || new Date();
+    return total + (bEnd.getTime() - b.start.getTime()) / 60000;
+  }, 0);
+  return new Date(entry.workStart.getTime() + (targetMinutes + totalBreakMinutes) * 60000);
+}
 ```
 
-### 5.2 WorkSessionService
+### 5.2 WorkEntryService
 
-Datei: `src/app/features/time-tracking/services/work-session.service.ts`
+Datei: `src/app/features/time-tracking/services/work-entry.service.ts`
+
+**Wichtig: Monatsbasierte Firestore-Struktur!**
 
 ```typescript
 @Injectable({ providedIn: 'root' })
-export class WorkSessionService {
+export class WorkEntryService {
+  // Lädt einen Tag aus dem Monats-Dokument
+  getWorkEntry(date: Date): Observable<WorkEntry | null>
 
-  // ── Echtzeit-Streams (Firestore) ─────────────────────────
-  activeSession$: Observable<WorkSession | null>
-  // query: isRunning == true, limit(1)
+  // Speichert einen Tag (merge: true in days.[dayKey])
+  saveWorkEntry(entry: WorkEntry): Promise<void>
 
-  getSessionsForDay(date: Date): Observable<WorkSession[]>
-  // query: startTime >= startOfDay(date), startTime <= endOfDay(date), orderBy startTime desc
-
-  getSessionsForWeek(date: Date): Observable<WorkSession[]>
-  // query: startTime >= startOfWeek(date), startTime <= endOfWeek(date), orderBy startTime desc
-
-  getSessionsInRange(start: Date, end: Date): Observable<WorkSession[]>
-  // Für Reports (Agent 06)
-
-  // ── CRUD ─────────────────────────────────────────────────
-  startSession(options?: { note?: string; category?: string; profileId?: string }): Promise<string>
-  // Erstellt neue Session mit isRunning: true, isPaused: false, pauseDuration: 0
-
-  stopSession(sessionId: string): Promise<void>
-  // Setzt endTime: now, isRunning: false, isPaused: false
-
-  pauseSession(sessionId: string): Promise<void>
-  // Setzt isPaused: true, pauseStartTime: now
-
-  resumeSession(sessionId: string, pauseStartTime: Timestamp): Promise<void>
-  // Berechnet vergangene Pausenzeit, addiert zu pauseDuration (Firestore increment)
-  // Setzt isPaused: false, pauseStartTime: null
-
-  updateSession(sessionId: string, updates: Partial<WorkSession>): Promise<void>
-  // Für manuelle Bearbeitung (Zeit, Notiz, Kategorie)
-
-  deleteSession(sessionId: string): Promise<void>
-  // Bug #108 Fix: try/catch mit aussagekräftiger Fehlermeldung
+  // Timer-Logik
+  startTimer(): Promise<void>
+  stopTimer(): Promise<void>
+  
+  // Pausen-Logik
+  toggleBreak(): Promise<void>
+  addManualBreak(b: Break): Promise<void>
+  deleteBreak(breakId: string): Promise<void>
 }
 ```
 
-**Alle Firestore-Operationen:** Immer `updatedAt: Timestamp.now()` setzen.
+### 5.3 OvertimeService (Neu)
 
-### 5.3 DashboardComponent
+Datei: `src/app/features/time-tracking/services/overtime.service.ts`
+
+Verwaltet die `users/{uid}/overtime/balance`.
+- `getBalance(): Observable<OvertimeBalance>`
+- `updateBalance(minutes: number): Promise<void>`
+
+### 5.4 DashboardComponent (Web-Optimiert)
 
 Datei: `src/app/features/time-tracking/components/dashboard/dashboard.component.ts`
 
-**Layout (Desktop: 3-spaltig, Mobile: 1-spaltig):**
-
-```
-┌─────────────────────────────────────────────┐
-│  LIVE-TIMER (falls Session läuft)            │
-│  [Starten] [Pausieren] [Stoppen]             │
-├──────────────┬──────────────┬───────────────┤
-│  Heute       │  Diese Woche │  Überstunden  │
-│  6h 30min    │  32h 15min   │  -7h 45min    │
-├──────────────┴──────────────┴───────────────┤
-│  Letzte Einträge (max. 5)                   │
-│  [Liste mit Datum, Dauer, Kategorie]         │
-└─────────────────────────────────────────────┘
-```
-
-Reactive Daten (alle als Signals):
-```typescript
-activeSession = toSignal(sessionService.activeSession$)
-todaySessions = toSignal(sessionService.getSessionsForDay(new Date()))
-weekSessions  = toSignal(sessionService.getSessionsForWeek(new Date()))
-
-todayTotal    = computed(() => calculateDailyTotal(todaySessions() ?? []))
-weekTotal     = computed(() => calculateDailyTotal(weekSessions() ?? []))
-overtime      = computed(() => calculateOvertimeMinutes(weekTotal(), weekTargetMinutes()))
-```
-
-### 5.4 LiveTimerComponent (Shared, wird auch im Header genutzt)
-
-Datei: `src/app/features/time-tracking/components/live-timer/live-timer.component.ts`
-
-- Input: `session: WorkSession | null`
-- Zeigt `HH:MM:SS` in Echtzeit
-- Nutzt `interval(1000)` + `takeUntilDestroyed()`
-- Bei `session = null`: Zeigt "00:00:00"
-- Animierter Puls-Effekt wenn Session läuft
-- Farbe: Grün (läuft), Orange (pausiert), Grau (inaktiv)
-
-### 5.5 SessionListComponent
-
-Datei: `src/app/features/time-tracking/components/session-list/session-list.component.ts`
+**Layout (Web: 2-spaltig):**
+- **Links**: 
+  - Große Netto-Zeit Anzeige (HH:MM:SS)
+  - Brutto-Zeit Anzeige
+  - Überstunden-Statistiken (Gesamt-Bilanz, Heutige Überstunden)
+  - Voraussichtlicher Feierabend (±0 und inkl. Bilanz)
+- **Rechts**:
+  - Time-Picker für Startzeit und Endzeit
+  - Buttons: "Zeiterfassung starten/beenden"
+  - Pausen-Management (Liste der heutigen Pausen mit Edit/Delete)
+  - Button: "Pause hinzufügen/beenden"
 
 **Features:**
-- `MatTable` mit Spalten: Datum, Startzeit, Endzeit, Pause, Nettozeit, Kategorie, Notiz, Aktionen
-- MatDateRangePicker für Zeitraum-Filter (Standard: aktuelle Woche)
-- Sortierung per `MatSort`
-- Inline-Delete mit `ConfirmDialogService` (Bug #108 Fix)
-- Inline-Edit: Klick auf Zeile → `SessionDetailComponent` öffnen
-- CSV-Export Button (ruft `PremiumGuard` ab → nur für Premium)
-- Pagination via `MatPaginator` (25 pro Seite)
-- Responsive: Auf Mobile reduzierte Spalten (Datum, Nettozeit, Aktionen)
-
-### 5.6 SessionDetailComponent
-
-Datei: `src/app/features/time-tracking/components/session-detail/session-detail.component.ts`
-
-Route: `/time-tracking/:id`
-
-Formular:
-```
-Startzeit       [MatDatepicker + Zeitfeld, required]
-Endzeit         [MatDatepicker + Zeitfeld, optional wenn noch läuft]
-Pause (Min.)    [number input, min: 0]
-Kategorie       [MatSelect mit eigenen Kategorien aus bisherigen Sessions]
-Notiz           [MatTextarea, max. 500 Zeichen]
-[Speichern] [Verwerfen] [Löschen]
-```
-
-Validierung: `endTime > startTime` wenn endTime gesetzt.
-
-## Tests
-
-`time-calculations.util.spec.ts` — vollständige Test-Suite:
-- `calculateNetMinutes`: ohne Pause, mit Pause, laufende Session, laufende Pause, Kantenfälle (negativ → 0)
-- `calculateDailyTotal`: mehrere Sessions, leere Liste
-- `calculateOvertimeMinutes`: positiv, negativ, exakt Soll
-- `formatDuration`: alle Fälle inkl. negative Werte
-- `startOfWeek`: Montag als Wochenstart (nicht Sonntag!)
-- `calculateCategoryBreakdown`: Gruppierung, Prozentwerte
+- Echtzeit-Update des Timers (Sekunden-Takt)
+- Automatische Pausen-Berechnung (BreakCalculatorService)
+- Warnung bei unrealistischen Zeiten
 
 ## Output
 - `src/app/features/time-tracking/utils/time-calculations.util.ts`
-- `src/app/features/time-tracking/utils/time-calculations.util.spec.ts`
-- `src/app/features/time-tracking/services/work-session.service.ts`
+- `src/app/features/time-tracking/services/work-entry.service.ts`
+- `src/app/features/time-tracking/services/overtime.service.ts`
 - `src/app/features/time-tracking/components/dashboard/`
-- `src/app/features/time-tracking/components/live-timer/`
-- `src/app/features/time-tracking/components/session-list/`
-- `src/app/features/time-tracking/components/session-detail/`
+- `src/app/features/time-tracking/components/break-list/`
 
 ## Übergabe
-`WorkSessionService` und `time-calculations.util.ts` werden von Agent 06 (Reports) importiert.
+Das Dashboard ist der zentrale Einstiegspunkt der App. Es nutzt den `OvertimeService` für die Saldo-Anzeige und den `WorkEntryService` für die Datenpersistenz.

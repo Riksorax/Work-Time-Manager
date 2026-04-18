@@ -1,4 +1,7 @@
 # Work-Time-Manager — Angular Web Version
+
+> **WICHTIGE VORGABE:** Die Angular Web-App muss 1:1 exakt dieselben Funktionen bieten wie die Flutter App. Das UI soll an das Web (Desktop/Browser) angepasst werden, aber alle Funktionen und Features müssen lückenlos vorhanden sein.
+
 ## Agent-Plan Master-Dokument
 
 ---
@@ -9,7 +12,7 @@ Dieses Repository enthält den vollständigen Agent-Plan zum Aufbau der Angular 
 
 ### Projekt-Links
 - **Flutter App (Quelle):** https://github.com/Riksorax/Work-Time-Manager
-- **Angular Web (Ziel):** separates Repo oder `/angular-web` Subfolder
+- **Angular Web (Ziel):** Subfolder `/web`
 - **Domain:** `app.work-time-manager.app`
 
 ---
@@ -18,18 +21,18 @@ Dieses Repository enthält den vollständigen Agent-Plan zum Aufbau der Angular 
 
 | # | Agent | Datei | Status |
 |---|---|---|---|
-| 00 | Flutter Analyst | `AGENT-00-analyst.md` | ⬜ |
-| 01 | Architect | `AGENT-01-architect.md` | ⬜ |
-| 02 | Security | `AGENT-02-security.md` | ⬜ |
-| 03 | Core / Foundation | `AGENT-03-core.md` | ⬜ |
-| 04 | Auth Feature | `AGENT-04-auth.md` | ⬜ |
-| 05 | Time Tracking ⭐ | `AGENT-05-time-tracking.md` | ⬜ |
-| 06 | Reports | `AGENT-06-reports.md` | ⬜ |
-| 07 | Premium / RevenueCat | `AGENT-07-premium.md` | ⬜ |
-| 08 | Notifications | `AGENT-08-notifications.md` | ⬜ |
-| 09 | Settings & Profile | `AGENT-09-settings.md` | ⬜ |
+| 00 | Flutter Analyst | `AGENT-00-analyst.md` | ✅ |
+| 01 | Architect | `AGENT-01-architect.md` | ✅ |
+| 02 | Security | `AGENT-02-security.md` | ✅ |
+| 03 | Core / Foundation | `AGENT-03-core.md` | 🔄 |
+| 04 | Auth Feature | `AGENT-04-auth.md` | 🔄 |
+| 05 | Time Tracking ⭐ | `AGENT-05-time-tracking.md` | 🔄 |
+| 06 | Reports | `AGENT-06-reports.md` | 🔄 |
+| 07 | Premium / RevenueCat | `AGENT-07-premium.md` | 🔄 |
+| 08 | Notifications | `AGENT-08-notifications.md` | 🔄 |
+| 09 | Settings & Profile | `AGENT-09-settings.md` | 🔄 |
 | 10 | Testing | `AGENT-10-testing.md` | ⬜ |
-| 11 | CI/CD & Deployment | `AGENT-11-cicd.md` | ⬜ |
+| 11 | CI/CD & Deployment | `AGENT-11-cicd.md` | ✅ |
 
 ---
 
@@ -59,7 +62,7 @@ Dieses Repository enthält den vollständigen Agent-Plan zum Aufbau der Angular 
 Die folgenden Dateien sind bereits als Vorlage vorhanden (aus der initialen Scaffold-Erstellung) und müssen von den Agents angepasst/erweitert werden:
 
 ```
-agent-docs/AGENT-00-flutter-analysis-report.md    ← Aus GitHub-Analyse erstellt
+agent-docs/AGENT-00-flutter-analysis-report.md    ← Basierend auf lokaler Flutter Analyse
 src/app/app.config.ts                  ← Vollständig
 src/app/app.routes.ts                  ← Vollständig
 src/app/core/auth/auth.service.ts      ← Vollständig
@@ -67,10 +70,11 @@ src/app/core/auth/auth.guard.ts        ← Vollständig
 src/app/core/auth/auth.interceptor.ts  ← Vollständig
 src/app/core/security/premium.guard.ts ← Vollständig
 src/app/core/notifications/notification.service.ts ← Vollständig
-src/app/shared/models/index.ts         ← Vollständig
+src/app/shared/models/index.ts         ← Vollständig (WorkEntry basiert)
 src/app/features/time-tracking/utils/time-calculations.util.ts ← Vollständig
 src/app/features/time-tracking/utils/time-calculations.util.spec.ts ← Vollständig
-src/app/features/time-tracking/services/work-session.service.ts ← Vollständig
+src/app/features/time-tracking/services/work-entry.service.ts ← Vollständig
+src/app/features/time-tracking/services/overtime.service.ts ← Vollständig
 src/app/features/reports/services/report.service.ts ← Vollständig
 src/app/features/premium/services/premium.service.ts ← Vollständig (RevenueCat Web Billing)
 src/app/features/settings/services/user-profile.service.ts ← Vollständig
@@ -116,8 +120,7 @@ Diese Dateien müssen noch von den Agents erstellt werden:
 **Agent 05:**
 - `src/app/features/time-tracking/components/dashboard/`
 - `src/app/features/time-tracking/components/live-timer/`
-- `src/app/features/time-tracking/components/session-list/`
-- `src/app/features/time-tracking/components/session-detail/`
+- `src/app/features/time-tracking/components/break-list/`
 
 **Agent 06:**
 - `src/app/features/reports/components/reports-overview/`
@@ -150,13 +153,7 @@ Diese Dateien müssen noch von den Agents erstellt werden:
 # Beispiel: Agent 05 ausführen
 claude "Lies AGENT-05-time-tracking.md und implementiere alle beschriebenen Dateien.
         Nutze dabei die bereits vorhandenen Dateien als Referenz (models, utils).
-        Fange mit time-calculations.util.ts an und schreibe dann den WorkSessionService."
-```
-
-Oder im Claude Code Interactive Mode:
-```
-> /read AGENT-05-time-tracking.md
-> Implementiere jetzt alle Aufgaben aus diesem Agent-Dokument.
+        Fange mit time-calculations.util.ts an und schreibe dann den WorkEntryService."
 ```
 
 ---
@@ -176,6 +173,6 @@ Oder im Claude Code Interactive Mode:
 
 | Issue | Bug | Lösung |
 |---|---|---|
-| #108 | Fehler beim Löschen der Arbeitszeiten | `try/catch` in `deleteSession()` mit sprechender Fehlermeldung |
+| #108 | Fehler beim Löschen der Arbeitszeiten | `try/catch` in `deleteWorkEntry()` mit sprechender Fehlermeldung |
 | #107 | Einstellungen-Trennung unklar | Separate Routen: `/settings/profile` vs `/settings/app` |
 | #113 | Accessibility im Kalender | `aria-label` und `role` korrekt setzen beim DateRangePicker |

@@ -83,6 +83,8 @@ Vollständige Regeln: [`mobile/CLAUDE.md`](mobile/CLAUDE.md)
 **Stack:** Angular 18 · Signals · Angular Material 3 · Firebase JS SDK v10 · RevenueCat Web Billing → Stripe
 **Domain:** `app.work-time-manager.app` | **Infra:** Hetzner · Docker · Traefik
 
+Die Angular Web-App bietet **1:1 dieselben Funktionen** wie die Flutter Mobile App. Die Benutzeroberfläche (UI) wurde speziell an die Web-Umgebung (Desktop & Mobile Browser) angepasst, während der gesamte Funktionsumfang, die Logik und die Datenmodelle identisch zur App-Version bleiben.
+
 ### Commands
 
 ```bash
@@ -93,24 +95,24 @@ npm run build        # Produktions-Build
 npm test             # Karma-Tests
 ```
 
-### Agent-Status
+### Agent-Status (Neu ausgerichtet auf Flutter-Parität)
 
 | # | Agent | Status |
 |---|---|---|
-| 00 | Flutter Analyst | ✅ Report erstellt |
-| 01 | Architect | ✅ Scaffold + Config erstellt |
-| 02 | Security | ✅ Guards, Interceptors, Firestore Rules |
-| 03 | Core / Foundation | 🔄 Services ✅ — Komponenten (Shell, Pipes, Shared) fehlen |
-| 04 | Auth | 🔄 AuthService ✅ — Login/Register-Komponenten fehlen |
-| 05 | Time Tracking | 🔄 Services + Utils ✅ — Dashboard/Timer-Komponenten fehlen |
-| 06 | Reports | 🔄 ReportService ✅ — Report-Komponenten fehlen |
-| 07 | Premium | 🔄 PremiumService ✅ — Paywall-Komponente fehlt |
-| 08 | Notifications | 🔄 NotificationService ✅ — Settings-Komponente fehlt |
-| 09 | Settings | 🔄 UserProfileService ✅ — Settings-Komponenten fehlen |
+| 00 | Flutter Analyst | ✅ Report aktualisiert (WorkEntry Struktur) |
+| 01 | Architect | ✅ Struktur definiert |
+| 02 | Security | ✅ Guards & Rules |
+| 03 | Core / Foundation | 🔄 Models (WorkEntry) ✅ — Komponenten fehlen |
+| 04 | Auth | 🔄 AuthService ✅ — UI fehlt |
+| 05 | Time Tracking ⭐ | 🔄 WorkEntryService ✅ — Dashboard (Timer/Breaks) fehlt |
+| 06 | Reports | 🔄 Monthly/Yearly Reports ✅ — UI fehlt |
+| 07 | Premium | 🔄 RevenueCat Web ✅ — Paywall fehlt |
+| 08 | Notifications | 🔄 Web Push ✅ — Settings fehlen |
+| 09 | Settings | 🔄 Profile & Overtime Balance ✅ — UI fehlt |
 | 10 | Testing | ⬜ Offen |
-| 11 | CI/CD | ✅ Dockerfile, docker-compose, GitHub Actions |
+| 11 | CI/CD | ✅ Docker & GitHub Actions |
 
-**Nächster Schritt:** Agent 03 — Shell-Layout, Shared Components, Pipes
+**Nächster Schritt:** Agent 03 — Shell-Layout, Shared Components (WorkEntry-basiert)
 
 Setup-Guide: [`agent-docs/SETUP.md`](agent-docs/SETUP.md)
 

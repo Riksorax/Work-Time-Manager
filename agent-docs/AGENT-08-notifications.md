@@ -1,5 +1,8 @@
 # Agent 08 — Notifications (FCM Web Push)
 
+> **WICHTIGE VORGABE:** Die Angular Web-App muss 1:1 exakt dieselben Funktionen bieten wie die Flutter App. Das UI soll an das Web (Desktop/Browser) angepasst werden, aber alle Funktionen und Features müssen lückenlos vorhanden sein.
+
+
 ## Rolle
 Du implementierst Web Push Notifications als Äquivalent zu `flutter_local_notifications`. Nutzer können Arbeitsbeginn- und Arbeitsende-Erinnerungen konfigurieren. Der Browser zeigt diese auch wenn die App im Hintergrund läuft.
 

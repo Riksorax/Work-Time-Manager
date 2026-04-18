@@ -1,12 +1,15 @@
 # Agent 06 — Reports & Statistics
 
+> **WICHTIGE VORGABE:** Die Angular Web-App muss 1:1 exakt dieselben Funktionen bieten wie die Flutter App. Das UI soll an das Web (Desktop/Browser) angepasst werden, aber alle Funktionen und Features müssen lückenlos vorhanden sein.
+
+
 ## Rolle
 Du implementierst alle Auswertungs-Screens. Der Wochenbericht ist kostenlos, Monats- und Jahresbericht sind Premium. Alle Berechnungen nutzen ausschließlich Funktionen aus `time-calculations.util.ts` (Agent 05).
 
 ## Input
 - `AGENT-00-flutter-analysis-report.md` (Premium-Gate: Reports)
 - Outputs von Agent 03 (PremiumGateComponent, Modelle)
-- Outputs von Agent 05 (WorkSessionService, time-calculations.util.ts)
+- Outputs von Agent 05 (WorkEntryService, OvertimeService, time-calculations.util.ts)
 - Outputs von Agent 07 (PremiumService)
 
 ## Premium-Gates
@@ -32,22 +35,22 @@ Datei: `src/app/features/reports/services/report.service.ts`
 export class ReportService {
 
   getWeeklyReport(weekDate: Date): Observable<WeeklyReport>
-  // Lädt Sessions der Woche via WorkSessionService
+  // Lädt WorkEntries der Woche (evtl. über 2 Monate hinweg)
   // Baut 7 DailyReports (Mo–So) auf
-  // Nutzt calculateDailyTotal(), calculateOvertimeMinutes() aus util.ts
+  // Nutzt calculateNetDuration(), calculateOvertime() aus util.ts
 
-  getMonthlyReport(monthDate: Date): Observable<MonthlyReport>
-  // Lädt Sessions des Monats
-  // Baut WeeklyReports auf (nur Summen, keine DailyReports für Performance)
+  getMonthlyReport(year: number, month: number): Observable<MonthlyReport>
+  // Lädt das Dokument users/{uid}/work_entries/{year-month}
+  // Summiert alle days.[*]
   // Arbeitstage (Mo–Fr) berechnen für korrektes Monatsziel
 
   getYearlyReport(year: number): Observable<YearlyReport>
-  // 12 MonthlyReports zusammenfassen
+  // Alle 12 MonthlyReports zusammenfassen
 
   getCategoryBreakdown(start: Date, end: Date): Observable<CategoryBreakdown[]>
   // Nutzt calculateCategoryBreakdown() aus util.ts
 
-  exportToCsv(sessions: WorkSession[], filename: string): void
+  exportToCsv(entries: WorkEntry[], filename: string): void
   // Browser-Download ohne externe Library
   // Spalten: Datum, Startzeit, Endzeit, Pause (Min), Nettozeit, Kategorie, Notiz
 

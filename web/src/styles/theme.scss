@@ -1,50 +1,35 @@
 @use '@angular/material' as mat;
 
-// ─── Angular Material 3 Theme ─────────────────────────────────────────────────
-// Primary: Blau (passend zur bestehenden Flutter-App, Haupt-Farbton #1565C0)
-// Tertiary: Indigo (Akzent für Premium-Elemente, Badges)
-
 @include mat.core();
 
-$light-theme: mat.define-theme((
+$work-timer-primary: mat.define-palette(mat.$indigo-palette);
+$work-timer-accent:  mat.define-palette(mat.$pink-palette, A200, A100, A400);
+$work-timer-warn:    mat.define-palette(mat.$red-palette);
+
+$work-timer-theme: mat.define-light-theme((
   color: (
-    theme-type: light,
-    primary: mat.$azure-palette,
-    tertiary: mat.$violet-palette,
+    primary: $work-timer-primary,
+    accent: $work-timer-accent,
+    warn: $work-timer-warn,
   ),
-  typography: (
-    brand-family: 'Roboto, sans-serif',
-    bold-weight: 700,
-  ),
-  density: (
-    scale: 0,
-  ),
+  typography: mat.define-typography-config(),
+  density: 0,
 ));
 
-$dark-theme: mat.define-theme((
+@include mat.all-component-themes($work-timer-theme);
+
+// Dark Theme
+$dark-theme: mat.define-dark-theme((
   color: (
-    theme-type: dark,
-    primary: mat.$azure-palette,
-    tertiary: mat.$violet-palette,
-  ),
+    primary: $work-timer-primary,
+    accent: $work-timer-accent,
+    warn: $work-timer-warn,
+  )
 ));
 
-// Light Mode (Default)
-html {
-  @include mat.all-component-themes($light-theme);
-  color-scheme: light;
+.dark-theme {
+  @include mat.all-component-colors($dark-theme);
 }
 
-// Dark Mode (System-Präferenz)
-@media (prefers-color-scheme: dark) {
-  html {
-    @include mat.all-component-colors($dark-theme);
-    color-scheme: dark;
-  }
-}
-
-// ─── Custom CSS Variables ─────────────────────────────────────────────────────
-:root {
-  --wtm-premium-color: #FF6F00;        // Orange für Premium-Badges
-  --wtm-premium-color-light: #FFF3E0;  // Hintergrund für Premium-Elemente
-}
+html, body { height: 100%; }
+body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }

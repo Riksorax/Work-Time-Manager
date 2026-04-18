@@ -1,5 +1,8 @@
 # Agent 11 — CI/CD & Deployment
 
+> **WICHTIGE VORGABE:** Die Angular Web-App muss 1:1 exakt dieselben Funktionen bieten wie die Flutter App. Das UI soll an das Web (Desktop/Browser) angepasst werden, aber alle Funktionen und Features müssen lückenlos vorhanden sein.
+
+
 ## Rolle
 Du baust die vollständige Build- und Deployment-Pipeline. Nach diesem Agent läuft jeder Push auf `main` automatisch als neues Docker-Image auf dem Hetzner-Server — via Traefik unter `app.work-time-manager.app`.
 

@@ -1,5 +1,8 @@
 # Agent 10 — Testing
 
+> **WICHTIGE VORGABE:** Die Angular Web-App muss 1:1 exakt dieselben Funktionen bieten wie die Flutter App. Das UI soll an das Web (Desktop/Browser) angepasst werden, aber alle Funktionen und Features müssen lückenlos vorhanden sein.
+
+
 ## Rolle
 Du schreibst alle fehlenden Tests und stellst sicher dass die Coverage-Ziele erreicht werden. Du schreibst keine neuen Features — du testest nur was die anderen Agents implementiert haben.
 
@@ -25,17 +28,17 @@ Datei: `time-calculations.util.spec.ts`
 
 Alle Testfälle müssen die Formeln aus `AGENT-00-flutter-analysis-report.md` validieren:
 
-**calculateNetMinutes:**
+**calculateNetDuration:**
 ```
 ✅ Normale Session: 9h - 0min Pause = 540min
 ✅ Mit Pause: 9h - 30min = 510min
-✅ Laufende Session (kein endTime): nutzt new Date() → Ergebnis ≈ erwartet ±1min
-✅ Pausierte Session: pauseStartTime wird eingerechnet
+✅ Laufende Session (kein workEnd): nutzt new Date() → Ergebnis ≈ erwartet ±1min
+✅ Pausierte Pause (kein break.end): nutzt new Date()
 ✅ Kantenfälle: Pause > Bruttozeit → 0 (niemals negativ)
-✅ endTime vor startTime → 0 (Dateneingabefehler)
+✅ workEnd vor workStart → 0 (Dateneingabefehler)
 ```
 
-**calculateOvertimeMinutes:**
+**calculateOvertime:**
 ```
 ✅ Überstunden: 510 - 480 = +30
 ✅ Unterzeit: 420 - 480 = -60
@@ -70,16 +73,24 @@ Alle Testfälle müssen die Formeln aus `AGENT-00-flutter-analysis-report.md` va
 
 ### Priorität 2: Service Tests
 
-**work-session.service.spec.ts:**
+**work-entry.service.spec.ts:**
 ```typescript
 // Setup: Fake Firestore + Mock AuthService
-describe('WorkSessionService', () => {
-  it('startSession erstellt Session mit isRunning: true')
-  it('stopSession setzt endTime und isRunning: false')
-  it('pauseSession setzt isPaused: true und pauseStartTime')
-  it('resumeSession addiert Pausenzeit zu pauseDuration')
-  it('deleteSession wirft sprechende Fehlermeldung bei Firestore-Fehler')  // Bug #108
-  it('activeSession$ gibt null zurück wenn keine Session läuft')
+describe('WorkEntryService', () => {
+  it('getWorkEntry lädt korrekten Tag aus Monats-Dokument')
+  it('saveWorkEntry speichert merge: true in days.[dayKey]')
+  it('startTimer setzt workStart')
+  it('stopTimer setzt workEnd')
+  it('toggleBreak fügt neue Pause hinzu oder beendet laufende')
+  it('activeEntry$ gibt heute zurück')
+})
+```
+
+**overtime.service.spec.ts:**
+```typescript
+describe('OvertimeService', () => {
+  it('getBalance liefert aktuellen Saldo')
+  it('updateBalance schreibt in balance Dokument')
 })
 ```
 
@@ -217,7 +228,8 @@ GitHub Actions (bereits in `deploy.yml` von Agent 11):
 
 ## Output
 - `src/app/features/time-tracking/utils/time-calculations.util.spec.ts`
-- `src/app/features/time-tracking/services/work-session.service.spec.ts`
+- `src/app/features/time-tracking/services/work-entry.service.spec.ts`
+- `src/app/features/time-tracking/services/overtime.service.spec.ts`
 - `src/app/features/premium/services/premium.service.spec.ts`
 - `src/app/features/settings/services/user-profile.service.spec.ts`
 - `src/app/core/auth/auth.guard.spec.ts`

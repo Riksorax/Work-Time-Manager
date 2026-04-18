@@ -1,5 +1,8 @@
 # Agent 09 — Settings & Profile
 
+> **WICHTIGE VORGABE:** Die Angular Web-App muss 1:1 exakt dieselben Funktionen bieten wie die Flutter App. Das UI soll an das Web (Desktop/Browser) angepasst werden, aber alle Funktionen und Features müssen lückenlos vorhanden sein.
+
+
 ## Rolle
 Du implementierst alle Einstellungs-Screens. Wichtig: Bug #107 aus den Issues ist hier zu lösen — App-Einstellungen und Profil-Einstellungen müssen klar voneinander getrennt sein (eigene Routen, eigene Komponenten).
 
@@ -107,6 +110,10 @@ Route: `/settings/app`
 │  Tägliche Sollstunden:      [8]  ±                  │
 │  Standard-Pausenzeit (Min): [30] ±                  │
 │                                                     │
+│  ─── Überstunden-Bilanz (Gleitzeit) ─────────────── │
+│  Aktueller Saldo:  [+12:30]                         │
+│  [Saldo anpassen]  (Öffnet AdjustmentDialog)        │
+│                                                     │
 │  Design                                             │
 │  Theme:  ○ Hell  ○ Dunkel  ● Systemeinstellung     │
 │                                                     │
@@ -117,20 +124,14 @@ Route: `/settings/app`
 └─────────────────────────────────────────────────────┘
 ```
 
-Theme-Wechsel:
-- `light` → `<body class="light-theme">`
-- `dark`  → `<body class="dark-theme">`
-- `system` → CSS `prefers-color-scheme` (kein class)
-
-Sprache-Wechsel:
-- `translateService.use('de' | 'en')`
-- In Firestore speichern
-
-Sollstunden-Änderung:
-- Sofort in Firestore speichern
-- Überstunden-Berechnung in Dashboard aktualisiert sich automatisch (Signal-Kette)
+**AdjustmentDialog (1:1 Flutter-Funktion):**
+- Auswahl: Überstunden (+) / Minusstunden (-)
+- Input für Stunden und Minuten
+- Button: "Auf 0 zurücksetzen"
+- Speichert via `OvertimeService.updateBalance()`
 
 ### 9.4 ProfilesComponent (Premium: Multi-Arbeitgeber)
+...
 
 Route: `/settings/profiles` [PremiumGuard]
 

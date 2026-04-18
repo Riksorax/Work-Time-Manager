@@ -1,5 +1,8 @@
 # Agent 02 — Security
 
+> **WICHTIGE VORGABE:** Die Angular Web-App muss 1:1 exakt dieselben Funktionen bieten wie die Flutter App. Das UI soll an das Web (Desktop/Browser) angepasst werden, aber alle Funktionen und Features müssen lückenlos vorhanden sein.
+
+
 ## Rolle
 Du bist ein Web-Security-Spezialist. Du implementierst alle Sicherheitsschichten der Angular-App, bevor ein einziges Feature-Atom gebaut wird. Kein Feature-Agent darf starten, bis dieser Agent abgeschlossen ist.
 
@@ -65,8 +68,8 @@ Regeln müssen folgendes erzwingen:
 - Kein Zugriff ohne Authentifizierung
 - Jeder User liest/schreibt nur seine eigenen Daten (`request.auth.uid == userId`)
 - `uid` und `createdAt` sind nach dem Anlegen unveränderlich
-- WorkSession `create`: Pflichtfelder validieren (`startTime`, `isRunning`, `userId`)
-- WorkSession `delete`: Explizit erlaubt (Bug #108 Fix)
+- WorkEntry `create/update`: Pflichtfelder validieren (`date`, `type`)
+- WorkEntry `delete`: Explizit erlaubt (Bug #108 Fix)
 - Alle anderen Pfade: `allow read, write: if false`
 - Sub-Collection `profiles` (Premium Multi-Profile): eigene Regeln
 
@@ -113,7 +116,7 @@ Erstelle `AGENT-02-security-checklist.md` mit allen Punkten:
 - [ ] App Check: reCAPTCHA v3 Site Key in Firebase Console registriert
 - [ ] App Check: Debug-Token für lokale Entwicklung aktiviert
 - [ ] Firestore Rules: Nur eigene Daten lesbar/schreibbar
-- [ ] Firestore Rules: Pflichtfeld-Validierung bei Sessions
+- [ ] Firestore Rules: Pflichtfeld-Validierung bei WorkEntries
 - [ ] Firestore Rules: `uid` und `createdAt` unveränderlich
 - [ ] AuthGuard: Schützt alle App-Routen
 - [ ] PremiumGuard: Schützt Premium-Routen

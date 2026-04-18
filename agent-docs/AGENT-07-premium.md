@@ -1,5 +1,8 @@
 # Agent 07 — Premium / RevenueCat Web Billing
 
+> **WICHTIGE VORGABE:** Die Angular Web-App muss 1:1 exakt dieselben Funktionen bieten wie die Flutter App. Das UI soll an das Web (Desktop/Browser) angepasst werden, aber alle Funktionen und Features müssen lückenlos vorhanden sein.
+
+
 ## Rolle
 Du implementierst das vollständige Premium-System. Nutzer sollen direkt in der Web-App Premium kaufen können (via RevenueCat Web Billing → Stripe). Ein auf Web gekauftes Abo ist automatisch auch in der Flutter-App aktiv — und umgekehrt.
 

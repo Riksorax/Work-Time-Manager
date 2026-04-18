@@ -1,8 +1,0 @@
-# robots.txt for Work Time Manager
-# Allow all crawlers to index the site. Adjust Disallow if you have private areas.
-User-agent: *
-Allow: /
-
-# Sitemap location (Bitte DOMAIN ersetzen)
-Sitemap: https://work-time-manager.app/sitemap.xml
-
