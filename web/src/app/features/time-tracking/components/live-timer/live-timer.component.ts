@@ -24,6 +24,7 @@ import { ToastService } from '../../../../shared/components/toast/toast.service'
 import { WorkSessionType, SessionBreak } from '../../../../shared/models';
 import { formatTimer, getElapsedSeconds, getGrossSeconds } from '../../utils/time-calculations.util';
 import { EditBreakDialogComponent, EditBreakDialogData } from '../edit-break-dialog/edit-break-dialog.component';
+import { EditTimeDialogComponent, EditTimeDialogData, EditTimeDialogResult } from '../edit-time-dialog/edit-time-dialog.component';
 
 const SESSION_TYPE_ICONS: Record<WorkSessionType, string> = {
   work: 'work',
@@ -112,21 +113,23 @@ const SESSION_TYPE_LABELS: Record<WorkSessionType, string> = {
         opacity: 0.6;
       }
 
-      .time-input {
+      .time-btn {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        background: rgba(255,255,255,0.15);
+        border: none;
+        border-radius: 8px;
+        padding: 4px 10px;
+        cursor: pointer;
+        color: var(--mat-sys-on-primary-container);
         font-size: 1.1rem;
         font-weight: 700;
         font-variant-numeric: tabular-nums;
-        color: var(--mat-sys-on-primary-container);
-        background: transparent;
-        border: none;
-        border-bottom: 1px solid rgba(255,255,255,0.4);
-        text-align: center;
-        width: 80px;
-        padding: 2px 4px;
-        cursor: pointer;
+        transition: background 0.15s;
 
-        &:focus { outline: none; border-bottom-color: var(--mat-sys-on-primary-container); }
-        &::-webkit-calendar-picker-indicator { filter: invert(1) opacity(0.5); width: 12px; height: 12px; }
+        &:hover { background: rgba(255,255,255,0.28); }
+        mat-icon { font-size: 14px; width: 14px; height: 14px; opacity: 0.7; }
       }
     }
 
@@ -337,29 +340,21 @@ const SESSION_TYPE_LABELS: Record<WorkSessionType, string> = {
         <p class="timer-net" [class]="activeSession()!.type">{{ netDisplay() }}</p>
         <p class="timer-gross">Anwesenheit (Brutto): {{ grossDisplay() }}</p>
 
-        <!-- START / ENDE (editierbar) -->
+        <!-- START / ENDE (tipp zum Bearbeiten) -->
         <div class="start-end-row">
           <div class="time-col">
             <span class="time-label">Start</span>
-            <input
-              class="time-input"
-              type="time"
-              [value]="startTimeStr()"
-              (change)="onStartTimeChange($event)"
-            />
+            <button class="time-btn" (click)="openStartTimePicker()" matTooltip="Startzeit bearbeiten">
+              {{ startTimeStr() }}
+              <mat-icon>edit</mat-icon>
+            </button>
           </div>
           <div class="time-col">
             <span class="time-label">Ende</span>
-            @if (activeSession()!.isRunning) {
-              <span style="font-size:1.1rem;font-weight:700;color:var(--mat-sys-on-primary-container)">--:--</span>
-            } @else {
-              <input
-                class="time-input"
-                type="time"
-                [value]="endTimeStr()"
-                (change)="onEndTimeChange($event)"
-              />
-            }
+            <button class="time-btn" (click)="openEndTimePicker()" matTooltip="Endzeit bearbeiten">
+              {{ endTimeStr() || '--:--' }}
+              <mat-icon>edit</mat-icon>
+            </button>
           </div>
         </div>
 
@@ -557,34 +552,35 @@ export class LiveTimerComponent implements OnInit, OnDestroy {
     return Math.floor((b.endTime.toMillis() - b.startTime.toMillis()) / 60_000);
   }
 
-  async onStartTimeChange(event: Event): Promise<void> {
+  openStartTimePicker(): void {
     const s = this.activeSession();
     if (!s) return;
-    const val = (event.target as HTMLInputElement).value;
-    if (!val) return;
-    const [h, m] = val.split(':').map(Number);
-    const newStart = new Date(s.startTime.toDate());
-    newStart.setHours(h, m, 0, 0);
-    try {
-      await this.sessionService.updateSessionTimes(s.id, newStart);
-    } catch {
-      this.toast.error('common.error');
-    }
+    const data: EditTimeDialogData = { label: 'Startzeit', currentTime: s.startTime.toDate() };
+    this.dialog.open<EditTimeDialogComponent, EditTimeDialogData, EditTimeDialogResult>(
+      EditTimeDialogComponent, { data, width: '280px' }
+    ).afterClosed().subscribe(async result => {
+      if (!result) return;
+      const newStart = new Date(s.startTime.toDate());
+      newStart.setHours(result.hours, result.minutes, 0, 0);
+      try { await this.sessionService.updateSessionTimes(s.id, newStart); }
+      catch { this.toast.error('common.error'); }
+    });
   }
 
-  async onEndTimeChange(event: Event): Promise<void> {
+  openEndTimePicker(): void {
     const s = this.activeSession();
     if (!s) return;
-    const val = (event.target as HTMLInputElement).value;
-    if (!val) return;
-    const [h, m] = val.split(':').map(Number);
-    const newEnd = new Date(s.startTime.toDate());
-    newEnd.setHours(h, m, 0, 0);
-    try {
-      await this.sessionService.updateSessionTimes(s.id, s.startTime.toDate(), newEnd);
-    } catch {
-      this.toast.error('common.error');
-    }
+    const current = s.endTime?.toDate() ?? new Date();
+    const data: EditTimeDialogData = { label: 'Endzeit', currentTime: current };
+    this.dialog.open<EditTimeDialogComponent, EditTimeDialogData, EditTimeDialogResult>(
+      EditTimeDialogComponent, { data, width: '280px' }
+    ).afterClosed().subscribe(async result => {
+      if (!result) return;
+      const newEnd = new Date(s.startTime.toDate());
+      newEnd.setHours(result.hours, result.minutes, 0, 0);
+      try { await this.sessionService.updateSessionTimes(s.id, s.startTime.toDate(), newEnd); }
+      catch { this.toast.error('common.error'); }
+    });
   }
 
   async start(): Promise<void> {
