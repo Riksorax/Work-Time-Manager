@@ -1,1 +1,59 @@
-<p>dashboard works!</p>
+<div class="dashboard-container">
+  <div class="stats-row">
+    <!-- Timer Card -->
+    <mat-card class="timer-card">
+      <mat-card-header>
+        <mat-card-title>Heute</mat-card-title>
+        <mat-card-subtitle>{{ todayEntry()?.date | date:'fullDate' }}</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="timer-display">
+          <h1>{{ formattedTime() }}</h1>
+          <p>Netto-Arbeitszeit</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Details Card -->
+    <mat-card class="details-card">
+      <mat-card-header>
+        <mat-card-title>Statistik</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="detail-item">
+          <mat-icon>play_arrow</mat-icon>
+          <span>Start: <strong>{{ todayEntry()?.workStart | date:'HH:mm' }} Uhr</strong></span>
+        </div>
+        <div class="detail-item">
+          <mat-icon>coffee</mat-icon>
+          <span>Pause: <strong>{{ todayEntry()?.breaks?.length || 0 }} mal</strong></span>
+        </div>
+        <div class="detail-item">
+          <mat-icon>timer</mat-icon>
+          <span>Status: <strong>{{ todayEntry()?.workEnd ? 'Beendet' : (todayEntry()?.workStart ? 'Läuft' : 'Nicht gestartet') }}</strong></span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Actions -->
+  <div class="action-buttons">
+    @if (!todayEntry()?.workStart) {
+      <button mat-fab extended color="primary" (click)="startTimer()">
+        <mat-icon>play_arrow</mat-icon>
+        Einstempeln
+      </button>
+    } @else if (!todayEntry()?.workEnd) {
+      <button mat-fab extended color="warn" (click)="stopTimer()">
+        <mat-icon>stop</mat-icon>
+        Ausstempeln
+      </button>
+      <button mat-fab extended (click)="toggleBreak()">
+        <mat-icon>coffee</mat-icon>
+        {{ todayEntry()?.breaks?.length ? 'Pause beenden' : 'Pause starten' }}
+      </button>
+    } @else {
+      <p class="done-msg">Schönen Feierabend! 🎉</p>
+    }
+  </div>
+</div>
