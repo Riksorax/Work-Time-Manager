@@ -1,16 +1,12 @@
 import { inject } from '@angular/core';
 import { Router, CanActivateFn } from '@angular/router';
+import { PremiumService } from '../../features/premium/services/premium.service';
 
 export const premiumGuard: CanActivateFn = () => {
   const router = inject(Router);
+  const premiumService = inject(PremiumService);
   
-  // TODO: Implement actual check using PremiumService signal
-  // For now, allow but log
-  console.warn('PremiumGuard: Actual check not implemented yet');
-  
-  const isPremium = false; // Mock value
-  
-  if (isPremium) {
+  if (premiumService.isPremium()) {
     return true;
   } else {
     router.navigate(['/settings/premium']);
