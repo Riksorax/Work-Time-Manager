@@ -1,59 +1,121 @@
-name: Build, Push, and Deploy Work Time Manager
+name: Deploy Angular Web App (Agent 11)
 
 on:
   push:
     branches:
       - main
+    paths:
+      - 'web/**'
+      - '.github/workflows/deploy-web.yml'
   workflow_dispatch:
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-
+    defaults:
+      run:
+        working-directory: web
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Login to Docker Hub
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      # - name: Run Tests
+      #   run: npm run test:ci
+
+      - name: Setup environment.prod.ts
+        run: |
+          envsubst < src/environments/environment.prod.template.ts > src/environments/environment.prod.ts
+        env:
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
+          FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+          RECAPTCHA_SITE_KEY: ${{ secrets.RECAPTCHA_SITE_KEY }}
+          REVENUECAT_WEB_BILLING_KEY: ${{ secrets.REVENUECAT_WEB_BILLING_KEY }}
+          FCM_VAPID_KEY: ${{ secrets.FCM_VAPID_KEY }}
+
+      - name: Setup firebase-messaging-sw.js
+        run: |
+          envsubst < public/firebase-messaging-sw.js > public/firebase-messaging-sw.prod.js
+          mv public/firebase-messaging-sw.prod.js public/firebase-messaging-sw.js
+        env:
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
+          FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+
+      - name: Build production
+        run: npm run build -- --configuration production
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: web/dist/work-time-manager-web/browser
+
+  docker:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: web/dist/work-time-manager-web/browser
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
         uses: docker/login-action@v3
         with:
-          username: ${{ vars.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push Docker image
+      - name: Build and push
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: web
           push: true
-          tags: ${{ vars.DOCKERHUB_USERNAME }}/work-time-manager:latest
-          build-args: |
-            RECAPTCHA_SITE_KEY=${{ secrets.RECAPTCHA_SITE_KEY }}
-            RC_WEB_KEY=${{ secrets.RC_WEB_KEY }}
+          tags: ghcr.io/${{ github.repository_owner }}/work-time-manager-web:latest,ghcr.io/${{ github.repository_owner }}/work-time-manager-web:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
+  deploy:
+    needs: docker
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
       - name: Deploy to Server
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ vars.HETZNER_HOST }}
           username: ${{ vars.HETZNER_USER }}
-          key: ${{ secrets.HETZNER_SSH_PRIVATE_KEY }}
+          key: ${{ secrets.HETZNER_SSH_KEY }}
           script: |
-            # Projektverzeichnis definieren
-            PROJECT_DIR="~/projekte/${{ github.event.repository.name }}"
-
-            # Projekt klonen, falls es noch nicht existiert
-            if [ ! -d "$PROJECT_DIR" ]; then
-              git clone https://github.com/${{ github.repository }}.git "$PROJECT_DIR"
-            fi
-
-            # In das Projektverzeichnis wechseln und die neuesten Änderungen holen
-            cd "$PROJECT_DIR"
-            git pull origin main
-
-            # Das neueste Docker-Image herunterladen
-            sudo docker compose pull
-
-            # Die Anwendung mit der neuen Konfiguration und dem neuen Image starten/aktualisieren
-            sudo docker compose up -d
-
-            # Alte, ungenutzte Docker-Images aufräumen
-            sudo docker image prune -af
+            cd /opt/work-time-manager-web
+            export IMAGE_TAG=${{ github.sha }}
+            docker compose pull
+            docker compose up -d --no-deps work-time-manager-web
+            docker image prune -f

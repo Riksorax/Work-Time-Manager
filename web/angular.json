@@ -54,7 +54,7 @@
                 "input": "public"
               }
             ],
-            "styles": ["src/styles.scss"]
+            "styles": ["src/styles.scss", "src/styles/theme.scss"]
           },
           "configurations": {
             "production": {
