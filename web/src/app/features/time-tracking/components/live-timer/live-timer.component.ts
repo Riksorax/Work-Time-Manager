@@ -14,12 +14,13 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDividerModule } from '@angular/material/divider';
 import { TranslateModule } from '@ngx-translate/core';
 import { WorkSessionService } from '../../services/work-session.service';
 import { BreakCalculatorService } from '../../services/break-calculator.service';
 import { ToastService } from '../../../../shared/components/toast/toast.service';
 import { WorkSessionType } from '../../../../shared/models';
-import { formatTimer, getElapsedSeconds } from '../../utils/time-calculations.util';
+import { formatTimer, getElapsedSeconds, getGrossSeconds } from '../../utils/time-calculations.util';
 
 const SESSION_TYPE_ICONS: Record<WorkSessionType, string> = {
   work: 'work',
@@ -45,11 +46,14 @@ const SESSION_TYPE_LABELS: Record<WorkSessionType, string> = {
     MatProgressSpinnerModule,
     MatSelectModule,
     MatTooltipModule,
+    MatDividerModule,
     TranslateModule,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: [`
     :host { display: block; }
+
+    /* ── Aktiver Timer ─────────────────────────────────── */
 
     .timer-card {
       background: var(--mat-sys-primary-container);
@@ -58,24 +62,56 @@ const SESSION_TYPE_LABELS: Record<WorkSessionType, string> = {
       text-align: center;
     }
 
-    .timer-display {
-      font-size: 3rem;
+    .timer-net {
+      font-size: 3.5rem;
       font-weight: 700;
       font-variant-numeric: tabular-nums;
       color: var(--mat-sys-on-primary-container);
       letter-spacing: 2px;
-      margin: 0 0 4px;
+      margin: 0 0 2px;
+      line-height: 1;
 
       &.vacation { color: #1565c0; }
-      &.sick { color: #c62828; }
-      &.holiday { color: #2e7d32; }
+      &.sick     { color: #c62828; }
+      &.holiday  { color: #2e7d32; }
     }
 
-    .timer-status {
-      font-size: 0.875rem;
+    .timer-gross {
+      font-size: 0.8rem;
       color: var(--mat-sys-on-primary-container);
-      opacity: 0.75;
-      margin: 0 0 4px;
+      opacity: 0.65;
+      margin: 0 0 16px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .start-end-row {
+      display: flex;
+      justify-content: center;
+      gap: 48px;
+      margin-bottom: 12px;
+
+      .time-col {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+      }
+
+      .time-label {
+        font-size: 0.65rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--mat-sys-on-primary-container);
+        opacity: 0.6;
+      }
+
+      .time-value {
+        font-size: 1.1rem;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        color: var(--mat-sys-on-primary-container);
+      }
     }
 
     .timer-meta {
@@ -86,7 +122,7 @@ const SESSION_TYPE_LABELS: Record<WorkSessionType, string> = {
       font-size: 0.8rem;
       color: var(--mat-sys-on-primary-container);
       opacity: 0.7;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
 
       .meta-item { display: flex; align-items: center; gap: 4px; }
       mat-icon { font-size: 14px; width: 14px; height: 14px; }
@@ -94,30 +130,85 @@ const SESSION_TYPE_LABELS: Record<WorkSessionType, string> = {
 
     .break-warning {
       display: flex;
-      align-items: center;
-      gap: 6px;
-      justify-content: center;
+      align-items: flex-start;
+      gap: 8px;
       background: #FFF3E0;
       border: 1px solid #FFCC80;
       border-radius: 8px;
-      padding: 6px 12px;
+      padding: 10px 12px;
       margin-bottom: 12px;
       font-size: 0.8rem;
       color: #E65100;
-      mat-icon { font-size: 16px; width: 16px; height: 16px; }
+      text-align: left;
+      mat-icon { font-size: 18px; width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px; }
     }
+
+    /* ── Pausen-Sektion ────────────────────────────────── */
+
+    .pause-section {
+      background: var(--mat-sys-surface);
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 12px;
+      text-align: left;
+    }
+
+    .pause-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+
+      .pause-title {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--mat-sys-on-surface);
+      }
+      .pause-total {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--mat-sys-primary);
+      }
+    }
+
+    .pause-status {
+      font-size: 0.75rem;
+      color: var(--mat-sys-on-surface-variant);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    }
+
+    /* ── Aktions-Buttons ───────────────────────────────── */
 
     .timer-actions {
       display: flex;
-      gap: 12px;
-      justify-content: center;
-      flex-wrap: wrap;
+      flex-direction: column;
+      gap: 8px;
     }
+
+    .btn-stop {
+      width: 100%;
+      height: 48px;
+      font-size: 1rem;
+      font-weight: 600;
+      background: #E65100 !important;
+      color: #fff !important;
+    }
+
+    .btn-pause {
+      width: 100%;
+      height: 44px;
+      font-size: 0.9rem;
+    }
+
+    /* ── Idle Card ─────────────────────────────────────── */
 
     .idle-card {
       border: 2px dashed var(--mat-sys-outline-variant);
       border-radius: 12px;
-      padding: 20px;
+      padding: 24px 20px;
       text-align: center;
       display: flex;
       flex-direction: column;
@@ -130,7 +221,6 @@ const SESSION_TYPE_LABELS: Record<WorkSessionType, string> = {
     .type-select {
       width: 100%;
       max-width: 200px;
-
       ::ng-deep .mat-mdc-form-field-subscript-wrapper { display: none; }
     }
 
@@ -140,64 +230,103 @@ const SESSION_TYPE_LABELS: Record<WorkSessionType, string> = {
       gap: 6px;
       font-size: 0.9rem;
     }
+
+    .btn-start {
+      width: 100%;
+      max-width: 280px;
+      height: 48px;
+      font-size: 1rem;
+      font-weight: 600;
+      background: #2e7d32 !important;
+      color: #fff !important;
+    }
   `],
   template: `
     @if (activeSession()) {
       <div class="timer-card">
-        <p class="timer-display" [class]="activeSession()!.type">{{ display() }}</p>
 
-        <p class="timer-status">
-          <mat-icon style="font-size:14px;width:14px;height:14px;vertical-align:middle">
-            {{ typeIcon(activeSession()!.type) }}
-          </mat-icon>
-          {{ typeLabel(activeSession()!.type) }} ·
-          {{ activeSession()!.isPaused ? ('timer.paused' | translate) : ('timer.running' | translate) }}
-        </p>
+        <!-- Netto-Timer -->
+        <p class="timer-net" [class]="activeSession()!.type">{{ netDisplay() }}</p>
+        <p class="timer-gross">Anwesenheit (Brutto): {{ grossDisplay() }}</p>
 
-        @if (expectedEnd()) {
+        <!-- START / ENDE -->
+        <div class="start-end-row">
+          <div class="time-col">
+            <span class="time-label">Start</span>
+            <span class="time-value">{{ activeSession()!.startTime.toDate() | date:'HH:mm' }}</span>
+          </div>
+          <div class="time-col">
+            <span class="time-label">Ende</span>
+            <span class="time-value">
+              {{ activeSession()!.endTime ? (activeSession()!.endTime!.toDate() | date:'HH:mm') : '--:--' }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Feierabend-Prognose -->
+        @if (expectedEnd() && !activeSession()!.isPaused) {
           <div class="timer-meta">
             <span class="meta-item">
               <mat-icon>schedule</mat-icon>
               Feierabend ca. {{ expectedEnd() | date:'HH:mm' }}
             </span>
-            @if (activeSession()!.pauseDuration > 0) {
-              <span class="meta-item">
-                <mat-icon>coffee</mat-icon>
-                {{ activeSession()!.pauseDuration }}min Pause
-              </span>
-            }
           </div>
         }
 
+        <!-- Pause-Warnung (ArbZG) -->
         @if (breakSuggestion()?.isRequired) {
           <div class="break-warning">
-            <mat-icon>warning</mat-icon>
-            Gesetzliche Pause: noch {{ breakSuggestion()!.missingMinutes }}min fällig
+            <mat-icon>info_outline</mat-icon>
+            Laut Arbeitszeitgesetz sind noch mind. {{ breakSuggestion()!.missingMinutes }} Min. Pause vorgeschrieben.
           </div>
         }
 
+        <!-- Pausen-Sektion -->
+        <div class="pause-section">
+          <div class="pause-header">
+            <span class="pause-title">Pausen</span>
+            <span class="pause-total">{{ activeSession()!.pauseDuration }} min</span>
+          </div>
+          @if (activeSession()!.isPaused) {
+            <div class="pause-status">
+              <mat-icon style="color:var(--mat-sys-primary)">timer</mat-icon>
+              Pause läuft gerade…
+            </div>
+          } @else if (activeSession()!.pauseDuration === 0) {
+            <div class="pause-status">Noch keine Pausen erfasst</div>
+          } @else {
+            <div class="pause-status">
+              <mat-icon>check_circle_outline</mat-icon>
+              {{ activeSession()!.pauseDuration }} Min. Pause gesamt
+            </div>
+          }
+        </div>
+
+        <!-- Aktions-Buttons -->
         <div class="timer-actions">
           @if (activeSession()!.isPaused) {
-            <button mat-flat-button (click)="resume()" [disabled]="busy()">
-              <mat-icon>play_arrow</mat-icon>
-              {{ 'timer.resume' | translate }}
+            <button class="btn-pause" mat-stroked-button (click)="resume()" [disabled]="busy()">
+              @if (busy()) { <mat-spinner diameter="18" /> } @else { <mat-icon>play_circle_outline</mat-icon> }
+              Pause beenden
             </button>
           } @else {
-            <button mat-stroked-button (click)="pause()" [disabled]="busy()">
-              <mat-icon>pause</mat-icon>
-              {{ 'timer.pause' | translate }}
+            <button class="btn-pause" mat-stroked-button (click)="pause()" [disabled]="busy()">
+              @if (busy()) { <mat-spinner diameter="18" /> } @else { <mat-icon>stop_circle</mat-icon> }
+              Pause starten
             </button>
           }
-          <button mat-flat-button color="warn" (click)="stop()" [disabled]="busy()">
+
+          <button class="btn-stop" mat-flat-button (click)="stop()" [disabled]="busy()">
             @if (busy()) { <mat-spinner diameter="18" /> } @else { <mat-icon>stop</mat-icon> }
-            {{ 'timer.stop' | translate }}
+            Zeiterfassung beenden
           </button>
         </div>
+
       </div>
     } @else {
       <div class="idle-card">
         <mat-icon style="font-size:40px;width:40px;height:40px;color:var(--mat-sys-primary)">timer</mat-icon>
-        <p>{{ 'timer.noActiveSession' | translate }}</p>
+        <p>Kein aktiver Timer</p>
 
         <mat-select class="type-select" [value]="selectedType()" (valueChange)="selectedType.set($event)">
           <mat-select-trigger>
@@ -216,9 +345,9 @@ const SESSION_TYPE_LABELS: Record<WorkSessionType, string> = {
           }
         </mat-select>
 
-        <button mat-flat-button (click)="start()" [disabled]="busy()">
-          @if (busy()) { <mat-spinner diameter="18" /> } @else { <mat-icon>play_arrow</mat-icon> }
-          {{ 'timer.start' | translate }}
+        <button class="btn-start" mat-flat-button (click)="start()" [disabled]="busy()">
+          @if (busy()) { <mat-spinner diameter="18" /> } @else { <mat-icon>play_circle_filled</mat-icon> }
+          Zeiterfassung starten
         </button>
       </div>
     }
@@ -231,7 +360,8 @@ export class LiveTimerComponent implements OnInit, OnDestroy {
 
   readonly activeSession = toSignal(this.sessionService.activeSession$, { initialValue: null });
   readonly busy = signal(false);
-  readonly display = signal('00:00:00');
+  readonly netDisplay = signal('00:00:00');
+  readonly grossDisplay = signal('00:00:00');
   readonly selectedType = signal<WorkSessionType>('work');
 
   readonly sessionTypes: WorkSessionType[] = ['work', 'vacation', 'sick', 'holiday'];
@@ -246,7 +376,6 @@ export class LiveTimerComponent implements OnInit, OnDestroy {
   readonly expectedEnd = computed(() => {
     const s = this.activeSession();
     if (!s || s.type !== 'work') return null;
-    // Feierabend basierend auf 8h Tagesziel (grobe Schätzung, verfeinert durch Profil)
     return this.breakCalc.expectedEndTime(s.startTime.toDate(), 8 * 60, s.pauseDuration);
   });
 
@@ -256,7 +385,8 @@ export class LiveTimerComponent implements OnInit, OnDestroy {
     this.tickInterval = setInterval(() => {
       const s = this.activeSession();
       if (s && !s.isPaused) {
-        this.display.set(formatTimer(getElapsedSeconds(s)));
+        this.netDisplay.set(formatTimer(getElapsedSeconds(s)));
+        this.grossDisplay.set(formatTimer(getGrossSeconds(s)));
       }
     }, 1000);
   }
@@ -279,7 +409,11 @@ export class LiveTimerComponent implements OnInit, OnDestroy {
     const s = this.activeSession();
     if (!s) return;
     this.busy.set(true);
-    try { await this.sessionService.stopSession(s.id); this.display.set('00:00:00'); }
+    try {
+      await this.sessionService.stopSession(s.id);
+      this.netDisplay.set('00:00:00');
+      this.grossDisplay.set('00:00:00');
+    }
     catch { this.toast.error('common.error'); }
     finally { this.busy.set(false); }
   }

@@ -72,6 +72,14 @@ export function formatTimer(totalSeconds: number): string {
 }
 
 /**
+ * Gibt die Brutto-Sekunden einer aktiven Session zurück (inkl. Pausen).
+ */
+export function getGrossSeconds(session: WorkSession): number {
+  const start = session.startTime.toDate();
+  return Math.floor((new Date().getTime() - start.getTime()) / 1000);
+}
+
+/**
  * Gibt die laufenden Sekunden einer aktiven Session zurück (für Timer-Anzeige).
  */
 export function getElapsedSeconds(session: WorkSession): number {
