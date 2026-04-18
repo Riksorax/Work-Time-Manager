@@ -1,0 +1,29 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "reports": "Berichte",
+    "profile": "Profil",
+    "settings": "Einstellungen",
+    "logout": "Abmelden"
+  },
+  "common": {
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "loading": "Lade...",
+    "confirm": "Bestätigen"
+  },
+  "timer": {
+    "start": "Starten",
+    "stop": "Stoppen",
+    "pause": "Pause",
+    "resume": "Fortsetzen"
+  },
+  "dashboard": {
+    "title": "Arbeitszeit",
+    "today": "Heute",
+    "week": "Diese Woche",
+    "overtime": "Überstunden",
+    "expected_end": "Voraussichtlicher Feierabend"
+  }
+}
