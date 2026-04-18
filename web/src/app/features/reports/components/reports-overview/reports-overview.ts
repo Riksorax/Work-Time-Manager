@@ -10,7 +10,7 @@ import { DurationPipe } from '../../../../shared/pipes/duration.pipe';
 import { OvertimePipe } from '../../../../shared/pipes/overtime.pipe';
 import { format, addWeeks, subWeeks, startOfWeek, endOfWeek } from 'date-fns';
 import { BaseChartDirective } from 'ng2-charts';
-import { ChartConfiguration, ChartType } from 'chart.js';
+import { ChartConfiguration } from 'chart.js';
 
 @Component({
   selector: 'app-reports-overview',
@@ -121,7 +121,6 @@ export class ReportsOverviewComponent {
   selectedDate = signal(new Date());
   
   report = computed(() => {
-    // Da toSignal nicht direkt mit computed geht, abonnieren wir im Service-Aufruf
     return toSignal(this.reportService.getWeeklyReport(this.selectedDate()))();
   });
 
@@ -155,10 +154,10 @@ export class ReportsOverviewComponent {
     if (!r) return { labels: [], datasets: [] };
 
     return {
-      labels: r.dailyReports.map(d => format(d.date, 'EEE')),
+      labels: r.dailyReports.map((d: any) => format(d.date, 'EEE')),
       datasets: [
         {
-          data: r.dailyReports.map(d => d.workedMinutes),
+          data: r.dailyReports.map((d: any) => d.workedMinutes),
           backgroundColor: '#3f51b5',
           borderRadius: 4
         }

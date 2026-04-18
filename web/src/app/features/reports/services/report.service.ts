@@ -1,20 +1,17 @@
 import { Injectable, inject } from '@angular/core';
 import { Firestore, doc, docData } from '@angular/fire/firestore';
-import { AuthService } from '../../../../core/auth/auth.service';
-import { WorkEntry, WeeklyReport, MonthlyReport, YearlyReport, DailyReport } from '../../../../shared/models';
-import { Observable, map, of, switchMap, forkJoin, combineLatest } from 'rxjs';
+import { AuthService } from '../../../core/auth/auth.service';
+import { WorkEntry, WeeklyReport, MonthlyReport, YearlyReport, DailyReport } from '../../../shared/models';
+import { Observable, map, of, switchMap, combineLatest } from 'rxjs';
 import { 
   format, 
   startOfWeek, 
   endOfWeek, 
   eachDayOfInterval, 
-  isSameDay, 
-  startOfMonth, 
-  endOfMonth,
-  addMonths,
-  subMonths
+  isSameDay
 } from 'date-fns';
-import { calculateNetDuration, calculateOvertime } from '../../../../shared/utils/time-calculations.util';
+import { calculateNetDuration, calculateOvertime } from '../../../shared/utils/time-calculations.util';
+import { User } from '@angular/fire/auth';
 
 @Injectable({
   providedIn: 'root'
@@ -36,10 +33,9 @@ export class ReportService {
     const end = endOfWeek(date, { weekStartsOn: 1 });
     const days = eachDayOfInterval({ start, end });
     
-    // Wir müssen evtl. zwei Monate laden, wenn die Woche einen Monatswechsel hat
     const monthIds = Array.from(new Set(days.map(d => this.getMonthId(d))));
 
-    return this.auth.currentUser$.pipe(
+    return (this.auth.currentUser$ as Observable<User | null>).pipe(
       switchMap(user => {
         if (!user) return of(null);
         
@@ -47,9 +43,9 @@ export class ReportService {
         return combineLatest(monthRequests).pipe(
           map(monthsData => {
             const allDays: { [key: string]: any } = {};
-            monthsData.forEach(data => {
-              if (data && (data as any).days) {
-                Object.assign(allDays, (data as any).days);
+            monthsData.forEach((data: any) => {
+              if (data && data.days) {
+                Object.assign(allDays, data.days);
               }
             });
 
@@ -60,9 +56,12 @@ export class ReportService {
               let workedMinutes = 0;
               let type: any = 'work';
 
-              if (dayData && isSameDay(dayData.date.toDate(), day)) {
-                workedMinutes = calculateNetDuration(this.mapFromFirestore(dayData, day));
-                type = dayData.type;
+              if (dayData && dayData.date) {
+                const dataDate = dayData.date.toDate();
+                if (isSameDay(dataDate, day)) {
+                  workedMinutes = calculateNetDuration(this.mapFromFirestore(dayData, day));
+                  type = dayData.type;
+                }
               }
 
               return {
@@ -96,7 +95,7 @@ export class ReportService {
     const date = new Date(year, month - 1);
     const monthId = this.getMonthId(date);
     
-    return this.auth.currentUser$.pipe(
+    return (this.auth.currentUser$ as Observable<User | null>).pipe(
       switchMap(user => {
         if (!user) return of(null);
         return this.getMonthDoc(user.uid, monthId).pipe(
@@ -105,7 +104,6 @@ export class ReportService {
             
             const days = Object.values(data.days);
             const totalWorked = days.reduce((sum: number, d: any) => sum + calculateNetDuration(this.mapFromFirestore(d, d.date.toDate())), 0);
-            // Einfache Annahme: 20 Arbeitstage pro Monat für das Ziel, wenn nicht genauer berechnet
             const totalTarget = 20 * targetDailyMinutes; 
 
             return {

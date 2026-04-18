@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, effect, OnDestroy } from '@angular/core';
+import { Component, inject, signal, computed, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -7,16 +7,16 @@ import { MatDividerModule } from '@angular/material/divider';
 import { WorkEntryService } from '../../services/work-entry.service';
 import { OvertimeService } from '../../services/overtime.service';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { WorkEntry, Break } from '../../../../shared/models';
+import { WorkEntry, Break } from '@shared/models';
 import { 
   calculateNetDuration, 
   calculateGrossDuration, 
   calculateOvertime, 
   calculateExpectedEnd,
   formatDurationSeconds
-} from '../../../../shared/utils/time-calculations.util';
-import { DurationPipe } from '../../../../shared/pipes/duration.pipe';
-import { OvertimePipe } from '../../../../shared/pipes/overtime.pipe';
+} from '@shared/utils/time-calculations.util';
+import { DurationPipe } from '@shared/pipes/duration.pipe';
+import { OvertimePipe } from '@shared/pipes/overtime.pipe';
 import { interval, Subscription } from 'rxjs';
 import { BreakListComponent } from '../break-list/break-list';
 import { v4 as uuidv4 } from 'uuid';
@@ -186,8 +186,6 @@ export class DashboardComponent implements OnDestroy {
   displayTime = computed(() => {
     const e = this.entry();
     if (!e) return '00:00:00';
-    // Trick: Wir nutzen calculateNetDuration, aber da es new Date() nutzt wenn end fehlt, 
-    // müssen wir sicherstellen dass der Effekt getriggert wird.
     this.now(); 
     return formatDurationSeconds(calculateNetDuration(e));
   });
@@ -203,7 +201,7 @@ export class DashboardComponent implements OnDestroy {
     const e = this.entry();
     if (!e) return 0;
     this.now();
-    return calculateOvertime(calculateNetDuration(e), 480); // 8h Target Mock
+    return calculateOvertime(calculateNetDuration(e), 480);
   });
 
   totalBalanceMinutes = computed(() => {
@@ -219,7 +217,7 @@ export class DashboardComponent implements OnDestroy {
   // Aktionen
   async startTimer() {
     const newEntry: WorkEntry = {
-      id: '', // Wird vom Service gesetzt
+      id: '',
       date: this.today,
       workStart: new Date(),
       type: 'work',
@@ -261,7 +259,7 @@ export class DashboardComponent implements OnDestroy {
   async onDeleteBreak(breakId: string) {
     const e = this.entry();
     if (!e) return;
-    const breaks = e.breaks.filter(b => b.id !== breakId);
+    const breaks = e.breaks.filter((b: Break) => b.id !== breakId);
     await this.entryService.saveWorkEntry({ ...e, breaks });
   }
 }

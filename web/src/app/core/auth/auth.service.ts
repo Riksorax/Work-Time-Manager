@@ -14,12 +14,12 @@ import {
   reauthenticateWithCredential,
   EmailAuthProvider,
   deleteUser,
-  User,
-  idToken
+  idToken,
+  User
 } from '@angular/fire/auth';
 import { Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { from, map, of } from 'rxjs';
+import { Observable, take } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -28,7 +28,7 @@ export class AuthService {
   private auth = inject(Auth);
   private router = inject(Router);
 
-  readonly currentUser$ = authState(this.auth);
+  readonly currentUser$ = authState(this.auth) as Observable<User | null>;
   readonly currentUser = toSignal(this.currentUser$);
   readonly isLoggedIn = computed(() => !!this.currentUser());
   readonly uid = computed(() => this.currentUser()?.uid ?? null);
@@ -68,7 +68,6 @@ export class AuthService {
     return null;
   }
   
-  // Re-Auth Hilfsmethode
   private async reauthenticate(password: string) {
     const user = this.auth.currentUser;
     if (!user || !user.email) throw new Error('Kein Benutzer angemeldet');
@@ -92,11 +91,8 @@ export class AuthService {
     await this.reauthenticate(currentPassword);
     const user = this.auth.currentUser;
     if (user) {
-      // Hier würde man normalerweise noch Daten in Firestore löschen (via Cloud Function oder Batch)
       await deleteUser(user);
       this.router.navigate(['/auth/login']);
     }
   }
 }
-
-import { take } from 'rxjs';

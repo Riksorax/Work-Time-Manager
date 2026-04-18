@@ -4,13 +4,13 @@ import {
   doc, 
   docData, 
   setDoc, 
-  updateDoc,
   Timestamp 
 } from '@angular/fire/firestore';
-import { AuthService } from '../../../../core/auth/auth.service';
-import { WorkEntry, Break, WorkMonth } from '../../../../shared/models';
-import { Observable, map, of, switchMap, take } from 'rxjs';
+import { AuthService } from '../../../core/auth/auth.service';
+import { WorkEntry, Break } from '../../../shared/models';
+import { Observable, map, of, switchMap } from 'rxjs';
 import { format } from 'date-fns';
+import { User } from '@angular/fire/auth';
 
 @Injectable({
   providedIn: 'root'
@@ -19,7 +19,6 @@ export class WorkEntryService {
   private firestore = inject(Firestore);
   private auth = inject(AuthService);
 
-  // Hilfsmethode zum Formatieren der IDs
   private getMonthId(date: Date): string {
     return format(date, 'yyyy-MM');
   }
@@ -34,7 +33,7 @@ export class WorkEntryService {
   }
 
   getWorkEntry(date: Date): Observable<WorkEntry | null> {
-    return this.auth.currentUser$.pipe(
+    return (this.auth.currentUser$ as Observable<User | null>).pipe(
       switchMap(user => {
         if (!user) return of(null);
         const docRef = this.getMonthDocRef(user.uid, date);
@@ -52,7 +51,7 @@ export class WorkEntryService {
   }
 
   async saveWorkEntry(entry: WorkEntry): Promise<void> {
-    const user = this.auth.currentUser();
+    const user = this.auth.currentUser() as User | null;
     if (!user) throw new Error('Nicht angemeldet');
 
     const docRef = this.getMonthDocRef(user.uid, entry.date);
@@ -75,7 +74,7 @@ export class WorkEntryService {
       description: entry.description || '',
       isManuallyEntered: entry.isManuallyEntered,
       manualOvertimeMinutes: entry.manualOvertimeMinutes || 0,
-      breaks: entry.breaks.map(b => ({
+      breaks: entry.breaks.map((b: Break) => ({
         id: b.id,
         name: b.name,
         start: Timestamp.fromDate(b.start),

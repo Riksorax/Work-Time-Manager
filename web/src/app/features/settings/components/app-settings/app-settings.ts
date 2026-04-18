@@ -12,8 +12,8 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { UserProfileService } from '../../services/user-profile.service';
 import { OvertimeService } from '../../../time-tracking/services/overtime.service';
-import { ToastService } from '../../../../shared/components/toast/toast.service';
-import { OvertimePipe } from '../../../../shared/pipes/overtime.pipe';
+import { ToastService } from '@shared/components/toast/toast.service';
+import { OvertimePipe } from '@shared/pipes/overtime.pipe';
 import { AdjustmentDialogComponent } from '../adjustment-dialog/adjustment-dialog';
 import { toSignal } from '@angular/core/rxjs-interop';
 
@@ -124,7 +124,6 @@ export class AppSettingsComponent {
   });
 
   constructor() {
-    // Formular mit aktuellen Werten befüllen wenn Profil geladen ist
     const profile = this.profileService.profile;
     if (profile()) {
       this.settingsForm.patchValue(profile()!.settings);

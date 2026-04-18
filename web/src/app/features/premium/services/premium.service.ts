@@ -1,8 +1,10 @@
-import { Injectable, inject, signal, effect, computed } from '@angular/core';
-import { AuthService } from '../../../../core/auth/auth.service';
+import { Injectable, inject, signal, effect } from '@angular/core';
+import { AuthService } from '../../../core/auth/auth.service';
 import { environment } from '../../../../environments/environment';
-import { Purchases, CustomerInfo, PurchasesOffering, PurchasesPackage } from '@revenuecat/purchases-js';
-import { UserProfileService } from '../../settings/services/user-profile';
+import { Purchases, CustomerInfo } from '@revenuecat/purchases-js';
+import { UserProfileService } from '../../settings/services/user-profile.service';
+import { User } from '@angular/fire/auth';
+import { Observable } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -13,15 +15,14 @@ export class PremiumService {
 
   readonly isPremium = signal(false);
   readonly premiumExpiresAt = signal<Date | null>(null);
-  readonly currentOffering = signal<PurchasesOffering | null>(null);
+  readonly currentOffering = signal<any | null>(null);
   readonly isInitialized = signal(false);
   readonly purchaseState = signal<'idle' | 'loading' | 'success' | 'error'>('idle');
   readonly purchaseError = signal<string | null>(null);
 
   constructor() {
-    // Auf Auth-Status reagieren
     effect(async () => {
-      const uid = this.auth.uid();
+      const uid = this.auth.uid() as string | null;
       if (uid) {
         await this.initialize(uid);
       } else {
@@ -33,12 +34,11 @@ export class PremiumService {
   async initialize(userId: string): Promise<void> {
     try {
       if (environment.revenueCatWebBillingKey === 'YOUR_REVENUECAT_KEY') {
-        console.warn('RevenueCat API Key nicht konfiguriert');
         this.isInitialized.set(true);
         return;
       }
 
-      await Purchases.configure({ 
+      await (Purchases as any).configure({ 
         apiKey: environment.revenueCatWebBillingKey, 
         appUserId: userId 
       });
@@ -51,13 +51,13 @@ export class PremiumService {
       this.isInitialized.set(true);
     } catch (error) {
       console.error('Fehler bei RevenueCat Initialisierung:', error);
-      this.isInitialized.set(true); // Trotzdem auf true setzen, um Loading-Spinner zu beenden
+      this.isInitialized.set(true);
     }
   }
 
   async refreshStatus(): Promise<void> {
     try {
-      const customerInfo = await Purchases.getCustomerInfo();
+      const customerInfo = await (Purchases as any).getCustomerInfo() as CustomerInfo;
       const entitlement = customerInfo.entitlements.active['premium'];
       
       const hasPremium = !!entitlement;
@@ -68,9 +68,6 @@ export class PremiumService {
       } else {
         this.premiumExpiresAt.set(null);
       }
-
-      // Firestore Sync
-      // this.userProfile.updatePremiumStatus(hasPremium, this.premiumExpiresAt());
     } catch (error) {
       console.error('Fehler beim Laden des Premium-Status:', error);
     }
@@ -78,7 +75,7 @@ export class PremiumService {
 
   async loadOfferings(): Promise<void> {
     try {
-      const offerings = await Purchases.getOfferings();
+      const offerings = await (Purchases as any).getOfferings();
       if (offerings.current) {
         this.currentOffering.set(offerings.current);
       }
@@ -87,13 +84,13 @@ export class PremiumService {
     }
   }
 
-  async purchasePackage(pkg: PurchasesPackage): Promise<boolean> {
+  async purchasePackage(pkg: any): Promise<boolean> {
     this.purchaseState.set('loading');
     this.purchaseError.set(null);
     
     try {
-      const user = this.auth.currentUser();
-      await Purchases.purchase({ 
+      const user = this.auth.currentUser() as User | null;
+      await (Purchases as any).purchase({ 
         rcPackage: pkg, 
         customerEmail: user?.email || undefined 
       });
@@ -114,7 +111,7 @@ export class PremiumService {
 
   async restorePurchases(): Promise<void> {
     try {
-      await Purchases.restorePurchases();
+      await (Purchases as any).restorePurchases();
       await this.refreshStatus();
     } catch (error) {
       console.error('Fehler beim Wiederherstellen der Käufe:', error);
@@ -123,7 +120,7 @@ export class PremiumService {
 
   async openCustomerPortal(): Promise<void> {
     try {
-      const url = await Purchases.getManagementURL();
+      const url = await (Purchases as any).getManagementURL();
       if (url) {
         window.open(url, '_blank');
       }
