@@ -12,7 +12,7 @@ Dieses Repository enthält den vollständigen Agent-Plan zum Aufbau der Angular 
 
 | # | Agent | Fokus | Status |
 |---|---|---|---|
-| 00 | [Flutter Analyst](./AGENT-00-analyst.md) | Business-Logik, Entities & UseCases extrahieren | 🔄 In Arbeit |
+| 00 | [Flutter Analyst](./AGENT-00-analyst.md) | Business-Logik, Entities & UseCases extrahieren | ✅ Abgeschlossen |
 | 01 | [Architect](./AGENT-01-architect.md) | Angular Setup, Routing, Core-Services | ⬜ Geplant |
 | 02 | [Security](./AGENT-02-security.md) | Firebase Rules, Auth-Guards, Interceptor | ⬜ Geplant |
 | 03 | [Feature-Lead Core](./AGENT-03-core.md) | Zeitberechnung & Dashboard | ⬜ Geplant |
