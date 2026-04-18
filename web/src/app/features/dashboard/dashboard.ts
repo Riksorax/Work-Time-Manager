@@ -25,6 +25,12 @@ export class DashboardComponent {
   // Heutiger Eintrag als Signal
   todayEntry = toSignal(this.entryService.getTodayEntry());
 
+  // Ob gerade eine Pause läuft
+  isBreakActive = computed(() => {
+    const entry = this.todayEntry();
+    return !!entry?.breaks.find(b => !b.end);
+  });
+
   // Aktuelle Zeit für den Live-Timer
   now = signal(new Date());
 

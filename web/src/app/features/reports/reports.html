@@ -1,0 +1,118 @@
+<div class="reports-container">
+  <mat-tab-group class="main-tabs">
+    <!-- TÄGLICHER BERICHT -->
+    <mat-tab label="Täglich">
+      <div class="daily-layout">
+        <aside class="calendar-sidebar">
+          <app-calendar 
+            [selectedDate]="selectedDate()"
+            [daysWithEntries]="daysWithEntries()"
+            (dateSelected)="selectDate($event)"
+            (monthChanged)="onMonthChanged($event)">
+          </app-calendar>
+
+          <mat-card class="day-summary-card">
+            <mat-card-header>
+              <mat-card-title>Zusammenfassung</mat-card-title>
+              <mat-card-subtitle>{{ selectedDate() | date:'fullDate' }}</mat-card-subtitle>
+            </mat-card-header>
+            <mat-card-content>
+              <!-- Hier kommen später aggregierte Tages-Soll/Ist Werte hin -->
+              <p>Aktuell keine detaillierten Soll-Werte verfügbar.</p>
+            </mat-card-content>
+          </mat-card>
+        </aside>
+
+        <main class="day-details">
+          <h2>Einträge</h2>
+          
+          @if (selectedDayEntries().length === 0) {
+            <div class="empty-state">
+              <mat-icon>event_busy</mat-icon>
+              <p>Keine Einträge für diesen Tag gefunden.</p>
+              <button mat-flat-button color="primary" (click)="openEditDialog()">
+                <mat-icon>add</mat-icon>
+                Eintrag hinzufügen
+              </button>
+            </div>
+          } @else {
+            <div class="list-header">
+              <button mat-stroked-button color="primary" (click)="openEditDialog()">
+                <mat-icon>add</mat-icon> Weiterer Eintrag
+              </button>
+            </div>
+            @for (entry of selectedDayEntries(); track entry.id) {
+              <mat-card class="entry-card">
+                <mat-card-content>
+                  <div class="entry-header">
+                    <span class="entry-type">{{ entry.type }}</span>
+                    <div class="entry-actions">
+                      <button mat-icon-button (click)="openEditDialog(entry)" title="Bearbeiten">
+                        <mat-icon>edit</mat-icon>
+                      </button>
+                      <button mat-icon-button color="warn" (click)="deleteEntry(entry.id)" title="Löschen">
+                        <mat-icon>delete</mat-icon>
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div class="entry-times">
+                    <div class="time-block">
+                      <span class="label">Start</span>
+                      <span class="value">{{ entry.workStart | date:'HH:mm' }} Uhr</span>
+                    </div>
+                    <div class="time-block">
+                      <span class="label">Ende</span>
+                      <span class="value">{{ entry.workEnd ? (entry.workEnd | date:'HH:mm') + ' Uhr' : 'läuft...' }}</span>
+                    </div>
+                    <div class="time-block">
+                      <span class="label">Pausen</span>
+                      <span class="value">{{ entry.breaks.length }} mal</span>
+                    </div>
+                  </div>
+                </mat-card-content>
+              </mat-card>
+            }
+          }
+        </main>
+      </div>
+    </mat-tab>
+
+    <!-- WÖCHENTLICHER BERICHT -->
+    <mat-tab label="Wöchentlich">
+      <div class="premium-placeholder">
+        <mat-icon>workspace_premium</mat-icon>
+        <h3>Wochenberichte (Premium)</h3>
+        <p>Holen Sie sich Premium, um Ihre wöchentlichen Statistiken zu sehen.</p>
+        <button mat-flat-button color="primary">Upgrade jetzt</button>
+      </div>
+    </mat-tab>
+
+    <!-- MONATLICHER BERICHT -->
+    <mat-tab label="Monatlich">
+      <div class="monthly-layout">
+        <div class="stats-grid">
+          <mat-card>
+            <mat-card-header><mat-card-title>Gesamtzeit</mat-card-title></mat-card-header>
+            <mat-card-content><h1>{{ monthlyStats().formattedTotal }}</h1></mat-card-content>
+          </mat-card>
+          <mat-card>
+            <mat-card-header><mat-card-title>Arbeitstage</mat-card-title></mat-card-header>
+            <mat-card-content><h1>{{ monthlyStats().workDays }}</h1></mat-card-content>
+          </mat-card>
+          <mat-card>
+            <mat-card-header><mat-card-title>Ø / Tag</mat-card-title></mat-card-header>
+            <mat-card-content><h1>{{ monthlyStats().formattedAvg }}</h1></mat-card-content>
+          </mat-card>
+        </div>
+
+        <mat-card class="premium-placeholder-mini">
+          <mat-card-content>
+            <mat-icon>lock</mat-icon>
+            <p>Detaillierte Monatsanalysen sind ein Premium-Feature.</p>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+</div>

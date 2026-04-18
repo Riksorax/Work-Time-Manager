@@ -8,11 +8,13 @@ import {
   query, 
   where, 
   collectionData,
-  Timestamp
+  Timestamp,
+  deleteDoc,
+  orderBy
 } from '@angular/fire/firestore';
 import { AuthService } from '../auth/auth';
 import { WorkEntry, WorkEntryType } from '../../shared/models';
-import { Observable, map, of, switchMap } from 'rxjs';
+import { Observable, map, of, switchMap, from } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -20,6 +22,43 @@ import { Observable, map, of, switchMap } from 'rxjs';
 export class WorkEntryService {
   private firestore = inject(Firestore);
   private auth = inject(AuthService);
+
+  /**
+   * Lädt alle Arbeitseinträge für einen bestimmten Monat.
+   */
+  getEntriesForMonth(year: number, month: number): Observable<WorkEntry[]> {
+    return this.auth.user$.pipe(
+      switchMap(user => {
+        if (!user) return of([]);
+
+        const startOfMonth = new Date(year, month - 1, 1);
+        const endOfMonth = new Date(year, month, 0, 23, 59, 59);
+
+        const colRef = collection(this.firestore, `users/${user.uid}/work_entries`);
+        const q = query(
+          colRef,
+          where('date', '>=', Timestamp.fromDate(startOfMonth)),
+          where('date', '<=', Timestamp.fromDate(endOfMonth)),
+          orderBy('date', 'asc')
+        );
+
+        return collectionData(q, { idField: 'id' }).pipe(
+          map(list => list.map(data => this.mapFromFirestore(data, data.id)))
+        );
+      })
+    );
+  }
+
+  /**
+   * Löscht einen Arbeitseintrag.
+   */
+  async deleteEntry(id: string): Promise<void> {
+    const uid = this.auth.uid;
+    if (!uid) throw new Error('Kein User angemeldet');
+
+    const docRef = doc(this.firestore, `users/${uid}/work_entries/${id}`);
+    await deleteDoc(docRef);
+  }
 
   /**
    * Lädt den heutigen Arbeitseintrag für den aktuell angemeldeten Nutzer.

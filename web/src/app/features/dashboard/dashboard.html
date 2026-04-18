@@ -48,9 +48,9 @@
         <mat-icon>stop</mat-icon>
         Ausstempeln
       </button>
-      <button mat-fab extended (click)="toggleBreak()">
-        <mat-icon>coffee</mat-icon>
-        {{ todayEntry()?.breaks?.length ? 'Pause beenden' : 'Pause starten' }}
+      <button mat-fab extended [color]="isBreakActive() ? 'accent' : ''" (click)="toggleBreak()">
+        <mat-icon>{{ isBreakActive() ? 'play_arrow' : 'coffee' }}</mat-icon>
+        {{ isBreakActive() ? 'Pause beenden' : 'Pause starten' }}
       </button>
     } @else {
       <p class="done-msg">Schönen Feierabend! 🎉</p>
