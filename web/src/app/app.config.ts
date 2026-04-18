@@ -20,12 +20,14 @@ export function HttpLoaderFactory(http: HttpClient) {
   return new TranslateHttpLoader(http, './assets/i18n/', '.json');
 }
 
+import { authInterceptor } from './core/auth/auth.interceptor';
+
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes, withComponentInputBinding()),
     provideAnimationsAsync(),
-    provideHttpClient(), // Interceptor wird von Agent 02 hinzugefügt
+    provideHttpClient(withInterceptors([authInterceptor])),
     
     // Firebase
     provideFirebaseApp(() => initializeApp(environment.firebase)),
