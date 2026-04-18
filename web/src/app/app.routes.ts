@@ -47,6 +47,11 @@ export const routes: Routes = [
         title: 'Arbeitgeber'
       },
       {
+        path: 'settings/notifications',
+        loadComponent: () => import('./features/notifications/components/notification-settings/notification-settings').then(m => m.NotificationSettingsComponent),
+        title: 'Benachrichtigungen'
+      },
+      {
         path: 'settings/premium',
         loadComponent: () => import('./features/premium/components/paywall/paywall.component').then(m => m.PaywallComponent),
         title: 'Premium'

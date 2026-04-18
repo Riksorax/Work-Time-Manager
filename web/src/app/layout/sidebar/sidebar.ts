@@ -35,6 +35,10 @@ import { TranslateModule } from '@ngx-translate/core';
           <mat-icon matListItemIcon>person</mat-icon>
           <span matListItemTitle>{{ 'nav.profile' | translate }}</span>
         </a>
+        <a mat-list-item routerLink="/settings/notifications" routerLinkActive="active-link">
+          <mat-icon matListItemIcon>notifications</mat-icon>
+          <span matListItemTitle>{{ 'nav.notifications' | translate }}</span>
+        </a>
         <a mat-list-item routerLink="/settings/app" routerLinkActive="active-link">
           <mat-icon matListItemIcon>settings</mat-icon>
           <span matListItemTitle>{{ 'nav.settings' | translate }}</span>
