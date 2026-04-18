@@ -8,6 +8,8 @@ import { getMessaging, provideMessaging } from '@angular/fire/messaging';
 
 import { routes } from './app.routes';
 
+import { initializeAppCheck, provideAppCheck, ReCaptchaV3Provider } from '@angular/fire/app-check';
+
 // Placeholder environment - will be updated by Agent 02
 const firebaseConfig = {
   apiKey: "YOUR_API_KEY",
@@ -27,5 +29,10 @@ export const appConfig: ApplicationConfig = {
     provideAuth(() => getAuth()),
     provideFirestore(() => getFirestore()),
     provideMessaging(() => getMessaging()),
+    provideAppCheck(() => {
+      // In der Produktion sollte hier der echte SiteKey stehen
+      const provider = new ReCaptchaV3Provider('YOUR_RECAPTCHA_SITE_KEY');
+      return initializeAppCheck(undefined, { provider, isTokenAutoRefreshEnabled: true });
+    }),
   ]
 };

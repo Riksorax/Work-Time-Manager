@@ -1,0 +1,31 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helferfunktion zum Prüfen der Authentifizierung
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Helferfunktion zum Prüfen der Inhaberschaft
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Benutzerprofile: Jeder Nutzer darf nur sein eigenes Profil lesen und schreiben
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+      
+      // Arbeitseinträge innerhalb des Benutzerprofils
+      match /work_entries/{entryId} {
+        allow read, write: if isOwner(userId);
+      }
+      
+      // Pausen innerhalb des Benutzerprofils
+      match /breaks/{breakId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+  }
+}
