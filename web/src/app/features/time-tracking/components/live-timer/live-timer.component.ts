@@ -113,23 +113,11 @@ const SESSION_TYPE_LABELS: Record<WorkSessionType, string> = {
         opacity: 0.6;
       }
 
-      .time-btn {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        background: rgba(255,255,255,0.15);
-        border: none;
-        border-radius: 8px;
-        padding: 4px 10px;
-        cursor: pointer;
-        color: var(--mat-sys-on-primary-container);
+      .time-value {
         font-size: 1.1rem;
         font-weight: 700;
         font-variant-numeric: tabular-nums;
-        transition: background 0.15s;
-
-        &:hover { background: rgba(255,255,255,0.28); }
-        mat-icon { font-size: 14px; width: 14px; height: 14px; opacity: 0.7; }
+        color: var(--mat-sys-on-primary-container);
       }
     }
 
@@ -247,29 +235,7 @@ const SESSION_TYPE_LABELS: Record<WorkSessionType, string> = {
         flex-shrink: 0;
       }
 
-      .break-actions { display: flex; gap: 2px; flex-shrink: 0; }
-    }
-
-    .running-break-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      background: rgba(var(--mat-sys-primary-rgb, 25, 118, 210), 0.12);
-      border-radius: 12px;
-      padding: 2px 8px;
-      font-size: 0.7rem;
-      font-weight: 600;
-      color: var(--mat-sys-primary);
-      margin-top: 4px;
-      mat-icon { font-size: 12px; width: 12px; height: 12px; }
-    }
-
-    .btn-add-break {
-      width: 100%;
-      font-size: 0.8rem;
-      height: 36px;
-      margin-top: 4px;
-    }
+      }
 
     /* ── Aktions-Buttons ───────────────────────────────── */
 
@@ -340,21 +306,15 @@ const SESSION_TYPE_LABELS: Record<WorkSessionType, string> = {
         <p class="timer-net" [class]="activeSession()!.type">{{ netDisplay() }}</p>
         <p class="timer-gross">Anwesenheit (Brutto): {{ grossDisplay() }}</p>
 
-        <!-- START / ENDE (tipp zum Bearbeiten) -->
+        <!-- START / ENDE (read-only, wie in Flutter) -->
         <div class="start-end-row">
           <div class="time-col">
             <span class="time-label">Start</span>
-            <button class="time-btn" (click)="openStartTimePicker()" matTooltip="Startzeit bearbeiten">
-              {{ startTimeStr() }}
-              <mat-icon>edit</mat-icon>
-            </button>
+            <span class="time-value">{{ startTimeStr() }}</span>
           </div>
           <div class="time-col">
             <span class="time-label">Ende</span>
-            <button class="time-btn" (click)="openEndTimePicker()" matTooltip="Endzeit bearbeiten">
-              {{ endTimeStr() || '--:--' }}
-              <mat-icon>edit</mat-icon>
-            </button>
+            <span class="time-value">{{ endTimeStr() || '--:--' }}</span>
           </div>
         </div>
 
@@ -383,47 +343,31 @@ const SESSION_TYPE_LABELS: Record<WorkSessionType, string> = {
             <span class="pause-total">{{ totalPauseDisplay() }}</span>
           </div>
 
-          <!-- Pausen-Liste -->
+          <!-- Pausen-Liste (read-only während aktiver Session) -->
           @if (completedBreaks().length > 0) {
             <div class="break-list">
               @for (b of completedBreaks(); track b.id) {
                 <div class="break-item">
-                  <mat-icon class="break-icon">{{ b.isAutomatic ? 'auto_mode' : 'coffee' }}</mat-icon>
+                  <mat-icon class="break-icon">coffee</mat-icon>
                   <div class="break-info">
                     <div class="break-name">{{ b.name }}</div>
                     <div class="break-time">{{ b.startTime.toDate() | date:'HH:mm' }} – {{ b.endTime!.toDate() | date:'HH:mm' }}</div>
                   </div>
                   <span class="break-duration">{{ breakDuration(b) }} Min.</span>
-                  @if (!b.isAutomatic) {
-                    <div class="break-actions">
-                      <button mat-icon-button [style.width.px]="28" [style.height.px]="28" (click)="editBreak(b)" [matTooltip]="'Bearbeiten'">
-                        <mat-icon style="font-size:16px;width:16px;height:16px">edit</mat-icon>
-                      </button>
-                      <button mat-icon-button [style.width.px]="28" [style.height.px]="28" (click)="deleteBreak(b.id)" [matTooltip]="'Löschen'">
-                        <mat-icon style="font-size:16px;width:16px;height:16px;color:#c62828">delete</mat-icon>
-                      </button>
-                    </div>
-                  }
                 </div>
               }
             </div>
           }
 
-          <!-- Laufende Pause -->
+          <!-- Status -->
           @if (activeSession()!.isPaused) {
-            <div class="pause-status" style="margin-bottom:6px">
+            <div class="pause-status">
               <mat-icon style="color:var(--mat-sys-primary)">timer</mat-icon>
               Pause läuft gerade…
             </div>
           } @else if (completedBreaks().length === 0) {
             <div class="pause-status">Noch keine Pausen erfasst</div>
           }
-
-          <!-- Pause manuell hinzufügen -->
-          <button class="btn-add-break" mat-stroked-button (click)="addManualBreak()" [disabled]="activeSession()!.isPaused">
-            <mat-icon>add</mat-icon>
-            Pause manuell hinzufügen
-          </button>
         </div>
 
         <!-- Aktions-Buttons -->
