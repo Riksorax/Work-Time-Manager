@@ -1,4 +1,4 @@
-import { Component, input, output, computed, signal } from '@angular/core';
+import { Component, input, output, computed, signal, effect, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -26,7 +26,7 @@ import { MatIconModule } from '@angular/material/icon';
           <div class="weekday-label">{{ day }}</div>
         }
 
-        @for (empty of emptyPrefix; track $index) {
+        @for (empty of emptyPrefix(); track $index) {
           <div class="calendar-day empty"></div>
         }
 
@@ -119,7 +119,7 @@ import { MatIconModule } from '@angular/material/icon';
 })
 export class CalendarComponent {
   selectedDate = input.required<Date>();
-  daysWithEntries = input<number[]>([]); // Array von Tagen im aktuellen Monat (1-31)
+  daysWithEntries = input<number[]>([]); 
   
   dateSelected = output<Date>();
   monthChanged = output<{ year: number, month: number }>();
@@ -128,10 +128,16 @@ export class CalendarComponent {
 
   weekDays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 
+  constructor() {
+    effect(() => {
+      const initial = this.selectedDate();
+      this.viewDate.set(new Date(initial.getFullYear(), initial.getMonth(), 1));
+    }, { allowSignalWrites: true });
+  }
+
   emptyPrefix = computed(() => {
     const d = this.viewDate();
     const firstDay = new Date(d.getFullYear(), d.getMonth(), 1).getDay();
-    // getDay(): 0 = Sunday, 1 = Monday... -> map to Mo=0, So=6
     const offset = firstDay === 0 ? 6 : firstDay - 1;
     return Array(offset).fill(0);
   });
@@ -143,12 +149,6 @@ export class CalendarComponent {
       date: new Date(d.getFullYear(), d.getMonth(), i + 1)
     }));
   });
-
-  constructor() {
-    // Initialisiere viewDate auf den Monat des selektierten Datums
-    const initial = this.selectedDate();
-    this.viewDate.set(new Date(initial.getFullYear(), initial.getMonth(), 1));
-  }
 
   isSameDay(d1: Date, d2: Date): boolean {
     return d1.getFullYear() === d2.getFullYear() &&

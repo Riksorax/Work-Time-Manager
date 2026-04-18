@@ -14,7 +14,9 @@ $theme: mat.define-theme((
     brand-family: 'Inter, Roboto, "Helvetica Neue", sans-serif',
     plain-family: 'Inter, Roboto, "Helvetica Neue", sans-serif',
   ),
-  density: 0,
+  density: (
+    scale: 0
+  ),
 ));
 
 :root {

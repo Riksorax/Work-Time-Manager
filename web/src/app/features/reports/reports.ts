@@ -11,9 +11,10 @@ import { SettingsService } from '../../core/services/settings';
 import { ProfileService } from '../../core/services/profile';
 import { CalendarComponent } from '../../shared/components/calendar/calendar';
 import { EditEntryDialogComponent } from '../../shared/components/edit-entry-dialog/edit-entry-dialog';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { toSignal, toObservable } from '@angular/core/rxjs-interop';
 import { WorkEntry } from '../../shared/models';
 import { calculateNetMinutes } from '../../shared/utils/time-calculations.util';
+import { switchMap } from 'rxjs';
 
 @Component({
   selector: 'app-reports',
@@ -46,20 +47,22 @@ export class ReportsComponent {
   settings = toSignal(this.settingsService.getSettings());
   
   // Wir laden die Einträge für den aktuell angezeigten Monat im Kalender
-  entries = toSignal(computed(() => {
-    const { year, month } = this.viewMonth();
-    return this.entryService.getEntriesForMonth(year, month);
-  }), { initialValue: [] as WorkEntry[] });
+  entries = toSignal(
+    toObservable(this.viewMonth).pipe(
+      switchMap(({ year, month }) => this.entryService.getEntriesForMonth(year, month))
+    ), 
+    { initialValue: [] as WorkEntry[] }
+  );
 
   // Tage mit Einträgen für den Kalender-Dot
   daysWithEntries = computed(() => {
-    return this.entries().map(e => e.date.getDate());
+    return this.entries().map((e: WorkEntry) => e.date.getDate());
   });
 
   // Details für den selektierten Tag
   selectedDayEntries = computed(() => {
     const sel = this.selectedDate();
-    return this.entries().filter(e => 
+    return this.entries().filter((e: WorkEntry) => 
       e.date.getDate() === sel.getDate() && 
       e.date.getMonth() === sel.getMonth() && 
       e.date.getFullYear() === sel.getFullYear()
@@ -69,8 +72,8 @@ export class ReportsComponent {
   // Statistiken für den Monat
   monthlyStats = computed(() => {
     const data = this.entries();
-    const totalMinutes = data.reduce((acc, curr) => acc + calculateNetMinutes(curr), 0);
-    const workDays = new Set(data.map(e => e.date.toDateString())).size;
+    const totalMinutes = data.reduce((acc: number, curr: WorkEntry) => acc + calculateNetMinutes(curr), 0);
+    const workDays = new Set(data.map((e: WorkEntry) => e.date.toDateString())).size;
     
     return {
       totalMinutes,
