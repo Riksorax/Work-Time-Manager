@@ -1,4 +1,9 @@
-export type WorkEntryType = 'work' | 'vacation' | 'sick' | 'holiday';
+export enum WorkEntryType {
+  Work = 'work',
+  Vacation = 'vacation',
+  Sick = 'sick',
+  Holiday = 'holiday',
+}
 
 export interface Break {
   id: string;
@@ -9,32 +14,26 @@ export interface Break {
 }
 
 export interface WorkEntry {
-  id: string; // Wird als YYYY-MM-DD formatiert
+  id: string;
   date: Date;
   workStart?: Date;
   workEnd?: Date;
-  type: WorkEntryType;
-  description?: string;
-  isManuallyEntered: boolean;
-  manualOvertimeMinutes?: number;
   breaks: Break[];
-}
-
-export interface WorkMonth {
-  id: string; // YYYY-MM
-  days: { [day: string]: WorkEntry };
-}
-
-export interface OvertimeBalance {
-  minutes: number;
-  lastUpdated: Date;
+  manualOvertimeMinutes?: number;
+  isManuallyEntered: boolean;
+  description?: string;
+  type: WorkEntryType;
 }
 
 export interface UserSettings {
-  language: 'de' | 'en';
-  theme: 'light' | 'dark' | 'system';
   weeklyTargetHours: number;
-  dailyTargetHours: number;
+  workdaysPerWeek: number;
+  notificationsEnabled: boolean;
+  notificationTime: string; // HH:mm
+  notificationDays: number[]; // 1-7
+  notifyWorkStart: boolean;
+  notifyWorkEnd: boolean;
+  notifyBreaks: boolean;
 }
 
 export interface UserProfile {
@@ -44,66 +43,4 @@ export interface UserProfile {
   photoURL?: string;
   isPremium: boolean;
   settings: UserSettings;
-}
-
-export const DEFAULT_USER_SETTINGS: UserSettings = {
-  language: 'de',
-  theme: 'system',
-  weeklyTargetHours: 40,
-  dailyTargetHours: 8
-};
-
-export interface WorkProfile {
-  id: string;
-  name: string;
-  color: string;
-  weeklyTargetHours: number;
-  dailyTargetHours: number;
-  isDefault: boolean;
-}
-
-export interface DailyReport {
-  date: Date;
-  workedMinutes: number;
-  targetMinutes: number;
-  overtimeMinutes: number;
-  type: WorkEntryType;
-}
-
-export interface WeeklyReport {
-  startDate: Date;
-  endDate: Date;
-  totalWorkedMinutes: number;
-  totalTargetMinutes: number;
-  overtimeMinutes: number;
-  dailyReports: DailyReport[];
-}
-
-export interface MonthlyReport {
-  year: number;
-  month: number;
-  totalWorkedMinutes: number;
-  totalTargetMinutes: number;
-  overtimeMinutes: number;
-}
-
-export interface YearlyReport {
-  year: number;
-  totalWorkedMinutes: number;
-  totalTargetMinutes: number;
-  overtimeMinutes: number;
-  months: MonthlyReport[];
-}
-
-export interface CategoryBreakdown {
-  category: string;
-  minutes: number;
-  percentage: number;
-}
-
-export interface NotificationReminder {
-  id: string;
-  type: 'workStart' | 'workEnd';
-  time: string; // "HH:mm"
-  enabled: boolean;
 }
