@@ -46,10 +46,7 @@ export const appConfig: ApplicationConfig = {
       suffix: '.json'
     }),
     importProvidersFrom(
-      TranslateModule.forRoot({
-        defaultLanguage: 'de',
-        useDefaultLang: true
-      })
+      TranslateModule.forRoot()
     )
   ]
 };
