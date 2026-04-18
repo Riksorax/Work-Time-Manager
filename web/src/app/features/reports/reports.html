@@ -80,12 +80,18 @@
 
     <!-- WÖCHENTLICHER BERICHT -->
     <mat-tab label="Wöchentlich">
-      <div class="premium-placeholder">
-        <mat-icon>workspace_premium</mat-icon>
-        <h3>Wochenberichte (Premium)</h3>
-        <p>Holen Sie sich Premium, um Ihre wöchentlichen Statistiken zu sehen.</p>
-        <button mat-flat-button color="primary">Upgrade jetzt</button>
-      </div>
+      @if (isPremium()) {
+        <div class="weekly-layout">
+          <p>Wöchentliche Statistiken für Premium-Nutzer.</p>
+          <!-- Hier käme die wöchentliche Detailansicht -->
+        </div>
+      } @else {
+        <div class="premium-placeholder">
+          <mat-icon>workspace_premium</mat-icon>
+          <h3>Wochenberichte (Premium)</h3>
+          <p>Holen Sie sich Premium in der App, um Ihre wöchentlichen Statistiken zu sehen.</p>
+        </div>
+      }
     </mat-tab>
 
     <!-- MONATLICHER BERICHT -->
@@ -106,12 +112,18 @@
           </mat-card>
         </div>
 
-        <mat-card class="premium-placeholder-mini">
-          <mat-card-content>
-            <mat-icon>lock</mat-icon>
-            <p>Detaillierte Monatsanalysen sind ein Premium-Feature.</p>
-          </mat-card-content>
-        </mat-card>
+        @if (!isPremium()) {
+          <mat-card class="premium-placeholder-mini">
+            <mat-card-content>
+              <mat-icon>lock</mat-icon>
+              <p>Detaillierte Monatsanalysen (Wochenübersicht, Trends) sind ein Premium-Feature.</p>
+            </mat-card-content>
+          </mat-card>
+        } @else {
+          <div class="premium-content">
+            <p>Detaillierte Monatsanalysen für Premium-Nutzer.</p>
+          </div>
+        }
       </div>
     </mat-tab>
   </mat-tab-group>

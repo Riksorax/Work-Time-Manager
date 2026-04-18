@@ -8,6 +8,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { WorkEntryService } from '../../core/services/work-entry';
 import { SettingsService } from '../../core/services/settings';
+import { ProfileService } from '../../core/services/profile';
 import { CalendarComponent } from '../../shared/components/calendar/calendar';
 import { EditEntryDialogComponent } from '../../shared/components/edit-entry-dialog/edit-entry-dialog';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -33,9 +34,11 @@ import { calculateNetMinutes } from '../../shared/utils/time-calculations.util';
 export class ReportsComponent {
   private entryService = inject(WorkEntryService);
   private settingsService = inject(SettingsService);
+  private profileService = inject(ProfileService);
   private dialog = inject(MatDialog);
 
   // State
+  isPremium = this.profileService.isPremium;
   selectedDate = signal(new Date());
   viewMonth = signal({ year: new Date().getFullYear(), month: new Date().getMonth() + 1 });
   
