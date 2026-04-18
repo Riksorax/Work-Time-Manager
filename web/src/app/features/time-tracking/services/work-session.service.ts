@@ -8,6 +8,8 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
+  arrayUnion,
+  arrayRemove,
   query,
   where,
   orderBy,
@@ -17,14 +19,16 @@ import {
 import { Observable, of, switchMap } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
 import { LocalSessionService } from '../../../core/storage/local-session.service';
-import { WorkSession, WorkSessionType } from '../../../shared/models';
+import { WorkSession, SessionBreak, WorkSessionType } from '../../../shared/models';
 import { startOfDay, endOfDay, startOfWeek, endOfWeek } from '../utils/time-calculations.util';
+import { BreakCalculatorService } from './break-calculator.service';
 
 @Injectable({ providedIn: 'root' })
 export class WorkSessionService {
   private firestore = inject(Firestore);
   private auth = inject(AuthService);
   private local = inject(LocalSessionService);
+  private breakCalc = inject(BreakCalculatorService);
 
   private get uid(): string | null { return this.auth.uid(); }
 
@@ -36,7 +40,7 @@ export class WorkSessionService {
     return doc(this.firestore, `users/${uid}/workSessions/${sessionId}`);
   }
 
-  // ─── Aktive Session (Echtzeit) ────────────────────────────────────────────
+  // ─── Aktive Session ───────────────────────────────────────────────────────
 
   activeSession$: Observable<WorkSession | null> = this.auth.currentUser$.pipe(
     switchMap(user => {
@@ -48,7 +52,7 @@ export class WorkSessionService {
     })
   );
 
-  // ─── Einzelne Session ────────────────────────────────────────────────────
+  // ─── Einzelne Session ─────────────────────────────────────────────────────
 
   getSession$(id: string): Observable<WorkSession | null> {
     const uid = this.uid;
@@ -99,22 +103,19 @@ export class WorkSessionService {
     return collectionData(q, { idField: 'id' }) as Observable<WorkSession[]>;
   }
 
-  // ─── CRUD ────────────────────────────────────────────────────────────────
+  // ─── Session CRUD ─────────────────────────────────────────────────────────
 
   async startSession(options?: { note?: string; category?: string; type?: WorkSessionType; profileId?: string }): Promise<string> {
     const uid = this.uid;
-    if (!uid) {
-      return this.local.startSession(options);
-    }
+    if (!uid) return this.local.startSession(options);
     const now = Timestamp.now();
     const session: Omit<WorkSession, 'id'> = {
       userId: uid,
       profileId: options?.profileId,
       type: options?.type ?? 'work',
       startTime: now,
-      endTime: undefined,
       pauseDuration: 0,
-      pauseStartTime: undefined,
+      breaks: [],
       note: options?.note,
       category: options?.category,
       isRunning: true,
@@ -135,24 +136,71 @@ export class WorkSessionService {
     });
   }
 
+  async stopSessionWithAutoBreaks(session: WorkSession): Promise<void> {
+    const uid = this.uid;
+    const autoBreaks = this.breakCalc.calculateAutoBreaks(session);
+    if (autoBreaks.length === 0) {
+      await this.stopSession(session.id);
+      return;
+    }
+    if (!uid) {
+      this.local.stopSession(session.id);
+      this.local.addAutoBreaks(session.id, autoBreaks);
+      return;
+    }
+    const now = Timestamp.now();
+    const manualBreaks = session.breaks.filter(b => !b.isAutomatic);
+    const allBreaks = [...manualBreaks, ...autoBreaks];
+    const pauseDuration = allBreaks
+      .filter(b => b.endTime)
+      .reduce((sum, b) => sum + Math.floor((b.endTime!.toMillis() - b.startTime.toMillis()) / 60_000), 0);
+    await updateDoc(this.sessionDoc(uid, session.id), {
+      endTime: now, isRunning: false, isPaused: false,
+      pauseStartTime: null, breaks: allBreaks, pauseDuration, updatedAt: now,
+    });
+  }
+
   async pauseSession(sessionId: string): Promise<void> {
     const uid = this.uid;
     if (!uid) { this.local.pauseSession(sessionId); return; }
+    const now = Timestamp.now();
+    const newBreak: SessionBreak = {
+      id: crypto.randomUUID(),
+      name: `Pause ${new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`,
+      startTime: now,
+      isAutomatic: false,
+    };
     await updateDoc(this.sessionDoc(uid, sessionId), {
-      isPaused: true, pauseStartTime: Timestamp.now(), updatedAt: Timestamp.now(),
+      isPaused: true, pauseStartTime: now,
+      breaks: arrayUnion(newBreak), updatedAt: now,
     });
   }
 
   async resumeSession(sessionId: string, currentPauseStartTime: Timestamp): Promise<void> {
     const uid = this.uid;
     if (!uid) { this.local.resumeSession(sessionId, currentPauseStartTime); return; }
-    const now = new Date();
-    const additionalPauseMinutes = Math.floor((now.getTime() - currentPauseStartTime.toDate().getTime()) / 60_000);
-    await updateDoc(this.sessionDoc(uid, sessionId), {
-      isPaused: false, pauseStartTime: null, updatedAt: Timestamp.now(),
-    });
+    const now = Timestamp.now();
+    const additionalPauseMinutes = Math.floor((now.toMillis() - currentPauseStartTime.toMillis()) / 60_000);
     const { increment } = await import('@angular/fire/firestore');
-    await updateDoc(this.sessionDoc(uid, sessionId), { pauseDuration: increment(additionalPauseMinutes) });
+    // Wir müssen das laufende Break schließen — da arrayUnion/arrayRemove nicht für Updates geht,
+    // laden wir die Session und updaten das breaks-Array direkt
+    const sessionData = await this.getSessionOnce(uid, sessionId);
+    if (sessionData) {
+      const breaks = sessionData.breaks.map((b: SessionBreak) =>
+        !b.endTime ? { ...b, endTime: now } : b
+      );
+      await updateDoc(this.sessionDoc(uid, sessionId), {
+        isPaused: false, pauseStartTime: null,
+        pauseDuration: increment(additionalPauseMinutes),
+        breaks, updatedAt: now,
+      });
+    } else {
+      await updateDoc(this.sessionDoc(uid, sessionId), {
+        isPaused: false, pauseStartTime: null,
+        pauseDuration: increment(additionalPauseMinutes),
+        updatedAt: now,
+      });
+    }
   }
 
   async updateSession(sessionId: string, updates: Partial<WorkSession>): Promise<void> {
@@ -162,17 +210,120 @@ export class WorkSessionService {
     await updateDoc(this.sessionDoc(uid, sessionId), { ...safeUpdates, updatedAt: Timestamp.now() });
   }
 
+  async updateSessionTimes(sessionId: string, startTime: Date, endTime?: Date): Promise<void> {
+    const uid = this.uid;
+    if (!uid) { this.local.updateSessionTimes(sessionId, startTime, endTime); return; }
+    const updates: Record<string, any> = {
+      startTime: Timestamp.fromDate(startTime),
+      updatedAt: Timestamp.now(),
+    };
+    if (endTime) updates['endTime'] = Timestamp.fromDate(endTime);
+    await updateDoc(this.sessionDoc(uid, sessionId), updates);
+  }
+
   async deleteSession(sessionId: string): Promise<void> {
     const uid = this.uid;
     if (!uid) { this.local.deleteSession(sessionId); return; }
-    try {
-      await deleteDoc(this.sessionDoc(uid, sessionId));
-    } catch (err) {
-      throw new Error('Die Arbeitszeit konnte nicht gelöscht werden. Bitte erneut versuchen.');
-    }
+    await deleteDoc(this.sessionDoc(uid, sessionId));
   }
 
-  // ─── Migration: local → Firestore nach Login ─────────────────────────────
+  // ─── Break CRUD ───────────────────────────────────────────────────────────
+
+  async startBreak(sessionId: string): Promise<void> {
+    const uid = this.uid;
+    if (!uid) { this.local.startBreak(sessionId); return; }
+    const now = Timestamp.now();
+    const newBreak: SessionBreak = {
+      id: crypto.randomUUID(),
+      name: `Pause ${new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`,
+      startTime: now,
+      isAutomatic: false,
+    };
+    await updateDoc(this.sessionDoc(uid, sessionId), {
+      isPaused: true, pauseStartTime: now,
+      breaks: arrayUnion(newBreak), updatedAt: now,
+    });
+  }
+
+  async stopBreak(sessionId: string): Promise<void> {
+    const uid = this.uid;
+    if (!uid) { this.local.stopBreak(sessionId); return; }
+    const sessionData = await this.getSessionOnce(uid, sessionId);
+    if (!sessionData) return;
+    const now = Timestamp.now();
+    const runningBreak = sessionData.breaks.find((b: SessionBreak) => !b.endTime);
+    if (!runningBreak) return;
+    const additionalMinutes = Math.floor((now.toMillis() - runningBreak.startTime.toMillis()) / 60_000);
+    const breaks = sessionData.breaks.map((b: SessionBreak) =>
+      b.id === runningBreak.id ? { ...b, endTime: now } : b
+    );
+    const { increment } = await import('@angular/fire/firestore');
+    await updateDoc(this.sessionDoc(uid, sessionId), {
+      isPaused: false, pauseStartTime: null,
+      pauseDuration: increment(additionalMinutes),
+      breaks, updatedAt: now,
+    });
+  }
+
+  async addManualBreak(sessionId: string, breakData: { name: string; startTime: Date; endTime: Date }): Promise<void> {
+    const uid = this.uid;
+    if (!uid) { this.local.addManualBreak(sessionId, breakData); return; }
+    const start = Timestamp.fromDate(breakData.startTime);
+    const end = Timestamp.fromDate(breakData.endTime);
+    const durationMinutes = Math.floor((end.toMillis() - start.toMillis()) / 60_000);
+    const newBreak: SessionBreak = {
+      id: crypto.randomUUID(),
+      name: breakData.name,
+      startTime: start,
+      endTime: end,
+      isAutomatic: false,
+    };
+    const sessionData = await this.getSessionOnce(uid, sessionId);
+    if (!sessionData) return;
+    const breaks = [...sessionData.breaks, newBreak]
+      .sort((a, b) => a.startTime.toMillis() - b.startTime.toMillis());
+    await updateDoc(this.sessionDoc(uid, sessionId), {
+      breaks,
+      pauseDuration: sessionData.pauseDuration + Math.max(0, durationMinutes),
+      updatedAt: Timestamp.now(),
+    });
+  }
+
+  async updateBreak(sessionId: string, breakId: string, updates: { name?: string; startTime?: Date; endTime?: Date }): Promise<void> {
+    const uid = this.uid;
+    if (!uid) { this.local.updateBreak(sessionId, breakId, updates); return; }
+    const sessionData = await this.getSessionOnce(uid, sessionId);
+    if (!sessionData) return;
+    const breaks = sessionData.breaks.map((b: SessionBreak) => {
+      if (b.id !== breakId) return b;
+      return {
+        ...b,
+        name: updates.name ?? b.name,
+        startTime: updates.startTime ? Timestamp.fromDate(updates.startTime) : b.startTime,
+        endTime: updates.endTime ? Timestamp.fromDate(updates.endTime) : b.endTime,
+      };
+    });
+    const pauseDuration = breaks
+      .filter((b: SessionBreak) => b.endTime)
+      .reduce((sum: number, b: SessionBreak) =>
+        sum + Math.floor((b.endTime!.toMillis() - b.startTime.toMillis()) / 60_000), 0);
+    await updateDoc(this.sessionDoc(uid, sessionId), { breaks, pauseDuration, updatedAt: Timestamp.now() });
+  }
+
+  async deleteBreak(sessionId: string, breakId: string): Promise<void> {
+    const uid = this.uid;
+    if (!uid) { this.local.deleteBreak(sessionId, breakId); return; }
+    const sessionData = await this.getSessionOnce(uid, sessionId);
+    if (!sessionData) return;
+    const breaks = sessionData.breaks.filter((b: SessionBreak) => b.id !== breakId);
+    const pauseDuration = breaks
+      .filter((b: SessionBreak) => b.endTime)
+      .reduce((sum: number, b: SessionBreak) =>
+        sum + Math.floor((b.endTime!.toMillis() - b.startTime.toMillis()) / 60_000), 0);
+    await updateDoc(this.sessionDoc(uid, sessionId), { breaks, pauseDuration, updatedAt: Timestamp.now() });
+  }
+
+  // ─── Migration ────────────────────────────────────────────────────────────
 
   async migrateLocalToFirestore(): Promise<void> {
     const uid = this.uid;
@@ -184,5 +335,14 @@ export class WorkSessionService {
       await addDoc(this.sessionsCol(uid), { ...data, userId: uid });
     }
     this.local.clearAll();
+  }
+
+  // ─── Private Helpers ──────────────────────────────────────────────────────
+
+  private async getSessionOnce(uid: string, sessionId: string): Promise<WorkSession | null> {
+    return new Promise(resolve => {
+      (docData(this.sessionDoc(uid, sessionId), { idField: 'id' }) as Observable<WorkSession | undefined>)
+        .subscribe({ next: s => resolve(s ?? null), error: () => resolve(null) });
+    });
   }
 }

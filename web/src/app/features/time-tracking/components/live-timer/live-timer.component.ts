@@ -8,6 +8,7 @@ import {
   OnDestroy,
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -15,12 +16,14 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatDialog } from '@angular/material/dialog';
 import { TranslateModule } from '@ngx-translate/core';
 import { WorkSessionService } from '../../services/work-session.service';
 import { BreakCalculatorService } from '../../services/break-calculator.service';
 import { ToastService } from '../../../../shared/components/toast/toast.service';
-import { WorkSessionType } from '../../../../shared/models';
+import { WorkSessionType, SessionBreak } from '../../../../shared/models';
 import { formatTimer, getElapsedSeconds, getGrossSeconds } from '../../utils/time-calculations.util';
+import { EditBreakDialogComponent, EditBreakDialogData } from '../edit-break-dialog/edit-break-dialog.component';
 
 const SESSION_TYPE_ICONS: Record<WorkSessionType, string> = {
   work: 'work',
@@ -41,6 +44,7 @@ const SESSION_TYPE_LABELS: Record<WorkSessionType, string> = {
   standalone: true,
   imports: [
     DatePipe,
+    FormsModule,
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
@@ -84,6 +88,8 @@ const SESSION_TYPE_LABELS: Record<WorkSessionType, string> = {
       font-variant-numeric: tabular-nums;
     }
 
+    /* ── START / ENDE ──────────────────────────────────── */
+
     .start-end-row {
       display: flex;
       justify-content: center;
@@ -94,7 +100,7 @@ const SESSION_TYPE_LABELS: Record<WorkSessionType, string> = {
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 2px;
+        gap: 4px;
       }
 
       .time-label {
@@ -106,13 +112,25 @@ const SESSION_TYPE_LABELS: Record<WorkSessionType, string> = {
         opacity: 0.6;
       }
 
-      .time-value {
+      .time-input {
         font-size: 1.1rem;
         font-weight: 700;
         font-variant-numeric: tabular-nums;
         color: var(--mat-sys-on-primary-container);
+        background: transparent;
+        border: none;
+        border-bottom: 1px solid rgba(255,255,255,0.4);
+        text-align: center;
+        width: 80px;
+        padding: 2px 4px;
+        cursor: pointer;
+
+        &:focus { outline: none; border-bottom-color: var(--mat-sys-on-primary-container); }
+        &::-webkit-calendar-picker-indicator { filter: invert(1) opacity(0.5); width: 12px; height: 12px; }
       }
     }
+
+    /* ── Feierabend-Prognose ───────────────────────────── */
 
     .timer-meta {
       display: flex;
@@ -127,6 +145,8 @@ const SESSION_TYPE_LABELS: Record<WorkSessionType, string> = {
       .meta-item { display: flex; align-items: center; gap: 4px; }
       mat-icon { font-size: 14px; width: 14px; height: 14px; }
     }
+
+    /* ── Pausen-Warnung ────────────────────────────────── */
 
     .break-warning {
       display: flex;
@@ -157,7 +177,7 @@ const SESSION_TYPE_LABELS: Record<WorkSessionType, string> = {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
 
       .pause-title {
         font-size: 0.85rem;
@@ -178,6 +198,74 @@ const SESSION_TYPE_LABELS: Record<WorkSessionType, string> = {
       align-items: center;
       gap: 4px;
       mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    }
+
+    /* ── Einzelne Pause ────────────────────────────────── */
+
+    .break-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+
+    .break-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: 6px;
+      background: var(--mat-sys-surface-variant);
+
+      .break-icon {
+        font-size: 16px; width: 16px; height: 16px;
+        color: var(--mat-sys-on-surface-variant);
+        flex-shrink: 0;
+      }
+
+      .break-info {
+        flex: 1;
+        min-width: 0;
+
+        .break-name {
+          font-size: 0.78rem;
+          font-weight: 500;
+          color: var(--mat-sys-on-surface);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .break-time {
+          font-size: 0.7rem;
+          color: var(--mat-sys-on-surface-variant);
+          font-variant-numeric: tabular-nums;
+        }
+      }
+
+      .break-duration {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--mat-sys-primary);
+        flex-shrink: 0;
+      }
+
+      .break-actions { display: flex; gap: 2px; flex-shrink: 0; }
+    }
+
+    .running-break-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(var(--mat-sys-primary-rgb, 25, 118, 210), 0.12);
+      border-radius: 12px;
+      padding: 2px 8px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--mat-sys-primary);
+      margin-top: 4px;
+      mat-icon { font-size: 12px; width: 12px; height: 12px; }
+    }
+
+    .btn-add-break {
+      width: 100%;
+      font-size: 0.8rem;
+      height: 36px;
+      margin-top: 4px;
     }
 
     /* ── Aktions-Buttons ───────────────────────────────── */
@@ -249,17 +337,29 @@ const SESSION_TYPE_LABELS: Record<WorkSessionType, string> = {
         <p class="timer-net" [class]="activeSession()!.type">{{ netDisplay() }}</p>
         <p class="timer-gross">Anwesenheit (Brutto): {{ grossDisplay() }}</p>
 
-        <!-- START / ENDE -->
+        <!-- START / ENDE (editierbar) -->
         <div class="start-end-row">
           <div class="time-col">
             <span class="time-label">Start</span>
-            <span class="time-value">{{ activeSession()!.startTime.toDate() | date:'HH:mm' }}</span>
+            <input
+              class="time-input"
+              type="time"
+              [value]="startTimeStr()"
+              (change)="onStartTimeChange($event)"
+            />
           </div>
           <div class="time-col">
             <span class="time-label">Ende</span>
-            <span class="time-value">
-              {{ activeSession()!.endTime ? (activeSession()!.endTime!.toDate() | date:'HH:mm') : '--:--' }}
-            </span>
+            @if (activeSession()!.isRunning) {
+              <span style="font-size:1.1rem;font-weight:700;color:var(--mat-sys-on-primary-container)">--:--</span>
+            } @else {
+              <input
+                class="time-input"
+                type="time"
+                [value]="endTimeStr()"
+                (change)="onEndTimeChange($event)"
+              />
+            }
           </div>
         </div>
 
@@ -285,21 +385,50 @@ const SESSION_TYPE_LABELS: Record<WorkSessionType, string> = {
         <div class="pause-section">
           <div class="pause-header">
             <span class="pause-title">Pausen</span>
-            <span class="pause-total">{{ activeSession()!.pauseDuration }} min</span>
+            <span class="pause-total">{{ totalPauseDisplay() }}</span>
           </div>
+
+          <!-- Pausen-Liste -->
+          @if (completedBreaks().length > 0) {
+            <div class="break-list">
+              @for (b of completedBreaks(); track b.id) {
+                <div class="break-item">
+                  <mat-icon class="break-icon">{{ b.isAutomatic ? 'auto_mode' : 'coffee' }}</mat-icon>
+                  <div class="break-info">
+                    <div class="break-name">{{ b.name }}</div>
+                    <div class="break-time">{{ b.startTime.toDate() | date:'HH:mm' }} – {{ b.endTime!.toDate() | date:'HH:mm' }}</div>
+                  </div>
+                  <span class="break-duration">{{ breakDuration(b) }} Min.</span>
+                  @if (!b.isAutomatic) {
+                    <div class="break-actions">
+                      <button mat-icon-button [style.width.px]="28" [style.height.px]="28" (click)="editBreak(b)" [matTooltip]="'Bearbeiten'">
+                        <mat-icon style="font-size:16px;width:16px;height:16px">edit</mat-icon>
+                      </button>
+                      <button mat-icon-button [style.width.px]="28" [style.height.px]="28" (click)="deleteBreak(b.id)" [matTooltip]="'Löschen'">
+                        <mat-icon style="font-size:16px;width:16px;height:16px;color:#c62828">delete</mat-icon>
+                      </button>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
+
+          <!-- Laufende Pause -->
           @if (activeSession()!.isPaused) {
-            <div class="pause-status">
+            <div class="pause-status" style="margin-bottom:6px">
               <mat-icon style="color:var(--mat-sys-primary)">timer</mat-icon>
               Pause läuft gerade…
             </div>
-          } @else if (activeSession()!.pauseDuration === 0) {
+          } @else if (completedBreaks().length === 0) {
             <div class="pause-status">Noch keine Pausen erfasst</div>
-          } @else {
-            <div class="pause-status">
-              <mat-icon>check_circle_outline</mat-icon>
-              {{ activeSession()!.pauseDuration }} Min. Pause gesamt
-            </div>
           }
+
+          <!-- Pause manuell hinzufügen -->
+          <button class="btn-add-break" mat-stroked-button (click)="addManualBreak()" [disabled]="activeSession()!.isPaused">
+            <mat-icon>add</mat-icon>
+            Pause manuell hinzufügen
+          </button>
         </div>
 
         <!-- Aktions-Buttons -->
@@ -357,6 +486,7 @@ export class LiveTimerComponent implements OnInit, OnDestroy {
   private sessionService = inject(WorkSessionService);
   private breakCalc = inject(BreakCalculatorService);
   private toast = inject(ToastService);
+  private dialog = inject(MatDialog);
 
   readonly activeSession = toSignal(this.sessionService.activeSession$, { initialValue: null });
   readonly busy = signal(false);
@@ -365,6 +495,30 @@ export class LiveTimerComponent implements OnInit, OnDestroy {
   readonly selectedType = signal<WorkSessionType>('work');
 
   readonly sessionTypes: WorkSessionType[] = ['work', 'vacation', 'sick', 'holiday'];
+
+  readonly completedBreaks = computed(() =>
+    (this.activeSession()?.breaks ?? []).filter(b => !!b.endTime)
+  );
+
+  readonly totalPauseDisplay = computed(() => {
+    const s = this.activeSession();
+    if (!s) return '0 min';
+    return `${s.pauseDuration} min`;
+  });
+
+  readonly startTimeStr = computed(() => {
+    const s = this.activeSession();
+    if (!s) return '';
+    const d = s.startTime.toDate();
+    return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+  });
+
+  readonly endTimeStr = computed(() => {
+    const s = this.activeSession();
+    if (!s?.endTime) return '';
+    const d = s.endTime.toDate();
+    return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+  });
 
   readonly breakSuggestion = computed(() => {
     const s = this.activeSession();
@@ -398,6 +552,41 @@ export class LiveTimerComponent implements OnInit, OnDestroy {
   typeIcon(type: WorkSessionType): string { return SESSION_TYPE_ICONS[type]; }
   typeLabel(type: WorkSessionType): string { return SESSION_TYPE_LABELS[type]; }
 
+  breakDuration(b: SessionBreak): number {
+    if (!b.endTime) return 0;
+    return Math.floor((b.endTime.toMillis() - b.startTime.toMillis()) / 60_000);
+  }
+
+  async onStartTimeChange(event: Event): Promise<void> {
+    const s = this.activeSession();
+    if (!s) return;
+    const val = (event.target as HTMLInputElement).value;
+    if (!val) return;
+    const [h, m] = val.split(':').map(Number);
+    const newStart = new Date(s.startTime.toDate());
+    newStart.setHours(h, m, 0, 0);
+    try {
+      await this.sessionService.updateSessionTimes(s.id, newStart);
+    } catch {
+      this.toast.error('common.error');
+    }
+  }
+
+  async onEndTimeChange(event: Event): Promise<void> {
+    const s = this.activeSession();
+    if (!s) return;
+    const val = (event.target as HTMLInputElement).value;
+    if (!val) return;
+    const [h, m] = val.split(':').map(Number);
+    const newEnd = new Date(s.startTime.toDate());
+    newEnd.setHours(h, m, 0, 0);
+    try {
+      await this.sessionService.updateSessionTimes(s.id, s.startTime.toDate(), newEnd);
+    } catch {
+      this.toast.error('common.error');
+    }
+  }
+
   async start(): Promise<void> {
     this.busy.set(true);
     try { await this.sessionService.startSession({ type: this.selectedType() }); }
@@ -410,7 +599,7 @@ export class LiveTimerComponent implements OnInit, OnDestroy {
     if (!s) return;
     this.busy.set(true);
     try {
-      await this.sessionService.stopSession(s.id);
+      await this.sessionService.stopSessionWithAutoBreaks(s);
       this.netDisplay.set('00:00:00');
       this.grossDisplay.set('00:00:00');
     }
@@ -434,5 +623,36 @@ export class LiveTimerComponent implements OnInit, OnDestroy {
     try { await this.sessionService.resumeSession(s.id, s.pauseStartTime); }
     catch { this.toast.error('common.error'); }
     finally { this.busy.set(false); }
+  }
+
+  addManualBreak(): void {
+    const s = this.activeSession();
+    if (!s) return;
+    const data: EditBreakDialogData = { sessionId: s.id, mode: 'add' };
+    this.dialog.open(EditBreakDialogComponent, { data, width: '320px' });
+  }
+
+  editBreak(b: SessionBreak): void {
+    const s = this.activeSession();
+    if (!s) return;
+    const data: EditBreakDialogData = {
+      sessionId: s.id,
+      mode: 'edit',
+      breakId: b.id,
+      initialName: b.name,
+      initialStartTime: b.startTime.toDate(),
+      initialEndTime: b.endTime?.toDate(),
+    };
+    this.dialog.open(EditBreakDialogComponent, { data, width: '320px' });
+  }
+
+  async deleteBreak(breakId: string): Promise<void> {
+    const s = this.activeSession();
+    if (!s) return;
+    try {
+      await this.sessionService.deleteBreak(s.id, breakId);
+    } catch {
+      this.toast.error('common.error');
+    }
   }
 }

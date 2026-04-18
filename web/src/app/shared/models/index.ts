@@ -50,6 +50,15 @@ export const DEFAULT_USER_PROFILE: Omit<UserProfile, 'uid' | 'email' | 'createdA
   },
 };
 
+// ─── Session Break ────────────────────────────────────────────────────────────
+export interface SessionBreak {
+  id: string;
+  name: string;
+  startTime: Timestamp;
+  endTime?: Timestamp;
+  isAutomatic: boolean;
+}
+
 // ─── Work Session ─────────────────────────────────────────────────────────────
 export interface WorkSession {
   id: string;
@@ -58,8 +67,9 @@ export interface WorkSession {
   type: WorkSessionType;            // work | vacation | sick | holiday
   startTime: Timestamp;
   endTime?: Timestamp;
-  pauseDuration: number;
-  pauseStartTime?: Timestamp;
+  pauseDuration: number;            // Summe abgeschlossener Pausen in Minuten
+  pauseStartTime?: Timestamp;       // Start der laufenden Pause
+  breaks: SessionBreak[];           // Detaillierte Pausen-Liste (wie Flutter)
   note?: string;
   category?: string;
   isRunning: boolean;
