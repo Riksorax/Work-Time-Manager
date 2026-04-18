@@ -18,10 +18,17 @@ export class OvertimeService {
   private firestore = inject(Firestore);
   private auth = inject(AuthService);
 
+  private readonly LOCAL_STORAGE_KEY = 'wtm_local_overtime';
+
   getBalance(): Observable<OvertimeBalance | null> {
     return (this.auth.currentUser$ as Observable<User | null>).pipe(
       switchMap(user => {
-        if (!user) return of(null);
+        if (!user) {
+          // GAST-MODUS
+          return of(this.getLocalBalance());
+        }
+
+        // CLOUD-MODUS
         const docRef = doc(this.firestore, `users/${user.uid}/overtime/balance`);
         return docData(docRef).pipe(
           map((data: any) => {
@@ -38,12 +45,36 @@ export class OvertimeService {
 
   async updateBalance(minutes: number): Promise<void> {
     const user = this.auth.currentUser() as User | null;
-    if (!user) throw new Error('Nicht angemeldet');
+    
+    if (!user) {
+      // GAST-MODUS
+      this.saveLocalBalance(minutes);
+      return;
+    }
 
+    // CLOUD-MODUS
     const docRef = doc(this.firestore, `users/${user.uid}/overtime/balance`);
     await setDoc(docRef, {
       minutes: minutes,
       lastUpdated: Timestamp.now()
     }, { merge: true });
+  }
+
+  private getLocalBalance(): OvertimeBalance {
+    const raw = localStorage.getItem(this.LOCAL_STORAGE_KEY);
+    if (!raw) return { minutes: 0, lastUpdated: new Date() };
+    const data = JSON.parse(raw);
+    return {
+      minutes: data.minutes || 0,
+      lastUpdated: new Date(data.lastUpdated)
+    };
+  }
+
+  private saveLocalBalance(minutes: number): void {
+    const data = {
+      minutes,
+      lastUpdated: new Date().toISOString()
+    };
+    localStorage.setItem(this.LOCAL_STORAGE_KEY, JSON.stringify(data));
   }
 }

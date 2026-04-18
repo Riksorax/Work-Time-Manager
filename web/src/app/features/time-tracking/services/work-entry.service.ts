@@ -8,7 +8,7 @@ import {
 } from '@angular/fire/firestore';
 import { AuthService } from '../../../core/auth/auth.service';
 import { WorkEntry, Break } from '../../../shared/models';
-import { Observable, map, of, switchMap } from 'rxjs';
+import { Observable, map, of, switchMap, tap } from 'rxjs';
 import { format } from 'date-fns';
 import { User } from '@angular/fire/auth';
 
@@ -18,6 +18,8 @@ import { User } from '@angular/fire/auth';
 export class WorkEntryService {
   private firestore = inject(Firestore);
   private auth = inject(AuthService);
+
+  private readonly LOCAL_STORAGE_KEY = 'wtm_local_work_entries';
 
   private getMonthId(date: Date): string {
     return format(date, 'yyyy-MM');
@@ -35,7 +37,12 @@ export class WorkEntryService {
   getWorkEntry(date: Date): Observable<WorkEntry | null> {
     return (this.auth.currentUser$ as Observable<User | null>).pipe(
       switchMap(user => {
-        if (!user) return of(null);
+        if (!user) {
+          // GAST-MODUS: Aus LocalStorage laden
+          return of(this.getLocalWorkEntry(date));
+        }
+        
+        // CLOUD-MODUS
         const docRef = this.getMonthDocRef(user.uid, date);
         return docData(docRef).pipe(
           map((data: any) => {
@@ -52,8 +59,14 @@ export class WorkEntryService {
 
   async saveWorkEntry(entry: WorkEntry): Promise<void> {
     const user = this.auth.currentUser() as User | null;
-    if (!user) throw new Error('Nicht angemeldet');
+    
+    if (!user) {
+      // GAST-MODUS: In LocalStorage speichern
+      this.saveLocalWorkEntry(entry);
+      return;
+    }
 
+    // CLOUD-MODUS
     const docRef = this.getMonthDocRef(user.uid, entry.date);
     const dayKey = this.getDayKey(entry.date);
     const firestoreData = this.mapToFirestore(entry);
@@ -64,6 +77,50 @@ export class WorkEntryService {
       }
     }, { merge: true });
   }
+
+  // ── LOCAL STORAGE HELPERS ──────────────────────────────────────────────
+
+  private getLocalWorkEntry(date: Date): WorkEntry | null {
+    const allData = this.getAllLocalData();
+    const monthId = this.getMonthId(date);
+    const dayKey = this.getDayKey(date);
+    
+    const dayData = allData[monthId]?.days?.[dayKey];
+    if (!dayData) return null;
+    
+    // Daten mappen (JSON Strings zurück zu Dates)
+    return {
+      ...dayData,
+      date: new Date(dayData.date),
+      workStart: dayData.workStart ? new Date(dayData.workStart) : undefined,
+      workEnd: dayData.workEnd ? new Date(dayData.workEnd) : undefined,
+      breaks: (dayData.breaks || []).map((b: any) => ({
+        ...b,
+        start: new Date(b.start),
+        end: b.end ? new Date(b.end) : undefined
+      }))
+    };
+  }
+
+  private saveLocalWorkEntry(entry: WorkEntry): void {
+    const allData = this.getAllLocalData();
+    const monthId = this.getMonthId(entry.date);
+    const dayKey = this.getDayKey(entry.date);
+
+    if (!allData[monthId]) {
+      allData[monthId] = { days: {} };
+    }
+
+    allData[monthId].days[dayKey] = entry;
+    localStorage.setItem(this.LOCAL_STORAGE_KEY, JSON.stringify(allData));
+  }
+
+  private getAllLocalData(): { [monthId: string]: { days: { [dayKey: string]: any } } } {
+    const raw = localStorage.getItem(this.LOCAL_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  }
+
+  // ── FIRESTORE MAPPING ──────────────────────────────────────────────────
 
   private mapToFirestore(entry: WorkEntry): any {
     return {

@@ -9,7 +9,6 @@ export const routes: Routes = [
   {
     path: '',
     loadComponent: () => import('./layout/shell/shell').then(m => m.ShellComponent),
-    canActivate: [authGuard],
     children: [
       {
         path: 'dashboard',
