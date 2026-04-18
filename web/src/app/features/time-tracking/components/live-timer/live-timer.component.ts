@@ -189,14 +189,8 @@ const SESSION_TYPE_LABELS: Record<WorkSessionType, string> = {
             </button>
           }
           <button mat-flat-button color="warn" (click)="stop()" [disabled]="busy()">
-            @if (busy()) {
-              <mat-spinner diameter="18" />
-            } @else {
-              <ng-container>
-                <mat-icon>stop</mat-icon>
-                {{ 'timer.stop' | translate }}
-              </ng-container>
-            }
+            @if (busy()) { <mat-spinner diameter="18" /> } @else { <mat-icon>stop</mat-icon> }
+            {{ 'timer.stop' | translate }}
           </button>
         </div>
       </div>
@@ -206,6 +200,12 @@ const SESSION_TYPE_LABELS: Record<WorkSessionType, string> = {
         <p>{{ 'timer.noActiveSession' | translate }}</p>
 
         <mat-select class="type-select" [value]="selectedType()" (valueChange)="selectedType.set($event)">
+          <mat-select-trigger>
+            <span class="type-row">
+              <mat-icon style="font-size:16px;width:16px;height:16px">{{ typeIcon(selectedType()) }}</mat-icon>
+              {{ typeLabel(selectedType()) }}
+            </span>
+          </mat-select-trigger>
           @for (t of sessionTypes; track t) {
             <mat-option [value]="t">
               <span class="type-row">
@@ -217,14 +217,8 @@ const SESSION_TYPE_LABELS: Record<WorkSessionType, string> = {
         </mat-select>
 
         <button mat-flat-button (click)="start()" [disabled]="busy()">
-          @if (busy()) {
-            <mat-spinner diameter="18" />
-          } @else {
-            <ng-container>
-              <mat-icon>play_arrow</mat-icon>
-              {{ 'timer.start' | translate }}
-            </ng-container>
-          }
+          @if (busy()) { <mat-spinner diameter="18" /> } @else { <mat-icon>play_arrow</mat-icon> }
+          {{ 'timer.start' | translate }}
         </button>
       </div>
     }
