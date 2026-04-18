@@ -42,7 +42,7 @@ export class PremiumService {
       } else {
         this.reset();
       }
-    });
+    }, { allowSignalWrites: true });
   }
 
   // ─── Initialisierung ──────────────────────────────────────────────────────

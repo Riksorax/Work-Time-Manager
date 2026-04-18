@@ -26,7 +26,7 @@ export class AppComponent implements OnInit {
       if (this.auth.isLoggedIn()) {
         this.sessionService.migrateLocalToFirestore();
       }
-    });
+    }, { allowSignalWrites: true });
   }
 
   ngOnInit(): void {
