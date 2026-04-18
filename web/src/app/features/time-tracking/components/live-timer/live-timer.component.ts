@@ -19,7 +19,7 @@ import { WorkSessionService } from '../../services/work-session.service';
 import { BreakCalculatorService } from '../../services/break-calculator.service';
 import { ToastService } from '../../../../shared/components/toast/toast.service';
 import { WorkSessionType } from '../../../../shared/models';
-import { formatTimer, getElapsedSeconds, calculateNetMinutes } from '../../utils/time-calculations.util';
+import { formatTimer, getElapsedSeconds } from '../../utils/time-calculations.util';
 
 const SESSION_TYPE_ICONS: Record<WorkSessionType, string> = {
   work: 'work',
@@ -53,7 +53,7 @@ const SESSION_TYPE_LABELS: Record<WorkSessionType, string> = {
 
     .timer-card {
       background: var(--mat-sys-primary-container);
-      border-radius: 16px;
+      border-radius: 12px;
       padding: 20px;
       text-align: center;
     }
@@ -97,12 +97,13 @@ const SESSION_TYPE_LABELS: Record<WorkSessionType, string> = {
       align-items: center;
       gap: 6px;
       justify-content: center;
-      background: rgba(198, 40, 40, 0.15);
+      background: #FFF3E0;
+      border: 1px solid #FFCC80;
       border-radius: 8px;
       padding: 6px 12px;
       margin-bottom: 12px;
       font-size: 0.8rem;
-      color: #c62828;
+      color: #E65100;
       mat-icon { font-size: 16px; width: 16px; height: 16px; }
     }
 
@@ -115,7 +116,7 @@ const SESSION_TYPE_LABELS: Record<WorkSessionType, string> = {
 
     .idle-card {
       border: 2px dashed var(--mat-sys-outline-variant);
-      border-radius: 16px;
+      border-radius: 12px;
       padding: 20px;
       text-align: center;
       display: flex;
