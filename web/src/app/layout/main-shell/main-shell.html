@@ -1,38 +1,57 @@
 <mat-sidenav-container class="sidenav-container">
-  <mat-sidenav #drawer class="sidenav" fixedInViewport
-      [attr.role]="'navigation'"
-      [mode]="'side'"
-      [opened]="true">
-    <mat-toolbar>Menu</mat-toolbar>
-    <mat-nav-list>
-      <a mat-list-item routerLink="/dashboard" routerLinkActive="active-link">
-        <mat-icon matListItemIcon>home</mat-icon>
-        <span matListItemTitle>Dashboard</span>
-      </a>
-      <a mat-list-item routerLink="/reports" routerLinkActive="active-link">
-        <mat-icon matListItemIcon>bar_chart</mat-icon>
-        <span matListItemTitle>Berichte</span>
-      </a>
-      <a mat-list-item routerLink="/settings" routerLinkActive="active-link">
-        <mat-icon matListItemIcon>settings</mat-icon>
-        <span matListItemTitle>Einstellungen</span>
-      </a>
-    </mat-nav-list>
-  </mat-sidenav>
+
+  @if (!isMobile()) {
+    <mat-sidenav class="sidenav" fixedInViewport role="navigation" mode="side" [opened]="true">
+      <mat-toolbar>Menü</mat-toolbar>
+      <mat-nav-list>
+        <a mat-list-item routerLink="/dashboard" routerLinkActive="active-link" ariaCurrentWhenActive="page">
+          <mat-icon matListItemIcon>home</mat-icon>
+          <span matListItemTitle>Dashboard</span>
+        </a>
+        <a mat-list-item routerLink="/reports" routerLinkActive="active-link" ariaCurrentWhenActive="page">
+          <mat-icon matListItemIcon>bar_chart</mat-icon>
+          <span matListItemTitle>Berichte</span>
+        </a>
+        <a mat-list-item routerLink="/settings" routerLinkActive="active-link" ariaCurrentWhenActive="page">
+          <mat-icon matListItemIcon>settings</mat-icon>
+          <span matListItemTitle>Einstellungen</span>
+        </a>
+      </mat-nav-list>
+    </mat-sidenav>
+  }
+
   <mat-sidenav-content>
     <mat-toolbar color="primary">
       <span>Work Time Manager</span>
       <span class="spacer"></span>
       @if (user()) {
         <span class="user-email">{{ user()?.email }}</span>
-        <button mat-icon-button (click)="logout()" title="Abmelden">
+        <button mat-icon-button (click)="logout()" aria-label="Abmelden">
           <mat-icon>logout</mat-icon>
         </button>
       }
     </mat-toolbar>
-    
-    <main class="content">
-      <router-outlet></router-outlet>
+
+    <main class="content" [class.has-bottom-nav]="isMobile()">
+      <router-outlet />
     </main>
+
+    @if (isMobile()) {
+      <nav class="bottom-nav" aria-label="Hauptnavigation">
+        <a class="bottom-nav-item" routerLink="/dashboard" routerLinkActive="bottom-nav-item--active" ariaCurrentWhenActive="page">
+          <mat-icon>home</mat-icon>
+          <span>Dashboard</span>
+        </a>
+        <a class="bottom-nav-item" routerLink="/reports" routerLinkActive="bottom-nav-item--active" ariaCurrentWhenActive="page">
+          <mat-icon>bar_chart</mat-icon>
+          <span>Berichte</span>
+        </a>
+        <a class="bottom-nav-item" routerLink="/settings" routerLinkActive="bottom-nav-item--active" ariaCurrentWhenActive="page">
+          <mat-icon>settings</mat-icon>
+          <span>Einstellungen</span>
+        </a>
+      </nav>
+    }
   </mat-sidenav-content>
+
 </mat-sidenav-container>

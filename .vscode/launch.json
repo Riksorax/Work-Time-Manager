@@ -1,34 +1,74 @@
 {
   "version": "0.2.0",
   "configurations": [
+    // ── Angular Web ────────────────────────────────────────────────────────────
     {
-      "name": "▶ Angular: Chrome",
       "type": "chrome",
       "request": "launch",
+      "name": "Web: Chrome (Dev Server starten)",
       "url": "http://localhost:4200",
       "webRoot": "${workspaceFolder}/web/src",
+      "preLaunchTask": "npm: start - web",
       "sourceMapPathOverrides": {
-        "webpack:///./src/*": "${workspaceFolder}/web/src/*"
+        "webpack:///./src/*": "${webRoot}/*"
       },
-      "preLaunchTask": "ng serve"
+      "timeout": 60000
     },
     {
-      "name": "▶ Angular: Edge",
-      "type": "msedge",
-      "request": "launch",
-      "url": "http://localhost:4200",
-      "webRoot": "${workspaceFolder}/web/src",
-      "sourceMapPathOverrides": {
-        "webpack:///./src/*": "${workspaceFolder}/web/src/*"
-      },
-      "preLaunchTask": "ng serve"
-    },
-    {
-      "name": "🔗 Angular: Attach (laufender Server)",
       "type": "chrome",
       "request": "attach",
+      "name": "Web: Chrome (bereits laufend)",
       "url": "http://localhost:4200",
-      "webRoot": "${workspaceFolder}/web/src"
+      "webRoot": "${workspaceFolder}/web/src",
+      "sourceMapPathOverrides": {
+        "webpack:///./src/*": "${webRoot}/*"
+      }
+    },
+    {
+      "type": "msedge",
+      "request": "launch",
+      "name": "Web: Edge (Dev Server starten)",
+      "url": "http://localhost:4200",
+      "webRoot": "${workspaceFolder}/web/src",
+      "preLaunchTask": "npm: start - web",
+      "sourceMapPathOverrides": {
+        "webpack:///./src/*": "${webRoot}/*"
+      },
+      "timeout": 60000
+    },
+    // ── Flutter Mobile ─────────────────────────────────────────────────────────
+    {
+      "type": "dart",
+      "request": "launch",
+      "name": "Mobile: Flutter (Debug)",
+      "cwd": "${workspaceFolder}/mobile",
+      "program": "${workspaceFolder}/mobile/lib/main.dart",
+      "flutterMode": "debug"
+    },
+    {
+      "type": "dart",
+      "request": "launch",
+      "name": "Mobile: Flutter (Profile)",
+      "cwd": "${workspaceFolder}/mobile",
+      "program": "${workspaceFolder}/mobile/lib/main.dart",
+      "flutterMode": "profile"
+    },
+    {
+      "type": "dart",
+      "request": "launch",
+      "name": "Mobile: Flutter (Release)",
+      "cwd": "${workspaceFolder}/mobile",
+      "program": "${workspaceFolder}/mobile/lib/main.dart",
+      "flutterMode": "release"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Web + Mobile gleichzeitig",
+      "configurations": [
+        "Web: Chrome (Dev Server starten)",
+        "Mobile: Flutter (Debug)"
+      ]
     }
   ]
 }

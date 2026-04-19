@@ -1,18 +1,18 @@
-import { Component, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { map } from 'rxjs';
 import { AuthService } from '../../core/auth/auth';
 
 @Component({
   selector: 'app-main-shell',
-  standalone: true,
   imports: [
-    CommonModule,
     RouterOutlet,
     RouterLink,
     RouterLinkActive,
@@ -20,16 +20,26 @@ import { AuthService } from '../../core/auth/auth';
     MatToolbarModule,
     MatListModule,
     MatIconModule,
-    MatButtonModule
+    MatButtonModule,
   ],
   templateUrl: './main-shell.html',
-  styleUrl: './main-shell.scss'
+  styleUrl: './main-shell.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MainShellComponent {
-  private authService = inject(AuthService);
-  user = this.authService.user;
+  private readonly authService       = inject(AuthService);
+  private readonly breakpointObserver = inject(BreakpointObserver);
 
-  logout() {
+  readonly user = this.authService.user;
+
+  readonly isMobile = toSignal(
+    this.breakpointObserver.observe([Breakpoints.XSmall, Breakpoints.Small]).pipe(
+      map(r => r.matches)
+    ),
+    { initialValue: false }
+  );
+
+  logout(): void {
     this.authService.signOut();
   }
 }

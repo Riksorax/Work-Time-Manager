@@ -1,0 +1,20 @@
+<mat-form-field appearance="outline" class="time-field">
+  <mat-label>{{ label() }}</mat-label>
+  <input
+    matInput
+    type="time"
+    [value]="formattedValue()"
+    [disabled]="disabled()"
+    (change)="onTimeChange($event)"
+    [attr.aria-label]="label()"
+  />
+  @if (showClear() && value() != null) {
+    <button matSuffix mat-icon-button
+            (click)="onClear()"
+            [attr.aria-label]="label() + ' entfernen'">
+      <mat-icon>clear</mat-icon>
+    </button>
+  } @else {
+    <mat-icon matSuffix>access_time</mat-icon>
+  }
+</mat-form-field>

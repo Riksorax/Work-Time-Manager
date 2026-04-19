@@ -1,3 +1,15 @@
+:host {
+  --color-overtime-positive: #4CAF50;
+  --color-delete: #C62828;
+}
+
+.loading-state {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 80px 0;
+}
+
 .dashboard-wrapper {
   padding: 24px;
   display: flex;
@@ -10,6 +22,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 48px;
+  align-items: start;
 
   @media (max-width: 900px) {
     grid-template-columns: 1fr;
@@ -17,89 +30,120 @@
   }
 }
 
-.main-column, .side-column {
+.main-column,
+.side-column {
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 24px;
 }
 
-// Timer Section
+// ── Timer Section ──────────────────────────────────────────────────────────────
+
 .timer-section {
   text-align: center;
-  padding: 32px 0;
+  padding: 32px 0 16px;
+
+  .timer-label {
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    opacity: 0.6;
+    margin: 0 0 8px;
+  }
 
   .display-time {
-    font-size: clamp(3rem, 8vw, 6rem);
+    font-size: 57px;
     font-weight: 300;
+    letter-spacing: -0.5px;
     margin: 0;
     line-height: 1;
     color: var(--mat-sys-on-surface);
+    font-variant-numeric: tabular-nums;
   }
 
   .gross-time {
-    font-size: 1.1rem;
-    opacity: 0.7;
-    margin: 8px 0 0 0;
+    font-size: 1rem;
+    opacity: 0.65;
+    margin: 12px 0 0;
   }
 }
 
-// Stats
+// ── Overtime Stats ─────────────────────────────────────────────────────────────
+
 .overtime-stats {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 16px;
+  gap: 12px;
 
-  .stat-item {
-    text-align: center;
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
     .stat-label {
-      display: block;
-      font-size: 1rem;
-      opacity: 0.8;
-      margin-bottom: 4px;
+      font-size: 0.95rem;
+      opacity: 0.75;
     }
+
     .stat-value {
-      font-size: 2.5rem;
+      font-size: 1.25rem;
       font-weight: 500;
+      font-variant-numeric: tabular-nums;
     }
   }
 
   .prediction-hint {
-    font-size: 0.9rem;
-    font-style: italic;
-    opacity: 0.6;
-    margin-top: 8px;
+    font-size: 0.875rem;
+    opacity: 0.7;
+    margin: 4px 0 0;
+
+    &--total {
+      opacity: 0.55;
+    }
   }
 }
 
-// Controls
+// ── Controls ───────────────────────────────────────────────────────────────────
+
 .controls-section {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 
-  .full-width {
+  app-time-input {
     width: 100%;
   }
 
   .main-action-btn {
-    padding: 24px;
-    font-size: 1.1rem;
+    height: 56px;
+    font-size: 1rem;
     border-radius: 12px;
+    gap: 8px;
+
+    &.running {
+      background-color: var(--mat-sys-error-container);
+      color: var(--mat-sys-on-error-container);
+    }
+
+    &:not(.running) {
+      background-color: var(--mat-sys-primary);
+      color: var(--mat-sys-on-primary);
+    }
   }
 }
 
-// Breaks
+// ── Breaks ─────────────────────────────────────────────────────────────────────
+
 .breaks-section {
   .section-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 16px;
-    
+    margin-bottom: 8px;
+
     h3 {
       margin: 0;
-      font-size: 1.5rem;
+      font-size: 1.25rem;
       font-weight: 400;
     }
   }
@@ -107,14 +151,15 @@
   .empty-hint {
     text-align: center;
     padding: 24px;
-    opacity: 0.5;
+    opacity: 0.45;
+    margin: 0;
   }
 
   .break-item {
     background: var(--mat-sys-surface-container-low);
-    margin-bottom: 8px;
+    margin-bottom: 6px;
     border-radius: 12px;
-    
+
     .break-title {
       display: flex;
       align-items: center;
@@ -123,6 +168,16 @@
 
     .auto-chip {
       transform: scale(0.8);
+      transform-origin: left center;
+    }
+
+    .break-actions {
+      display: flex;
+      gap: 0;
+    }
+
+    .delete-btn {
+      color: var(--color-delete);
     }
   }
 }

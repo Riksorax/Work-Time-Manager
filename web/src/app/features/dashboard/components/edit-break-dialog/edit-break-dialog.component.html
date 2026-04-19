@@ -1,0 +1,40 @@
+<h2 mat-dialog-title>Pause bearbeiten</h2>
+
+<mat-dialog-content>
+  <div class="fields">
+
+    <mat-form-field appearance="outline">
+      <mat-label>Pausenname</mat-label>
+      <input matInput [(ngModel)]="name" [ngModelOptions]="{standalone: true}"
+             aria-label="Pausenname" />
+    </mat-form-field>
+
+    <app-time-input
+      label="Startzeit"
+      [value]="startTime()"
+      (timeSelected)="onStartTimeSelected($event)"
+      aria-label="Startzeit der Pause"
+    />
+
+    <app-time-input
+      label="Endzeit"
+      [value]="endTime()"
+      (timeSelected)="onEndTimeSelected($event)"
+      aria-label="Endzeit der Pause"
+    />
+
+    @if (validationError()) {
+      <p class="error-text" role="alert">{{ validationError() }}</p>
+    }
+
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close aria-label="Abbrechen">Abbrechen</button>
+  <button mat-raised-button color="primary"
+          (click)="save()"
+          aria-label="Änderungen speichern">
+    Speichern
+  </button>
+</mat-dialog-actions>
