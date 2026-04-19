@@ -6,7 +6,6 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog } from '@angular/material/dialog';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
-import { MatListModule } from '@angular/material/list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { DashboardService } from './dashboard.service';
@@ -24,7 +23,6 @@ import { Break } from '../../shared/models/index';
     MatChipsModule,
     MatDividerModule,
     MatIconModule,
-    MatListModule,
     MatProgressSpinnerModule,
     MatTooltipModule,
     TimeInputComponent,

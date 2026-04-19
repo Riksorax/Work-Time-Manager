@@ -97,26 +97,27 @@
             }
           </div>
 
-          <mat-list class="breaks-list">
+          <div class="breaks-list">
             @if (svc.breaks().length === 0) {
               <p class="empty-hint">Noch keine Pausen eingetragen.</p>
             }
             @for (b of svc.breaks(); track b.id) {
-              <mat-list-item class="break-item">
-                <mat-icon matListItemIcon>coffee</mat-icon>
-                <div matListItemTitle class="break-title">
-                  {{ b.name }}
-                  @if (b.isAutomatic) {
-                    <mat-chip-set class="auto-chip">
-                      <mat-chip>Automatisch</mat-chip>
-                    </mat-chip-set>
-                  }
+              <div class="break-item">
+                <mat-icon class="break-icon">coffee</mat-icon>
+
+                <div class="break-content">
+                  <div class="break-title">
+                    {{ b.name }}
+                    @if (b.isAutomatic) {
+                      <span class="auto-badge">Automatisch</span>
+                    }
+                  </div>
+                  <div class="break-time">
+                    {{ b.start | date:'HH:mm' }} – {{ b.end ? (b.end | date:'HH:mm') : 'läuft…' }}
+                  </div>
                 </div>
-                <div matListItemLine class="break-subtitle">
-                  {{ b.start | date:'HH:mm' }} –
-                  @if (b.end) { {{ b.end | date:'HH:mm' }} } @else { läuft… }
-                </div>
-                <div matListItemMeta class="break-actions">
+
+                <div class="break-actions">
                   <button mat-icon-button
                           (click)="onEditBreak(b)"
                           [attr.aria-label]="'Pause ' + b.name + ' bearbeiten'">
@@ -129,9 +130,9 @@
                     <mat-icon>delete</mat-icon>
                   </button>
                 </div>
-              </mat-list-item>
+              </div>
             }
-          </mat-list>
+          </div>
         </section>
 
       </div>
