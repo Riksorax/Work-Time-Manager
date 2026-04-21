@@ -24,6 +24,10 @@ web/coverage/
 
 # ─── Claude Code (local session state) ───────────────────────────────────────
 .claude/settings.local.json
+.claude/.fuse_hidden*
+
+# ─── Planungs-Dokumente (Claude-intern, nicht für VCS) ────────────────────────
+web/thoughts/
 
 # ─── Secrets ──────────────────────────────────────────────────────────────────
 web/src/environments/environment.prod.ts
