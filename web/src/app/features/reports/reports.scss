@@ -1,149 +1,527 @@
-.reports-container {
-  height: 100%;
+:host {
+  --color-overtime-positive: #4CAF50;
+  --color-delete: #C62828;
+  --color-work: #4CAF50;
+  --color-vacation: #9C27B0;
+  --color-sick: #607D8B;
+  --color-holiday: #FF9800;
 }
+
+.loading-state {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 80px 0;
+}
+
+.reports-wrapper {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.main-tabs {
+  flex: 1;
+
+  ::ng-deep .mat-mdc-tab-body-wrapper {
+    flex: 1;
+  }
+
+  ::ng-deep .mat-mdc-tab-body-content {
+    overflow: hidden auto;
+  }
+}
+
+// ── Shared tab content ─────────────────────────────────────────────────────────
+
+.tab-content {
+  padding: 24px;
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+// ── Daily layout ───────────────────────────────────────────────────────────────
 
 .daily-layout {
   display: flex;
-  gap: 24px;
-  padding: 24px 0;
+  gap: 32px;
+  padding: 24px;
+  align-items: start;
+  max-width: 1200px;
+  margin: 0 auto;
 
   @media (max-width: 900px) {
     flex-direction: column;
+    gap: 24px;
   }
 }
 
-.calendar-sidebar {
-  flex: 0 0 320px;
+.calendar-panel {
+  flex: 0 0 400px;
   display: flex;
   flex-direction: column;
   gap: 16px;
+
+  @media (max-width: 900px) {
+    flex: none;
+    width: 100%;
+  }
 }
 
-.day-summary-card {
+.stats-card {
+  background: var(--mat-sys-surface-container-low);
+  border-radius: 16px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  mat-divider {
+    margin: 4px 0;
+  }
+}
+
+.stats-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stats-label {
+  font-size: 0.9375rem;
+  opacity: 0.75;
+}
+
+.stats-value {
+  font-size: 1.125rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+
+  &--overtime {
+    font-size: 1.25rem;
+    font-weight: 600;
+  }
+}
+
+// ── Day panel ──────────────────────────────────────────────────────────────────
+
+.day-panel {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.day-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.day-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 500;
+}
+
+.batch-btn {
   background: var(--mat-sys-secondary-container);
   color: var(--mat-sys-on-secondary-container);
+  border-radius: 20px;
+  gap: 6px;
 }
 
-.day-details {
-  flex: 1;
-  
-  h2 {
-    margin: 0;
-    font-weight: 500;
-  }
-
-  .list-header {
-    display: flex;
-    justify-content: flex-end;
-    margin-bottom: 16px;
-  }
-}
-
-.entry-card {
-  margin-bottom: 12px;
-  border-radius: 12px;
-
-  .entry-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-
-    .entry-type {
-      text-transform: uppercase;
-      font-size: 0.75rem;
-      font-weight: 700;
-      letter-spacing: 1px;
-      color: var(--mat-sys-primary);
-      background: var(--mat-sys-primary-container);
-      padding: 4px 12px;
-      border-radius: 16px;
-    }
-  }
-
-  .entry-times {
-    display: flex;
-    gap: 24px;
-    flex-wrap: wrap;
-
-    .time-block {
-      display: flex;
-      flex-direction: column;
-      
-      .label {
-        font-size: 0.8rem;
-        opacity: 0.7;
-      }
-      .value {
-        font-weight: 500;
-        font-size: 1.1rem;
-      }
-    }
-  }
-}
+// ── Empty state ────────────────────────────────────────────────────────────────
 
 .empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 64px 0;
-  opacity: 0.5;
+  padding: 56px 0;
+  gap: 12px;
+}
 
-  mat-icon {
-    font-size: 48px;
-    width: 48px;
-    height: 48px;
-    margin-bottom: 16px;
+.empty-icon {
+  font-size: 52px;
+  width: 52px;
+  height: 52px;
+  opacity: 0.35;
+}
+
+.empty-text {
+  margin: 0;
+  opacity: 0.55;
+  font-size: 1rem;
+}
+
+.empty-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.add-btn {
+  background: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+  gap: 6px;
+}
+
+// ── Entry list ─────────────────────────────────────────────────────────────────
+
+.entry-list-header {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.entry-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.entry-card {
+  background: var(--mat-sys-surface-container-low);
+  border-radius: 16px;
+  padding: 14px 8px 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.entry-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.entry-type-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: 16px;
+
+  &--work {
+    background: rgba(76, 175, 80, 0.15);
+    color: var(--color-work);
+  }
+  &--vacation {
+    background: rgba(156, 39, 176, 0.15);
+    color: var(--color-vacation);
+  }
+  &--sick {
+    background: rgba(96, 125, 139, 0.15);
+    color: var(--color-sick);
+  }
+  &--holiday {
+    background: rgba(255, 152, 0, 0.15);
+    color: var(--color-holiday);
   }
 }
 
-.premium-placeholder {
+.entry-actions {
+  display: flex;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.delete-btn {
+  color: var(--color-delete);
+}
+
+.entry-times {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.time-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.time-label {
+  font-size: 0.8rem;
+  opacity: 0.65;
+}
+
+.time-value {
+  font-size: 1.0625rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+// ── Auth gate ──────────────────────────────────────────────────────────────────
+
+.auth-gate-card {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 100px 24px;
+  padding: 80px 24px;
+  gap: 12px;
   text-align: center;
-  background: rgba(0,0,0,0.03);
+  background: var(--mat-sys-surface-container-low);
   border-radius: 16px;
   margin: 24px 0;
 
-  mat-icon {
-    font-size: 64px;
-    width: 64px;
-    height: 64px;
-    margin-bottom: 16px;
-    color: #ffd700;
+  h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 500;
   }
-
-  h3 { margin-bottom: 8px; }
-  p { margin-bottom: 24px; max-width: 400px; }
+  p {
+    margin: 0;
+    opacity: 0.7;
+    max-width: 360px;
+  }
 }
 
+.gate-icon {
+  font-size: 48px;
+  width: 48px;
+  height: 48px;
+  opacity: 0.45;
+  margin-bottom: 4px;
+}
+
+.login-btn {
+  margin-top: 8px;
+  background: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+}
+
+// ── Premium gate ───────────────────────────────────────────────────────────────
+
+.premium-gate {
+  position: relative;
+  margin: 24px 0;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.premium-blur-content {
+  filter: blur(6px);
+  pointer-events: none;
+  user-select: none;
+}
+
+.premium-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.08);
+
+  h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 500;
+  }
+  p {
+    margin: 0;
+    opacity: 0.8;
+    max-width: 360px;
+  }
+}
+
+.premium-icon {
+  font-size: 52px;
+  width: 52px;
+  height: 52px;
+  color: #FFD700;
+  margin-bottom: 4px;
+}
+
+// ── Navigation (week / month) ──────────────────────────────────────────────────
+
+.week-nav,
+.month-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--mat-sys-surface-container-low);
+  border-radius: 12px;
+  padding: 4px 4px;
+  margin-bottom: 20px;
+}
+
+.week-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.month-label {
+  font-size: 1.0625rem;
+  font-weight: 500;
+}
+
+.kw-label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  opacity: 0.6;
+}
+
+.week-range {
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+// ── Summary card ───────────────────────────────────────────────────────────────
+
+.summary-card {
+  background: var(--mat-sys-surface-container-low);
+  border-radius: 16px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 24px;
+
+  &.blurred {
+    filter: blur(6px);
+  }
+
+  mat-divider {
+    margin: 4px 0;
+  }
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.summary-label {
+  font-size: 0.9375rem;
+  opacity: 0.75;
+}
+
+.summary-value {
+  font-size: 1.125rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+// ── Day list (weekly/monthly) ──────────────────────────────────────────────────
+
+.section-title {
+  font-size: 1rem;
+  font-weight: 500;
+  margin: 0 0 12px;
+  opacity: 0.8;
+}
+
+.day-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+
+.day-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 8px 12px 16px;
+  background: var(--mat-sys-surface-container-low);
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  font-family: inherit;
+  font-size: 0.9375rem;
+  color: var(--mat-sys-on-surface);
+  transition: background-color 0.15s;
+
+  &:hover {
+    background: var(--mat-sys-surface-container);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--mat-sys-primary);
+    outline-offset: 2px;
+  }
+}
+
+.day-name {
+  flex: 1;
+  font-weight: 400;
+}
+
+.day-duration {
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  opacity: 0.85;
+}
+
+.day-arrow {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+  opacity: 0.4;
+  flex-shrink: 0;
+}
+
+// ── Week overview (monthly) ────────────────────────────────────────────────────
+
+.week-overview {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+
+.week-overview-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 16px;
+  background: var(--mat-sys-surface-container-low);
+  border-radius: 12px;
+}
+
+.kw-badge {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+  padding: 2px 10px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.week-overview-duration {
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  font-size: 0.9375rem;
+}
+
+// ── Weekly layout ──────────────────────────────────────────────────────────────
+
+.weekly-layout,
 .monthly-layout {
-  padding: 24px 0;
-
-  .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-    margin-bottom: 24px;
-
-    h1 {
-      margin: 8px 0 0 0;
-      color: var(--mat-sys-primary);
-    }
-  }
-}
-
-.premium-placeholder-mini {
-  mat-card-content {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    opacity: 0.6;
-    mat-icon { font-size: 20px; }
-    p { margin: 0; }
-  }
+  padding: 24px;
+  max-width: 900px;
+  margin: 0 auto;
+  box-sizing: border-box;
 }

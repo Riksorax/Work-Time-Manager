@@ -1,46 +1,71 @@
-import { Component, input, output, computed, signal, effect, untracked } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  computed,
+  effect,
+  input,
+  output,
+  signal,
+  untracked,
+  viewChild,
+} from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 
+function toKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 @Component({
   selector: 'app-calendar',
-  standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule],
+  imports: [DatePipe, MatButtonModule, MatIconModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="calendar-card">
+    <div class="calendar-card"
+         #calendarCard
+         (pointerup)="onPointerUp($event)"
+         (pointercancel)="onPointerCancel($event)">
       <div class="calendar-header">
-        <button mat-icon-button (click)="changeMonth(-1)">
+        <button mat-icon-button (click)="changeMonth(-1)" aria-label="Vorheriger Monat">
           <mat-icon>chevron_left</mat-icon>
         </button>
-        <div class="current-month">
+        <div class="current-month" aria-live="polite">
           {{ viewDate() | date:'MMMM yyyy' }}
         </div>
-        <button mat-icon-button (click)="changeMonth(1)">
+        <button mat-icon-button (click)="changeMonth(1)" aria-label="Nächster Monat">
           <mat-icon>chevron_right</mat-icon>
         </button>
       </div>
 
-      <div class="calendar-grid">
+      <div class="calendar-grid" role="grid" [attr.aria-label]="viewDate() | date:'MMMM yyyy'">
         @for (day of weekDays; track day) {
-          <div class="weekday-label">{{ day }}</div>
+          <div class="weekday-label" role="columnheader">{{ day }}</div>
         }
 
         @for (empty of emptyPrefix(); track $index) {
-          <div class="calendar-day empty"></div>
+          <div class="calendar-day empty" role="gridcell" aria-hidden="true"></div>
         }
 
         @for (day of daysInMonth(); track day.date.getTime()) {
-          <div 
+          <div
             class="calendar-day"
-            [class.selected]="isSameDay(day.date, selectedDate())"
+            role="gridcell"
+            [attr.aria-label]="day.date | date:'d. MMMM yyyy'"
+            [attr.aria-selected]="isSameDay(day.date, selectedDate())"
+            [attr.aria-pressed]="isMultiSelected(day.date)"
+            [class.selected]="!multiSelectMode() && isSameDay(day.date, selectedDate())"
             [class.today]="isToday(day.date)"
             [class.has-entry]="hasEntry(day.date)"
-            (click)="selectDate(day.date)"
+            [class.multi-selected]="isMultiSelected(day.date)"
+            (click)="onDayClick(day.date)"
+            (pointerdown)="onPointerDown($event, day.date)"
+            (pointermove)="onPointerMove($event, day.date)"
           >
             <span class="day-number">{{ day.date.getDate() }}</span>
             @if (hasEntry(day.date)) {
-              <div class="entry-dot"></div>
+              <div class="entry-dot" aria-hidden="true"></div>
             }
           </div>
         }
@@ -53,6 +78,7 @@ import { MatIconModule } from '@angular/material/icon';
       border-radius: 16px;
       padding: 16px;
       user-select: none;
+      touch-action: none;
     }
     .calendar-header {
       display: flex;
@@ -97,10 +123,15 @@ import { MatIconModule } from '@angular/material/icon';
         color: var(--mat-sys-on-primary);
       }
 
-      &.today:not(.selected) {
+      &.today:not(.selected):not(.multi-selected) {
         color: var(--mat-sys-primary);
         font-weight: bold;
         border: 1px solid var(--mat-sys-primary);
+      }
+
+      &.multi-selected {
+        background-color: var(--mat-sys-secondary-container);
+        color: var(--mat-sys-on-secondary-container);
       }
     }
     .entry-dot {
@@ -118,42 +149,54 @@ import { MatIconModule } from '@angular/material/icon';
   `]
 })
 export class CalendarComponent {
-  selectedDate = input.required<Date>();
-  daysWithEntries = input<number[]>([]); 
-  
-  dateSelected = output<Date>();
-  monthChanged = output<{ year: number, month: number }>();
+  readonly selectedDate       = input.required<Date>();
+  readonly daysWithEntries    = input<number[]>([]);
+  readonly multiSelectMode    = input<boolean>(false);
+  readonly multiSelectedDates = input<Set<string>>(new Set());
 
-  viewDate = signal(new Date());
+  readonly dateSelected = output<Date>();
+  readonly monthChanged = output<{ year: number; month: number }>();
+  readonly dragSelected = output<Date[]>();
 
-  weekDays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+  readonly viewDate = signal(new Date());
+
+  readonly weekDays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+
+  private readonly _cardRef = viewChild<ElementRef<HTMLElement>>('calendarCard');
+
+  // Drag state
+  private _dragStart: Date | null = null;
+  private _isDragging = false;
+  private _activePointerId: number | null = null;
 
   constructor() {
     effect(() => {
       const initial = this.selectedDate();
-      this.viewDate.set(new Date(initial.getFullYear(), initial.getMonth(), 1));
-    }, { allowSignalWrites: true });
+      untracked(() => {
+        this.viewDate.set(new Date(initial.getFullYear(), initial.getMonth(), 1));
+      });
+    });
   }
 
-  emptyPrefix = computed(() => {
+  readonly emptyPrefix = computed(() => {
     const d = this.viewDate();
     const firstDay = new Date(d.getFullYear(), d.getMonth(), 1).getDay();
     const offset = firstDay === 0 ? 6 : firstDay - 1;
-    return Array(offset).fill(0);
+    return Array<number>(offset).fill(0);
   });
 
-  daysInMonth = computed(() => {
+  readonly daysInMonth = computed(() => {
     const d = this.viewDate();
-    const days = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-    return Array.from({ length: days }, (_, i) => ({
-      date: new Date(d.getFullYear(), d.getMonth(), i + 1)
+    const count = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    return Array.from({ length: count }, (_, i) => ({
+      date: new Date(d.getFullYear(), d.getMonth(), i + 1),
     }));
   });
 
   isSameDay(d1: Date, d2: Date): boolean {
-    return d1.getFullYear() === d2.getFullYear() &&
-           d1.getMonth() === d2.getMonth() &&
-           d1.getDate() === d2.getDate();
+    return d1.getFullYear() === d2.getFullYear()
+      && d1.getMonth() === d2.getMonth()
+      && d1.getDate() === d2.getDate();
   }
 
   isToday(date: Date): boolean {
@@ -165,14 +208,70 @@ export class CalendarComponent {
     return this.daysWithEntries().includes(date.getDate());
   }
 
-  selectDate(date: Date) {
+  isMultiSelected(date: Date): boolean {
+    return this.multiSelectedDates().has(toKey(date));
+  }
+
+  onDayClick(date: Date): void {
+    if (this._isDragging) return;
     this.dateSelected.emit(date);
   }
 
-  changeMonth(delta: number) {
+  // ── Pointer Events for Drag Selection ──────────────────────────────────────
+
+  onPointerDown(event: PointerEvent, date: Date): void {
+    if (!this.multiSelectMode()) return;
+    this._dragStart = date;
+    this._isDragging = false; // will become true on move
+    this._activePointerId = event.pointerId;
+    (event.target as Element).setPointerCapture(event.pointerId);
+    event.preventDefault();
+  }
+
+  onPointerMove(event: PointerEvent, date: Date): void {
+    if (!this.multiSelectMode() || this._dragStart === null) return;
+    if (event.pointerId !== this._activePointerId) return;
+    this._isDragging = true;
+    this.dragSelected.emit(this._dateRange(this._dragStart, date));
+    event.preventDefault();
+  }
+
+  onPointerUp(event: PointerEvent): void {
+    if (this._activePointerId !== null) {
+      const el = this._cardRef()?.nativeElement;
+      if (el?.hasPointerCapture(event.pointerId)) {
+        el.releasePointerCapture(event.pointerId);
+      }
+    }
+    this._dragStart = null;
+    this._activePointerId = null;
+    // Reset isDragging on next microtask to let click handler check it first
+    setTimeout(() => { this._isDragging = false; });
+  }
+
+  onPointerCancel(event: PointerEvent): void {
+    this.onPointerUp(event);
+  }
+
+  changeMonth(delta: number): void {
     const d = this.viewDate();
-    const newDate = new Date(d.getFullYear(), d.getMonth() + delta, 1);
-    this.viewDate.set(newDate);
-    this.monthChanged.emit({ year: newDate.getFullYear(), month: newDate.getMonth() + 1 });
+    const next = new Date(d.getFullYear(), d.getMonth() + delta, 1);
+    this.viewDate.set(next);
+    this.monthChanged.emit({ year: next.getFullYear(), month: next.getMonth() + 1 });
+  }
+
+  // ── Private ─────────────────────────────────────────────────────────────────
+
+  private _dateRange(a: Date, b: Date): Date[] {
+    const start = a <= b ? a : b;
+    const end   = a <= b ? b : a;
+    const result: Date[] = [];
+    const cur = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    const fin = new Date(end.getFullYear(),   end.getMonth(),   end.getDate());
+    while (cur <= fin) {
+      result.push(new Date(cur));
+      cur.setDate(cur.getDate() + 1);
+    }
+    return result;
   }
 }
