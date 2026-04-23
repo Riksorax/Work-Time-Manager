@@ -58,9 +58,16 @@ jobs:
         run: echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 --decode > android/app/google-services.json
         shell: bash
 
+      - name: Generate Version Code
+        id: version
+        run: |
+          VERSION_CODE=$(date +%s)
+          echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
+          echo "Generated Version Code: $VERSION_CODE"
+
       - name: Build Staging App Bundle
         env:
-          VERSION_CODE: ${{ github.run_number }}
+          VERSION_CODE: ${{ steps.version.outputs.version_code }}
           ORG_GRADLE_PROJECT_android.signing.storeFile: release.keystore
           ORG_GRADLE_PROJECT_android.signing.storePassword: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ORG_GRADLE_PROJECT_android.signing.keyAlias: ${{ secrets.ANDROID_KEY_ALIAS }}
@@ -89,4 +96,5 @@ jobs:
           releaseNotes: |
             [STAGING] Test Build
             Build: ${{ github.run_number }}
+            Version Code: ${{ steps.version.outputs.version_code }}
             Commit: ${{ github.sha }}
