@@ -5,7 +5,7 @@
 
     <mat-form-field appearance="outline">
       <mat-label>Pausenname</mat-label>
-      <input matInput [(ngModel)]="name" [ngModelOptions]="{standalone: true}"
+      <input matInput [value]="name()" (input)="onNameInput($event)"
              aria-label="Pausenname" />
     </mat-form-field>
 

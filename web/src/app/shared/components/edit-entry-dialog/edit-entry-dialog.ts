@@ -1,27 +1,32 @@
-import { Component, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormArray } from '@angular/forms';
-import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormArray } from '@angular/forms';
+import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { WorkEntry, WorkEntryType, Break } from '../../../shared/models';
+import { WorkEntry, WorkEntryType, Break } from '../../models/index';
+
+interface BreakFormValue {
+  id: string;
+  name: string;
+  start: string;
+  end: string;
+}
 
 @Component({
   selector: 'app-edit-entry-dialog',
-  standalone: true,
   imports: [
-    CommonModule,
     ReactiveFormsModule,
     MatDialogModule,
-    MatFormFieldModule,
-    MatInputModule,
     MatButtonModule,
+    MatFormFieldModule,
     MatIconModule,
-    MatSelectModule
+    MatInputModule,
+    MatSelectModule,
   ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <h2 mat-dialog-title>{{ data.entry ? 'Eintrag bearbeiten' : 'Neuer Eintrag' }}</h2>
     <mat-dialog-content>
@@ -39,18 +44,17 @@ import { WorkEntry, WorkEntryType, Break } from '../../../shared/models';
         <div class="time-row">
           <mat-form-field appearance="outline">
             <mat-label>Arbeitsbeginn</mat-label>
-            <input matInput type="time" formControlName="startTime">
+            <input matInput type="time" formControlName="startTime" />
           </mat-form-field>
-
           <mat-form-field appearance="outline">
             <mat-label>Arbeitsende</mat-label>
-            <input matInput type="time" formControlName="endTime">
+            <input matInput type="time" formControlName="endTime" />
           </mat-form-field>
         </div>
 
         <div class="section-header">
           <h3>Pausen</h3>
-          <button mat-stroked-button type="button" (click)="addBreak()">
+          <button mat-stroked-button type="button" (click)="addBreak()" aria-label="Pause hinzufügen">
             <mat-icon>add</mat-icon> Pause
           </button>
         </div>
@@ -60,20 +64,17 @@ import { WorkEntry, WorkEntryType, Break } from '../../../shared/models';
             <div [formGroupName]="i" class="break-row">
               <mat-form-field appearance="outline" class="flex-2">
                 <mat-label>Name</mat-label>
-                <input matInput formControlName="name">
+                <input matInput formControlName="name" />
               </mat-form-field>
-              
               <mat-form-field appearance="outline" class="flex-1">
                 <mat-label>Start</mat-label>
-                <input matInput type="time" formControlName="start">
+                <input matInput type="time" formControlName="start" />
               </mat-form-field>
-              
               <mat-form-field appearance="outline" class="flex-1">
                 <mat-label>Ende</mat-label>
-                <input matInput type="time" formControlName="end">
+                <input matInput type="time" formControlName="end" />
               </mat-form-field>
-
-              <button mat-icon-button color="warn" (click)="removeBreak(i)">
+              <button mat-icon-button (click)="removeBreak(i)" aria-label="Pause entfernen">
                 <mat-icon>delete</mat-icon>
               </button>
             </div>
@@ -83,114 +84,91 @@ import { WorkEntry, WorkEntryType, Break } from '../../../shared/models';
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button (click)="onCancel()">Abbrechen</button>
-      <button mat-flat-button color="primary" [disabled]="form.invalid" (click)="onSave()">Speichern</button>
+      <button mat-flat-button [disabled]="form.invalid" (click)="onSave()">Speichern</button>
     </mat-dialog-actions>
   `,
   styles: [`
-    .edit-form {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      min-width: 400px;
-      padding-top: 8px;
-    }
-    .time-row {
-      display: flex;
-      gap: 16px;
-    }
+    .edit-form { display: flex; flex-direction: column; gap: 8px; min-width: 400px; padding-top: 8px; }
+    .time-row { display: flex; gap: 16px; }
     .section-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin: 16px 0 8px 0;
+      display: flex; justify-content: space-between; align-items: center; margin: 16px 0 8px;
       h3 { margin: 0; font-size: 1rem; }
     }
-    .break-row {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
+    .break-row { display: flex; gap: 8px; align-items: center; }
     .flex-2 { flex: 2; }
     .flex-1 { flex: 1; }
-  `]
+  `],
 })
 export class EditEntryDialogComponent {
-  private fb = inject(FormBuilder);
-  private dialogRef = inject(MatDialogRef<EditEntryDialogComponent>);
-  data = inject(MAT_DIALOG_DATA) as { entry?: WorkEntry, date: Date };
+  private readonly fb        = inject(FormBuilder);
+  private readonly dialogRef = inject(MatDialogRef<EditEntryDialogComponent>);
+  readonly data              = inject(MAT_DIALOG_DATA) as { entry?: WorkEntry; date: Date };
 
-  WorkEntryType = WorkEntryType;
-  form: FormGroup;
+  protected readonly WorkEntryType = WorkEntryType;
+  readonly form: FormGroup;
 
   constructor() {
     const entry = this.data.entry;
     this.form = this.fb.group({
-      type: [entry?.type || WorkEntryType.Work, Validators.required],
-      startTime: [this.formatTime(entry?.workStart)],
-      endTime: [this.formatTime(entry?.workEnd)],
+      type:      [entry?.type ?? WorkEntryType.Work, Validators.required],
+      startTime: [this._formatTime(entry?.workStart)],
+      endTime:   [this._formatTime(entry?.workEnd)],
       breaks: this.fb.array(
-        (entry?.breaks || []).map(b => this.fb.group({
-          id: [b.id],
-          name: [b.name, Validators.required],
-          start: [this.formatTime(b.start), Validators.required],
-          end: [this.formatTime(b.end), Validators.required]
+        (entry?.breaks ?? []).map(b => this.fb.group({
+          id:    [b.id],
+          name:  [b.name,                   Validators.required],
+          start: [this._formatTime(b.start), Validators.required],
+          end:   [this._formatTime(b.end),   Validators.required],
         }))
-      )
+      ),
     });
   }
 
-  get breaks() {
-    return this.form.get('breaks') as FormArray;
-  }
+  get breaks(): FormArray { return this.form.get('breaks') as FormArray; }
 
-  addBreak() {
+  addBreak(): void {
     this.breaks.push(this.fb.group({
-      id: [crypto.randomUUID()],
-      name: ['Pause ' + (this.breaks.length + 1), Validators.required],
+      id:    [crypto.randomUUID()],
+      name:  [`Pause ${this.breaks.length + 1}`, Validators.required],
       start: ['', Validators.required],
-      end: ['', Validators.required]
+      end:   ['', Validators.required],
     }));
   }
 
-  removeBreak(index: number) {
-    this.breaks.removeAt(index);
-  }
+  removeBreak(index: number): void { this.breaks.removeAt(index); }
 
-  onCancel() {
-    this.dialogRef.close();
-  }
+  onCancel(): void { this.dialogRef.close(); }
 
-  onSave() {
+  onSave(): void {
     if (this.form.invalid) return;
-
-    const val = this.form.value;
+    const val  = this.form.value as { type: WorkEntryType; startTime: string; endTime: string; breaks: BreakFormValue[] };
     const date = this.data.date;
 
     const result: Partial<WorkEntry> = {
-      id: this.data.entry?.id || date.toISOString().split('T')[0],
-      date: date,
-      type: val.type,
-      workStart: this.parseTime(date, val.startTime),
-      workEnd: this.parseTime(date, val.endTime),
+      id:               this.data.entry?.id ?? date.toISOString().split('T')[0],
+      date,
+      type:             val.type,
+      workStart:        this._parseTime(date, val.startTime),
+      workEnd:          this._parseTime(date, val.endTime),
       isManuallyEntered: true,
-      breaks: val.breaks.map((b: any) => ({
-        id: b.id,
-        name: b.name,
-        start: this.parseTime(date, b.start)!,
-        end: this.parseTime(date, b.end),
-        isAutomatic: false
-      }))
+      breaks: val.breaks.map((b): Break => ({
+        id:          b.id,
+        name:        b.name,
+        start:       this._parseTime(date, b.start)!,
+        end:         this._parseTime(date, b.end),
+        isAutomatic: false,
+      })),
     };
 
     this.dialogRef.close(result);
   }
 
-  private formatTime(date?: Date): string {
+  private _formatTime(date?: Date): string {
     if (!date) return '';
     return date.toTimeString().slice(0, 5);
   }
 
-  private parseTime(baseDate: Date, timeStr: string): Date | undefined {
+  private _parseTime(baseDate: Date, timeStr: string): Date | undefined {
     if (!timeStr) return undefined;
     const [h, m] = timeStr.split(':').map(Number);
     const d = new Date(baseDate);

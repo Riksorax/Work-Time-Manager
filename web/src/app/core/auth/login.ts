@@ -1,14 +1,14 @@
-import { Component, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { AuthService } from './auth';
 
 @Component({
   selector: 'app-login',
-  standalone: true,
-  imports: [CommonModule, MatButtonModule, MatCardModule, MatIconModule],
+  imports: [MatButtonModule, MatCardModule, MatIconModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="login-container">
       <mat-card class="login-card">
@@ -20,7 +20,7 @@ import { AuthService } from './auth';
           <p>Bitte melden Sie sich an, um Ihre Arbeitszeiten zu verwalten.</p>
         </mat-card-content>
         <mat-card-actions>
-          <button mat-flat-button color="primary" (click)="login()">
+          <button mat-flat-button (click)="login()" aria-label="Mit Google anmelden">
             <mat-icon>login</mat-icon>
             Mit Google anmelden
           </button>
@@ -45,16 +45,17 @@ import { AuthService } from './auth';
       justify-content: center;
       padding-top: 16px;
     }
-  `]
+  `],
 })
 export class LoginComponent {
-  private authService = inject(AuthService);
+  private readonly authService = inject(AuthService);
+  private readonly snackbar    = inject(MatSnackBar);
 
-  async login() {
+  async login(): Promise<void> {
     try {
       await this.authService.signInWithGoogle();
-    } catch (error) {
-      console.error('Login failed', error);
+    } catch {
+      this.snackbar.open('Anmeldung fehlgeschlagen. Bitte erneut versuchen.', 'OK', { duration: 4000 });
     }
   }
 }

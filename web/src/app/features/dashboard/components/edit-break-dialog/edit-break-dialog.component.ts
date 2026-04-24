@@ -1,5 +1,4 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -19,7 +18,6 @@ export interface EditBreakDialogResult {
 @Component({
   selector: 'app-edit-break-dialog',
   imports: [
-    FormsModule,
     MatButtonModule,
     MatDialogModule,
     MatFormFieldModule,
@@ -33,10 +31,14 @@ export class EditBreakDialogComponent {
   private readonly dialogRef = inject(MatDialogRef<EditBreakDialogComponent, EditBreakDialogResult>);
   private readonly data: EditBreakDialogData = inject(MAT_DIALOG_DATA);
 
-  name           = this.data.break.name;
+  readonly name  = signal(this.data.break.name);
   startTime      = signal<Date | null>(this.data.break.start);
   endTime        = signal<Date | null>(this.data.break.end ?? null);
   validationError = signal<string | null>(null);
+
+  onNameInput(event: Event): void {
+    this.name.set((event.target as HTMLInputElement).value);
+  }
 
   onStartTimeSelected(timeStr: string): void {
     this.startTime.set(this._parseTime(timeStr));
