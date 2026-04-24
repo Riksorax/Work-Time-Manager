@@ -20,7 +20,7 @@ export type RestartSessionDialogResult = 'keep-breaks' | 'discard-breaks' | null
       <button mat-stroked-button (click)="confirm(false)" aria-label="Pausen verwerfen">
         Pausen verwerfen
       </button>
-      <button mat-raised-button color="primary" (click)="confirm(true)" aria-label="Pausen behalten">
+      <button mat-flat-button (click)="confirm(true)" aria-label="Pausen behalten">
         Pausen behalten
       </button>
     </mat-dialog-actions>

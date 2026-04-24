@@ -66,7 +66,6 @@ export interface QuickEntryDialogResult {
     <mat-dialog-actions align="end">
       <button mat-button mat-dialog-close>Abbrechen</button>
       <button mat-flat-button
-              color="primary"
               [disabled]="form.invalid"
               (click)="submit()">
         Speichern

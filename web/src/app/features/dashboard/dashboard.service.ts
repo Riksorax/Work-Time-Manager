@@ -170,8 +170,8 @@ export class DashboardService {
 
       this._recalculateState(workEntry, false);
       this._startTimerIfNeeded();
-    } catch (err) {
-      console.error('[Dashboard] Initialisierung fehlgeschlagen:', err);
+    } catch {
+      // Initialisierung fehlgeschlagen — UI zeigt leeren Zustand
     }
   }
 
