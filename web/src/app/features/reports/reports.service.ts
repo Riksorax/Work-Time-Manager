@@ -1,15 +1,15 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
-import { Observable, catchError, combineLatest, map, of, switchMap, tap } from 'rxjs';
+import { Observable, catchError, combineLatest, from, map, of, switchMap, tap } from 'rxjs';
 import { AuthService } from '../../core/auth/auth';
 import { ProfileService } from '../../core/services/profile';
 import { SettingsService } from '../../core/services/settings';
 import { WorkEntryService } from '../../core/services/work-entry';
-import { ReportCalculatorService, toDateKey } from '../../domain/services/report-calculator.service';
+import { ReportCalculatorService, isSameDayRc, toDateKey } from '../../domain/services/report-calculator.service';
 import { DailyStat, MonthlyReport, WeeklyReport } from '../../domain/models/reports.models';
 import { WorkEntry, WorkEntryType, UserSettings } from '../../shared/models/index';
-import { isSameDayRc } from '../../domain/services/report-calculator.service';
+import { OvertimeService } from '../../core/services/overtime';
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
@@ -59,6 +59,7 @@ export class ReportsService {
   private readonly settingsService  = inject(SettingsService);
   private readonly profileService   = inject(ProfileService);
   private readonly authService      = inject(AuthService);
+  private readonly overtimeService  = inject(OvertimeService);
   private readonly calc             = inject(ReportCalculatorService);
   private readonly router           = inject(Router);
 
@@ -67,10 +68,15 @@ export class ReportsService {
   readonly isPremium  = this.profileService.isPremium;
 
   // ── State Signals ─────────────────────────────────────────────────────────────
-  readonly isLoading           = signal(true);
-  readonly selectedDate        = signal<Date>(new Date());
-  readonly isMultiSelectActive = signal(false);
-  readonly selectedDates       = signal<Set<string>>(new Set());
+  private readonly _isLoading           = signal(true);
+  private readonly _selectedDate        = signal<Date>(new Date());
+  private readonly _isMultiSelectActive = signal(false);
+  private readonly _selectedDates       = signal<Set<string>>(new Set());
+
+  readonly isLoading           = this._isLoading.asReadonly();
+  readonly selectedDate        = this._selectedDate.asReadonly();
+  readonly isMultiSelectActive = this._isMultiSelectActive.asReadonly();
+  readonly selectedDates       = this._selectedDates.asReadonly();
 
   // Monat-Navigation für Kalender (täglich-Tab)
   private readonly _viewMonth = signal({
@@ -87,13 +93,13 @@ export class ReportsService {
   // Monatliche Einträge (täglich-Tab / Monatlich-Tab)
   private readonly _monthlyEntries = toSignal(
     toObservable(this._viewMonth).pipe(
-      tap(() => this.isLoading.set(true)),
+      tap(() => this._isLoading.set(true)),
       switchMap(({ year, month }) =>
         this.workEntryService.getEntriesForMonth(year, month).pipe(
           catchError(() => of([] as WorkEntry[])),
         )
       ),
-      tap(() => this.isLoading.set(false)),
+      tap(() => this._isLoading.set(false)),
     ),
     { initialValue: [] as WorkEntry[] }
   );
@@ -112,6 +118,15 @@ export class ReportsService {
     { initialValue: DEFAULT_SETTINGS }
   );
 
+  // Gespeichertes Überstundensaldo — neu laden wenn Auth-Status wechselt
+  private readonly _storedOvertime = toSignal(
+    this.authService.user$.pipe(
+      switchMap(() => from(this.overtimeService.getOvertime())),
+      catchError(() => of(0)),
+    ),
+    { initialValue: 0 }
+  );
+
   // ── Computed ──────────────────────────────────────────────────────────────────
 
   readonly daysWithEntries = computed(() =>
@@ -124,11 +139,10 @@ export class ReportsService {
   });
 
   readonly dailyStat = computed((): DailyStat => {
-    const entries  = this._monthlyEntries();
-    const date     = this.selectedDate();
-    const settings = this._settings();
-    if (!entries.length && !this.isLoading()) return EMPTY_DAILY_STAT;
-    return this.calc.calculateDailyStat(entries, date, settings);
+    if (this.isLoading()) return EMPTY_DAILY_STAT;
+    return this.calc.calculateDailyStat(
+      this._monthlyEntries(), this.selectedDate(), this._settings()
+    );
   });
 
   readonly weeklyReport = computed((): WeeklyReport => {
@@ -141,7 +155,7 @@ export class ReportsService {
   readonly monthlyReport = computed((): MonthlyReport => {
     if (!this.isLoggedIn() || !this.isPremium()) return EMPTY_MONTHLY;
     return this.calc.calculateMonthlyReport(
-      this._monthlyEntries(), this._monthRef(), this._settings(), 0
+      this._monthlyEntries(), this._monthRef(), this._settings(), this._storedOvertime()
     );
   });
 
@@ -149,7 +163,7 @@ export class ReportsService {
 
   selectDate(date: Date): void {
     const prev = this.selectedDate();
-    this.selectedDate.set(date);
+    this._selectedDate.set(date);
     // Monat gewechselt → Einträge neu laden
     if (date.getMonth() !== prev.getMonth() || date.getFullYear() !== prev.getFullYear()) {
       this._viewMonth.set({ year: date.getFullYear(), month: date.getMonth() + 1 });
@@ -196,15 +210,15 @@ export class ReportsService {
   }
 
   toggleMultiSelect(): void {
-    this.isMultiSelectActive.update(v => !v);
+    this._isMultiSelectActive.update((v: boolean) => !v);
     if (!this.isMultiSelectActive()) {
-      this.selectedDates.set(new Set());
+      this._selectedDates.set(new Set());
     }
   }
 
   toggleDateSelection(date: Date): void {
     const key = toDateKey(date);
-    this.selectedDates.update(prev => {
+    this._selectedDates.update((prev: Set<string>) => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
       else next.add(key);
@@ -213,7 +227,7 @@ export class ReportsService {
   }
 
   addDateRangeSelection(dates: Date[]): void {
-    this.selectedDates.update(prev => {
+    this._selectedDates.update((prev: Set<string>) => {
       const next = new Set(prev);
       dates.forEach(d => next.add(toDateKey(d)));
       return next;
@@ -221,7 +235,7 @@ export class ReportsService {
   }
 
   clearDateSelection(): void {
-    this.selectedDates.set(new Set());
+    this._selectedDates.set(new Set());
   }
 
   navigateToLogin(): void {
