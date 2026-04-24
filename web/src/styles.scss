@@ -50,6 +50,21 @@ $theme: mat.define-theme((
   }
 }
 
+// Dark theme override — aktiviert via ThemeService (class auf <html>)
+.dark-theme {
+  $dark-theme: mat.define-theme((
+    color: (
+      theme-type: dark,
+      primary: mat.$azure-palette,
+      tertiary: mat.$blue-palette,
+    ),
+  ));
+
+  @include mat.all-component-themes($dark-theme);
+  @include mat.system-level-colors($dark-theme);
+  color-scheme: dark;
+}
+
 html, body {
   height: 100%;
   margin: 0;

@@ -1,99 +1,266 @@
+// ─── Layout ─────────────────────────────────────────────────────────────────
+
+.loading-state {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 64px 16px;
+}
+
 .settings-wrapper {
-  padding: 24px;
+  padding: 24px 16px;
   display: flex;
   justify-content: center;
 }
 
 .settings-content {
   width: 100%;
-  max-width: 1000px;
+  max-width: 1100px;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 64px;
+  gap: 48px;
+  align-items: start;
 
   @media (max-width: 900px) {
     grid-template-columns: 1fr;
-    gap: 32px;
+    gap: 8px;
   }
 }
 
 .column {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 0;
 }
 
-// Profile Section
+.section-title {
+  margin: 16px 0 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mat-sys-on-surface-variant);
+  padding: 0 16px;
+}
+
+// ─── Profil ──────────────────────────────────────────────────────────────────
+
 .profile-section {
+  padding: 16px 0;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
+}
 
-  .profile-header {
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 16px;
+}
+
+.avatar {
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--mat-sys-primary-container);
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  font-weight: 500;
+  color: var(--mat-sys-on-primary-container);
+}
+
+.profile-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.profile-name {
+  margin: 0 0 2px;
+  font-size: 1.1rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-email {
+  margin: 0;
+  font-size: 0.85rem;
+  opacity: 0.7;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.premium-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 2px 8px 2px 4px;
+  background: #FF8F00;
+  color: #fff;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+
+  mat-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+  }
+}
+
+.delete-account-btn {
+  margin-left: auto;
+}
+
+.auth-btn {
+  align-self: flex-start;
+  margin: 0 16px;
+
+  &--logout {
+    color: var(--mat-sys-error);
+    border-color: var(--mat-sys-error);
+  }
+}
+
+// ─── Arbeitszeit ─────────────────────────────────────────────────────────────
+
+.config-section {
+  padding: 8px 0;
+}
+
+.clickable-item {
+  cursor: pointer;
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container-high);
+    border-radius: 4px;
+  }
+}
+
+// ─── Gleitzeit ────────────────────────────────────────────────────────────────
+
+.overtime-section {
+  padding: 8px 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  button {
+    align-self: flex-start;
+    margin: 0 16px;
+  }
+}
+
+.overtime-display {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 0 16px;
+  gap: 4px;
+}
+
+.overtime-value {
+  font-size: 2rem;
+  font-weight: 300;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.overtime-date {
+  font-size: 0.75rem;
+  color: var(--mat-sys-on-surface-variant);
+  font-style: italic;
+}
+
+// ─── Sync ─────────────────────────────────────────────────────────────────────
+
+.sync-section {
+  padding: 8px 0 16px;
+
+  button {
+    margin: 0 16px;
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 8px;
 
-    .avatar {
-      width: 64px;
-      height: 64px;
-      border-radius: 50%;
-      overflow: hidden;
-      background: var(--mat-sys-primary-container);
-      
-      img { width: 100%; height: 100%; object-fit: cover; }
-      
-      .avatar-placeholder {
-        width: 100%;
-        height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.5rem;
-        font-weight: 500;
-        color: var(--mat-sys-on-primary-container);
-      }
+    mat-spinner {
+      display: inline-block;
     }
-
-    .profile-info {
-      h3 { margin: 0; font-size: 1.25rem; }
-      p { margin: 0; opacity: 0.7; font-size: 0.9rem; }
-    }
-  }
-
-  .premium-chip {
-    background-color: #ffa500 !important;
-    color: white !important;
-    font-weight: bold;
-    mat-icon { color: white !important; }
-  }
-
-  .logout-btn {
-    align-self: flex-start;
   }
 }
 
-// Config Section
-.config-section {
-  .compact-field {
-    width: 80px;
-    margin-left: 16px;
-    ::ng-deep .mat-mdc-form-field-subscript-wrapper { display: none; }
-  }
-
-  .save-actions {
-    margin-top: 16px;
-    display: flex;
-    justify-content: flex-end;
-  }
-}
-
-// Sync Card
-.sync-card {
+.offline-card {
+  margin: 8px 16px;
+  padding: 16px;
   background: var(--mat-sys-surface-container-low);
-  border-radius: 16px;
-  
-  mat-icon[mat-card-avatar] {
+  border-radius: 12px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+
+  .offline-icon {
     color: var(--mat-sys-primary);
+    font-size: 28px;
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    margin-top: 2px;
   }
+
+  .offline-text {
+    h4 {
+      margin: 0 0 6px;
+      font-size: 0.95rem;
+      font-weight: 500;
+    }
+
+    p {
+      margin: 0;
+      font-size: 0.85rem;
+      color: var(--mat-sys-on-surface-variant);
+      line-height: 1.4;
+    }
+  }
+}
+
+// ─── Design ──────────────────────────────────────────────────────────────────
+
+.design-section {
+  padding: 8px 0;
+}
+
+// ─── Deaktivierte Items ───────────────────────────────────────────────────────
+
+.disabled-item {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.disabled-icon {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+// ─── Semantic Colors ─────────────────────────────────────────────────────────
+
+:host {
+  --color-overtime-positive: #4CAF50;
 }

@@ -1,11 +1,12 @@
 import { Injectable, inject } from '@angular/core';
-import { 
-  Auth, 
-  authState, 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  signOut, 
-  GoogleAuthProvider, 
+import {
+  Auth,
+  authState,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
+  deleteUser,
+  GoogleAuthProvider,
   signInWithPopup,
   User
 } from '@angular/fire/auth';
@@ -31,8 +32,15 @@ export class AuthService {
     return signInWithPopup(this.auth, provider);
   }
 
-  async signOut() {
+  async signOut(): Promise<void> {
     await signOut(this.auth);
+    this.router.navigate(['/auth/login']);
+  }
+
+  async deleteAccount(): Promise<void> {
+    const user = this.auth.currentUser;
+    if (!user) throw new Error('Kein Benutzer angemeldet');
+    await deleteUser(user);
     this.router.navigate(['/auth/login']);
   }
 

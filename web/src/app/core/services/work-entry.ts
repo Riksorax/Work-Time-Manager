@@ -240,6 +240,23 @@ export class WorkEntryService {
     };
   }
 
+  getAllLocalEntries(): WorkEntry[] {
+    const keys = JSON.parse(localStorage.getItem(LS_KEYS) ?? '[]') as string[];
+    return keys.flatMap(key => {
+      const raw = localStorage.getItem(key);
+      if (!raw) return [];
+      try {
+        const data = JSON.parse(raw) as { days: Record<string, Record<string, unknown>> };
+        const match = key.replace(LS_PREFIX, '').split('_');
+        const year  = Number(match[0]);
+        const month = Number(match[1]);
+        return Object.entries(data.days ?? {}).map(([day, dayData]) =>
+          this._fromLocalJson(dayData, new Date(year, month - 1, Number(day)))
+        );
+      } catch { return []; }
+    });
+  }
+
   private _monthKey(year: number, month: number): string {
     return `${LS_PREFIX}${year}_${String(month).padStart(2, '0')}`;
   }

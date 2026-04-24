@@ -1,92 +1,174 @@
-import { Component, inject, signal, effect, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { MatCardModule } from '@angular/material/card';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatSelectModule } from '@angular/material/select';
+import { MatDialog } from '@angular/material/dialog';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatChipsModule } from '@angular/material/chips';
-import { SettingsService } from '../../core/services/settings';
-import { ProfileService } from '../../core/services/profile';
-import { AuthService } from '../../core/auth/auth';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { SettingsPageService } from './settings.service';
+import {
+  EditTargetHoursDialogComponent,
+  EditTargetHoursDialogResult,
+} from './components/edit-target-hours-dialog/edit-target-hours-dialog.component';
+import {
+  EditWorkdaysDialogComponent,
+  EditWorkdaysDialogResult,
+} from './components/edit-workdays-dialog/edit-workdays-dialog.component';
+import {
+  AdjustOvertimeDialogComponent,
+  AdjustOvertimeDialogResult,
+} from './components/adjust-overtime-dialog/adjust-overtime-dialog.component';
 
 @Component({
   selector: 'app-settings',
-  standalone: true,
   imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    MatCardModule,
-    MatFormFieldModule,
-    MatInputModule,
+    DatePipe,
     MatButtonModule,
-    MatIconModule,
-    MatSelectModule,
     MatDividerModule,
+    MatIconModule,
     MatListModule,
-    MatSnackBarModule,
-    MatChipsModule
+    MatProgressSpinnerModule,
+    MatSlideToggleModule,
   ],
   templateUrl: './settings.html',
-  styleUrl: './settings.scss'
+  styleUrl: './settings.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SettingsComponent {
-  private fb = inject(FormBuilder);
-  private settingsService = inject(SettingsService);
-  private profileService = inject(ProfileService);
-  private authService = inject(AuthService);
-  private snackBar = inject(MatSnackBar);
+  protected readonly svc      = inject(SettingsPageService);
+  private  readonly dialog    = inject(MatDialog);
+  private  readonly snackbar  = inject(MatSnackBar);
 
-  loading = signal(false);
-  
-  settings = toSignal(this.settingsService.getSettings());
-  profile = this.profileService.profile;
-  isPremium = this.profileService.isPremium;
+  // ── Template helpers ────────────────────────────────────────────────────────
 
-  form = this.fb.group({
-    weeklyTargetHours: [40, [Validators.required, Validators.min(1), Validators.max(168)]],
-    workdaysPerWeek: [5, [Validators.required, Validators.min(1), Validators.max(7)]]
-  });
+  formatOvertime(ms: number): string {
+    const sign = ms >= 0 ? '+' : '-';
+    const abs  = Math.abs(ms);
+    const h    = Math.floor(abs / 3600000);
+    const m    = Math.floor((abs % 3600000) / 60000);
+    return `${sign}${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  }
 
-  constructor() {
-    effect(() => {
-      const current = this.settings();
-      if (current) {
-        this.form.patchValue({
-          weeklyTargetHours: current.weeklyTargetHours,
-          workdaysPerWeek: current.workdaysPerWeek
-        }, { emitEvent: false });
+  dailyTargetHours(): string {
+    return this.svc.dailyTargetHours();
+  }
+
+  // ── Actions ─────────────────────────────────────────────────────────────────
+
+  openEditTargetHoursDialog(): void {
+    const ref = this.dialog.open(EditTargetHoursDialogComponent, {
+      data: { currentHours: this.svc.settings()?.weeklyTargetHours ?? 40 },
+    });
+    ref.afterClosed().subscribe(async (result: EditTargetHoursDialogResult | undefined) => {
+      if (!result) return;
+      await this.svc.setTargetHours(result.hours);
+      this.snackbar.open('Soll-Arbeitsstunden gespeichert', 'OK', { duration: 2500 });
+    });
+  }
+
+  openEditWorkdaysDialog(): void {
+    const ref = this.dialog.open(EditWorkdaysDialogComponent, {
+      data: { currentDays: this.svc.settings()?.workdaysPerWeek ?? 5 },
+    });
+    ref.afterClosed().subscribe(async (result: EditWorkdaysDialogResult | undefined) => {
+      if (!result) return;
+      await this.svc.setWorkdays(result.days);
+      this.snackbar.open('Arbeitstage gespeichert', 'OK', { duration: 2500 });
+    });
+  }
+
+  openAdjustOvertimeDialog(): void {
+    const ref = this.dialog.open(AdjustOvertimeDialogComponent, {
+      data: { currentOvertimeMs: this.svc.overtimeMs() },
+    });
+    ref.afterClosed().subscribe(async (result: AdjustOvertimeDialogResult | undefined) => {
+      if (!result) return;
+      const ms = result === 'reset' ? 0 : result.overtimeMs;
+      await this.svc.setOvertime(ms);
+      this.snackbar.open('Gleitzeit-Bilanz gespeichert', 'OK', { duration: 2500 });
+    });
+  }
+
+  onThemeToggle(dark: boolean): void {
+    this.svc.setTheme(dark);
+  }
+
+  onLogin(): void {
+    this.svc.navigateToLogin();
+  }
+
+  onLogout(): void {
+    this.svc.logout();
+  }
+
+  onDeleteAccount(): void {
+    const ref = this.dialog.open(
+      // Inline confirm dialog via MatDialog
+      ConfirmDeleteDialogComponent,
+    );
+    ref.afterClosed().subscribe(async (confirmed: boolean | undefined) => {
+      if (!confirmed) return;
+      try {
+        await this.svc.deleteAccount();
+      } catch (e: unknown) {
+        const msg = e instanceof Error && e.message.includes('requires-recent-login')
+          ? 'Bitte erneut anmelden und dann erneut versuchen.'
+          : 'Account konnte nicht gelöscht werden.';
+        this.snackbar.open(msg, 'OK', { duration: 5000 });
       }
     });
   }
 
-  async save() {
-    if (this.form.invalid) return;
-    this.loading.set(true);
-    try {
-      const current = this.settings();
-      if (current) {
-        await this.settingsService.saveSettings({
-          ...current,
-          weeklyTargetHours: this.form.value.weeklyTargetHours!,
-          workdaysPerWeek: this.form.value.workdaysPerWeek!
-        });
-        this.snackBar.open('Einstellungen gespeichert', 'OK', { duration: 3000 });
-      }
-    } catch (error) {
-      this.snackBar.open('Fehler beim Speichern', 'OK', { duration: 5000 });
-    } finally {
-      this.loading.set(false);
+  async onSync(): Promise<void> {
+    const result = await this.svc.sync();
+    if (result.errors.length === 0) {
+      this.snackbar.open(
+        `Synchronisierung erfolgreich! Einträge: ${result.workEntriesSynced}`,
+        'OK',
+        { duration: 4000 }
+      );
+    } else {
+      this.snackbar.open(
+        `Synchronisierung mit Fehlern: ${result.errors.join(', ')}`,
+        'OK',
+        { duration: 5000 }
+      );
     }
   }
+}
 
-  logout() {
-    this.authService.signOut();
-  }
+// ── Inline Bestätigungs-Dialog ────────────────────────────────────────────────
+
+import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+
+@Component({
+  selector: 'app-confirm-delete-dialog',
+  imports: [MatDialogModule, MatButtonModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <h2 mat-dialog-title>Account endgültig löschen</h2>
+    <mat-dialog-content>
+      <p>
+        Warnung: Diese Aktion kann nicht rückgängig gemacht werden.
+        Alle Ihre Daten werden dauerhaft gelöscht.
+      </p>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button mat-button mat-dialog-close>Abbrechen</button>
+      <button mat-flat-button
+              [style.background-color]="'var(--mat-sys-error)'"
+              [style.color]="'var(--mat-sys-on-error)'"
+              (click)="confirm()"
+              aria-label="Account endgültig löschen">
+        Endgültig löschen
+      </button>
+    </mat-dialog-actions>
+  `,
+})
+export class ConfirmDeleteDialogComponent {
+  private readonly dialogRef = inject(MatDialogRef<ConfirmDeleteDialogComponent>);
+  confirm(): void { this.dialogRef.close(true); }
 }

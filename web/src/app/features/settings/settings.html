@@ -1,114 +1,236 @@
-<div class="settings-wrapper">
-  <div class="settings-content">
-    
-    <!-- Linke Spalte: Profil & Arbeitszeit -->
-    <div class="column">
-      <section class="profile-section">
-        <div class="profile-header">
-          <div class="avatar">
-            @if (profile()?.photoURL) {
-              <img [src]="profile()?.photoURL" alt="Profile">
-            } @else {
-              <div class="avatar-placeholder">
-                {{ (profile()?.displayName || '?')[0].toUpperCase() }}
-              </div>
+@if (svc.isLoading()) {
+  <div class="loading-state" aria-label="Einstellungen werden geladen">
+    <mat-spinner diameter="48" />
+  </div>
+} @else {
+  <div class="settings-wrapper">
+    <div class="settings-content">
+
+      <!-- ══════════════════════════════════════════ LINKE SPALTE ══ -->
+      <div class="column">
+
+        <!-- ── Profil-Sektion ───────────────────────────────────── -->
+        <section class="profile-section" aria-label="Profil">
+          <div class="profile-header">
+            <div class="avatar" aria-hidden="true">
+              @if (svc.user()?.photoURL) {
+                <img [src]="svc.user()!.photoURL!" alt="Profilbild" />
+              } @else {
+                <div class="avatar-placeholder">
+                  {{ (svc.user()?.displayName || svc.user()?.email || '?')[0].toUpperCase() }}
+                </div>
+              }
+            </div>
+            <div class="profile-info">
+              @if (svc.isLoggedIn()) {
+                <h3 class="profile-name">{{ svc.user()?.displayName || 'Benutzer' }}</h3>
+                <p class="profile-email">{{ svc.user()?.email }}</p>
+                @if (svc.isPremium()) {
+                  <span class="premium-badge" aria-label="Premium-Mitglied">
+                    <mat-icon aria-hidden="true">workspace_premium</mat-icon>
+                    Premium
+                  </span>
+                }
+              } @else {
+                <h3 class="profile-name">Nicht angemeldet</h3>
+                <p class="profile-email">Lokal gespeicherte Daten</p>
+              }
+            </div>
+            @if (svc.isLoggedIn()) {
+              <button mat-icon-button
+                      class="delete-account-btn"
+                      (click)="onDeleteAccount()"
+                      aria-label="Account endgültig löschen"
+                      [style.color]="'var(--mat-sys-error)'">
+                <mat-icon>delete_forever</mat-icon>
+              </button>
             }
           </div>
-          <div class="profile-info">
-            <h3>{{ profile()?.displayName || 'Benutzer' }}</h3>
-            <p>{{ profile()?.email }}</p>
-            @if (isPremium()) {
-              <mat-chip-set>
-                <mat-chip class="premium-chip">
-                  <mat-icon matChipAvatar>workspace_premium</mat-icon>
-                  Premium
-                </mat-chip>
-              </mat-chip-set>
-            }
-          </div>
-        </div>
-        <button mat-stroked-button color="warn" class="logout-btn" (click)="logout()">
-          <mat-icon>logout</mat-icon> Abmelden
-        </button>
-      </section>
 
-      <mat-divider></mat-divider>
+          @if (svc.isLoggedIn()) {
+            <button mat-stroked-button
+                    class="auth-btn auth-btn--logout"
+                    (click)="onLogout()"
+                    aria-label="Abmelden">
+              <mat-icon>logout</mat-icon>
+              Abmelden
+            </button>
+          } @else {
+            <button mat-flat-button
+                    class="auth-btn"
+                    (click)="onLogin()"
+                    aria-label="Anmelden">
+              <mat-icon>login</mat-icon>
+              Anmelden
+            </button>
+          }
+        </section>
 
-      <section class="config-section">
-        <form [formGroup]="form" (ngSubmit)="save()">
+        <mat-divider />
+
+        <!-- ── Arbeitszeit-Einstellungen ────────────────────────── -->
+        <section class="config-section" aria-label="Arbeitszeit-Einstellungen">
+          <h3 class="section-title">Arbeitszeit</h3>
+
           <mat-list>
-            <div mat-subheader>Arbeitszeit</div>
-            
-            <mat-list-item>
-              <mat-icon matListItemIcon>timer</mat-icon>
-              <div matListItemTitle>Soll-Arbeitsstunden</div>
-              <div matListItemLine>{{ form.value.weeklyTargetHours }} h/Woche</div>
-              <div matListItemMeta>
-                <mat-form-field appearance="fill" class="compact-field">
-                  <input matInput type="number" formControlName="weeklyTargetHours">
-                </mat-form-field>
-              </div>
+            <mat-list-item (click)="openEditTargetHoursDialog()" class="clickable-item"
+                           aria-label="Soll-Arbeitsstunden bearbeiten">
+              <mat-icon matListItemIcon aria-hidden="true">timer</mat-icon>
+              <span matListItemTitle>Soll-Arbeitsstunden</span>
+              <span matListItemLine>{{ svc.settings().weeklyTargetHours.toFixed(1) }} h/Woche</span>
+              <mat-icon matListItemMeta aria-hidden="true">chevron_right</mat-icon>
+            </mat-list-item>
+
+            <mat-list-item (click)="openEditWorkdaysDialog()" class="clickable-item"
+                           aria-label="Arbeitstage bearbeiten">
+              <mat-icon matListItemIcon aria-hidden="true">calendar_today</mat-icon>
+              <span matListItemTitle>Arbeitstage pro Woche</span>
+              <span matListItemLine>{{ svc.settings().workdaysPerWeek }} Tage</span>
+              <mat-icon matListItemMeta aria-hidden="true">chevron_right</mat-icon>
             </mat-list-item>
 
             <mat-list-item>
-              <mat-icon matListItemIcon>calendar_today</mat-icon>
-              <div matListItemTitle>Arbeitstage pro Woche</div>
-              <div matListItemLine>{{ form.value.workdaysPerWeek }} Tage</div>
-              <div matListItemMeta>
-                <mat-form-field appearance="fill" class="compact-field">
-                  <mat-select formControlName="workdaysPerWeek">
-                    @for (d of [1,2,3,4,5,6,7]; track d) {
-                      <mat-option [value]="d">{{ d }}</mat-option>
-                    }
-                  </mat-select>
-                </mat-form-field>
-              </div>
+              <mat-icon matListItemIcon aria-hidden="true">schedule</mat-icon>
+              <span matListItemTitle>Tägliche Soll-Arbeitszeit</span>
+              <span matListItemLine>≈ {{ dailyTargetHours() }} h/Tag</span>
             </mat-list-item>
           </mat-list>
-          
-          <div class="save-actions">
-            <button mat-flat-button color="primary" type="submit" [disabled]="form.invalid || loading()">
-              Speichern
-            </button>
+        </section>
+
+        <mat-divider />
+
+        <!-- ── Gleitzeit-Bilanz ─────────────────────────────────── -->
+        <section class="overtime-section" aria-label="Gleitzeit-Bilanz">
+          <h3 class="section-title">Gleitzeit-Bilanz</h3>
+
+          <div class="overtime-display" aria-live="polite">
+            <span class="overtime-value"
+                  [style.color]="svc.overtimeMs() >= 0 ? 'var(--color-overtime-positive)' : 'var(--mat-sys-error)'">
+              {{ formatOvertime(svc.overtimeMs()) }}
+            </span>
+            @if (svc.lastOvertimeUpdate()) {
+              <span class="overtime-date">
+                Letzte Änderung: {{ svc.lastOvertimeUpdate() | date:'dd.MM.yyyy' }}
+              </span>
+            }
           </div>
-        </form>
-      </section>
+
+          <button mat-flat-button
+                  (click)="openAdjustOvertimeDialog()"
+                  aria-label="Überstunden oder Minusstunden manuell anpassen">
+            <mat-icon>tune</mat-icon>
+            Überstunden / Minusstunden anpassen
+          </button>
+        </section>
+
+        <mat-divider />
+
+        <!-- ── Daten-Synchronisation ────────────────────────────── -->
+        <section class="sync-section" aria-label="Datensynchronisation">
+          @if (!svc.isLoggedIn()) {
+            <div class="offline-card">
+              <mat-icon class="offline-icon" aria-hidden="true">cloud_off</mat-icon>
+              <div class="offline-text">
+                <h4>Offline-Modus</h4>
+                <p>
+                  Ihre Daten werden lokal auf diesem Gerät gespeichert.
+                  Melden Sie sich an, um Ihre Daten in der Cloud zu sichern
+                  und geräteübergreifend zu synchronisieren.
+                </p>
+              </div>
+            </div>
+          } @else {
+            <button mat-stroked-button
+                    [disabled]="svc.isSyncing()"
+                    (click)="onSync()"
+                    aria-label="Lokale Daten mit der Cloud synchronisieren">
+              @if (svc.isSyncing()) {
+                <mat-spinner diameter="18" aria-hidden="true" />
+              } @else {
+                <mat-icon aria-hidden="true">cloud_sync</mat-icon>
+              }
+              Lokale Daten zu Cloud synchronisieren
+            </button>
+          }
+        </section>
+
+      </div>
+
+      <!-- ══════════════════════════════════════════ RECHTE SPALTE ══ -->
+      <div class="column">
+
+        <!-- ── Design ───────────────────────────────────────────── -->
+        <section class="design-section" aria-label="Design">
+          <h3 class="section-title">Design</h3>
+
+          <mat-list>
+            <mat-list-item>
+              <mat-icon matListItemIcon aria-hidden="true">dark_mode</mat-icon>
+              <span matListItemTitle>Design</span>
+              <span matListItemLine>{{ svc.isDarkMode() ? 'Dunkel' : 'Hell' }}</span>
+              <mat-slide-toggle matListItemMeta
+                                [checked]="svc.isDarkMode()"
+                                (change)="onThemeToggle($event.checked)"
+                                aria-label="Dunkelmodus umschalten"
+                                color="primary" />
+            </mat-list-item>
+          </mat-list>
+        </section>
+
+        <mat-divider />
+
+        <!-- ── Benachrichtigungen ───────────────────────────────── -->
+        <section aria-label="Benachrichtigungen">
+          <h3 class="section-title">Benachrichtigungen</h3>
+
+          <mat-list>
+            <mat-list-item class="disabled-item">
+              <mat-icon matListItemIcon aria-hidden="true">notifications</mat-icon>
+              <span matListItemTitle>Benachrichtigungen</span>
+              <span matListItemLine>Nicht verfügbar im Browser</span>
+              <mat-icon matListItemMeta aria-hidden="true" class="disabled-icon">block</mat-icon>
+            </mat-list-item>
+          </mat-list>
+        </section>
+
+        <mat-divider />
+
+        <!-- ── Über die App ─────────────────────────────────────── -->
+        <section aria-label="Über die App">
+          <h3 class="section-title">Über die App</h3>
+
+          <mat-list>
+            <a mat-list-item href="/imprint.html" target="_blank" rel="noopener"
+               aria-label="Impressum öffnen (neues Fenster)">
+              <mat-icon matListItemIcon aria-hidden="true">gavel</mat-icon>
+              <span matListItemTitle>Impressum</span>
+              <mat-icon matListItemMeta aria-hidden="true">open_in_new</mat-icon>
+            </a>
+
+            <a mat-list-item href="/privacy.html" target="_blank" rel="noopener"
+               aria-label="Datenschutzerklärung öffnen (neues Fenster)">
+              <mat-icon matListItemIcon aria-hidden="true">privacy_tip</mat-icon>
+              <span matListItemTitle>Datenschutzerklärung</span>
+              <mat-icon matListItemMeta aria-hidden="true">open_in_new</mat-icon>
+            </a>
+
+            <a mat-list-item href="/terms.html" target="_blank" rel="noopener"
+               aria-label="Nutzungsbedingungen öffnen (neues Fenster)">
+              <mat-icon matListItemIcon aria-hidden="true">description</mat-icon>
+              <span matListItemTitle>Nutzungsbedingungen</span>
+              <mat-icon matListItemMeta aria-hidden="true">open_in_new</mat-icon>
+            </a>
+
+            <mat-list-item>
+              <mat-icon matListItemIcon aria-hidden="true">info</mat-icon>
+              <span matListItemTitle>Version</span>
+              <span matListItemLine>Work Time Manager · Web</span>
+            </mat-list-item>
+          </mat-list>
+        </section>
+
+      </div>
+
     </div>
-
-    <!-- Rechte Spalte: Sonstiges -->
-    <div class="column">
-      <mat-list>
-        <div mat-subheader>App-Einstellungen</div>
-        
-        <mat-list-item>
-          <mat-icon matListItemIcon>notifications</mat-icon>
-          <div matListItemTitle>Benachrichtigungen</div>
-          <div matListItemLine>Browser-Support in Kürze</div>
-          <mat-icon matListItemMeta>chevron_right</mat-icon>
-        </mat-list-item>
-
-        <mat-divider></mat-divider>
-
-        <mat-list-item>
-          <mat-icon matListItemIcon>info</mat-icon>
-          <div matListItemTitle>Über die App</div>
-          <div matListItemLine>Version 1.0.0 (Web)</div>
-          <mat-icon matListItemMeta>chevron_right</mat-icon>
-        </mat-list-item>
-      </mat-list>
-
-      <section class="sync-card-wrapper">
-        <mat-card class="sync-card">
-          <mat-card-header>
-            <mat-icon mat-card-avatar>cloud_done</mat-icon>
-            <mat-card-title>Cloud-Sync</mat-card-title>
-          </mat-card-header>
-          <mat-card-content>
-            Ihre Daten werden automatisch mit der Firebase Cloud synchronisiert.
-          </mat-card-content>
-        </mat-card>
-      </section>
-    </div>
-
   </div>
-</div>
+}
