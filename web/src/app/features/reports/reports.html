@@ -53,14 +53,31 @@
                 {{ svc.selectedDate() | date:'EEEE, d. MMMM yyyy' }}
               </h2>
 
-              @if (svc.isMultiSelectActive()) {
-                <button mat-flat-button class="batch-btn"
-                        (click)="openBatchQuickEntryDialog()"
-                        aria-label="Schnell-Eintrag für alle ausgewählten Tage">
-                  <mat-icon>edit_calendar</mat-icon>
-                  {{ svc.selectedDates().size }} Tage
-                </button>
-              }
+              <div class="day-header-actions">
+                @if (svc.isMultiSelectActive()) {
+                  @if (svc.selectedDates().size > 0) {
+                    <button mat-flat-button class="batch-btn"
+                            (click)="openBatchQuickEntryDialog()"
+                            aria-label="Schnell-Eintrag für alle ausgewählten Tage">
+                      <mat-icon>edit_calendar</mat-icon>
+                      {{ svc.selectedDates().size }} Tage
+                    </button>
+                  }
+                  <button mat-stroked-button
+                          (click)="svc.toggleMultiSelect()"
+                          aria-label="Mehrfachauswahl beenden">
+                    <mat-icon>close</mat-icon>
+                    Abbrechen
+                  </button>
+                } @else {
+                  <button mat-stroked-button
+                          (click)="svc.toggleMultiSelect()"
+                          aria-label="Mehrere Tage auswählen">
+                    <mat-icon>date_range</mat-icon>
+                    Mehrfachauswahl
+                  </button>
+                }
+              </div>
             </div>
 
             @if (svc.selectedDayEntries().length === 0) {
