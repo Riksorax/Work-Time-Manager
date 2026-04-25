@@ -227,6 +227,8 @@ export class ReportsService {
   }
 
   addDateRangeSelection(dates: Date[]): void {
+    // Drag-Auswahl aktiviert Multi-Select automatisch
+    if (!this.isMultiSelectActive()) this._isMultiSelectActive.set(true);
     this._selectedDates.update((prev: Set<string>) => {
       const next = new Set(prev);
       dates.forEach(d => next.add(toDateKey(d)));

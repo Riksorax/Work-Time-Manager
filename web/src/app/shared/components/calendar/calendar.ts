@@ -25,8 +25,11 @@ function toKey(d: Date): string {
   template: `
     <div class="calendar-card"
          #calendarCard
-         (pointerup)="onPointerUp($event)"
-         (pointercancel)="onPointerCancel($event)">
+         (pointerdown)="onCardPointerDown($event)"
+         (pointermove)="onCardPointerMove($event)"
+         (pointerup)="onCardPointerUp($event)"
+         (pointercancel)="onCardPointerUp($event)">
+
       <div class="calendar-header">
         <button mat-icon-button (click)="changeMonth(-1)" aria-label="Vorheriger Monat">
           <mat-icon>chevron_left</mat-icon>
@@ -52,16 +55,14 @@ function toKey(d: Date): string {
           <div
             class="calendar-day"
             role="gridcell"
+            [attr.data-date]="dayKey(day.date)"
             [attr.aria-label]="day.date | date:'d. MMMM yyyy'"
             [attr.aria-selected]="isSameDay(day.date, selectedDate())"
             [attr.aria-pressed]="isMultiSelected(day.date)"
-            [class.selected]="!multiSelectMode() && isSameDay(day.date, selectedDate())"
+            [class.selected]="!hasMultiSelected() && isSameDay(day.date, selectedDate())"
             [class.today]="isToday(day.date)"
             [class.has-entry]="hasEntry(day.date)"
             [class.multi-selected]="isMultiSelected(day.date)"
-            (click)="onDayClick(day.date)"
-            (pointerdown)="onPointerDown($event, day.date)"
-            (pointermove)="onPointerMove($event, day.date)"
           >
             <span class="day-number">{{ day.date.getDate() }}</span>
             @if (hasEntry(day.date)) {
@@ -151,7 +152,6 @@ function toKey(d: Date): string {
 export class CalendarComponent {
   readonly selectedDate       = input.required<Date>();
   readonly daysWithEntries    = input<number[]>([]);
-  readonly multiSelectMode    = input<boolean>(false);
   readonly multiSelectedDates = input<Set<string>>(new Set());
 
   readonly dateSelected = output<Date>();
@@ -159,12 +159,10 @@ export class CalendarComponent {
   readonly dragSelected = output<Date[]>();
 
   readonly viewDate = signal(new Date());
-
   readonly weekDays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 
   private readonly _cardRef = viewChild<ElementRef<HTMLElement>>('calendarCard');
 
-  // Drag state
   private _dragStart: Date | null = null;
   private _isDragging = false;
   private _activePointerId: number | null = null;
@@ -212,45 +210,54 @@ export class CalendarComponent {
     return this.multiSelectedDates().has(toKey(date));
   }
 
-  onDayClick(date: Date): void {
-    if (this._isDragging) return;
-    this.dateSelected.emit(date);
+  hasMultiSelected(): boolean {
+    return this.multiSelectedDates().size > 0;
   }
 
-  // ── Pointer Events for Drag Selection ──────────────────────────────────────
+  dayKey(d: Date): string { return toKey(d); }
 
-  onPointerDown(event: PointerEvent, date: Date): void {
-    if (!this.multiSelectMode()) return;
-    this._dragStart = date;
-    this._isDragging = false; // will become true on move
+  // ── Pointer Events (Container-level) ────────────────────────────────────────
+
+  onCardPointerDown(event: PointerEvent): void {
+    const date = this._dateFromPoint(event.clientX, event.clientY);
+    if (!date) return;
+
+    this._dragStart       = date;
+    this._isDragging      = false;
     this._activePointerId = event.pointerId;
-    (event.target as Element).setPointerCapture(event.pointerId);
+    this._cardRef()?.nativeElement.setPointerCapture(event.pointerId);
     event.preventDefault();
   }
 
-  onPointerMove(event: PointerEvent, date: Date): void {
-    if (!this.multiSelectMode() || this._dragStart === null) return;
+  onCardPointerMove(event: PointerEvent): void {
+    if (this._activePointerId === null || this._dragStart === null) return;
     if (event.pointerId !== this._activePointerId) return;
-    this._isDragging = true;
-    this.dragSelected.emit(this._dateRange(this._dragStart, date));
+
+    const date = this._dateFromPoint(event.clientX, event.clientY);
+    if (!date) return;
+
+    // Drag beginnt sobald der Finger einen anderen Tag berührt
+    if (!this.isSameDay(date, this._dragStart) || this._isDragging) {
+      this._isDragging = true;
+      this.dragSelected.emit(this._dateRange(this._dragStart, date));
+    }
     event.preventDefault();
   }
 
-  onPointerUp(event: PointerEvent): void {
-    if (this._activePointerId !== null) {
-      const el = this._cardRef()?.nativeElement;
-      if (el?.hasPointerCapture(event.pointerId)) {
-        el.releasePointerCapture(event.pointerId);
-      }
+  onCardPointerUp(event: PointerEvent): void {
+    const card = this._cardRef()?.nativeElement;
+    if (card?.hasPointerCapture(event.pointerId)) {
+      card.releasePointerCapture(event.pointerId);
     }
-    this._dragStart = null;
-    this._activePointerId = null;
-    // Reset isDragging on next microtask to let click handler check it first
-    setTimeout(() => { this._isDragging = false; });
-  }
 
-  onPointerCancel(event: PointerEvent): void {
-    this.onPointerUp(event);
+    if (!this._isDragging && this._dragStart) {
+      // Einfacher Tap → Tag auswählen
+      this.dateSelected.emit(this._dragStart);
+    }
+
+    this._dragStart       = null;
+    this._activePointerId = null;
+    setTimeout(() => { this._isDragging = false; });
   }
 
   changeMonth(delta: number): void {
@@ -261,6 +268,15 @@ export class CalendarComponent {
   }
 
   // ── Private ─────────────────────────────────────────────────────────────────
+
+  private _dateFromPoint(x: number, y: number): Date | null {
+    const el      = document.elementFromPoint(x, y);
+    const dayEl   = el?.closest('[data-date]') as HTMLElement | null;
+    const dateStr = dayEl?.dataset['date'];
+    if (!dateStr) return null;
+    const [yr, mo, da] = dateStr.split('-').map(Number);
+    return new Date(yr, mo - 1, da);
+  }
 
   private _dateRange(a: Date, b: Date): Date[] {
     const start = a <= b ? a : b;

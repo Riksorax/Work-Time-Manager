@@ -74,6 +74,14 @@ export class ReportsComponent {
     this.activeTabIndex.set(index);
   }
 
+  onCalendarDayTap(date: Date): void {
+    if (this.svc.isMultiSelectActive()) {
+      this.svc.toggleDateSelection(date);
+    } else {
+      this.svc.selectDate(date);
+    }
+  }
+
   openEditDialog(entry?: WorkEntry): void {
     const ref = this.dialog.open(EditEntryDialogComponent, {
       width: '520px',

@@ -17,9 +17,8 @@
             <app-calendar
               [selectedDate]="svc.selectedDate()"
               [daysWithEntries]="svc.daysWithEntries()"
-              [multiSelectMode]="svc.isMultiSelectActive()"
               [multiSelectedDates]="svc.selectedDates()"
-              (dateSelected)="svc.selectDate($event)"
+              (dateSelected)="onCalendarDayTap($event)"
               (monthChanged)="svc.onMonthChanged($event)"
               (dragSelected)="svc.addDateRangeSelection($event)"
               aria-label="Monatskalender"
@@ -53,8 +52,8 @@
                 {{ svc.selectedDate() | date:'EEEE, d. MMMM yyyy' }}
               </h2>
 
-              <div class="day-header-actions">
-                @if (svc.isMultiSelectActive()) {
+              @if (svc.isMultiSelectActive()) {
+                <div class="day-header-actions">
                   @if (svc.selectedDates().size > 0) {
                     <button mat-flat-button class="batch-btn"
                             (click)="openBatchQuickEntryDialog()"
@@ -69,15 +68,8 @@
                     <mat-icon>close</mat-icon>
                     Abbrechen
                   </button>
-                } @else {
-                  <button mat-stroked-button
-                          (click)="svc.toggleMultiSelect()"
-                          aria-label="Mehrere Tage auswählen">
-                    <mat-icon>date_range</mat-icon>
-                    Mehrfachauswahl
-                  </button>
-                }
-              </div>
+                </div>
+              }
             </div>
 
             @if (svc.selectedDayEntries().length === 0) {
