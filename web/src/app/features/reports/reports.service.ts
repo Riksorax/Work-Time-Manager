@@ -227,13 +227,21 @@ export class ReportsService {
   }
 
   addDateRangeSelection(dates: Date[]): void {
-    // Drag-Auswahl aktiviert Multi-Select automatisch
     if (!this.isMultiSelectActive()) this._isMultiSelectActive.set(true);
+    const workdays = this._settings().workdaysPerWeek;
+    const filtered = dates.filter(d => this._isWorkday(d, workdays));
     this._selectedDates.update((prev: Set<string>) => {
       const next = new Set(prev);
-      dates.forEach(d => next.add(toDateKey(d)));
+      filtered.forEach(d => next.add(toDateKey(d)));
       return next;
     });
+  }
+
+  private _isWorkday(date: Date, workdaysPerWeek: number): boolean {
+    const dow = date.getDay(); // 0=So, 1=Mo, ..., 6=Sa
+    if (workdaysPerWeek >= 7) return true;
+    if (workdaysPerWeek >= 6) return dow !== 0;          // Mo–Sa
+    return dow >= 1 && dow <= 5;                         // Mo–Fr
   }
 
   clearDateSelection(): void {
