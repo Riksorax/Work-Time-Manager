@@ -62,17 +62,12 @@
   }
 
   <mat-sidenav-content>
-    <mat-toolbar>
-      @if (isMobile()) {
+    @if (isMobile()) {
+      <mat-toolbar>
         <span>Work Time Manager</span>
-      }
-      <span class="spacer"></span>
-      @if (!isMobile() && user()) {
-        <button mat-icon-button (click)="logout()" aria-label="Abmelden">
-          <mat-icon>logout</mat-icon>
-        </button>
-      }
-    </mat-toolbar>
+        <span class="spacer"></span>
+      </mat-toolbar>
+    }
 
     <main class="content" [class.has-bottom-nav]="isMobile()">
       <router-outlet />

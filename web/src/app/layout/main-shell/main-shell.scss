@@ -7,6 +7,10 @@
 .sidenav {
   width: 240px;
   border-right: 1px solid var(--mat-sys-outline-variant);
+}
+
+// Material's innerer Container muss Flex sein damit Spacer funktioniert
+::ng-deep .sidenav .mat-drawer-inner-container {
   display: flex;
   flex-direction: column;
   overflow: hidden;
