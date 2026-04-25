@@ -98,6 +98,16 @@ export class DashboardService {
       void this._init(user?.uid ?? null);
     });
 
+    // Einstellungen reaktiv halten — Überstunden bei Änderung neu berechnen
+    this.settingsSvc.getSettings()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(s => {
+        this._settingsCache = { weeklyTargetHours: s.weeklyTargetHours, workdaysPerWeek: s.workdaysPerWeek };
+        if (this._s().status === 'ready') {
+          this._recalculateOvertime();
+        }
+      });
+
     // Page Visibility API — re-sync elapsed on tab focus (Flow 4)
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible' && this.isTimerRunning()) {
@@ -126,10 +136,11 @@ export class DashboardService {
       // 3. Wocheneinträge laden (inkl. Vormonat falls nötig)
       await this._loadWeekEntries(today);
 
-      // 4. Einstellungen laden
+      // 4. Einstellungen laden + Cache sofort befüllen
       const settings = await new Promise<{ weeklyTargetHours: number; workdaysPerWeek: number }>(resolve => {
         this.settingsSvc.getSettings().pipe(takeUntilDestroyed(this.destroyRef)).subscribe(s => resolve(s));
       });
+      this._settingsCache = { weeklyTargetHours: settings.weeklyTargetHours, workdaysPerWeek: settings.workdaysPerWeek };
 
       // 5. Effektives Tagessoll berechnen
       const weeklyMs          = settings.weeklyTargetHours * 60 * 60 * 1000;
