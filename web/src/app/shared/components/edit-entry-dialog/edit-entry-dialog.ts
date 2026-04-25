@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormArray } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDividerModule } from '@angular/material/divider';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -15,12 +16,21 @@ interface BreakFormValue {
   end: string;
 }
 
+interface EntryFormValue {
+  type: WorkEntryType;
+  startTime: string;
+  endTime: string;
+  manualOvertimeMinutes: number | null;
+  breaks: BreakFormValue[];
+}
+
 @Component({
   selector: 'app-edit-entry-dialog',
   imports: [
     ReactiveFormsModule,
     MatDialogModule,
     MatButtonModule,
+    MatDividerModule,
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
@@ -80,6 +90,18 @@ interface BreakFormValue {
             </div>
           }
         </div>
+
+        <mat-divider class="section-divider" />
+
+        <div class="section-header">
+          <h3>Manuelle Zeitkorrektur</h3>
+        </div>
+        <mat-form-field appearance="outline">
+          <mat-label>Minuten (+ Überstunden / − Minusstunden)</mat-label>
+          <input matInput type="number" formControlName="manualOvertimeMinutes"
+                 aria-label="Manuelle Zeitkorrektur in Minuten" />
+          <mat-hint>z.B. 30 für +30 Min, -15 für −15 Min</mat-hint>
+        </mat-form-field>
       </form>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
@@ -91,9 +113,10 @@ interface BreakFormValue {
     .edit-form { display: flex; flex-direction: column; gap: 8px; min-width: 400px; padding-top: 8px; }
     .time-row { display: flex; gap: 16px; }
     .section-header {
-      display: flex; justify-content: space-between; align-items: center; margin: 16px 0 8px;
+      display: flex; justify-content: space-between; align-items: center; margin: 16px 0 4px;
       h3 { margin: 0; font-size: 1rem; }
     }
+    .section-divider { margin: 8px 0; }
     .break-row { display: flex; gap: 8px; align-items: center; }
     .flex-2 { flex: 2; }
     .flex-1 { flex: 1; }
@@ -110,15 +133,16 @@ export class EditEntryDialogComponent {
   constructor() {
     const entry = this.data.entry;
     this.form = this.fb.group({
-      type:      [entry?.type ?? WorkEntryType.Work, Validators.required],
-      startTime: [this._formatTime(entry?.workStart)],
-      endTime:   [this._formatTime(entry?.workEnd)],
+      type:                  [entry?.type ?? WorkEntryType.Work, Validators.required],
+      startTime:             [this._formatTime(entry?.workStart)],
+      endTime:               [this._formatTime(entry?.workEnd)],
+      manualOvertimeMinutes: [entry?.manualOvertimeMinutes ?? null],
       breaks: this.fb.array(
         (entry?.breaks ?? []).map(b => this.fb.group({
           id:    [b.id],
-          name:  [b.name,                   Validators.required],
-          start: [this._formatTime(b.start), Validators.required],
-          end:   [this._formatTime(b.end),   Validators.required],
+          name:  [b.name,                    Validators.required],
+          start: [this._formatTime(b.start),  Validators.required],
+          end:   [this._formatTime(b.end),    Validators.required],
         }))
       ),
     });
@@ -141,16 +165,17 @@ export class EditEntryDialogComponent {
 
   onSave(): void {
     if (this.form.invalid) return;
-    const val  = this.form.value as { type: WorkEntryType; startTime: string; endTime: string; breaks: BreakFormValue[] };
+    const val  = this.form.value as EntryFormValue;
     const date = this.data.date;
 
     const result: Partial<WorkEntry> = {
-      id:               this.data.entry?.id ?? date.toISOString().split('T')[0],
+      id:                    this.data.entry?.id ?? date.toISOString().split('T')[0],
       date,
-      type:             val.type,
-      workStart:        this._parseTime(date, val.startTime),
-      workEnd:          this._parseTime(date, val.endTime),
-      isManuallyEntered: true,
+      type:                  val.type,
+      workStart:             this._parseTime(date, val.startTime),
+      workEnd:               this._parseTime(date, val.endTime),
+      manualOvertimeMinutes: val.manualOvertimeMinutes ?? undefined,
+      isManuallyEntered:     true,
       breaks: val.breaks.map((b): Break => ({
         id:          b.id,
         name:        b.name,
