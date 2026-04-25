@@ -1,8 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import { Firestore, doc, docData, setDoc } from '@angular/fire/firestore';
+import { BehaviorSubject, Observable, map, switchMap } from 'rxjs';
 import { AuthService } from '../auth/auth';
 import { UserSettings } from '../../shared/models';
-import { Observable, map, of, switchMap } from 'rxjs';
 
 const LS_KEY = 'user_settings';
 
@@ -22,10 +22,13 @@ export class SettingsService {
     notifyBreaks: false,
   };
 
+  // Reaktiver Stream für localStorage-Modus
+  private readonly _local$ = new BehaviorSubject<UserSettings>(this._localGet());
+
   getSettings(): Observable<UserSettings> {
     return this.auth.user$.pipe(
       switchMap(user => {
-        if (!user) return of(this._localGet());
+        if (!user) return this._local$.asObservable();
 
         const docRef = doc(this.firestore, `users/${user.uid}/settings/current`);
         return docData(docRef).pipe(
@@ -45,7 +48,7 @@ export class SettingsService {
     await setDoc(docRef, settings, { merge: true });
   }
 
-  // ── localStorage (Gast-Modus) ─────────────────────────────────────────────
+  // ── localStorage ─────────────────────────────────────────────────────────
 
   private _localGet(): UserSettings {
     const raw = localStorage.getItem(LS_KEY);
@@ -57,5 +60,6 @@ export class SettingsService {
 
   private _localSave(settings: UserSettings): void {
     localStorage.setItem(LS_KEY, JSON.stringify(settings));
+    this._local$.next(settings); // Subscriber sofort informieren
   }
 }

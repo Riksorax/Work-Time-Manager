@@ -147,12 +147,17 @@
   padding: 8px 0;
 }
 
-.clickable-item {
+// button mat-list-item: Browser-Defaults zurücksetzen
+button[mat-list-item] {
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font: inherit;
   cursor: pointer;
 
   &:hover {
     background-color: var(--mat-sys-surface-container-high);
-    border-radius: 4px;
   }
 }
 
