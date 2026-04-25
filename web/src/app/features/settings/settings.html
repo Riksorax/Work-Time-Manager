@@ -73,21 +73,21 @@
           <h3 class="section-title">Arbeitszeit</h3>
 
           <mat-list>
-            <mat-list-item (click)="openEditTargetHoursDialog()" class="clickable-item"
-                           aria-label="Soll-Arbeitsstunden bearbeiten">
+            <button mat-list-item (click)="openEditTargetHoursDialog()"
+                    aria-label="Soll-Arbeitsstunden bearbeiten">
               <mat-icon matListItemIcon aria-hidden="true">timer</mat-icon>
               <span matListItemTitle>Soll-Arbeitsstunden</span>
               <span matListItemLine>{{ svc.settings().weeklyTargetHours.toFixed(1) }} h/Woche</span>
               <mat-icon matListItemMeta aria-hidden="true">chevron_right</mat-icon>
-            </mat-list-item>
+            </button>
 
-            <mat-list-item (click)="openEditWorkdaysDialog()" class="clickable-item"
-                           aria-label="Arbeitstage bearbeiten">
+            <button mat-list-item (click)="openEditWorkdaysDialog()"
+                    aria-label="Arbeitstage bearbeiten">
               <mat-icon matListItemIcon aria-hidden="true">calendar_today</mat-icon>
               <span matListItemTitle>Arbeitstage pro Woche</span>
               <span matListItemLine>{{ svc.settings().workdaysPerWeek }} Tage</span>
               <mat-icon matListItemMeta aria-hidden="true">chevron_right</mat-icon>
-            </mat-list-item>
+            </button>
 
             <mat-list-item>
               <mat-icon matListItemIcon aria-hidden="true">schedule</mat-icon>
