@@ -1,20 +1,15 @@
 import { Injectable, inject } from '@angular/core';
-import { 
-  Firestore, 
-  doc, 
-  docData, 
-  setDoc
-} from '@angular/fire/firestore';
+import { Firestore, doc, docData, setDoc } from '@angular/fire/firestore';
 import { AuthService } from '../auth/auth';
 import { UserSettings } from '../../shared/models';
 import { Observable, map, of, switchMap } from 'rxjs';
 
-@Injectable({
-  providedIn: 'root'
-})
+const LS_KEY = 'user_settings';
+
+@Injectable({ providedIn: 'root' })
 export class SettingsService {
-  private firestore = inject(Firestore);
-  private auth = inject(AuthService);
+  private readonly firestore = inject(Firestore);
+  private readonly auth      = inject(AuthService);
 
   private readonly defaultSettings: UserSettings = {
     weeklyTargetHours: 40,
@@ -24,14 +19,14 @@ export class SettingsService {
     notificationDays: [1, 2, 3, 4, 5],
     notifyWorkStart: false,
     notifyWorkEnd: false,
-    notifyBreaks: false
+    notifyBreaks: false,
   };
 
   getSettings(): Observable<UserSettings> {
     return this.auth.user$.pipe(
       switchMap(user => {
-        if (!user) return of(this.defaultSettings);
-        
+        if (!user) return of(this._localGet());
+
         const docRef = doc(this.firestore, `users/${user.uid}/settings/current`);
         return docData(docRef).pipe(
           map(data => (data as UserSettings) || this.defaultSettings)
@@ -42,9 +37,25 @@ export class SettingsService {
 
   async saveSettings(settings: UserSettings): Promise<void> {
     const uid = this.auth.uid;
-    if (!uid) throw new Error('Kein User angemeldet');
-
+    if (!uid) {
+      this._localSave(settings);
+      return;
+    }
     const docRef = doc(this.firestore, `users/${uid}/settings/current`);
     await setDoc(docRef, settings, { merge: true });
+  }
+
+  // ── localStorage (Gast-Modus) ─────────────────────────────────────────────
+
+  private _localGet(): UserSettings {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return { ...this.defaultSettings };
+    try {
+      return { ...this.defaultSettings, ...(JSON.parse(raw) as Partial<UserSettings>) };
+    } catch { return { ...this.defaultSettings }; }
+  }
+
+  private _localSave(settings: UserSettings): void {
+    localStorage.setItem(LS_KEY, JSON.stringify(settings));
   }
 }
