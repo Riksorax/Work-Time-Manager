@@ -9,6 +9,7 @@
   border-right: 1px solid var(--mat-sys-outline-variant);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .sidenav-header {
