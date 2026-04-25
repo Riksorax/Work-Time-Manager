@@ -1,6 +1,6 @@
 import { Injectable, inject, signal, computed, effect, DestroyRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { interval } from 'rxjs';
+import { firstValueFrom, interval } from 'rxjs';
 import { WorkEntryService } from '../../core/services/work-entry';
 import { OvertimeService }  from '../../core/services/overtime';
 import { SettingsService }  from '../../core/services/settings';
@@ -125,9 +125,7 @@ export class DashboardService {
       const today = new Date();
 
       // 1. Heutigen Eintrag laden
-      const workEntry = await new Promise<WorkEntry | null>(resolve => {
-        this.workSvc.getTodayEntry().pipe(takeUntilDestroyed(this.destroyRef)).subscribe(e => resolve(e));
-      }) ?? this.workSvc.emptyEntry(today);
+      const workEntry = (await firstValueFrom(this.workSvc.getTodayEntry())) ?? this.workSvc.emptyEntry(today);
 
       // 2. Überstunden + Datum laden
       const storedOvertimeMs = await this.overtimeSvc.getOvertime();
@@ -136,10 +134,8 @@ export class DashboardService {
       // 3. Wocheneinträge laden (inkl. Vormonat falls nötig)
       await this._loadWeekEntries(today);
 
-      // 4. Einstellungen laden + Cache sofort befüllen
-      const settings = await new Promise<{ weeklyTargetHours: number; workdaysPerWeek: number }>(resolve => {
-        this.settingsSvc.getSettings().pipe(takeUntilDestroyed(this.destroyRef)).subscribe(s => resolve(s));
-      });
+      // 4. Einstellungen laden + Cache sofort befüllen (firstValueFrom = take(1), keine dauerhafte Subscription)
+      const settings = await firstValueFrom(this.settingsSvc.getSettings());
       this._settingsCache = { weeklyTargetHours: settings.weeklyTargetHours, workdaysPerWeek: settings.workdaysPerWeek };
 
       // 5. Effektives Tagessoll berechnen
@@ -187,20 +183,18 @@ export class DashboardService {
   }
 
   private async _loadWeekEntries(today: Date): Promise<void> {
-    const monthEntries = await new Promise<WorkEntry[]>(resolve => {
+    const monthEntries = await firstValueFrom(
       this.workSvc.getEntriesForMonth(today.getFullYear(), today.getMonth() + 1)
-        .pipe(takeUntilDestroyed(this.destroyRef)).subscribe(e => resolve(e));
-    });
+    );
 
     this._weekEntries = getWeekEntriesForDate(today, monthEntries);
 
     const startOfWeek = new Date(today);
     startOfWeek.setDate(today.getDate() - ((today.getDay() || 7) - 1));
     if (startOfWeek.getMonth() !== today.getMonth()) {
-      const prevEntries = await new Promise<WorkEntry[]>(resolve => {
+      const prevEntries = await firstValueFrom(
         this.workSvc.getEntriesForMonth(startOfWeek.getFullYear(), startOfWeek.getMonth() + 1)
-          .pipe(takeUntilDestroyed(this.destroyRef)).subscribe(e => resolve(e));
-      });
+      );
       this._weekEntries = [...getWeekEntriesForDate(today, prevEntries), ...this._weekEntries];
     }
   }
