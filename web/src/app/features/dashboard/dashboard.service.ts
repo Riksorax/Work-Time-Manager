@@ -302,6 +302,19 @@ export class DashboardService {
     await this._recalculateState({ ...e, breaks }, true);
   }
 
+  // ─── Flow 12: Überstunden manuell anpassen ────────────────────────────────
+  async updateInitialOvertime(newTotalMs: number): Promise<void> {
+    const daily = this._s().dailyOvertimeMs ?? 0;
+    const newInitial = newTotalMs - daily;
+    this._s.update(s => ({
+      ...s,
+      initialOvertimeMs: newInitial,
+      totalOvertimeMs:   newTotalMs,
+    }));
+    await this.overtimeSvc.saveOvertime(newTotalMs);
+    await this.overtimeSvc.saveLastUpdateDate(new Date());
+  }
+
   // ─── Timer Internals ──────────────────────────────────────────────────────
   private _startTimerIfNeeded(): void {
     const e = this._s().workEntry;

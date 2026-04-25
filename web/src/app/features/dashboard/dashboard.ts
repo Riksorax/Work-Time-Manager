@@ -11,6 +11,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { DashboardService } from './dashboard.service';
 import { EditBreakDialogComponent, EditBreakDialogData, EditBreakDialogResult } from './components/edit-break-dialog/edit-break-dialog.component';
 import { RestartSessionDialogComponent, RestartSessionDialogResult } from './components/restart-session-dialog/restart-session-dialog.component';
+import { AdjustOvertimeDialogComponent, AdjustOvertimeDialogResult } from '../settings/components/adjust-overtime-dialog/adjust-overtime-dialog.component';
 import { TimeInputComponent } from '../../shared/components/time-input/time-input.component';
 import { Break } from '../../shared/models/index';
 
@@ -56,6 +57,17 @@ export class DashboardComponent {
   }
 
   // ─── Actions ─────────────────────────────────────────────────────────────────
+
+  openAdjustOvertimeDialog(): void {
+    const ref = this.dialog.open(AdjustOvertimeDialogComponent, {
+      data: { currentOvertimeMs: this.svc.totalOvertime() ?? 0 },
+    });
+    ref.afterClosed().subscribe(async (result: AdjustOvertimeDialogResult | undefined) => {
+      if (!result) return;
+      const ms = result === 'reset' ? 0 : result.overtimeMs;
+      await this.svc.updateInitialOvertime(ms);
+    });
+  }
 
   async onMainAction(): Promise<void> {
     const result = await this.svc.startOrStopTimer();
