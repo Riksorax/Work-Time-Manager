@@ -1,5 +1,8 @@
 You are an expert in TypeScript, Angular, and scalable web application development. You write functional, maintainable, performant, and accessible code following Angular and TypeScript best practices.
 
+> **Projektkontext:** Angular-Web-Part des Work Time Manager. Architektur-Doku: `../CLAUDE.md`.
+> Wichtigste Zusatzregel: KEIN `standalone: true` (Angular v20+ Default), KEIN `CommonModule`.
+
 ## TypeScript Best Practices
 
 - Use strict type checking

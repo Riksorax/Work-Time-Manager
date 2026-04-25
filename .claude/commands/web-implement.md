@@ -22,10 +22,13 @@ Implementiere alle Schritte aus dem Plan (`web/thoughts/$ARGUMENTS-plan.md`).
 8. `npm test` ausführen — alle grün
 
 **Regeln:**
-- `standalone: true` + `ChangeDetectionStrategy.OnPush` bei allen Components
+- KEIN `standalone: true` (Angular v20+ Default) + `ChangeDetectionStrategy.OnPush` bei allen Components
+- KEIN `CommonModule` — nur spezifische Imports (`DatePipe`, `AsyncPipe` etc.)
 - `inject()` statt Constructor-Parameter
 - `@if` / `@for` statt `*ngIf` / `*ngFor`
-- `takeUntilDestroyed()` für alle Subscriptions
+- `firstValueFrom()` für einmalige Observable-Werte (statt `new Promise + subscribe`)
+- Dauerhafte Subscriptions via `takeUntilDestroyed()` absichern
+- Öffentliche Signals via `.asReadonly()` exponieren
 - Keine `any`-Typen
 - Alle Strings auf Deutsch
 - Premium-Features hinter `PremiumService.isPremium()`
