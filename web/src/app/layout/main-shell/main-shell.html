@@ -2,8 +2,15 @@
 
   @if (!isMobile()) {
     <mat-sidenav class="sidenav" fixedInViewport role="navigation" mode="side" [opened]="true">
-      <mat-toolbar>Menü</mat-toolbar>
-      <mat-nav-list>
+
+      <!-- App-Titel -->
+      <div class="sidenav-header">
+        <mat-icon class="sidenav-logo" aria-hidden="true">schedule</mat-icon>
+        <span class="sidenav-title">Work Time Manager</span>
+      </div>
+
+      <!-- Hauptnavigation -->
+      <mat-nav-list class="sidenav-nav">
         <a mat-list-item routerLink="/dashboard" routerLinkActive="active-link" ariaCurrentWhenActive="page">
           <mat-icon matListItemIcon>home</mat-icon>
           <span matListItemTitle>Dashboard</span>
@@ -17,15 +24,50 @@
           <span matListItemTitle>Einstellungen</span>
         </a>
       </mat-nav-list>
+
+      <!-- Spacer -->
+      <div class="sidenav-spacer"></div>
+
+      <!-- User / Login -->
+      <div class="sidenav-footer">
+        @if (user()) {
+          <div class="sidenav-user">
+            <mat-icon class="user-icon" aria-hidden="true">account_circle</mat-icon>
+            <span class="user-email" [title]="user()!.email ?? ''">{{ user()!.email }}</span>
+            <button mat-icon-button (click)="logout()" aria-label="Abmelden"
+                    matTooltip="Abmelden">
+              <mat-icon>logout</mat-icon>
+            </button>
+          </div>
+        } @else {
+          <a mat-list-item routerLink="/auth/login" class="login-item" aria-label="Anmelden">
+            <mat-icon matListItemIcon>login</mat-icon>
+            <span matListItemTitle>Anmelden</span>
+          </a>
+        }
+
+        <mat-divider />
+
+        <!-- Rechtliche Links -->
+        <div class="legal-links">
+          <a href="/imprint.html" target="_blank" rel="noopener">Impressum</a>
+          <span aria-hidden="true">·</span>
+          <a href="/privacy.html" target="_blank" rel="noopener">Datenschutz</a>
+          <span aria-hidden="true">·</span>
+          <a href="/terms.html" target="_blank" rel="noopener">AGB</a>
+        </div>
+      </div>
+
     </mat-sidenav>
   }
 
   <mat-sidenav-content>
     <mat-toolbar>
-      <span>Work Time Manager</span>
+      @if (isMobile()) {
+        <span>Work Time Manager</span>
+      }
       <span class="spacer"></span>
-      @if (user()) {
-        <span class="user-email">{{ user()?.email }}</span>
+      @if (!isMobile() && user()) {
         <button mat-icon-button (click)="logout()" aria-label="Abmelden">
           <mat-icon>logout</mat-icon>
         </button>
@@ -50,6 +92,12 @@
           <mat-icon>settings</mat-icon>
           <span>Einstellungen</span>
         </a>
+        @if (!user()) {
+          <a class="bottom-nav-item" routerLink="/auth/login" ariaCurrentWhenActive="page">
+            <mat-icon>login</mat-icon>
+            <span>Anmelden</span>
+          </a>
+        }
       </nav>
     }
   </mat-sidenav-content>

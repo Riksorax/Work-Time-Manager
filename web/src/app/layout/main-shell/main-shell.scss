@@ -2,35 +2,111 @@
   height: 100%;
 }
 
+// ── Sidebar ───────────────────────────────────────────────────────────────────
+
 .sidenav {
   width: 240px;
   border-right: 1px solid var(--mat-sys-outline-variant);
+  display: flex;
+  flex-direction: column;
 }
 
-.sidenav .mat-toolbar {
-  background: transparent;
+.sidenav-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 16px 12px;
+}
+
+.sidenav-logo {
+  color: var(--mat-sys-primary);
+  font-size: 28px;
+  width: 28px;
+  height: 28px;
+}
+
+.sidenav-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--mat-sys-on-surface);
+}
+
+.sidenav-nav {
+  padding: 4px 0;
 }
 
 .active-link {
   background-color: var(--mat-sys-secondary-container);
   color: var(--mat-sys-on-secondary-container);
+  border-radius: 28px;
 }
 
-.spacer {
-  flex: 1 1 auto;
+.sidenav-spacer {
+  flex: 1;
+}
+
+// ── Footer (User + Legal) ─────────────────────────────────────────────────────
+
+.sidenav-footer {
+  padding-bottom: 8px;
+}
+
+.sidenav-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+}
+
+.user-icon {
+  color: var(--mat-sys-on-surface-variant);
+  flex-shrink: 0;
 }
 
 .user-email {
-  font-size: 0.9rem;
-  margin-right: 12px;
-  opacity: 0.9;
+  flex: 1;
+  font-size: 0.8rem;
+  color: var(--mat-sys-on-surface-variant);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
+
+.login-item {
+  margin: 4px 8px;
+  border-radius: 28px;
+}
+
+.legal-links {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  padding: 8px 12px 4px;
+  font-size: 0.7rem;
+
+  a {
+    color: var(--mat-sys-on-surface-variant);
+    text-decoration: none;
+    opacity: 0.7;
+    &:hover { opacity: 1; text-decoration: underline; }
+  }
+
+  span { color: var(--mat-sys-on-surface-variant); opacity: 0.4; }
+}
+
+// ── Toolbar ───────────────────────────────────────────────────────────────────
+
+.spacer { flex: 1 1 auto; }
+
+// ── Content ───────────────────────────────────────────────────────────────────
 
 .content {
   padding: 16px;
 
   &.has-bottom-nav {
-    padding-bottom: 80px; // clearance for bottom nav
+    padding-bottom: 80px;
   }
 }
 

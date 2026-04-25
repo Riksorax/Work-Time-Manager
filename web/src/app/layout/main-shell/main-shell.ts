@@ -6,6 +6,8 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs';
 import { AuthService } from '../../core/auth/auth';
@@ -21,6 +23,8 @@ import { AuthService } from '../../core/auth/auth';
     MatListModule,
     MatIconModule,
     MatButtonModule,
+    MatDividerModule,
+    MatTooltipModule,
   ],
   templateUrl: './main-shell.html',
   styleUrl: './main-shell.scss',
