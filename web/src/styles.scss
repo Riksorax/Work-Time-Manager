@@ -70,6 +70,12 @@ html, body {
   margin: 0;
 }
 
+// Icons nie als Rohtext zeigen (Fallback bei langsamer Font-Ladung)
+mat-icon {
+  overflow: hidden;
+  font-display: block;
+}
+
 body {
   font-family: Inter, Roboto, "Helvetica Neue", sans-serif;
   background-color: var(--mat-sys-surface);
