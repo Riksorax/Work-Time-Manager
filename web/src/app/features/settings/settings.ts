@@ -96,14 +96,6 @@ export class SettingsComponent {
     this.svc.setTheme(dark);
   }
 
-  onLogin(): void {
-    this.svc.navigateToLogin();
-  }
-
-  onLogout(): void {
-    this.svc.logout();
-  }
-
   onDeleteAccount(): void {
     const ref = this.dialog.open(
       // Inline confirm dialog via MatDialog

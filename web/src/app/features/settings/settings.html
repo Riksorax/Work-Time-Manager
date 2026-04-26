@@ -46,24 +46,6 @@
               </button>
             }
           </div>
-
-          @if (svc.isLoggedIn()) {
-            <button mat-stroked-button
-                    class="auth-btn auth-btn--logout"
-                    (click)="onLogout()"
-                    aria-label="Abmelden">
-              <mat-icon>logout</mat-icon>
-              Abmelden
-            </button>
-          } @else {
-            <button mat-flat-button
-                    class="auth-btn"
-                    (click)="onLogin()"
-                    aria-label="Anmelden">
-              <mat-icon>login</mat-icon>
-              Anmelden
-            </button>
-          }
         </section>
 
         <mat-divider />
@@ -189,42 +171,6 @@
               <span matListItemTitle>Benachrichtigungen</span>
               <span matListItemLine>Nicht verfügbar im Browser</span>
               <mat-icon matListItemMeta aria-hidden="true" class="disabled-icon">block</mat-icon>
-            </mat-list-item>
-          </mat-list>
-        </section>
-
-        <mat-divider />
-
-        <!-- ── Über die App ─────────────────────────────────────── -->
-        <section aria-label="Über die App">
-          <h3 class="section-title">Über die App</h3>
-
-          <mat-list>
-            <a mat-list-item href="/imprint.html" target="_blank" rel="noopener"
-               aria-label="Impressum öffnen (neues Fenster)">
-              <mat-icon matListItemIcon aria-hidden="true">gavel</mat-icon>
-              <span matListItemTitle>Impressum</span>
-              <mat-icon matListItemMeta aria-hidden="true">open_in_new</mat-icon>
-            </a>
-
-            <a mat-list-item href="/privacy.html" target="_blank" rel="noopener"
-               aria-label="Datenschutzerklärung öffnen (neues Fenster)">
-              <mat-icon matListItemIcon aria-hidden="true">privacy_tip</mat-icon>
-              <span matListItemTitle>Datenschutzerklärung</span>
-              <mat-icon matListItemMeta aria-hidden="true">open_in_new</mat-icon>
-            </a>
-
-            <a mat-list-item href="/terms.html" target="_blank" rel="noopener"
-               aria-label="Nutzungsbedingungen öffnen (neues Fenster)">
-              <mat-icon matListItemIcon aria-hidden="true">description</mat-icon>
-              <span matListItemTitle>Nutzungsbedingungen</span>
-              <mat-icon matListItemMeta aria-hidden="true">open_in_new</mat-icon>
-            </a>
-
-            <mat-list-item>
-              <mat-icon matListItemIcon aria-hidden="true">info</mat-icon>
-              <span matListItemTitle>Version</span>
-              <span matListItemLine>Work Time Manager · Web</span>
             </mat-list-item>
           </mat-list>
         </section>
