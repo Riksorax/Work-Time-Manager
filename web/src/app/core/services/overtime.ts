@@ -1,8 +1,7 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, Injector, inject, runInInjectionContext } from '@angular/core';
 import { Firestore, doc, getDoc, setDoc } from '@angular/fire/firestore';
 import { AuthService } from '../auth/auth';
 
-// localStorage Keys — identisch zu Flutter
 const LS_OVERTIME    = 'overtime_value';
 const LS_LAST_UPDATE = 'overtime_last_update';
 
@@ -10,6 +9,7 @@ const LS_LAST_UPDATE = 'overtime_last_update';
 export class OvertimeService {
   private readonly firestore = inject(Firestore);
   private readonly auth      = inject(AuthService);
+  private readonly injector  = inject(Injector);
 
   async getOvertime(): Promise<number> {
     const uid = this.auth.uid;
@@ -25,36 +25,28 @@ export class OvertimeService {
 
   async saveOvertime(ms: number): Promise<void> {
     const uid = this.auth.uid;
-    if (uid) {
-      await this._firebaseSave(uid, ms, new Date());
-    } else {
-      this._localSave(ms, new Date());
-    }
+    if (uid) await this._firebaseSave(uid, ms, new Date());
+    else     this._localSave(ms, new Date());
   }
 
   async saveLastUpdateDate(date: Date): Promise<void> {
     const uid = this.auth.uid;
-    if (uid) {
-      await this._firebaseSave(uid, await this.getOvertime(), date);
-    } else {
-      localStorage.setItem(LS_LAST_UPDATE, date.toISOString());
-    }
+    if (uid) await this._firebaseSave(uid, await this.getOvertime(), date);
+    else     localStorage.setItem(LS_LAST_UPDATE, date.toISOString());
   }
 
   // ─── Firebase ──────────────────────────────────────────────────────────────
 
   private async _firebaseGetOvertime(uid: string): Promise<number> {
-    const ref = doc(this.firestore, `users/${uid}/overtime/current`);
-    const snap = await getDoc(ref);
+    const ref  = doc(this.firestore, `users/${uid}/overtime/current`);
+    const snap = await runInInjectionContext(this.injector, () => getDoc(ref));
     if (!snap.exists()) return 0;
-    const data = snap.data();
-    // Stored as minutes in Flutter, convert to ms
-    return ((data['overtimeMinutes'] as number) ?? 0) * 60 * 1000;
+    return ((snap.data()['overtimeMinutes'] as number) ?? 0) * 60 * 1000;
   }
 
   private async _firebaseGetLastUpdate(uid: string): Promise<Date | null> {
-    const ref = doc(this.firestore, `users/${uid}/overtime/current`);
-    const snap = await getDoc(ref);
+    const ref  = doc(this.firestore, `users/${uid}/overtime/current`);
+    const snap = await runInInjectionContext(this.injector, () => getDoc(ref));
     if (!snap.exists()) return null;
     const raw = snap.data()['lastUpdateDate'];
     return raw ? (raw as { toDate(): Date }).toDate() : null;
@@ -62,18 +54,16 @@ export class OvertimeService {
 
   private async _firebaseSave(uid: string, ms: number, date: Date): Promise<void> {
     const ref = doc(this.firestore, `users/${uid}/overtime/current`);
-    await setDoc(ref, {
-      overtimeMinutes: Math.round(ms / 60 / 1000),
-      lastUpdateDate: date,
-    }, { merge: true });
+    await runInInjectionContext(this.injector, () =>
+      setDoc(ref, { overtimeMinutes: Math.round(ms / 60 / 1000), lastUpdateDate: date }, { merge: true })
+    );
   }
 
-  // ─── localStorage (identisch zu Flutter) ───────────────────────────────────
+  // ─── localStorage ──────────────────────────────────────────────────────────
 
   private _localGetOvertime(): number {
     const raw = localStorage.getItem(LS_OVERTIME);
-    if (!raw) return 0;
-    return (Number(raw) ?? 0) * 60 * 1000; // stored as minutes
+    return raw ? Number(raw) * 60 * 1000 : 0;
   }
 
   private _localGetLastUpdate(): Date | null {

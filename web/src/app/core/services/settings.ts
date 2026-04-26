@@ -46,7 +46,9 @@ export class SettingsService {
       return;
     }
     const docRef = doc(this.firestore, `users/${uid}/settings/current`);
-    await setDoc(docRef, settings, { merge: true });
+    await runInInjectionContext(this.injector, () =>
+      setDoc(docRef, settings, { merge: true })
+    );
   }
 
   // ── localStorage ─────────────────────────────────────────────────────────

@@ -25,20 +25,20 @@ export class AuthService {
   readonly user  = toSignal(runInInjectionContext(this.injector, () => authState(this.auth)));
   readonly user$: Observable<User | null> = runInInjectionContext(this.injector, () => authState(this.auth));
 
-  async signInWithGoogle() {
+  async signInWithGoogle(): Promise<void> {
     const provider = new GoogleAuthProvider();
-    return signInWithPopup(this.auth, provider);
+    await runInInjectionContext(this.injector, () => signInWithPopup(this.auth, provider));
   }
 
   async signOut(): Promise<void> {
-    await signOut(this.auth);
+    await runInInjectionContext(this.injector, () => signOut(this.auth));
     this.router.navigate(['/auth/login']);
   }
 
   async deleteAccount(): Promise<void> {
     const user = this.auth.currentUser;
     if (!user) throw new Error('Kein Benutzer angemeldet');
-    await deleteUser(user);
+    await runInInjectionContext(this.injector, () => deleteUser(user));
     this.router.navigate(['/auth/login']);
   }
 

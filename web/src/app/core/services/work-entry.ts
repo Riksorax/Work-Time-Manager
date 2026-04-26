@@ -59,7 +59,9 @@ export class WorkEntryService {
   async deleteEntry(id: string): Promise<void> {
     const uid = this.auth.uid;
     if (uid) {
-      await deleteDoc(doc(this.firestore, `users/${uid}/work_entries/${id}`));
+      await runInInjectionContext(this.injector, () =>
+        deleteDoc(doc(this.firestore, `users/${uid}/work_entries/${id}`))
+      );
     } else {
       this._localDelete(id);
     }
@@ -104,7 +106,9 @@ export class WorkEntryService {
 
   private async _firebaseSave(uid: string, entry: WorkEntry): Promise<void> {
     const ref = doc(this.firestore, `users/${uid}/work_entries/${entry.id}`);
-    await setDoc(ref, this._toFirestore(entry), { merge: true });
+    await runInInjectionContext(this.injector, () =>
+      setDoc(ref, this._toFirestore(entry), { merge: true })
+    );
   }
 
   private _toFirestore(entry: WorkEntry): Record<string, unknown> {
