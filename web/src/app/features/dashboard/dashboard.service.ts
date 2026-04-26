@@ -178,7 +178,8 @@ export class DashboardService {
       this._recalculateState(workEntry, false);
       this._startTimerIfNeeded();
     } catch {
-      // Initialisierung fehlgeschlagen — UI zeigt leeren Zustand
+      // Initialisierung fehlgeschlagen — leeren Zustand zeigen statt Dauerladespinner
+      this._s.update(s => ({ ...s, status: 'ready' }));
     }
   }
 
