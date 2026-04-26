@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, Injector, inject, runInInjectionContext } from '@angular/core';
 import {
   Firestore,
   collection,
@@ -24,6 +24,7 @@ const LS_KEYS    = 'local_monthly_keys';
 export class WorkEntryService {
   private readonly firestore = inject(Firestore);
   private readonly auth      = inject(AuthService);
+  private readonly injector  = inject(Injector);
 
   // ─── Public API ────────────────────────────────────────────────────────────
 
@@ -81,8 +82,8 @@ export class WorkEntryService {
   private _firebaseToday(uid: string): Observable<WorkEntry | null> {
     const id  = this._dateId(new Date());
     const ref = doc(this.firestore, `users/${uid}/work_entries/${id}`);
-    return docData(ref).pipe(
-      map(data => data ? this._fromFirestore(data, id) : null)
+    return runInInjectionContext(this.injector, () =>
+      docData(ref).pipe(map(data => data ? this._fromFirestore(data, id) : null))
     );
   }
 
@@ -96,7 +97,7 @@ export class WorkEntryService {
       where('date', '<=', Timestamp.fromDate(end)),
       orderBy('date', 'asc')
     );
-    return collectionData(q, { idField: 'id' }).pipe(
+    return runInInjectionContext(this.injector, () => collectionData(q, { idField: 'id' })).pipe(
       map(list => list.map(d => this._fromFirestore(d, (d as WorkEntry & {id: string}).id)))
     );
   }

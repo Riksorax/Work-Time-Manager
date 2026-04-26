@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, Injector, inject } from '@angular/core';
 import {
   Auth,
   authState,
@@ -18,13 +18,11 @@ import { Observable } from 'rxjs';
   providedIn: 'root'
 })
 export class AuthService {
-  private auth = inject(Auth);
-  private router = inject(Router);
+  private auth     = inject(Auth);
+  private router   = inject(Router);
+  private injector = inject(Injector);
 
-  // User Signal für die UI (Signals sind perfekt für Angular 18+)
-  readonly user = toSignal(authState(this.auth));
-
-  // Observable für Guards
+  readonly user  = toSignal(authState(this.auth));
   readonly user$: Observable<User | null> = authState(this.auth);
 
   async signInWithGoogle() {

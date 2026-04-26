@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, Injector, inject, runInInjectionContext } from '@angular/core';
 import { Firestore, doc, docData, setDoc } from '@angular/fire/firestore';
 import { BehaviorSubject, Observable, map, switchMap } from 'rxjs';
 import { AuthService } from '../auth/auth';
@@ -10,6 +10,7 @@ const LS_KEY = 'user_settings';
 export class SettingsService {
   private readonly firestore = inject(Firestore);
   private readonly auth      = inject(AuthService);
+  private readonly injector  = inject(Injector);
 
   private readonly defaultSettings: UserSettings = {
     weeklyTargetHours: 40,
@@ -31,7 +32,7 @@ export class SettingsService {
         if (!user) return this._local$.asObservable();
 
         const docRef = doc(this.firestore, `users/${user.uid}/settings/current`);
-        return docData(docRef).pipe(
+        return runInInjectionContext(this.injector, () => docData(docRef)).pipe(
           map(data => (data as UserSettings) || this.defaultSettings)
         );
       })
