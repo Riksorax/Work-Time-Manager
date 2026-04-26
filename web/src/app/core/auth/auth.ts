@@ -1,4 +1,4 @@
-import { Injectable, Injector, inject } from '@angular/core';
+import { Injectable, Injector, inject, runInInjectionContext } from '@angular/core';
 import {
   Auth,
   authState,
@@ -22,8 +22,8 @@ export class AuthService {
   private router   = inject(Router);
   private injector = inject(Injector);
 
-  readonly user  = toSignal(authState(this.auth));
-  readonly user$: Observable<User | null> = authState(this.auth);
+  readonly user  = toSignal(runInInjectionContext(this.injector, () => authState(this.auth)));
+  readonly user$: Observable<User | null> = runInInjectionContext(this.injector, () => authState(this.auth));
 
   async signInWithGoogle() {
     const provider = new GoogleAuthProvider();
