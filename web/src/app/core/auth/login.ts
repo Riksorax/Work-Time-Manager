@@ -231,9 +231,9 @@ export class LoginComponent {
       this.status.set('idle');
       const code = (e as { code?: string }).code;
       if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
-        return; // Nutzer hat selbst abgebrochen — kein Fehler anzeigen
+        return;
       }
-      this.errorMessage.set('Anmeldung fehlgeschlagen. Bitte erneut versuchen.');
+      this.errorMessage.set(`Fehler: ${code ?? String(e)}`);
     }
   }
 
