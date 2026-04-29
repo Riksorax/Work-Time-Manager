@@ -233,7 +233,7 @@ export class LoginComponent {
       if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
         return;
       }
-      this.errorMessage.set(`Fehler: ${code ?? String(e)}`);
+      this.errorMessage.set('Anmeldung fehlgeschlagen. Bitte erneut versuchen.');
     }
   }
 
