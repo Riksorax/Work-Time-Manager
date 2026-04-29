@@ -2,15 +2,69 @@
 <html lang="de">
   <head>
     <meta charset="utf-8" />
-    <title>Work Time Manager</title>
+    <title>Work Time Manager – Arbeitszeit erfassen & Überstunden berechnen</title>
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- SEO Primary -->
+    <meta name="description" content="Work Time Manager – kostenlose App zur Arbeitszeiterfassung. Timer starten, Pausen verwalten, Überstunden berechnen. Für Browser & Android." />
+    <meta name="keywords" content="Arbeitszeiterfassung, Zeiterfassung, Überstunden berechnen, Stempeluhr, Arbeitsstunden, Timer, kostenlos" />
+    <meta name="author" content="Frank Speulmans" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://work-time-manager.app/" />
+
+    <!-- Open Graph (Facebook, LinkedIn, WhatsApp) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://work-time-manager.app/" />
+    <meta property="og:title" content="Work Time Manager – Arbeitszeit erfassen & Überstunden berechnen" />
+    <meta property="og:description" content="Kostenlose Arbeitszeiterfassung für Browser & Android. Timer, Pausen, Überstunden, Berichte – einfach & datenschutzkonform." />
+    <meta property="og:image" content="https://work-time-manager.app/og-image.png" />
+    <meta property="og:locale" content="de_DE" />
+    <meta property="og:site_name" content="Work Time Manager" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Work Time Manager – Arbeitszeit erfassen" />
+    <meta name="twitter:description" content="Kostenlose Arbeitszeiterfassung für Browser & Android. Timer, Pausen, Überstunden, Berichte." />
+    <meta name="twitter:image" content="https://work-time-manager.app/og-image.png" />
+
+    <!-- PWA / Theme -->
+    <meta name="theme-color" content="#1565C0" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Work Time Manager" />
+    <link rel="manifest" href="manifest.json" />
+
+    <!-- Icons -->
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
+
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Work Time Manager",
+      "description": "Kostenlose Arbeitszeiterfassung für Browser und Android. Timer, Pausen, Überstunden berechnen und Berichte erstellen.",
+      "url": "https://work-time-manager.app/",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web, Android",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "EUR"
+      },
+      "author": {
+        "@type": "Person",
+        "name": "Frank Speulmans",
+        "email": "Franksp20.fs@gmail.com"
+      }
+    }
+    </script>
+
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <!-- Inter Schriftart -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <!-- Material Icons (inkl. Extended für alle Icons) -->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons|Material+Icons+Outlined|Material+Icons+Round" rel="stylesheet">
   </head>
   <body>
