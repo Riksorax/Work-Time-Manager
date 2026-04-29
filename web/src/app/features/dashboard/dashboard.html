@@ -28,17 +28,18 @@
 
           <div class="stat-row">
             <span class="stat-label">Gesamtüberstunden</span>
-            <span class="stat-value"
-                  [style.color]="(svc.totalOvertime() ?? 0) >= 0 ? 'var(--color-overtime-positive)' : 'var(--mat-sys-error)'">
-              {{ formatOvertime(svc.totalOvertime()) }}
-            </span>
-            <button mat-icon-button
-                    class="adjust-btn"
-                    (click)="openAdjustOvertimeDialog()"
-                    aria-label="Überstunden manuell anpassen"
-                    matTooltip="Gleitzeit-Bilanz anpassen">
-              <mat-icon>tune</mat-icon>
-            </button>
+            <div class="stat-row-end">
+              <span class="stat-value"
+                    [style.color]="(svc.totalOvertime() ?? 0) >= 0 ? 'var(--color-overtime-positive)' : 'var(--mat-sys-error)'">
+                {{ formatOvertime(svc.totalOvertime()) }}
+              </span>
+              <button mat-icon-button
+                      (click)="openAdjustOvertimeDialog()"
+                      aria-label="Überstunden manuell anpassen"
+                      matTooltip="Gleitzeit-Bilanz anpassen">
+                <mat-icon>tune</mat-icon>
+              </button>
+            </div>
           </div>
 
           @if (svc.isTimerRunning() && svc.expectedEndTime()) {
