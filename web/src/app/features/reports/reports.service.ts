@@ -108,13 +108,16 @@ export class ReportsService {
   private readonly _weeklyEntries = toSignal(
     toObservable(this._weekRef).pipe(
       switchMap(weekRef => this._loadWeekEntries(weekRef)),
+      catchError(() => of([] as WorkEntry[])),
     ),
     { initialValue: [] as WorkEntry[] }
   );
 
   // Settings
   private readonly _settings = toSignal(
-    this.settingsService.getSettings(),
+    this.settingsService.getSettings().pipe(
+      catchError(() => of(DEFAULT_SETTINGS)),
+    ),
     { initialValue: DEFAULT_SETTINGS }
   );
 
