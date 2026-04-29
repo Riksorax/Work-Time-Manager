@@ -97,9 +97,9 @@ export class ReportsService {
       switchMap(({ year, month }) =>
         this.workEntryService.getEntriesForMonth(year, month).pipe(
           catchError(() => of([] as WorkEntry[])),
+          tap(() => this._isLoading.set(false)),
         )
       ),
-      tap(() => this._isLoading.set(false)),
     ),
     { initialValue: [] as WorkEntry[] }
   );
@@ -107,8 +107,11 @@ export class ReportsService {
   // Wöchentliche Einträge — lade beide Monate falls Woche Monatsgrenze überschreitet
   private readonly _weeklyEntries = toSignal(
     toObservable(this._weekRef).pipe(
-      switchMap(weekRef => this._loadWeekEntries(weekRef)),
-      catchError(() => of([] as WorkEntry[])),
+      switchMap(weekRef =>
+        this._loadWeekEntries(weekRef).pipe(
+          catchError(() => of([] as WorkEntry[])),
+        )
+      ),
     ),
     { initialValue: [] as WorkEntry[] }
   );
@@ -124,8 +127,11 @@ export class ReportsService {
   // Gespeichertes Überstundensaldo — neu laden wenn Auth-Status wechselt
   private readonly _storedOvertime = toSignal(
     this.authService.user$.pipe(
-      switchMap(() => from(this.overtimeService.getOvertime())),
-      catchError(() => of(0)),
+      switchMap(() =>
+        from(this.overtimeService.getOvertime()).pipe(
+          catchError(() => of(0)),
+        )
+      ),
     ),
     { initialValue: 0 }
   );

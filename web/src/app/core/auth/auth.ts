@@ -12,7 +12,7 @@ import {
 } from '@angular/fire/auth';
 import { Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { Observable } from 'rxjs';
+import { Observable, shareReplay } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -22,8 +22,12 @@ export class AuthService {
   private router   = inject(Router);
   private injector = inject(Injector);
 
-  readonly user  = toSignal(runInInjectionContext(this.injector, () => authState(this.auth)));
-  readonly user$: Observable<User | null> = runInInjectionContext(this.injector, () => authState(this.auth));
+  // Shared hot Observable — ein einziger Firebase-Listener für alle Subscriber
+  readonly user$: Observable<User | null> = runInInjectionContext(
+    this.injector, () => authState(this.auth)
+  ).pipe(shareReplay({ bufferSize: 1, refCount: false }));
+
+  readonly user = toSignal(this.user$);
 
   async signInWithGoogle(): Promise<void> {
     const provider = new GoogleAuthProvider();
