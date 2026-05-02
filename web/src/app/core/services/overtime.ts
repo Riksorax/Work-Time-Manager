@@ -35,27 +35,27 @@ export class OvertimeService {
     else     localStorage.setItem(LS_LAST_UPDATE, date.toISOString());
   }
 
-  // ─── Firebase ──────────────────────────────────────────────────────────────
+  // ─── Firebase (Flutter-kompatibles Format: overtime/balance, minutes, lastUpdated) ─
 
   private async _firebaseGetOvertime(uid: string): Promise<number> {
-    const ref  = doc(this.firestore, `users/${uid}/overtime/current`);
+    const ref  = doc(this.firestore, `users/${uid}/overtime/balance`);
     const snap = await runInInjectionContext(this.injector, () => getDoc(ref));
     if (!snap.exists()) return 0;
-    return ((snap.data()['overtimeMinutes'] as number) ?? 0) * 60 * 1000;
+    return ((snap.data()['minutes'] as number) ?? 0) * 60 * 1000;
   }
 
   private async _firebaseGetLastUpdate(uid: string): Promise<Date | null> {
-    const ref  = doc(this.firestore, `users/${uid}/overtime/current`);
+    const ref  = doc(this.firestore, `users/${uid}/overtime/balance`);
     const snap = await runInInjectionContext(this.injector, () => getDoc(ref));
     if (!snap.exists()) return null;
-    const raw = snap.data()['lastUpdateDate'];
+    const raw = snap.data()['lastUpdated'];
     return raw ? (raw as { toDate(): Date }).toDate() : null;
   }
 
   private async _firebaseSave(uid: string, ms: number, date: Date): Promise<void> {
-    const ref = doc(this.firestore, `users/${uid}/overtime/current`);
+    const ref = doc(this.firestore, `users/${uid}/overtime/balance`);
     await runInInjectionContext(this.injector, () =>
-      setDoc(ref, { overtimeMinutes: Math.round(ms / 60 / 1000), lastUpdateDate: date }, { merge: true })
+      setDoc(ref, { minutes: Math.round(ms / 60 / 1000), lastUpdated: date }, { merge: true })
     );
   }
 

@@ -1,15 +1,12 @@
 import { Injectable, Injector, inject, runInInjectionContext } from '@angular/core';
 import {
   Firestore,
-  collection,
   doc,
   onSnapshot,
   setDoc,
-  query,
-  where,
+  updateDoc,
+  deleteField,
   Timestamp,
-  deleteDoc,
-  orderBy,
 } from '@angular/fire/firestore';
 import { AuthService } from '../auth/auth';
 import { WorkEntry, WorkEntryType, Break } from '../../shared/models';
@@ -31,8 +28,7 @@ export class WorkEntryService {
     return this.auth.user$.pipe(
       switchMap(user => {
         if (user) return this._firebaseToday(user.uid);
-        const entry = this._localGet(new Date());
-        return of(entry);
+        return of(this._localGet(new Date()));
       })
     );
   }
@@ -48,18 +44,21 @@ export class WorkEntryService {
 
   async saveEntry(entry: WorkEntry): Promise<void> {
     const uid = this.auth.uid;
-    if (uid) {
-      await this._firebaseSave(uid, entry);
-    } else {
-      this._localSave(entry);
-    }
+    if (uid) await this._firebaseSave(uid, entry);
+    else     this._localSave(entry);
   }
 
   async deleteEntry(id: string): Promise<void> {
     const uid = this.auth.uid;
     if (uid) {
-      const ref = doc(this.firestore, `users/${uid}/work_entries/${id}`);
-      await runInInjectionContext(this.injector, () => deleteDoc(ref));
+      // id = yyyy-MM-dd → Monatsdok aktualisieren: days.{day} löschen
+      const [year, month, day] = id.split('-');
+      const monthId = `${year}-${month}`;
+      const dayKey  = String(Number(day)); // "05" → "5" (Flutter-Format)
+      const ref = doc(this.firestore, `users/${uid}/work_entries/${monthId}`);
+      await runInInjectionContext(this.injector, () =>
+        updateDoc(ref, { [`days.${dayKey}`]: deleteField() })
+      );
     } else {
       this._localDelete(id);
     }
@@ -77,17 +76,26 @@ export class WorkEntryService {
     };
   }
 
-  // ─── Firebase ──────────────────────────────────────────────────────────────
+  // ─── Firebase (Flutter-kompatibles Format: work_entries/{yyyy-MM}/days/{day}) ─
 
   private _firebaseToday(uid: string): Observable<WorkEntry | null> {
-    const id  = this._dateId(new Date());
+    const today   = new Date();
+    const monthId = this._monthId(today);
+    const dayKey  = String(today.getDate());
+    const id      = this._dateId(today);
+
     return new Observable<WorkEntry | null>(observer => {
       let unsub: (() => void) | undefined;
       runInInjectionContext(this.injector, () => {
-        const ref = doc(this.firestore, `users/${uid}/work_entries/${id}`);
+        const ref = doc(this.firestore, `users/${uid}/work_entries/${monthId}`);
         unsub = onSnapshot(ref,
-          snap => observer.next(snap.exists() ? this._fromFirestore(snap.data() as Record<string, unknown>, id) : null),
-          err  => observer.error(err),
+          snap => {
+            if (!snap.exists()) { observer.next(null); return; }
+            const days = (snap.data()['days'] as Record<string, unknown>) ?? {};
+            const dayData = days[dayKey];
+            observer.next(dayData ? this._fromFirestore(dayData as Record<string, unknown>, id) : null);
+          },
+          err => observer.error(err),
         );
       });
       return () => unsub?.();
@@ -95,21 +103,26 @@ export class WorkEntryService {
   }
 
   private _firebaseMonth(uid: string, year: number, month: number): Observable<WorkEntry[]> {
+    const monthId = `${year}-${String(month).padStart(2, '0')}`;
+
     return new Observable<WorkEntry[]>(observer => {
       let unsub: (() => void) | undefined;
       runInInjectionContext(this.injector, () => {
-        const start = new Date(year, month - 1, 1);
-        const end   = new Date(year, month, 0, 23, 59, 59);
-        const col   = collection(this.firestore, `users/${uid}/work_entries`);
-        const q     = query(
-          col,
-          where('date', '>=', Timestamp.fromDate(start)),
-          where('date', '<=', Timestamp.fromDate(end)),
-          orderBy('date', 'asc'),
-        );
-        unsub = onSnapshot(q,
-          snap => observer.next(snap.docs.map(d => this._fromFirestore(d.data() as Record<string, unknown>, d.id))),
-          err  => observer.error(err),
+        const ref = doc(this.firestore, `users/${uid}/work_entries/${monthId}`);
+        unsub = onSnapshot(ref,
+          snap => {
+            if (!snap.exists()) { observer.next([]); return; }
+            const days = (snap.data()['days'] as Record<string, unknown>) ?? {};
+            const entries = Object.entries(days)
+              .map(([dayStr, dayData]) => {
+                const id = `${monthId}-${String(Number(dayStr)).padStart(2, '0')}`;
+                return this._fromFirestore(dayData as Record<string, unknown>, id);
+              })
+              .filter((e): e is WorkEntry => e !== null)
+              .sort((a, b) => a.date.getTime() - b.date.getTime());
+            observer.next(entries);
+          },
+          err => observer.error(err),
         );
       });
       return () => unsub?.();
@@ -117,48 +130,59 @@ export class WorkEntryService {
   }
 
   private async _firebaseSave(uid: string, entry: WorkEntry): Promise<void> {
-    const ref = doc(this.firestore, `users/${uid}/work_entries/${entry.id}`);
+    const monthId = this._monthId(entry.date);
+    const dayKey  = String(entry.date.getDate()); // Flutter nutzt "5", nicht "05"
+    const ref = doc(this.firestore, `users/${uid}/work_entries/${monthId}`);
     await runInInjectionContext(this.injector, () =>
-      setDoc(ref, this._toFirestore(entry), { merge: true })
+      setDoc(ref, { days: { [dayKey]: this._toFirestore(entry) } }, { merge: true })
     );
   }
 
+  // ─── Serialisierung (Flutter-kompatibel) ───────────────────────────────────
+
   private _toFirestore(entry: WorkEntry): Record<string, unknown> {
     return {
-      date:                  Timestamp.fromDate(entry.date),
+      date:                  Timestamp.fromDate(new Date(Date.UTC(entry.date.getFullYear(), entry.date.getMonth(), entry.date.getDate()))),
       workStart:             entry.workStart ? Timestamp.fromDate(entry.workStart) : null,
       workEnd:               entry.workEnd   ? Timestamp.fromDate(entry.workEnd)   : null,
-      type:                  entry.type,
-      isManuallyEntered:     entry.isManuallyEntered,
-      manualOvertimeMinutes: entry.manualOvertimeMinutes ?? 0,
+      type:                  entry.type ?? WorkEntryType.Work,
+      isManuallyEntered:     entry.isManuallyEntered ?? false,
+      manualOvertimeMinutes: entry.manualOvertimeMinutes ?? null,
       description:           entry.description ?? null,
+      // Flutter liest nur name/start/end — extra Felder werden ignoriert
       breaks: entry.breaks.map(b => ({
-        id: b.id, name: b.name, isAutomatic: b.isAutomatic,
-        start: Timestamp.fromDate(b.start),
-        end:   b.end ? Timestamp.fromDate(b.end) : null,
+        id:          b.id,
+        name:        b.name,
+        isAutomatic: b.isAutomatic,
+        start:       Timestamp.fromDate(b.start),
+        end:         b.end ? Timestamp.fromDate(b.end) : null,
       })),
     };
   }
 
-  private _fromFirestore(data: Record<string, unknown>, id: string): WorkEntry {
-    const ts = (v: unknown) => v ? (v as Timestamp).toDate() : undefined;
-    return {
-      id,
-      date:                  ts(data['date'])!,
-      workStart:             ts(data['workStart']),
-      workEnd:               ts(data['workEnd']),
-      type:                  (data['type'] as WorkEntryType) ?? WorkEntryType.Work,
-      isManuallyEntered:     (data['isManuallyEntered'] as boolean) ?? false,
-      manualOvertimeMinutes: (data['manualOvertimeMinutes'] as number) ?? 0,
-      description:           data['description'] as string | undefined,
-      breaks: ((data['breaks'] as Record<string, unknown>[]) ?? []).map(b => ({
-        id:          b['id'] as string,
-        name:        b['name'] as string,
-        isAutomatic: (b['isAutomatic'] as boolean) ?? false,
-        start:       ts(b['start'])!,
-        end:         ts(b['end']),
-      })) as Break[],
-    };
+  private _fromFirestore(data: Record<string, unknown>, id: string): WorkEntry | null {
+    try {
+      const ts = (v: unknown) => v ? (v as Timestamp).toDate() : undefined;
+      return {
+        id,
+        date:                  ts(data['date'])!,
+        workStart:             ts(data['workStart']),
+        workEnd:               ts(data['workEnd']),
+        type:                  (data['type'] as WorkEntryType) ?? WorkEntryType.Work,
+        isManuallyEntered:     (data['isManuallyEntered'] as boolean) ?? false,
+        manualOvertimeMinutes: (data['manualOvertimeMinutes'] as number) ?? undefined,
+        description:           data['description'] as string | undefined,
+        breaks: ((data['breaks'] as Record<string, unknown>[]) ?? []).map(b => ({
+          id:          (b['id'] as string) || `break-${b['start']}`,
+          name:        (b['name'] as string) || 'Pause',
+          isAutomatic: (b['isAutomatic'] as boolean) ?? false,
+          start:       ts(b['start'])!,
+          end:         ts(b['end']),
+        })) as Break[],
+      };
+    } catch {
+      return null;
+    }
   }
 
   // ─── localStorage (identisch zu Flutter LocalWorkRepositoryImpl) ───────────
@@ -184,6 +208,7 @@ export class WorkEntryService {
       const data = JSON.parse(raw) as { days: Record<string, Record<string, unknown>> };
       return Object.entries(data.days ?? {})
         .map(([day, dayData]) => this._fromLocalJson(dayData, new Date(year, month - 1, Number(day))))
+        .filter((e): e is WorkEntry => e !== null)
         .sort((a, b) => a.date.getTime() - b.date.getTime());
     } catch { return []; }
   }
@@ -235,25 +260,27 @@ export class WorkEntryService {
     };
   }
 
-  private _fromLocalJson(data: Record<string, unknown>, date: Date): WorkEntry {
-    const parseDate = (v: unknown) => v ? new Date(v as string) : undefined;
-    return {
-      id:                    this._dateId(date),
-      date,
-      workStart:             parseDate(data['workStart']),
-      workEnd:               parseDate(data['workEnd']),
-      type:                  (data['type'] as WorkEntryType) ?? WorkEntryType.Work,
-      isManuallyEntered:     (data['isManuallyEntered'] as boolean) ?? false,
-      manualOvertimeMinutes: (data['manualOvertimeMinutes'] as number) ?? undefined,
-      description:           data['description'] as string | undefined,
-      breaks: ((data['breaks'] as Record<string, unknown>[]) ?? []).map(b => ({
-        id:          b['id'] as string,
-        name:        b['name'] as string,
-        isAutomatic: (b['isAutomatic'] as boolean) ?? false,
-        start:       new Date(b['start'] as string),
-        end:         b['end'] ? new Date(b['end'] as string) : undefined,
-      })) as Break[],
-    };
+  private _fromLocalJson(data: Record<string, unknown>, date: Date): WorkEntry | null {
+    try {
+      const parseDate = (v: unknown) => v ? new Date(v as string) : undefined;
+      return {
+        id:                    this._dateId(date),
+        date,
+        workStart:             parseDate(data['workStart']),
+        workEnd:               parseDate(data['workEnd']),
+        type:                  (data['type'] as WorkEntryType) ?? WorkEntryType.Work,
+        isManuallyEntered:     (data['isManuallyEntered'] as boolean) ?? false,
+        manualOvertimeMinutes: (data['manualOvertimeMinutes'] as number) ?? undefined,
+        description:           data['description'] as string | undefined,
+        breaks: ((data['breaks'] as Record<string, unknown>[]) ?? []).map(b => ({
+          id:          b['id'] as string,
+          name:        b['name'] as string,
+          isAutomatic: (b['isAutomatic'] as boolean) ?? false,
+          start:       new Date(b['start'] as string),
+          end:         b['end'] ? new Date(b['end'] as string) : undefined,
+        })) as Break[],
+      };
+    } catch { return null; }
   }
 
   getAllLocalEntries(): WorkEntry[] {
@@ -266,11 +293,17 @@ export class WorkEntryService {
         const match = key.replace(LS_PREFIX, '').split('_');
         const year  = Number(match[0]);
         const month = Number(match[1]);
-        return Object.entries(data.days ?? {}).map(([day, dayData]) =>
-          this._fromLocalJson(dayData, new Date(year, month - 1, Number(day)))
-        );
+        return Object.entries(data.days ?? {})
+          .map(([day, dayData]) => this._fromLocalJson(dayData, new Date(year, month - 1, Number(day))))
+          .filter((e): e is WorkEntry => e !== null);
       } catch { return []; }
     });
+  }
+
+  // ─── Helpers ───────────────────────────────────────────────────────────────
+
+  private _monthId(date: Date): string {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
   }
 
   private _monthKey(year: number, month: number): string {
