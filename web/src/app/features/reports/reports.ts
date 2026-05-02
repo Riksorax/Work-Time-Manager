@@ -18,6 +18,7 @@ import {
   BatchQuickEntryDialogResult,
 } from './components/batch-quick-entry-dialog/batch-quick-entry-dialog.component';
 import { ReportsService } from './reports.service';
+import { WebPremiumService } from '../../core/services/web-premium.service';
 import { WorkEntry, WorkEntryType } from '../../shared/models/index';
 import { toDateKey } from '../../domain/services/report-calculator.service';
 
@@ -37,10 +38,40 @@ import { toDateKey } from '../../domain/services/report-calculator.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ReportsComponent {
-  protected readonly svc    = inject(ReportsService);
-  private  readonly dialog  = inject(MatDialog);
-  private  readonly snackbar = inject(MatSnackBar);
+  protected readonly svc        = inject(ReportsService);
+  private  readonly premiumSvc  = inject(WebPremiumService);
+  private  readonly dialog      = inject(MatDialog);
+  private  readonly snackbar    = inject(MatSnackBar);
   protected readonly activeTabIndex = signal(0);
+
+  protected readonly isRestoring  = this.premiumSvc.isRestoring;
+  protected readonly isPurchasing = this.premiumSvc.isPurchasing;
+  protected readonly isRcConfigured = this.premiumSvc.isConfigured;
+
+  async onRestorePurchases(): Promise<void> {
+    try {
+      const restored = await this.premiumSvc.restorePurchases();
+      this.snackbar.open(
+        restored ? 'Premium erfolgreich wiederhergestellt!' : 'Kein aktiver Kauf gefunden.',
+        'OK',
+        { duration: 4000 },
+      );
+    } catch {
+      this.snackbar.open('Fehler beim Wiederherstellen.', 'OK', { duration: 4000 });
+    }
+  }
+
+  async onPresentPaywall(): Promise<void> {
+    try {
+      const purchased = await this.premiumSvc.presentPaywall();
+      if (purchased) {
+        this.snackbar.open('Premium erfolgreich aktiviert!', 'OK', { duration: 4000 });
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Kauf fehlgeschlagen.';
+      this.snackbar.open(msg, 'OK', { duration: 4000 });
+    }
+  }
 
   // ── Template helpers ────────────────────────────────────────────────────────
 

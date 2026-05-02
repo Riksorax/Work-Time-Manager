@@ -24,6 +24,9 @@ abstract class FirestoreDataSource {
   Future<void> saveOvertime(String userId, Duration overtime);
   Future<DateTime?> getLastOvertimeUpdate(String userId);
   Future<void> saveLastOvertimeUpdate(String userId, DateTime date);
+
+  // User Profile
+  Future<void> setUserProfile(String userId, Map<String, dynamic> data);
 }
 
 class FirestoreDataSourceImpl implements FirestoreDataSource {
@@ -290,5 +293,11 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
     await docRef.set({
       'lastUpdated': Timestamp.fromDate(date),
     }, SetOptions(merge: true));
+  }
+
+  @override
+  Future<void> setUserProfile(String userId, Map<String, dynamic> data) async {
+    logger.i('[Firestore] Aktualisiere User-Profil für $userId: $data');
+    await _firestore.collection('users').doc(userId).set(data, SetOptions(merge: true));
   }
 }

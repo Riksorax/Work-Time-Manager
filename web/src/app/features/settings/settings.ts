@@ -114,6 +114,31 @@ export class SettingsComponent {
     });
   }
 
+  async onRestorePurchases(): Promise<void> {
+    try {
+      const restored = await this.svc.restorePurchases();
+      this.snackbar.open(
+        restored ? 'Premium erfolgreich wiederhergestellt!' : 'Kein aktiver Kauf gefunden.',
+        'OK',
+        { duration: 4000 },
+      );
+    } catch {
+      this.snackbar.open('Fehler beim Wiederherstellen des Kaufs.', 'OK', { duration: 4000 });
+    }
+  }
+
+  async onPresentPaywall(): Promise<void> {
+    try {
+      const purchased = await this.svc.presentPaywall();
+      if (purchased) {
+        this.snackbar.open('Premium erfolgreich aktiviert!', 'OK', { duration: 4000 });
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Kauf fehlgeschlagen.';
+      this.snackbar.open(msg, 'OK', { duration: 4000 });
+    }
+  }
+
   async onSync(): Promise<void> {
     const result = await this.svc.sync();
     if (result.errors.length === 0) {

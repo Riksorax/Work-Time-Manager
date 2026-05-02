@@ -346,6 +346,14 @@
     opacity: 0.8;
     max-width: 360px;
   }
+
+  .premium-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 4px;
+  }
 }
 
 .premium-icon {

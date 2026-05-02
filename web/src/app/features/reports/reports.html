@@ -193,7 +193,33 @@
               <div class="premium-overlay" role="status" aria-label="Premium-Feature gesperrt">
                 <mat-icon class="premium-icon" aria-hidden="true">workspace_premium</mat-icon>
                 <h3>Wochenberichte — Premium</h3>
-                <p>Hol dir Premium in der App, um deine wöchentlichen Statistiken zu sehen.</p>
+                <p>Schalte Premium frei, um deine wöchentlichen Statistiken zu sehen.</p>
+                <div class="premium-actions">
+                  @if (isRcConfigured) {
+                    <button mat-flat-button
+                            [disabled]="isPurchasing()"
+                            (click)="onPresentPaywall()"
+                            aria-label="Premium freischalten">
+                      @if (isPurchasing()) {
+                        <mat-spinner diameter="18" aria-hidden="true" />
+                      } @else {
+                        <mat-icon aria-hidden="true">workspace_premium</mat-icon>
+                      }
+                      Premium freischalten
+                    </button>
+                  }
+                  <button mat-stroked-button
+                          [disabled]="isRestoring()"
+                          (click)="onRestorePurchases()"
+                          aria-label="Bereits getätigten Kauf wiederherstellen">
+                    @if (isRestoring()) {
+                      <mat-spinner diameter="18" aria-hidden="true" />
+                    } @else {
+                      <mat-icon aria-hidden="true">restore</mat-icon>
+                    }
+                    Kauf wiederherstellen
+                  </button>
+                </div>
               </div>
             </div>
           } @else {
@@ -293,7 +319,33 @@
               <div class="premium-overlay" role="status" aria-label="Premium-Feature gesperrt">
                 <mat-icon class="premium-icon" aria-hidden="true">workspace_premium</mat-icon>
                 <h3>Monatsberichte — Premium</h3>
-                <p>Hol dir Premium in der App, um deine monatlichen Statistiken zu sehen.</p>
+                <p>Schalte Premium frei, um deine monatlichen Statistiken zu sehen.</p>
+                <div class="premium-actions">
+                  @if (isRcConfigured) {
+                    <button mat-flat-button
+                            [disabled]="isPurchasing()"
+                            (click)="onPresentPaywall()"
+                            aria-label="Premium freischalten">
+                      @if (isPurchasing()) {
+                        <mat-spinner diameter="18" aria-hidden="true" />
+                      } @else {
+                        <mat-icon aria-hidden="true">workspace_premium</mat-icon>
+                      }
+                      Premium freischalten
+                    </button>
+                  }
+                  <button mat-stroked-button
+                          [disabled]="isRestoring()"
+                          (click)="onRestorePurchases()"
+                          aria-label="Bereits getätigten Kauf wiederherstellen">
+                    @if (isRestoring()) {
+                      <mat-spinner diameter="18" aria-hidden="true" />
+                    } @else {
+                      <mat-icon aria-hidden="true">restore</mat-icon>
+                    }
+                    Kauf wiederherstellen
+                  </button>
+                </div>
               </div>
             </div>
           } @else {

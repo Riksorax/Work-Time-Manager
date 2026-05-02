@@ -7,6 +7,7 @@ import { SettingsService } from '../../core/services/settings';
 import { OvertimeService } from '../../core/services/overtime';
 import { ThemeService } from '../../core/services/theme';
 import { DataSyncService, DataSyncResult } from '../../core/services/data-sync';
+import { WebPremiumService } from '../../core/services/web-premium.service';
 import { UserSettings } from '../../shared/models/index';
 
 const DEFAULT_SETTINGS: UserSettings = {
@@ -22,13 +23,14 @@ const DEFAULT_SETTINGS: UserSettings = {
 
 @Injectable({ providedIn: 'root' })
 export class SettingsPageService {
-  private readonly coreSettings  = inject(SettingsService);
-  private readonly authService   = inject(AuthService);
+  private readonly coreSettings   = inject(SettingsService);
+  private readonly authService    = inject(AuthService);
   private readonly profileService = inject(ProfileService);
-  private readonly overtimeSvc   = inject(OvertimeService);
-  private readonly themeSvc      = inject(ThemeService);
-  private readonly dataSyncSvc   = inject(DataSyncService);
-  private readonly router        = inject(Router);
+  private readonly overtimeSvc    = inject(OvertimeService);
+  private readonly themeSvc       = inject(ThemeService);
+  private readonly dataSyncSvc    = inject(DataSyncService);
+  private readonly premiumSvc     = inject(WebPremiumService);
+  private readonly router         = inject(Router);
 
   // ── Auth / Premium ────────────────────────────────────────────────────────
   readonly user       = this.authService.user;
@@ -56,6 +58,11 @@ export class SettingsPageService {
 
   // ── Sync ──────────────────────────────────────────────────────────────────
   readonly isSyncing = this.dataSyncSvc.isSyncing;
+
+  // ── Premium ───────────────────────────────────────────────────────────────
+  readonly isRcConfigured = this.premiumSvc.isConfigured;
+  readonly isRestoring    = this.premiumSvc.isRestoring;
+  readonly isPurchasing   = this.premiumSvc.isPurchasing;
 
   // ── Computed ──────────────────────────────────────────────────────────────
   readonly dailyTargetHours = computed(() => {
@@ -105,6 +112,14 @@ export class SettingsPageService {
 
   async sync(): Promise<DataSyncResult> {
     return this.dataSyncSvc.syncAll();
+  }
+
+  async restorePurchases(): Promise<boolean> {
+    return this.premiumSvc.restorePurchases();
+  }
+
+  async presentPaywall(): Promise<boolean> {
+    return this.premiumSvc.presentPaywall();
   }
 
   async logout(): Promise<void> {

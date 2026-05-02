@@ -141,6 +141,61 @@
       <!-- ══════════════════════════════════════════ RECHTE SPALTE ══ -->
       <div class="column">
 
+        <!-- ── Premium ──────────────────────────────────────────── -->
+        @if (svc.isLoggedIn()) {
+          <section class="premium-section" aria-label="Premium">
+            <h3 class="section-title">Premium</h3>
+
+            @if (svc.isPremium()) {
+              <div class="premium-active">
+                <mat-icon aria-hidden="true">workspace_premium</mat-icon>
+                <div>
+                  <p class="premium-active-title">Premium aktiv</p>
+                  <p class="premium-active-sub">Alle Funktionen sind freigeschaltet.</p>
+                </div>
+              </div>
+            } @else {
+              <div class="premium-cta">
+                @if (svc.isRcConfigured) {
+                  <button mat-flat-button
+                          [disabled]="svc.isPurchasing()"
+                          (click)="onPresentPaywall()"
+                          aria-label="Premium freischalten">
+                    @if (svc.isPurchasing()) {
+                      <mat-spinner diameter="18" aria-hidden="true" />
+                    } @else {
+                      <mat-icon aria-hidden="true">workspace_premium</mat-icon>
+                    }
+                    Premium freischalten
+                  </button>
+
+                  <button mat-stroked-button
+                          [disabled]="svc.isRestoring()"
+                          (click)="onRestorePurchases()"
+                          aria-label="Bereits getätigten Kauf wiederherstellen">
+                    @if (svc.isRestoring()) {
+                      <mat-spinner diameter="18" aria-hidden="true" />
+                    } @else {
+                      <mat-icon aria-hidden="true">restore</mat-icon>
+                    }
+                    Kauf wiederherstellen
+                  </button>
+                } @else {
+                  <p class="premium-info">
+                    Premium kann über die
+                    <a href="https://play.google.com/store/apps/details?id=app.work_time_manager"
+                       target="_blank" rel="noopener">Android-App</a>
+                    erworben werden. Nach dem Kauf hier auf „Kauf wiederherstellen" tippen
+                    — sobald der Web-Store verfügbar ist.
+                  </p>
+                }
+              </div>
+            }
+          </section>
+
+          <mat-divider />
+        }
+
         <!-- ── Design ───────────────────────────────────────────── -->
         <section class="design-section" aria-label="Design">
           <h3 class="section-title">Design</h3>

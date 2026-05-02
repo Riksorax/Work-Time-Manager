@@ -253,6 +253,57 @@ button[mat-list-item] {
   padding: 8px 0;
 }
 
+// ─── Premium ─────────────────────────────────────────────────────────────────
+
+.premium-section {
+  padding: 8px 0;
+
+  .premium-active {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    border-radius: 12px;
+    background: var(--mat-sys-secondary-container);
+    color: var(--mat-sys-on-secondary-container);
+
+    mat-icon {
+      font-size: 32px;
+      width: 32px;
+      height: 32px;
+      flex-shrink: 0;
+    }
+  }
+
+  .premium-active-title {
+    margin: 0;
+    font-weight: 500;
+  }
+
+  .premium-active-sub {
+    margin: 2px 0 0;
+    font-size: 0.875rem;
+    opacity: 0.8;
+  }
+
+  .premium-cta {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .premium-info {
+    font-size: 0.875rem;
+    opacity: 0.75;
+    line-height: 1.5;
+    margin: 0;
+
+    a {
+      color: var(--mat-sys-primary);
+    }
+  }
+}
+
 // ─── Deaktivierte Items ───────────────────────────────────────────────────────
 
 .disabled-item {

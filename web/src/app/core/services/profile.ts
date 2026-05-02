@@ -1,5 +1,5 @@
 import { Injectable, Injector, inject, runInInjectionContext } from '@angular/core';
-import { Firestore, doc, docData } from '@angular/fire/firestore';
+import { Firestore, doc, onSnapshot } from '@angular/fire/firestore';
 import { AuthService } from '../auth/auth';
 import { UserProfile } from '../../shared/models';
 import { Observable, map, of, switchMap } from 'rxjs';
@@ -14,10 +14,17 @@ export class ProfileService {
   readonly profile$ = this.auth.user$.pipe(
     switchMap(user => {
       if (!user) return of(null);
-      const docRef = doc(this.firestore, `users/${user.uid}`);
-      return runInInjectionContext(this.injector, () => docData(docRef)).pipe(
-        map(data => (data as UserProfile) || null)
-      );
+      return new Observable<UserProfile | null>(observer => {
+        let unsub: (() => void) | undefined;
+        runInInjectionContext(this.injector, () => {
+          const ref = doc(this.firestore, `users/${user.uid}`);
+          unsub = onSnapshot(ref,
+            snap => observer.next((snap.data() as UserProfile) || null),
+            err  => observer.error(err),
+          );
+        });
+        return () => unsub?.();
+      });
     })
   );
 

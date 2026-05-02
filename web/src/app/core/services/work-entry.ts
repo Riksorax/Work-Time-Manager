@@ -3,22 +3,21 @@ import {
   Firestore,
   collection,
   doc,
-  docData,
+  onSnapshot,
   setDoc,
   query,
   where,
-  collectionData,
   Timestamp,
   deleteDoc,
-  orderBy
+  orderBy,
 } from '@angular/fire/firestore';
 import { AuthService } from '../auth/auth';
 import { WorkEntry, WorkEntryType, Break } from '../../shared/models';
-import { Observable, map, of, switchMap } from 'rxjs';
+import { Observable, of, switchMap } from 'rxjs';
 
 // localStorage Keys — identisch zu Flutter LocalWorkRepositoryImpl
-const LS_PREFIX  = 'local_work_entries_';
-const LS_KEYS    = 'local_monthly_keys';
+const LS_PREFIX = 'local_work_entries_';
+const LS_KEYS   = 'local_monthly_keys';
 
 @Injectable({ providedIn: 'root' })
 export class WorkEntryService {
@@ -59,9 +58,8 @@ export class WorkEntryService {
   async deleteEntry(id: string): Promise<void> {
     const uid = this.auth.uid;
     if (uid) {
-      await runInInjectionContext(this.injector, () =>
-        deleteDoc(doc(this.firestore, `users/${uid}/work_entries/${id}`))
-      );
+      const ref = doc(this.firestore, `users/${uid}/work_entries/${id}`);
+      await runInInjectionContext(this.injector, () => deleteDoc(ref));
     } else {
       this._localDelete(id);
     }
@@ -83,25 +81,39 @@ export class WorkEntryService {
 
   private _firebaseToday(uid: string): Observable<WorkEntry | null> {
     const id  = this._dateId(new Date());
-    const ref = doc(this.firestore, `users/${uid}/work_entries/${id}`);
-    return runInInjectionContext(this.injector, () =>
-      docData(ref).pipe(map(data => data ? this._fromFirestore(data, id) : null))
-    );
+    return new Observable<WorkEntry | null>(observer => {
+      let unsub: (() => void) | undefined;
+      runInInjectionContext(this.injector, () => {
+        const ref = doc(this.firestore, `users/${uid}/work_entries/${id}`);
+        unsub = onSnapshot(ref,
+          snap => observer.next(snap.exists() ? this._fromFirestore(snap.data() as Record<string, unknown>, id) : null),
+          err  => observer.error(err),
+        );
+      });
+      return () => unsub?.();
+    });
   }
 
   private _firebaseMonth(uid: string, year: number, month: number): Observable<WorkEntry[]> {
-    const start = new Date(year, month - 1, 1);
-    const end   = new Date(year, month, 0, 23, 59, 59);
-    const col   = collection(this.firestore, `users/${uid}/work_entries`);
-    const q     = query(
-      col,
-      where('date', '>=', Timestamp.fromDate(start)),
-      where('date', '<=', Timestamp.fromDate(end)),
-      orderBy('date', 'asc')
-    );
-    return runInInjectionContext(this.injector, () => collectionData(q, { idField: 'id' })).pipe(
-      map(list => list.map(d => this._fromFirestore(d, (d as WorkEntry & {id: string}).id)))
-    );
+    return new Observable<WorkEntry[]>(observer => {
+      let unsub: (() => void) | undefined;
+      runInInjectionContext(this.injector, () => {
+        const start = new Date(year, month - 1, 1);
+        const end   = new Date(year, month, 0, 23, 59, 59);
+        const col   = collection(this.firestore, `users/${uid}/work_entries`);
+        const q     = query(
+          col,
+          where('date', '>=', Timestamp.fromDate(start)),
+          where('date', '<=', Timestamp.fromDate(end)),
+          orderBy('date', 'asc'),
+        );
+        unsub = onSnapshot(q,
+          snap => observer.next(snap.docs.map(d => this._fromFirestore(d.data() as Record<string, unknown>, d.id))),
+          err  => observer.error(err),
+        );
+      });
+      return () => unsub?.();
+    });
   }
 
   private async _firebaseSave(uid: string, entry: WorkEntry): Promise<void> {
@@ -191,7 +203,6 @@ export class WorkEntryService {
   }
 
   private _localDelete(id: string): void {
-    // id is YYYY-MM-DD
     const [year, month, day] = id.split('-').map(Number);
     const monthKey = this._monthKey(year, month);
     const raw = localStorage.getItem(monthKey);

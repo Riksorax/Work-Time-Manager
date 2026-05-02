@@ -1,6 +1,6 @@
 import { Injectable, Injector, inject, runInInjectionContext } from '@angular/core';
-import { Firestore, doc, docData, setDoc } from '@angular/fire/firestore';
-import { BehaviorSubject, Observable, map, switchMap } from 'rxjs';
+import { Firestore, doc, onSnapshot, setDoc } from '@angular/fire/firestore';
+import { BehaviorSubject, Observable, switchMap } from 'rxjs';
 import { AuthService } from '../auth/auth';
 import { UserSettings } from '../../shared/models';
 
@@ -23,7 +23,6 @@ export class SettingsService {
     notifyBreaks: false,
   };
 
-  // Reaktiver Stream für localStorage-Modus
   private readonly _local$ = new BehaviorSubject<UserSettings>(this._localGet());
 
   getSettings(): Observable<UserSettings> {
@@ -31,10 +30,17 @@ export class SettingsService {
       switchMap(user => {
         if (!user) return this._local$.asObservable();
 
-        const docRef = doc(this.firestore, `users/${user.uid}/settings/current`);
-        return runInInjectionContext(this.injector, () => docData(docRef)).pipe(
-          map(data => (data as UserSettings) || this.defaultSettings)
-        );
+        return new Observable<UserSettings>(observer => {
+          let unsub: (() => void) | undefined;
+          runInInjectionContext(this.injector, () => {
+            const ref = doc(this.firestore, `users/${user.uid}/settings/current`);
+            unsub = onSnapshot(ref,
+              snap => observer.next((snap.data() as UserSettings) || this.defaultSettings),
+              err  => observer.error(err),
+            );
+          });
+          return () => unsub?.();
+        });
       })
     );
   }
@@ -45,10 +51,10 @@ export class SettingsService {
       this._localSave(settings);
       return;
     }
-    const docRef = doc(this.firestore, `users/${uid}/settings/current`);
-    await runInInjectionContext(this.injector, () =>
-      setDoc(docRef, settings, { merge: true })
-    );
+    await runInInjectionContext(this.injector, () => {
+      const ref = doc(this.firestore, `users/${uid}/settings/current`);
+      return setDoc(ref, settings, { merge: true });
+    });
   }
 
   // ── localStorage ─────────────────────────────────────────────────────────
@@ -63,6 +69,6 @@ export class SettingsService {
 
   private _localSave(settings: UserSettings): void {
     localStorage.setItem(LS_KEY, JSON.stringify(settings));
-    this._local$.next(settings); // Subscriber sofort informieren
+    this._local$.next(settings);
   }
 }
