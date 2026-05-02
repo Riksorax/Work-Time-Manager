@@ -63,9 +63,10 @@ core/
 │   ├── work-entry.ts      Hybrid Firebase/localStorage — getAllLocalEntries() für DataSync
 │   ├── overtime.ts        Hybrid — getOvertime() / saveOvertime() / getLastUpdateDate()
 │   ├── settings.ts        Hybrid — getSettings() Observable / saveSettings()
-│   ├── profile.ts         ProfileService — isPremium Signal (Firestore-Flag, kein RevenueCat)
+│   ├── profile.ts         ProfileService — isPremium Signal (Firestore-Flag)
 │   ├── theme.ts           ThemeService — isDarkMode Signal + localStorage-Persistenz
-│   └── data-sync.ts       DataSyncService — localStorage→Firebase-Migration bei Login
+│   ├── data-sync.ts       DataSyncService — localStorage→Firebase-Migration bei Login
+│   └── web-premium.ts     WebPremiumService — RC Billing Paywall + Kauf-Wiederherstellung
 
 domain/
 ├── models/
@@ -108,8 +109,42 @@ Jedes Feature hat einen eigenen `*.service.ts` der Core-Services aggregiert:
 - **`ChangeDetectionStrategy.OnPush`** bei allen Components
 - **Kein `color="primary/warn/accent"`** auf Material-Buttons (M3-deprecated)
 - **Premium-Gate**: `ProfileService.isPremium` — kein RevenueCat (Web nutzt Firestore-Flag)
-- **Firebase**: nur modular API v10, kein AngularFire Compat-Layer
 - **Kein `CommonModule`** — nur spezifische Imports (`DatePipe`, `AsyncPipe` etc.)
+
+### Firebase / AngularFire-Regeln (kritisch)
+
+AngularFire 20 bundelt **eigenes Firebase v11** in `node_modules/@angular/fire/node_modules/`. Das Projekt hat separat Firebase v12. Die Typen sind **inkompatibel** — niemals mischen:
+
+```typescript
+// ✅ RICHTIG — alles aus @angular/fire/*
+import { Firestore, doc, onSnapshot, setDoc } from '@angular/fire/firestore';
+import { Auth, authState } from '@angular/fire/auth';
+
+// ❌ FALSCH — firebase/* und @angular/fire/* nie mischen
+import { doc } from '@angular/fire/firestore';
+import { onSnapshot } from 'firebase/firestore'; // anderes Modul-Bundle!
+```
+
+**`runInInjectionContext` für alle Firebase-Calls außerhalb des Constructors:**
+
+```typescript
+// Calls in switchMap / async-Callbacks benötigen runInInjectionContext
+runInInjectionContext(this.injector, () => {
+  unsub = onSnapshot(ref, snap => observer.next(snap.data()), err => observer.error(err));
+});
+```
+
+**Nie `docData` / `collectionData` verwenden** — rxfire-Bug mit DocumentReference. Stattdessen eigene `new Observable(observer => { runInInjectionContext(...) })`.
+
+### Firestore-Datenpfade (Flutter-kompatibel)
+
+| Daten | Pfad | Felder |
+|---|---|---|
+| Arbeitseintrag | `users/{uid}/work_entries/{yyyy-MM}` | `days: { "5": { date, workStart, workEnd, breaks, ... } }` |
+| Pause (in Eintrag) | (eingebettet in days-Map) | `{ name, start, end }` — Flutter ignoriert `id`/`isAutomatic` |
+| Gleitzeit | `users/{uid}/overtime/balance` | `minutes` (int), `lastUpdated` (Timestamp) |
+| Einstellungen | `users/{uid}/settings/current` | nur Web — Flutter nutzt SharedPreferences |
+| Profil/Premium | `users/{uid}` | `isPremium` (bool) |
 
 ### Dark Mode
 
