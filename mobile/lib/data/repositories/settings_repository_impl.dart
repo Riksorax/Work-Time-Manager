@@ -58,6 +58,7 @@ class SettingsRepositoryImpl implements SettingsRepository {
   Future<void> setTargetWeeklyHours(double hours) async {
     logger.i('[SettingsRepository] setTargetWeeklyHours for user $_userId: $hours');
     await _prefs.setDouble(_targetHoursKey, hours);
+    _syncToFirestore({'weeklyTargetHours': hours});
   }
 
   @override
@@ -71,6 +72,34 @@ class SettingsRepositoryImpl implements SettingsRepository {
   Future<void> setWorkdaysPerWeek(int days) async {
     logger.i('[SettingsRepository] setWorkdaysPerWeek for user $_userId: $days');
     await _prefs.setInt(_workdaysPerWeekKey, days);
+    _syncToFirestore({'workdaysPerWeek': days});
+  }
+
+  /// Beim Login: Firestore-Einstellungen in SharedPreferences übernehmen.
+  /// Nur weeklyTargetHours und workdaysPerWeek werden synchronisiert —
+  /// Benachrichtigungen sind gerätespezifisch.
+  Future<void> syncFromFirestore() async {
+    if (_userId == 'local' || _userId.isEmpty) return;
+    try {
+      final data = await _firestoreDataSource.getSettings(_userId);
+      if (data == null) return;
+      if (data['weeklyTargetHours'] != null) {
+        await _prefs.setDouble(_targetHoursKey, (data['weeklyTargetHours'] as num).toDouble());
+      }
+      if (data['workdaysPerWeek'] != null) {
+        await _prefs.setInt(_workdaysPerWeekKey, (data['workdaysPerWeek'] as num).toInt());
+      }
+      logger.i('[SettingsRepository] Einstellungen von Firestore geladen.');
+    } catch (e) {
+      logger.w('[SettingsRepository] Firestore-Import fehlgeschlagen: $e');
+    }
+  }
+
+  void _syncToFirestore(Map<String, dynamic> data) {
+    if (_userId == 'local' || _userId.isEmpty) return;
+    _firestoreDataSource
+        .saveSettings(_userId, data)
+        .catchError((e) => logger.w('[SettingsRepository] Firestore-Sync fehlgeschlagen: $e'));
   }
 
   @override

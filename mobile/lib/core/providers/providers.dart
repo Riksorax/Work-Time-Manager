@@ -93,11 +93,14 @@ AuthRepository authRepository(Ref ref) {
 @riverpod
 SettingsRepository settingsRepository(Ref ref) {
   final userId = ref.watch(firebaseAuthProvider).currentUser?.uid;
-  return SettingsRepositoryImpl(
+  final repo = SettingsRepositoryImpl(
     ref.watch(sharedPreferencesProvider),
     ref.watch(firestoreDataSourceProvider),
     userId ?? 'local',
   );
+  // Beim Login Firestore-Einstellungen in SharedPrefs übernehmen
+  if (userId != null) repo.syncFromFirestore();
+  return repo;
 }
 
 @riverpod

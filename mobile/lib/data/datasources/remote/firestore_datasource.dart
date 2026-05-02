@@ -27,6 +27,10 @@ abstract class FirestoreDataSource {
 
   // User Profile
   Future<void> setUserProfile(String userId, Map<String, dynamic> data);
+
+  // Settings (plattformübergreifend: weeklyTargetHours, workdaysPerWeek)
+  Future<Map<String, dynamic>?> getSettings(String userId);
+  Future<void> saveSettings(String userId, Map<String, dynamic> settings);
 }
 
 class FirestoreDataSourceImpl implements FirestoreDataSource {
@@ -299,5 +303,22 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
   Future<void> setUserProfile(String userId, Map<String, dynamic> data) async {
     logger.i('[Firestore] Aktualisiere User-Profil für $userId: $data');
     await _firestore.collection('users').doc(userId).set(data, SetOptions(merge: true));
+  }
+
+  @override
+  Future<Map<String, dynamic>?> getSettings(String userId) async {
+    final snap = await _firestore
+        .collection('users').doc(userId)
+        .collection('settings').doc('current')
+        .get();
+    return snap.exists ? snap.data() : null;
+  }
+
+  @override
+  Future<void> saveSettings(String userId, Map<String, dynamic> settings) async {
+    await _firestore
+        .collection('users').doc(userId)
+        .collection('settings').doc('current')
+        .set(settings, SetOptions(merge: true));
   }
 }

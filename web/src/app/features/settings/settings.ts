@@ -142,8 +142,11 @@ export class SettingsComponent {
   async onSync(): Promise<void> {
     const result = await this.svc.sync();
     if (result.errors.length === 0) {
+      const parts = [`${result.workEntriesSynced} Einträge`];
+      if (result.settingsSynced) parts.push('Einstellungen');
+      if (result.overtimeSynced) parts.push('Überstunden');
       this.snackbar.open(
-        `Synchronisierung erfolgreich! Einträge: ${result.workEntriesSynced}`,
+        `Synchronisierung erfolgreich: ${parts.join(', ')}`,
         'OK',
         { duration: 4000 }
       );
