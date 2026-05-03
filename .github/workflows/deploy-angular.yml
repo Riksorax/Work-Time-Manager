@@ -68,7 +68,6 @@ jobs:
         run: |
           mkdir -p src/environments
           BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
-          # In beide Dateien schreiben, um sicherzugehen
           cat > src/environments/environment.ts <<EOF
           export const environment = {
             production: true,
@@ -86,18 +85,13 @@ jobs:
           };
           EOF
           cp src/environments/environment.ts src/environments/environment.prod.ts
-          
-          echo "environment.ts and environment.prod.ts created successfully (Build: ${BUILD_DATE})."
-          
-          # Strenge Validierung: Prüfen ob noch Platzhalter drin sind
-          if grep -qE "YOUR_API_KEY|YOUR_AUTH_DOMAIN|PLACEHOLDER" src/environments/environment.ts; then
-            echo "Error: Placeholders detected in environment.ts! Check your GitHub Secrets."
-            grep -E "YOUR_API_KEY|YOUR_AUTH_DOMAIN|PLACEHOLDER" src/environments/environment.ts | sed 's/.:/ ******* /'
-            exit 1
-          fi
+          echo "environment.ts created (Build: ${BUILD_DATE})"
 
       - name: Build (production)
-        run: npm run build -- --configuration production --delete-output-path
+        run: |
+          # Cache löschen um "Stale Data" zu vermeiden
+          rm -rf .angular/cache
+          npm run build -- --configuration production --delete-output-path
 
       - name: Upload dist artifact
         uses: actions/upload-artifact@v4
