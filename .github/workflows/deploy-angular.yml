@@ -142,20 +142,13 @@ jobs:
           username: ${{ vars.HETZNER_USER }}
           key:      ${{ secrets.HETZNER_SSH_PRIVATE_KEY }}
           script: |
-            IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+            cd /opt/work-time-manager
 
             # Neues Image ziehen
-            docker pull ${IMAGE}:latest
+            docker compose pull web
 
-            # Alten Container ersetzen (zero-downtime mit --pull always)
-            docker stop work-time-manager-web 2>/dev/null || true
-            docker rm   work-time-manager-web 2>/dev/null || true
-
-            docker run -d \
-              --name work-time-manager-web \
-              --restart unless-stopped \
-              -p 80:80 \
-              ${IMAGE}:latest
+            # Container neu starten (Caddy bleibt oben)
+            docker compose up -d --no-deps web
 
             # Alte Images aufräumen
             docker image prune -f
