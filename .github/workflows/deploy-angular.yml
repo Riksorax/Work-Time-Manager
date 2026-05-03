@@ -145,7 +145,7 @@ jobs:
           username: ${{ vars.HETZNER_USER }}
           key:      ${{ secrets.HETZNER_SSH_PRIVATE_KEY }}
           source:   server/docker-compose.yml
-          target:   ~/work-time-manager
+          target:   ~/projekte/work-time-manager
           strip_components: 1
 
       - name: Deploy via SSH
@@ -156,7 +156,7 @@ jobs:
           key:      ${{ secrets.HETZNER_SSH_PRIVATE_KEY }}
           script: |
             set -e
-            cd ~/work-time-manager
+            cd ~/projekte/work-time-manager
 
             # Neues Image ziehen
             docker compose pull work-time-manager-web
