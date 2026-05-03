@@ -1,18 +1,30 @@
-name: Build & Deploy Angular Web to Firebase
+name: Web — Build & Deploy
 
 on:
   push:
-    branches:
-      - main
-      - develop
+    branches: [main, develop]
+    paths:
+      - 'web/**'
+      - 'web/firestore.rules'
+      - 'firestore.rules'
+      - '.github/workflows/deploy-angular.yml'
   pull_request:
-    branches:
-      - main
-      - develop
+    branches: [main, develop]
+    paths:
+      - 'web/**'
+      - 'web/firestore.rules'
+      - 'firestore.rules'
+      - '.github/workflows/deploy-angular.yml'
+  workflow_dispatch:
 
 jobs:
-  build_and_deploy:
+  build:
+    name: Build
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,13 +38,52 @@ jobs:
 
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
-        working-directory: web
 
-      - name: Build
+      - name: Inject environment.ts
+        run: |
+          cat > src/environments/environment.ts << 'ENVEOF'
+          export const environment = {
+            production: true,
+            firebase: {
+              apiKey:            '${{ secrets.FIREBASE_API_KEY }}',
+              authDomain:        '${{ secrets.FIREBASE_AUTH_DOMAIN }}',
+              projectId:         '${{ secrets.FIREBASE_PROJECT_ID }}',
+              storageBucket:     '${{ secrets.FIREBASE_STORAGE_BUCKET }}',
+              messagingSenderId: '${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}',
+              appId:             '${{ secrets.FIREBASE_APP_ID }}',
+              measurementId:     '${{ secrets.FIREBASE_MEASUREMENT_ID }}',
+            },
+            rcWebApiKey: '${{ secrets.REVENUECAT_WEB_BILLING_KEY }}',
+          };
+          ENVEOF
+
+      - name: Build (production)
         run: npm run build -- --configuration production
-        working-directory: web
 
-      - name: Deploy to Firebase Hosting
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist-${{ github.run_id }}
+          path: web/dist/work-time-manager-web/browser
+          retention-days: 1
+
+  deploy-live:
+    name: Deploy → Live
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: web-dist-${{ github.run_id }}
+          path: web/dist/work-time-manager-web/browser
+
+      - name: Deploy to Firebase Hosting (live)
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
@@ -40,4 +91,27 @@ jobs:
           channelId: live
           projectId: worktime-56c7a
           entryPoint: web
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+  deploy-preview:
+    name: Deploy → Preview
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/develop')
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: web-dist-${{ github.run_id }}
+          path: web/dist/work-time-manager-web/browser
+
+      - name: Deploy to Firebase Hosting (preview)
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_WORK_TIME_MANAGER_RIKSORAX }}'
+          projectId: worktime-56c7a
+          entryPoint: web
