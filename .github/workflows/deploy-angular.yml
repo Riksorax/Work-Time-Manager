@@ -140,7 +140,7 @@ jobs:
           tags: |
             type=ref,event=branch
             type=sha,prefix={{branch}}-,format=short
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feature/angular-web-scaffold' }}
 
       - name: Build & Push Docker Image
         id: push
@@ -153,12 +153,12 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # ── 3. Hetzner Deploy (nur main) ────────────────────────────────────────────
+  # ── 3. Hetzner Deploy (main oder feature branch) ────────────────────────────
   deploy:
     name: Deploy → Hetzner
     needs: docker
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feature/angular-web-scaffold'
     environment: production
 
     steps:
