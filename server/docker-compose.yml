@@ -1,41 +1,25 @@
 services:
-
-  web:
+  work-time-manager-web:
     image: riksorax/work-time-manager-web:latest
     container_name: work-time-manager-web
     restart: unless-stopped
-    # Nur intern erreichbar — Caddy spricht direkt mit dem Container
-    expose:
-      - "80"
     networks:
-      - proxy
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost/"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
-  caddy:
-    image: caddy:2-alpine
-    container_name: caddy
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"   # HTTP/3
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    networks:
-      - proxy
-    depends_on:
-      - web
+      - traefik-proxy
+    labels:
+      # Traefik aktivieren
+      - "traefik.enable=true"
+      # HTTPS-Router
+      - "traefik.http.routers.work-time-manager.rule=Host(`work-time-manager.app`)"
+      - "traefik.http.routers.work-time-manager.entrypoints=websecure"
+      - "traefik.http.routers.work-time-manager.tls.certresolver=letsencrypt"
+      # Port im Container (nginx läuft auf 80)
+      - "traefik.http.services.work-time-manager.loadbalancer.server.port=80"
+      # HTTP → HTTPS Redirect
+      - "traefik.http.routers.work-time-manager-web.rule=Host(`work-time-manager.app`)"
+      - "traefik.http.routers.work-time-manager-web.entrypoints=web"
+      - "traefik.http.routers.work-time-manager-web.middlewares=https-redirect"
+      - "traefik.http.middlewares.https-redirect.redirectscheme.scheme=https"
 
 networks:
-  proxy:
-    driver: bridge
-
-volumes:
-  caddy_data:    # Let's Encrypt Zertifikate (persistent!)
-  caddy_config:
+  traefik-proxy:
+    external: true
