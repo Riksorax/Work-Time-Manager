@@ -208,4 +208,48 @@ class MockFirestoreDataSource extends _i1.Mock
         returnValue: _i3.Future<void>.value(),
         returnValueForMissingStub: _i3.Future<void>.value(),
       ) as _i3.Future<void>);
+
+  @override
+  _i3.Future<void> setUserProfile(
+    String? userId,
+    Map<String, dynamic>? data,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #setUserProfile,
+          [
+            userId,
+            data,
+          ],
+        ),
+        returnValue: _i3.Future<void>.value(),
+        returnValueForMissingStub: _i3.Future<void>.value(),
+      ) as _i3.Future<void>);
+
+  @override
+  _i3.Future<Map<String, dynamic>?> getSettings(String? userId) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getSettings,
+          [userId],
+        ),
+        returnValue: _i3.Future<Map<String, dynamic>?>.value(),
+      ) as _i3.Future<Map<String, dynamic>?>);
+
+  @override
+  _i3.Future<void> saveSettings(
+    String? userId,
+    Map<String, dynamic>? settings,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #saveSettings,
+          [
+            userId,
+            settings,
+          ],
+        ),
+        returnValue: _i3.Future<void>.value(),
+        returnValueForMissingStub: _i3.Future<void>.value(),
+      ) as _i3.Future<void>);
 }

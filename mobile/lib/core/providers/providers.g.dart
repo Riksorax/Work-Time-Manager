@@ -387,7 +387,7 @@ final class SettingsRepositoryProvider extends $FunctionalProvider<
 }
 
 String _$settingsRepositoryHash() =>
-    r'18140d9186a20eb7e032cfcd7abe504f81c67a61';
+    r'13727e5b62593b79f3ef6e3c6713ec6a29003b19';
 
 @ProviderFor(workRepository)
 const workRepositoryProvider = WorkRepositoryProvider._();

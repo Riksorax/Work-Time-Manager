@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
 
-import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/repositories/settings_repository.dart';
 import '../datasources/remote/firestore_datasource.dart';
-import '../models/work_entry_model.dart';
 
 class SettingsRepositoryImpl implements SettingsRepository {
   // Theme ist global (nicht userId-spezifisch)
