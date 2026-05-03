@@ -46,7 +46,7 @@ jobs:
         env:
           RC_WEB_KEY: ${{ secrets.RC_WEB_KEY }}
         run: |
-          cat > src/environments/environment.ts << EOF
+          cat > src/environments/environment.ts <<'ENVEOF'
           export const environment = {
             production: true,
             firebase: {
@@ -58,9 +58,10 @@ jobs:
               appId:             '1:915742606352:web:f94b1304e714d8ad21f695',
               measurementId:     'G-YZSWN2Y84F',
             },
-            rcWebApiKey: '${RC_WEB_KEY}',
+            rcWebApiKey: 'RC_KEY_PLACEHOLDER',
           };
-          EOF
+          ENVEOF
+          sed -i "s|RC_KEY_PLACEHOLDER|${RC_WEB_KEY}|" src/environments/environment.ts
 
       - name: Build (production)
         run: npm run build -- --configuration production
