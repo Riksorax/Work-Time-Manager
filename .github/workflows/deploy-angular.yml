@@ -144,7 +144,7 @@ jobs:
           host:     ${{ vars.HETZNER_HOST }}
           username: ${{ vars.HETZNER_USER }}
           key:      ${{ secrets.HETZNER_SSH_PRIVATE_KEY }}
-          script:   mkdir -p /opt/work-time-manager
+          script:   sudo mkdir -p /opt/work-time-manager
 
       - name: docker-compose.yml auf Server kopieren
         uses: appleboy/scp-action@v0.1.7
@@ -167,10 +167,10 @@ jobs:
             cd /opt/work-time-manager
 
             # Neues Image ziehen
-            docker compose pull work-time-manager-web
+            sudo docker compose pull work-time-manager-web
 
             # Container starten/aktualisieren (Traefik läuft separat)
-            docker compose up -d --no-deps work-time-manager-web
+            sudo docker compose up -d --no-deps work-time-manager-web
 
             # Alte Images aufräumen
-            docker image prune -f
+            sudo docker image prune -f
