@@ -6,7 +6,7 @@ COPY dist/work-time-manager-web/browser /usr/share/nginx/html
 # SPA-Konfiguration
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-EXPOSE 80
+EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s \
-    CMD wget -qO- http://localhost/ || exit 1
+    CMD curl -f http://localhost:8080/ || exit 1
