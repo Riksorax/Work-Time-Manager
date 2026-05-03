@@ -1,6 +1,9 @@
 FROM nginx:1.27-alpine
 
-# Gebaute Angular-App (vom CI-Artifact) in nginx-Root kopieren
+# Verzeichnis leeren, um alte Reste (Placeholders) zu vermeiden
+RUN rm -rf /usr/share/nginx/html/*
+
+# Gebaute Angular-App kopieren
 COPY dist/work-time-manager-web/browser /usr/share/nginx/html
 
 # SPA-Konfiguration
