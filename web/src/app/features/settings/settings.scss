@@ -11,6 +11,10 @@
   padding: 24px 16px;
   display: flex;
   justify-content: center;
+
+  @media (max-width: 600px) {
+    padding: 16px 8px;
+  }
 }
 
 .settings-content {
