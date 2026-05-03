@@ -138,14 +138,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Verzeichnis auf Server anlegen
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host:     ${{ vars.HETZNER_HOST }}
-          username: ${{ vars.HETZNER_USER }}
-          key:      ${{ secrets.HETZNER_SSH_PRIVATE_KEY }}
-          script:   sudo mkdir -p /opt/work-time-manager
-
       - name: docker-compose.yml auf Server kopieren
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -153,8 +145,8 @@ jobs:
           username: ${{ vars.HETZNER_USER }}
           key:      ${{ secrets.HETZNER_SSH_PRIVATE_KEY }}
           source:   server/docker-compose.yml
-          target:   /opt/work-time-manager
-          strip_components: 1   # entfernt "server/" — Datei landet direkt in /opt/work-time-manager/
+          target:   ~/projekte/work-time-manager
+          strip_components: 1
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -164,13 +156,13 @@ jobs:
           key:      ${{ secrets.HETZNER_SSH_PRIVATE_KEY }}
           script: |
             set -e
-            cd /opt/work-time-manager
+            cd ~/projekte/work-time-manager
 
             # Neues Image ziehen
-            sudo docker compose pull work-time-manager-web
+            docker compose pull work-time-manager-web
 
             # Container starten/aktualisieren (Traefik läuft separat)
-            sudo docker compose up -d --no-deps work-time-manager-web
+            docker compose up -d --no-deps work-time-manager-web
 
             # Alte Images aufräumen
-            sudo docker image prune -f
+            docker image prune -f
