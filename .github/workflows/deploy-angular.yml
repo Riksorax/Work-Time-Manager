@@ -138,6 +138,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Verzeichnis auf Server anlegen
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host:     ${{ vars.HETZNER_HOST }}
+          username: ${{ vars.HETZNER_USER }}
+          key:      ${{ secrets.HETZNER_SSH_PRIVATE_KEY }}
+          script:   mkdir -p /opt/work-time-manager
+
       - name: docker-compose.yml auf Server kopieren
         uses: appleboy/scp-action@v0.1.7
         with:
