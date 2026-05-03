@@ -1,0 +1,235 @@
+:host {
+  --color-overtime-positive: #4CAF50;
+  --color-delete: #C62828;
+}
+
+.loading-state {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 80px 0;
+}
+
+.dashboard-wrapper {
+  padding: 24px;
+  display: flex;
+  justify-content: center;
+}
+
+.dashboard-content {
+  width: 100%;
+  max-width: 1200px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  align-items: start;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+}
+
+.main-column,
+.side-column {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+// ── Timer Section ──────────────────────────────────────────────────────────────
+
+.timer-section {
+  text-align: center;
+  padding: 32px 0 16px;
+
+  .timer-label {
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    opacity: 0.6;
+    margin: 0 0 8px;
+  }
+
+  .display-time {
+    font-size: 57px;
+    font-weight: 300;
+    letter-spacing: -0.5px;
+    margin: 0;
+    line-height: 1;
+    color: var(--mat-sys-on-surface);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .gross-time {
+    font-size: 1rem;
+    opacity: 0.65;
+    margin: 12px 0 0;
+  }
+}
+
+// ── Overtime Stats ─────────────────────────────────────────────────────────────
+
+.overtime-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  .stat-row {
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-right: 40px; // Platz für absolut positionierten Button
+
+    .stat-label {
+      font-size: 0.95rem;
+      opacity: 0.75;
+    }
+
+    .stat-value {
+      font-size: 1.25rem;
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .adjust-btn {
+      position: absolute;
+      right: -4px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+  }
+
+  .prediction-hint {
+    font-size: 0.875rem;
+    opacity: 0.7;
+    margin: 4px 0 0;
+
+    &--total {
+      opacity: 0.55;
+    }
+  }
+}
+
+// ── Controls ───────────────────────────────────────────────────────────────────
+
+.controls-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  app-time-input {
+    width: 100%;
+  }
+
+  .main-action-btn {
+    height: 56px;
+    font-size: 1rem;
+    border-radius: 12px;
+    gap: 8px;
+
+    &.running {
+      background-color: var(--mat-sys-error-container);
+      color: var(--mat-sys-on-error-container);
+    }
+
+    &:not(.running) {
+      background-color: var(--mat-sys-primary);
+      color: var(--mat-sys-on-primary);
+    }
+  }
+}
+
+// ── Breaks ─────────────────────────────────────────────────────────────────────
+
+.breaks-section {
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+
+    h3 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 400;
+    }
+  }
+
+  .empty-hint {
+    text-align: center;
+    padding: 24px;
+    opacity: 0.45;
+    margin: 0;
+  }
+}
+
+.breaks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.break-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 4px 10px 12px;
+  background: var(--mat-sys-surface-container-low);
+  border-radius: 12px;
+
+  .break-icon {
+    flex-shrink: 0;
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    opacity: 0.7;
+  }
+
+  .break-content {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .break-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .auto-badge {
+    font-size: 0.7rem;
+    font-weight: 500;
+    padding: 1px 7px;
+    border-radius: 10px;
+    background: var(--mat-sys-secondary-container);
+    color: var(--mat-sys-on-secondary-container);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .break-time {
+    font-size: 0.8125rem;
+    opacity: 0.65;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .break-actions {
+    display: flex;
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+
+  .delete-btn {
+    color: var(--color-delete);
+  }
+}

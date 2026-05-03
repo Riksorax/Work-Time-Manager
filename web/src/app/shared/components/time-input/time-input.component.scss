@@ -1,0 +1,9 @@
+// Flutter: OutlineInputBorder, full width
+.time-field {
+  width: 100%;
+}
+
+// Native time input: remove default browser styling inconsistencies
+input[type="time"]::-webkit-calendar-picker-indicator {
+  display: none; // We use our own icon via matSuffix
+}

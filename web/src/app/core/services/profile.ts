@@ -1,0 +1,36 @@
+import { Injectable, Injector, inject, runInInjectionContext } from '@angular/core';
+import { Firestore, doc, onSnapshot } from '@angular/fire/firestore';
+import { AuthService } from '../auth/auth';
+import { UserProfile } from '../../shared/models';
+import { Observable, map, of, switchMap } from 'rxjs';
+import { toSignal } from '@angular/core/rxjs-interop';
+
+@Injectable({ providedIn: 'root' })
+export class ProfileService {
+  private readonly firestore = inject(Firestore);
+  private readonly auth      = inject(AuthService);
+  private readonly injector  = inject(Injector);
+
+  readonly profile$ = this.auth.user$.pipe(
+    switchMap(user => {
+      if (!user) return of(null);
+      return new Observable<UserProfile | null>(observer => {
+        let unsub: (() => void) | undefined;
+        runInInjectionContext(this.injector, () => {
+          const ref = doc(this.firestore, `users/${user.uid}`);
+          unsub = onSnapshot(ref,
+            snap => observer.next((snap.data() as UserProfile) || null),
+            err  => observer.error(err),
+          );
+        });
+        return () => unsub?.();
+      });
+    })
+  );
+
+  readonly profile   = toSignal(this.profile$);
+  readonly isPremium = toSignal(
+    this.profile$.pipe(map(p => p?.isPremium ?? false)),
+    { initialValue: false }
+  );
+}

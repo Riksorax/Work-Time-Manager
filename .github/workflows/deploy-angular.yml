@@ -1,0 +1,176 @@
+name: Web — Build & Deploy
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'web/**'
+      - 'firestore.rules'
+      - '.github/workflows/deploy-angular.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'web/**'
+      - 'firestore.rules'
+      - '.github/workflows/deploy-angular.yml'
+  workflow_dispatch:
+
+env:
+  REGISTRY: docker.io
+  IMAGE_NAME: ${{ vars.DOCKERHUB_USERNAME }}/work-time-manager-web
+
+jobs:
+  # ── 1. Angular Build ────────────────────────────────────────────────────────
+  build:
+    name: Angular Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node.js Setup
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Inject environment.ts
+        env:
+          RC_WEB_KEY: ${{ secrets.RC_WEB_KEY }}
+        run: |
+          cat > src/environments/environment.ts << EOF
+          export const environment = {
+            production: true,
+            firebase: {
+              apiKey:            'AIzaSyAlBWIrPPlT8NaH2sWzrl3jsp_tVVM9KJM',
+              authDomain:        'worktime-56c7a.firebaseapp.com',
+              projectId:         'worktime-56c7a',
+              storageBucket:     'worktime-56c7a.firebasestorage.app',
+              messagingSenderId: '915742606352',
+              appId:             '1:915742606352:web:f94b1304e714d8ad21f695',
+              measurementId:     'G-YZSWN2Y84F',
+            },
+            rcWebApiKey: '${RC_WEB_KEY}',
+          };
+          EOF
+
+      - name: Build (production)
+        run: npm run build -- --configuration production
+
+      - name: Upload dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist-${{ github.run_id }}
+          path: web/dist/work-time-manager-web/browser
+          retention-days: 1
+
+  # ── 2. Docker Image bauen & in GHCR pushen ──────────────────────────────────
+  docker:
+    name: Docker Image
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    permissions:
+      contents: read
+      packages: write
+
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+      image-digest: ${{ steps.push.outputs.digest }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download dist artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: web-dist-${{ github.run_id }}
+          path: web/dist/work-time-manager-web/browser
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Docker Metadata (Tags & Labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-,format=short
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+      - name: Build & Push Docker Image
+        id: push
+        uses: docker/build-push-action@v5
+        with:
+          context: web
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ── 3. Hetzner Deploy (nur main) ────────────────────────────────────────────
+  deploy:
+    name: Deploy → Hetzner
+    needs: docker
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verzeichnis auf Server anlegen
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host:     ${{ vars.HETZNER_HOST }}
+          username: ${{ vars.HETZNER_USER }}
+          key:      ${{ secrets.HETZNER_SSH_PRIVATE_KEY }}
+          script:   mkdir -p /opt/work-time-manager
+
+      - name: docker-compose.yml auf Server kopieren
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host:     ${{ vars.HETZNER_HOST }}
+          username: ${{ vars.HETZNER_USER }}
+          key:      ${{ secrets.HETZNER_SSH_PRIVATE_KEY }}
+          source:   server/docker-compose.yml
+          target:   /opt/work-time-manager
+          strip_components: 1   # entfernt "server/" — Datei landet direkt in /opt/work-time-manager/
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host:     ${{ vars.HETZNER_HOST }}
+          username: ${{ vars.HETZNER_USER }}
+          key:      ${{ secrets.HETZNER_SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            cd /opt/work-time-manager
+
+            # Neues Image ziehen
+            docker compose pull work-time-manager-web
+
+            # Container starten/aktualisieren (Traefik läuft separat)
+            docker compose up -d --no-deps work-time-manager-web
+
+            # Alte Images aufräumen
+            docker image prune -f

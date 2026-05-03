@@ -1,0 +1,262 @@
+@if (svc.isLoading()) {
+  <div class="loading-state" aria-label="Einstellungen werden geladen">
+    <mat-spinner diameter="48" />
+  </div>
+} @else {
+  <div class="settings-wrapper">
+    <div class="settings-content">
+
+      <!-- ══════════════════════════════════════════ LINKE SPALTE ══ -->
+      <div class="column">
+
+        <!-- ── Profil-Sektion ───────────────────────────────────── -->
+        <section class="profile-section" aria-label="Profil">
+          <div class="profile-header">
+            <div class="avatar" aria-hidden="true">
+              @if (svc.user()?.photoURL) {
+                <img [src]="svc.user()!.photoURL!" alt="Profilbild" />
+              } @else {
+                <div class="avatar-placeholder">
+                  {{ (svc.user()?.displayName || svc.user()?.email || '?')[0].toUpperCase() }}
+                </div>
+              }
+            </div>
+            <div class="profile-info">
+              @if (svc.isLoggedIn()) {
+                <h3 class="profile-name">{{ svc.user()?.displayName || 'Benutzer' }}</h3>
+                <p class="profile-email">{{ svc.user()?.email }}</p>
+                @if (svc.isPremium()) {
+                  <span class="premium-badge" aria-label="Premium-Mitglied">
+                    <mat-icon aria-hidden="true">workspace_premium</mat-icon>
+                    Premium
+                  </span>
+                }
+              } @else {
+                <h3 class="profile-name">Nicht angemeldet</h3>
+                <p class="profile-email">Lokal gespeicherte Daten</p>
+              }
+            </div>
+            @if (svc.isLoggedIn()) {
+              <button mat-icon-button
+                      class="delete-account-btn"
+                      (click)="onDeleteAccount()"
+                      aria-label="Account endgültig löschen"
+                      [style.color]="'var(--mat-sys-error)'">
+                <mat-icon>delete_forever</mat-icon>
+              </button>
+            }
+          </div>
+        </section>
+
+        <mat-divider />
+
+        <!-- ── Arbeitszeit-Einstellungen ────────────────────────── -->
+        <section class="config-section" aria-label="Arbeitszeit-Einstellungen">
+          <h3 class="section-title">Arbeitszeit</h3>
+
+          <mat-list>
+            <button mat-list-item (click)="openEditTargetHoursDialog()"
+                    aria-label="Soll-Arbeitsstunden bearbeiten">
+              <mat-icon matListItemIcon aria-hidden="true">timer</mat-icon>
+              <span matListItemTitle>Soll-Arbeitsstunden</span>
+              <span matListItemLine>{{ svc.settings().weeklyTargetHours.toFixed(1) }} h/Woche</span>
+              <mat-icon matListItemMeta aria-hidden="true">chevron_right</mat-icon>
+            </button>
+
+            <button mat-list-item (click)="openEditWorkdaysDialog()"
+                    aria-label="Arbeitstage bearbeiten">
+              <mat-icon matListItemIcon aria-hidden="true">calendar_today</mat-icon>
+              <span matListItemTitle>Arbeitstage pro Woche</span>
+              <span matListItemLine>{{ svc.settings().workdaysPerWeek }} Tage</span>
+              <mat-icon matListItemMeta aria-hidden="true">chevron_right</mat-icon>
+            </button>
+
+            <mat-list-item>
+              <mat-icon matListItemIcon aria-hidden="true">schedule</mat-icon>
+              <span matListItemTitle>Tägliche Soll-Arbeitszeit</span>
+              <span matListItemLine>≈ {{ dailyTargetHours() }} h/Tag</span>
+            </mat-list-item>
+          </mat-list>
+        </section>
+
+        <mat-divider />
+
+        <!-- ── Gleitzeit-Bilanz ─────────────────────────────────── -->
+        <section class="overtime-section" aria-label="Gleitzeit-Bilanz">
+          <h3 class="section-title">Gleitzeit-Bilanz</h3>
+
+          <div class="overtime-display" aria-live="polite">
+            <span class="overtime-value"
+                  [style.color]="svc.overtimeMs() >= 0 ? 'var(--color-overtime-positive)' : 'var(--mat-sys-error)'">
+              {{ formatOvertime(svc.overtimeMs()) }}
+            </span>
+            @if (svc.lastOvertimeUpdate()) {
+              <span class="overtime-date">
+                Letzte Änderung: {{ svc.lastOvertimeUpdate() | date:'dd.MM.yyyy' }}
+              </span>
+            }
+          </div>
+
+          <button mat-flat-button
+                  (click)="openAdjustOvertimeDialog()"
+                  aria-label="Überstunden oder Minusstunden manuell anpassen">
+            <mat-icon>tune</mat-icon>
+            Überstunden / Minusstunden anpassen
+          </button>
+        </section>
+
+        <mat-divider />
+
+        <!-- ── Daten-Synchronisation ────────────────────────────── -->
+        <section class="sync-section" aria-label="Datensynchronisation">
+          @if (!svc.isLoggedIn()) {
+            <div class="offline-card">
+              <mat-icon class="offline-icon" aria-hidden="true">cloud_off</mat-icon>
+              <div class="offline-text">
+                <h4>Offline-Modus</h4>
+                <p>
+                  Ihre Daten werden lokal auf diesem Gerät gespeichert.
+                  Melden Sie sich an, um Ihre Daten in der Cloud zu sichern
+                  und geräteübergreifend zu synchronisieren.
+                </p>
+              </div>
+            </div>
+          } @else {
+            <button mat-stroked-button
+                    [disabled]="svc.isSyncing()"
+                    (click)="onSync()"
+                    aria-label="Lokale Daten mit der Cloud synchronisieren">
+              @if (svc.isSyncing()) {
+                <mat-spinner diameter="18" aria-hidden="true" />
+              } @else {
+                <mat-icon aria-hidden="true">cloud_sync</mat-icon>
+              }
+              Lokale Daten zu Cloud synchronisieren
+            </button>
+          }
+        </section>
+
+      </div>
+
+      <!-- ══════════════════════════════════════════ RECHTE SPALTE ══ -->
+      <div class="column">
+
+        <!-- ── Premium ──────────────────────────────────────────── -->
+        @if (svc.isLoggedIn()) {
+          <section class="premium-section" aria-label="Premium">
+            <h3 class="section-title">Premium</h3>
+
+            @if (svc.isPremium()) {
+              <div class="premium-active">
+                <mat-icon aria-hidden="true">workspace_premium</mat-icon>
+                <div>
+                  <p class="premium-active-title">Premium aktiv</p>
+                  <p class="premium-active-sub">Alle Funktionen sind freigeschaltet.</p>
+                </div>
+              </div>
+            } @else {
+              <div class="premium-cta">
+                @if (svc.isRcConfigured) {
+                  <button mat-flat-button
+                          [disabled]="svc.isPurchasing()"
+                          (click)="onPresentPaywall()"
+                          aria-label="Premium freischalten">
+                    @if (svc.isPurchasing()) {
+                      <mat-spinner diameter="18" aria-hidden="true" />
+                    } @else {
+                      <mat-icon aria-hidden="true">workspace_premium</mat-icon>
+                    }
+                    Premium freischalten
+                  </button>
+
+                  <button mat-stroked-button
+                          [disabled]="svc.isRestoring()"
+                          (click)="onRestorePurchases()"
+                          aria-label="Bereits getätigten Kauf wiederherstellen">
+                    @if (svc.isRestoring()) {
+                      <mat-spinner diameter="18" aria-hidden="true" />
+                    } @else {
+                      <mat-icon aria-hidden="true">restore</mat-icon>
+                    }
+                    Kauf wiederherstellen
+                  </button>
+                } @else {
+                  <p class="premium-info">
+                    Premium kann über die
+                    <a href="https://play.google.com/store/apps/details?id=app.work_time_manager"
+                       target="_blank" rel="noopener">Android-App</a>
+                    erworben werden. Nach dem Kauf hier auf „Kauf wiederherstellen" tippen
+                    — sobald der Web-Store verfügbar ist.
+                  </p>
+                }
+              </div>
+            }
+          </section>
+
+          <mat-divider />
+        }
+
+        <!-- ── Design ───────────────────────────────────────────── -->
+        <section class="design-section" aria-label="Design">
+          <h3 class="section-title">Design</h3>
+
+          <mat-list>
+            <mat-list-item>
+              <mat-icon matListItemIcon aria-hidden="true">dark_mode</mat-icon>
+              <span matListItemTitle>Design</span>
+              <span matListItemLine>{{ svc.isDarkMode() ? 'Dunkel' : 'Hell' }}</span>
+              <mat-slide-toggle matListItemMeta
+                                [checked]="svc.isDarkMode()"
+                                (change)="onThemeToggle($event.checked)"
+                                aria-label="Dunkelmodus umschalten"
+                                />
+            </mat-list-item>
+          </mat-list>
+        </section>
+
+        <mat-divider />
+
+        <!-- ── Benachrichtigungen ───────────────────────────────── -->
+        <section aria-label="Benachrichtigungen">
+          <h3 class="section-title">Benachrichtigungen</h3>
+
+          <mat-list>
+            <mat-list-item class="disabled-item">
+              <mat-icon matListItemIcon aria-hidden="true">notifications</mat-icon>
+              <span matListItemTitle>Benachrichtigungen</span>
+              <span matListItemLine>Nicht verfügbar im Browser</span>
+              <mat-icon matListItemMeta aria-hidden="true" class="disabled-icon">block</mat-icon>
+            </mat-list-item>
+          </mat-list>
+        </section>
+
+        <mat-divider />
+
+        <!-- ── Über die App ─────────────────────────────────────── -->
+        <section aria-label="Über die App">
+          <h3 class="section-title">Über die App</h3>
+
+          <mat-list>
+            <a mat-list-item
+               href="https://play.google.com/store/apps/details?id=app.work_time_manager"
+               target="_blank" rel="noopener"
+               aria-label="App im Google Play Store öffnen (neues Fenster)">
+              <mat-icon matListItemIcon aria-hidden="true">shop</mat-icon>
+              <span matListItemTitle>Android-App herunterladen</span>
+              <span matListItemLine>Google Play Store</span>
+              <mat-icon matListItemMeta aria-hidden="true">open_in_new</mat-icon>
+            </a>
+
+            <mat-list-item>
+              <mat-icon matListItemIcon aria-hidden="true">info</mat-icon>
+              <span matListItemTitle>Version</span>
+              <span matListItemLine>Work Time Manager · Web</span>
+            </mat-list-item>
+          </mat-list>
+        </section>
+
+      </div>
+
+    </div>
+  </div>
+}

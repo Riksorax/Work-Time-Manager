@@ -1,0 +1,35 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    match /users/{userId} {
+      // Profil-Dokument (inkl. isPremium-Flag).
+      // isPremium wird client-seitig nach RevenueCat-Verifikation gesetzt
+      // (mobile: subscription_provider, web: WebPremiumService nach RC Billing).
+      // Eine echte server-seitige Absicherung würde Firebase Functions
+      // + RC-Webhook erfordern.
+      allow read, write: if isOwner(userId);
+
+      // Arbeitseinträge: {yyyy-MM}-Dokumente mit verschachtelter days-Map
+      // (Flutter-kompatibles Format)
+      match /work_entries/{entryId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // Einstellungen — nur Web (Flutter nutzt SharedPreferences lokal)
+      match /settings/{doc} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // Gleitzeit-Bilanz: Dokument "balance" mit Feldern minutes + lastUpdated
+      match /overtime/{doc} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+  }
+}
