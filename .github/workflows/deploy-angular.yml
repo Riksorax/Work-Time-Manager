@@ -135,6 +135,19 @@ jobs:
     environment: production
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: docker-compose.yml auf Server kopieren
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host:     ${{ vars.HETZNER_HOST }}
+          username: ${{ vars.HETZNER_USER }}
+          key:      ${{ secrets.HETZNER_SSH_PRIVATE_KEY }}
+          source:   server/docker-compose.yml
+          target:   /opt/work-time-manager
+          strip_components: 1   # entfernt "server/" — Datei landet direkt in /opt/work-time-manager/
+
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -142,13 +155,14 @@ jobs:
           username: ${{ vars.HETZNER_USER }}
           key:      ${{ secrets.HETZNER_SSH_PRIVATE_KEY }}
           script: |
+            set -e
             cd /opt/work-time-manager
 
             # Neues Image ziehen
-            docker compose pull web
+            docker compose pull work-time-manager-web
 
-            # Container neu starten (Caddy bleibt oben)
-            docker compose up -d --no-deps web
+            # Container starten/aktualisieren (Traefik läuft separat)
+            docker compose up -d --no-deps work-time-manager-web
 
             # Alte Images aufräumen
             docker image prune -f
