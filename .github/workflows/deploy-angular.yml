@@ -44,23 +44,37 @@ jobs:
 
       - name: Inject environment.ts
         env:
-          RC_WEB_KEY: ${{ secrets.RC_WEB_KEY }}
+          FIREBASE_API_KEY:             ${{ secrets.FIREBASE_API_KEY }}
+          FIREBASE_AUTH_DOMAIN:         ${{ secrets.FIREBASE_AUTH_DOMAIN }}
+          FIREBASE_PROJECT_ID:          ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_STORAGE_BUCKET:      ${{ secrets.FIREBASE_STORAGE_BUCKET }}
+          FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
+          FIREBASE_APP_ID:              ${{ secrets.FIREBASE_APP_ID }}
+          FIREBASE_MEASUREMENT_ID:      ${{ secrets.FIREBASE_MEASUREMENT_ID }}
+          RC_WEB_KEY:                   ${{ secrets.RC_WEB_KEY }}
         run: |
           cat > src/environments/environment.ts <<'ENVEOF'
           export const environment = {
             production: true,
             firebase: {
-              apiKey:            'AIzaSyAlBWIrPPlT8NaH2sWzrl3jsp_tVVM9KJM',
-              authDomain:        'worktime-56c7a.firebaseapp.com',
-              projectId:         'worktime-56c7a',
-              storageBucket:     'worktime-56c7a.firebasestorage.app',
-              messagingSenderId: '915742606352',
-              appId:             '1:915742606352:web:f94b1304e714d8ad21f695',
-              measurementId:     'G-YZSWN2Y84F',
+              apiKey:            'FIREBASE_API_KEY_PLACEHOLDER',
+              authDomain:        'FIREBASE_AUTH_DOMAIN_PLACEHOLDER',
+              projectId:         'FIREBASE_PROJECT_ID_PLACEHOLDER',
+              storageBucket:     'FIREBASE_STORAGE_BUCKET_PLACEHOLDER',
+              messagingSenderId: 'FIREBASE_MESSAGING_SENDER_ID_PLACEHOLDER',
+              appId:             'FIREBASE_APP_ID_PLACEHOLDER',
+              measurementId:     'FIREBASE_MEASUREMENT_ID_PLACEHOLDER',
             },
             rcWebApiKey: 'RC_KEY_PLACEHOLDER',
           };
           ENVEOF
+          sed -i "s|FIREBASE_API_KEY_PLACEHOLDER|${FIREBASE_API_KEY}|" src/environments/environment.ts
+          sed -i "s|FIREBASE_AUTH_DOMAIN_PLACEHOLDER|${FIREBASE_AUTH_DOMAIN}|" src/environments/environment.ts
+          sed -i "s|FIREBASE_PROJECT_ID_PLACEHOLDER|${FIREBASE_PROJECT_ID}|" src/environments/environment.ts
+          sed -i "s|FIREBASE_STORAGE_BUCKET_PLACEHOLDER|${FIREBASE_STORAGE_BUCKET}|" src/environments/environment.ts
+          sed -i "s|FIREBASE_MESSAGING_SENDER_ID_PLACEHOLDER|${FIREBASE_MESSAGING_SENDER_ID}|" src/environments/environment.ts
+          sed -i "s|FIREBASE_APP_ID_PLACEHOLDER|${FIREBASE_APP_ID}|" src/environments/environment.ts
+          sed -i "s|FIREBASE_MEASUREMENT_ID_PLACEHOLDER|${FIREBASE_MEASUREMENT_ID}|" src/environments/environment.ts
           sed -i "s|RC_KEY_PLACEHOLDER|${RC_WEB_KEY}|" src/environments/environment.ts
 
       - name: Build (production)
