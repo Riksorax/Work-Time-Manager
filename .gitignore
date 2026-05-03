@@ -34,3 +34,4 @@ web/src/environments/environment.prod.ts
 web/src/environments/environment.local.ts
 mobile/android/key.properties
 mobile/android/local.properties
+.vscode/settings.json
