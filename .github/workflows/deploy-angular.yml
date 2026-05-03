@@ -67,6 +67,7 @@ jobs:
           RC_WEB_KEY:                   ${{ secrets.RC_WEB_KEY }}
         run: |
           mkdir -p src/environments
+          # In beide Dateien schreiben, um sicherzugehen
           cat > src/environments/environment.ts <<EOF
           export const environment = {
             production: true,
@@ -82,7 +83,9 @@ jobs:
             rcWebApiKey: '${RC_WEB_KEY}',
           };
           EOF
-          echo "environment.ts created successfully."
+          cp src/environments/environment.ts src/environments/environment.prod.ts
+          
+          echo "environment.ts and environment.prod.ts created successfully."
           # Validierung (ohne Keys zu zeigen): Prüfen ob Platzhalter noch da sind
           if grep -q "PLACEHOLDER" src/environments/environment.ts; then
             echo "Error: Placeholders still present in environment.ts"
@@ -140,7 +143,7 @@ jobs:
           tags: |
             type=ref,event=branch
             type=sha,prefix={{branch}}-,format=short
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feature/angular-web-scaffold' }}
 
       - name: Build & Push Docker Image
         id: push
@@ -153,12 +156,12 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # ── 3. Hetzner Deploy (nur main) ────────────────────────────────────────────
+  # ── 3. Hetzner Deploy (main oder feature branch) ────────────────────────────
   deploy:
     name: Deploy → Hetzner
     needs: docker
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feature/angular-web-scaffold'
     environment: production
 
     steps:
