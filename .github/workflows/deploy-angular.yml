@@ -5,21 +5,24 @@ on:
     branches: [main, develop]
     paths:
       - 'web/**'
-      - 'web/firestore.rules'
       - 'firestore.rules'
       - '.github/workflows/deploy-angular.yml'
   pull_request:
     branches: [main, develop]
     paths:
       - 'web/**'
-      - 'web/firestore.rules'
       - 'firestore.rules'
       - '.github/workflows/deploy-angular.yml'
   workflow_dispatch:
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}/work-time-manager-web
+
 jobs:
+  # ── 1. Angular Build ────────────────────────────────────────────────────────
   build:
-    name: Build
+    name: Angular Build
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -40,78 +43,127 @@ jobs:
         run: npm ci --legacy-peer-deps
 
       - name: Inject environment.ts
+        env:
+          FIREBASE_API_KEY:            ${{ secrets.FIREBASE_API_KEY }}
+          FIREBASE_AUTH_DOMAIN:        ${{ secrets.FIREBASE_AUTH_DOMAIN }}
+          FIREBASE_PROJECT_ID:         ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_STORAGE_BUCKET:     ${{ secrets.FIREBASE_STORAGE_BUCKET }}
+          FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
+          FIREBASE_APP_ID:             ${{ secrets.FIREBASE_APP_ID }}
+          FIREBASE_MEASUREMENT_ID:     ${{ secrets.FIREBASE_MEASUREMENT_ID }}
+          REVENUECAT_WEB_BILLING_KEY:  ${{ secrets.REVENUECAT_WEB_BILLING_KEY }}
         run: |
-          cat > src/environments/environment.ts << 'ENVEOF'
+          cat > src/environments/environment.ts << EOF
           export const environment = {
             production: true,
             firebase: {
-              apiKey:            '${{ secrets.FIREBASE_API_KEY }}',
-              authDomain:        '${{ secrets.FIREBASE_AUTH_DOMAIN }}',
-              projectId:         '${{ secrets.FIREBASE_PROJECT_ID }}',
-              storageBucket:     '${{ secrets.FIREBASE_STORAGE_BUCKET }}',
-              messagingSenderId: '${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}',
-              appId:             '${{ secrets.FIREBASE_APP_ID }}',
-              measurementId:     '${{ secrets.FIREBASE_MEASUREMENT_ID }}',
+              apiKey:            '${FIREBASE_API_KEY}',
+              authDomain:        '${FIREBASE_AUTH_DOMAIN}',
+              projectId:         '${FIREBASE_PROJECT_ID}',
+              storageBucket:     '${FIREBASE_STORAGE_BUCKET}',
+              messagingSenderId: '${FIREBASE_MESSAGING_SENDER_ID}',
+              appId:             '${FIREBASE_APP_ID}',
+              measurementId:     '${FIREBASE_MEASUREMENT_ID}',
             },
-            rcWebApiKey: '${{ secrets.REVENUECAT_WEB_BILLING_KEY }}',
+            rcWebApiKey: '${REVENUECAT_WEB_BILLING_KEY}',
           };
-          ENVEOF
+          EOF
 
       - name: Build (production)
         run: npm run build -- --configuration production
 
-      - name: Upload build artifact
+      - name: Upload dist artifact
         uses: actions/upload-artifact@v4
         with:
           name: web-dist-${{ github.run_id }}
           path: web/dist/work-time-manager-web/browser
           retention-days: 1
 
-  deploy-live:
-    name: Deploy → Live
+  # ── 2. Docker Image bauen & in GHCR pushen ──────────────────────────────────
+  docker:
+    name: Docker Image
     needs: build
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name != 'pull_request'
+    permissions:
+      contents: read
+      packages: write
+
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+      image-digest: ${{ steps.push.outputs.digest }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download build artifact
+      - name: Download dist artifact
         uses: actions/download-artifact@v4
         with:
           name: web-dist-${{ github.run_id }}
           path: web/dist/work-time-manager-web/browser
 
-      - name: Deploy to Firebase Hosting (live)
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: '${{ secrets.GITHUB_TOKEN }}'
-          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_WORK_TIME_MANAGER_RIKSORAX }}'
-          channelId: live
-          projectId: worktime-56c7a
-          entryPoint: web
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-  deploy-preview:
-    name: Deploy → Preview
-    needs: build
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker Metadata (Tags & Labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-,format=short
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+      - name: Build & Push Docker Image
+        id: push
+        uses: docker/build-push-action@v5
+        with:
+          context: web
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ── 3. Hetzner Deploy (nur main) ────────────────────────────────────────────
+  deploy:
+    name: Deploy → Hetzner
+    needs: docker
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/develop')
+    if: github.ref == 'refs/heads/main'
+    environment: production
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Download build artifact
-        uses: actions/download-artifact@v4
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
         with:
-          name: web-dist-${{ github.run_id }}
-          path: web/dist/work-time-manager-web/browser
+          host:     ${{ vars.HETZNER_HOST }}
+          username: ${{ vars.HETZNER_USER }}
+          key:      ${{ secrets.HETZNER_SSH_KEY }}
+          script: |
+            IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
-      - name: Deploy to Firebase Hosting (preview)
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: '${{ secrets.GITHUB_TOKEN }}'
-          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_WORK_TIME_MANAGER_RIKSORAX }}'
-          projectId: worktime-56c7a
-          entryPoint: web
+            # Neues Image ziehen
+            docker pull ${IMAGE}:latest
+
+            # Alten Container ersetzen (zero-downtime mit --pull always)
+            docker stop work-time-manager-web 2>/dev/null || true
+            docker rm   work-time-manager-web 2>/dev/null || true
+
+            docker run -d \
+              --name work-time-manager-web \
+              --restart unless-stopped \
+              -p 80:80 \
+              ${IMAGE}:latest
+
+            # Alte Images aufräumen
+            docker image prune -f
