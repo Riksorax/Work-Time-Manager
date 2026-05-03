@@ -17,8 +17,8 @@ services:
       # HTTP → HTTPS Redirect
       - "traefik.http.routers.work-time-manager-web.rule=Host(`work-time-manager.app`)"
       - "traefik.http.routers.work-time-manager-web.entrypoints=web"
-      - "traefik.http.routers.work-time-manager-web.middlewares=https-redirect"
-      - "traefik.http.middlewares.https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.routers.work-time-manager-web.middlewares=wtm-https-redirect"
+      - "traefik.http.middlewares.wtm-https-redirect.redirectscheme.scheme=https"
 
 networks:
   traefik-proxy:
