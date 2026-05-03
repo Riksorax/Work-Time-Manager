@@ -1,6 +1,6 @@
 services:
   work-time-manager-web:
-    image: riksorax/work-time-manager-web:latest
+    image: riksorax/work-time-manager-web:${DOCKER_TAG:-latest}
     container_name: work-time-manager-web
     restart: unless-stopped
     networks:

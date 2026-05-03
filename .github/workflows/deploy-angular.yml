@@ -148,6 +148,7 @@ jobs:
             type=ref,event=branch
             type=sha,prefix={{branch}}-,format=short
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feature/angular-web-scaffold' }}
+            type=raw,value={{date 'YYYYMMDD-HHmmss'}}
 
       - name: Build & Push Docker Image
         id: push
@@ -172,6 +173,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Get Version Tag
+        id: vars
+        run: |
+          # Den aktuellsten Tag extrahieren (der Zeitstempel-Tag ist der letzte in der Liste)
+          TAG=$(echo "${{ needs.docker.outputs.image-tag }}" | tr ',' '\n' | grep -E '[0-9]{8}-[0-9]{6}' | head -n 1)
+          echo "deploy_tag=$TAG" >> $GITHUB_OUTPUT
+
       - name: docker-compose.yml auf Server kopieren
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -191,11 +199,15 @@ jobs:
           script: |
             set -e
             cd ~/projekte/work-time-manager
+            
+            # Exportieren der Variable für docker-compose
+            export DOCKER_TAG=${{ steps.vars.outputs.deploy_tag }}
+            echo "Deploying version: $DOCKER_TAG"
 
             # Neues Image ziehen
             docker compose pull work-time-manager-web
 
-            # Container starten/aktualisieren (Traefik läuft separat)
+            # Container starten/aktualisieren
             docker compose up -d --no-deps work-time-manager-web
 
             # Alte Images aufräumen
