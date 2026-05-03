@@ -13,11 +13,7 @@ export const appConfig: ApplicationConfig = {
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes, withNavigationErrorHandler(e => console.error('Navigation error:', e))),
     provideAnimationsAsync(),
-    provideFirebaseApp(() => {
-      console.log('Initializing Firebase with Key:', environment.firebase.apiKey);
-      console.log('Build Timestamp:', (environment as any).buildTimestamp);
-      return initializeApp(environment.firebase);
-    }),
+    provideFirebaseApp(() => initializeApp(environment.firebase)),
     provideAuth(() => getAuth()),
     provideFirestore(() => getFirestore()),
   ]
