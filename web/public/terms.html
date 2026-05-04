@@ -8,80 +8,261 @@
     body { font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto; padding: 24px 16px; color: #1c1c1c; line-height: 1.6; }
     h1 { font-size: 1.8rem; margin-bottom: 4px; }
     .stand { font-size: 0.85rem; opacity: 0.6; margin-bottom: 24px; }
-    h2 { font-size: 1.1rem; margin-top: 28px; }
+    h2 { font-size: 1.1rem; margin-top: 32px; border-top: 1px solid #e0e0e0; padding-top: 16px; }
     ul { padding-left: 20px; }
+    li { margin-bottom: 4px; }
     a { color: #1565C0; }
     .back { display: inline-block; margin-bottom: 24px; font-size: 0.9rem; }
-    .hinweis { background: #fff8e1; border-left: 4px solid #f9a825; padding: 12px 16px; border-radius: 4px; }
+    .hinweis { background: #fff8e1; border-left: 4px solid #f9a825; padding: 12px 16px; border-radius: 4px; margin: 12px 0; }
+    .widerruf-box { background: #e8f5e9; border-left: 4px solid #388e3c; padding: 12px 16px; border-radius: 4px; margin: 12px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 0.9rem; }
+    th, td { border: 1px solid #ccc; padding: 8px 12px; text-align: left; vertical-align: top; }
+    th { background: #f5f5f5; }
     @media (prefers-color-scheme: dark) {
       body { background: #121212; color: #e0e0e0; }
       a { color: #90CAF9; }
+      h2 { border-top-color: #333; }
+      th { background: #1e1e1e; }
+      th, td { border-color: #444; }
       .hinweis { background: #2d2600; border-color: #f9a825; }
+      .widerruf-box { background: #1b2e1b; border-color: #388e3c; }
     }
   </style>
 </head>
 <body>
   <a class="back" href="javascript:history.back()">← Zurück</a>
   <h1>Allgemeine Geschäftsbedingungen</h1>
-  <p class="stand">Stand: Januar 2026</p>
+  <p class="stand">Stand: Mai 2026</p>
 
   <h2>1. Geltungsbereich</h2>
-  <p>Diese Allgemeinen Geschäftsbedingungen (AGB) gelten für die Nutzung der Work Time Manager App. Mit der Nutzung der App akzeptieren Sie diese Bedingungen in vollem Umfang.</p>
+  <p>
+    Diese Allgemeinen Geschäftsbedingungen (AGB) gelten für die Nutzung der Work Time Manager App
+    (Web-App und Android-App) von:
+  </p>
+  <p>
+    Speulmans, Frank Web &amp; App Entwicklung am Niederrhein<br />
+    Frank Speulmans · Thielenstr. 3 · 47574 Goch<br />
+    E-Mail: <a href="mailto:Franksp20.fs@gmail.com">Franksp20.fs@gmail.com</a>
+  </p>
+  <p>
+    Mit der Nutzung der App erklären Sie sich mit diesen AGB einverstanden.
+    Ergänzend gilt unsere <a href="/privacy.html">Datenschutzerklärung</a>.
+  </p>
 
   <h2>2. Leistungsumfang</h2>
   <p>Work Time Manager ist eine App zur Erfassung und Verwaltung von Arbeitszeiten. Die App bietet:</p>
-  <ul>
-    <li>Erfassung von Arbeitsbeginn und -ende</li>
-    <li>Berechnung von Arbeitszeiten und Überstunden</li>
-    <li>Verwaltung von Pausen</li>
-    <li>Lokale oder Cloud-basierte Datenspeicherung</li>
-    <li>Synchronisierung über mehrere Geräte (bei Anmeldung)</li>
-  </ul>
+
+  <table>
+    <tr>
+      <th>Funktion</th>
+      <th>Kostenlos</th>
+      <th>Premium</th>
+    </tr>
+    <tr>
+      <td>Arbeitszeiterfassung (Timer, manuell)</td>
+      <td>✓</td>
+      <td>✓</td>
+    </tr>
+    <tr>
+      <td>Pausenverwaltung</td>
+      <td>✓</td>
+      <td>✓</td>
+    </tr>
+    <tr>
+      <td>Überstundensaldo</td>
+      <td>✓</td>
+      <td>✓</td>
+    </tr>
+    <tr>
+      <td>Lokale Datenspeicherung</td>
+      <td>✓</td>
+      <td>✓</td>
+    </tr>
+    <tr>
+      <td>Cloud-Synchronisation (Google-Konto)</td>
+      <td>✓</td>
+      <td>✓</td>
+    </tr>
+    <tr>
+      <td>Wochenberichte &amp; Monatsberichte</td>
+      <td>–</td>
+      <td>✓</td>
+    </tr>
+    <tr>
+      <td>Erweiterte Exportfunktionen</td>
+      <td>–</td>
+      <td>✓</td>
+    </tr>
+  </table>
+
   <div class="hinweis">
-    <strong>Wichtiger Hinweis:</strong> Die App dient ausschließlich der persönlichen Selbstkontrolle. Sie ersetzt keine gesetzlich vorgeschriebene oder betriebliche Arbeitszeiterfassung und stellt kein offizielles Dokument dar.
+    <strong>Wichtiger Hinweis:</strong> Die App dient ausschließlich der persönlichen Selbstkontrolle.
+    Sie ersetzt keine gesetzlich vorgeschriebene oder betriebliche Arbeitszeiterfassung und stellt
+    kein offizielles Arbeitszeitdokument dar.
   </div>
 
-  <h2>3. Nutzungsvoraussetzungen</h2>
+  <h2>3. Premium-Abonnement und Preise</h2>
+  <p>
+    Premium-Funktionen sind gegen Entgelt freischaltbar. Der jeweils aktuelle Preis wird beim
+    Kaufvorgang (Paywall) angezeigt, bevor Sie eine verbindliche Bestellung aufgeben.
+  </p>
   <ul>
-    <li>Ein kompatibles Endgerät</li>
+    <li><strong>Einmalkauf:</strong> unbefristete Nutzung der Premium-Funktionen</li>
+    <li><strong>Plattformübergreifend:</strong> Ein auf Android erworbenes Premium-Abo kann in der
+      Web-App über „Kauf wiederherstellen" aktiviert werden und umgekehrt.</li>
+  </ul>
+  <p>
+    Zahlungen werden über <strong>RevenueCat</strong> (RevenueCat Inc., San Francisco, USA) und
+    den jeweiligen Zahlungsdienstleister abgewickelt:
+  </p>
+  <ul>
+    <li><strong>Web:</strong> Stripe Payments Europe Limited, 1 Grand Canal Street Lower, Dublin 2, Irland</li>
+    <li><strong>Android:</strong> Google Play Billing (Google Ireland Limited)</li>
+  </ul>
+  <p>
+    Mit Abschluss des Kaufs kommt ein Vertrag zwischen Ihnen und Frank Speulmans (Anbieter)
+    zustande. Die technische Zahlungsabwicklung erfolgt durch die genannten Drittanbieter;
+    deren eigene Nutzungsbedingungen gelten zusätzlich.
+  </p>
+
+  <h2>4. Widerrufsrecht</h2>
+  <div class="widerruf-box">
+    <strong>Widerrufsbelehrung für Verbraucher</strong><br /><br />
+    Sie haben das Recht, binnen <strong>14 Tagen</strong> ohne Angabe von Gründen diesen Vertrag
+    zu widerrufen. Die Widerrufsfrist beträgt 14 Tage ab dem Tag des Vertragsabschlusses.
+    <br /><br />
+    Um Ihr Widerrufsrecht auszuüben, müssen Sie uns mittels einer eindeutigen Erklärung
+    (z.B. per E-Mail an <a href="mailto:Franksp20.fs@gmail.com">Franksp20.fs@gmail.com</a>)
+    über Ihren Entschluss informieren, diesen Vertrag zu widerrufen.
+    <br /><br />
+    Im Falle eines wirksamen Widerrufs erstatten wir alle Zahlungen, die wir von Ihnen
+    erhalten haben, unverzüglich und spätestens binnen 14 Tagen ab dem Tag, an dem die
+    Mitteilung über den Widerruf eingegangen ist.
+  </div>
+
+  <p><strong>Erlöschen des Widerrufsrechts bei digitalen Inhalten:</strong></p>
+  <p>
+    Das Widerrufsrecht erlischt bei einem Vertrag über die Lieferung von digitalen Inhalten,
+    die nicht auf einem körperlichen Datenträger geliefert werden, wenn Sie ausdrücklich
+    zugestimmt haben, dass wir mit der Ausführung des Vertrags beginnen, und Sie
+    Kenntnis davon genommen haben, dass Sie hierdurch Ihr Widerrufsrecht verlieren
+    (§ 356 Abs. 5 BGB). Diese Zustimmung wird Ihnen beim Kaufvorgang ausdrücklich abgefragt.
+  </p>
+
+  <h2>5. Nutzungsvoraussetzungen</h2>
+  <ul>
+    <li>Ein kompatibles Endgerät mit aktuellem Browser (Web) bzw. Android 8.0+ (App)</li>
     <li>Für Cloud-Funktionen: Internetverbindung und Google-Konto</li>
-    <li>Akzeptanz dieser AGB und der Datenschutzerklärung</li>
+    <li>Akzeptanz dieser AGB und der <a href="/privacy.html">Datenschutzerklärung</a></li>
     <li>Mindestalter: 16 Jahre</li>
   </ul>
 
-  <h2>4. Nutzungsrechte</h2>
-  <p>Die App wird Ihnen zur persönlichen, nicht-kommerziellen Nutzung zur Verfügung gestellt. Untersagt sind:</p>
+  <h2>6. Nutzungsrechte</h2>
+  <p>
+    Die App wird Ihnen zur persönlichen, nicht-kommerziellen Nutzung zur Verfügung gestellt.
+    Untersagt sind insbesondere:
+  </p>
   <ul>
     <li>Reverse Engineering, Dekompilierung oder Disassemblierung</li>
     <li>Entfernung von Urheberrechtsvermerken</li>
-    <li>Kommerzielle Weitergabe oder Vermietung</li>
+    <li>Gewerbliche Weitergabe, Vermietung oder Weiterveräußerung</li>
     <li>Nutzung für rechtswidrige Zwecke</li>
+    <li>Automatisierte Massenabfragen (Scraping, Bots)</li>
   </ul>
 
-  <h2>5. Registrierung und Account</h2>
-  <p>Für die Cloud-Synchronisation ist eine Anmeldung mit einem Google-Konto erforderlich. Sie können Ihren Account jederzeit in den Einstellungen löschen.</p>
+  <h2>7. Registrierung und Account</h2>
+  <p>
+    Für die Cloud-Synchronisation und Premium-Funktionen ist eine Anmeldung mit einem
+    Google-Konto erforderlich. Sie sind verpflichtet, Ihre Zugangsdaten vertraulich zu behandeln.
+    Ihren Account können Sie jederzeit in den Einstellungen löschen. Mit der Kontolöschung
+    werden alle Ihre Daten unwiderruflich entfernt; ein anteiliger Rückerstattungsanspruch
+    für bereits bezahlte Premium-Zeiträume besteht nicht, sofern gesetzlich zulässig.
+  </p>
 
-  <h2>6. Verfügbarkeit</h2>
-  <p>Wir bemühen uns um eine hohe Verfügbarkeit der App und der Cloud-Services. Es besteht jedoch kein Anspruch auf ununterbrochene Verfügbarkeit.</p>
+  <h2>8. Verfügbarkeit</h2>
+  <p>
+    Wir bemühen uns um eine hohe Verfügbarkeit der App und der Cloud-Services. Es besteht
+    jedoch kein Anspruch auf ununterbrochene Verfügbarkeit. Geplante Wartungsarbeiten werden
+    nach Möglichkeit vorab angekündigt. Ausfälle der Firebase-Infrastruktur (Google) liegen
+    außerhalb unseres Einflussbereichs.
+  </p>
 
-  <h2>7. Haftung</h2>
-  <p>Die Nutzung der App erfolgt auf eigene Gefahr. Wir haften nur bei Vorsatz und grober Fahrlässigkeit sowie bei Verletzung wesentlicher Vertragspflichten.</p>
+  <h2>9. Haftung</h2>
+  <p>
+    Wir haften unbeschränkt bei Vorsatz und grober Fahrlässigkeit sowie bei Verletzung von
+    Leben, Körper und Gesundheit.
+  </p>
+  <p>
+    Bei leichter Fahrlässigkeit haften wir nur bei Verletzung einer wesentlichen Vertragspflicht
+    (Kardinalpflicht), deren Erfüllung die ordnungsgemäße Durchführung des Vertrags erst
+    ermöglicht und auf deren Einhaltung Sie regelmäßig vertrauen dürfen. In diesem Fall ist
+    die Haftung auf den bei Vertragsschluss vorhersehbaren, typischerweise entstehenden Schaden
+    begrenzt.
+  </p>
+  <p>
+    Die App dient ausschließlich der persönlichen Arbeitszeitkontrolle. Wir übernehmen keine
+    Haftung für Entscheidungen, die auf Basis der angezeigten Daten getroffen werden, insbesondere
+    nicht für arbeitsrechtliche oder steuerliche Konsequenzen.
+  </p>
 
-  <h2>8. Datensicherung</h2>
-  <p>Sie sind selbst für die Sicherung Ihrer Daten verantwortlich. Bei Cloud-Speicherung werden Ihre Daten automatisch gesichert, jedoch übernehmen wir keine Garantie für die jederzeitige Wiederherstellbarkeit.</p>
+  <h2>10. Datensicherung</h2>
+  <p>
+    Sie sind selbst für die Sicherung Ihrer lokal gespeicherten Daten verantwortlich.
+    Bei Cloud-Speicherung werden Ihre Daten automatisch gesichert; jedoch übernehmen
+    wir keine Garantie für die jederzeitige Wiederherstellbarkeit. Wir empfehlen
+    regelmäßige eigene Sicherungen.
+  </p>
 
-  <h2>9. Änderungen der AGB</h2>
-  <p>Wir behalten uns vor, diese AGB jederzeit zu ändern. Änderungen werden in der App bekannt gegeben.</p>
+  <h2>11. Änderungen der AGB</h2>
+  <p>
+    Wir behalten uns vor, diese AGB mit angemessener Frist zu ändern. Änderungen werden
+    in der App bekannt gegeben. Wenn Sie der geänderten Fassung nicht zustimmen, können
+    Sie Ihren Account löschen und die Nutzung einstellen.
+  </p>
 
-  <h2>10. Kündigung</h2>
-  <p>Sie können die Nutzung der App jederzeit einstellen. Ihren Account können Sie in den Einstellungen löschen.</p>
+  <h2>12. Kündigung</h2>
+  <p>
+    Sie können die Nutzung der App jederzeit einstellen. Ihren Account können Sie in den
+    Einstellungen löschen. Laufende Premium-Abonnements (sofern zutreffend) sind nach
+    den Bedingungen des jeweiligen App-Stores (Google Play) oder des Zahlungsdienstleisters
+    (Stripe) zu kündigen.
+  </p>
 
-  <h2>11. Schlussbestimmungen</h2>
-  <p>Es gilt das Recht der Bundesrepublik Deutschland. Sollten einzelne Bestimmungen dieser AGB unwirksam sein, bleibt die Wirksamkeit der übrigen Bestimmungen unberührt.</p>
+  <h2>13. Gerichtsstand und anwendbares Recht</h2>
+  <p>
+    Es gilt das Recht der Bundesrepublik Deutschland unter Ausschluss des UN-Kaufrechts (CISG).
+  </p>
+  <p>
+    Für Verträge mit Verbrauchern gilt das Recht des Staates, in dem der Verbraucher seinen
+    gewöhnlichen Aufenthalt hat, soweit zwingende Verbraucherschutzvorschriften dies verlangen.
+    Gerichtsstand für Verbraucher ist deren allgemeiner Wohnsitzgerichtsstand.
+  </p>
+  <p>
+    Für Verträge mit Unternehmern ist ausschließlicher Gerichtsstand Goch (Nordrhein-Westfalen).
+  </p>
+
+  <h2>14. Streitbeilegung</h2>
+  <p>
+    Die EU-Kommission stellt eine Plattform zur Online-Streitbeilegung bereit:
+    <a href="https://ec.europa.eu/consumers/odr" target="_blank" rel="noopener">https://ec.europa.eu/consumers/odr</a>.
+    Wir sind nicht verpflichtet und nicht bereit, an Streitbeilegungsverfahren vor einer
+    Verbraucherschlichtungsstelle teilzunehmen.
+  </p>
+
+  <h2>15. Schlussbestimmungen</h2>
+  <p>
+    Sollten einzelne Bestimmungen dieser AGB unwirksam oder undurchführbar sein oder werden,
+    bleibt die Wirksamkeit der übrigen Bestimmungen unberührt. An die Stelle der unwirksamen
+    Bestimmung tritt die gesetzlich zulässige Regelung, die dem wirtschaftlichen Zweck am
+    nächsten kommt.
+  </p>
 
   <h2>Kontakt</h2>
   <p>Bei Fragen: <a href="mailto:Franksp20.fs@gmail.com">Franksp20.fs@gmail.com</a></p>
 
-  <p style="margin-top:32px;"><a href="/imprint.html">Impressum</a></p>
+  <p style="margin-top:40px;font-size:0.85rem;">
+    <a href="/privacy.html">Datenschutzerklärung</a> ·
+    <a href="/imprint.html">Impressum</a>
+  </p>
 </body>
 </html>
