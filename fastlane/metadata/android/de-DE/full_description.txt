@@ -1,0 +1,45 @@
+Behalte deine Arbeitszeiten immer im Blick – einfach, schnell und ohne komplizierte Einrichtung.
+
+⏱ ARBEITSZEITERFASSUNG MIT TIMER
+Starte und stoppe deinen Arbeitstimer mit einem Tippen. Work Time Manager erfasst deine Arbeitszeiten präzise und berechnet dein Überstundensaldo automatisch in Echtzeit.
+
+☕ AUTOMATISCHE PAUSENBERECHNUNG
+Pausen nach Arbeitszeitgesetz werden automatisch berechnet: 30 Minuten nach 6 Stunden, 45 Minuten nach 9 Stunden. Manuelle Pausen sind jederzeit hinzufügbar und bearbeitbar.
+
+📊 ÜBERSTUNDENKONTO & BERICHTE
+Dein persönliches Überstundenkonto zeigt jederzeit, wie viel Mehrarbeit du geleistet hast oder wie viele Stunden noch nachzuholen sind. Tagesberichte sind kostenlos – Wochen- und Monatsberichte mit Premium.
+
+🗓 SCHNELL-EINTRAG FÜR URLAUB & ABWESENHEITEN
+Trage Urlaub, Krankheitstage, Feiertage und Sonderzeiten mit wenigen Tippen ein – auch für mehrere Tage gleichzeitig.
+
+☁️ CLOUD-SYNCHRONISATION (OPTIONAL)
+Melde dich mit deinem Google-Konto an und greife von mehreren Geräten auf deine Arbeitszeiten zu. Ohne Anmeldung werden alle Daten sicher lokal auf deinem Gerät gespeichert – kein Account nötig.
+
+⚙️ FLEXIBLE ARBEITSZEITMODELLE
+Stelle deine Soll-Arbeitszeit und Arbeitstage individuell ein. Geeignet für Vollzeit, Teilzeit, Gleitzeit und Schichtarbeit.
+
+🌙 DARK MODE & MODERNES DESIGN
+Work Time Manager unterstützt den Dark Mode deines Geräts und setzt auf ein übersichtliches Material Design 3 Interface.
+
+🔒 DATENSCHUTZ – MADE IN GERMANY
+Keine Datenweitergabe an Dritte. Daten werden lokal oder verschlüsselt über Firebase gespeichert. Vollständig DSGVO-konform. Account und alle Daten jederzeit in den Einstellungen löschbar.
+
+---
+
+🆓 KOSTENLOS NUTZBAR
+Timer, Pausenerfassung, Überstundenkonto und Tagesberichte sind dauerhaft kostenlos – ohne versteckte Kosten.
+
+⭐ PREMIUM
+Wochen- und Monatsberichte für detaillierte Auswertungen deiner geleisteten Arbeitsstunden.
+
+---
+
+Ideal für:
+• Angestellte mit Gleitzeit oder flexiblen Arbeitszeiten
+• Selbstständige und Freelancer
+• Schichtarbeiter und Teilzeitkräfte
+• Alle, die ihr Überstundenkonto im Blick behalten möchten
+
+---
+
+Hinweis: Work Time Manager dient der persönlichen Arbeitszeitübersicht und ersetzt keine gesetzlich vorgeschriebene betriebliche Zeiterfassung.
