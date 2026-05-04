@@ -8,73 +8,245 @@
     body { font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto; padding: 24px 16px; color: #1c1c1c; line-height: 1.6; }
     h1 { font-size: 1.8rem; margin-bottom: 4px; }
     .stand { font-size: 0.85rem; opacity: 0.6; margin-bottom: 24px; }
-    h2 { font-size: 1.1rem; margin-top: 28px; }
+    h2 { font-size: 1.1rem; margin-top: 32px; border-top: 1px solid #e0e0e0; padding-top: 16px; }
     ul { padding-left: 20px; }
+    li { margin-bottom: 4px; }
     a { color: #1565C0; }
     .back { display: inline-block; margin-bottom: 24px; font-size: 0.9rem; }
+    table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 0.9rem; }
+    th, td { border: 1px solid #ccc; padding: 8px 12px; text-align: left; vertical-align: top; }
+    th { background: #f5f5f5; }
     @media (prefers-color-scheme: dark) {
       body { background: #121212; color: #e0e0e0; }
       a { color: #90CAF9; }
+      h2 { border-top-color: #333; }
+      th { background: #1e1e1e; }
+      th, td { border-color: #444; }
     }
   </style>
 </head>
 <body>
   <a class="back" href="javascript:history.back()">← Zurück</a>
   <h1>Datenschutzerklärung</h1>
-  <p class="stand">Stand: Januar 2026</p>
+  <p class="stand">Stand: Mai 2026</p>
 
-  <h2>Einleitung</h2>
-  <p>Wir nehmen den Schutz Ihrer persönlichen Daten ernst. Diese Datenschutzerklärung informiert Sie über die Verarbeitung personenbezogener Daten bei der Nutzung unserer Work Time Manager App.</p>
+  <h2>1. Einleitung</h2>
+  <p>
+    Wir nehmen den Schutz Ihrer persönlichen Daten ernst. Diese Datenschutzerklärung informiert Sie
+    gemäß Art. 13 der Datenschutz-Grundverordnung (DSGVO) über die Verarbeitung personenbezogener
+    Daten bei der Nutzung der Work Time Manager Web-App sowie der Android-App.
+  </p>
 
-  <h2>Verantwortlicher</h2>
+  <h2>2. Verantwortlicher</h2>
   <p>
     Speulmans, Frank Web &amp; App Entwicklung am Niederrhein<br />
+    Frank Speulmans<br />
     Thielenstr. 3 · 47574 Goch · Deutschland<br />
     Telefon: 015256818526<br />
     E-Mail: <a href="mailto:Franksp20.fs@gmail.com">Franksp20.fs@gmail.com</a>
   </p>
 
-  <h2>Welche Daten werden erhoben?</h2>
+  <h2>3. Welche Daten werden erhoben?</h2>
+  <p>Je nach Nutzungsweise werden folgende Kategorien personenbezogener Daten verarbeitet:</p>
+
+  <table>
+    <tr>
+      <th>Datenkategorie</th>
+      <th>Details</th>
+      <th>Nur bei Anmeldung?</th>
+    </tr>
+    <tr>
+      <td>Arbeitszeitdaten</td>
+      <td>Datum, Arbeitsbeginn, Arbeitsende, Pausen, Eintragstyp</td>
+      <td>Nein (auch lokal)</td>
+    </tr>
+    <tr>
+      <td>Überstundensaldo</td>
+      <td>Akkumulierte Über-/Minderstunden in Minuten</td>
+      <td>Nein (auch lokal)</td>
+    </tr>
+    <tr>
+      <td>Einstellungen</td>
+      <td>Soll-Arbeitszeit, Arbeitstage, Gleitzeitgrenzen</td>
+      <td>Nein (auch lokal)</td>
+    </tr>
+    <tr>
+      <td>Kontodaten (Google)</td>
+      <td>Name, E-Mail-Adresse, Profilbild-URL, Google User-ID</td>
+      <td>Ja</td>
+    </tr>
+    <tr>
+      <td>Premium-Status</td>
+      <td>Boolean-Flag in der Datenbank (kein Zahlungsmittel)</td>
+      <td>Ja</td>
+    </tr>
+  </table>
+
+  <p>Es werden keine Zahlungsdaten, Standortdaten oder besondere Kategorien personenbezogener Daten (Art. 9 DSGVO) verarbeitet.</p>
+
+  <h2>4. Rechtsgrundlagen der Verarbeitung</h2>
+  <p>Die Verarbeitung Ihrer Daten erfolgt auf folgenden Rechtsgrundlagen:</p>
+
+  <table>
+    <tr>
+      <th>Verarbeitungszweck</th>
+      <th>Rechtsgrundlage</th>
+    </tr>
+    <tr>
+      <td>Erfassung und Verwaltung Ihrer Arbeitszeiten (Kernfunktion)</td>
+      <td>Art. 6 Abs. 1 lit. b DSGVO – Erfüllung des Nutzungsvertrags</td>
+    </tr>
+    <tr>
+      <td>Berechnung von Überstunden und Berichten</td>
+      <td>Art. 6 Abs. 1 lit. b DSGVO – Erfüllung des Nutzungsvertrags</td>
+    </tr>
+    <tr>
+      <td>Anmeldung mit Google (Firebase Authentication)</td>
+      <td>Art. 6 Abs. 1 lit. b DSGVO – Erfüllung des Nutzungsvertrags</td>
+    </tr>
+    <tr>
+      <td>Geräteübergreifende Synchronisation (Cloud-Speicherung)</td>
+      <td>Art. 6 Abs. 1 lit. b DSGVO – Erfüllung des Nutzungsvertrags</td>
+    </tr>
+    <tr>
+      <td>Lokale Speicherung ohne Anmeldung (localStorage)</td>
+      <td>Art. 6 Abs. 1 lit. f DSGVO – Berechtigtes Interesse (technisch notwendige Funktionalität)</td>
+    </tr>
+  </table>
+
+  <h2>5. Zwecke der Verarbeitung</h2>
   <ul>
-    <li>Arbeitszeiteinträge (Datum, Uhrzeit, Dauer)</li>
-    <li>Überstundensaldo</li>
-    <li>Persönliche Einstellungen (Soll-Arbeitszeit, Arbeitstage)</li>
-    <li>Bei Anmeldung: Google-Kontoinformationen (Name, E-Mail, Profilbild)</li>
+    <li>Erfassung, Speicherung und Anzeige Ihrer Arbeitszeiteinträge</li>
+    <li>Berechnung von Tages-, Wochen- und Monatsberichten sowie Überstunden</li>
+    <li>Synchronisierung Ihrer Daten über mehrere Geräte (nur bei Anmeldung)</li>
+    <li>Bereitstellung personalisierter Einstellungen</li>
+    <li>Sicherstellung der technischen Funktion der App</li>
   </ul>
 
-  <h2>Wie werden die Daten verwendet?</h2>
+  <h2>6. Speicherung und Speicherdauer</h2>
+
+  <p><strong>Lokale Speicherung (ohne Anmeldung):</strong><br />
+  Alle Daten werden ausschließlich im Speicher Ihres Geräts (Browser localStorage) gesichert.
+  Die Daten verbleiben dort bis Sie diese manuell löschen oder die Browserdaten leeren.
+  Es erfolgt keine Übertragung an unsere Server.</p>
+
+  <p><strong>Cloud-Speicherung (bei Anmeldung):</strong><br />
+  Ihre Daten werden in Google Firebase Firestore gespeichert. Die Speicherung erfolgt für die
+  Dauer der aktiven Nutzung Ihres Kontos. Nach Löschung Ihres Accounts werden alle zugehörigen
+  Daten in Firebase innerhalb von 30 Tagen unwiderruflich gelöscht.</p>
+
+  <p><strong>Google-Kontodaten:</strong><br />
+  Name, E-Mail und Profilbild werden nur für die Dauer der aktiven Sitzung bzw. des bestehenden
+  Kontos verarbeitet und nicht separat bei uns gespeichert.</p>
+
+  <h2>7. Einsatz von Google-Diensten (Auftragsverarbeitung)</h2>
+  <p>
+    Für die Bereitstellung der Cloud-Funktionalität (Anmeldung und Datensynchronisation) nutzen
+    wir Dienste der Google LLC, 1600 Amphitheatre Parkway, Mountain View, CA 94043, USA,
+    vertreten in der EU durch Google Ireland Limited, Gordon House, Barrow Street, Dublin 4, Irland.
+  </p>
+  <p>
+    Im Einzelnen werden folgende Google-Dienste eingesetzt:
+  </p>
   <ul>
-    <li>Erfassung und Verwaltung Ihrer Arbeitszeiten</li>
-    <li>Berechnung von Überstunden und Berichten</li>
-    <li>Synchronisierung Ihrer Daten über mehrere Geräte (bei Anmeldung)</li>
+    <li><strong>Firebase Authentication:</strong> Verwaltung der Benutzeranmeldung via Google Sign-In</li>
+    <li><strong>Firebase Firestore:</strong> Cloud-Datenbank zur geräteübergreifenden Speicherung Ihrer Arbeitszeitdaten</li>
+  </ul>
+  <p>
+    Mit Google besteht ein Auftragsverarbeitungsvertrag gemäß Art. 28 DSGVO
+    (<a href="https://cloud.google.com/terms/data-processing-addendum" target="_blank" rel="noopener">Google Cloud Data Processing Addendum</a>).
+    Google verarbeitet Ihre Daten ausschließlich auf unsere Weisung.
+  </p>
+
+  <h3 style="font-size:1rem; margin-top:16px;">Drittlandübermittlung (USA)</h3>
+  <p>
+    Google LLC hat seinen Sitz in den USA. Die Übermittlung personenbezogener Daten in die USA
+    ist durch das <strong>EU-US Data Privacy Framework</strong> (Angemessenheitsbeschluss der
+    EU-Kommission vom 10. Juli 2023) abgesichert. Google LLC ist unter dem EU-US DPF zertifiziert.
+    Darüber hinaus hat Google EU-Standardvertragsklauseln (SCCs) gemäß Art. 46 Abs. 2 lit. c DSGVO
+    abgeschlossen.
+  </p>
+  <p>
+    Weitere Informationen zum Datenschutz bei Google:
+    <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">https://policies.google.com/privacy</a>
+  </p>
+
+  <h2>8. Weitergabe von Daten an Dritte</h2>
+  <p>
+    Ihre Daten werden nicht an Dritte weitergegeben, verkauft oder für Werbezwecke genutzt.
+    Eine Weitergabe erfolgt ausschließlich:
+  </p>
+  <ul>
+    <li>An Google im Rahmen der oben beschriebenen Auftragsverarbeitung</li>
+    <li>Bei gesetzlicher Verpflichtung (z.B. behördliche Anfragen)</li>
+    <li>Mit Ihrer ausdrücklichen Einwilligung</li>
   </ul>
 
-  <h2>Speicherung der Daten</h2>
-  <p><strong>Lokale Speicherung:</strong> Ohne Anmeldung werden alle Daten lokal auf Ihrem Gerät gespeichert.</p>
-  <p><strong>Cloud-Speicherung:</strong> Bei Anmeldung mit Google werden Ihre Daten in Firebase (Google Cloud Platform) gespeichert. Die Datenübertragung erfolgt verschlüsselt.</p>
+  <h2>9. Lokale Gerätespeicherung (§ 25 TTDSG)</h2>
+  <p>
+    Die App nutzt den Browser-localStorage ausschließlich zur Speicherung Ihrer eigenen
+    Arbeitszeitdaten, Einstellungen und UI-Präferenzen (z.B. Dark Mode). Diese Speicherung ist
+    technisch für die Bereitstellung des von Ihnen gewünschten Dienstes unbedingt erforderlich.
+    Es werden keine Tracking- oder Analyse-Cookies eingesetzt.
+  </p>
 
-  <h2>Weitergabe von Daten</h2>
-  <p>Ihre Daten werden nicht an Dritte weitergegeben, verkauft oder vermietet. Eine Weitergabe erfolgt nur bei gesetzlicher Verpflichtung oder mit Ihrer ausdrücklichen Einwilligung.</p>
-
-  <h2>Ihre Rechte</h2>
+  <h2>10. Ihre Rechte als betroffene Person</h2>
+  <p>Sie haben gegenüber uns folgende Rechte bezüglich Ihrer personenbezogenen Daten:</p>
   <ul>
-    <li>Auskunft über gespeicherte Daten</li>
-    <li>Berichtigung unrichtiger Daten</li>
-    <li>Löschung Ihrer Daten</li>
-    <li>Einschränkung der Verarbeitung</li>
-    <li>Datenübertragbarkeit</li>
-    <li>Widerspruch gegen die Verarbeitung</li>
+    <li><strong>Auskunft</strong> (Art. 15 DSGVO): Welche Daten wir über Sie gespeichert haben</li>
+    <li><strong>Berichtigung</strong> (Art. 16 DSGVO): Korrektur unrichtiger Daten</li>
+    <li><strong>Löschung</strong> (Art. 17 DSGVO): Löschung Ihrer Daten</li>
+    <li><strong>Einschränkung der Verarbeitung</strong> (Art. 18 DSGVO)</li>
+    <li><strong>Datenübertragbarkeit</strong> (Art. 20 DSGVO): Herausgabe Ihrer Daten in maschinenlesbarem Format</li>
+    <li><strong>Widerspruch</strong> (Art. 21 DSGVO): Widerspruch gegen die Verarbeitung auf Basis berechtigter Interessen</li>
   </ul>
+  <p>
+    Zur Ausübung Ihrer Rechte wenden Sie sich bitte per E-Mail an:
+    <a href="mailto:Franksp20.fs@gmail.com">Franksp20.fs@gmail.com</a>
+  </p>
 
-  <h2>Account-Löschung</h2>
-  <p>Sie können Ihren Account und alle zugehörigen Daten jederzeit in den Einstellungen der App löschen. Diese Aktion ist unwiderruflich.</p>
+  <h2>11. Beschwerderecht bei der Aufsichtsbehörde</h2>
+  <p>
+    Sie haben das Recht, sich bei einer Datenschutz-Aufsichtsbehörde über die Verarbeitung
+    Ihrer Daten zu beschweren (Art. 77 DSGVO). Die zuständige Aufsichtsbehörde für den
+    Verantwortlichen mit Sitz in Nordrhein-Westfalen ist:
+  </p>
+  <p>
+    <strong>Landesbeauftragte für Datenschutz und Informationsfreiheit Nordrhein-Westfalen (LfDI NRW)</strong><br />
+    Postfach 20 04 44<br />
+    40102 Düsseldorf<br />
+    Telefon: +49 211 38424-0<br />
+    E-Mail: <a href="mailto:poststelle@ldi.nrw.de">poststelle@ldi.nrw.de</a><br />
+    Web: <a href="https://www.ldi.nrw.de" target="_blank" rel="noopener">https://www.ldi.nrw.de</a>
+  </p>
 
-  <h2>Änderungen der Datenschutzerklärung</h2>
-  <p>Wir behalten uns vor, diese Datenschutzerklärung anzupassen, um sie an geänderte Rechtslage oder Änderungen der App anzupassen.</p>
+  <h2>12. Account-Löschung</h2>
+  <p>
+    Sie können Ihren Account und alle zugehörigen Daten (Arbeitszeiteinträge, Überstundensaldo,
+    Einstellungen) jederzeit in den App-Einstellungen unter „Konto löschen" unwiderruflich
+    löschen. Die Löschung der Daten in Firebase erfolgt innerhalb von 30 Tagen.
+  </p>
 
-  <h2>Kontakt</h2>
-  <p>Bei Fragen zum Datenschutz: <a href="mailto:Franksp20.fs@gmail.com">Franksp20.fs@gmail.com</a></p>
+  <h2>13. Datensicherheit</h2>
+  <p>
+    Die Übertragung Ihrer Daten zu Firebase erfolgt ausschließlich verschlüsselt über HTTPS/TLS.
+    Firebase Firestore-Sicherheitsregeln stellen sicher, dass jeder Nutzer ausschließlich auf
+    seine eigenen Daten zugreifen kann.
+  </p>
 
-  <p style="margin-top:32px;"><a href="/imprint.html">Impressum</a></p>
+  <h2>14. Änderungen dieser Datenschutzerklärung</h2>
+  <p>
+    Wir behalten uns vor, diese Datenschutzerklärung anzupassen, um Änderungen der Rechtslage
+    oder der App Rechnung zu tragen. Das Datum der jeweils aktuellen Fassung ist oben ausgewiesen.
+    Bei wesentlichen Änderungen informieren wir Sie über die App.
+  </p>
+
+  <h2>15. Kontakt</h2>
+  <p>
+    Bei Fragen zum Datenschutz:<br />
+    <a href="mailto:Franksp20.fs@gmail.com">Franksp20.fs@gmail.com</a>
+  </p>
+
+  <p style="margin-top:40px;font-size:0.85rem;"><a href="/imprint.html">Impressum</a></p>
 </body>
 </html>
