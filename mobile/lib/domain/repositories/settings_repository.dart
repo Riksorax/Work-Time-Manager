@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart' show ThemeMode;
 
-import '../entities/work_entry_entity.dart';
-
 /// Die Schnittstelle (der Vertrag) für den Zugriff auf lokale App-Einstellungen.
 ///
 /// Dieses Repository abstrahiert, wo und wie die Einstellungen gespeichert werden

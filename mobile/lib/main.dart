@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_work_time/presentation/screens/home_screen.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -17,7 +16,6 @@ import 'dart:io' show Platform;
 
 import 'package:flutter_localizations/flutter_localizations.dart';
 
-import 'core/config/google_sign_in_config.dart';
 import 'core/providers/providers.dart';
 import 'core/services/notification_service.dart';
 import 'core/theme/app_theme.dart';

@@ -74,7 +74,7 @@ void main() {
       when(mockGetTodayWorkEntry()).thenAnswer((_) async => entry);
 
       // Act
-      final viewModel = container.read(dashboardViewModelProvider.notifier);
+      container.read(dashboardViewModelProvider.notifier);
       // Wait for init
       await Future.delayed(Duration.zero);
       
@@ -119,7 +119,7 @@ void main() {
 
       when(mockGetTodayWorkEntry()).thenAnswer((_) async => entry);
 
-      final viewModel = container.read(dashboardViewModelProvider.notifier);
+      container.read(dashboardViewModelProvider.notifier);
       await Future.delayed(Duration.zero);
       
       final state = container.read(dashboardViewModelProvider);
@@ -157,7 +157,7 @@ void main() {
       // Last update was yesterday (so it's fully initial)
       when(mockOvertimeRepository.getLastUpdateDate()).thenReturn(now.subtract(const Duration(days: 1)));
 
-      final viewModel = container.read(dashboardViewModelProvider.notifier);
+      container.read(dashboardViewModelProvider.notifier);
       await Future.delayed(Duration.zero);
       
       final state = container.read(dashboardViewModelProvider);
