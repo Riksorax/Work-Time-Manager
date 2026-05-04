@@ -1,0 +1,10 @@
+Erster öffentlicher Release von Work Time Manager!
+
+✅ Arbeitszeiterfassung mit Timer
+✅ Automatische Pausenberechnung (ArbZG-konform)
+✅ Überstundenkonto in Echtzeit
+✅ Tages-, Wochen- und Monatsberichte
+✅ Cloud-Synchronisation via Google-Konto
+✅ Urlaub, Krank & Feiertage per Schnell-Eintrag
+✅ Dark Mode
+✅ Kostenlos – Premium optional
