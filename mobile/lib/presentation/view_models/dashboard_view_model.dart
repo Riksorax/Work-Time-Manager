@@ -35,8 +35,9 @@ class DashboardViewModel extends Notifier<DashboardState> {
     final overtimeRepository = ref.read(overtimeRepositoryProvider);
 
     final workEntry = await getTodayWorkEntry.call();
-    final storedOvertime = overtimeRepository.getOvertime();
-    final lastUpdateDate = overtimeRepository.getLastUpdateDate();
+    // Async laden statt synchronem Cache-Zugriff (verhindert Race Condition bei Firebase-Login)
+    final storedOvertime = await overtimeRepository.ensureOvertimeLoaded();
+    final lastUpdateDate = await overtimeRepository.ensureLastUpdateLoaded();
 
     // Lade Wocheneinträge um zu prüfen ob heute ein Zusatztag ist
     await _loadWeekEntries(workEntry);

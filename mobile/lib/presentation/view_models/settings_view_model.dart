@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers/providers.dart' as core_providers;
-import '../../data/repositories/hybrid_overtime_repository_impl.dart';
 import '../../domain/entities/settings_entity.dart';
 import '../../domain/repositories/settings_repository.dart';
 import '../state/settings_state.dart';
@@ -88,19 +87,8 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
       final overtimeRepository = ref.read(core_providers.overtimeRepositoryProvider);
       final settingsRepository = ref.read(core_providers.settingsRepositoryProvider);
 
-      // Für Firebase: Stelle sicher, dass Überstunden async geladen werden
-      Duration overtimeBalance;
-      DateTime? lastOvertimeUpdate;
-
-      if (overtimeRepository is HybridOvertimeRepositoryImpl) {
-        overtimeBalance = await overtimeRepository.ensureOvertimeLoaded();
-        lastOvertimeUpdate = await overtimeRepository.ensureLastUpdateLoaded();
-      } else {
-        final getOvertime = ref.read(core_providers.getOvertimeUseCaseProvider);
-        final getLastUpdate = ref.read(core_providers.getLastOvertimeUpdateUseCaseProvider);
-        overtimeBalance = getOvertime.call();
-        lastOvertimeUpdate = getLastUpdate.call();
-      }
+      final overtimeBalance = await overtimeRepository.ensureOvertimeLoaded();
+      final lastOvertimeUpdate = await overtimeRepository.ensureLastUpdateLoaded();
       final weeklyTargetHours = settingsRepository.getTargetWeeklyHours();
       final workdaysPerWeek = settingsRepository.getWorkdaysPerWeek();
       final notificationsEnabled = settingsRepository.getNotificationsEnabled();

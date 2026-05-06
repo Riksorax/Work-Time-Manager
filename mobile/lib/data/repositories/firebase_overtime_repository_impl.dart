@@ -89,4 +89,10 @@ class FirebaseOvertimeRepositoryImpl implements OvertimeRepository {
     _cachedLastUpdate = lastUpdate;
     return lastUpdate;
   }
+
+  @override
+  Future<Duration> ensureOvertimeLoaded() => loadOvertimeAsync();
+
+  @override
+  Future<DateTime?> ensureLastUpdateLoaded() => loadLastUpdateAsync();
 }
