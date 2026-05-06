@@ -43,4 +43,10 @@ class OvertimeRepositoryImpl implements OvertimeRepository {
   Future<void> saveLastUpdateDate(DateTime date) async {
     await _prefs.setString(_userDatePrefKey, date.toIso8601String());
   }
+
+  @override
+  Future<Duration> ensureOvertimeLoaded() async => getOvertime();
+
+  @override
+  Future<DateTime?> ensureLastUpdateLoaded() async => getLastUpdateDate();
 }

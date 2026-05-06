@@ -50,6 +50,8 @@ void main() {
     when(mockSettingsRepository.getTargetWeeklyHours()).thenReturn(40.0);
     when(mockOvertimeRepository.getOvertime()).thenReturn(Duration.zero);
     when(mockOvertimeRepository.getLastUpdateDate()).thenReturn(null);
+    when(mockOvertimeRepository.ensureOvertimeLoaded()).thenAnswer((_) async => Duration.zero);
+    when(mockOvertimeRepository.ensureLastUpdateLoaded()).thenAnswer((_) async => null);
     when(mockGetOvertime()).thenReturn(Duration.zero);
   });
 
@@ -154,8 +156,10 @@ void main() {
       when(mockGetTodayWorkEntry()).thenAnswer((_) async => entry);
       // Mock Overtime Repository to return +10h
       when(mockOvertimeRepository.getOvertime()).thenReturn(const Duration(hours: 10));
+      when(mockOvertimeRepository.ensureOvertimeLoaded()).thenAnswer((_) async => const Duration(hours: 10));
       // Last update was yesterday (so it's fully initial)
       when(mockOvertimeRepository.getLastUpdateDate()).thenReturn(now.subtract(const Duration(days: 1)));
+      when(mockOvertimeRepository.ensureLastUpdateLoaded()).thenAnswer((_) async => now.subtract(const Duration(days: 1)));
 
       container.read(dashboardViewModelProvider.notifier);
       await Future.delayed(Duration.zero);
