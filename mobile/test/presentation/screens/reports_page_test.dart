@@ -5,6 +5,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_work_time/core/providers/providers.dart';
+import 'package:flutter_work_time/core/providers/subscription_provider.dart';
 import 'package:flutter_work_time/domain/entities/settings_entity.dart';
 import 'package:flutter_work_time/domain/entities/user_entity.dart';
 import 'package:flutter_work_time/presentation/screens/reports_page.dart';
@@ -12,11 +15,12 @@ import 'package:flutter_work_time/presentation/state/reports_state.dart';
 import 'package:flutter_work_time/presentation/state/settings_state.dart';
 import 'package:flutter_work_time/presentation/state/monthly_report_state.dart';
 import 'package:flutter_work_time/presentation/state/weekly_report_state.dart';
-import 'package:flutter_work_time/presentation/view_models/auth_view_model.dart';
 import 'package:flutter_work_time/presentation/view_models/reports_view_model.dart';
 import 'package:flutter_work_time/presentation/view_models/settings_view_model.dart';
 
 import 'reports_page_test.mocks.dart';
+import '../view_models/reports_view_model_test.mocks.dart';
+import '../view_models/dashboard_view_model_test.mocks.dart' hide MockSettingsRepository;
 
 // Abstract callbacks for verification
 abstract class NavigationCallback {
@@ -27,13 +31,24 @@ abstract class NavigationCallback {
 @GenerateMocks([NavigationCallback])
 void main() {
   late MockNavigationCallback mockCallback;
+  late MockSettingsRepository mockSettingsRepository;
+  late MockOvertimeRepository mockOvertimeRepository;
+  late SharedPreferences prefs;
 
   setUpAll(() async {
+    SharedPreferences.setMockInitialValues({});
+    prefs = await SharedPreferences.getInstance();
     await initializeDateFormatting('de_DE', null);
   });
 
   setUp(() {
     mockCallback = MockNavigationCallback();
+    mockSettingsRepository = MockSettingsRepository();
+    mockOvertimeRepository = MockOvertimeRepository();
+    when(mockSettingsRepository.getWorkdaysPerWeek()).thenReturn(5);
+    when(mockSettingsRepository.getTargetWeeklyHours()).thenReturn(40.0);
+    when(mockOvertimeRepository.getOvertime()).thenReturn(Duration.zero);
+    when(mockOvertimeRepository.getLastUpdateDate()).thenReturn(null);
   });
 
   Widget createSubject({
@@ -43,6 +58,10 @@ void main() {
   }) {
     return ProviderScope(
       overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        isPremiumProvider.overrideWithValue(true),
+        settingsRepositoryProvider.overrideWithValue(mockSettingsRepository),
+        overtimeRepositoryProvider.overrideWithValue(mockOvertimeRepository),
         reportsViewModelProvider.overrideWith(() => reportsViewModel),
         settingsViewModelProvider.overrideWith(() => settingsViewModel),
         authStateProvider.overrideWithValue(authState),
