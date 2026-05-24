@@ -304,16 +304,17 @@ export class DashboardService {
   }
 
   // ─── Flow 12: Überstunden manuell anpassen ────────────────────────────────
-  async updateInitialOvertime(newTotalMs: number): Promise<void> {
+  // newBaseMs = Basis-Bilanz aus Vortagen (NICHT inkl. heutiger Daily-Overtime).
+  async updateInitialOvertime(newBaseMs: number): Promise<void> {
     const daily = this._s().dailyOvertimeMs ?? 0;
-    const newInitial = newTotalMs - daily;
     this._s.update(s => ({
       ...s,
-      initialOvertimeMs: newInitial,
-      totalOvertimeMs:   newTotalMs,
+      initialOvertimeMs: newBaseMs,
+      totalOvertimeMs:   newBaseMs + daily,
     }));
-    await this.overtimeSvc.saveOvertime(newTotalMs);
-    await this.overtimeSvc.saveLastUpdateDate(new Date());
+    // Nur minutes speichern — kein lastUpdated-Update.
+    // So behandelt _init den Wert beim nächsten Load als Basis, nicht als heutigen Total.
+    await this.overtimeSvc.saveOvertime(newBaseMs);
   }
 
   // ─── Timer Internals ──────────────────────────────────────────────────────

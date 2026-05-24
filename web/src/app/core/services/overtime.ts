@@ -25,14 +25,26 @@ export class OvertimeService {
 
   async saveOvertime(ms: number): Promise<void> {
     const uid = this.auth.uid;
-    if (uid) await this._firebaseSave(uid, ms, new Date());
-    else     this._localSave(ms, new Date());
+    if (uid) {
+      const ref = doc(this.firestore, `users/${uid}/overtime/balance`);
+      await runInInjectionContext(this.injector, () =>
+        setDoc(ref, { minutes: Math.round(ms / 60000) }, { merge: true })
+      );
+    } else {
+      localStorage.setItem(LS_OVERTIME, String(Math.round(ms / 60000)));
+    }
   }
 
   async saveLastUpdateDate(date: Date): Promise<void> {
     const uid = this.auth.uid;
-    if (uid) await this._firebaseSave(uid, await this.getOvertime(), date);
-    else     localStorage.setItem(LS_LAST_UPDATE, date.toISOString());
+    if (uid) {
+      const ref = doc(this.firestore, `users/${uid}/overtime/balance`);
+      await runInInjectionContext(this.injector, () =>
+        setDoc(ref, { lastUpdated: date }, { merge: true })
+      );
+    } else {
+      localStorage.setItem(LS_LAST_UPDATE, date.toISOString());
+    }
   }
 
   // ─── Firebase (Flutter-kompatibles Format: overtime/balance, minutes, lastUpdated) ─
@@ -52,13 +64,6 @@ export class OvertimeService {
     return raw ? (raw as { toDate(): Date }).toDate() : null;
   }
 
-  private async _firebaseSave(uid: string, ms: number, date: Date): Promise<void> {
-    const ref = doc(this.firestore, `users/${uid}/overtime/balance`);
-    await runInInjectionContext(this.injector, () =>
-      setDoc(ref, { minutes: Math.round(ms / 60 / 1000), lastUpdated: date }, { merge: true })
-    );
-  }
-
   // ─── localStorage ──────────────────────────────────────────────────────────
 
   private _localGetOvertime(): number {
@@ -69,10 +74,5 @@ export class OvertimeService {
   private _localGetLastUpdate(): Date | null {
     const raw = localStorage.getItem(LS_LAST_UPDATE);
     return raw ? new Date(raw) : null;
-  }
-
-  private _localSave(ms: number, date: Date): void {
-    localStorage.setItem(LS_OVERTIME, String(Math.round(ms / 60 / 1000)));
-    localStorage.setItem(LS_LAST_UPDATE, date.toISOString());
   }
 }
