@@ -2,17 +2,8 @@ name: Web — Build & Deploy
 
 on:
   push:
-    branches: [main, develop]
-    paths:
-      - 'web/**'
-      - 'firestore.rules'
-      - '.github/workflows/deploy-angular.yml'
-  pull_request:
-    branches: [main, develop]
-    paths:
-      - 'web/**'
-      - 'firestore.rules'
-      - '.github/workflows/deploy-angular.yml'
+    branches:
+      - main
   workflow_dispatch:
 
 env:
