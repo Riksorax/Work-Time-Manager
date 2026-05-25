@@ -60,6 +60,7 @@ jobs:
           ORG_GRADLE_PROJECT_android.signing.keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           flutter build appbundle --release \
+            --build-number=$(( ${{ github.run_number }} + 44 )) \
             --dart-define=RC_ANDROID_KEY="${{ secrets.RC_ANDROID_PROD_KEY }}" \
             --dart-define=RECAPTCHA_SITE_KEY="${{ secrets.RECAPTCHA_SITE_KEY }}"
 
