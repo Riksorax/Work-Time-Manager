@@ -79,5 +79,4 @@ jobs:
           packageName: app.work_time_manager
           releaseFiles: mobile/build/app/outputs/bundle/release/app-release.aab
           tracks: production
-          tracks: production
           status: completed
