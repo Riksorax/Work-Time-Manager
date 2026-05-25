@@ -61,7 +61,6 @@ jobs:
           ORG_GRADLE_PROJECT_android.signing.keyAlias: ${{ secrets.ANDROID_KEY_ALIAS }}
           ORG_GRADLE_PROJECT_android.signing.keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          BUILD_NUMBER=$(( $(git rev-list --count HEAD) + 1000 ))
           flutter build appbundle --release \
             --build-number=$(( ${{ github.run_number }} + 44 )) \
             --dart-define=RC_ANDROID_KEY="${{ secrets.RC_ANDROID_PROD_KEY }}" \
@@ -81,6 +80,5 @@ jobs:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_JSON_KEY }}
           packageName: app.work_time_manager
           releaseFiles: mobile/build/app/outputs/bundle/release/app-release.aab
-          tracks: production
           tracks: production
           status: completed
