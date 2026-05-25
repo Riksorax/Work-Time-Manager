@@ -1,0 +1,82 @@
+name: CI — Build & Test
+
+on:
+  push:
+    branches-ignore:
+      - main
+  pull_request:
+
+jobs:
+  flutter:
+    name: Flutter Analyze & Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./mobile
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos
+
+      - name: Test
+        run: flutter test
+
+  web:
+    name: Angular Build Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Create CI environment.ts
+        run: |
+          mkdir -p src/environments
+          cat > src/environments/environment.ts <<'EOF'
+          export const environment = {
+            production: true,
+            buildTimestamp: 'ci',
+            firebase: {
+              apiKey: 'ci-dummy',
+              authDomain: 'ci-dummy.firebaseapp.com',
+              projectId: 'ci-dummy',
+              storageBucket: 'ci-dummy.appspot.com',
+              messagingSenderId: '000000000000',
+              appId: '1:000000000000:web:0000000000000000',
+              measurementId: 'G-XXXXXXXXXX',
+            },
+            rcWebApiKey: 'ci-dummy',
+          };
+          EOF
+          cp src/environments/environment.ts src/environments/environment.prod.ts
+
+      - name: Build check
+        run: |
+          rm -rf .angular/cache
+          npm run build -- --configuration production --delete-output-path
