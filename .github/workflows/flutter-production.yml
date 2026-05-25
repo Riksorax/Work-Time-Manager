@@ -60,7 +60,7 @@ jobs:
           ORG_GRADLE_PROJECT_android.signing.keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           flutter build appbundle --release \
-            --build-number=$(( ${{ github.run_number }} + 44 )) \
+            --build-number=$(( ${{ github.run_number }} + 1393 )) \
             --dart-define=RC_ANDROID_KEY="${{ secrets.RC_ANDROID_PROD_KEY }}" \
             --dart-define=RECAPTCHA_SITE_KEY="${{ secrets.RECAPTCHA_SITE_KEY }}"
 
@@ -72,11 +72,11 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Upload to Google Play
+      - name: Upload to Google Play (Closed Testing)
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_JSON_KEY }}
           packageName: app.work_time_manager
           releaseFiles: mobile/build/app/outputs/bundle/release/app-release.aab
-          tracks: production
+          tracks: alpha
           status: completed
