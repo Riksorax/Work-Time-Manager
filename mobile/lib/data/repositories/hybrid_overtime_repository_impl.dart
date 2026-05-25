@@ -1,6 +1,5 @@
 import '../../domain/repositories/overtime_repository.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
-import 'firebase_overtime_repository_impl.dart';
 
 /// Hybrid Repository für Überstunden, das automatisch zwischen Firebase und Local wechselt.
 class HybridOvertimeRepositoryImpl implements OvertimeRepository {
@@ -59,26 +58,14 @@ class HybridOvertimeRepositoryImpl implements OvertimeRepository {
   /// Gibt das Firebase Repository zurück (für Sync-Operationen)
   OvertimeRepository get firebaseRepository => _firebaseRepository;
 
-  /// Lädt die Überstunden async von Firebase und cached sie.
-  /// Gibt den geladenen Wert zurück.
-  /// Bei Local-Repository wird einfach der aktuelle Wert zurückgegeben.
+  @override
   Future<Duration> ensureOvertimeLoaded() async {
-    if (isUsingFirebase && _firebaseRepository is FirebaseOvertimeRepositoryImpl) {
-      final firebaseRepo = _firebaseRepository as FirebaseOvertimeRepositoryImpl;
-      logger.i('[HybridOvertimeRepository] Lade Überstunden async von Firebase...');
-      final overtime = await firebaseRepo.loadOvertimeAsync();
-      logger.i('[HybridOvertimeRepository] Überstunden geladen: ${overtime.inMinutes} Min');
-      return overtime;
-    }
-    return _activeRepository.getOvertime();
+    logger.i('[HybridOvertimeRepository] ensureOvertimeLoaded (Firebase: $isUsingFirebase)');
+    final overtime = await _activeRepository.ensureOvertimeLoaded();
+    logger.i('[HybridOvertimeRepository] Überstunden geladen: ${overtime.inMinutes} Min');
+    return overtime;
   }
 
-  /// Lädt das letzte Update-Datum async von Firebase und cached es.
-  Future<DateTime?> ensureLastUpdateLoaded() async {
-    if (isUsingFirebase && _firebaseRepository is FirebaseOvertimeRepositoryImpl) {
-      final firebaseRepo = _firebaseRepository as FirebaseOvertimeRepositoryImpl;
-      return await firebaseRepo.loadLastUpdateAsync();
-    }
-    return _activeRepository.getLastUpdateDate();
-  }
+  @override
+  Future<DateTime?> ensureLastUpdateLoaded() => _activeRepository.ensureLastUpdateLoaded();
 }

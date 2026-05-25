@@ -9,11 +9,9 @@ import 'package:flutter_work_time/presentation/widgets/edit_break_modal.dart';
 
 void main() {
   group('EditBreakModal', () {
-    late DateTime testDate;
     late BreakEntity testBreak;
 
     setUp(() {
-      testDate = DateTime(2024, 1, 15);
       testBreak = BreakEntity(
         id: 'break-1',
         name: 'Mittagspause',

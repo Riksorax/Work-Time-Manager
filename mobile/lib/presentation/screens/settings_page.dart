@@ -365,7 +365,7 @@ class SettingsPage extends ConsumerWidget {
                 color: isNegative ? Colors.red : Colors.green,
               ),
         ),
-        if (lastUpdate != null) ...[
+        if (lastUpdate != null && lastUpdate.isAfter(DateTime(2000))) ...[
           const SizedBox(height: 4),
           Text(
             'Letzte manuelle Änderung: ${DateFormat('dd.MM.yyyy').format(lastUpdate)}',

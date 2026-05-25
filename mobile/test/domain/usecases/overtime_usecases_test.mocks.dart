@@ -77,4 +77,28 @@ class MockOvertimeRepository extends _i1.Mock
         returnValue: _i3.Future<void>.value(),
         returnValueForMissingStub: _i3.Future<void>.value(),
       ) as _i3.Future<void>);
+
+  @override
+  _i3.Future<Duration> ensureOvertimeLoaded() => (super.noSuchMethod(
+        Invocation.method(
+          #ensureOvertimeLoaded,
+          [],
+        ),
+        returnValue: _i3.Future<Duration>.value(_FakeDuration_0(
+          this,
+          Invocation.method(
+            #ensureOvertimeLoaded,
+            [],
+          ),
+        )),
+      ) as _i3.Future<Duration>);
+
+  @override
+  _i3.Future<DateTime?> ensureLastUpdateLoaded() => (super.noSuchMethod(
+        Invocation.method(
+          #ensureLastUpdateLoaded,
+          [],
+        ),
+        returnValue: _i3.Future<DateTime?>.value(),
+      ) as _i3.Future<DateTime?>);
 }

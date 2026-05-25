@@ -8,6 +8,7 @@ import { OvertimeService } from '../../core/services/overtime';
 import { ThemeService } from '../../core/services/theme';
 import { DataSyncService, DataSyncResult } from '../../core/services/data-sync';
 import { WebPremiumService } from '../../core/services/web-premium.service';
+import { DashboardService } from '../dashboard/dashboard.service';
 import { UserSettings } from '../../shared/models/index';
 
 const DEFAULT_SETTINGS: UserSettings = {
@@ -30,6 +31,7 @@ export class SettingsPageService {
   private readonly themeSvc       = inject(ThemeService);
   private readonly dataSyncSvc    = inject(DataSyncService);
   private readonly premiumSvc     = inject(WebPremiumService);
+  private readonly dashboardSvc   = inject(DashboardService);
   private readonly router         = inject(Router);
 
   // ── Auth / Premium ────────────────────────────────────────────────────────
@@ -100,10 +102,10 @@ export class SettingsPageService {
   }
 
   async setOvertime(ms: number): Promise<void> {
-    await this.overtimeSvc.saveOvertime(ms);
+    // Dashboard live aktualisieren + Basis-Wert speichern (ohne lastUpdated zu setzen).
+    // Der eingegebene Wert ist die Basis aus Vortagen, nicht der heutige Gesamtstand.
+    await this.dashboardSvc.updateInitialOvertime(ms);
     this._overtimeMs.set(ms);
-    this._lastOvertimeUpdate.set(new Date());
-    await this.overtimeSvc.saveLastUpdateDate(new Date());
   }
 
   setTheme(dark: boolean): void {

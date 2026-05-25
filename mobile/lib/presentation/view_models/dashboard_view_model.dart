@@ -35,8 +35,9 @@ class DashboardViewModel extends Notifier<DashboardState> {
     final overtimeRepository = ref.read(overtimeRepositoryProvider);
 
     final workEntry = await getTodayWorkEntry.call();
-    final storedOvertime = overtimeRepository.getOvertime();
-    final lastUpdateDate = overtimeRepository.getLastUpdateDate();
+    // Async laden statt synchronem Cache-Zugriff (verhindert Race Condition bei Firebase-Login)
+    final storedOvertime = await overtimeRepository.ensureOvertimeLoaded();
+    final lastUpdateDate = await overtimeRepository.ensureLastUpdateLoaded();
 
     // Lade Wocheneinträge um zu prüfen ob heute ein Zusatztag ist
     await _loadWeekEntries(workEntry);
@@ -156,17 +157,13 @@ class DashboardViewModel extends Notifier<DashboardState> {
     );
   }
 
-  void updateOvertimeFromSettings(Duration newOvertime) {
-    // Wenn Overtime manuell gesetzt wird, ist das der neue Total/Base Wert.
-    // Wir setzen Base auf den neuen Wert und behalten Daily bei.
-    // Total = Base + Daily.
-    // Aber wenn der User "Total" editiert, meint er meistens "Total inkl. heute".
-    // Angenommen er setzt Total auf X.
-    // Dann ist Base = X - Daily.
+  void updateOvertimeFromSettings(Duration newBase) {
+    // Der User gibt die Basis-Bilanz aus Vortagen ein (nicht inkl. heute).
+    // Total = Basis + Heutige Überstunden.
     final currentDaily = state.dailyOvertime ?? Duration.zero;
     state = state.copyWith(
-      initialOvertime: newOvertime - currentDaily,
-      totalOvertime: newOvertime,
+      initialOvertime: newBase,
+      totalOvertime: newBase + currentDaily,
     );
   }
 
