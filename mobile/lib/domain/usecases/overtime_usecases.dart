@@ -30,9 +30,10 @@ class SetOvertime {
 
   Future<void> call({required Duration overtime, bool isManual = false}) async {
     await repository.saveOvertime(overtime);
-    // Bei manueller Änderung das Datum speichern
     if (isManual) {
-      await repository.saveLastUpdateDate(DateTime.now());
+      // Epoch-Datum setzen damit _init den gespeicherten Wert als Basis behandelt
+      // (nicht als "heutiger Gesamtstand inkl. Daily-Overtime").
+      await repository.saveLastUpdateDate(DateTime.utc(1970, 1, 1));
     }
   }
 }
