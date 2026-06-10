@@ -145,16 +145,17 @@ export class DashboardService {
       const isExtraDay        = targetDailyMs === 0;
 
       // 6. Initiales Daily Overtime berechnen
+      const manualEntryMs = (workEntry.manualOvertimeMinutes ?? 0) * 60000;
       let initialDailyMs = 0;
       if (workEntry.workStart && workEntry.workEnd) {
         const breakMs    = this._totalBreakMs(workEntry.breaks, workEntry.workEnd);
         const netMs      = workEntry.workEnd.getTime() - workEntry.workStart.getTime() - breakMs;
-        initialDailyMs   = netMs - targetDailyMs;
+        initialDailyMs   = netMs - targetDailyMs + manualEntryMs;
       } else if (workEntry.workStart) {
         const now        = new Date();
         const breakMs    = this._totalBreakMs(workEntry.breaks, now);
         const netMs      = now.getTime() - workEntry.workStart.getTime() - breakMs;
-        initialDailyMs   = netMs - targetDailyMs;
+        initialDailyMs   = netMs - targetDailyMs + manualEntryMs;
       }
 
       // 7. Base-Overtime berechnen
@@ -363,17 +364,18 @@ export class DashboardService {
     const e = this._s().workEntry;
     if (!e.workStart) return;
 
-    const settings = this._currentSettings();
-    const targetMs = this._targetDailyMs(settings);
-    const now      = new Date();
-    const breakMs  = this._totalBreakMs(e.breaks, now);
-    const elapsed  = now.getTime() - e.workStart.getTime() - breakMs;
-    const daily    = elapsed - targetMs;
-    const base     = this._s().initialOvertimeMs ?? 0;
-    const total    = base + daily;
+    const settings  = this._currentSettings();
+    const targetMs  = this._targetDailyMs(settings);
+    const manualMs  = (e.manualOvertimeMinutes ?? 0) * 60000;
+    const now       = new Date();
+    const breakMs   = this._totalBreakMs(e.breaks, now);
+    const elapsed   = now.getTime() - e.workStart.getTime() - breakMs;
+    const daily     = elapsed - targetMs + manualMs;
+    const base      = this._s().initialOvertimeMs ?? 0;
+    const total     = base + daily;
 
-    const expectedEnd         = this._calcExpectedEnd(e.workStart, targetMs, this._totalBreakMs(e.breaks, now));
-    const remainingForZero    = Math.max(0, targetMs - base);
+    const expectedEnd          = this._calcExpectedEnd(e.workStart, targetMs, this._totalBreakMs(e.breaks, now));
+    const remainingForZero     = Math.max(0, targetMs - base - manualMs);
     const expectedEndTotalZero = this._calcExpectedEnd(e.workStart, remainingForZero, this._totalBreakMs(e.breaks, now));
 
     this._s.update(s => ({
@@ -417,7 +419,8 @@ export class DashboardService {
       actualWorkMs = grossMs - breaks;
       const settings  = this._currentSettings();
       const targetMs  = this._targetDailyMs(settings);
-      dailyMs    = actualWorkMs - targetMs;
+      const manualMs  = (entry.manualOvertimeMinutes ?? 0) * 60000;
+      dailyMs    = actualWorkMs - targetMs + manualMs;
       const base = this._s().initialOvertimeMs ?? 0;
       totalMs    = base + dailyMs;
     }

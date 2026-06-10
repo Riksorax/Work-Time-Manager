@@ -1,4 +1,4 @@
-import { WorkEntry } from '../../shared/models';
+import { WorkEntry, WorkEntryType } from '../../shared/models';
 
 export function getEffectiveDailyTarget(
   date: Date,
@@ -8,7 +8,7 @@ export function getEffectiveDailyTarget(
 ): number {
   const workDays = [...new Set(
     weekEntries
-      .filter(e => e.workStart)
+      .filter(e => e.workStart || e.type !== WorkEntryType.Work)
       .map(e => toDateKey(e.date))
   )].sort();
 

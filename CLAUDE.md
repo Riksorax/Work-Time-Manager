@@ -38,12 +38,24 @@ npm run build -- --configuration production
 
 ## CI/CD
 
-| Workflow | Trigger | Target |
+| Workflow | Trigger | Jobs |
 |---|---|---|
-| `flutter.yml` | Push to `main` | Android AAB → Google Play |
-| `deploy-angular.yml` | Push to `main`/`develop` | Angular → Firebase Hosting |
+| `flutter-production.yml` | Push to `main` | Android AAB → Google Play (Closed Testing) |
+| `deploy-angular.yml` | Push to `main` oder `workflow_dispatch` | 1. Angular Build → 2. Docker Image → Docker Hub → 3. Deploy → Hetzner |
+| `ci.yml` | PRs / Push | Lint & Tests |
+| `version-bump.yml` | Push to `main` | Versionsnummer erhöhen |
 
-Firebase project: `work-time-manager-riksorax`. Required secrets: `FIREBASE_SERVICE_ACCOUNT_WORK_TIME_MANAGER_RIKSORAX`, `RC_ANDROID_KEY`, `RC_IOS_KEY`, `RECAPTCHA_SITE_KEY`, Android keystore secrets.
+**Web-Deployment Detail (`deploy-angular.yml`):**
+- **Build**: Angular Production Build mit injizierten Firebase-Secrets
+- **Docker**: Image `riksorax/work-time-manager-web` → Docker Hub (nur bei nicht-PR)
+- **Deploy**: SSH auf Hetzner-Server, `docker compose up` (nur bei Push auf `main`)
+- Manueller Trigger via `workflow_dispatch` baut & pusht Docker Image, deployt aber **nicht** (kein `main`-Branch)
+
+**Required Secrets (Web):** `FIREBASE_API_KEY`, `FIREBASE_AUTH_DOMAIN`, `FIREBASE_PROJECT_ID`, `FIREBASE_STORAGE_BUCKET`, `FIREBASE_MESSAGING_SENDER_ID`, `FIREBASE_APP_ID`, `FIREBASE_MEASUREMENT_ID`, `RC_WEB_KEY`, `DOCKERHUB_TOKEN`, `HETZNER_SSH_PRIVATE_KEY`
+
+**Required Vars (Web):** `DOCKERHUB_USERNAME`, `HETZNER_HOST`, `HETZNER_USER`
+
+**Required Secrets (Flutter):** `RC_ANDROID_KEY`, `RC_IOS_KEY`, Android keystore secrets
 
 ## Mobile Architecture
 

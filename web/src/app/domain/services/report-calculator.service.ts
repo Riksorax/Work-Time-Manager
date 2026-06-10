@@ -149,8 +149,11 @@ export class ReportCalculatorService {
         worked = daily;
         workDaySet.add(key);
       } else {
-        worked = netWorkMs(entry);
+        // Bruttozeit (Start bis Ende), Pausen separat erfassen
         breaks = sumBreakMs(entry.breaks);
+        worked = (entry.workStart && entry.workEnd)
+          ? entry.workEnd.getTime() - entry.workStart.getTime()
+          : 0;
         if (entry.workStart) workDaySet.add(key);
       }
 
@@ -213,8 +216,11 @@ export class ReportCalculatorService {
         worked = daily;
         weekWorkDays.get(weekNum)!.add(key);
       } else {
-        worked = netWorkMs(entry);
+        // Bruttozeit (Start bis Ende), Pausen separat erfassen
         breaks = sumBreakMs(entry.breaks);
+        worked = (entry.workStart && entry.workEnd)
+          ? entry.workEnd.getTime() - entry.workStart.getTime()
+          : 0;
         if (entry.workStart) weekWorkDays.get(weekNum)!.add(key);
       }
 

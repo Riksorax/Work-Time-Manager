@@ -76,6 +76,7 @@ export class ReportsComponent {
   // ── Template helpers ────────────────────────────────────────────────────────
 
   formatDuration(ms: number): string {
+    if (!isFinite(ms)) return '00:00';
     const abs = Math.abs(ms);
     const h   = Math.floor(abs / 3600000);
     const m   = Math.floor((abs % 3600000) / 60000);
@@ -83,6 +84,7 @@ export class ReportsComponent {
   }
 
   formatOvertime(ms: number): string {
+    if (!isFinite(ms)) return '+00:00';
     const sign = ms >= 0 ? '+' : '-';
     const abs  = Math.abs(ms);
     const h    = Math.floor(abs / 3600000);
