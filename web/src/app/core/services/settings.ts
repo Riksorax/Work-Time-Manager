@@ -35,7 +35,7 @@ export class SettingsService {
           runInInjectionContext(this.injector, () => {
             const ref = doc(this.firestore, `users/${user.uid}/settings/current`);
             unsub = onSnapshot(ref,
-              snap => observer.next((snap.data() as UserSettings) || this.defaultSettings),
+              snap => observer.next({ ...this.defaultSettings, ...(snap.data() ?? {}) as Partial<UserSettings> }),
               err  => observer.error(err),
             );
           });
