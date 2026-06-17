@@ -79,6 +79,7 @@ api.MapWorkEntryEndpoints();
 api.MapOvertimeEndpoints();
 api.MapSettingsEndpoints();
 api.MapProfileEndpoints();
+api.MapReportEndpoints();
 
 app.Run();
 

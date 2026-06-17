@@ -8,6 +8,7 @@ This is a monorepo for a German work-time tracking app:
 
 - `mobile/` — Flutter app (primary, production-ready). Has its own detailed `mobile/CLAUDE.md`.
 - `web/` — Angular web app (feature-complete on `feature/angular-web-scaffold`).
+- `server/` — .NET 10 Backend-API (`feature/backend-umbau`). Firebase-Auth + Firestore.
 
 For all Flutter/mobile work, refer to `mobile/CLAUDE.md` for commands, architecture details, and workflow rules.
 
@@ -174,6 +175,48 @@ runInInjectionContext(this.injector, () => {
 ### Daten-Synchronisation
 
 `DataSyncService.syncAll()` liest alle localStorage-Einträge (via `WorkEntryService.getAllLocalEntries()` + `LS_KEYS`-Index) und schreibt sie nach Firebase. Wird manuell aus den Einstellungen getriggert.
+
+## Backend (.NET API) — `server/`
+
+.NET 10 Minimal API, Firebase-ID-Token-Auth (JWT Bearer, JWKS-validiert), Firestore als Datenspeicher. Liest/schreibt **dieselbe Firestore-Struktur** wie Flutter/Web (siehe Datenpfade oben).
+
+```bash
+cd server
+dotnet run --project src/WorkTimeManager.Api      # Swagger unter /swagger (nur Development)
+dotnet test WorkTimeManager.slnx                  # Unit- + Integrationstests
+```
+
+### Schichten (`src/WorkTimeManager.Api/`)
+
+```
+Contracts/    API-DTOs (JSON, ISO-8601-Daten) — WorkEntryDto, OvertimeDto, SettingsDto, ProfileDto, Report*Dto
+Firestore/    Documents/ (FirestoreData-POCOs) + Repositories + FirestoreMappings (POCO↔DTO)
+Domain/       Pure Berechnung — BreakCalculator (Pflichtpausen), ReportCalculator (ISO-Woche, Tages-/Wochen-/Monatsbericht)
+Endpoints/    Minimal-API-Mappings je Ressource + ClaimsPrincipalExtensions.GetUid()
+```
+
+### Endpunkte (alle unter `/api`, authentifiziert; UID kommt aus dem Token)
+
+| Methode | Route | Zweck |
+|---|---|---|
+| GET | `/api/me` | UID des Tokens |
+| GET | `/api/work-entries/{year}/{month}` | Einträge eines Monats |
+| GET | `/api/work-entries/{year}/{month}/{day}` | Einzeleintrag (404 wenn fehlt) |
+| PUT | `/api/work-entries` | Eintrag speichern (merge in days-Map) |
+| DELETE | `/api/work-entries/{year}/{month}/{day}` | Tag löschen |
+| GET / PUT | `/api/overtime` | Gleitzeit-Saldo lesen/speichern (`minutes`) |
+| GET / PUT | `/api/settings` | Einstellungen lesen/speichern |
+| GET | `/api/profile` | Premium-Status |
+| GET | `/api/reports/daily/{year}/{month}/{day}` | Tagesstatistik |
+| GET | `/api/reports/weekly/{year}/{month}/{day}` | Wochenbericht |
+| GET | `/api/reports/monthly/{year}/{month}` | Monatsbericht |
+
+### Backend-Regeln
+
+- **Firestore-Format ist Flutter-kanonisch**: days-Map-Schlüssel ohne führende Null (`"5"`), Zeiten als `Timestamp`. Mapping ausschließlich über `FirestoreMappings`.
+- **Berechnungslogik = Port der Web-`*-calculator`-Services** — bei Änderungen an der Web-Logik beide Seiten konsistent halten. `ReportCalculator.GetIsoWeekNumber` ist gegen `System.Globalization.ISOWeek` getestet.
+- **Integrationstests** laufen gegen einen Firestore-Emulator via Testcontainers (Docker). Ohne Docker überspringen sie sich (`SkippableFact`), `dotnet test` bleibt grün.
+- Credentials: `FIRESTORE_EMULATOR_HOST` (lokal/Test) bzw. `FIREBASE_SERVICE_ACCOUNT_BASE64` (Prod), sonst Application Default Credentials.
 
 ## Web-Port Workflow (5 Phasen)
 
