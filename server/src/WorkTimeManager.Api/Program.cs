@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.OpenApi;
+using WorkTimeManager.Api.Endpoints;
 using WorkTimeManager.Api.Firestore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -68,13 +69,16 @@ app.MapGet("/health", () => Results.Ok(new { status = "healthy" }))
    .WithName("Health")
    .AllowAnonymous();
 
-app.MapGet("/api/me", (ClaimsPrincipal user) =>
-{
-    var uid = user.FindFirst("sub")?.Value ?? user.FindFirst("user_id")?.Value;
-    return Results.Ok(new { uid });
-})
-.RequireAuthorization()
-.WithName("Me");
+app.MapGet("/api/me", (ClaimsPrincipal user) => Results.Ok(new { uid = user.GetUid() }))
+   .RequireAuthorization()
+   .WithName("Me");
+
+// ── Geschäftslogik-Endpunkte (alle authentifiziert) ────────────────────────
+var api = app.MapGroup("/api").RequireAuthorization();
+api.MapWorkEntryEndpoints();
+api.MapOvertimeEndpoints();
+api.MapSettingsEndpoints();
+api.MapProfileEndpoints();
 
 app.Run();
 

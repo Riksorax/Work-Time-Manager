@@ -20,6 +20,11 @@ public static class FirestoreServiceCollectionExtensions
             return FirestoreDb.Create(projectId, clientBuilder.Build());
         });
 
+        services.AddSingleton<WorkEntryRepository>();
+        services.AddSingleton<OvertimeRepository>();
+        services.AddSingleton<SettingsRepository>();
+        services.AddSingleton<ProfileRepository>();
+
         return services;
     }
 
