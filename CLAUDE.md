@@ -42,6 +42,7 @@ npm run build -- --configuration production
 |---|---|---|
 | `flutter-production.yml` | Push to `main` | Android AAB → Google Play (Closed Testing) |
 | `deploy-angular.yml` | Push to `main` oder `workflow_dispatch` | 1. Angular Build → 2. Docker Image → Docker Hub → 3. Deploy → Hetzner |
+| `deploy-api.yml` | Push to `main` oder `workflow_dispatch` | 1. .NET Build & Test → 2. Docker Image → Docker Hub → 3. Deploy → Hetzner |
 | `ci.yml` | PRs / Push | Lint & Tests |
 | `version-bump.yml` | Push to `main` | Versionsnummer erhöhen |
 
@@ -51,9 +52,17 @@ npm run build -- --configuration production
 - **Deploy**: SSH auf Hetzner-Server, `docker compose up` (nur bei Push auf `main`)
 - Manueller Trigger via `workflow_dispatch` baut & pusht Docker Image, deployt aber **nicht** (kein `main`-Branch)
 
+**API-Deployment Detail (`deploy-api.yml`):**
+- **Build & Test**: `dotnet build`/`dotnet test` gegen `server/WorkTimeManager.slnx`
+- **Docker**: Image `riksorax/work-time-manager-api` → Docker Hub (nur bei nicht-PR)
+- **Deploy**: SSH auf Hetzner-Server, `docker compose up` (nur bei Push auf `main`) — Firebase-Projekt-ID und Service-Account-Credential werden als GitHub Secrets per SSH-Session-Env injiziert (`appleboy/ssh-action` `envs:`), es liegt **keine** `.env`-Datei auf dem Server
+- Manueller Trigger via `workflow_dispatch` baut & pusht Docker Image, deployt aber **nicht** (kein `main`-Branch)
+
 **Required Secrets (Web):** `FIREBASE_API_KEY`, `FIREBASE_AUTH_DOMAIN`, `FIREBASE_PROJECT_ID`, `FIREBASE_STORAGE_BUCKET`, `FIREBASE_MESSAGING_SENDER_ID`, `FIREBASE_APP_ID`, `FIREBASE_MEASUREMENT_ID`, `RC_WEB_KEY`, `DOCKERHUB_TOKEN`, `HETZNER_SSH_PRIVATE_KEY`
 
 **Required Vars (Web):** `DOCKERHUB_USERNAME`, `HETZNER_HOST`, `HETZNER_USER`
+
+**Required Secrets (API, zusätzlich):** `FIREBASE_PROJECT_ID` (geteilt mit Web), `FIREBASE_SERVICE_ACCOUNT_BASE64` (Base64-kodiertes Firebase-Service-Account-JSON für `worktime-56c7a`, Quelle: Firebase Console → Projekteinstellungen → Dienstkonten → "Neuen privaten Schlüssel generieren")
 
 **Required Secrets (Flutter):** `RC_ANDROID_KEY`, `RC_IOS_KEY`, Android keystore secrets
 
