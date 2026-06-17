@@ -214,7 +214,7 @@ Endpoints/    Minimal-API-Mappings je Ressource + ClaimsPrincipalExtensions.GetU
 ### Backend-Regeln
 
 - **Firestore-Format ist Flutter-kanonisch**: days-Map-Schlüssel ohne führende Null (`"5"`), Zeiten als `Timestamp`. Mapping ausschließlich über `FirestoreMappings`.
-- **Berechnungslogik = Port der Web-`*-calculator`-Services** — bei Änderungen an der Web-Logik beide Seiten konsistent halten. `ReportCalculator.GetIsoWeekNumber` ist gegen `System.Globalization.ISOWeek` getestet.
+- **Berechnungslogik = Port der _korrigierten_ Web-`*-calculator`-Services** (Stand nach Web-Bugfix `0ddd15b`, 10.06.2026). Das ist die mathematisch korrekte Variante. **Achtung:** Die Flutter-App rechnet aktuell noch _anders_ (doppelte Pausen-Subtraktion in Wochen-/Monatsbericht, ignoriert Urlaub/Krank/Feiertag, Tages-Überstunden=0, vereinfachte KW ohne Jahreswechsel-Korrektur, Monats-Gesamtüberstunden ohne Gleitzeit-Altsaldo). Das Backend folgt **bewusst nicht** dieser Flutter-Logik — Flutter soll perspektivisch auf die Backend-Logik gezogen werden, damit alle Clients identisch rechnen. `ReportCalculator.GetIsoWeekNumber` ist gegen `System.Globalization.ISOWeek` getestet.
 - **Integrationstests** laufen gegen einen Firestore-Emulator via Testcontainers (Docker). Ohne Docker überspringen sie sich (`SkippableFact`), `dotnet test` bleibt grün.
 - Credentials: `FIRESTORE_EMULATOR_HOST` (lokal/Test) bzw. `FIREBASE_SERVICE_ACCOUNT_BASE64` (Prod), sonst Application Default Credentials.
 
