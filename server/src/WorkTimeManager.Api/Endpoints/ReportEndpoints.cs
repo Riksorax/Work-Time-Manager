@@ -31,9 +31,10 @@ internal static class ReportEndpoints
             if (user.GetUid() is not { } uid) return Results.Unauthorized();
             if (!IsValidDay(year, month, day)) return Results.BadRequest("Ungültiges Datum.");
 
-            var monthEntries = await entries.GetMonthAsync(uid, year, month, ct);
+            var date = new DateOnly(year, month, day);
+            var weekEntries = await entries.GetWeekAsync(uid, date, ct);
             var settings = await settingsRepo.GetAsync(uid, ct);
-            var report = ReportCalculator.CalculateWeeklyReport(monthEntries, new DateOnly(year, month, day), settings);
+            var report = ReportCalculator.CalculateWeeklyReport(weekEntries, date, settings);
             return Results.Ok(report);
         })
         .WithName("GetWeeklyReport");

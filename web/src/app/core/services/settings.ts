@@ -1,7 +1,8 @@
 import { Injectable, Injector, inject, runInInjectionContext } from '@angular/core';
-import { Firestore, doc, onSnapshot, setDoc } from '@angular/fire/firestore';
+import { Firestore, doc, onSnapshot } from '@angular/fire/firestore';
 import { BehaviorSubject, Observable, switchMap } from 'rxjs';
 import { AuthService } from '../auth/auth';
+import { ApiClient } from './api-client';
 import { UserSettings } from '../../shared/models';
 
 const LS_KEY = 'user_settings';
@@ -11,6 +12,7 @@ export class SettingsService {
   private readonly firestore = inject(Firestore);
   private readonly auth      = inject(AuthService);
   private readonly injector  = inject(Injector);
+  private readonly api       = inject(ApiClient);
 
   private readonly defaultSettings: UserSettings = {
     weeklyTargetHours: 40,
@@ -46,15 +48,9 @@ export class SettingsService {
   }
 
   async saveSettings(settings: UserSettings): Promise<void> {
-    const uid = this.auth.uid;
-    if (!uid) {
-      this._localSave(settings);
-      return;
-    }
-    await runInInjectionContext(this.injector, () => {
-      const ref = doc(this.firestore, `users/${uid}/settings/current`);
-      return setDoc(ref, settings, { merge: true });
-    });
+    // Eingeloggt: Schreibvorgang über die API; getSettings bleibt onSnapshot (Hybrid).
+    if (this.auth.uid) await this.api.saveSettings(settings);
+    else               this._localSave(settings);
   }
 
   // ── localStorage ─────────────────────────────────────────────────────────

@@ -209,7 +209,8 @@ public static class ReportCalculator
         }).ToList();
     }
 
-    private static (DateOnly Start, DateOnly End) WeekBounds(DateOnly date)
+    /// <summary>Wochengrenzen (Montag–Sonntag) der Woche, die <paramref name="date"/> enthält.</summary>
+    public static (DateOnly Start, DateOnly End) WeekBounds(DateOnly date)
     {
         var start = date.AddDays(-(IsoDow(date) - 1));
         return (start, start.AddDays(6));

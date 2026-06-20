@@ -34,6 +34,24 @@ public sealed class WorkEntryRepository(FirestoreDb db)
             .ToList();
     }
 
+    /// <summary>
+    /// Lädt alle Einträge der Woche (Mo–So), die <paramref name="date"/> enthält — über
+    /// Monatsgrenzen hinweg (1–2 Monatsdokumente). Für den Wochenbericht.
+    /// </summary>
+    public async Task<IReadOnlyList<WorkEntryDto>> GetWeekAsync(
+        string uid, DateOnly date, CancellationToken ct)
+    {
+        var (start, end) = Domain.ReportCalculator.WeekBounds(date);
+        var months = new[] { (start.Year, start.Month), (end.Year, end.Month) }.Distinct();
+
+        var all = new List<WorkEntryDto>();
+        foreach (var (year, month) in months)
+        {
+            all.AddRange(await GetMonthAsync(uid, year, month, ct));
+        }
+        return all;
+    }
+
     public async Task<WorkEntryDto?> GetDayAsync(
         string uid, int year, int month, int day, CancellationToken ct)
     {

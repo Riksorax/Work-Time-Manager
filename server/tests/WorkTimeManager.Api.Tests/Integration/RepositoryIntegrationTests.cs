@@ -92,6 +92,31 @@ public class RepositoryIntegrationTests(FirestoreEmulatorFixture fixture)
     }
 
     [SkippableFact]
+    public async Task GetWeek_LoadsEntriesAcrossMonthBoundary()
+    {
+        RequireEmulator();
+        var repo = new WorkEntryRepository(fixture.Db!);
+        var uid = NewUid();
+        // Woche Mo 30.03.2026 – So 05.04.2026 (kreuzt März/April)
+        await repo.SaveAsync(uid, Day(2026, 3, 31), Ct);
+        await repo.SaveAsync(uid, Day(2026, 4, 1), Ct);
+
+        var week = await repo.GetWeekAsync(uid, new DateOnly(2026, 4, 1), Ct);
+
+        Assert.Equal(2, week.Count);
+        Assert.Contains(week, e => e.Id == "2026-03-31");
+        Assert.Contains(week, e => e.Id == "2026-04-01");
+
+        static WorkEntryDto Day(int y, int m, int d) => new()
+        {
+            Id = $"{y:D4}-{m:D2}-{d:D2}",
+            Date = new DateTimeOffset(y, m, d, 0, 0, 0, TimeSpan.Zero),
+            WorkStart = new DateTimeOffset(y, m, d, 9, 0, 0, TimeSpan.Zero),
+            WorkEnd = new DateTimeOffset(y, m, d, 17, 0, 0, TimeSpan.Zero),
+        };
+    }
+
+    [SkippableFact]
     public async Task Overtime_SaveAndGet_RoundTrips()
     {
         RequireEmulator();
