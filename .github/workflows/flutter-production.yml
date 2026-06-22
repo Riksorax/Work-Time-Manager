@@ -61,6 +61,7 @@ jobs:
         run: |
           flutter build appbundle --release \
             --build-number=$(( ${{ github.run_number }} + 1393 )) \
+            --dart-define=API_URL="https://api.work-time-manager.app" \
             --dart-define=RC_ANDROID_KEY="${{ secrets.RC_ANDROID_PROD_KEY }}" \
             --dart-define=RECAPTCHA_SITE_KEY="${{ secrets.RECAPTCHA_SITE_KEY }}"
 
