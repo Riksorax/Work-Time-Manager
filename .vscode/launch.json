@@ -36,14 +36,47 @@
       },
       "timeout": 60000
     },
+    // ── .NET Backend ─────────────────────────────────────────────────────────
+    {
+      "type": "coreclr",
+      "request": "launch",
+      "name": "Backend: API (lokal)",
+      "program": "dotnet",
+      "args": ["run", "--project", "src/WorkTimeManager.Api"],
+      "cwd": "${workspaceFolder}/server",
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        // Lokale Firestore-Credentials: Service-Account-Key hier ablegen (gitignored).
+        // Firebase Console → Projekteinstellungen → Dienstkonten → "Neuen privaten Schlüssel generieren"
+        "GOOGLE_APPLICATION_CREDENTIALS": "${workspaceFolder}/server/.secrets/firebase-sa.json"
+      },
+      "console": "integratedTerminal",
+      "serverReadyAction": {
+        "action": "openExternally",
+        "pattern": "Now listening on:\\s+(https?://\\S+)",
+        "uriFormat": "%s/swagger"
+      }
+    },
     // ── Flutter Mobile ─────────────────────────────────────────────────────────
     {
       "type": "dart",
       "request": "launch",
-      "name": "Mobile: Flutter (Debug)",
+      "name": "Mobile: Flutter (Debug, Emulator)",
       "cwd": "${workspaceFolder}/mobile",
       "program": "${workspaceFolder}/mobile/lib/main.dart",
-      "flutterMode": "debug"
+      "flutterMode": "debug",
+      "args": ["--dart-define=API_URL=http://10.0.2.2:5148"]
+    },
+    {
+      // Physisches Gerät (WLAN/USB): erreicht das lokale Backend über die LAN-IP des PCs.
+      // IP ggf. anpassen, falls sich die Adresse des Entwicklerrechners ändert (aktuell 192.168.178.37).
+      "type": "dart",
+      "request": "launch",
+      "name": "Mobile: Flutter (Debug, physisches Gerät)",
+      "cwd": "${workspaceFolder}/mobile",
+      "program": "${workspaceFolder}/mobile/lib/main.dart",
+      "flutterMode": "debug",
+      "args": ["--dart-define=API_URL=http://192.168.178.37:5148"]
     },
     {
       "type": "dart",
@@ -64,10 +97,34 @@
   ],
   "compounds": [
     {
+      "name": "Full Stack: Backend + Web",
+      "configurations": [
+        "Backend: API (lokal)",
+        "Web: Chrome (Dev Server starten)"
+      ],
+      "stopAll": true
+    },
+    {
+      "name": "Full Stack: Backend + Mobile (Emulator)",
+      "configurations": [
+        "Backend: API (lokal)",
+        "Mobile: Flutter (Debug, Emulator)"
+      ],
+      "stopAll": true
+    },
+    {
+      "name": "Full Stack: Backend + Mobile (Gerät)",
+      "configurations": [
+        "Backend: API (lokal)",
+        "Mobile: Flutter (Debug, physisches Gerät)"
+      ],
+      "stopAll": true
+    },
+    {
       "name": "Web + Mobile gleichzeitig",
       "configurations": [
         "Web: Chrome (Dev Server starten)",
-        "Mobile: Flutter (Debug)"
+        "Mobile: Flutter (Debug, Emulator)"
       ]
     }
   ]

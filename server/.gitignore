@@ -6,6 +6,9 @@
 # dotenv files
 .env
 
+# Lokale Service-Account-Credentials für die Backend-Entwicklung (NIE einchecken!)
+.secrets/
+
 # User-specific files
 *.rsuser
 *.suo
