@@ -93,10 +93,12 @@ export class ReportsService {
   // Monatliche Einträge (täglich-Tab / Monatlich-Tab)
   private readonly _monthlyEntries = toSignal(
     toObservable(this._viewMonth).pipe(
-      tap(() => this._isLoading.set(true)),
       switchMap(({ year, month }) =>
         this.workEntryService.getEntriesForMonth(year, month).pipe(
           catchError(() => of([] as WorkEntry[])),
+          // isLoading nur für den Erstladevorgang ausschalten — beim Monatswechsel
+          // NICHT erneut auf true setzen, sonst wird die gesamte UI (inkl. Kalender,
+          // der den Monatszustand hält) zerstört und springt auf den alten Monat zurück.
           tap(() => this._isLoading.set(false)),
         )
       ),
