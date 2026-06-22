@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/WorkTimeManager.Api/WorkTimeManager.Api.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/WorkTimeManager.Api.Tests/WorkTimeManager.Api.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -1,11 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:http/http.dart' as http;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/services/version_service.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/utils/logger.dart';
+import '../../data/datasources/remote/api_client.dart';
+import '../../data/datasources/remote/api_data_source.dart';
 import '../../data/datasources/remote/firestore_datasource.dart';
 import '../../data/repositories/auth_repository_impl.dart';
 import '../../data/repositories/hybrid_overtime_repository_impl.dart';
@@ -67,6 +70,24 @@ FirestoreDataSource firestoreDataSource(Ref ref) {
   );
 }
 
+@Riverpod(keepAlive: true)
+http.Client httpClient(Ref ref) {
+  final client = http.Client();
+  ref.onDispose(client.close);
+  return client;
+}
+
+@riverpod
+ApiClient apiClient(Ref ref) =>
+    ApiClient(ref.watch(firebaseAuthProvider), ref.watch(httpClientProvider));
+
+/// Datenzugriff (Work/Overtime/Settings) über die Backend-API; Auth/Profil
+/// delegiert an die Firestore-DataSource. Ersetzt die Firestore-DataSource im
+/// "remote"-Slot der Hybrid-Repositories.
+@riverpod
+ApiDataSource apiDataSource(Ref ref) =>
+    ApiDataSource(ref.watch(firestoreDataSourceProvider), ref.watch(apiClientProvider));
+
 //==============================================================================
 // SERVICES
 //==============================================================================
@@ -95,7 +116,7 @@ SettingsRepository settingsRepository(Ref ref) {
   final userId = ref.watch(firebaseAuthProvider).currentUser?.uid;
   final repo = SettingsRepositoryImpl(
     ref.watch(sharedPreferencesProvider),
-    ref.watch(firestoreDataSourceProvider),
+    ref.watch(apiDataSourceProvider),
     userId ?? 'local',
   );
   // Beim Login Firestore-Einstellungen in SharedPrefs übernehmen
@@ -115,7 +136,7 @@ WorkRepository workRepository(Ref ref) {
 
   final firebaseRepository = userId != null
       ? WorkRepositoryImpl(
-          dataSource: ref.watch(firestoreDataSourceProvider),
+          dataSource: ref.watch(apiDataSourceProvider),
           userId: userId,
         )
       : localRepository;
@@ -139,7 +160,7 @@ OvertimeRepository overtimeRepository(Ref ref) {
 
   final firebaseRepository = userId != null
       ? FirebaseOvertimeRepositoryImpl(
-          dataSource: ref.watch(firestoreDataSourceProvider),
+          dataSource: ref.watch(apiDataSourceProvider),
           userId: userId,
         )
       : localRepository;
