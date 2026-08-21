@@ -25,19 +25,18 @@ if (flutterVersionName == null) {
     flutterVersionName = '1.0'
 }
 
+// Ab AGP 9 wird ausschließlich das neue DSL gelesen: Eigenschaften werden
+// zugewiesen (`x = y`) statt per Methodenaufruf gesetzt (`x y`), und
+// minSdkVersion/targetSdkVersion heißen minSdk/targetSdk.
 android {
-    namespace "app.work_time_manager"
-    compileSdk flutter.compileSdkVersion
-    ndkVersion flutter.ndkVersion
+    namespace = "app.work_time_manager"
+    compileSdk = flutter.compileSdkVersion
+    ndkVersion = flutter.ndkVersion
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
-        coreLibraryDesugaringEnabled true
-    }
-
-    kotlinOptions {
-        jvmTarget = '17'
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+        coreLibraryDesugaringEnabled = true
     }
 
     sourceSets {
@@ -45,12 +44,12 @@ android {
     }
 
     defaultConfig {
-        applicationId "app.work_time_manager"
-        minSdkVersion flutter.minSdkVersion
-        targetSdkVersion flutter.targetSdkVersion
+        applicationId = "app.work_time_manager"
+        minSdk = flutter.minSdkVersion
+        targetSdk = flutter.targetSdkVersion
         // Prioritize environment variable for CI, otherwise use local properties.
-        versionCode System.getenv("VERSION_CODE") != null ? System.getenv("VERSION_CODE").toInteger() : flutterVersionCode.toInteger()
-        versionName flutterVersionName
+        versionCode = System.getenv("VERSION_CODE") != null ? System.getenv("VERSION_CODE").toInteger() : flutterVersionCode.toInteger()
+        versionName = flutterVersionName
     }
 
     signingConfigs {
@@ -58,25 +57,32 @@ android {
             // This configuration reads the signature details from the environment variables
             // set in the GitHub Action.
             if (System.getenv("ORG_GRADLE_PROJECT_android.signing.storeFile") != null) {
-                storeFile file(System.getenv("ORG_GRADLE_PROJECT_android.signing.storeFile"))
-                storePassword System.getenv("ORG_GRADLE_PROJECT_android.signing.storePassword")
-                keyAlias System.getenv("ORG_GRADLE_PROJECT_android.signing.keyAlias")
-                keyPassword System.getenv("ORG_GRADLE_PROJECT_android.signing.keyPassword")
+                storeFile = file(System.getenv("ORG_GRADLE_PROJECT_android.signing.storeFile"))
+                storePassword = System.getenv("ORG_GRADLE_PROJECT_android.signing.storePassword")
+                keyAlias = System.getenv("ORG_GRADLE_PROJECT_android.signing.keyAlias")
+                keyPassword = System.getenv("ORG_GRADLE_PROJECT_android.signing.keyPassword")
             }
         }
     }
 
     buildTypes {
         release {
-            signingConfig signingConfigs.release
-            minifyEnabled true
-            shrinkResources true
+            signingConfig = signingConfigs.release
+            minifyEnabled = true
+            shrinkResources = true
         }
     }
 }
 
+// kotlinOptions wurde durch die kotlin{}-Erweiterung ersetzt.
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+    }
+}
+
 flutter {
-    source '../..'
+    source = '../..'
 }
 
 dependencies {
