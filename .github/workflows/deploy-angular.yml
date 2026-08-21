@@ -56,6 +56,7 @@ jobs:
           FIREBASE_APP_ID:              ${{ secrets.FIREBASE_APP_ID }}
           FIREBASE_MEASUREMENT_ID:      ${{ secrets.FIREBASE_MEASUREMENT_ID }}
           RC_WEB_KEY:                   ${{ secrets.RC_WEB_KEY }}
+          API_URL:                      ${{ vars.API_URL }}
         run: |
           mkdir -p src/environments
           BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
@@ -63,6 +64,7 @@ jobs:
           export const environment = {
             production: true,
             buildTimestamp: '${BUILD_DATE}',
+            apiUrl: '${API_URL}',
             firebase: {
               apiKey:            '${FIREBASE_API_KEY}',
               authDomain:        '${FIREBASE_AUTH_DOMAIN}',

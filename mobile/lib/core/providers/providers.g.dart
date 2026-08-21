@@ -219,6 +219,140 @@ final class FirestoreDataSourceProvider extends $FunctionalProvider<
 String _$firestoreDataSourceHash() =>
     r'8c794a60f391c62f58c6da49f2a8d5576a9b093f';
 
+@ProviderFor(httpClient)
+const httpClientProvider = HttpClientProvider._();
+
+final class HttpClientProvider
+    extends $FunctionalProvider<http.Client, http.Client, http.Client>
+    with $Provider<http.Client> {
+  const HttpClientProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'httpClientProvider',
+          isAutoDispose: false,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$httpClientHash();
+
+  @$internal
+  @override
+  $ProviderElement<http.Client> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  http.Client create(Ref ref) {
+    return httpClient(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(http.Client value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<http.Client>(value),
+    );
+  }
+}
+
+String _$httpClientHash() => r'7ec49beae0f15115de79f9aa98dbd250130e26d8';
+
+@ProviderFor(apiClient)
+const apiClientProvider = ApiClientProvider._();
+
+final class ApiClientProvider
+    extends $FunctionalProvider<ApiClient, ApiClient, ApiClient>
+    with $Provider<ApiClient> {
+  const ApiClientProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'apiClientProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$apiClientHash();
+
+  @$internal
+  @override
+  $ProviderElement<ApiClient> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  ApiClient create(Ref ref) {
+    return apiClient(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(ApiClient value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<ApiClient>(value),
+    );
+  }
+}
+
+String _$apiClientHash() => r'd0af502dd95074270d914aa97a95d3aa6cb91072';
+
+/// Datenzugriff (Work/Overtime/Settings) über die Backend-API; Auth/Profil
+/// delegiert an die Firestore-DataSource. Ersetzt die Firestore-DataSource im
+/// "remote"-Slot der Hybrid-Repositories.
+
+@ProviderFor(apiDataSource)
+const apiDataSourceProvider = ApiDataSourceProvider._();
+
+/// Datenzugriff (Work/Overtime/Settings) über die Backend-API; Auth/Profil
+/// delegiert an die Firestore-DataSource. Ersetzt die Firestore-DataSource im
+/// "remote"-Slot der Hybrid-Repositories.
+
+final class ApiDataSourceProvider
+    extends $FunctionalProvider<ApiDataSource, ApiDataSource, ApiDataSource>
+    with $Provider<ApiDataSource> {
+  /// Datenzugriff (Work/Overtime/Settings) über die Backend-API; Auth/Profil
+  /// delegiert an die Firestore-DataSource. Ersetzt die Firestore-DataSource im
+  /// "remote"-Slot der Hybrid-Repositories.
+  const ApiDataSourceProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'apiDataSourceProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$apiDataSourceHash();
+
+  @$internal
+  @override
+  $ProviderElement<ApiDataSource> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  ApiDataSource create(Ref ref) {
+    return apiDataSource(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(ApiDataSource value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<ApiDataSource>(value),
+    );
+  }
+}
+
+String _$apiDataSourceHash() => r'8c1a22ac204febbbdc3dcf10f5c6413ed8d406e9';
+
 @ProviderFor(versionService)
 const versionServiceProvider = VersionServiceProvider._();
 
@@ -387,7 +521,7 @@ final class SettingsRepositoryProvider extends $FunctionalProvider<
 }
 
 String _$settingsRepositoryHash() =>
-    r'13727e5b62593b79f3ef6e3c6713ec6a29003b19';
+    r'1b079df9e1a20159d6220a0440589b69fbe232c2';
 
 @ProviderFor(workRepository)
 const workRepositoryProvider = WorkRepositoryProvider._();
@@ -428,7 +562,7 @@ final class WorkRepositoryProvider
   }
 }
 
-String _$workRepositoryHash() => r'80410f292c560043c1f9655de73a3fd85abacd5f';
+String _$workRepositoryHash() => r'8dc588d3a63ee4ce4263f6bbad2a10b97d323304';
 
 @ProviderFor(overtimeRepository)
 const overtimeRepositoryProvider = OvertimeRepositoryProvider._();
@@ -472,7 +606,7 @@ final class OvertimeRepositoryProvider extends $FunctionalProvider<
 }
 
 String _$overtimeRepositoryHash() =>
-    r'5189433b30e6fdc5d05986962fb3770f313c5699';
+    r'5cb1492b8414df0694565293ce341c00eec7f196';
 
 @ProviderFor(getAuthStateChangesUseCase)
 const getAuthStateChangesUseCaseProvider =

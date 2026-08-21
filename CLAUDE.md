@@ -8,6 +8,7 @@ This is a monorepo for a German work-time tracking app:
 
 - `mobile/` — Flutter app (primary, production-ready). Has its own detailed `mobile/CLAUDE.md`.
 - `web/` — Angular web app (feature-complete on `feature/angular-web-scaffold`).
+- `server/` — .NET 10 Backend-API (`feature/backend-umbau`). Firebase-Auth + Firestore.
 
 For all Flutter/mobile work, refer to `mobile/CLAUDE.md` for commands, architecture details, and workflow rules.
 
@@ -42,6 +43,7 @@ npm run build -- --configuration production
 |---|---|---|
 | `flutter-production.yml` | Push to `main` | Android AAB → Google Play (Closed Testing) |
 | `deploy-angular.yml` | Push to `main` oder `workflow_dispatch` | 1. Angular Build → 2. Docker Image → Docker Hub → 3. Deploy → Hetzner |
+| `deploy-api.yml` | Push to `main` oder `workflow_dispatch` | 1. .NET Build & Test → 2. Docker Image → Docker Hub → 3. Deploy → Hetzner |
 | `ci.yml` | PRs / Push | Lint & Tests |
 | `version-bump.yml` | Push to `main` | Versionsnummer erhöhen |
 
@@ -51,9 +53,17 @@ npm run build -- --configuration production
 - **Deploy**: SSH auf Hetzner-Server, `docker compose up` (nur bei Push auf `main`)
 - Manueller Trigger via `workflow_dispatch` baut & pusht Docker Image, deployt aber **nicht** (kein `main`-Branch)
 
+**API-Deployment Detail (`deploy-api.yml`):**
+- **Build & Test**: `dotnet build`/`dotnet test` gegen `server/WorkTimeManager.slnx`
+- **Docker**: Image `riksorax/work-time-manager-api` → Docker Hub (nur bei nicht-PR)
+- **Deploy**: SSH auf Hetzner-Server, `docker compose up` (nur bei Push auf `main`) — Firebase-Projekt-ID und Service-Account-Credential werden als GitHub Secrets per SSH-Session-Env injiziert (`appleboy/ssh-action` `envs:`), es liegt **keine** `.env`-Datei auf dem Server
+- Manueller Trigger via `workflow_dispatch` baut & pusht Docker Image, deployt aber **nicht** (kein `main`-Branch)
+
 **Required Secrets (Web):** `FIREBASE_API_KEY`, `FIREBASE_AUTH_DOMAIN`, `FIREBASE_PROJECT_ID`, `FIREBASE_STORAGE_BUCKET`, `FIREBASE_MESSAGING_SENDER_ID`, `FIREBASE_APP_ID`, `FIREBASE_MEASUREMENT_ID`, `RC_WEB_KEY`, `DOCKERHUB_TOKEN`, `HETZNER_SSH_PRIVATE_KEY`
 
 **Required Vars (Web):** `DOCKERHUB_USERNAME`, `HETZNER_HOST`, `HETZNER_USER`
+
+**Required Secrets (API, zusätzlich):** `FIREBASE_PROJECT_ID` (geteilt mit Web), `FIREBASE_SERVICE_ACCOUNT_BASE64` (Base64-kodiertes Firebase-Service-Account-JSON für `worktime-56c7a`, Quelle: Firebase Console → Projekteinstellungen → Dienstkonten → "Neuen privaten Schlüssel generieren")
 
 **Required Secrets (Flutter):** `RC_ANDROID_KEY`, `RC_IOS_KEY`, Android keystore secrets
 
@@ -165,6 +175,48 @@ runInInjectionContext(this.injector, () => {
 ### Daten-Synchronisation
 
 `DataSyncService.syncAll()` liest alle localStorage-Einträge (via `WorkEntryService.getAllLocalEntries()` + `LS_KEYS`-Index) und schreibt sie nach Firebase. Wird manuell aus den Einstellungen getriggert.
+
+## Backend (.NET API) — `server/`
+
+.NET 10 Minimal API, Firebase-ID-Token-Auth (JWT Bearer, JWKS-validiert), Firestore als Datenspeicher. Liest/schreibt **dieselbe Firestore-Struktur** wie Flutter/Web (siehe Datenpfade oben).
+
+```bash
+cd server
+dotnet run --project src/WorkTimeManager.Api      # Swagger unter /swagger (nur Development)
+dotnet test WorkTimeManager.slnx                  # Unit- + Integrationstests
+```
+
+### Schichten (`src/WorkTimeManager.Api/`)
+
+```
+Contracts/    API-DTOs (JSON, ISO-8601-Daten) — WorkEntryDto, OvertimeDto, SettingsDto, ProfileDto, Report*Dto
+Firestore/    Documents/ (FirestoreData-POCOs) + Repositories + FirestoreMappings (POCO↔DTO)
+Domain/       Pure Berechnung — BreakCalculator (Pflichtpausen), ReportCalculator (ISO-Woche, Tages-/Wochen-/Monatsbericht)
+Endpoints/    Minimal-API-Mappings je Ressource + ClaimsPrincipalExtensions.GetUid()
+```
+
+### Endpunkte (alle unter `/api`, authentifiziert; UID kommt aus dem Token)
+
+| Methode | Route | Zweck |
+|---|---|---|
+| GET | `/api/me` | UID des Tokens |
+| GET | `/api/work-entries/{year}/{month}` | Einträge eines Monats |
+| GET | `/api/work-entries/{year}/{month}/{day}` | Einzeleintrag (404 wenn fehlt) |
+| PUT | `/api/work-entries` | Eintrag speichern (merge in days-Map) |
+| DELETE | `/api/work-entries/{year}/{month}/{day}` | Tag löschen |
+| GET / PUT | `/api/overtime` | Gleitzeit-Saldo lesen/speichern (`minutes`) |
+| GET / PUT | `/api/settings` | Einstellungen lesen/speichern |
+| GET | `/api/profile` | Premium-Status |
+| GET | `/api/reports/daily/{year}/{month}/{day}` | Tagesstatistik |
+| GET | `/api/reports/weekly/{year}/{month}/{day}` | Wochenbericht |
+| GET | `/api/reports/monthly/{year}/{month}` | Monatsbericht |
+
+### Backend-Regeln
+
+- **Firestore-Format ist Flutter-kanonisch**: days-Map-Schlüssel ohne führende Null (`"5"`), Zeiten als `Timestamp`. Mapping ausschließlich über `FirestoreMappings`.
+- **Berechnungslogik = Port der _korrigierten_ Web-`*-calculator`-Services** (Stand nach Web-Bugfix `0ddd15b`, 10.06.2026). Das ist die mathematisch korrekte Variante. **Achtung:** Die Flutter-App rechnet aktuell noch _anders_ (doppelte Pausen-Subtraktion in Wochen-/Monatsbericht, ignoriert Urlaub/Krank/Feiertag, Tages-Überstunden=0, vereinfachte KW ohne Jahreswechsel-Korrektur, Monats-Gesamtüberstunden ohne Gleitzeit-Altsaldo). Das Backend folgt **bewusst nicht** dieser Flutter-Logik — Flutter soll perspektivisch auf die Backend-Logik gezogen werden, damit alle Clients identisch rechnen. `ReportCalculator.GetIsoWeekNumber` ist gegen `System.Globalization.ISOWeek` getestet.
+- **Integrationstests** laufen gegen einen Firestore-Emulator via Testcontainers (Docker). Ohne Docker überspringen sie sich (`SkippableFact`), `dotnet test` bleibt grün.
+- Credentials: `FIRESTORE_EMULATOR_HOST` (lokal/Test) bzw. `FIREBASE_SERVICE_ACCOUNT_BASE64` (Prod), sonst Application Default Credentials.
 
 ## Web-Port Workflow (5 Phasen)
 

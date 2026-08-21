@@ -20,6 +20,10 @@ web/.angular/
 web/.sass-cache/
 web/coverage/
 
+# ─── .NET Server  (Details: server/.gitignore) ───────────────────────────────
+server/**/bin/
+server/**/obj/
+
 # ─── VS Code (nur lokale Session-Dateien ausschließen) ───────────────────────
 .vscode/settings.local.json
 

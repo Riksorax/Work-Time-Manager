@@ -3,12 +3,10 @@ import {
   Firestore,
   doc,
   onSnapshot,
-  setDoc,
-  updateDoc,
-  deleteField,
   Timestamp,
 } from '@angular/fire/firestore';
 import { AuthService } from '../auth/auth';
+import { ApiClient } from './api-client';
 import { WorkEntry, WorkEntryType, Break } from '../../shared/models';
 import { Observable, of, switchMap } from 'rxjs';
 import { roundToMinute, roundToMinuteOrUndefined } from '../../shared/utils/time-precision.util';
@@ -22,6 +20,7 @@ export class WorkEntryService {
   private readonly firestore = inject(Firestore);
   private readonly auth      = inject(AuthService);
   private readonly injector  = inject(Injector);
+  private readonly api       = inject(ApiClient);
 
   // ─── Public API ────────────────────────────────────────────────────────────
 
@@ -44,25 +43,14 @@ export class WorkEntryService {
   }
 
   async saveEntry(entry: WorkEntry): Promise<void> {
-    const uid = this.auth.uid;
-    if (uid) await this._firebaseSave(uid, entry);
-    else     this._localSave(entry);
+    // Eingeloggt: Schreibvorgang über die Backend-API; Reads bleiben onSnapshot (Hybrid).
+    if (this.auth.uid) await this.api.saveWorkEntry(entry);
+    else               this._localSave(entry);
   }
 
   async deleteEntry(id: string): Promise<void> {
-    const uid = this.auth.uid;
-    if (uid) {
-      // id = yyyy-MM-dd → Monatsdok aktualisieren: days.{day} löschen
-      const [year, month, day] = id.split('-');
-      const monthId = `${year}-${month}`;
-      const dayKey  = String(Number(day)); // "05" → "5" (Flutter-Format)
-      const ref = doc(this.firestore, `users/${uid}/work_entries/${monthId}`);
-      await runInInjectionContext(this.injector, () =>
-        updateDoc(ref, { [`days.${dayKey}`]: deleteField() })
-      );
-    } else {
-      this._localDelete(id);
-    }
+    if (this.auth.uid) await this.api.deleteWorkEntry(id);
+    else               this._localDelete(id);
   }
 
   emptyEntry(date: Date): WorkEntry {
@@ -130,36 +118,7 @@ export class WorkEntryService {
     });
   }
 
-  private async _firebaseSave(uid: string, entry: WorkEntry): Promise<void> {
-    const monthId = this._monthId(entry.date);
-    const dayKey  = String(entry.date.getDate()); // Flutter nutzt "5", nicht "05"
-    const ref = doc(this.firestore, `users/${uid}/work_entries/${monthId}`);
-    await runInInjectionContext(this.injector, () =>
-      setDoc(ref, { days: { [dayKey]: this._toFirestore(entry) } }, { merge: true })
-    );
-  }
-
-  // ─── Serialisierung (Flutter-kompatibel) ───────────────────────────────────
-
-  private _toFirestore(entry: WorkEntry): Record<string, unknown> {
-    return {
-      date:                  Timestamp.fromDate(new Date(Date.UTC(entry.date.getFullYear(), entry.date.getMonth(), entry.date.getDate()))),
-      workStart:             entry.workStart ? Timestamp.fromDate(roundToMinute(entry.workStart)) : null,
-      workEnd:               entry.workEnd   ? Timestamp.fromDate(roundToMinute(entry.workEnd))   : null,
-      type:                  entry.type ?? WorkEntryType.Work,
-      isManuallyEntered:     entry.isManuallyEntered ?? false,
-      manualOvertimeMinutes: entry.manualOvertimeMinutes ?? null,
-      description:           entry.description ?? null,
-      // Flutter liest nur name/start/end — extra Felder werden ignoriert
-      breaks: entry.breaks.map(b => ({
-        id:          b.id,
-        name:        b.name,
-        isAutomatic: b.isAutomatic,
-        start:       Timestamp.fromDate(roundToMinute(b.start)),
-        end:         b.end ? Timestamp.fromDate(roundToMinute(b.end)) : null,
-      })),
-    };
-  }
+  // ─── Deserialisierung (Flutter-kompatibel) — für onSnapshot-Reads ──────────
 
   private _fromFirestore(data: Record<string, unknown>, id: string): WorkEntry | null {
     try {
