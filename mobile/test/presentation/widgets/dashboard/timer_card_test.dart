@@ -84,7 +84,7 @@ void main() {
       // Check text is present
       expect(find.text('Arbeit starten'), findsOneWidget);
       expect(find.text('08:00'), findsOneWidget);
-      expect(find.text('17:00:00'), findsOneWidget);
+      expect(find.text('17:00'), findsOneWidget);
       
       // Attempt to tap
       await tester.tap(find.text('Arbeit starten'));
