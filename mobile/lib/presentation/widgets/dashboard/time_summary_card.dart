@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_work_time/core/utils/time_precision.dart';
 
 import '../../../core/providers/providers.dart';
 import '../../../domain/entities/work_entry_entity.dart';
@@ -15,7 +16,7 @@ class TimeSummaryCard extends ConsumerWidget {
 
   // Helper zum Formatieren einer Duration
   String _formatDuration(Duration duration) {
-    if (duration.inSeconds < 0) return "00h 00m";
+    if (duration.inMinutes < 0) return "00h 00m";
     final hours = duration.inHours.toString().padLeft(2, '0');
     final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
     return '${hours}h ${minutes}m';
@@ -25,9 +26,9 @@ class TimeSummaryCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settingsRepository = ref.watch(settingsRepositoryProvider);
     final workdaysPerWeek = settingsRepository.getWorkdaysPerWeek();
-    final targetDailyHours = Duration(
+    final targetDailyHours = roundDurationToMinute(Duration(
       microseconds: (settingsRepository.getTargetWeeklyHours() / workdaysPerWeek * Duration.microsecondsPerHour).round(),
-    );
+    ));
 
     return Card(
       elevation: 2,

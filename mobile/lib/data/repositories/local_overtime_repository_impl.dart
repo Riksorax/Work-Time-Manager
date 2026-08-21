@@ -2,6 +2,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
 
 import '../../domain/repositories/overtime_repository.dart';
+import 'package:flutter_work_time/core/utils/time_precision.dart';
 
 /// Lokales Repository für Überstunden ohne User-ID.
 /// Funktioniert auch ohne Login.
@@ -22,8 +23,8 @@ class LocalOvertimeRepositoryImpl implements OvertimeRepository {
 
   @override
   Future<void> saveOvertime(Duration overtime) async {
-    logger.i('[LocalOvertimeRepository] saveOvertime, key: $_overtimeKey, value: ${overtime.inMinutes} min');
-    final success = await _prefs.setInt(_overtimeKey, overtime.inMinutes);
+    logger.i('[LocalOvertimeRepository] saveOvertime, key: $_overtimeKey, value: ${toStoredMinutes(overtime)} min');
+    final success = await _prefs.setInt(_overtimeKey, toStoredMinutes(overtime));
     logger.i('[LocalOvertimeRepository] Save success: $success');
 
     // Verifiziere, dass der Wert gespeichert wurde

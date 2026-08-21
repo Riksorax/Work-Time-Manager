@@ -7,6 +7,7 @@ import { SettingsService }  from '../../core/services/settings';
 import { AuthService }      from '../../core/auth/auth';
 import { WorkEntry, WorkEntryType, Break } from '../../shared/models';
 import { calculateAndApplyBreaks } from '../../domain/services/break-calculator.service';
+import { nowToMinute, roundToMinute, roundMsToMinute } from '../../shared/utils/time-precision.util';
 import {
   getEffectiveDailyTarget,
   getWeekEntriesForDate,
@@ -140,7 +141,7 @@ export class DashboardService {
 
       // 5. Effektives Tagessoll berechnen
       const weeklyMs          = settings.weeklyTargetHours * 60 * 60 * 1000;
-      const regularDailyMs    = settings.workdaysPerWeek > 0 ? Math.round(weeklyMs / settings.workdaysPerWeek) : 0;
+      const regularDailyMs    = settings.workdaysPerWeek > 0 ? roundMsToMinute(weeklyMs / settings.workdaysPerWeek) : 0;
       const targetDailyMs     = getEffectiveDailyTarget(today, this._weekEntries, settings.workdaysPerWeek, regularDailyMs);
       const isExtraDay        = targetDailyMs === 0;
 
@@ -152,7 +153,7 @@ export class DashboardService {
         const netMs      = workEntry.workEnd.getTime() - workEntry.workStart.getTime() - breakMs;
         initialDailyMs   = netMs - targetDailyMs + manualEntryMs;
       } else if (workEntry.workStart) {
-        const now        = new Date();
+        const now        = nowToMinute();
         const breakMs    = this._totalBreakMs(workEntry.breaks, now);
         const netMs      = now.getTime() - workEntry.workStart.getTime() - breakMs;
         initialDailyMs   = netMs - targetDailyMs + manualEntryMs;
@@ -206,13 +207,13 @@ export class DashboardService {
     const e = this._s().workEntry;
     if (!e.workStart) {
       // START
-      const updated = { ...e, workStart: new Date(), workEnd: undefined };
+      const updated = { ...e, workStart: nowToMinute(), workEnd: undefined };
       await this._recalculateState(updated, true);
       this._startTimerIfNeeded();
     } else if (!e.workEnd) {
       // STOP
       this._stopTimer();
-      let updated: WorkEntry = { ...e, workEnd: new Date() };
+      let updated: WorkEntry = { ...e, workEnd: nowToMinute() };
       const hasRunningBreak = updated.breaks.some(b => !b.end);
       if (!hasRunningBreak && updated.type === WorkEntryType.Work) {
         updated = calculateAndApplyBreaks(updated);
@@ -230,7 +231,7 @@ export class DashboardService {
     const e = this._s().workEntry;
     const updated: WorkEntry = {
       ...e,
-      workStart:         new Date(),
+      workStart:         nowToMinute(),
       workEnd:           undefined,
       breaks:            keepBreaks ? e.breaks : [],
       isManuallyEntered: false,
@@ -246,12 +247,12 @@ export class DashboardService {
     let updatedBreaks: Break[];
 
     if (runningBreak) {
-      updatedBreaks = e.breaks.map(b => b.id === runningBreak.id ? { ...b, end: new Date() } : b);
+      updatedBreaks = e.breaks.map(b => b.id === runningBreak.id ? { ...b, end: nowToMinute() } : b);
     } else {
       const newBreak: Break = {
         id:          crypto.randomUUID(),
         name:        `Pause ${e.breaks.length + 1}`,
-        start:       new Date(),
+        start:       nowToMinute(),
         end:         undefined,
         isAutomatic: false,
       };
@@ -293,7 +294,12 @@ export class DashboardService {
   // ─── Flow 9: Pause bearbeiten ─────────────────────────────────────────────
   async updateBreak(updated: Break): Promise<void> {
     const e = this._s().workEntry;
-    const breaks = e.breaks.map(b => b.id === updated.id ? updated : b);
+    const normalized: Break = {
+      ...updated,
+      start: roundToMinute(updated.start),
+      end:   updated.end ? roundToMinute(updated.end) : undefined,
+    };
+    const breaks = e.breaks.map(b => b.id === updated.id ? normalized : b);
     await this._recalculateState({ ...e, breaks }, true);
   }
 
@@ -346,7 +352,7 @@ export class DashboardService {
   private _tick(): void {
     const e = this._s().workEntry;
     if (!e.workStart || e.workEnd) return;
-    const now    = new Date();
+    const now    = nowToMinute();
     const breakMs = this._totalBreakMs(e.breaks, now);
     const elapsed = now.getTime() - e.workStart.getTime() - breakMs;
     const gross   = now.getTime() - e.workStart.getTime();
@@ -367,7 +373,7 @@ export class DashboardService {
     const settings  = this._currentSettings();
     const targetMs  = this._targetDailyMs(settings);
     const manualMs  = (e.manualOvertimeMinutes ?? 0) * 60000;
-    const now       = new Date();
+    const now       = nowToMinute();
     const breakMs   = this._totalBreakMs(e.breaks, now);
     const elapsed   = now.getTime() - e.workStart.getTime() - breakMs;
     const daily     = elapsed - targetMs + manualMs;
@@ -462,7 +468,7 @@ export class DashboardService {
   private _targetDailyMs(settings: { weeklyTargetHours: number; workdaysPerWeek: number }): number {
     if (settings.workdaysPerWeek <= 0) return 0;
     const weeklyMs    = settings.weeklyTargetHours * 3600000;
-    const regularMs   = Math.round(weeklyMs / settings.workdaysPerWeek);
+    const regularMs   = roundMsToMinute(weeklyMs / settings.workdaysPerWeek);
     return getEffectiveDailyTarget(new Date(), this._weekEntries, settings.workdaysPerWeek, regularMs);
   }
 

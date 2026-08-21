@@ -49,7 +49,7 @@ void main() {
       await tester.pumpWidget(createSubject(entry, fakeViewModel));
 
       expect(find.text('Arbeit starten'), findsOneWidget);
-      expect(find.text('--:--:--'), findsNWidgets(2)); // Start and End
+      expect(find.text('--:--'), findsNWidgets(2)); // Start and End
       expect(find.byIcon(Icons.play_circle_filled), findsOneWidget);
     });
 
@@ -65,8 +65,8 @@ void main() {
       await tester.pumpWidget(createSubject(entry, fakeViewModel));
 
       expect(find.text('Arbeit beenden'), findsOneWidget);
-      expect(find.text('08:00:00'), findsOneWidget); // Start time
-      expect(find.text('--:--:--'), findsOneWidget); // End time
+      expect(find.text('08:00'), findsOneWidget); // Start time
+      expect(find.text('--:--'), findsOneWidget); // End time
       expect(find.byIcon(Icons.pause_circle_filled), findsOneWidget);
     });
 
@@ -83,7 +83,7 @@ void main() {
 
       // Check text is present
       expect(find.text('Arbeit starten'), findsOneWidget);
-      expect(find.text('08:00:00'), findsOneWidget);
+      expect(find.text('08:00'), findsOneWidget);
       expect(find.text('17:00:00'), findsOneWidget);
       
       // Attempt to tap

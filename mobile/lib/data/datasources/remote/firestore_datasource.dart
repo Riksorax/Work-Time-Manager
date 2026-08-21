@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
 
 import '../../models/work_entry_model.dart';
+import 'package:flutter_work_time/core/utils/time_precision.dart';
 
 abstract class FirestoreDataSource {
   Stream<firebase.User?> get authStateChanges;
@@ -267,11 +268,11 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
 
   @override
   Future<void> saveOvertime(String userId, Duration overtime) async {
-    logger.i('[Firestore] Speichere Overtime für User: $userId, Wert: ${overtime.inMinutes} Minuten');
+    logger.i('[Firestore] Speichere Overtime für User: $userId, Wert: ${toStoredMinutes(overtime)} Minuten');
     final docRef = _getOvertimeDocRef(userId);
 
     await docRef.set({
-      'minutes': overtime.inMinutes,
+      'minutes': toStoredMinutes(overtime),
     }, SetOptions(merge: true));
   }
 

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_work_time/core/utils/time_precision.dart';
 import 'package:intl/intl.dart';
 import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 import '../../core/providers/subscription_provider.dart';
@@ -230,7 +231,7 @@ class DailyReportView extends ConsumerWidget {
           if (dE.type == WorkEntryType.work) {
             final DateTime? start = dE.workStart;
             // FIX: DateTime type, not DateTime? to ensure non-null usage later
-            final DateTime end = dE.workEnd ?? DateTime.now();
+            final DateTime end = dE.workEnd ?? nowToMinute();
             if (start != null) {
               // end is always not null due to ??
               Duration breakDur = Duration.zero;
@@ -439,7 +440,7 @@ class DailyReportView extends ConsumerWidget {
                     .read(reportsViewModelProvider.notifier)
                     .applyBreakCalculation(entry);
                 final DateTime? start = displayEntry.workStart;
-                final DateTime end = displayEntry.workEnd ?? DateTime.now();
+                final DateTime end = displayEntry.workEnd ?? nowToMinute();
                 Duration breakDuration = Duration.zero;
                 if (start != null) {
                   for (final b in displayEntry.breaks) {
@@ -1653,7 +1654,7 @@ class _DayEntriesBottomSheetState extends ConsumerState<DayEntriesBottomSheet> {
 
                         final DateTime? start = displayEntry.workStart;
                         final DateTime? end =
-                            displayEntry.workEnd ?? DateTime.now();
+                            displayEntry.workEnd ?? nowToMinute();
                         Duration worked = Duration.zero;
 
                         if (start != null && end != null) {
