@@ -17,16 +17,14 @@ const DEFAULT_SETTINGS: UserSettings = {
 const DAILY_MS = 8 * 3600000;
 
 function makeWorkEntry(overrides: Partial<WorkEntry> & { date: Date }): WorkEntry {
+  // Defaults zuerst, danach die Overrides — das abschließende Spread gewinnt.
+  // Die Felder aus overrides hier zusätzlich einzeln aufzuführen wäre wirkungslos.
   return {
     id: crypto.randomUUID(),
-    date: overrides.date,
-    workStart: overrides.workStart,
-    workEnd: overrides.workEnd,
-    breaks: overrides.breaks ?? [],
-    manualOvertimeMinutes: overrides.manualOvertimeMinutes,
+    breaks: [],
     isManuallyEntered: false,
     description: undefined,
-    type: overrides.type ?? WorkEntryType.Work,
+    type: WorkEntryType.Work,
     ...overrides,
   };
 }
@@ -99,7 +97,7 @@ describe('ReportCalculatorService', () => {
         }),
       ];
       const stat = svc.calculateDailyStat(entries, d(2026, 4, 21), DEFAULT_SETTINGS);
-      const expected = 8.5 * 3600000 - 30 * 60000; // 9h − 30min break
+      const expected = 9 * 3600000 - 30 * 60000; // 9h − 30min Pause = 8,5h
       expect(stat.worked).toBe(expected);
     });
 
