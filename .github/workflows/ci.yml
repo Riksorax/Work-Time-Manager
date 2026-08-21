@@ -22,8 +22,13 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
+      # Flutter-Version bewusst fest gepinnt statt 'stable' mitwandern zu lassen.
+      # Die exakten Overrides für test_api/test_core in mobile/pubspec.yaml sind an
+      # die test_api-Version gekoppelt, die das flutter_test dieses SDKs verlangt.
+      # Beim Anheben hier müssen die Overrides mitgezogen werden.
       - uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.47.1'
           channel: 'stable'
           cache: true
 
@@ -62,6 +67,7 @@ jobs:
           export const environment = {
             production: true,
             buildTimestamp: 'ci',
+            apiUrl: 'http://localhost:5000',
             firebase: {
               apiKey: 'ci-dummy',
               authDomain: 'ci-dummy.firebaseapp.com',
@@ -75,6 +81,11 @@ jobs:
           };
           EOF
           cp src/environments/environment.ts src/environments/environment.prod.ts
+
+      # --watch=false erzwingen: der Builder würde sonst in einer TTY in den
+      # Watch-Modus gehen und den Job hängen lassen.
+      - name: Test
+        run: npm test -- --watch=false
 
       - name: Build check
         run: |

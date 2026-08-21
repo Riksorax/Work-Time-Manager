@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter_work_time/core/utils/time_precision.dart';
 
 @immutable
 class WeeklyReportState {
@@ -20,8 +21,9 @@ class WeeklyReportState {
     this.dailyWork = const {},
   });
 
-  Duration get avgWorkDurationPerDay => workDays > 0 
-      ? Duration(seconds: totalWorkDuration.inSeconds ~/ workDays) 
+  Duration get avgWorkDurationPerDay => workDays > 0
+      ? roundDurationToMinute(
+          Duration(microseconds: totalWorkDuration.inMicroseconds ~/ workDays))
       : Duration.zero;
 
   static const WeeklyReportState initial = WeeklyReportState();

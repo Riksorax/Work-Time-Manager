@@ -1,3 +1,5 @@
+import 'package:flutter_work_time/core/utils/time_precision.dart';
+
 import '../entities/work_entry_entity.dart';
 import '../repositories/work_repository.dart';
 
@@ -14,10 +16,10 @@ class StartOrStopTimer {
 
     if (currentEntry.workStart == null) {
       // Fall 1: Timer wurde noch nicht gestartet. -> STARTEN
-      updatedEntry = currentEntry.copyWith(workStart: DateTime.now());
+      updatedEntry = currentEntry.copyWith(workStart: nowToMinute());
     } else if (currentEntry.workEnd == null) {
       // Fall 2: Timer läuft, aber wurde noch nicht gestoppt. -> STOPPEN
-      updatedEntry = currentEntry.copyWith(workEnd: DateTime.now());
+      updatedEntry = currentEntry.copyWith(workEnd: nowToMinute());
     } else {
       // Fall 3: Timer wurde bereits gestoppt. Nichts tun.
       return currentEntry;

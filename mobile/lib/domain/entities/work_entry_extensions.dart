@@ -1,3 +1,5 @@
+import 'package:flutter_work_time/core/utils/time_precision.dart';
+
 import 'work_entry_entity.dart';
 
 /// Diese Erweiterung fügt der WorkEntryEntity reine Berechnungslogik hinzu,
@@ -8,7 +10,7 @@ extension WorkEntryCalculations on WorkEntryEntity {
   /// Wenn der Timer noch läuft, wird die Zeit bis "jetzt" berechnet.
   Duration get calculatedWorkDuration {
     if (workStart == null) return Duration.zero;
-    final end = workEnd ?? DateTime.now();
+    final end = workEnd ?? nowToMinute();
     return end.difference(workStart!);
   }
 

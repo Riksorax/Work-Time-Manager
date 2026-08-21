@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart' as firebase;
+import 'package:flutter_work_time/core/utils/time_precision.dart';
 
 import '../../models/work_entry_model.dart';
 import 'api_client.dart';
@@ -62,7 +63,9 @@ class ApiDataSource implements FirestoreDataSource {
 
   @override
   Future<void> saveOvertime(String userId, Duration overtime) =>
-      _api.saveOvertime(overtime.inMinutes);
+      // Kaufmännisch runden statt inMinutes (schneidet Richtung Null ab und
+      // ließe den Saldo im Minus anders driften als im Plus).
+      _api.saveOvertime(toStoredMinutes(overtime));
 
   @override
   Future<DateTime?> getLastOvertimeUpdate(String userId) async {

@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart' show DateUtils;
+import 'package:flutter_work_time/core/utils/time_precision.dart';
 import 'package:intl/intl.dart';
 
 import '../../domain/entities/work_entry_entity.dart';
@@ -35,8 +36,8 @@ class WorkEntryModel extends WorkEntryEntity {
     return WorkEntryModel(
       id: entity.id,
       date: entity.date,
-      workStart: entity.workStart,
-      workEnd: entity.workEnd,
+      workStart: roundToMinuteOrNull(entity.workStart),
+      workEnd: roundToMinuteOrNull(entity.workEnd),
       manualOvertime: entity.manualOvertime,
       breaks: entity.breaks.map((e) => BreakModel.fromEntity(e)).toList(),
       description: entity.description,
@@ -49,8 +50,8 @@ class WorkEntryModel extends WorkEntryEntity {
     return WorkEntryModel(
       id: '', // Die ID ist nicht Teil der Map, sie wird vom Aufrufer gesetzt.
       date: (map['date'] as Timestamp).toDate(),
-      workStart: (map['workStart'] as Timestamp?)?.toDate(),
-      workEnd: (map['workEnd'] as Timestamp?)?.toDate(),
+      workStart: roundToMinuteOrNull((map['workStart'] as Timestamp?)?.toDate()),
+      workEnd: roundToMinuteOrNull((map['workEnd'] as Timestamp?)?.toDate()),
       breaks: (map['breaks'] as List<dynamic>?)
               ?.map((breakData) => BreakModel.fromMap(breakData as Map<String, dynamic>))
               .toList() ??
@@ -80,10 +81,11 @@ class WorkEntryModel extends WorkEntryEntity {
   Map<String, dynamic> toMap() {
     return {
       'date': Timestamp.fromDate(DateTime.utc(date.year, date.month, date.day)),
-      'workStart': workStart != null ? Timestamp.fromDate(workStart!) : null,
-      'workEnd': workEnd != null ? Timestamp.fromDate(workEnd!) : null,
+      'workStart': workStart != null ? Timestamp.fromDate(roundToMinute(workStart!)) : null,
+      'workEnd': workEnd != null ? Timestamp.fromDate(roundToMinute(workEnd!)) : null,
       'breaks': breaks.map((b) => BreakModel.fromEntity(b).toMap()).toList(),
-      'manualOvertimeMinutes': manualOvertime?.inMinutes,
+      'manualOvertimeMinutes':
+          manualOvertime != null ? toStoredMinutes(manualOvertime!) : null,
       'description': description,
       'isManuallyEntered': isManuallyEntered,
       'type': type.name,

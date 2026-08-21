@@ -4,6 +4,11 @@ import { Observable, firstValueFrom, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Break, UserSettings, WorkEntry, WorkEntryType } from '../../shared/models';
 import { DailyStat, MonthlyReport, WeeklyReport } from '../../domain/models/reports.models';
+import {
+  roundToMinute,
+  roundToMinuteOrUndefined,
+  toStoredMinutes,
+} from '../../shared/utils/time-precision.util';
 
 // ─── Backend-DTO-Formen (JSON, camelCase, ISO-8601-Daten, Zeiten in ms) ──────
 
@@ -87,7 +92,7 @@ export class ApiClient {
 
   saveOvertimeMs(ms: number): Promise<void> {
     return firstValueFrom(
-      this.http.put<OvertimeDto>(`${this.base}/overtime`, { minutes: Math.round(ms / 60_000) }).pipe(map(() => void 0))
+      this.http.put<OvertimeDto>(`${this.base}/overtime`, { minutes: toStoredMinutes(ms) }).pipe(map(() => void 0))
     );
   }
 
@@ -157,8 +162,8 @@ export class ApiClient {
       id: entry.id,
       // UTC-Mitternacht aus lokalen Y/M/D — verhindert Tag-Verschiebung (analog Firestore-Mapping)
       date: new Date(Date.UTC(entry.date.getFullYear(), entry.date.getMonth(), entry.date.getDate())).toISOString(),
-      workStart: entry.workStart?.toISOString() ?? null,
-      workEnd: entry.workEnd?.toISOString() ?? null,
+      workStart: roundToMinuteOrUndefined(entry.workStart)?.toISOString() ?? null,
+      workEnd: roundToMinuteOrUndefined(entry.workEnd)?.toISOString() ?? null,
       type: entry.type ?? WorkEntryType.Work,
       isManuallyEntered: entry.isManuallyEntered ?? false,
       manualOvertimeMinutes: entry.manualOvertimeMinutes ?? null,
@@ -167,8 +172,8 @@ export class ApiClient {
         id: b.id,
         name: b.name,
         isAutomatic: b.isAutomatic,
-        start: b.start.toISOString(),
-        end: b.end?.toISOString() ?? null,
+        start: roundToMinute(b.start).toISOString(),
+        end: roundToMinuteOrUndefined(b.end)?.toISOString() ?? null,
       })),
     };
   }
@@ -177,8 +182,8 @@ export class ApiClient {
     return {
       id: dto.id,
       date: new Date(dto.date),
-      workStart: dto.workStart ? new Date(dto.workStart) : undefined,
-      workEnd: dto.workEnd ? new Date(dto.workEnd) : undefined,
+      workStart: dto.workStart ? roundToMinute(new Date(dto.workStart)) : undefined,
+      workEnd: dto.workEnd ? roundToMinute(new Date(dto.workEnd)) : undefined,
       type: (dto.type as WorkEntryType) ?? WorkEntryType.Work,
       isManuallyEntered: dto.isManuallyEntered ?? false,
       manualOvertimeMinutes: dto.manualOvertimeMinutes ?? undefined,
@@ -187,8 +192,8 @@ export class ApiClient {
         id: b.id,
         name: b.name,
         isAutomatic: b.isAutomatic ?? false,
-        start: new Date(b.start),
-        end: b.end ? new Date(b.end) : undefined,
+        start: roundToMinute(new Date(b.start)),
+        end: b.end ? roundToMinute(new Date(b.end)) : undefined,
       })),
     };
   }

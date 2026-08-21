@@ -15,7 +15,7 @@ class TimerCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final timeFormat = DateFormat('HH:mm:ss');
+    final timeFormat = DateFormat('HH:mm');
     final bool isTimerRunning = workEntry.workStart != null && workEntry.workEnd == null;
     final bool isWorkDone = workEntry.workStart != null && workEntry.workEnd != null;
 
@@ -37,13 +37,13 @@ class TimerCard extends ConsumerWidget {
                   label: 'Start',
                   time: workEntry.workStart != null
                       ? timeFormat.format(workEntry.workStart!)
-                      : '--:--:--',
+                      : '--:--',
                 ),
                 _TimeDisplay(
                   label: 'Ende',
                   time: workEntry.workEnd != null
                       ? timeFormat.format(workEntry.workEnd!)
-                      : '--:--:--',
+                      : '--:--',
                 ),
               ],
             ),

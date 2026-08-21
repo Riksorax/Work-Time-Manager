@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_work_time/core/utils/time_precision.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../domain/entities/break_entity.dart';
@@ -20,8 +21,8 @@ class BreakModel extends BreakEntity {
   factory BreakModel.fromEntity(BreakEntity entity) {
     return BreakModel(
       name: entity.name,
-      start: entity.start,
-      end: entity.end,
+      start: roundToMinute(entity.start),
+      end: roundToMinuteOrNull(entity.end),
     );
   }
 
@@ -33,8 +34,8 @@ class BreakModel extends BreakEntity {
   factory BreakModel.fromMap(Map<String, dynamic> map) {
     return BreakModel(
       name: map['name'] as String? ?? 'Pause', // Fallback, falls der Name fehlt
-      start: (map['start'] as Timestamp).toDate(),
-      end: (map['end'] as Timestamp?)?.toDate(),
+      start: roundToMinute((map['start'] as Timestamp).toDate()),
+      end: roundToMinuteOrNull((map['end'] as Timestamp?)?.toDate()),
     );
   }
 
@@ -46,9 +47,9 @@ class BreakModel extends BreakEntity {
     return {
       'name': name,
       // Wandle Dart DateTime in Firestore Timestamp um.
-      'start': Timestamp.fromDate(start),
+      'start': Timestamp.fromDate(roundToMinute(start)),
       // Wandle das optionale DateTime? in ein optionales Timestamp? um.
-      'end': end != null ? Timestamp.fromDate(end!) : null,
+      'end': end != null ? Timestamp.fromDate(roundToMinute(end!)) : null,
     };
   }
 }

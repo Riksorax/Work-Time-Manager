@@ -1,6 +1,8 @@
 import 'package:collection/collection.dart';
 import 'package:uuid/uuid.dart';
 
+import 'package:flutter_work_time/core/utils/time_precision.dart';
+
 import '../entities/break_entity.dart';
 import '../entities/work_entry_entity.dart';
 import '../repositories/work_repository.dart';
@@ -26,7 +28,7 @@ class ToggleBreak {
       final updatedBreaks = currentEntry.breaks.map((b) {
         if (b == activeBreak) {
           // Erstelle eine neue Instanz der Pause mit gesetzter Endzeit.
-          return b.copyWith(end: DateTime.now());
+          return b.copyWith(end: nowToMinute());
         }
         return b;
       }).toList();
@@ -37,7 +39,7 @@ class ToggleBreak {
       final newBreak = BreakEntity(
         id: const Uuid().v4(),
         name: 'Pause ${currentEntry.breaks.length + 1}',
-        start: DateTime.now(),
+        start: nowToMinute(),
       );
 
       // Füge die neue Pause zur Liste der Pausen hinzu.

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_work_time/core/utils/time_precision.dart';
 
 import '../../core/providers/providers.dart' as core_providers;
 import '../../domain/entities/work_entry_entity.dart';
@@ -280,12 +281,12 @@ class ReportsViewModel extends Notifier<ReportsState> {
     final settingsRepository = ref.read(core_providers.settingsRepositoryProvider);
     final workdaysPerWeek = settingsRepository.getWorkdaysPerWeek();
     if (workdaysPerWeek <= 0) return Duration.zero;
-    final regularDailyTarget = Duration(
+    final regularDailyTarget = roundDurationToMinute(Duration(
       microseconds: (settingsRepository.getTargetWeeklyHours() /
               workdaysPerWeek *
               Duration.microsecondsPerHour)
           .round(),
-    );
+    ));
 
     final weekEntries = getWeekEntriesForDate(date, _monthlyEntries);
     return getEffectiveDailyTarget(
@@ -323,7 +324,8 @@ class ReportsViewModel extends Notifier<ReportsState> {
         .toSet()
         .length;
     final averageWorkDuration = uniqueWorkDays > 0
-        ? Duration(seconds: totalNetWorkDuration.inSeconds ~/ uniqueWorkDays)
+        ? roundDurationToMinute(
+            Duration(microseconds: totalNetWorkDuration.inMicroseconds ~/ uniqueWorkDays))
         : Duration.zero;
 
     final workdaysPerWeek = settingsRepository.getWorkdaysPerWeek();
@@ -336,8 +338,8 @@ class ReportsViewModel extends Notifier<ReportsState> {
     final targetWeeklyHoursForActualWorkdaysInMicroseconds =
         (targetDailyHoursInDouble * effectiveWorkDays * Duration.microsecondsPerHour)
             .toInt();
-    final targetWeeklyHours =
-        Duration(microseconds: targetWeeklyHoursForActualWorkdaysInMicroseconds);
+    final targetWeeklyHours = roundDurationToMinute(
+        Duration(microseconds: targetWeeklyHoursForActualWorkdaysInMicroseconds));
     final overtime = totalNetWorkDuration - targetWeeklyHours;
 
     final manualOvertimes = entriesForWeek.fold<Duration>(
@@ -379,7 +381,10 @@ class ReportsViewModel extends Notifier<ReportsState> {
     final workDays = uniqueWorkDaysSet.length;
 
     final averageWorkDuration =
-        workDays > 0 ? Duration(microseconds: totalNetWorkDuration.inMicroseconds ~/ workDays) : Duration.zero;
+        workDays > 0
+            ? roundDurationToMinute(
+                Duration(microseconds: totalNetWorkDuration.inMicroseconds ~/ workDays))
+            : Duration.zero;
 
     final workdaysPerWeek = settingsRepository.getWorkdaysPerWeek();
     final targetDailyHours = workdaysPerWeek > 0
@@ -401,8 +406,8 @@ class ReportsViewModel extends Notifier<ReportsState> {
       effectiveTotalWorkDays += min(weekDays.length, workdaysPerWeek);
     }
 
-    final totalTargetHoursForActualWorkDays =
-        Duration(microseconds: (targetDailyHours * effectiveTotalWorkDays * Duration.microsecondsPerHour).toInt());
+    final totalTargetHoursForActualWorkDays = roundDurationToMinute(
+        Duration(microseconds: (targetDailyHours * effectiveTotalWorkDays * Duration.microsecondsPerHour).toInt()));
     final overtime = totalNetWorkDuration - totalTargetHoursForActualWorkDays;
 
     final manualOvertimes = _monthlyEntries.fold<Duration>(
@@ -428,7 +433,8 @@ class ReportsViewModel extends Notifier<ReportsState> {
     final numberOfWeeksWithWork = weeklyWork.keys.length;
     final totalWorkDurationInMonth = weeklyWork.values.fold(Duration.zero, (prev, current) => prev + current);
     final avgWorkDurationPerWeek = numberOfWeeksWithWork > 0 
-        ? Duration(microseconds: totalWorkDurationInMonth.inMicroseconds ~/ numberOfWeeksWithWork) 
+        ? roundDurationToMinute(Duration(
+            microseconds: totalWorkDurationInMonth.inMicroseconds ~/ numberOfWeeksWithWork))
         : Duration.zero;
 
 

@@ -9,6 +9,7 @@ import {
   WeeklyReport,
   WeeklyReportDay,
 } from '../models/reports.models';
+import { roundMsToMinute } from '../../shared/utils/time-precision.util';
 
 // ─── Module-level helpers (no Angular DI) ─────────────────────────────────────
 
@@ -61,7 +62,8 @@ function filterByWeek(entries: WorkEntry[], date: Date): WorkEntry[] {
 }
 
 function dailyTargetMs(settings: UserSettings): number {
-  return (settings.weeklyTargetHours * 3600000) / settings.workdaysPerWeek;
+  // Auf volle Minuten runden — die App rechnet durchgehend minutengenau.
+  return roundMsToMinute((settings.weeklyTargetHours * 3600000) / settings.workdaysPerWeek);
 }
 
 // ─── Injectable Service ────────────────────────────────────────────────────────

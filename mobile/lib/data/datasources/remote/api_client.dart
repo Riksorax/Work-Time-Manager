@@ -9,6 +9,7 @@ import 'package:flutter_work_time/core/utils/logger.dart';
 import '../../../domain/entities/break_entity.dart';
 import '../../../domain/entities/work_entry_entity.dart';
 import '../../models/work_entry_model.dart';
+import 'package:flutter_work_time/core/utils/time_precision.dart';
 
 /// Low-Level-Client für die .NET-Backend-API: HTTP + Firebase-ID-Token +
 /// JSON↔Model-Mapping. Wird von [ApiDataSource] (Work/Overtime/Settings) und
@@ -148,14 +149,21 @@ class ApiClient {
   WorkEntryModel _entryFromJson(Map<String, dynamic> j) => WorkEntryModel(
         id: j['id'] as String,
         date: DateTime.parse(j['date'] as String).toLocal(),
-        workStart: j['workStart'] != null ? DateTime.parse(j['workStart'] as String).toLocal() : null,
-        workEnd: j['workEnd'] != null ? DateTime.parse(j['workEnd'] as String).toLocal() : null,
+        // Minutengenau normalisieren — Altdaten können Sekunden enthalten.
+        workStart: j['workStart'] != null
+            ? roundToMinute(DateTime.parse(j['workStart'] as String).toLocal())
+            : null,
+        workEnd: j['workEnd'] != null
+            ? roundToMinute(DateTime.parse(j['workEnd'] as String).toLocal())
+            : null,
         breaks: ((j['breaks'] as List<dynamic>?) ?? [])
             .map((b) => BreakEntity(
                   id: (b['id'] as String?) ?? const Uuid().v4(),
                   name: (b['name'] as String?) ?? 'Pause',
-                  start: DateTime.parse(b['start'] as String).toLocal(),
-                  end: b['end'] != null ? DateTime.parse(b['end'] as String).toLocal() : null,
+                  start: roundToMinute(DateTime.parse(b['start'] as String).toLocal()),
+                  end: b['end'] != null
+                      ? roundToMinute(DateTime.parse(b['end'] as String).toLocal())
+                      : null,
                   isAutomatic: (b['isAutomatic'] as bool?) ?? false,
                 ))
             .toList(),

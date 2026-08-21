@@ -39,12 +39,11 @@ export class DashboardComponent {
   // ─── Template helpers ────────────────────────────────────────────────────────
 
   formatDuration(ms: number | null): string {
-    if (ms === null) return '00:00:00';
+    if (ms === null) return '00:00';
     const abs = Math.abs(ms);
     const h   = Math.floor(abs / 3600000);
     const m   = Math.floor((abs % 3600000) / 60000);
-    const s   = Math.floor((abs % 60000) / 1000);
-    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
   }
 
   formatOvertime(ms: number | null): string {

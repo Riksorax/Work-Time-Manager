@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { AuthService } from '../auth/auth';
 import { ApiClient } from './api-client';
+import { toStoredMinutes } from '../../shared/utils/time-precision.util';
 
 const LS_OVERTIME    = 'overtime_value';
 const LS_LAST_UPDATE = 'overtime_last_update';
@@ -23,9 +24,10 @@ export class OvertimeService {
   async saveOvertime(ms: number): Promise<void> {
     if (this.auth.uid) {
       // Backend setzt lastUpdated automatisch beim Speichern.
+      // Auf Minuten gerundet wird im ApiClient — das Backend nimmt bereits int entgegen.
       await this.api.saveOvertimeMs(ms);
     } else {
-      localStorage.setItem(LS_OVERTIME, String(Math.round(ms / 60000)));
+      localStorage.setItem(LS_OVERTIME, String(toStoredMinutes(ms)));
     }
   }
 

@@ -2,6 +2,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
 
 import '../../domain/repositories/overtime_repository.dart';
+import 'package:flutter_work_time/core/utils/time_precision.dart';
 
 class OvertimeRepositoryImpl implements OvertimeRepository {
   static const String _overtimeKey = 'overtime_minutes';
@@ -24,8 +25,8 @@ class OvertimeRepositoryImpl implements OvertimeRepository {
 
   @override
   Future<void> saveOvertime(Duration overtime) async {
-    logger.i('[OvertimeRepository] saveOvertime for userId $_userId, key: $_userPrefKey, value: ${overtime.inMinutes} min');
-    final success = await _prefs.setInt(_userPrefKey, overtime.inMinutes);
+    logger.i('[OvertimeRepository] saveOvertime for userId $_userId, key: $_userPrefKey, value: ${toStoredMinutes(overtime)} min');
+    final success = await _prefs.setInt(_userPrefKey, toStoredMinutes(overtime));
     logger.i('[OvertimeRepository] Save success: $success');
 
     // Verifiziere, dass der Wert gespeichert wurde
