@@ -81,6 +81,11 @@ jobs:
           EOF
           cp src/environments/environment.ts src/environments/environment.prod.ts
 
+      # --watch=false erzwingen: der Builder würde sonst in einer TTY in den
+      # Watch-Modus gehen und den Job hängen lassen.
+      - name: Test
+        run: npm test -- --watch=false
+
       - name: Build check
         run: |
           rm -rf .angular/cache
