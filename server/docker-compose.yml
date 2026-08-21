@@ -20,6 +20,34 @@ services:
       - "traefik.http.routers.work-time-manager-web.middlewares=wtm-https-redirect"
       - "traefik.http.middlewares.wtm-https-redirect.redirectscheme.scheme=https"
 
+  work-time-manager-api:
+    image: riksorax/work-time-manager-api:${API_DOCKER_TAG:-latest}
+    container_name: work-time-manager-api
+    restart: unless-stopped
+    environment:
+      - Firebase__ProjectId=${FIREBASE_PROJECT_ID}
+      - FIREBASE_SERVICE_ACCOUNT_BASE64=${FIREBASE_SERVICE_ACCOUNT_BASE64}
+      - Cors__AllowedOrigins__0=https://work-time-manager.app
+      - ASPNETCORE_ENVIRONMENT=Production
+    networks:
+      - traefik-proxy
+    labels:
+      # Traefik aktivieren
+      - "traefik.enable=true"
+      # HTTPS-Router
+      - "traefik.http.routers.work-time-manager-api.rule=Host(`api.work-time-manager.app`)"
+      - "traefik.http.routers.work-time-manager-api.entrypoints=websecure"
+      - "traefik.http.routers.work-time-manager-api.tls.certresolver=letsencrypt"
+      # Port im Container (Kestrel läuft auf 8080)
+      - "traefik.http.services.work-time-manager-api.loadbalancer.server.port=8080"
+      - "traefik.http.services.work-time-manager-api.loadbalancer.healthcheck.path=/health"
+      - "traefik.http.services.work-time-manager-api.loadbalancer.healthcheck.interval=30s"
+      # HTTP → HTTPS Redirect
+      - "traefik.http.routers.work-time-manager-api-web.rule=Host(`api.work-time-manager.app`)"
+      - "traefik.http.routers.work-time-manager-api-web.entrypoints=web"
+      - "traefik.http.routers.work-time-manager-api-web.middlewares=wtm-https-redirect"
+      - "traefik.http.middlewares.wtm-https-redirect.redirectscheme.scheme=https"
+
 networks:
   traefik-proxy:
     external: true

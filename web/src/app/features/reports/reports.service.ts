@@ -1,15 +1,15 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
-import { Observable, catchError, combineLatest, from, map, of, switchMap, tap } from 'rxjs';
+import { catchError, combineLatest, of, switchMap, tap } from 'rxjs';
 import { AuthService } from '../../core/auth/auth';
 import { ProfileService } from '../../core/services/profile';
 import { SettingsService } from '../../core/services/settings';
 import { WorkEntryService } from '../../core/services/work-entry';
+import { ApiClient } from '../../core/services/api-client';
 import { ReportCalculatorService, isSameDayRc, toDateKey } from '../../domain/services/report-calculator.service';
 import { DailyStat, MonthlyReport, WeeklyReport } from '../../domain/models/reports.models';
 import { WorkEntry, WorkEntryType, UserSettings } from '../../shared/models/index';
-import { OvertimeService } from '../../core/services/overtime';
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
@@ -59,7 +59,7 @@ export class ReportsService {
   private readonly settingsService  = inject(SettingsService);
   private readonly profileService   = inject(ProfileService);
   private readonly authService      = inject(AuthService);
-  private readonly overtimeService  = inject(OvertimeService);
+  private readonly apiClient        = inject(ApiClient);
   private readonly calc             = inject(ReportCalculatorService);
   private readonly router           = inject(Router);
 
@@ -93,23 +93,13 @@ export class ReportsService {
   // Monatliche Einträge (täglich-Tab / Monatlich-Tab)
   private readonly _monthlyEntries = toSignal(
     toObservable(this._viewMonth).pipe(
-      tap(() => this._isLoading.set(true)),
       switchMap(({ year, month }) =>
         this.workEntryService.getEntriesForMonth(year, month).pipe(
           catchError(() => of([] as WorkEntry[])),
+          // isLoading nur für den Erstladevorgang ausschalten — beim Monatswechsel
+          // NICHT erneut auf true setzen, sonst wird die gesamte UI (inkl. Kalender,
+          // der den Monatszustand hält) zerstört und springt auf den alten Monat zurück.
           tap(() => this._isLoading.set(false)),
-        )
-      ),
-    ),
-    { initialValue: [] as WorkEntry[] }
-  );
-
-  // Wöchentliche Einträge — lade beide Monate falls Woche Monatsgrenze überschreitet
-  private readonly _weeklyEntries = toSignal(
-    toObservable(this._weekRef).pipe(
-      switchMap(weekRef =>
-        this._loadWeekEntries(weekRef).pipe(
-          catchError(() => of([] as WorkEntry[])),
         )
       ),
     ),
@@ -124,16 +114,44 @@ export class ReportsService {
     { initialValue: DEFAULT_SETTINGS }
   );
 
-  // Gespeichertes Überstundensaldo — neu laden wenn Auth-Status wechselt
-  private readonly _storedOvertime = toSignal(
-    this.authService.user$.pipe(
-      switchMap(() =>
-        from(this.overtimeService.getOvertime()).pipe(
-          catchError(() => of(0)),
-        )
+  // ── Reports aus der Backend-API (eingeloggt) ───────────────────────────────────
+  // Berechnung erfolgt server-seitig (zentrale, korrigierte Logik). Roh-Einträge
+  // (_monthlyEntries via onSnapshot) bleiben für Kalender/Tagesliste erhalten.
+
+  private readonly _apiDaily = toSignal(
+    combineLatest([toObservable(this._selectedDate), this.authService.user$]).pipe(
+      switchMap(([date, user]) =>
+        user
+          ? this.apiClient.getDailyReport(date.getFullYear(), date.getMonth() + 1, date.getDate())
+              .pipe(catchError(() => of(EMPTY_DAILY_STAT)))
+          : of(null)
       ),
     ),
-    { initialValue: 0 }
+    { initialValue: null as DailyStat | null }
+  );
+
+  private readonly _apiWeekly = toSignal(
+    combineLatest([toObservable(this._weekRef), this.authService.user$, toObservable(this.isPremium)]).pipe(
+      switchMap(([date, user, premium]) =>
+        user && premium
+          ? this.apiClient.getWeeklyReport(date.getFullYear(), date.getMonth() + 1, date.getDate())
+              .pipe(catchError(() => of(EMPTY_WEEKLY)))
+          : of(EMPTY_WEEKLY)
+      ),
+    ),
+    { initialValue: EMPTY_WEEKLY }
+  );
+
+  private readonly _apiMonthly = toSignal(
+    combineLatest([toObservable(this._monthRef), this.authService.user$, toObservable(this.isPremium)]).pipe(
+      switchMap(([date, user, premium]) =>
+        user && premium
+          ? this.apiClient.getMonthlyReport(date.getFullYear(), date.getMonth() + 1)
+              .pipe(catchError(() => of(EMPTY_MONTHLY)))
+          : of(EMPTY_MONTHLY)
+      ),
+    ),
+    { initialValue: EMPTY_MONTHLY }
   );
 
   // ── Computed ──────────────────────────────────────────────────────────────────
@@ -148,6 +166,8 @@ export class ReportsService {
   });
 
   readonly dailyStat = computed((): DailyStat => {
+    // Eingeloggt: server-berechnet. Anonym: lokale Berechnung aus localStorage-Einträgen.
+    if (this.isLoggedIn()) return this._apiDaily() ?? EMPTY_DAILY_STAT;
     if (this.isLoading()) return EMPTY_DAILY_STAT;
     return this.calc.calculateDailyStat(
       this._monthlyEntries(), this.selectedDate(), this._settings()
@@ -156,16 +176,12 @@ export class ReportsService {
 
   readonly weeklyReport = computed((): WeeklyReport => {
     if (!this.isLoggedIn() || !this.isPremium()) return EMPTY_WEEKLY;
-    return this.calc.calculateWeeklyReport(
-      this._weeklyEntries(), this._weekRef(), this._settings()
-    );
+    return this._apiWeekly();
   });
 
   readonly monthlyReport = computed((): MonthlyReport => {
     if (!this.isLoggedIn() || !this.isPremium()) return EMPTY_MONTHLY;
-    return this.calc.calculateMonthlyReport(
-      this._monthlyEntries(), this._monthRef(), this._settings(), this._storedOvertime()
-    );
+    return this._apiMonthly();
   });
 
   // ── Actions ───────────────────────────────────────────────────────────────────
@@ -277,35 +293,6 @@ export class ReportsService {
     const vm = this._viewMonth();
     // Trigger erneuten Load durch neues Objekt
     this._viewMonth.set({ ...vm });
-  }
-
-  private _loadWeekEntries(weekRef: Date): Observable<WorkEntry[]> {
-    const dow   = weekRef.getDay() === 0 ? 7 : weekRef.getDay();
-    const start = new Date(weekRef.getFullYear(), weekRef.getMonth(), weekRef.getDate() - (dow - 1));
-    const end   = new Date(start.getTime() + 6 * 86400000);
-
-    const year1 = start.getFullYear(), month1 = start.getMonth() + 1;
-    const year2 = end.getFullYear(),   month2 = end.getMonth()   + 1;
-
-    if (year1 === year2 && month1 === month2) {
-      return this.workEntryService.getEntriesForMonth(year1, month1).pipe(
-        catchError(() => of([] as WorkEntry[])),
-      );
-    }
-
-    // Monatsübergreifende Woche: beide Monate laden + deduplizieren
-    return combineLatest([
-      this.workEntryService.getEntriesForMonth(year1, month1).pipe(catchError(() => of([]))),
-      this.workEntryService.getEntriesForMonth(year2, month2).pipe(catchError(() => of([]))),
-    ]).pipe(
-      map(([a, b]: [WorkEntry[], WorkEntry[]]) => {
-        const all = [...a, ...b];
-        return all.filter(e => {
-          const ed = new Date(e.date.getFullYear(), e.date.getMonth(), e.date.getDate());
-          return ed >= start && ed <= end;
-        });
-      }),
-    );
   }
 
   private _dateId(date: Date): string {

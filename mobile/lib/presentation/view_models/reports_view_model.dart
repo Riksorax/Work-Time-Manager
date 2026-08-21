@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -44,12 +45,95 @@ class ReportsViewModel extends Notifier<ReportsState> {
   }
 
   void _updateCalculatedReports() {
-    final currentSelectedDay = state.selectedDay ?? DateTime.now();
+    final day = state.selectedDay ?? DateTime.now();
+    // Lokale Berechnung als Sofortanzeige und Fallback (offline / nicht eingeloggt).
     state = state.copyWith(
       isLoading: false,
-      dailyReportState: _calculateDailyReport(currentSelectedDay),
-      weeklyReportState: _calculateWeeklyReport(currentSelectedDay),
+      dailyReportState: _calculateDailyReport(day),
+      weeklyReportState: _calculateWeeklyReport(day),
       monthlyReportState: _calculateMonthlyReport(),
+    );
+    // Eingeloggt: server-berechnete Werte (zentrale, korrigierte Logik) laden und
+    // die lokalen überschreiben. Schlägt der Abruf fehl (401/offline), bleibt der
+    // lokale Fallback bestehen.
+    unawaited(_loadReportsFromApi(day));
+  }
+
+  Future<void> _loadReportsFromApi(DateTime day) async {
+    try {
+      final api = ref.read(core_providers.apiClientProvider);
+      final monthRef = state.selectedMonth ?? DateTime(day.year, day.month);
+      final results = await Future.wait([
+        api.getDailyReport(day.year, day.month, day.day),
+        api.getWeeklyReport(day.year, day.month, day.day),
+        api.getMonthlyReport(monthRef.year, monthRef.month),
+      ]);
+      state = state.copyWith(
+        dailyReportState: _dailyWithApiOvertime(day, results[0]),
+        weeklyReportState: _weeklyFromApi(results[1]),
+        monthlyReportState: _monthlyFromApi(results[2]),
+      );
+    } catch (e) {
+      logger.w('[ReportsViewModel] API-Reports nicht geladen, lokaler Fallback: $e');
+    }
+  }
+
+  Duration _msDur(dynamic v) => Duration(milliseconds: (v as num?)?.toInt() ?? 0);
+
+  DateTime _dayKey(String iso) {
+    final d = DateTime.parse(iso).toLocal();
+    return DateTime(d.year, d.month, d.day);
+  }
+
+  /// Tages-Rohsummen lokal, Überstunden aus dem Backend.
+  DailyReportState _dailyWithApiOvertime(DateTime day, Map<String, dynamic> json) {
+    final local = _calculateDailyReport(day);
+    return DailyReportState(
+      entries: local.entries,
+      workTime: local.workTime,
+      breakTime: local.breakTime,
+      totalTime: local.totalTime,
+      overtime: _msDur(json['overtimeMs']),
+    );
+  }
+
+  WeeklyReportState _weeklyFromApi(Map<String, dynamic> json) {
+    final gross = _msDur(json['totalWorkedMs']);
+    final breaks = _msDur(json['totalBreaksMs']);
+    return WeeklyReportState(
+      totalWorkDuration: gross,
+      totalBreakDuration: breaks,
+      totalNetWorkDuration: gross - breaks,
+      averageWorkDuration: _msDur(json['avgPerDayMs']),
+      overtime: _msDur(json['overtimeMs']),
+      workDays: (json['workDays'] as num?)?.toInt() ?? 0,
+      dailyWork: {
+        for (final d in (json['days'] as List<dynamic>? ?? []))
+          _dayKey(d['date'] as String): _msDur(d['workedMs']),
+      },
+    );
+  }
+
+  MonthlyReportState _monthlyFromApi(Map<String, dynamic> json) {
+    final gross = _msDur(json['totalWorkedMs']);
+    final breaks = _msDur(json['totalBreaksMs']);
+    return MonthlyReportState(
+      totalWorkDuration: gross,
+      totalBreakDuration: breaks,
+      totalNetWorkDuration: gross - breaks,
+      averageWorkDuration: _msDur(json['avgPerDayMs']),
+      overtime: _msDur(json['monthlyOvertimeMs']),
+      totalOvertime: _msDur(json['totalOvertimeMs']),
+      workDays: (json['workDays'] as num?)?.toInt() ?? 0,
+      avgWorkDurationPerWeek: _msDur(json['avgPerWeekMs']),
+      weeklyWork: {
+        for (final w in (json['weeks'] as List<dynamic>? ?? []))
+          (w['weekNumber'] as num).toInt(): _msDur(w['totalWorkedMs']),
+      },
+      dailyWork: {
+        for (final d in (json['days'] as List<dynamic>? ?? []))
+          _dayKey(d['date'] as String): _msDur(d['workedMs']),
+      },
     );
   }
   
