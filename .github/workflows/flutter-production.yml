@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+  # Manuell auslösbar, um den AAB-Build auf einem Branch zu verifizieren,
+  # bevor er nach main geht. Der Play-Upload bleibt dabei aus (siehe unten).
+  workflow_dispatch:
 
 defaults:
   run:
@@ -78,7 +81,10 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+      # Nur beim echten Release über main hochladen. Ein manueller Testlauf
+      # (workflow_dispatch) baut das AAB, veröffentlicht es aber nicht.
       - name: Upload to Google Play (Closed Testing)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_JSON_KEY }}
