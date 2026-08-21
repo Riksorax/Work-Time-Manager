@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart' show ThemeMode;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_work_time/core/utils/time_precision.dart';
 
 /// Die Schnittstelle (der "Vertrag") für unsere lokale Speicher-Datenquelle.
 /// Sie definiert, welche Operationen für App-Einstellungen möglich sein müssen.
@@ -74,6 +75,6 @@ class StorageDataSourceImpl implements StorageDataSource {
 
   @override
   Future<void> saveOvertime(Duration overtime) async {
-    await _prefs.setInt(_overtimeKey, overtime.inMinutes);
+    await _prefs.setInt(_overtimeKey, toStoredMinutes(overtime));
   }
 }

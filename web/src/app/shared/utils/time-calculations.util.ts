@@ -1,11 +1,12 @@
 import { WorkEntry, Break, WorkEntryType } from '../models';
+import { nowToMinute } from './time-precision.util';
 
 /**
  * Berechnet die Brutto-Arbeitszeit in Minuten.
  */
 export function calculateGrossMinutes(entry: WorkEntry): number {
   if (!entry.workStart) return 0;
-  const end = entry.workEnd || new Date();
+  const end = entry.workEnd || nowToMinute();
   return (end.getTime() - entry.workStart.getTime()) / (1000 * 60);
 }
 

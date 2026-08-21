@@ -60,7 +60,8 @@ dependencies:
 
 dependency_overrides:
   meta: ^1.17.0
-  test_api: ^0.7.8
+  test_api: 0.7.12
+  test_core: 0.6.18
   analyzer: ^8.0.0
   custom_lint_visitor: 1.0.0+8.4.0
 

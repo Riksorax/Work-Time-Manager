@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
+import 'package:flutter_work_time/core/utils/time_precision.dart';
 
 import '../../domain/entities/break_entity.dart';
 import '../../domain/entities/work_entry_entity.dart';
@@ -34,10 +35,10 @@ class LocalWorkRepositoryImpl implements WorkRepository {
       id: WorkEntryModel.generateId(date),
       date: date,
       workStart: data['workStart'] != null
-          ? DateTime.parse(data['workStart'] as String)
+          ? roundToMinute(DateTime.parse(data['workStart'] as String))
           : null,
       workEnd: data['workEnd'] != null
-          ? DateTime.parse(data['workEnd'] as String)
+          ? roundToMinute(DateTime.parse(data['workEnd'] as String))
           : null,
       breaks: (data['breaks'] as List<dynamic>?)
               ?.map((breakData) {
@@ -63,10 +64,12 @@ class LocalWorkRepositoryImpl implements WorkRepository {
   /// Konvertiert WorkEntryEntity zu lokalen JSON-Daten
   Map<String, dynamic> _toLocalJson(WorkEntryEntity entry) {
     return {
-      'workStart': entry.workStart?.toIso8601String(),
-      'workEnd': entry.workEnd?.toIso8601String(),
+      'workStart': roundToMinuteOrNull(entry.workStart)?.toIso8601String(),
+      'workEnd': roundToMinuteOrNull(entry.workEnd)?.toIso8601String(),
       'breaks': entry.breaks.map((b) => _breakToLocalJson(b)).toList(),
-      'manualOvertimeMinutes': entry.manualOvertime?.inMinutes,
+      'manualOvertimeMinutes': entry.manualOvertime != null
+          ? toStoredMinutes(entry.manualOvertime!)
+          : null,
       'description': entry.description,
       'isManuallyEntered': entry.isManuallyEntered,
       'type': entry.type.name,
@@ -78,8 +81,10 @@ class LocalWorkRepositoryImpl implements WorkRepository {
     return BreakEntity(
       id: data['id'] as String,
       name: data['name'] as String,
-      start: DateTime.parse(data['start'] as String),
-      end: data['end'] != null ? DateTime.parse(data['end'] as String) : null,
+      start: roundToMinute(DateTime.parse(data['start'] as String)),
+      end: data['end'] != null
+          ? roundToMinute(DateTime.parse(data['end'] as String))
+          : null,
       isAutomatic: data['isAutomatic'] as bool? ?? false,
     );
   }
@@ -89,8 +94,8 @@ class LocalWorkRepositoryImpl implements WorkRepository {
     return {
       'id': breakEntity.id,
       'name': breakEntity.name,
-      'start': breakEntity.start.toIso8601String(),
-      'end': breakEntity.end?.toIso8601String(),
+      'start': roundToMinute(breakEntity.start).toIso8601String(),
+      'end': roundToMinuteOrNull(breakEntity.end)?.toIso8601String(),
       'isAutomatic': breakEntity.isAutomatic,
     };
   }

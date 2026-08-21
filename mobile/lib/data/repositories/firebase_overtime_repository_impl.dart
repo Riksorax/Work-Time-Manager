@@ -1,6 +1,7 @@
 import 'package:flutter_work_time/core/utils/logger.dart';
 import 'package:flutter_work_time/data/datasources/remote/firestore_datasource.dart';
 import 'package:flutter_work_time/domain/repositories/overtime_repository.dart';
+import 'package:flutter_work_time/core/utils/time_precision.dart';
 
 /// Repository für Überstunden, das Firestore als Backend nutzt.
 /// Wird verwendet, wenn der User eingeloggt ist.
@@ -36,9 +37,12 @@ class FirebaseOvertimeRepositoryImpl implements OvertimeRepository {
 
   @override
   Future<void> saveOvertime(Duration overtime) async {
-    logger.i('[FirebaseOvertimeRepository] saveOvertime: ${overtime.inMinutes} min');
-    _cachedOvertime = overtime;
-    await _dataSource.saveOvertime(_userId, overtime);
+    // Minutengenau speichern — der Cache muss denselben Wert halten wie Firestore,
+    // sonst driftet die Bilanz zwischen Cache und persistiertem Stand.
+    final rounded = roundDurationToMinute(overtime);
+    logger.i('[FirebaseOvertimeRepository] saveOvertime: ${rounded.inMinutes} min');
+    _cachedOvertime = rounded;
+    await _dataSource.saveOvertime(_userId, rounded);
   }
 
   @override

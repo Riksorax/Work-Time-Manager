@@ -1,6 +1,7 @@
 import { Injectable, Injector, inject, runInInjectionContext } from '@angular/core';
 import { Firestore, doc, getDoc, setDoc } from '@angular/fire/firestore';
 import { AuthService } from '../auth/auth';
+import { toStoredMinutes } from '../../shared/utils/time-precision.util';
 
 const LS_OVERTIME    = 'overtime_value';
 const LS_LAST_UPDATE = 'overtime_last_update';
@@ -28,10 +29,10 @@ export class OvertimeService {
     if (uid) {
       const ref = doc(this.firestore, `users/${uid}/overtime/balance`);
       await runInInjectionContext(this.injector, () =>
-        setDoc(ref, { minutes: Math.round(ms / 60000) }, { merge: true })
+        setDoc(ref, { minutes: toStoredMinutes(ms) }, { merge: true })
       );
     } else {
-      localStorage.setItem(LS_OVERTIME, String(Math.round(ms / 60000)));
+      localStorage.setItem(LS_OVERTIME, String(toStoredMinutes(ms)));
     }
   }
 

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
+import 'package:flutter_work_time/core/utils/time_precision.dart';
 
 import '../../core/providers/providers.dart';
 import '../../domain/entities/break_entity.dart';
@@ -58,7 +59,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
     } else if (workEntry.workStart != null) {
       // Laufender Tag -> Overtime wird im Timer berechnet.
       // Um initialOvertime (Basis) korrekt wiederherzustellen, müssen wir den aktuellen "Tagesfortschritt" vom gespeicherten Gesamtwert abziehen.
-      final now = DateTime.now();
+      final now = nowToMinute();
 
       // Berechne aktuelle Pausenzeit
       final breakDuration = _calculateTotalBreakDuration(now);
@@ -143,12 +144,12 @@ class DashboardViewModel extends Notifier<DashboardState> {
     final settingsRepository = ref.read(settingsRepositoryProvider);
     final workdaysPerWeek = settingsRepository.getWorkdaysPerWeek();
     if (workdaysPerWeek <= 0) return Duration.zero;
-    final regularDailyTarget = Duration(
+    final regularDailyTarget = roundDurationToMinute(Duration(
       microseconds: (settingsRepository.getTargetWeeklyHours() /
               workdaysPerWeek *
               Duration.microsecondsPerHour)
           .round(),
-    );
+    ));
     return getEffectiveDailyTarget(
       date: DateTime.now(),
       weekEntries: _weekEntries,
@@ -186,7 +187,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
       _tickCounter = 0;
       
       // Sofortiges Update
-      final now = DateTime.now();
+      final now = nowToMinute();
       final initialElapsedTime = _calculateElapsedTime();
       final initialGrossDuration = now.difference(state.workEntry.workStart!);
       
@@ -197,7 +198,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
       _recalculateOvertime();
       
       _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-        final now = DateTime.now();
+        final now = nowToMinute();
         final elapsedTime = _calculateElapsedTime();
         final grossDuration = state.workEntry.workStart != null 
             ? now.difference(state.workEntry.workStart!) 
@@ -240,7 +241,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
 
   Duration _calculateElapsedTime() {
     if (state.workEntry.workStart == null) return Duration.zero;
-    final now = DateTime.now();
+    final now = nowToMinute();
     final breakDuration = _calculateTotalBreakDuration(now);
     return now.difference(state.workEntry.workStart!) - breakDuration;
   }
@@ -278,7 +279,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
     if (state.workEntry.workStart == null) return null;
 
     final start = state.workEntry.workStart!;
-    final now = DateTime.now();
+    final now = nowToMinute();
     
     // Bereits genommene Pausen (bis jetzt)
     var currentBreaks = _calculateTotalBreakDuration(now);
@@ -320,7 +321,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
   }
 
   Future<void> startOrStopTimer() async {
-    final now = DateTime.now();
+    final now = nowToMinute();
     WorkEntryEntity updatedEntry;
 
     if (state.workEntry.workStart == null) {
@@ -354,7 +355,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
 
   /// Startet eine komplett neue Session (Start, End und Pausen zurücksetzen)
   Future<void> startNewSession() async {
-    final now = DateTime.now();
+    final now = nowToMinute();
     final updatedEntry = WorkEntryEntity(
       id: state.workEntry.id,
       date: state.workEntry.date,
@@ -372,7 +373,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
 
   /// Neue Session mit Pausen behalten (nur Start und Endzeit zurücksetzen)
   Future<void> startNewSessionKeepBreaks() async {
-    final now = DateTime.now();
+    final now = nowToMinute();
     final updatedEntry = WorkEntryEntity(
       id: state.workEntry.id,
       date: state.workEntry.date,

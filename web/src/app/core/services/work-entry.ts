@@ -11,6 +11,7 @@ import {
 import { AuthService } from '../auth/auth';
 import { WorkEntry, WorkEntryType, Break } from '../../shared/models';
 import { Observable, of, switchMap } from 'rxjs';
+import { roundToMinute, roundToMinuteOrUndefined } from '../../shared/utils/time-precision.util';
 
 // localStorage Keys — identisch zu Flutter LocalWorkRepositoryImpl
 const LS_PREFIX = 'local_work_entries_';
@@ -143,8 +144,8 @@ export class WorkEntryService {
   private _toFirestore(entry: WorkEntry): Record<string, unknown> {
     return {
       date:                  Timestamp.fromDate(new Date(Date.UTC(entry.date.getFullYear(), entry.date.getMonth(), entry.date.getDate()))),
-      workStart:             entry.workStart ? Timestamp.fromDate(entry.workStart) : null,
-      workEnd:               entry.workEnd   ? Timestamp.fromDate(entry.workEnd)   : null,
+      workStart:             entry.workStart ? Timestamp.fromDate(roundToMinute(entry.workStart)) : null,
+      workEnd:               entry.workEnd   ? Timestamp.fromDate(roundToMinute(entry.workEnd))   : null,
       type:                  entry.type ?? WorkEntryType.Work,
       isManuallyEntered:     entry.isManuallyEntered ?? false,
       manualOvertimeMinutes: entry.manualOvertimeMinutes ?? null,
@@ -154,8 +155,8 @@ export class WorkEntryService {
         id:          b.id,
         name:        b.name,
         isAutomatic: b.isAutomatic,
-        start:       Timestamp.fromDate(b.start),
-        end:         b.end ? Timestamp.fromDate(b.end) : null,
+        start:       Timestamp.fromDate(roundToMinute(b.start)),
+        end:         b.end ? Timestamp.fromDate(roundToMinute(b.end)) : null,
       })),
     };
   }
@@ -163,11 +164,13 @@ export class WorkEntryService {
   private _fromFirestore(data: Record<string, unknown>, id: string): WorkEntry | null {
     try {
       const ts = (v: unknown) => v ? (v as Timestamp).toDate() : undefined;
+      // Zeitstempel minutengenau normalisieren (Altdaten können Sekunden enthalten)
+      const tsMin = (v: unknown) => roundToMinuteOrUndefined(ts(v));
       return {
         id,
         date:                  ts(data['date'])!,
-        workStart:             ts(data['workStart']),
-        workEnd:               ts(data['workEnd']),
+        workStart:             tsMin(data['workStart']),
+        workEnd:               tsMin(data['workEnd']),
         type:                  (data['type'] as WorkEntryType) ?? WorkEntryType.Work,
         isManuallyEntered:     (data['isManuallyEntered'] as boolean) ?? false,
         manualOvertimeMinutes: (data['manualOvertimeMinutes'] as number) ?? undefined,
@@ -176,8 +179,8 @@ export class WorkEntryService {
           id:          (b['id'] as string) || `break-${b['start']}`,
           name:        (b['name'] as string) || 'Pause',
           isAutomatic: (b['isAutomatic'] as boolean) ?? false,
-          start:       ts(b['start'])!,
-          end:         ts(b['end']),
+          start:       tsMin(b['start'])!,
+          end:         tsMin(b['end']),
         })) as Break[],
       };
     } catch {
@@ -246,23 +249,24 @@ export class WorkEntryService {
 
   private _toLocalJson(entry: WorkEntry): Record<string, unknown> {
     return {
-      workStart:             entry.workStart?.toISOString() ?? null,
-      workEnd:               entry.workEnd?.toISOString()   ?? null,
+      workStart:             roundToMinuteOrUndefined(entry.workStart)?.toISOString() ?? null,
+      workEnd:               roundToMinuteOrUndefined(entry.workEnd)?.toISOString()   ?? null,
       type:                  entry.type,
       isManuallyEntered:     entry.isManuallyEntered,
       manualOvertimeMinutes: entry.manualOvertimeMinutes ?? null,
       description:           entry.description ?? null,
       breaks: entry.breaks.map(b => ({
         id: b.id, name: b.name, isAutomatic: b.isAutomatic,
-        start: b.start.toISOString(),
-        end:   b.end?.toISOString() ?? null,
+        start: roundToMinute(b.start).toISOString(),
+        end:   roundToMinuteOrUndefined(b.end)?.toISOString() ?? null,
       })),
     };
   }
 
   private _fromLocalJson(data: Record<string, unknown>, date: Date): WorkEntry | null {
     try {
-      const parseDate = (v: unknown) => v ? new Date(v as string) : undefined;
+      const parseDate = (v: unknown) =>
+        v ? roundToMinute(new Date(v as string)) : undefined;
       return {
         id:                    this._dateId(date),
         date,
@@ -276,8 +280,8 @@ export class WorkEntryService {
           id:          b['id'] as string,
           name:        b['name'] as string,
           isAutomatic: (b['isAutomatic'] as boolean) ?? false,
-          start:       new Date(b['start'] as string),
-          end:         b['end'] ? new Date(b['end'] as string) : undefined,
+          start:       roundToMinute(new Date(b['start'] as string)),
+          end:         b['end'] ? roundToMinute(new Date(b['end'] as string)) : undefined,
         })) as Break[],
       };
     } catch { return null; }

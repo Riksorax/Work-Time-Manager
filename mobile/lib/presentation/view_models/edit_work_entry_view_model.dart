@@ -1,3 +1,4 @@
+import 'package:flutter_work_time/core/utils/time_precision.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:uuid/uuid.dart';
 
@@ -22,19 +23,19 @@ class EditWorkEntryViewModel extends _$EditWorkEntryViewModel {
   }
 
   void setStartTime(DateTime startTime) {
-    state = state.copyWith(newStartTime: startTime);
+    state = state.copyWith(newStartTime: roundToMinute(startTime));
   }
 
   void setEndTime(DateTime? endTime) {
-    state = state.copyWith(newEndTime: endTime);
+    state = state.copyWith(newEndTime: roundToMinuteOrNull(endTime));
   }
 
   void addBreak() {
     final newBreak = BreakEntity(
       id: _uuid.v4(),
       name: 'Pause #${state.breaks.length + 1}',
-      start: state.newStartTime ?? DateTime.now(),
-      end: (state.newStartTime ?? DateTime.now())
+      start: state.newStartTime ?? nowToMinute(),
+      end: (state.newStartTime ?? nowToMinute())
           .add(const Duration(minutes: 30)),
     );
     state = state.copyWith(breaks: [...state.breaks, newBreak]);
@@ -49,8 +50,8 @@ class EditWorkEntryViewModel extends _$EditWorkEntryViewModel {
     final updatedBreaks = state.breaks.map((b) {
       if (b.id == breakId) {
         return b.copyWith(
-          start: newStart ?? b.start,
-          end: newEnd ?? b.end,
+          start: roundToMinuteOrNull(newStart) ?? b.start,
+          end: roundToMinuteOrNull(newEnd) ?? b.end,
           name: newName ?? b.name,
         );
       }
