@@ -27,6 +27,7 @@ jobs:
       # Bewusst früh, damit ein fehlender Name nicht erst nach ~9 min Build auffällt.
       - name: Release-Namen ermitteln
         id: release_name
+        working-directory: .
         run: |
           VERSION=$(grep '^version:' mobile/pubspec.yaml | sed 's/version: *//' | cut -d'+' -f1)
           CHARACTER=$(awk -F'|' -v v="$VERSION" '
