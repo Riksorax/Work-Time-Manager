@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_work_time/core/utils/time_precision.dart';
 import 'package:intl/intl.dart';
 
 import '../../domain/entities/break_entity.dart';
@@ -17,7 +16,8 @@ class DashboardScreen extends ConsumerWidget {
     String twoDigits(int n) => n.toString().padLeft(2, '0');
     final hours = twoDigits(duration.inHours);
     final minutes = twoDigits(duration.inMinutes.remainder(60));
-    return "$hours:$minutes";
+    final seconds = twoDigits(duration.inSeconds.remainder(60));
+    return "$hours:$minutes:$seconds";
   }
 
   String _formatOvertime(Duration overtime) {
@@ -47,7 +47,7 @@ class DashboardScreen extends ConsumerWidget {
     final netDuration = dashboardState.actualWorkDuration ?? dashboardState.elapsedTime;
     
     final totalBreakDuration = workEntryWithAutoBreaks.breaks.fold(Duration.zero, (prev, b) {
-      final end = b.end ?? nowToMinute();
+      final end = b.end ?? DateTime.now();
       return prev + end.difference(b.start);
     });
 
