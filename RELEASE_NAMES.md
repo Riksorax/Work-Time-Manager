@@ -1,26 +1,30 @@
 # Release-Namen
-
-Jedes Release im geschlossenen Test (Play-Track `alpha`) trägt den Namen
+ 
+Jedes Release im geschlossenen Test (Play-Track `<Version> <Charakter>`) trägt den Namen
 `<Version> <Charakter>` — der Charakter stammt aus Kingdom Hearts.
-
+ 
 ## Wie ein Name vergeben wird
-
+ 
 Der Charakter kommt aus dem Namen des Release-Branches:
-
+ 
 ```
-release/v1.3.2-Vanitas        ->  Release-Name "1.3.2 Vanitas"
-release/v1.4.0-Micky-Maus     ->  Release-Name "1.4.0 Micky Maus"
+release/v1.3.2-Vanitas        ->  Release- und Track-Name "1.3.2 Vanitas"
+release/v1.4.0-Micky-Maus     ->  Release- und Track-Name "1.4.0 Micky Maus"
 ```
-
+ 
 Alles vor dem ersten `-` ist die Version, alles danach der Charakter;
 Bindestriche im Charakternamen werden zu Leerzeichen.
-
+ 
 `version-bump.yml` prüft beim Push auf den Release-Branch, ob der Charakter
 unter „Noch frei" steht, verschiebt ihn nach „Vergeben" und committet das
 zusammen mit der Versionsnummer. `flutter-production.yml` liest den Namen
-später aus der Tabelle unten und übergibt ihn beim Play-Upload — der
-Branch-Name ist zu diesem Zeitpunkt nicht mehr verfügbar, weil der Workflow
-auf `main` läuft.
+später aus der Tabelle unten und übergibt ihn beim Play-Upload als `track` und
+`releaseName` — der Branch-Name ist zu diesem Zeitpunkt nicht mehr verfügbar,
+weil der Workflow auf `main` läuft.
+ 
+> **Wichtig:** Der geschlossene Test-Track mit dem Namen `<Version> <Charakter>`
+> (z. B. `1.3.2 Vanitas`) muss vorab in der Google Play Console unter
+> *Testen > Geschlossene Tests* erstellt und mit Testern verknüpft sein!
 
 Steht der Charakter nicht in der Frei-Liste, bricht der Bump mit einer
 Fehlermeldung ab. Namen werden also nie doppelt vergeben.
