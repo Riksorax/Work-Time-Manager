@@ -170,5 +170,28 @@ void main() {
       expect(state.expectedEndTotalZero!.hour, 8);
       expect(state.expectedEndTotalZero!.minute, 0);
     });
+
+    test('elapsedTime and grossWorkDuration track live seconds when work timer is running', () async {
+      final now = DateTime.now();
+      final startTime = now.subtract(const Duration(hours: 1, minutes: 23, seconds: 45));
+
+      final entry = WorkEntryEntity(
+        id: '1',
+        date: now,
+        workStart: startTime,
+        workEnd: null,
+      );
+
+      when(mockGetTodayWorkEntry()).thenAnswer((_) async => entry);
+
+      container.read(dashboardViewModelProvider.notifier);
+      await Future.delayed(Duration.zero);
+
+      final state = container.read(dashboardViewModelProvider);
+
+      expect(state.elapsedTime.inSeconds, greaterThanOrEqualTo(1 * 3600 + 23 * 60 + 44));
+      expect(state.grossWorkDuration, isNotNull);
+      expect(state.grossWorkDuration!.inSeconds, greaterThanOrEqualTo(1 * 3600 + 23 * 60 + 44));
+    });
   });
 }

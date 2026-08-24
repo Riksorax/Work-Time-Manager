@@ -59,7 +59,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
     } else if (workEntry.workStart != null) {
       // Laufender Tag -> Overtime wird im Timer berechnet.
       // Um initialOvertime (Basis) korrekt wiederherzustellen, müssen wir den aktuellen "Tagesfortschritt" vom gespeicherten Gesamtwert abziehen.
-      final now = nowToMinute();
+      final now = DateTime.now();
 
       // Berechne aktuelle Pausenzeit
       final breakDuration = _calculateTotalBreakDuration(now);
@@ -187,7 +187,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
       _tickCounter = 0;
       
       // Sofortiges Update
-      final now = nowToMinute();
+      final now = DateTime.now();
       final initialElapsedTime = _calculateElapsedTime();
       final initialGrossDuration = now.difference(state.workEntry.workStart!);
       
@@ -198,7 +198,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
       _recalculateOvertime();
       
       _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-        final now = nowToMinute();
+        final now = DateTime.now();
         final elapsedTime = _calculateElapsedTime();
         final grossDuration = state.workEntry.workStart != null 
             ? now.difference(state.workEntry.workStart!) 
@@ -241,7 +241,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
 
   Duration _calculateElapsedTime() {
     if (state.workEntry.workStart == null) return Duration.zero;
-    final now = nowToMinute();
+    final now = DateTime.now();
     final breakDuration = _calculateTotalBreakDuration(now);
     return now.difference(state.workEntry.workStart!) - breakDuration;
   }
@@ -279,7 +279,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
     if (state.workEntry.workStart == null) return null;
 
     final start = state.workEntry.workStart!;
-    final now = nowToMinute();
+    final now = DateTime.now();
     
     // Bereits genommene Pausen (bis jetzt)
     var currentBreaks = _calculateTotalBreakDuration(now);

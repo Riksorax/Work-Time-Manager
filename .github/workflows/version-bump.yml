@@ -18,21 +18,84 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract version and update pubspec.yaml
+      # Der Branch-Name trägt Version und Release-Charakter:
+      #   release/v1.3.2-Roxas        -> 1.3.2 / "Roxas"
+      #   release/v1.4.0-Micky-Maus   -> 1.4.0 / "Micky Maus"
+      # Der Charakter wird hier in RELEASE_NAMES.md festgeschrieben, weil
+      # flutter-production.yml auf main läuft und den Branch-Namen dort nicht
+      # mehr sehen kann.
+      - name: Version und Release-Charakter aus dem Branch lesen
+        id: parse
         run: |
           BRANCH="${GITHUB_REF#refs/heads/}"
-          VERSION="${BRANCH#release/v}"
+          SUFFIX="${BRANCH#release/v}"
+          VERSION="${SUFFIX%%-*}"
 
+          if [ "$SUFFIX" = "$VERSION" ]; then
+            echo "::error::Branch '$BRANCH' enthält keinen Release-Charakter. Erwartet wird release/v<Version>-<Charakter>, z. B. release/v1.3.2-Roxas. Freie Namen stehen in RELEASE_NAMES.md."
+            exit 1
+          fi
+
+          CHARACTER=$(printf '%s' "${SUFFIX#*-}" | tr '-' ' ')
+          echo "version=$VERSION"     >> "$GITHUB_OUTPUT"
+          echo "character=$CHARACTER" >> "$GITHUB_OUTPUT"
+          echo "Version: $VERSION — Charakter: $CHARACTER"
+
+      - name: Charakter prüfen und in RELEASE_NAMES.md eintragen
+        env:
+          VERSION: ${{ steps.parse.outputs.version }}
+          CHARACTER: ${{ steps.parse.outputs.character }}
+        run: |
+          python3 - <<'PY'
+          import datetime, os, re, sys
+
+          path = "RELEASE_NAMES.md"
+          version = os.environ["VERSION"]
+          character = os.environ["CHARACTER"]
+          lines = open(path, encoding="utf-8").read().split("\n")
+
+          free_idx = [i for i, l in enumerate(lines) if l.strip() == f"- {character}"]
+          used = [l for l in lines if l.startswith("|") and l.split("|")[2].strip() == character]
+
+          if used:
+              sys.exit(f"::error::Der Charakter '{character}' ist bereits vergeben. Freie Namen stehen in {path}.")
+          if not free_idx:
+              sys.exit(f"::error::'{character}' steht nicht in der Frei-Liste von {path}. Entweder ist der Name falsch geschrieben oder er muss dort ergänzt werden.")
+
+          # Bereits eingetragen (z. B. erneuter Push auf denselben Branch)?
+          if any(l.startswith("|") and l.split("|")[1].strip() == version for l in lines):
+              print(f"Version {version} steht bereits in {path} — nichts zu tun.")
+              sys.exit(0)
+
+          today = datetime.date.today().isoformat()
+          sep = next(i for i, l in enumerate(lines) if re.match(r"^\|\s*---", l))
+          lines.insert(sep + 1, f"| {version} | {character} | {today} |")
+          # Index verschiebt sich durch das Einfügen um eins
+          lines.pop(free_idx[0] + 1)
+
+          open(path, "w", encoding="utf-8").write("\n".join(lines))
+          print(f"'{character}' als {version} eingetragen.")
+          PY
+
+      - name: pubspec.yaml aktualisieren und committen
+        env:
+          VERSION: ${{ steps.parse.outputs.version }}
+          CHARACTER: ${{ steps.parse.outputs.character }}
+        run: |
           CURRENT=$(grep '^version:' mobile/pubspec.yaml | sed 's/version: //')
-          if [ "$CURRENT" = "$VERSION" ]; then
-            echo "Version already $VERSION — nothing to do"
+          if [ "$CURRENT" != "$VERSION" ]; then
+            sed -i "s/^version: .*/version: $VERSION/" mobile/pubspec.yaml
+          else
+            echo "Version steht bereits auf $VERSION"
+          fi
+
+          if git diff --quiet; then
+            echo "Keine Änderungen — nichts zu committen"
             exit 0
           fi
 
-          sed -i "s/^version: .*/version: $VERSION/" mobile/pubspec.yaml
-
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add mobile/pubspec.yaml
-          git commit -m "chore(release): bump version to $VERSION [skip ci]"
+          git add mobile/pubspec.yaml RELEASE_NAMES.md
+          git commit -m "chore(release): bump version to $VERSION ($CHARACTER) [skip ci]"
           git push

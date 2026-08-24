@@ -1,5 +1,7 @@
 export const environment = {
   production: false,
+  apiUrl: 'http://localhost:5000',
+  rcWebApiKey: '',
   firebase: {
     apiKey: "YOUR_API_KEY",
     authDomain: "YOUR_AUTH_DOMAIN",
