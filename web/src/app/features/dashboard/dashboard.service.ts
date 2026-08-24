@@ -153,7 +153,7 @@ export class DashboardService {
         const netMs      = workEntry.workEnd.getTime() - workEntry.workStart.getTime() - breakMs;
         initialDailyMs   = netMs - targetDailyMs + manualEntryMs;
       } else if (workEntry.workStart) {
-        const now        = nowToMinute();
+        const now        = new Date();
         const breakMs    = this._totalBreakMs(workEntry.breaks, now);
         const netMs      = now.getTime() - workEntry.workStart.getTime() - breakMs;
         initialDailyMs   = netMs - targetDailyMs + manualEntryMs;
@@ -352,7 +352,7 @@ export class DashboardService {
   private _tick(): void {
     const e = this._s().workEntry;
     if (!e.workStart || e.workEnd) return;
-    const now    = nowToMinute();
+    const now    = new Date();
     const breakMs = this._totalBreakMs(e.breaks, now);
     const elapsed = now.getTime() - e.workStart.getTime() - breakMs;
     const gross   = now.getTime() - e.workStart.getTime();
@@ -373,7 +373,7 @@ export class DashboardService {
     const settings  = this._currentSettings();
     const targetMs  = this._targetDailyMs(settings);
     const manualMs  = (e.manualOvertimeMinutes ?? 0) * 60000;
-    const now       = nowToMinute();
+    const now       = new Date();
     const breakMs   = this._totalBreakMs(e.breaks, now);
     const elapsed   = now.getTime() - e.workStart.getTime() - breakMs;
     const daily     = elapsed - targetMs + manualMs;
