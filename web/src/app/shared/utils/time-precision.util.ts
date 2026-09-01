@@ -2,19 +2,23 @@
  * Zentrale Helfer für die minutengenaue Zeiterfassung.
  *
  * Die App erfasst, speichert und rechnet ausschließlich minutengenau.
- * Sekunden und Millisekunden werden kaufmännisch gerundet (ab 30 Sekunden
- * auf, darunter ab). So stimmen die angezeigte Uhrzeit (`HH:mm`) und der
- * Wert, mit dem gerechnet wird, immer überein.
+ * Erfasste Zeitstempel (Start, Ende, Pausen) werden dafür auf die volle
+ * Minute abgeschnitten statt gerundet — eine Uhrzeit darf nie in der
+ * Zukunft liegen (relativ zum tatsächlichen Moment der Erfassung), sonst
+ * wirkt es, als würde die App die Zeit manipulieren. Dauern (z. B. für den
+ * Gleitzeit-Saldo) werden dagegen weiterhin kaufmännisch gerundet, siehe
+ * {@link toStoredMinutes}.
  */
 
 const MS_PER_MINUTE = 60_000;
 
 /**
- * Rundet einen Zeitstempel kaufmännisch auf die nächste volle Minute.
- * `08:00:29` → `08:00`, `08:00:30` → `08:01`.
+ * Schneidet einen Zeitstempel auf die volle Minute ab (Sekunden und
+ * Millisekunden werden verworfen, nicht gerundet).
+ * `08:00:29` → `08:00`, `08:00:59` → `08:00`.
  */
 export function roundToMinute(date: Date): Date {
-  return new Date(Math.round(date.getTime() / MS_PER_MINUTE) * MS_PER_MINUTE);
+  return new Date(Math.floor(date.getTime() / MS_PER_MINUTE) * MS_PER_MINUTE);
 }
 
 /** Wie {@link roundToMinute}, akzeptiert aber `undefined`/`null`. */
@@ -23,7 +27,7 @@ export function roundToMinuteOrUndefined(date: Date | null | undefined): Date | 
 }
 
 /**
- * Der aktuelle Zeitpunkt, kaufmännisch auf die volle Minute gerundet.
+ * Der aktuelle Zeitpunkt, auf die volle Minute abgeschnitten.
  * Einzige Quelle für automatisch erfasste Zeitstempel (Arbeits-/Pausenzeiten).
  */
 export function nowToMinute(): Date {

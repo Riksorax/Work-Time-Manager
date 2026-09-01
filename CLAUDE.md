@@ -41,7 +41,7 @@ npm run build -- --configuration production
 
 | Workflow | Trigger | Jobs |
 |---|---|---|
-| `flutter-production.yml` | Push to `main` | Android AAB → Google Play (Closed Testing) |
+| `flutter-production.yml` | Push to `main` oder `workflow_dispatch` | Android AAB → Google Play (Closed Testing Track `<Version> <Charakter>` aus `RELEASE_NAMES.md` oder Input) |
 | `deploy-angular.yml` | Push to `main` oder `workflow_dispatch` | 1. Angular Build → 2. Docker Image → Docker Hub → 3. Deploy → Hetzner |
 | `deploy-api.yml` | Push to `main` oder `workflow_dispatch` | 1. .NET Build & Test → 2. Docker Image → Docker Hub → 3. Deploy → Hetzner |
 | `ci.yml` | PRs / Push | Lint & Tests |

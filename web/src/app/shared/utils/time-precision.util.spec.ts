@@ -8,14 +8,19 @@ import {
 
 describe('time-precision.util', () => {
   describe('roundToMinute', () => {
-    it('rundet unter 30 Sekunden ab', () => {
+    it('schneidet Sekunden unter 30 ab', () => {
       expect(roundToMinute(new Date(2024, 4, 6, 8, 0, 29, 999)))
         .toEqual(new Date(2024, 4, 6, 8, 0, 0, 0));
     });
 
-    it('rundet ab genau 30 Sekunden auf', () => {
+    it('schneidet auch ab genau 30 Sekunden ab statt aufzurunden', () => {
       expect(roundToMinute(new Date(2024, 4, 6, 8, 0, 30)))
-        .toEqual(new Date(2024, 4, 6, 8, 1, 0, 0));
+        .toEqual(new Date(2024, 4, 6, 8, 0, 0, 0));
+    });
+
+    it('schneidet auch kurz vor der nächsten Minute ab', () => {
+      expect(roundToMinute(new Date(2024, 4, 6, 8, 0, 59, 999)))
+        .toEqual(new Date(2024, 4, 6, 8, 0, 0, 0));
     });
 
     it('lässt eine volle Minute unverändert', () => {
@@ -23,11 +28,11 @@ describe('time-precision.util', () => {
       expect(roundToMinute(exact)).toEqual(exact);
     });
 
-    it('rundet über die Stunden- und Tagesgrenze korrekt', () => {
+    it('rundet nie über die Stunden- oder Tagesgrenze auf', () => {
       expect(roundToMinute(new Date(2024, 4, 6, 8, 59, 45)))
-        .toEqual(new Date(2024, 4, 6, 9, 0, 0, 0));
+        .toEqual(new Date(2024, 4, 6, 8, 59, 0, 0));
       expect(roundToMinute(new Date(2024, 4, 6, 23, 59, 45)))
-        .toEqual(new Date(2024, 4, 7, 0, 0, 0, 0));
+        .toEqual(new Date(2024, 4, 6, 23, 59, 0, 0));
     });
   });
 

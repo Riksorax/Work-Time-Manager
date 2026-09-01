@@ -1,31 +1,32 @@
 /// Zentrale Helfer für die minutengenaue Zeiterfassung.
 ///
 /// Die App erfasst, speichert und rechnet ausschließlich minutengenau.
-/// Sekunden und Millisekunden werden dabei kaufmännisch gerundet
-/// (ab 30 Sekunden auf, darunter ab). So stimmen die angezeigte Uhrzeit
-/// (`HH:mm`) und der Wert, mit dem gerechnet wird, immer überein.
+/// Erfasste Zeitstempel (Start, Ende, Pausen) werden dafür auf die volle
+/// Minute abgeschnitten statt gerundet — eine Uhrzeit darf nie in der
+/// Zukunft liegen (relativ zum tatsächlichen Moment der Erfassung), sonst
+/// wirkt es, als würde die App die Zeit manipulieren. Dauern (z. B. für
+/// den Gleitzeit-Saldo) werden dagegen weiterhin kaufmännisch gerundet,
+/// siehe [roundDurationToMinute].
 library;
 
-/// Rundet einen Zeitstempel kaufmännisch auf die nächste volle Minute.
+/// Schneidet einen Zeitstempel auf die volle Minute ab (Sekunden,
+/// Millisekunden und Mikrosekunden werden verworfen, nicht gerundet).
 ///
-/// `08:00:29` -> `08:00`, `08:00:30` -> `08:01`.
+/// `08:00:29` -> `08:00`, `08:00:59` -> `08:00`.
 DateTime roundToMinute(DateTime time) {
   final fraction = Duration(
     seconds: time.second,
     milliseconds: time.millisecond,
     microseconds: time.microsecond,
   );
-  final floored = time.subtract(fraction);
-  return fraction.inMicroseconds * 2 >= Duration.microsecondsPerMinute
-      ? floored.add(const Duration(minutes: 1))
-      : floored;
+  return time.subtract(fraction);
 }
 
 /// Wie [roundToMinute], akzeptiert aber `null` (z. B. für eine offene Endzeit).
 DateTime? roundToMinuteOrNull(DateTime? time) =>
     time == null ? null : roundToMinute(time);
 
-/// Der aktuelle Zeitpunkt, kaufmännisch auf die volle Minute gerundet.
+/// Der aktuelle Zeitpunkt, auf die volle Minute abgeschnitten.
 ///
 /// Diese Funktion ist die einzige Quelle für automatisch erfasste Zeitstempel
 /// (Arbeitsbeginn/-ende, Pausenbeginn/-ende).

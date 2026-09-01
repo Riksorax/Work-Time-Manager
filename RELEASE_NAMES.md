@@ -1,26 +1,30 @@
 # Release-Namen
-
-Jedes Release im geschlossenen Test (Play-Track `alpha`) trägt den Namen
+ 
+Jedes Release im geschlossenen Test (Play-Track `<Version> <Charakter>`) trägt den Namen
 `<Version> <Charakter>` — der Charakter stammt aus Kingdom Hearts.
-
+ 
 ## Wie ein Name vergeben wird
-
+ 
 Der Charakter kommt aus dem Namen des Release-Branches:
-
+ 
 ```
-release/v1.3.2-Vanitas        ->  Release-Name "1.3.2 Vanitas"
-release/v1.4.0-Micky-Maus     ->  Release-Name "1.4.0 Micky Maus"
+release/v1.3.2-Vanitas        ->  Release- und Track-Name "1.3.2 Vanitas"
+release/v1.4.0-Micky-Maus     ->  Release- und Track-Name "1.4.0 Micky Maus"
 ```
-
+ 
 Alles vor dem ersten `-` ist die Version, alles danach der Charakter;
 Bindestriche im Charakternamen werden zu Leerzeichen.
-
+ 
 `version-bump.yml` prüft beim Push auf den Release-Branch, ob der Charakter
 unter „Noch frei" steht, verschiebt ihn nach „Vergeben" und committet das
 zusammen mit der Versionsnummer. `flutter-production.yml` liest den Namen
-später aus der Tabelle unten und übergibt ihn beim Play-Upload — der
-Branch-Name ist zu diesem Zeitpunkt nicht mehr verfügbar, weil der Workflow
-auf `main` läuft.
+später aus der Tabelle unten und übergibt ihn beim Play-Upload als `track` und
+`releaseName` — der Branch-Name ist zu diesem Zeitpunkt nicht mehr verfügbar,
+weil der Workflow auf `main` läuft.
+ 
+> **Wichtig:** Der geschlossene Test-Track mit dem Namen `<Version> <Charakter>`
+> (z. B. `1.3.2 Vanitas`) muss vorab in der Google Play Console unter
+> *Testen > Geschlossene Tests* erstellt und mit Testern verknüpft sein!
 
 Steht der Charakter nicht in der Frei-Liste, bricht der Bump mit einer
 Fehlermeldung ab. Namen werden also nie doppelt vergeben.
@@ -29,6 +33,7 @@ Fehlermeldung ab. Namen werden also nie doppelt vergeben.
 
 | Version | Charakter | Datum |
 | --- | --- | --- |
+| 1.3.3 | Larxene | 2026-09-01 |
 | 1.3.2 | Vanitas | 2026-08-24 |
 | 1.3.1 | — | 2026-08-21 |
 | 1.1.0 | Micky Maus | 2026-05-25 |
@@ -62,7 +67,6 @@ Einige Einträge sind alternative Identitäten derselben Figur (Lea/Axel,
 Isa/Saix). Ist eine Variante vergeben, sollte die andere nicht mehr
 verwendet werden, auch wenn die Prüfung sie formal durchlässt.
 
-- Larxene
 - Marluxia
 - Luxord
 - Demyx
