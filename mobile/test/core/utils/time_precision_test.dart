@@ -3,17 +3,24 @@ import 'package:flutter_work_time/core/utils/time_precision.dart';
 
 void main() {
   group('roundToMinute', () {
-    test('rundet unter 30 Sekunden ab', () {
+    test('schneidet Sekunden unter 30 ab', () {
       expect(
         roundToMinute(DateTime(2024, 5, 6, 8, 0, 29, 999)),
         DateTime(2024, 5, 6, 8, 0),
       );
     });
 
-    test('rundet ab genau 30 Sekunden auf', () {
+    test('schneidet auch ab genau 30 Sekunden ab statt aufzurunden', () {
       expect(
         roundToMinute(DateTime(2024, 5, 6, 8, 0, 30)),
-        DateTime(2024, 5, 6, 8, 1),
+        DateTime(2024, 5, 6, 8, 0),
+      );
+    });
+
+    test('schneidet auch kurz vor der nächsten Minute ab', () {
+      expect(
+        roundToMinute(DateTime(2024, 5, 6, 8, 0, 59, 999)),
+        DateTime(2024, 5, 6, 8, 0),
       );
     });
 
@@ -22,14 +29,14 @@ void main() {
       expect(roundToMinute(exact), exact);
     });
 
-    test('rundet über die Stunden- und Tagesgrenze korrekt', () {
+    test('rundet nie über die Stunden- oder Tagesgrenze auf', () {
       expect(
         roundToMinute(DateTime(2024, 5, 6, 8, 59, 45)),
-        DateTime(2024, 5, 6, 9, 0),
+        DateTime(2024, 5, 6, 8, 59),
       );
       expect(
         roundToMinute(DateTime(2024, 5, 6, 23, 59, 45)),
-        DateTime(2024, 5, 7, 0, 0),
+        DateTime(2024, 5, 6, 23, 59),
       );
     });
 
@@ -46,10 +53,10 @@ void main() {
       expect(roundToMinuteOrNull(null), isNull);
     });
 
-    test('rundet einen vorhandenen Wert', () {
+    test('schneidet einen vorhandenen Wert ab, statt ihn aufzurunden', () {
       expect(
         roundToMinuteOrNull(DateTime(2024, 5, 6, 8, 0, 40)),
-        DateTime(2024, 5, 6, 8, 1),
+        DateTime(2024, 5, 6, 8, 0),
       );
     });
   });
