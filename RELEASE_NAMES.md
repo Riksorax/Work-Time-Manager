@@ -33,6 +33,7 @@ Fehlermeldung ab. Namen werden also nie doppelt vergeben.
 
 | Version | Charakter | Datum |
 | --- | --- | --- |
+| 1.3.3 | Larxene | 2026-09-01 |
 | 1.3.2 | Vanitas | 2026-08-24 |
 | 1.3.1 | — | 2026-08-21 |
 | 1.1.0 | Micky Maus | 2026-05-25 |
@@ -66,7 +67,6 @@ Einige Einträge sind alternative Identitäten derselben Figur (Lea/Axel,
 Isa/Saix). Ist eine Variante vergeben, sollte die andere nicht mehr
 verwendet werden, auch wenn die Prüfung sie formal durchlässt.
 
-- Larxene
 - Marluxia
 - Luxord
 - Demyx
