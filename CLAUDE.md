@@ -240,3 +240,4 @@ Stitch API Key in `.claude/settings.local.json`: `{ "env": { "STITCH_API_KEY": "
 - Alle User-Strings auf Deutsch — kein i18n-System.
 - Premium-Features hinter `isPremiumProvider` (Flutter) bzw. `ProfileService.isPremium` (Web).
 - Hybrid-Layer nie umgehen — immer über `WorkEntryService` / `OvertimeService`.
+- **Branch-Hygiene**: Feature-/Fix-/Release-Branches (`claude/*`, `feature/*`, `release/*`) nach dem Mergen in `main`/`develop` löschen (Remote-Branch, GitHub-Button "Delete branch" bzw. `git push origin --delete <branch>`) — keine bereits gemergten Branches stehen lassen.
