@@ -134,3 +134,4 @@ jobs:
           releaseName: ${{ steps.release_name.outputs.name }}
           track: ${{ steps.release_name.outputs.name }}
           status: completed
+          whatsNewDirectory: mobile/whatsnew
