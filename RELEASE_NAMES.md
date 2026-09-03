@@ -40,6 +40,7 @@ lädt den Inhalt beim Play-Upload automatisch als Änderungsprotokoll mit hoch.
 
 | Version | Charakter | Datum |
 | --- | --- | --- |
+| 1.3.4 | Marluxia | 2026-09-03 |
 | 1.3.2 | Vanitas | 2026-08-24 |
 | 1.3.1 | — | 2026-08-21 |
 | 1.1.0 | Micky Maus | 2026-05-25 |
@@ -74,7 +75,6 @@ Isa/Saix). Ist eine Variante vergeben, sollte die andere nicht mehr
 verwendet werden, auch wenn die Prüfung sie formal durchlässt.
 
 - Larxene
-- Marluxia
 - Luxord
 - Demyx
 - Zexion
