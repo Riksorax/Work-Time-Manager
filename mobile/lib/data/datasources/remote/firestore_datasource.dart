@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:intl/intl.dart';
+import 'package:flutter_work_time/core/config/google_sign_in_config.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
 
 import '../../models/work_entry_model.dart';
@@ -54,8 +55,10 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
       } else {
         // Auf Mobile: Verwende google_sign_in mit authenticate()
         // WICHTIG: initialize() muss vor authenticate() aufgerufen werden (seit google_sign_in 7.0)
-        await _googleSignIn.initialize();
-        
+        // und benötigt auf Android zwingend die serverClientId, sonst wirft
+        // authenticate() eine clientConfigurationError-Exception.
+        await _googleSignIn.initialize(serverClientId: GoogleSignInConfig.serverClientId);
+
         final GoogleSignInAccount? googleUser = await _googleSignIn.authenticate(
           scopeHint: ['email', 'profile'],
         );
@@ -108,8 +111,8 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
           await userCredential.user?.delete();
         } else {
           // Auf Mobile: authenticate()
-          await _googleSignIn.initialize();
-          
+          await _googleSignIn.initialize(serverClientId: GoogleSignInConfig.serverClientId);
+
           final GoogleSignInAccount? googleUser = await _googleSignIn.authenticate(
             scopeHint: ['email', 'profile'],
           );
