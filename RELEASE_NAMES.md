@@ -25,14 +25,22 @@ weil der Workflow auf `main` läuft.
 > **Wichtig:** Der geschlossene Test-Track mit dem Namen `<Version> <Charakter>`
 > (z. B. `1.3.2 Vanitas`) muss vorab in der Google Play Console unter
 > *Testen > Geschlossene Tests* erstellt und mit Testern verknüpft sein!
+> Die Play Developer API kann keine neuen Tracks anlegen — das ist nur
+> manuell in der Console möglich.
 
 Steht der Charakter nicht in der Frei-Liste, bricht der Bump mit einer
 Fehlermeldung ab. Namen werden also nie doppelt vergeben.
+
+Vor dem Mergen des Release-Branches nach `main` außerdem
+`mobile/whatsnew/de-DE.txt` mit den Versionshinweisen für dieses Release
+aktualisieren — siehe `mobile/whatsnew/README.md`. `flutter-production.yml`
+lädt den Inhalt beim Play-Upload automatisch als Änderungsprotokoll mit hoch.
 
 ## Vergeben
 
 | Version | Charakter | Datum |
 | --- | --- | --- |
+| 1.3.4 | Marluxia | 2026-09-03 |
 | 1.3.3 | Larxene | 2026-09-01 |
 | 1.3.2 | Vanitas | 2026-08-24 |
 | 1.3.1 | — | 2026-08-21 |
@@ -67,7 +75,6 @@ Einige Einträge sind alternative Identitäten derselben Figur (Lea/Axel,
 Isa/Saix). Ist eine Variante vergeben, sollte die andere nicht mehr
 verwendet werden, auch wenn die Prüfung sie formal durchlässt.
 
-- Marluxia
 - Luxord
 - Demyx
 - Zexion
