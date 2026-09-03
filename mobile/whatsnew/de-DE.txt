@@ -1,1 +1,1 @@
-Bugfix: Erfasste Start-, End- und Pausenzeiten werden nicht mehr fälschlich aufgerundet.
+Bugfix: Die Anmeldung mit Google funktioniert auf Android jetzt wieder zuverlässig (serverClientId-Konfigurationsfehler behoben).
