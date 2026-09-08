@@ -35,22 +35,13 @@ class DashboardViewModel extends Notifier<DashboardState> {
     final getTodayWorkEntry = ref.read(getTodayWorkEntryUseCaseProvider);
     final overtimeRepository = ref.read(overtimeRepositoryProvider);
 
-    // Alle voneinander unabhängigen Ladevorgänge parallel starten statt sie
-    // sequentiell zu awaiten (jeder await war zuvor ein eigener Netzwerk-Roundtrip
-    // zu Firebase/Backend-API) - reduziert die Ladezeit beim App-Start spürbar,
-    // insbesondere wenn gerade eine Zeiterfassung läuft.
-    final workEntryFuture = getTodayWorkEntry.call();
+    final workEntry = await getTodayWorkEntry.call();
     // Async laden statt synchronem Cache-Zugriff (verhindert Race Condition bei Firebase-Login)
-    final storedOvertimeFuture = overtimeRepository.ensureOvertimeLoaded();
-    final lastUpdateDateFuture = overtimeRepository.ensureLastUpdateLoaded();
-    // Lade Wocheneinträge um zu prüfen ob heute ein Zusatztag ist
-    final weekEntriesFuture = _fetchWeekEntries();
+    final storedOvertime = await overtimeRepository.ensureOvertimeLoaded();
+    final lastUpdateDate = await overtimeRepository.ensureLastUpdateLoaded();
 
-    final workEntry = await workEntryFuture;
-    final storedOvertime = await storedOvertimeFuture;
-    final lastUpdateDate = await lastUpdateDateFuture;
-    _weekEntries = await weekEntriesFuture;
-    _mergeTodayIntoWeekEntries(workEntry);
+    // Lade Wocheneinträge um zu prüfen ob heute ein Zusatztag ist
+    await _loadWeekEntries(workEntry);
 
     // Berechne dailyOvertime für den initialen Stand
     final targetDailyHours = _getEffectiveTargetDailyHours();
@@ -114,9 +105,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
   }
 
   /// Lädt die Einträge für die aktuelle Woche, um zu bestimmen ob heute ein Zusatztag ist.
-  /// Hängt bewusst nicht vom heutigen Eintrag ab, damit der Aufruf parallel zu dessen
-  /// Laden gestartet werden kann (siehe [_init]).
-  Future<List<WorkEntryEntity>> _fetchWeekEntries() async {
+  Future<void> _loadWeekEntries(WorkEntryEntity todayEntry) async {
     try {
       final workRepository = ref.read(workRepositoryProvider);
       final now = DateTime.now();
@@ -134,24 +123,19 @@ class DashboardViewModel extends Notifier<DashboardState> {
       }
 
       // Für aktuelle Woche filtern
-      return getWeekEntriesForDate(now, entries);
+      _weekEntries = getWeekEntriesForDate(now, entries);
+
+      // Heutigen Eintrag hinzufügen falls noch nicht enthalten (z.B. neuer Tag)
+      final todayInEntries = _weekEntries.any((e) =>
+          e.date.year == today.year &&
+          e.date.month == today.month &&
+          e.date.day == today.day);
+      if (!todayInEntries && todayEntry.workStart != null) {
+        _weekEntries = [..._weekEntries, todayEntry];
+      }
     } catch (e) {
       logger.e('[Dashboard] Fehler beim Laden der Wocheneinträge: $e');
-      return [];
-    }
-  }
-
-  /// Ergänzt den heutigen Eintrag in [_weekEntries], falls er dort noch fehlt
-  /// (z.B. weil heute ein neuer Tag ist und noch nicht persistiert wurde).
-  void _mergeTodayIntoWeekEntries(WorkEntryEntity todayEntry) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final todayInEntries = _weekEntries.any((e) =>
-        e.date.year == today.year &&
-        e.date.month == today.month &&
-        e.date.day == today.day);
-    if (!todayInEntries && todayEntry.workStart != null) {
-      _weekEntries = [..._weekEntries, todayEntry];
+      _weekEntries = [];
     }
   }
 
