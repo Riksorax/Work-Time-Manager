@@ -1,1 +1,1 @@
-Bugfix: Die Anmeldung mit Google funktioniert auf Android jetzt wieder zuverlässig (serverClientId-Konfigurationsfehler behoben).
+Performance: Daten laden jetzt spürbar schneller – z. B. beim App-Start mit laufender Zeiterfassung und beim Bearbeiten der Überstunden in den Einstellungen.
