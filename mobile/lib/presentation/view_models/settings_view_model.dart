@@ -87,8 +87,13 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
       final overtimeRepository = ref.read(core_providers.overtimeRepositoryProvider);
       final settingsRepository = ref.read(core_providers.settingsRepositoryProvider);
 
-      final overtimeBalance = await overtimeRepository.ensureOvertimeLoaded();
-      final lastOvertimeUpdate = await overtimeRepository.ensureLastUpdateLoaded();
+      // Beide Ladevorgänge parallel starten statt sequentiell zu awaiten - jeder
+      // await war zuvor ein eigener Netzwerk-Roundtrip zu Firebase/Backend-API und
+      // verzögerte das Anzeigen der Einstellungen unnötig.
+      final overtimeBalanceFuture = overtimeRepository.ensureOvertimeLoaded();
+      final lastOvertimeUpdateFuture = overtimeRepository.ensureLastUpdateLoaded();
+      final overtimeBalance = await overtimeBalanceFuture;
+      final lastOvertimeUpdate = await lastOvertimeUpdateFuture;
       final weeklyTargetHours = settingsRepository.getTargetWeeklyHours();
       final workdaysPerWeek = settingsRepository.getWorkdaysPerWeek();
       final notificationsEnabled = settingsRepository.getNotificationsEnabled();
