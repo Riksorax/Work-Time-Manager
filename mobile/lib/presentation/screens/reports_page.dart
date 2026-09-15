@@ -9,7 +9,6 @@ import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 import '../../core/providers/subscription_provider.dart';
 import '../../core/services/pdf_report_service.dart';
 
-import '../../domain/entities/bundesland.dart';
 import '../../domain/entities/work_entry_extensions.dart';
 import '../../domain/utils/german_holidays.dart';
 import '../widgets/common/responsive_center.dart';
