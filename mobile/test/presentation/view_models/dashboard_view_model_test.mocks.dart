@@ -174,18 +174,18 @@ class MockSettingsRepository extends _i1.Mock
       ) as _i5.Future<void>);
 
   @override
-  int getWorkdaysPerWeek() => (super.noSuchMethod(
+  List<int> getWorkdays() => (super.noSuchMethod(
         Invocation.method(
-          #getWorkdaysPerWeek,
+          #getWorkdays,
           [],
         ),
-        returnValue: 0,
-      ) as int);
+        returnValue: <int>[],
+      ) as List<int>);
 
   @override
-  _i5.Future<void> setWorkdaysPerWeek(int? days) => (super.noSuchMethod(
+  _i5.Future<void> setWorkdays(List<int>? days) => (super.noSuchMethod(
         Invocation.method(
-          #setWorkdaysPerWeek,
+          #setWorkdays,
           [days],
         ),
         returnValue: _i5.Future<void>.value(),

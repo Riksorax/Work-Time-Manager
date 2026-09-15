@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -279,20 +278,18 @@ class ReportsViewModel extends Notifier<ReportsState> {
   /// (mehr Arbeitstage in der Woche als konfiguriert).
   Duration getEffectiveDailyTargetForDate(DateTime date) {
     final settingsRepository = ref.read(core_providers.settingsRepositoryProvider);
-    final workdaysPerWeek = settingsRepository.getWorkdaysPerWeek();
-    if (workdaysPerWeek <= 0) return Duration.zero;
+    final workdays = settingsRepository.getWorkdays();
+    if (workdays.isEmpty) return Duration.zero;
     final regularDailyTarget = roundDurationToMinute(Duration(
       microseconds: (settingsRepository.getTargetWeeklyHours() /
-              workdaysPerWeek *
+              workdays.length *
               Duration.microsecondsPerHour)
           .round(),
     ));
 
-    final weekEntries = getWeekEntriesForDate(date, _monthlyEntries);
     return getEffectiveDailyTarget(
       date: date,
-      weekEntries: weekEntries,
-      workdaysPerWeek: workdaysPerWeek,
+      workdays: workdays,
       regularDailyTarget: regularDailyTarget,
     );
   }
@@ -318,23 +315,25 @@ class ReportsViewModel extends Notifier<ReportsState> {
     final totalNetWorkDuration = totalWorkDuration - totalBreakDuration;
 
     // Unique Arbeitstage zählen (nicht Einträge, da mehrere Einträge pro Tag möglich)
-    final uniqueWorkDays = entriesForWeek
+    final uniqueWorkDaysSet = entriesForWeek
         .where((e) => e.workStart != null)
         .map((e) => DateTime(e.date.year, e.date.month, e.date.day))
-        .toSet()
-        .length;
+        .toSet();
+    final uniqueWorkDays = uniqueWorkDaysSet.length;
     final averageWorkDuration = uniqueWorkDays > 0
         ? roundDurationToMinute(
             Duration(microseconds: totalNetWorkDuration.inMicroseconds ~/ uniqueWorkDays))
         : Duration.zero;
 
-    final workdaysPerWeek = settingsRepository.getWorkdaysPerWeek();
-    final targetDailyHoursInDouble = workdaysPerWeek > 0
-        ? settingsRepository.getTargetWeeklyHours() / workdaysPerWeek
+    final workdays = settingsRepository.getWorkdays();
+    final targetDailyHoursInDouble = workdays.isNotEmpty
+        ? settingsRepository.getTargetWeeklyHours() / workdays.length
         : 0.0;
-    // Wochen-Soll begrenzen: max. workdaysPerWeek Tage zählen,
-    // damit Zusatztage das Soll nicht erhöhen
-    final effectiveWorkDays = min(uniqueWorkDays, workdaysPerWeek);
+    // Wochen-Soll begrenzen: nur Tage zählen, deren Wochentag zu den
+    // konfigurierten Arbeitstagen gehört, damit Zusatztage an anderen
+    // Wochentagen das Soll nicht erhöhen (#217)
+    final effectiveWorkDays =
+        uniqueWorkDaysSet.where((d) => workdays.contains(d.weekday)).length;
     final targetWeeklyHoursForActualWorkdaysInMicroseconds =
         (targetDailyHoursInDouble * effectiveWorkDays * Duration.microsecondsPerHour)
             .toInt();
@@ -386,13 +385,14 @@ class ReportsViewModel extends Notifier<ReportsState> {
                 Duration(microseconds: totalNetWorkDuration.inMicroseconds ~/ workDays))
             : Duration.zero;
 
-    final workdaysPerWeek = settingsRepository.getWorkdaysPerWeek();
-    final targetDailyHours = workdaysPerWeek > 0
-        ? settingsRepository.getTargetWeeklyHours() / workdaysPerWeek
+    final workdays = settingsRepository.getWorkdays();
+    final targetDailyHours = workdays.isNotEmpty
+        ? settingsRepository.getTargetWeeklyHours() / workdays.length
         : 0.0;
 
-    // Arbeitstage pro Woche gruppieren und jeweils auf workdaysPerWeek deckeln,
-    // damit Zusatztage das Monats-Soll nicht erhöhen
+    // Arbeitstage pro Woche gruppieren; nur Tage zählen, deren Wochentag zu
+    // den konfigurierten Arbeitstagen gehört, damit Zusatztage an anderen
+    // Wochentagen das Monats-Soll nicht erhöhen (#217)
     final Map<int, Set<DateTime>> weekToWorkDays = {};
     for (var entry in _monthlyEntries) {
       if (entry.workStart != null) {
@@ -403,7 +403,7 @@ class ReportsViewModel extends Notifier<ReportsState> {
     }
     int effectiveTotalWorkDays = 0;
     for (var weekDays in weekToWorkDays.values) {
-      effectiveTotalWorkDays += min(weekDays.length, workdaysPerWeek);
+      effectiveTotalWorkDays += weekDays.where((d) => workdays.contains(d.weekday)).length;
     }
 
     final totalTargetHoursForActualWorkDays = roundDurationToMinute(

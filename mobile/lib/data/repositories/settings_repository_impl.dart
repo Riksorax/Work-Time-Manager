@@ -35,7 +35,10 @@ class SettingsRepositoryImpl implements SettingsRepository {
 
   // Generiere userId-spezifische Keys für Einstellungen
   String get _targetHoursKey => 'target_weekly_hours_$_userId';
-  String get _workdaysPerWeekKey => 'workdays_per_week_$_userId';
+  String get _workdaysKey => 'workdays_$_userId';
+  // Alter Schlüssel (reine Anzahl statt konkreter Wochentage) - nur noch
+  // zur Migration bestehender Nutzer beim ersten Lesen relevant (#217).
+  String get _legacyWorkdaysPerWeekKey => 'workdays_per_week_$_userId';
 
   @override
   ThemeMode getThemeMode() {
@@ -68,21 +71,29 @@ class SettingsRepositoryImpl implements SettingsRepository {
   }
 
   @override
-  int getWorkdaysPerWeek() {
-    final value = _prefs.getInt(_workdaysPerWeekKey);
-    logger.i('[SettingsRepository] getWorkdaysPerWeek for user $_userId: $value');
-    return value ?? 5;
+  List<int> getWorkdays() {
+    final stored = _prefs.getString(_workdaysKey);
+    if (stored != null && stored.isNotEmpty) {
+      return stored.split(',').map(int.parse).toList();
+    }
+    // Migration: bestehende Nutzer hatten nur eine Anzahl gespeichert -
+    // das entsprach implizit "die ersten N Tage ab Montag" (siehe #217).
+    final legacyCount = _prefs.getInt(_legacyWorkdaysPerWeekKey);
+    if (legacyCount != null) {
+      return List.generate(legacyCount.clamp(0, 7), (i) => i + 1);
+    }
+    return const [1, 2, 3, 4, 5];
   }
 
   @override
-  Future<void> setWorkdaysPerWeek(int days) async {
-    logger.i('[SettingsRepository] setWorkdaysPerWeek for user $_userId: $days');
-    await _prefs.setInt(_workdaysPerWeekKey, days);
-    _syncToFirestore({'workdaysPerWeek': days});
+  Future<void> setWorkdays(List<int> days) async {
+    logger.i('[SettingsRepository] setWorkdays for user $_userId: $days');
+    await _prefs.setString(_workdaysKey, days.join(','));
+    _syncToFirestore({'workdays': days});
   }
 
   /// Beim Login: Firestore-Einstellungen in SharedPreferences übernehmen.
-  /// Nur weeklyTargetHours und workdaysPerWeek werden synchronisiert —
+  /// Nur weeklyTargetHours und workdays werden synchronisiert —
   /// Benachrichtigungen sind gerätespezifisch.
   Future<void> syncFromFirestore() async {
     if (_userId == 'local' || _userId.isEmpty) return;
@@ -92,8 +103,15 @@ class SettingsRepositoryImpl implements SettingsRepository {
       if (data['weeklyTargetHours'] != null) {
         await _prefs.setDouble(_targetHoursKey, (data['weeklyTargetHours'] as num).toDouble());
       }
-      if (data['workdaysPerWeek'] != null) {
-        await _prefs.setInt(_workdaysPerWeekKey, (data['workdaysPerWeek'] as num).toInt());
+      if (data['workdays'] != null) {
+        final days = (data['workdays'] as List).map((e) => (e as num).toInt()).toList();
+        await _prefs.setString(_workdaysKey, days.join(','));
+      } else if (data['workdaysPerWeek'] != null) {
+        final legacyCount = (data['workdaysPerWeek'] as num).toInt();
+        await _prefs.setString(
+          _workdaysKey,
+          List.generate(legacyCount.clamp(0, 7), (i) => i + 1).join(','),
+        );
       }
       logger.i('[SettingsRepository] Einstellungen von Firestore geladen.');
     } catch (e) {

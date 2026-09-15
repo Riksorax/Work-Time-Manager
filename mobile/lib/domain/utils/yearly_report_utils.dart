@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import '../entities/work_entry_entity.dart';
 
 /// Aggregierte Kennzahlen für einen einzelnen Monat innerhalb des
@@ -51,13 +49,14 @@ class MonthSummary {
 ///
 /// Spiegelt bewusst dieselbe Wochen-Deckelung wie der bestehende
 /// Monatsbericht (`ReportsViewModel._calculateMonthlyReport`) — Zusatztage
-/// über [workdaysPerWeek] hinaus erhöhen das Soll nicht. Eigenständige
-/// Implementierung statt Wiederverwendung der privaten ViewModel-Methode,
-/// um bestehendes, produktiv genutztes Verhalten nicht anzufassen.
+/// an Wochentagen außerhalb von [workdays] erhöhen das Soll nicht (#217).
+/// Eigenständige Implementierung statt Wiederverwendung der privaten
+/// ViewModel-Methode, um bestehendes, produktiv genutztes Verhalten nicht
+/// anzufassen.
 MonthSummary calculateMonthSummary({
   required int month,
   required List<WorkEntryEntity> entriesForMonth,
-  required int workdaysPerWeek,
+  required List<int> workdays,
   required double targetWeeklyHours,
 }) {
   final totalNetWorkDuration = entriesForMonth.fold<Duration>(
@@ -70,7 +69,7 @@ MonthSummary calculateMonthSummary({
       .length;
 
   final targetDailyHours =
-      workdaysPerWeek > 0 ? targetWeeklyHours / workdaysPerWeek : 0.0;
+      workdays.isNotEmpty ? targetWeeklyHours / workdays.length : 0.0;
 
   final Map<int, Set<DateTime>> weekToWorkDays = {};
   for (final entry in entriesForMonth) {
@@ -82,7 +81,7 @@ MonthSummary calculateMonthSummary({
   }
   var effectiveWorkDays = 0;
   for (final days in weekToWorkDays.values) {
-    effectiveWorkDays += min(days.length, workdaysPerWeek);
+    effectiveWorkDays += days.where((d) => workdays.contains(d.weekday)).length;
   }
 
   final targetDuration = Duration(

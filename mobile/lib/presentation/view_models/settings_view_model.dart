@@ -20,9 +20,9 @@ class NoOpSettingsRepository implements SettingsRepository {
   @override
   Future<void> setTargetWeeklyHours(double hours) async {}
   @override
-  int getWorkdaysPerWeek() => 5;
+  List<int> getWorkdays() => const [1, 2, 3, 4, 5];
   @override
-  Future<void> setWorkdaysPerWeek(int days) async {}
+  Future<void> setWorkdays(List<int> days) async {}
 
   @override
   bool hasAcceptedTermsOfService() => false;
@@ -145,7 +145,7 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
       final overtimeBalance = await overtimeBalanceFuture;
       final lastOvertimeUpdate = await lastOvertimeUpdateFuture;
       final weeklyTargetHours = settingsRepository.getTargetWeeklyHours();
-      final workdaysPerWeek = settingsRepository.getWorkdaysPerWeek();
+      final workdays = settingsRepository.getWorkdays();
       final notificationsEnabled = settingsRepository.getNotificationsEnabled();
       final notificationTime = settingsRepository.getNotificationTime();
       final notificationDays = settingsRepository.getNotificationDays();
@@ -166,7 +166,7 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
 
       final settings = SettingsEntity(
         weeklyTargetHours: weeklyTargetHours,
-        workdaysPerWeek: workdaysPerWeek,
+        workdays: workdays,
         notificationsEnabled: notificationsEnabled,
         notificationTime: notificationTime,
         notificationDays: notificationDays,
@@ -229,10 +229,10 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
     }
   }
 
-  Future<void> updateWorkdaysPerWeek(WidgetRef ref, int days) async {
+  Future<void> updateWorkdays(WidgetRef ref, List<int> days) async {
     final settingsRepository = ref.read(core_providers.settingsRepositoryProvider);
-    await settingsRepository.setWorkdaysPerWeek(days);
-    final newSettings = state.value!.settings.copyWith(workdaysPerWeek: days);
+    await settingsRepository.setWorkdays(days);
+    final newSettings = state.value!.settings.copyWith(workdays: days);
     state = state.whenData((value) => value.copyWith(settings: newSettings));
 
     // Dashboard über die Änderung informieren

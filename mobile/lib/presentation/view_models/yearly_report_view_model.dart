@@ -32,7 +32,7 @@ class YearlyReportViewModel extends Notifier<YearlyReportState> {
 
     final workRepository = ref.read(core_providers.workRepositoryProvider);
     final settingsRepository = ref.read(core_providers.settingsRepositoryProvider);
-    final workdaysPerWeek = settingsRepository.getWorkdaysPerWeek();
+    final workdays = settingsRepository.getWorkdays();
     final targetWeeklyHours = settingsRepository.getTargetWeeklyHours();
 
     List<MonthSummary> months;
@@ -44,7 +44,7 @@ class YearlyReportViewModel extends Notifier<YearlyReportState> {
         return calculateMonthSummary(
           month: i + 1,
           entriesForMonth: entriesPerMonth[i],
-          workdaysPerWeek: workdaysPerWeek,
+          workdays: workdays,
           targetWeeklyHours: targetWeeklyHours,
         );
       });

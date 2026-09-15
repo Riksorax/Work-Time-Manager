@@ -21,7 +21,7 @@ void main() {
       final summary = calculateMonthSummary(
         month: 3,
         entriesForMonth: const [],
-        workdaysPerWeek: 5,
+        workdays: const [1, 2, 3, 4, 5],
         targetWeeklyHours: 40,
       );
 
@@ -44,7 +44,7 @@ void main() {
       final summary = calculateMonthSummary(
         month: 1,
         entriesForMonth: entries,
-        workdaysPerWeek: 5,
+        workdays: const [1, 2, 3, 4, 5],
         targetWeeklyHours: 40,
       );
 
@@ -53,7 +53,7 @@ void main() {
       expect(summary.overtime, Duration.zero);
     });
 
-    test('Zusatztag über workdaysPerWeek hinaus zählt voll als Überstunden', () {
+    test('Zusatztag über workdays hinaus zählt voll als Überstunden', () {
       // Mo-Sa (6 Tage) bei einer 5-Tage-Woche
       final entries = List.generate(
         6,
@@ -63,7 +63,7 @@ void main() {
       final summary = calculateMonthSummary(
         month: 1,
         entriesForMonth: entries,
-        workdaysPerWeek: 5,
+        workdays: const [1, 2, 3, 4, 5],
         targetWeeklyHours: 40,
       );
 
@@ -85,7 +85,7 @@ void main() {
       final summary = calculateMonthSummary(
         month: 6,
         entriesForMonth: entries,
-        workdaysPerWeek: 5,
+        workdays: const [1, 2, 3, 4, 5],
         targetWeeklyHours: 40,
       );
 
@@ -103,7 +103,7 @@ void main() {
       final summary = calculateMonthSummary(
         month: 2,
         entriesForMonth: [entry],
-        workdaysPerWeek: 5,
+        workdays: const [1, 2, 3, 4, 5],
         targetWeeklyHours: 40,
       );
 

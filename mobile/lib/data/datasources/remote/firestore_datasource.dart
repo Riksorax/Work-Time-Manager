@@ -30,7 +30,7 @@ abstract class FirestoreDataSource {
   // User Profile
   Future<void> setUserProfile(String userId, Map<String, dynamic> data);
 
-  // Settings (plattformübergreifend: weeklyTargetHours, workdaysPerWeek)
+  // Settings (plattformübergreifend: weeklyTargetHours, workdays)
   Future<Map<String, dynamic>?> getSettings(String userId);
   Future<void> saveSettings(String userId, Map<String, dynamic> settings);
 }

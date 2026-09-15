@@ -75,7 +75,7 @@ class MockSettingsActions extends _i1.Mock implements _i2.SettingsActions {
       ) as _i4.Future<void>);
 
   @override
-  _i4.Future<void> updateWorkdays(int? days) => (super.noSuchMethod(
+  _i4.Future<void> updateWorkdays(List<int>? days) => (super.noSuchMethod(
         Invocation.method(
           #updateWorkdays,
           [days],

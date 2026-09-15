@@ -5,7 +5,7 @@ import 'package:flutter_work_time/domain/utils/overtime_utils.dart';
 void main() {
   const regularTarget = Duration(hours: 8);
 
-  WorkEntryEntity _makeEntry(DateTime date, {bool withWork = true}) {
+  WorkEntryEntity makeEntry(DateTime date, {bool withWork = true}) {
     return WorkEntryEntity(
       id: date.toIso8601String(),
       date: date,
@@ -15,201 +15,145 @@ void main() {
   }
 
   group('getEffectiveDailyTarget', () {
-    test('5 Arbeitstage in 5-Tage-Woche: alle regulär', () {
-      // Mo 2023-10-23 bis Fr 2023-10-27
-      final entries = [
-        _makeEntry(DateTime(2023, 10, 23)), // Mo
-        _makeEntry(DateTime(2023, 10, 24)), // Di
-        _makeEntry(DateTime(2023, 10, 25)), // Mi
-        _makeEntry(DateTime(2023, 10, 26)), // Do
-        _makeEntry(DateTime(2023, 10, 27)), // Fr
-      ];
+    const monFri = [1, 2, 3, 4, 5];
 
-      for (final entry in entries) {
+    test('Mo-Fr-Vertrag: jeder Wochentag Mo-Fr erhält reguläres Soll', () {
+      for (final date in [
+        DateTime(2023, 10, 23), // Mo
+        DateTime(2023, 10, 24), // Di
+        DateTime(2023, 10, 25), // Mi
+        DateTime(2023, 10, 26), // Do
+        DateTime(2023, 10, 27), // Fr
+      ]) {
         final target = getEffectiveDailyTarget(
-          date: entry.date,
-          weekEntries: entries,
-          workdaysPerWeek: 5,
+          date: date,
+          workdays: monFri,
           regularDailyTarget: regularTarget,
         );
-        expect(target, regularTarget,
-            reason: 'Tag ${entry.date.weekday} sollte reguläres Soll haben');
+        expect(target, regularTarget, reason: '$date sollte reguläres Soll haben');
       }
     });
 
-    test('6 Arbeitstage in 5-Tage-Woche: 6. Tag ist Zusatztag', () {
-      final entries = [
-        _makeEntry(DateTime(2023, 10, 23)), // Mo
-        _makeEntry(DateTime(2023, 10, 24)), // Di
-        _makeEntry(DateTime(2023, 10, 25)), // Mi
-        _makeEntry(DateTime(2023, 10, 26)), // Do
-        _makeEntry(DateTime(2023, 10, 27)), // Fr
-        _makeEntry(DateTime(2023, 10, 28)), // Sa (Zusatztag)
-      ];
-
-      // Mo-Fr: reguläres Soll
-      for (int i = 0; i < 5; i++) {
-        final target = getEffectiveDailyTarget(
-          date: entries[i].date,
-          weekEntries: entries,
-          workdaysPerWeek: 5,
-          regularDailyTarget: regularTarget,
-        );
-        expect(target, regularTarget,
-            reason: 'Tag ${entries[i].date.day} sollte reguläres Soll haben');
-      }
-
-      // Sa: Zusatztag, Soll = 0
-      final satTarget = getEffectiveDailyTarget(
-        date: DateTime(2023, 10, 28),
-        weekEntries: entries,
-        workdaysPerWeek: 5,
-        regularDailyTarget: regularTarget,
-      );
-      expect(satTarget, Duration.zero);
-    });
-
-    test('7 Arbeitstage in 5-Tage-Woche: Sa und So sind Zusatztage', () {
-      final entries = [
-        _makeEntry(DateTime(2023, 10, 23)), // Mo
-        _makeEntry(DateTime(2023, 10, 24)), // Di
-        _makeEntry(DateTime(2023, 10, 25)), // Mi
-        _makeEntry(DateTime(2023, 10, 26)), // Do
-        _makeEntry(DateTime(2023, 10, 27)), // Fr
-        _makeEntry(DateTime(2023, 10, 28)), // Sa
-        _makeEntry(DateTime(2023, 10, 29)), // So
-      ];
-
+    test('Mo-Fr-Vertrag: Samstag und Sonntag sind Zusatztage', () {
       expect(
         getEffectiveDailyTarget(
-          date: DateTime(2023, 10, 28),
-          weekEntries: entries,
-          workdaysPerWeek: 5,
+          date: DateTime(2023, 10, 28), // Sa
+          workdays: monFri,
           regularDailyTarget: regularTarget,
         ),
         Duration.zero,
       );
       expect(
         getEffectiveDailyTarget(
-          date: DateTime(2023, 10, 29),
-          weekEntries: entries,
-          workdaysPerWeek: 5,
+          date: DateTime(2023, 10, 29), // So
+          workdays: monFri,
           regularDailyTarget: regularTarget,
         ),
         Duration.zero,
       );
     });
 
-    test('3 Arbeitstage in 5-Tage-Woche: alle regulär', () {
-      final entries = [
-        _makeEntry(DateTime(2023, 10, 23)), // Mo
-        _makeEntry(DateTime(2023, 10, 25)), // Mi
-        _makeEntry(DateTime(2023, 10, 27)), // Fr
-      ];
+    test('Di-Sa-Vertrag: Montag ist Zusatztag, Samstag ist Soll-Tag (Bug-Fix #217)', () {
+      const tueSat = [2, 3, 4, 5, 6];
 
-      for (final entry in entries) {
-        final target = getEffectiveDailyTarget(
-          date: entry.date,
-          weekEntries: entries,
-          workdaysPerWeek: 5,
+      // Der ursprüngliche Bug: bei ordinaler Zählung ("erste N Tage der
+      // Woche") bekam Montag fälschlich ein Soll und Samstag keins.
+      expect(
+        getEffectiveDailyTarget(
+          date: DateTime(2023, 10, 23), // Mo
+          workdays: tueSat,
           regularDailyTarget: regularTarget,
-        );
-        expect(target, regularTarget);
-      }
-    });
-
-    test('Tag nicht in Einträgen: reguläres Soll', () {
-      final entries = [
-        _makeEntry(DateTime(2023, 10, 23)), // Mo
-        _makeEntry(DateTime(2023, 10, 24)), // Di
-      ];
-
-      // Mi ist nicht in den Einträgen
-      final target = getEffectiveDailyTarget(
-        date: DateTime(2023, 10, 25),
-        weekEntries: entries,
-        workdaysPerWeek: 5,
-        regularDailyTarget: regularTarget,
+        ),
+        Duration.zero,
+        reason: 'Montag ist bei Di-Sa-Vertrag kein Soll-Tag',
       );
-      expect(target, regularTarget);
-    });
-
-    test('Einträge ohne workStart werden ignoriert', () {
-      final entries = [
-        _makeEntry(DateTime(2023, 10, 23)), // Mo (mit Arbeit)
-        _makeEntry(DateTime(2023, 10, 24)), // Di (mit Arbeit)
-        _makeEntry(DateTime(2023, 10, 25)), // Mi (mit Arbeit)
-        _makeEntry(DateTime(2023, 10, 26)), // Do (mit Arbeit)
-        _makeEntry(DateTime(2023, 10, 27)), // Fr (mit Arbeit)
-        _makeEntry(DateTime(2023, 10, 28), withWork: false), // Sa (ohne Arbeit)
-      ];
-
-      // Sa ohne workStart sollte nicht als Arbeitstag zählen
-      // => Nur 5 echte Arbeitstage, kein Zusatztag
-      final satTarget = getEffectiveDailyTarget(
-        date: DateTime(2023, 10, 28),
-        weekEntries: entries,
-        workdaysPerWeek: 5,
-        regularDailyTarget: regularTarget,
+      expect(
+        getEffectiveDailyTarget(
+          date: DateTime(2023, 10, 28), // Sa
+          workdays: tueSat,
+          regularDailyTarget: regularTarget,
+        ),
+        regularTarget,
+        reason: 'Samstag ist bei Di-Sa-Vertrag ein Soll-Tag',
       );
-      // Der Tag ist nicht in den "workDays" (kein workStart), also reguläres Soll
-      expect(satTarget, regularTarget);
     });
 
-    test('4-Tage-Woche: 5. Tag ist Zusatztag', () {
-      final entries = [
-        _makeEntry(DateTime(2023, 10, 23)), // Mo
-        _makeEntry(DateTime(2023, 10, 24)), // Di
-        _makeEntry(DateTime(2023, 10, 25)), // Mi
-        _makeEntry(DateTime(2023, 10, 26)), // Do
-        _makeEntry(DateTime(2023, 10, 27)), // Fr (Zusatztag bei 4-Tage-Woche)
-      ];
-
+    test('4-Tage-Woche (Mo-Do): Freitag ist Zusatztag', () {
       final target = getEffectiveDailyTarget(
-        date: DateTime(2023, 10, 27),
-        weekEntries: entries,
-        workdaysPerWeek: 4,
+        date: DateTime(2023, 10, 27), // Fr
+        workdays: const [1, 2, 3, 4],
         regularDailyTarget: const Duration(hours: 10),
       );
       expect(target, Duration.zero);
     });
+
+    test('gilt unabhängig davon, ob an dem Tag tatsächlich gearbeitet wurde', () {
+      // Die Funktion braucht keine Einträge mehr - nur den Wochentag.
+      final target = getEffectiveDailyTarget(
+        date: DateTime(2023, 10, 25), // Mi, kein Eintrag vorhanden
+        workdays: monFri,
+        regularDailyTarget: regularTarget,
+      );
+      expect(target, regularTarget);
+    });
   });
 
   group('getEffectiveWorkDays', () {
-    test('begrenzt auf workdaysPerWeek', () {
+    test('zählt nur Tage, deren Wochentag zu den Arbeitstagen gehört', () {
       final entries = [
-        _makeEntry(DateTime(2023, 10, 23)),
-        _makeEntry(DateTime(2023, 10, 24)),
-        _makeEntry(DateTime(2023, 10, 25)),
-        _makeEntry(DateTime(2023, 10, 26)),
-        _makeEntry(DateTime(2023, 10, 27)),
-        _makeEntry(DateTime(2023, 10, 28)), // 6. Tag
+        makeEntry(DateTime(2023, 10, 23)), // Mo
+        makeEntry(DateTime(2023, 10, 24)), // Di
+        makeEntry(DateTime(2023, 10, 25)), // Mi
+        makeEntry(DateTime(2023, 10, 26)), // Do
+        makeEntry(DateTime(2023, 10, 27)), // Fr
+        makeEntry(DateTime(2023, 10, 28)), // Sa - kein Vertragstag
       ];
 
-      final effective = getEffectiveWorkDays(entries: entries, workdaysPerWeek: 5);
+      final effective = getEffectiveWorkDays(entries: entries, workdays: const [1, 2, 3, 4, 5]);
       expect(effective, 5);
     });
 
-    test('weniger als workdaysPerWeek gibt tatsächliche Anzahl zurück', () {
+    test('Di-Sa-Vertrag: Arbeit an einem Montag zählt nicht mit (Bug-Fix #217)', () {
       final entries = [
-        _makeEntry(DateTime(2023, 10, 23)),
-        _makeEntry(DateTime(2023, 10, 24)),
-        _makeEntry(DateTime(2023, 10, 25)),
+        makeEntry(DateTime(2023, 10, 23)), // Mo - kein Vertragstag
+        makeEntry(DateTime(2023, 10, 24)), // Di
+        makeEntry(DateTime(2023, 10, 25)), // Mi
       ];
 
-      final effective = getEffectiveWorkDays(entries: entries, workdaysPerWeek: 5);
+      final effective = getEffectiveWorkDays(entries: entries, workdays: const [2, 3, 4, 5, 6]);
+      expect(effective, 2);
+    });
+
+    test('weniger Einträge als Vertragstage gibt tatsächliche Anzahl zurück', () {
+      final entries = [
+        makeEntry(DateTime(2023, 10, 23)),
+        makeEntry(DateTime(2023, 10, 24)),
+        makeEntry(DateTime(2023, 10, 25)),
+      ];
+
+      final effective = getEffectiveWorkDays(entries: entries, workdays: const [1, 2, 3, 4, 5]);
       expect(effective, 3);
+    });
+
+    test('Einträge ohne workStart werden ignoriert', () {
+      final entries = [
+        makeEntry(DateTime(2023, 10, 23)),
+        makeEntry(DateTime(2023, 10, 24), withWork: false),
+      ];
+
+      final effective = getEffectiveWorkDays(entries: entries, workdays: const [1, 2, 3, 4, 5]);
+      expect(effective, 1);
     });
   });
 
   group('getWeekEntriesForDate', () {
     test('filtert korrekt für die Woche eines Datums', () {
       final allEntries = [
-        _makeEntry(DateTime(2023, 10, 20)), // Vorherige Woche (Fr)
-        _makeEntry(DateTime(2023, 10, 23)), // Mo (aktuelle Woche)
-        _makeEntry(DateTime(2023, 10, 24)), // Di
-        _makeEntry(DateTime(2023, 10, 25)), // Mi
-        _makeEntry(DateTime(2023, 10, 30)), // Nächste Woche (Mo)
+        makeEntry(DateTime(2023, 10, 20)), // Vorherige Woche (Fr)
+        makeEntry(DateTime(2023, 10, 23)), // Mo (aktuelle Woche)
+        makeEntry(DateTime(2023, 10, 24)), // Di
+        makeEntry(DateTime(2023, 10, 25)), // Mi
+        makeEntry(DateTime(2023, 10, 30)), // Nächste Woche (Mo)
       ];
 
       final weekEntries = getWeekEntriesForDate(DateTime(2023, 10, 25), allEntries);
