@@ -26,6 +26,10 @@ class SettingsEntity extends Equatable {
   /// Whether to notify about missing break entries.
   final bool notifyBreaks;
 
+  /// Whether times are displayed in 24-hour format (true) or 12-hour
+  /// format with AM/PM (false). Siehe #218.
+  final bool use24HourFormat;
+
   const SettingsEntity({
     this.weeklyTargetHours = 40.0,
     this.workdaysPerWeek = 5,
@@ -35,6 +39,7 @@ class SettingsEntity extends Equatable {
     this.notifyWorkStart = true,
     this.notifyWorkEnd = true,
     this.notifyBreaks = true,
+    this.use24HourFormat = true,
   });
 
   /// Creates a copy of this [SettingsEntity] but with the given fields
@@ -48,6 +53,7 @@ class SettingsEntity extends Equatable {
     bool? notifyWorkStart,
     bool? notifyWorkEnd,
     bool? notifyBreaks,
+    bool? use24HourFormat,
   }) {
     return SettingsEntity(
       weeklyTargetHours: weeklyTargetHours ?? this.weeklyTargetHours,
@@ -58,6 +64,7 @@ class SettingsEntity extends Equatable {
       notifyWorkStart: notifyWorkStart ?? this.notifyWorkStart,
       notifyWorkEnd: notifyWorkEnd ?? this.notifyWorkEnd,
       notifyBreaks: notifyBreaks ?? this.notifyBreaks,
+      use24HourFormat: use24HourFormat ?? this.use24HourFormat,
     );
   }
 
@@ -71,5 +78,6 @@ class SettingsEntity extends Equatable {
         notifyWorkStart,
         notifyWorkEnd,
         notifyBreaks,
+        use24HourFormat,
       ];
 }

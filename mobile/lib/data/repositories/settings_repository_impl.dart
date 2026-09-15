@@ -18,6 +18,8 @@ class SettingsRepositoryImpl implements SettingsRepository {
   static const String _notifyWorkStartKey = 'notify_work_start';
   static const String _notifyWorkEndKey = 'notify_work_end';
   static const String _notifyBreaksKey = 'notify_breaks';
+  // Zeitformat ist geräteweit, nicht userId-spezifisch (wie Theme/Benachrichtigungen).
+  static const String _use24HourFormatKey = 'use_24_hour_format';
 
   final SharedPreferences _prefs;
   final FirestoreDataSource _firestoreDataSource;
@@ -182,5 +184,15 @@ class SettingsRepositoryImpl implements SettingsRepository {
   @override
   Future<void> setNotifyBreaks(bool enabled) async {
     await _prefs.setBool(_notifyBreaksKey, enabled);
+  }
+
+  @override
+  bool getUse24HourFormat() {
+    return _prefs.getBool(_use24HourFormatKey) ?? true;
+  }
+
+  @override
+  Future<void> setUse24HourFormat(bool use24Hour) async {
+    await _prefs.setBool(_use24HourFormatKey, use24Hour);
   }
 }

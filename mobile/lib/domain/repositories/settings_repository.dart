@@ -70,4 +70,11 @@ abstract class SettingsRepository {
 
   /// Speichert, ob Pausen-Benachrichtigungen aktiviert sind.
   Future<void> setNotifyBreaks(bool enabled);
+
+  /// Ruft ab, ob Uhrzeiten im 24-Stunden-Format angezeigt werden
+  /// (false = 12-Stunden-Format mit AM/PM). Siehe #218.
+  bool getUse24HourFormat();
+
+  /// Speichert, ob Uhrzeiten im 24-Stunden-Format angezeigt werden.
+  Future<void> setUse24HourFormat(bool use24Hour);
 }
