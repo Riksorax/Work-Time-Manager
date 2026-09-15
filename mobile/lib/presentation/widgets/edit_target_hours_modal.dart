@@ -87,8 +87,9 @@ class _EditTargetHoursModalState extends ConsumerState<EditTargetHoursModal> {
                 if (number == null) {
                   return 'Ungültige Zahl.';
                 }
-                if (number <= 0 || number > 100) {
-                  return 'Bitte geben Sie einen Wert zwischen 1 und 100 ein.';
+                // Gesetzliche Obergrenze nach § 3 ArbZG: max. 48 Std./Woche.
+                if (number <= 0 || number > 48) {
+                  return 'Bitte geben Sie einen Wert zwischen 1 und 48 ein (gesetzliches Maximum nach § 3 ArbZG).';
                 }
                 return null;
               },
