@@ -13,6 +13,7 @@ import '../widgets/premium_blur_gate.dart';
 import '../state/reports_state.dart';
 import '../view_models/reports_view_model.dart';
 import '../view_models/settings_view_model.dart';
+import '../view_models/yearly_report_view_model.dart';
 import '../view_models/auth_view_model.dart';
 import '../widgets/common/loading_indicator.dart';
 import '../widgets/edit_work_entry_modal.dart';
@@ -82,7 +83,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(reportsViewModelProvider.notifier).loadCurrentMonthData();
@@ -125,6 +126,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
             Tab(text: 'Täglich'),
             Tab(text: 'Wöchentlich'),
             Tab(text: 'Monatlich'),
+            Tab(text: 'Jährlich'),
           ],
         ),
       ),
@@ -135,6 +137,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
               onEntryTap: (entry) => _showEditWorkEntryModal(entry, context)),
           const WeeklyReportView(),
           const MonthlyReportView(),
+          const YearlyReportView(),
         ],
       ),
     );
@@ -1084,6 +1087,230 @@ class MonthlyReportView extends ConsumerWidget {
       loading: () => const LoadingIndicator(),
       error: (error, stackTrace) => Center(
         child: Text('Fehler beim Laden der Einstellungen: $error'),
+      ),
+    );
+  }
+}
+
+/// Jahresbericht (Premium, siehe #136): Monatsvergleich, Gesamtüberstunden
+/// sowie Urlaubs-/Kranktage über ein Kalenderjahr.
+class YearlyReportView extends ConsumerStatefulWidget {
+  const YearlyReportView({super.key});
+
+  @override
+  ConsumerState<YearlyReportView> createState() => _YearlyReportViewState();
+}
+
+class _YearlyReportViewState extends ConsumerState<YearlyReportView> {
+  // TabBarView baut alle Tabs sofort auf - der Ladevorgang wird daher nicht
+  // in initState() ausgelöst, sondern erst wenn der Bericht tatsächlich
+  // sichtbar wäre (eingeloggt + Premium). Vermeidet unnötige
+  // Firestore-/API-Reads für Nutzer ohne Zugriff auf diesen Tab und lädt
+  // auch nach, falls ein Premium-Upgrade erst während der Session passiert.
+  bool _loadTriggered = false;
+
+  void _loadIfNeeded() {
+    if (_loadTriggered) return;
+    _loadTriggered = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(yearlyReportViewModelProvider.notifier).loadYear(DateTime.now().year);
+    });
+  }
+
+  String _formatDuration(Duration duration) {
+    final bool isNegative = duration.isNegative;
+    final Duration absDuration = duration.abs();
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final hours = twoDigits(absDuration.inHours);
+    final minutes = twoDigits(absDuration.inMinutes.remainder(60));
+    final sign = isNegative ? '-' : '+';
+    return '$sign$hours:$minutes';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final authState = ref.watch(authStateProvider);
+    final user = authState.asData?.value;
+
+    // 1. Nicht eingeloggt: Nur Anmelde-Aufforderung
+    if (user == null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('Anmeldung erforderlich für Jahresberichte'),
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: () {
+                ref.read(pendingReportTabIndexProvider.notifier).state = 3;
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                      builder: (context) => const LoginPage(returnToIndex: 1)),
+                );
+              },
+              child: const Text('Anmelden'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // 2. Eingeloggt: Prüfe Premium-Status
+    final isPremium = ref.watch(isPremiumProvider);
+
+    if (!isPremium) {
+      return PremiumBlurGate(
+        featureTitle: 'Jahresberichte',
+        featureText:
+            'Jahresübersicht mit Monatsvergleich, Gesamtüberstunden sowie Urlaubs- und Kranktagen.',
+        onUpgrade: kIsWeb ? null : () {
+          if (context.mounted) _showPaywall(context);
+        },
+        child: const _MonthlyReportPlaceholder(),
+      );
+    }
+
+    // 3. Eingeloggt & Premium: Zeige Bericht
+    _loadIfNeeded();
+    final yearlyState = ref.watch(yearlyReportViewModelProvider);
+    final yearlyNotifier = ref.read(yearlyReportViewModelProvider.notifier);
+
+    if (yearlyState.isLoading) {
+      return const LoadingIndicator();
+    }
+
+    const monthNames = [
+      'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
+      'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember',
+    ];
+
+    return ResponsiveCenter(
+      child: ListView(
+        padding: const EdgeInsets.all(16.0),
+        children: [
+          // Jahresnavigation
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.chevron_left),
+                onPressed: () => yearlyNotifier.loadYear(yearlyState.year - 1),
+                tooltip: 'Vorheriges Jahr',
+              ),
+              Expanded(
+                child: Text(
+                  '${yearlyState.year}',
+                  style: Theme.of(context).textTheme.titleLarge,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.chevron_right),
+                onPressed: () => yearlyNotifier.loadYear(yearlyState.year + 1),
+                tooltip: 'Nächstes Jahr',
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (yearlyState.totalWorkDays == 0 &&
+              yearlyState.totalVacationDays == 0 &&
+              yearlyState.totalSickDays == 0)
+            const Center(child: Text('Keine Daten für dieses Jahr.'))
+          else ...[
+            // Statistikkarte
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Gesamte Arbeitszeit:',
+                            style: TextStyle(fontWeight: FontWeight.bold)),
+                        Text(
+                            yearlyState.totalNetWorkDuration.toString().split('.').first,
+                            style: const TextStyle(fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Arbeitstage:'),
+                        Text('${yearlyState.totalWorkDays}'),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Urlaubstage:'),
+                        Text('${yearlyState.totalVacationDays}'),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Krankheitstage:'),
+                        Text('${yearlyState.totalSickDays}'),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Feiertage:'),
+                        Text('${yearlyState.totalHolidayDays}'),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Gesamt-Überstunden:',
+                            style: TextStyle(fontWeight: FontWeight.bold)),
+                        Text(
+                          _formatDuration(yearlyState.totalOvertime),
+                          style: TextStyle(
+                              color: yearlyState.totalOvertime.isNegative
+                                  ? Colors.red
+                                  : Colors.green,
+                              fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Text('Monatsübersicht:',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            const SizedBox(height: 8),
+            for (final monthSummary in yearlyState.months)
+              if (monthSummary.workDays > 0 ||
+                  monthSummary.vacationDays > 0 ||
+                  monthSummary.sickDays > 0 ||
+                  monthSummary.holidayDays > 0)
+                Card(
+                  margin: const EdgeInsets.symmetric(vertical: 4.0),
+                  child: ListTile(
+                    title: Text(monthNames[monthSummary.month - 1]),
+                    subtitle: Text(
+                        '${monthSummary.workDays} Arbeitstage · ${monthSummary.netWorkDuration.toString().split('.').first}'),
+                    trailing: Text(
+                      _formatDuration(monthSummary.overtime),
+                      style: TextStyle(
+                          color: monthSummary.overtime.isNegative
+                              ? Colors.red
+                              : Colors.green),
+                    ),
+                  ),
+                ),
+          ],
+        ],
       ),
     );
   }
