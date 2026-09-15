@@ -32,8 +32,7 @@ public static class ReportCalculator
         IReadOnlyList<WorkEntryDto> monthEntries, DateOnly date, SettingsDto settings)
     {
         var daily = DailyTargetMs(settings);
-        var weekEntries = FilterByWeek(monthEntries, date);
-        var target = EffectiveDailyTarget(date, weekEntries, settings, daily);
+        var target = settings.Workdays.Contains(IsoDow(date)) ? daily : 0;
 
         long worked = 0;
         long manualMs = 0;
@@ -80,7 +79,7 @@ public static class ReportCalculator
             dayMap[key] = dayMap.GetValueOrDefault(key) + worked;
         }
 
-        var effectiveDays = Math.Min(workDays.Count, settings.WorkdaysPerWeek);
+        var effectiveDays = workDays.Count(d => settings.Workdays.Contains(IsoDow(d)));
         var weekTarget = effectiveDays * daily;
         var netWork = totalWorked - totalBreaks;
         var days = dayMap.OrderBy(kvp => kvp.Key)
@@ -138,7 +137,7 @@ public static class ReportCalculator
         }
 
         var effectiveTotalWorkDays = weekWorkDays.Values
-            .Sum(set => Math.Min(set.Count, settings.WorkdaysPerWeek));
+            .Sum(set => set.Count(d => settings.Workdays.Contains(IsoDow(d))));
         var monthTarget = effectiveTotalWorkDays * daily;
         var netWork = totalWorked - totalBreaks;
         var monthlyOvertime = netWork - monthTarget + manualMs;
@@ -166,7 +165,7 @@ public static class ReportCalculator
     // ─── Helpers ─────────────────────────────────────────────────────────────
 
     private static long DailyTargetMs(SettingsDto s) =>
-        (long)(s.WeeklyTargetHours * 3_600_000 / s.WorkdaysPerWeek);
+        s.Workdays.Count == 0 ? 0 : (long)(s.WeeklyTargetHours * 3_600_000 / s.Workdays.Count);
 
     private static long SumBreakMs(WorkEntryDto entry) =>
         entry.Breaks.Where(b => b.End is not null)
@@ -182,21 +181,6 @@ public static class ReportCalculator
         if (entry.Type != "work" || entry.WorkStart is null || entry.WorkEnd is null) return 0;
         var net = GrossWorkMs(entry) - SumBreakMs(entry);
         return net > 0 ? net : 0;
-    }
-
-    private static long EffectiveDailyTarget(
-        DateOnly date, IReadOnlyList<WorkEntryDto> weekEntries, SettingsDto settings, long daily)
-    {
-        var workDays = weekEntries
-            .Where(e => e.WorkStart is not null || e.Type != "work")
-            .Select(e => DatePart(e.Date))
-            .Distinct()
-            .OrderBy(d => d)
-            .ToList();
-
-        var idx = workDays.IndexOf(date);
-        if (idx == -1) return daily;
-        return idx < settings.WorkdaysPerWeek ? daily : 0;
     }
 
     private static IReadOnlyList<WorkEntryDto> FilterByWeek(IReadOnlyList<WorkEntryDto> entries, DateOnly date)
