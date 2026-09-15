@@ -239,7 +239,7 @@ class SettingsPage extends ConsumerWidget {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.workspace_premium, color: Colors.orange),
+                  const Icon(Icons.subscriptions, color: Colors.orange),
                   const SizedBox(width: 12),
                   Text('Dein Abo', style: Theme.of(context).textTheme.titleMedium),
                 ],
