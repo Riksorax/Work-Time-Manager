@@ -53,17 +53,15 @@ function weekBounds(date: Date): { start: Date; end: Date } {
   return { start, end };
 }
 
-function filterByWeek(entries: WorkEntry[], date: Date): WorkEntry[] {
-  const { start, end } = weekBounds(date);
-  return entries.filter(e => {
-    const ed = startOfDay(e.date);
-    return ed >= start && ed <= end;
-  });
+function isoWeekday(d: Date): number {
+  const day = d.getDay();
+  return day === 0 ? 7 : day;
 }
 
 function dailyTargetMs(settings: UserSettings): number {
   // Auf volle Minuten runden — die App rechnet durchgehend minutengenau.
-  return roundMsToMinute((settings.weeklyTargetHours * 3600000) / settings.workdaysPerWeek);
+  if (settings.workdays.length === 0) return 0;
+  return roundMsToMinute((settings.weeklyTargetHours * 3600000) / settings.workdays.length);
 }
 
 // ─── Injectable Service ────────────────────────────────────────────────────────
@@ -100,10 +98,9 @@ export class ReportCalculatorService {
     settings: UserSettings,
   ): DailyStat {
     const daily = dailyTargetMs(settings);
-    const weekEntries = filterByWeek(monthEntries, date);
 
-    // Effektives Tagessoll (0 wenn Zusatztag jenseits workdaysPerWeek)
-    const target = this._effectiveDailyTarget(date, weekEntries, settings, daily);
+    // Effektives Tagessoll (0 wenn der Wochentag kein Vertrags-Arbeitstag ist)
+    const target = settings.workdays.includes(isoWeekday(date)) ? daily : 0;
 
     const dayEntries = monthEntries.filter(e => isSameDayRc(e.date, date));
     let worked = 0;
@@ -165,7 +162,7 @@ export class ReportCalculatorService {
       dayMap.set(key, (dayMap.get(key) ?? 0) + worked);
     }
 
-    const effectiveDays = Math.min(workDaySet.size, settings.workdaysPerWeek);
+    const effectiveDays = [...workDaySet].filter(k => settings.workdays.includes(isoWeekday(keyToDate(k)))).length;
     const weekTarget    = effectiveDays * daily;
     const netWork       = totalWorked - totalBreaks;
     const overtime      = netWork - weekTarget + manualMs;
@@ -233,10 +230,10 @@ export class ReportCalculatorService {
       weekTotals.set(weekNum, (weekTotals.get(weekNum) ?? 0) + worked);
     }
 
-    // Effektive Arbeitstage: je Woche max workdaysPerWeek
+    // Effektive Arbeitstage: nur Tage, deren Wochentag zu den Vertrags-Arbeitstagen gehört
     let effectiveTotalWorkDays = 0;
     for (const [, daySet] of weekWorkDays) {
-      effectiveTotalWorkDays += Math.min(daySet.size, settings.workdaysPerWeek);
+      effectiveTotalWorkDays += [...daySet].filter(k => settings.workdays.includes(isoWeekday(keyToDate(k)))).length;
     }
 
     const monthTarget       = effectiveTotalWorkDays * daily;
@@ -269,25 +266,5 @@ export class ReportCalculatorService {
       weeks,
       days,
     };
-  }
-
-  // ─── Private ─────────────────────────────────────────────────────────────────
-
-  private _effectiveDailyTarget(
-    date: Date,
-    weekEntries: WorkEntry[],
-    settings: UserSettings,
-    daily: number,
-  ): number {
-    const workDays = [...new Set(
-      weekEntries
-        .filter(e => e.workStart || e.type !== WorkEntryType.Work)
-        .map(e => toDateKey(e.date))
-    )].sort();
-
-    const key = toDateKey(date);
-    const idx = workDays.indexOf(key);
-    if (idx === -1) return daily;
-    return idx < settings.workdaysPerWeek ? daily : 0;
   }
 }

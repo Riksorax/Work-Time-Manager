@@ -1,28 +1,25 @@
-import { WorkEntry, WorkEntryType } from '../../shared/models';
+import { WorkEntry } from '../../shared/models';
+
+/** ISO-Wochentag (1 = Montag, 7 = Sonntag) für ein Datum. */
+function isoWeekday(d: Date): number {
+  const day = d.getDay();
+  return day === 0 ? 7 : day;
+}
 
 export function getEffectiveDailyTarget(
   date: Date,
-  weekEntries: WorkEntry[],
-  workdaysPerWeek: number,
+  workdays: number[],
   regularDailyTargetMs: number,
 ): number {
-  const workDays = [...new Set(
-    weekEntries
-      .filter(e => e.workStart || e.type !== WorkEntryType.Work)
-      .map(e => toDateKey(e.date))
-  )].sort();
-
-  const dayKey = toDateKey(date);
-  const idx = workDays.indexOf(dayKey);
-
-  if (idx === -1) return regularDailyTargetMs;
-  if (idx < workdaysPerWeek) return regularDailyTargetMs;
-  return 0;
+  return workdays.includes(isoWeekday(date)) ? regularDailyTargetMs : 0;
 }
 
-export function getEffectiveWorkDays(entries: WorkEntry[], workdaysPerWeek: number): number {
-  const unique = new Set(entries.filter(e => e.workStart).map(e => toDateKey(e.date))).size;
-  return Math.min(unique, workdaysPerWeek);
+export function getEffectiveWorkDays(entries: WorkEntry[], workdays: number[]): number {
+  const uniqueDays = new Map<string, Date>();
+  for (const e of entries) {
+    if (e.workStart) uniqueDays.set(toDateKey(e.date), e.date);
+  }
+  return [...uniqueDays.values()].filter(d => workdays.includes(isoWeekday(d))).length;
 }
 
 export function getWeekEntriesForDate(date: Date, monthlyEntries: WorkEntry[]): WorkEntry[] {

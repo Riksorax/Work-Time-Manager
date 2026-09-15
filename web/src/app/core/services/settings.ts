@@ -7,6 +7,19 @@ import { UserSettings } from '../../shared/models';
 
 const LS_KEY = 'user_settings';
 
+/**
+ * Migriert das alte `workdaysPerWeek`-Feld (Anzahl) in das neue `workdays`-
+ * Feld (konkrete ISO-Wochentage), damit bestehende Nutzer ihr bisheriges
+ * Verhalten ("erste N Tage ab Montag") behalten. Siehe #217.
+ */
+function migrateWorkdays(raw: Partial<UserSettings> & { workdaysPerWeek?: number }): Partial<UserSettings> {
+  if (raw.workdays == null && typeof raw.workdaysPerWeek === 'number') {
+    const count = Math.min(Math.max(raw.workdaysPerWeek, 0), 7);
+    return { ...raw, workdays: Array.from({ length: count }, (_, i) => i + 1) };
+  }
+  return raw;
+}
+
 @Injectable({ providedIn: 'root' })
 export class SettingsService {
   private readonly firestore = inject(Firestore);
@@ -16,7 +29,7 @@ export class SettingsService {
 
   private readonly defaultSettings: UserSettings = {
     weeklyTargetHours: 40,
-    workdaysPerWeek: 5,
+    workdays: [1, 2, 3, 4, 5],
     notificationsEnabled: false,
     notificationTime: '08:00',
     notificationDays: [1, 2, 3, 4, 5],
@@ -37,7 +50,10 @@ export class SettingsService {
           runInInjectionContext(this.injector, () => {
             const ref = doc(this.firestore, `users/${user.uid}/settings/current`);
             unsub = onSnapshot(ref,
-              snap => observer.next({ ...this.defaultSettings, ...(snap.data() ?? {}) as Partial<UserSettings> }),
+              snap => observer.next({
+                ...this.defaultSettings,
+                ...migrateWorkdays((snap.data() ?? {}) as Partial<UserSettings>),
+              }),
               err  => observer.error(err),
             );
           });
@@ -59,7 +75,7 @@ export class SettingsService {
     const raw = localStorage.getItem(LS_KEY);
     if (!raw) return { ...this.defaultSettings };
     try {
-      return { ...this.defaultSettings, ...(JSON.parse(raw) as Partial<UserSettings>) };
+      return { ...this.defaultSettings, ...migrateWorkdays(JSON.parse(raw) as Partial<UserSettings>) };
     } catch { return { ...this.defaultSettings }; }
   }
 

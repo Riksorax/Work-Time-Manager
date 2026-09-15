@@ -10,7 +10,6 @@ import { calculateAndApplyBreaks } from '../../domain/services/break-calculator.
 import { nowToMinute, roundToMinute, roundMsToMinute } from '../../shared/utils/time-precision.util';
 import {
   getEffectiveDailyTarget,
-  getWeekEntriesForDate,
   calculateInitialOvertime,
   isSameDay,
 } from '../../domain/utils/overtime.utils';
@@ -90,7 +89,6 @@ export class DashboardService {
   private _timerSub: ReturnType<typeof interval> | null = null;
   private _timerUnsub: (() => void) | null = null;
   private _autoSaveTick = 0;
-  private _weekEntries: WorkEntry[] = [];
 
   constructor() {
     // Re-init on auth state change (Flow 11)
@@ -103,7 +101,7 @@ export class DashboardService {
     this.settingsSvc.getSettings()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(s => {
-        this._settingsCache = { weeklyTargetHours: s.weeklyTargetHours, workdaysPerWeek: s.workdaysPerWeek };
+        this._settingsCache = { weeklyTargetHours: s.weeklyTargetHours, workdays: s.workdays };
         if (this._s().status === 'ready') {
           this._recalculateOvertime();
         }
@@ -132,17 +130,14 @@ export class DashboardService {
       const storedOvertimeMs = await this.overtimeSvc.getOvertime();
       const lastUpdateDate   = await this.overtimeSvc.getLastUpdateDate();
 
-      // 3. Wocheneinträge laden (inkl. Vormonat falls nötig)
-      await this._loadWeekEntries(today);
-
-      // 4. Einstellungen laden + Cache sofort befüllen (firstValueFrom = take(1), keine dauerhafte Subscription)
+      // 3. Einstellungen laden + Cache sofort befüllen (firstValueFrom = take(1), keine dauerhafte Subscription)
       const settings = await firstValueFrom(this.settingsSvc.getSettings());
-      this._settingsCache = { weeklyTargetHours: settings.weeklyTargetHours, workdaysPerWeek: settings.workdaysPerWeek };
+      this._settingsCache = { weeklyTargetHours: settings.weeklyTargetHours, workdays: settings.workdays };
 
-      // 5. Effektives Tagessoll berechnen
+      // 4. Effektives Tagessoll berechnen
       const weeklyMs          = settings.weeklyTargetHours * 60 * 60 * 1000;
-      const regularDailyMs    = settings.workdaysPerWeek > 0 ? roundMsToMinute(weeklyMs / settings.workdaysPerWeek) : 0;
-      const targetDailyMs     = getEffectiveDailyTarget(today, this._weekEntries, settings.workdaysPerWeek, regularDailyMs);
+      const regularDailyMs    = settings.workdays.length > 0 ? roundMsToMinute(weeklyMs / settings.workdays.length) : 0;
+      const targetDailyMs     = getEffectiveDailyTarget(today, settings.workdays, regularDailyMs);
       const isExtraDay        = targetDailyMs === 0;
 
       // 6. Initiales Daily Overtime berechnen
@@ -182,23 +177,6 @@ export class DashboardService {
     } catch {
       // Initialisierung fehlgeschlagen — leeren Zustand zeigen statt Dauerladespinner
       this._s.update(s => ({ ...s, status: 'ready' }));
-    }
-  }
-
-  private async _loadWeekEntries(today: Date): Promise<void> {
-    const monthEntries = await firstValueFrom(
-      this.workSvc.getEntriesForMonth(today.getFullYear(), today.getMonth() + 1)
-    );
-
-    this._weekEntries = getWeekEntriesForDate(today, monthEntries);
-
-    const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - ((today.getDay() || 7) - 1));
-    if (startOfWeek.getMonth() !== today.getMonth()) {
-      const prevEntries = await firstValueFrom(
-        this.workSvc.getEntriesForMonth(startOfWeek.getFullYear(), startOfWeek.getMonth() + 1)
-      );
-      this._weekEntries = [...getWeekEntriesForDate(today, prevEntries), ...this._weekEntries];
     }
   }
 
@@ -456,20 +434,20 @@ export class DashboardService {
   }
 
   // ─── Settings Cache (from Observable) ─────────────────────────────────────
-  private _settingsCache: { weeklyTargetHours: number; workdaysPerWeek: number } = {
+  private _settingsCache: { weeklyTargetHours: number; workdays: number[] } = {
     weeklyTargetHours: 40,
-    workdaysPerWeek: 5,
+    workdays: [1, 2, 3, 4, 5],
   };
 
   private _currentSettings() {
     return this._settingsCache;
   }
 
-  private _targetDailyMs(settings: { weeklyTargetHours: number; workdaysPerWeek: number }): number {
-    if (settings.workdaysPerWeek <= 0) return 0;
+  private _targetDailyMs(settings: { weeklyTargetHours: number; workdays: number[] }): number {
+    if (settings.workdays.length === 0) return 0;
     const weeklyMs    = settings.weeklyTargetHours * 3600000;
-    const regularMs   = roundMsToMinute(weeklyMs / settings.workdaysPerWeek);
-    return getEffectiveDailyTarget(new Date(), this._weekEntries, settings.workdaysPerWeek, regularMs);
+    const regularMs   = roundMsToMinute(weeklyMs / settings.workdays.length);
+    return getEffectiveDailyTarget(new Date(), settings.workdays, regularMs);
   }
 
   // ─── Helpers ─────────────────────────────────────────────────────────────
