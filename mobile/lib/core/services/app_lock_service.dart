@@ -63,7 +63,10 @@ class AppLockService {
     try {
       return await _localAuth.authenticate(
         localizedReason: 'Bitte authentifizieren Sie sich, um die App zu entsperren',
-        options: const AuthenticationOptions(biometricOnly: true, stickyAuth: true),
+        biometricOnly: true,
+        // Setzt die Authentifizierung nach Rückkehr aus dem Hintergrund
+        // automatisch fort, statt mit einem Fehler abzubrechen.
+        persistAcrossBackgrounding: true,
       );
     } catch (_) {
       return false;
