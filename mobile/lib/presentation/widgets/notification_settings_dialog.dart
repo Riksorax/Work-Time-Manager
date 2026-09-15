@@ -33,6 +33,10 @@ class _NotificationSettingsDialogState
   late bool _notifyWorkStart;
   late bool _notifyWorkEnd;
   late bool _notifyBreaks;
+  late bool _warnOnOvertimeThreshold;
+  late final TextEditingController _overtimeThresholdController;
+  late bool _warnOnUndertimeThreshold;
+  late final TextEditingController _undertimeThresholdController;
 
   final Map<int, String> _dayNames = {
     1: 'Mo',
@@ -51,6 +55,12 @@ class _NotificationSettingsDialogState
     _notifyWorkStart = widget.settings.notifyWorkStart;
     _notifyWorkEnd = widget.settings.notifyWorkEnd;
     _notifyBreaks = widget.settings.notifyBreaks;
+    _warnOnOvertimeThreshold = widget.settings.warnOnOvertimeThreshold;
+    _overtimeThresholdController =
+        TextEditingController(text: widget.settings.overtimeThresholdHours.toString());
+    _warnOnUndertimeThreshold = widget.settings.warnOnUndertimeThreshold;
+    _undertimeThresholdController =
+        TextEditingController(text: widget.settings.undertimeThresholdHours.toString());
 
     // Parse time
     final timeParts = widget.settings.notificationTime.split(':');
@@ -60,6 +70,13 @@ class _NotificationSettingsDialogState
     );
 
     _selectedDays = Set.from(widget.settings.notificationDays);
+  }
+
+  @override
+  void dispose() {
+    _overtimeThresholdController.dispose();
+    _undertimeThresholdController.dispose();
+    super.dispose();
   }
 
   Future<void> _selectTime() async {
@@ -115,6 +132,18 @@ class _NotificationSettingsDialogState
     await viewModel.updateNotifyWorkStart(_notifyWorkStart);
     await viewModel.updateNotifyWorkEnd(_notifyWorkEnd);
     await viewModel.updateNotifyBreaks(_notifyBreaks);
+
+    await viewModel.updateWarnOnOvertimeThreshold(_warnOnOvertimeThreshold);
+    final overtimeThreshold =
+        double.tryParse(_overtimeThresholdController.text.replaceAll(',', '.')) ??
+            widget.settings.overtimeThresholdHours;
+    await viewModel.updateOvertimeThresholdHours(overtimeThreshold);
+
+    await viewModel.updateWarnOnUndertimeThreshold(_warnOnUndertimeThreshold);
+    final undertimeThreshold =
+        double.tryParse(_undertimeThresholdController.text.replaceAll(',', '.')) ??
+            widget.settings.undertimeThresholdHours;
+    await viewModel.updateUndertimeThresholdHours(undertimeThreshold);
 
     // Schedule or cancel notifications
     if (_enabled && _selectedDays.isNotEmpty) {
@@ -293,6 +322,64 @@ class _NotificationSettingsDialogState
                         ),
                     ],
                     const SizedBox(height: 24),
+
+                    // Gleitzeit-Warnungen (siehe #219) - unabhängig von den
+                    // täglichen Erinnerungen oben.
+                    const Divider(),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Gleitzeit-Warnungen',
+                      style: theme.textTheme.titleMedium,
+                    ),
+                    SwitchListTile(
+                      title: const Text('Warnung bei Überstunden'),
+                      subtitle: const Text('Benachrichtigung ab Schwellwert'),
+                      value: _warnOnOvertimeThreshold,
+                      onChanged: (value) {
+                        setState(() {
+                          _warnOnOvertimeThreshold = value;
+                        });
+                      },
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                    if (_warnOnOvertimeThreshold)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 16, bottom: 12),
+                        child: TextField(
+                          controller: _overtimeThresholdController,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          decoration: const InputDecoration(
+                            labelText: 'Schwellwert (Stunden)',
+                            border: OutlineInputBorder(),
+                            isDense: true,
+                          ),
+                        ),
+                      ),
+                    SwitchListTile(
+                      title: const Text('Warnung bei Minusstunden'),
+                      subtitle: const Text('Benachrichtigung ab Schwellwert'),
+                      value: _warnOnUndertimeThreshold,
+                      onChanged: (value) {
+                        setState(() {
+                          _warnOnUndertimeThreshold = value;
+                        });
+                      },
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                    if (_warnOnUndertimeThreshold)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 16, bottom: 12),
+                        child: TextField(
+                          controller: _undertimeThresholdController,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          decoration: const InputDecoration(
+                            labelText: 'Schwellwert (Stunden)',
+                            border: OutlineInputBorder(),
+                            isDense: true,
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 12),
 
                     // Save Button
                     SizedBox(

@@ -10,6 +10,7 @@ import '../../domain/entities/break_entity.dart';
 import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/services/break_calculator_service.dart';
 import '../../domain/utils/overtime_utils.dart';
+import '../../domain/utils/overtime_warning_utils.dart';
 import '../state/dashboard_state.dart';
 
 class DashboardViewModel extends Notifier<DashboardState> {
@@ -433,6 +434,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
         final overtimeRepository = ref.read(overtimeRepositoryProvider);
         await overtimeRepository.saveOvertime(newTotalOvertime);
         await overtimeRepository.saveLastUpdateDate(DateTime.now());
+        await _checkOvertimeWarning(newTotalOvertime);
       }
     } else {
       newActualWorkDuration = null;
@@ -462,6 +464,33 @@ class DashboardViewModel extends Notifier<DashboardState> {
       logger.i('[Dashboard] WorkEntry erfolgreich gespeichert');
     }
     _startTimerIfNeeded();
+  }
+
+  /// Prüft nach jedem Speichern des Gleitzeitsaldos, ob ein konfigurierter
+  /// Über-/Minusstunden-Schwellwert erreicht ist, und löst ggf. eine
+  /// Benachrichtigung aus (siehe #219).
+  Future<void> _checkOvertimeWarning(Duration totalOvertime) async {
+    // Eine fehlschlagende Warnprüfung darf niemals das eigentliche Speichern
+    // der Arbeitszeit gefährden - daher komplett defensiv.
+    try {
+      final settingsRepository = ref.read(settingsRepositoryProvider);
+      final warningType = checkOvertimeWarning(
+        totalOvertime: totalOvertime,
+        warnOnOvertime: settingsRepository.getWarnOnOvertimeThreshold(),
+        overtimeThresholdHours: settingsRepository.getOvertimeThresholdHours(),
+        warnOnUndertime: settingsRepository.getWarnOnUndertimeThreshold(),
+        undertimeThresholdHours: settingsRepository.getUndertimeThresholdHours(),
+      );
+      if (warningType == OvertimeWarningType.none) return;
+
+      final notificationService = ref.read(notificationServiceProvider);
+      await notificationService.showOvertimeWarning(
+        type: warningType,
+        totalOvertime: totalOvertime,
+      );
+    } catch (e) {
+      logger.w('[Dashboard] Überstunden-Warnung konnte nicht geprüft werden: $e');
+    }
   }
 
   Future<void> setManualStartTime(TimeOfDay time) async {
