@@ -6,22 +6,22 @@
       <!-- App-Titel -->
       <div class="sidenav-header">
         <mat-icon class="sidenav-logo" aria-hidden="true">schedule</mat-icon>
-        <span class="sidenav-title">Work Time Manager</span>
+        <span class="sidenav-title">{{ 'appTitle' | translate }}</span>
       </div>
 
       <!-- Hauptnavigation -->
       <mat-nav-list class="sidenav-nav">
         <a mat-list-item routerLink="/dashboard" routerLinkActive="active-link" ariaCurrentWhenActive="page">
           <mat-icon matListItemIcon>home</mat-icon>
-          <span matListItemTitle>Dashboard</span>
+          <span matListItemTitle>{{ 'nav.dashboard' | translate }}</span>
         </a>
         <a mat-list-item routerLink="/reports" routerLinkActive="active-link" ariaCurrentWhenActive="page">
           <mat-icon matListItemIcon>bar_chart</mat-icon>
-          <span matListItemTitle>Berichte</span>
+          <span matListItemTitle>{{ 'nav.reports' | translate }}</span>
         </a>
         <a mat-list-item routerLink="/settings" routerLinkActive="active-link" ariaCurrentWhenActive="page">
           <mat-icon matListItemIcon>settings</mat-icon>
-          <span matListItemTitle>Einstellungen</span>
+          <span matListItemTitle>{{ 'nav.settings' | translate }}</span>
         </a>
       </mat-nav-list>
 
@@ -64,7 +64,7 @@
   <mat-sidenav-content>
     @if (isMobile()) {
       <mat-toolbar>
-        <span>Work Time Manager</span>
+        <span>{{ 'appTitle' | translate }}</span>
         <span class="spacer"></span>
       </mat-toolbar>
     }
@@ -77,15 +77,15 @@
       <nav class="bottom-nav" aria-label="Hauptnavigation">
         <a class="bottom-nav-item" routerLink="/dashboard" routerLinkActive="bottom-nav-item--active" ariaCurrentWhenActive="page">
           <mat-icon>home</mat-icon>
-          <span>Dashboard</span>
+          <span>{{ 'nav.dashboard' | translate }}</span>
         </a>
         <a class="bottom-nav-item" routerLink="/reports" routerLinkActive="bottom-nav-item--active" ariaCurrentWhenActive="page">
           <mat-icon>bar_chart</mat-icon>
-          <span>Berichte</span>
+          <span>{{ 'nav.reports' | translate }}</span>
         </a>
         <a class="bottom-nav-item" routerLink="/settings" routerLinkActive="bottom-nav-item--active" ariaCurrentWhenActive="page">
           <mat-icon>settings</mat-icon>
-          <span>Einstellungen</span>
+          <span>{{ 'nav.settings' | translate }}</span>
         </a>
         @if (!user()) {
           <a class="bottom-nav-item" routerLink="/auth/login" ariaCurrentWhenActive="page">

@@ -216,6 +216,27 @@
 
         <mat-divider />
 
+        <!-- ── Sprache ──────────────────────────────────────────── -->
+        <section class="language-section" aria-label="Sprache">
+          <h3 class="section-title">{{ 'settings.language' | translate }}</h3>
+
+          <mat-list>
+            <mat-list-item>
+              <mat-icon matListItemIcon aria-hidden="true">language</mat-icon>
+              <span matListItemTitle>{{ 'settings.language' | translate }}</span>
+              <mat-button-toggle-group matListItemMeta
+                                        [value]="svc.locale()"
+                                        (change)="onLocaleChange($event.value)"
+                                        aria-label="Sprache auswählen">
+                <mat-button-toggle value="de">{{ 'settings.languageGerman' | translate }}</mat-button-toggle>
+                <mat-button-toggle value="en">{{ 'settings.languageEnglish' | translate }}</mat-button-toggle>
+              </mat-button-toggle-group>
+            </mat-list-item>
+          </mat-list>
+        </section>
+
+        <mat-divider />
+
         <!-- ── Benachrichtigungen ───────────────────────────────── -->
         <section aria-label="Benachrichtigungen">
           <h3 class="section-title">Benachrichtigungen</h3>

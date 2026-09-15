@@ -6,6 +6,7 @@ import { ProfileService } from '../../core/services/profile';
 import { SettingsService } from '../../core/services/settings';
 import { OvertimeService } from '../../core/services/overtime';
 import { ThemeService } from '../../core/services/theme';
+import { LanguageService } from '../../core/services/language';
 import { DataSyncService, DataSyncResult } from '../../core/services/data-sync';
 import { WebPremiumService } from '../../core/services/web-premium.service';
 import { DashboardService } from '../dashboard/dashboard.service';
@@ -29,6 +30,7 @@ export class SettingsPageService {
   private readonly profileService = inject(ProfileService);
   private readonly overtimeSvc    = inject(OvertimeService);
   private readonly themeSvc       = inject(ThemeService);
+  private readonly languageSvc    = inject(LanguageService);
   private readonly dataSyncSvc    = inject(DataSyncService);
   private readonly premiumSvc     = inject(WebPremiumService);
   private readonly dashboardSvc   = inject(DashboardService);
@@ -57,6 +59,9 @@ export class SettingsPageService {
 
   // ── Theme ─────────────────────────────────────────────────────────────────
   readonly isDarkMode = this.themeSvc.isDarkMode;
+
+  // ── Sprache ───────────────────────────────────────────────────────────────
+  readonly locale = this.languageSvc.locale;
 
   // ── Sync ──────────────────────────────────────────────────────────────────
   readonly isSyncing = this.dataSyncSvc.isSyncing;
@@ -110,6 +115,10 @@ export class SettingsPageService {
 
   setTheme(dark: boolean): void {
     this.themeSvc.setTheme(dark);
+  }
+
+  setLocale(locale: string): void {
+    this.languageSvc.setLocale(locale);
   }
 
   async sync(): Promise<DataSyncResult> {

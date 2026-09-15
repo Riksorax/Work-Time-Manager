@@ -9,6 +9,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { TranslatePipe } from '@ngx-translate/core';
 import { map } from 'rxjs';
 import { AuthService } from '../../core/auth/auth';
 
@@ -25,6 +26,7 @@ import { AuthService } from '../../core/auth/auth';
     MatButtonModule,
     MatDividerModule,
     MatTooltipModule,
+    TranslatePipe,
   ],
   templateUrl: './main-shell.html',
   styleUrl: './main-shell.scss',
