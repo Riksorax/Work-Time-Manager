@@ -139,7 +139,7 @@ public class RepositoryIntegrationTests(FirestoreEmulatorFixture fixture)
         var settings = new SettingsDto
         {
             WeeklyTargetHours = 38.5,
-            WorkdaysPerWeek = 4,
+            Workdays = [1, 2, 3, 4],
             NotificationsEnabled = true,
             NotificationTime = "07:30",
             NotificationDays = [1, 3, 5],
@@ -150,7 +150,7 @@ public class RepositoryIntegrationTests(FirestoreEmulatorFixture fixture)
         var loaded = await repo.GetAsync(uid, Ct);
 
         Assert.Equal(38.5, loaded.WeeklyTargetHours);
-        Assert.Equal(4, loaded.WorkdaysPerWeek);
+        Assert.Equal([1, 2, 3, 4], loaded.Workdays);
         Assert.True(loaded.NotificationsEnabled);
         Assert.Equal("07:30", loaded.NotificationTime);
         Assert.Equal([1, 3, 5], loaded.NotificationDays);

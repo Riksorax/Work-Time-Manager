@@ -66,7 +66,7 @@ internal static class FirestoreMappings
     public static SettingsDto ToDto(SettingsDocument doc) => new()
     {
         WeeklyTargetHours = doc.WeeklyTargetHours,
-        WorkdaysPerWeek = doc.WorkdaysPerWeek,
+        Workdays = ResolveWorkdays(doc),
         NotificationsEnabled = doc.NotificationsEnabled,
         NotificationTime = doc.NotificationTime,
         NotificationDays = doc.NotificationDays,
@@ -78,7 +78,7 @@ internal static class FirestoreMappings
     public static SettingsDocument ToDocument(SettingsDto dto) => new()
     {
         WeeklyTargetHours = dto.WeeklyTargetHours,
-        WorkdaysPerWeek = dto.WorkdaysPerWeek,
+        Workdays = dto.Workdays.ToList(),
         NotificationsEnabled = dto.NotificationsEnabled,
         NotificationTime = dto.NotificationTime,
         NotificationDays = dto.NotificationDays.ToList(),
@@ -86,6 +86,22 @@ internal static class FirestoreMappings
         NotifyWorkEnd = dto.NotifyWorkEnd,
         NotifyBreaks = dto.NotifyBreaks,
     };
+
+    /// <summary>
+    /// Migriert das alte <c>workdaysPerWeek</c>-Feld (Anzahl) in konkrete ISO-Wochentage
+    /// (erste N Tage ab Montag), damit bestehende Nutzer ihr bisheriges Verhalten behalten.
+    /// Siehe #217.
+    /// </summary>
+    private static IReadOnlyList<int> ResolveWorkdays(SettingsDocument doc)
+    {
+        if (doc.Workdays is { Count: > 0 }) return doc.Workdays;
+        if (doc.WorkdaysPerWeek is { } count)
+        {
+            var clamped = Math.Clamp(count, 0, 7);
+            return Enumerable.Range(1, clamped).ToList();
+        }
+        return new[] { 1, 2, 3, 4, 5 };
+    }
 
     // ── Helpers ─────────────────────────────────────────────────────────────
 

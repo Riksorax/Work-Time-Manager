@@ -9,8 +9,12 @@ public sealed class SettingsDocument
     [FirestoreProperty("weeklyTargetHours")]
     public double WeeklyTargetHours { get; set; } = 40;
 
+    [FirestoreProperty("workdays")]
+    public List<int>? Workdays { get; set; }
+
+    /// <summary>Legacy-Feld (Anzahl statt konkreter Wochentage). Nur für Migration gelesen, siehe #217.</summary>
     [FirestoreProperty("workdaysPerWeek")]
-    public int WorkdaysPerWeek { get; set; } = 5;
+    public int? WorkdaysPerWeek { get; set; }
 
     [FirestoreProperty("notificationsEnabled")]
     public bool NotificationsEnabled { get; set; }
