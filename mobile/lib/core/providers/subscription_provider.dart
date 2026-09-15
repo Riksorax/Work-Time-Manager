@@ -105,12 +105,16 @@ final activeEntitlementProvider = Provider<EntitlementInfo?>((ref) {
 /// Ruft den store-eigenen Link zur Abo-Verwaltung ab (Kündigung/Verlängerung
 /// direkt im App Store bzw. Play Store). Gibt `null` zurück, wenn kein Link
 /// verfügbar ist (z.B. Web oder Fehler) - siehe #220.
+///
+/// `purchases_flutter` bietet dafür keine eigene statische Methode - der
+/// Link steckt direkt als Feld in [CustomerInfo.managementURL].
 Future<String?> getSubscriptionManagementUrl() async {
   if (kIsWeb) return null;
   try {
-    return await Purchases.getManagementURL();
+    final info = await Purchases.getCustomerInfo();
+    return info.managementURL;
   } catch (e) {
-    debugPrint('[Premium] getManagementURL fehlgeschlagen: $e');
+    debugPrint('[Premium] managementURL nicht verfügbar: $e');
     return null;
   }
 }
