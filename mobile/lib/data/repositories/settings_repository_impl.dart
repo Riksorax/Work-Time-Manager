@@ -27,6 +27,8 @@ class SettingsRepositoryImpl implements SettingsRepository {
   static const String _undertimeThresholdHoursKey = 'undertime_threshold_hours';
   // Zeitformat ist geräteweit, nicht userId-spezifisch (wie Theme/Benachrichtigungen).
   static const String _use24HourFormatKey = 'use_24_hour_format';
+  // Sprache ist geräteweit, nicht userId-spezifisch (wie Zeitformat) - siehe #221.
+  static const String _localeKey = 'locale';
 
   final SharedPreferences _prefs;
   final FirestoreDataSource _firestoreDataSource;
@@ -287,5 +289,15 @@ class SettingsRepositoryImpl implements SettingsRepository {
     } else {
       await _prefs.setString(timezoneOverridePrefsKey, timezone);
     }
+  }
+
+  @override
+  String getLocale() {
+    return _prefs.getString(_localeKey) ?? 'de';
+  }
+
+  @override
+  Future<void> setLocale(String locale) async {
+    await _prefs.setString(_localeKey, locale);
   }
 }

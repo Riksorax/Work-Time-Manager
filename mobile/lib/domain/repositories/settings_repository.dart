@@ -123,4 +123,11 @@ abstract class SettingsRepository {
   /// Speichert die manuell überschriebene Zeitzone (`null` setzt auf
   /// Systemzeitzone zurück).
   Future<void> setTimezoneOverride(String? timezone);
+
+  /// Ruft die eingestellte Sprache der App-Oberfläche ab (ISO-639-1-Kürzel,
+  /// z.B. `de` oder `en`). Siehe #221.
+  String getLocale();
+
+  /// Speichert die Sprache der App-Oberfläche.
+  Future<void> setLocale(String locale);
 }

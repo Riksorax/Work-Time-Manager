@@ -1,0 +1,14 @@
+{
+  "@@locale": "en",
+  "appTitle": "Work Time Manager",
+  "navDashboard": "Dashboard",
+  "navReports": "Reports",
+  "navSettings": "Settings",
+  "dashboardTitle": "Working Time",
+  "settingsTitle": "Settings",
+  "save": "Save",
+  "cancel": "Cancel",
+  "languageSettingTitle": "Language",
+  "languageGerman": "German",
+  "languageEnglish": "English"
+}

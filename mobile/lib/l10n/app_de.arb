@@ -1,0 +1,47 @@
+{
+  "@@locale": "de",
+  "appTitle": "Work Time Manager",
+  "@appTitle": {
+    "description": "Name der App, u.a. als App-Titel im Betriebssystem sichtbar."
+  },
+  "navDashboard": "Dashboard",
+  "@navDashboard": {
+    "description": "Label des Dashboard-Tabs in der unteren Navigation."
+  },
+  "navReports": "Berichte",
+  "@navReports": {
+    "description": "Label des Berichte-Tabs in der unteren Navigation."
+  },
+  "navSettings": "Einstellungen",
+  "@navSettings": {
+    "description": "Label des Einstellungen-Tabs in der unteren Navigation."
+  },
+  "dashboardTitle": "Arbeitszeit",
+  "@dashboardTitle": {
+    "description": "AppBar-Titel des Dashboards."
+  },
+  "settingsTitle": "Einstellungen",
+  "@settingsTitle": {
+    "description": "AppBar-Titel der Einstellungen-Seite."
+  },
+  "save": "Speichern",
+  "@save": {
+    "description": "Beschriftung des Speichern-Buttons, u.a. in Dialogen."
+  },
+  "cancel": "Abbrechen",
+  "@cancel": {
+    "description": "Beschriftung des Abbrechen-Buttons, u.a. in Dialogen."
+  },
+  "languageSettingTitle": "Sprache",
+  "@languageSettingTitle": {
+    "description": "Titel der Sprachauswahl-Einstellung."
+  },
+  "languageGerman": "Deutsch",
+  "@languageGerman": {
+    "description": "Option für die deutsche Sprache in der Sprachauswahl."
+  },
+  "languageEnglish": "Englisch",
+  "@languageEnglish": {
+    "description": "Option für die englische Sprache in der Sprachauswahl."
+  }
+}

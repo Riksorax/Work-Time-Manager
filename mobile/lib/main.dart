@@ -21,6 +21,7 @@ import 'core/providers/providers.dart';
 import 'core/services/notification_service.dart';
 import 'core/theme/app_theme.dart';
 import 'firebase_options.dart';
+import 'l10n/app_localizations.dart';
 import 'presentation/view_models/settings_view_model.dart';
 import 'presentation/view_models/theme_view_model.dart';
 import 'presentation/widgets/app_lock_screen.dart';
@@ -39,8 +40,13 @@ Future<void> main() async {
   tz_data.initializeTimeZones();
   await applyTimezone(prefs.getString(timezoneOverridePrefsKey));
 
+  // Beide unterstützten Sprachen laden (siehe #221) - unabhängig von der
+  // aktuellen Auswahl, damit ein Sprachwechsel zur Laufzeit ohne erneutes
+  // Nachladen funktioniert.
   await initializeDateFormatting('de_DE', null);
-  Intl.defaultLocale = 'de_DE';
+  await initializeDateFormatting('en_US', null);
+  final locale = prefs.getString('locale') ?? 'de';
+  Intl.defaultLocale = locale == 'en' ? 'en_US' : 'de_DE';
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
@@ -179,6 +185,8 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     // MaterialLocalizations.formatTimeOfDay), 24h- oder 12h-Format nutzen.
     final use24HourFormat =
         ref.watch(settingsViewModelProvider).value?.settings.use24HourFormat ?? true;
+    // Siehe #221: steuert die Sprache der App-Oberfläche zur Laufzeit.
+    final localeCode = ref.watch(settingsViewModelProvider).value?.settings.locale ?? 'de';
     final isLocked = !kIsWeb && ref.watch(isAppLockedProvider);
 
     return MaterialApp(
@@ -188,15 +196,14 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: themeMode,
-      locale: const Locale('de', 'DE'),
+      locale: Locale(localeCode),
       localizationsDelegates: const [
+        AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      supportedLocales: const [
-        Locale('de', 'DE'),
-      ],
+      supportedLocales: AppLocalizations.supportedLocales,
       builder: (context, child) {
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: use24HourFormat),
