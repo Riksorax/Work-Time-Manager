@@ -523,11 +523,16 @@ void main() {
         authState: const AsyncValue.data(null),
       ));
 
-      // onChanged direkt aufrufen statt tap() zu simulieren: die Kachel
-      // liegt inzwischen (seit die Bundesland-Auswahl aus #222 die Liste
-      // verlängert hat) so tief in der scrollbaren Liste, dass ein
-      // pixelgenauer Scroll+Tap in der 600px hohen Test-Oberfläche
-      // unzuverlässig ist. find.widgetWithText benötigt keine Sichtbarkeit.
+      // Erst scrollen: die sliver-basierte ListView hält Elemente außerhalb
+      // von Viewport+CacheExtent gar nicht erst gemounted (rein lazy trotz
+      // "eager" Widget-Liste), seit die Bundesland-Auswahl (#222) die Liste
+      // so weit verlängert hat, dass die Kachel sonst nicht im Element-Baum
+      // existiert. Danach onChanged direkt aufrufen statt tap() zu
+      // simulieren, da ein pixelgenauer Tap in der 600px hohen
+      // Test-Oberfläche knapp daneben treffen kann.
+      final lockSwitchFinder = find.text('PIN-/Biometrie-Sperre');
+      await tester.scrollUntilVisible(lockSwitchFinder, 500.0);
+
       final lockSwitchTile = tester.widget<SwitchListTile>(
         find.widgetWithText(SwitchListTile, 'PIN-/Biometrie-Sperre'),
       );
