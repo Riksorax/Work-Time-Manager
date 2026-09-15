@@ -94,14 +94,32 @@ class NoOpSettingsRepository implements SettingsRepository {
 
   @override
   Future<void> setUndertimeThresholdHours(double hours) async {}
+
+  @override
+  bool getUse24HourFormat() => true;
+
+  @override
+  Future<void> setUse24HourFormat(bool use24Hour) async {}
 }
 
 class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
   @override
   AsyncValue<SettingsState> build() {
-    // Watch dependencies to trigger rebuild on updates (e.g. Auth change)
-    ref.watch(core_providers.getOvertimeUseCaseProvider);
-    ref.watch(core_providers.settingsRepositoryProvider);
+    // Watch dependencies to trigger rebuild on updates (e.g. Auth change).
+    // In try/catch: falls SharedPreferences (z.B. in Tests ohne Provider-
+    // Override) noch nicht verfügbar ist, würde dieser watch()-Aufruf sonst
+    // synchron eine ProviderException werfen, die als ungefangene Exception
+    // bei jedem Widget landet, das settingsViewModelProvider beobachtet -
+    // _init() unten fängt denselben Fehler zwar auch ab, aber erst
+    // asynchron, also zu spät für diesen synchronen build()-Aufruf.
+    try {
+      ref.watch(core_providers.getOvertimeUseCaseProvider);
+      ref.watch(core_providers.settingsRepositoryProvider);
+    } catch (_) {
+      // Reactivity auf diese Provider geht in diesem Fall verloren - der
+      // eigentliche Fehler wird unten in _init() erneut geworfen und dort
+      // reguär in einen AsyncValue.error verwandelt.
+    }
 
     Future.microtask(() => _init());
     return const AsyncValue.loading();
@@ -131,6 +149,7 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
       final overtimeThresholdHours = settingsRepository.getOvertimeThresholdHours();
       final warnOnUndertimeThreshold = settingsRepository.getWarnOnUndertimeThreshold();
       final undertimeThresholdHours = settingsRepository.getUndertimeThresholdHours();
+      final use24HourFormat = settingsRepository.getUse24HourFormat();
 
       final settings = SettingsEntity(
         weeklyTargetHours: weeklyTargetHours,
@@ -145,6 +164,7 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
         overtimeThresholdHours: overtimeThresholdHours,
         warnOnUndertimeThreshold: warnOnUndertimeThreshold,
         undertimeThresholdHours: undertimeThresholdHours,
+        use24HourFormat: use24HourFormat,
       );
       state = AsyncValue.data(SettingsState(
         settings: settings,
@@ -288,6 +308,13 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
     final settingsRepository = ref.read(core_providers.settingsRepositoryProvider);
     await settingsRepository.setUndertimeThresholdHours(hours);
     final newSettings = state.value!.settings.copyWith(undertimeThresholdHours: hours);
+    state = state.whenData((value) => value.copyWith(settings: newSettings));
+  }
+
+  Future<void> updateUse24HourFormat(bool use24Hour) async {
+    final settingsRepository = ref.read(core_providers.settingsRepositoryProvider);
+    await settingsRepository.setUse24HourFormat(use24Hour);
+    final newSettings = state.value!.settings.copyWith(use24HourFormat: use24Hour);
     state = state.whenData((value) => value.copyWith(settings: newSettings));
   }
 

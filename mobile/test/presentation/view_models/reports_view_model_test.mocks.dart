@@ -415,4 +415,27 @@ class MockSettingsRepository extends _i1.Mock
         returnValue: _i4.Future<void>.value(),
         returnValueForMissingStub: _i4.Future<void>.value(),
       ) as _i4.Future<void>);
+
+  // Manuell ergänzt (siehe #218 / SettingsRepository) - Flutter-SDK war in
+  // der Umgebung, in der diese Änderung entstand, nicht verfügbar, um
+  // `dart run build_runner build` auszuführen. Entspricht exakt dem Muster,
+  // das der Generator für die anderen bool-Getter/-Setter erzeugt.
+  @override
+  bool getUse24HourFormat() => (super.noSuchMethod(
+        Invocation.method(
+          #getUse24HourFormat,
+          [],
+        ),
+        returnValue: true,
+      ) as bool);
+
+  @override
+  _i4.Future<void> setUse24HourFormat(bool? use24Hour) => (super.noSuchMethod(
+        Invocation.method(
+          #setUse24HourFormat,
+          [use24Hour],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
 }

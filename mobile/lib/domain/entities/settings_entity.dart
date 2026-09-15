@@ -40,6 +40,10 @@ class SettingsEntity extends Equatable {
   /// Threshold in hours for the undertime (minus hours) warning.
   final double undertimeThresholdHours;
 
+  /// Whether times are displayed in 24-hour format (true) or 12-hour
+  /// format with AM/PM (false). Siehe #218.
+  final bool use24HourFormat;
+
   const SettingsEntity({
     this.weeklyTargetHours = 40.0,
     this.workdaysPerWeek = 5,
@@ -53,6 +57,7 @@ class SettingsEntity extends Equatable {
     this.overtimeThresholdHours = 10.0,
     this.warnOnUndertimeThreshold = false,
     this.undertimeThresholdHours = 10.0,
+    this.use24HourFormat = true,
   });
 
   /// Creates a copy of this [SettingsEntity] but with the given fields
@@ -70,6 +75,7 @@ class SettingsEntity extends Equatable {
     double? overtimeThresholdHours,
     bool? warnOnUndertimeThreshold,
     double? undertimeThresholdHours,
+    bool? use24HourFormat,
   }) {
     return SettingsEntity(
       weeklyTargetHours: weeklyTargetHours ?? this.weeklyTargetHours,
@@ -84,6 +90,7 @@ class SettingsEntity extends Equatable {
       overtimeThresholdHours: overtimeThresholdHours ?? this.overtimeThresholdHours,
       warnOnUndertimeThreshold: warnOnUndertimeThreshold ?? this.warnOnUndertimeThreshold,
       undertimeThresholdHours: undertimeThresholdHours ?? this.undertimeThresholdHours,
+      use24HourFormat: use24HourFormat ?? this.use24HourFormat,
     );
   }
 
@@ -101,5 +108,6 @@ class SettingsEntity extends Equatable {
         overtimeThresholdHours,
         warnOnUndertimeThreshold,
         undertimeThresholdHours,
+        use24HourFormat,
       ];
 }

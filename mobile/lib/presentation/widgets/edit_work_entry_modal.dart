@@ -95,8 +95,11 @@ class EditWorkEntryModal extends ConsumerWidget {
     bool dense = false,
   }) {
     final localizations = MaterialLocalizations.of(context);
+    // Folgt der App-weiten Einstellung (siehe #218) statt hart auf 24h zu
+    // stehen - MediaQuery.alwaysUse24HourFormat wird in main.dart gesetzt.
+    final alwaysUse24HourFormat = MediaQuery.of(context).alwaysUse24HourFormat;
     final formatted = selectedTime != null
-        ? localizations.formatTimeOfDay(selectedTime, alwaysUse24HourFormat: true)
+        ? localizations.formatTimeOfDay(selectedTime, alwaysUse24HourFormat: alwaysUse24HourFormat)
         : '';
     return TextFormField(
       readOnly: true,
@@ -108,15 +111,12 @@ class EditWorkEntryModal extends ConsumerWidget {
       ),
       controller: TextEditingController(text: formatted),
       onTap: () async {
+        // Kein builder-Override mehr: der TimePicker übernimmt automatisch
+        // die App-weite Einstellung aus MediaQuery.alwaysUse24HourFormat
+        // (siehe #218, main.dart).
         final time = await showTimePicker(
           context: context,
           initialTime: selectedTime ?? TimeOfDay.now(),
-          builder: (context, child) {
-            return MediaQuery(
-              data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
-              child: child ?? const SizedBox.shrink(),
-            );
-          },
         );
         if (time != null) {
           onTimeSelected(time);

@@ -21,6 +21,7 @@ import 'core/providers/providers.dart';
 import 'core/services/notification_service.dart';
 import 'core/theme/app_theme.dart';
 import 'firebase_options.dart';
+import 'presentation/view_models/settings_view_model.dart';
 import 'presentation/view_models/theme_view_model.dart';
 
 // Global key for navigation from notifications
@@ -154,6 +155,11 @@ class MyApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeViewModelProvider);
+    // Siehe #218: steuert app-weit, ob Zeitpicker/-anzeigen, die auf
+    // MediaQuery.alwaysUse24HourFormat reagieren (z. B. showTimePicker,
+    // MaterialLocalizations.formatTimeOfDay), 24h- oder 12h-Format nutzen.
+    final use24HourFormat =
+        ref.watch(settingsViewModelProvider).value?.settings.use24HourFormat ?? true;
 
     return MaterialApp(
       navigatorKey: navigatorKey,
@@ -171,6 +177,12 @@ class MyApp extends ConsumerWidget {
       supportedLocales: const [
         Locale('de', 'DE'),
       ],
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: use24HourFormat),
+          child: child!,
+        );
+      },
       home: const HomeScreen(),
     );
   }

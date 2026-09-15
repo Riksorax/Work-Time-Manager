@@ -3,6 +3,7 @@ import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
+import 'package:flutter_work_time/core/utils/time_format.dart';
 import 'package:flutter_work_time/core/utils/time_precision.dart';
 import 'package:intl/intl.dart';
 import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
@@ -504,9 +505,9 @@ class DailyReportView extends ConsumerWidget {
                             displayEntry.workEnd != null) ...[
                           const SizedBox(height: 8),
                           Text(
-                              'Start: ${displayEntry.workStart != null ? DateFormat('HH:mm').format(displayEntry.workStart!) : '-'}'),
+                              'Start: ${displayEntry.workStart != null ? formatTime(displayEntry.workStart!, use24HourFormat: settingsState.settings.use24HourFormat) : '-'}'),
                           Text(
-                              'Ende: ${displayEntry.workEnd != null ? DateFormat('HH:mm').format(displayEntry.workEnd!) : (isSpecialType ? '-' : 'läuft...')}'),
+                              'Ende: ${displayEntry.workEnd != null ? formatTime(displayEntry.workEnd!, use24HourFormat: settingsState.settings.use24HourFormat) : (isSpecialType ? '-' : 'läuft...')}'),
                           if (!isSpecialType)
                             Text(
                                 'Pause: ${displayEntry.totalBreakDuration.toString().split('.').first}'),
@@ -1865,6 +1866,8 @@ class _DayEntriesBottomSheetState extends ConsumerState<DayEntriesBottomSheet> {
   @override
   Widget build(BuildContext context) {
     final reportsState = ref.watch(reportsViewModelProvider);
+    final use24HourFormat =
+        ref.watch(settingsViewModelProvider).value?.settings.use24HourFormat ?? true;
 
     if (reportsState.isLoading &&
         (reportsState.selectedDay == null ||
@@ -2018,9 +2021,9 @@ class _DayEntriesBottomSheetState extends ConsumerState<DayEntriesBottomSheet> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                          'Start: ${start != null ? DateFormat('HH:mm').format(start) : '-'}'),
+                                          'Start: ${start != null ? formatTime(start, use24HourFormat: use24HourFormat) : '-'}'),
                                       Text(
-                                          'Ende: ${displayEntry.workEnd != null ? DateFormat('HH:mm').format(displayEntry.workEnd!) : (isSpecialType ? '-' : 'läuft...')}'),
+                                          'Ende: ${displayEntry.workEnd != null ? formatTime(displayEntry.workEnd!, use24HourFormat: use24HourFormat) : (isSpecialType ? '-' : 'läuft...')}'),
                                       if (!isSpecialType)
                                         Text(
                                             'Pause: ${displayEntry.totalBreakDuration.toString().split('.').first}'),
