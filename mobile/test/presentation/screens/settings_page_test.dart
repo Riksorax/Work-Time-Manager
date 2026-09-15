@@ -487,7 +487,16 @@ void main() {
       final lockTile = find.text('PIN-/Biometrie-Sperre');
       await tester.scrollUntilVisible(lockTile, 500.0);
       expect(lockTile, findsOneWidget);
-      expect(find.text('Deaktiviert'), findsOneWidget);
+      // "Deaktiviert" erscheint auch beim Benachrichtigungen-Eintrag im
+      // Standardzustand - deshalb gezielt innerhalb des Sperr-SwitchListTile
+      // suchen statt global.
+      expect(
+        find.descendant(
+          of: find.widgetWithText(SwitchListTile, 'PIN-/Biometrie-Sperre'),
+          matching: find.text('Deaktiviert'),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('Aktivieren der Sperre ohne vorhandene PIN öffnet PIN-Einrichtung',
