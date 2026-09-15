@@ -61,6 +61,10 @@ void main() {
         signOutProvider.overrideWithValue(mockSignOut),
         deleteAccountProvider.overrideWithValue(mockDeleteAccount),
         isPremiumProvider.overrideWithValue(isPremium),
+        // Verhindert, dass die Abo-Verwaltungssektion (#220) das echte
+        // RevenueCat-Plugin über customerInfoProvider anspricht - in Tests
+        // gibt es keinen Platform-Channel dafür.
+        activeEntitlementProvider.overrideWithValue(null),
       ],
       child: MaterialApp(
         home: const SettingsPage(),

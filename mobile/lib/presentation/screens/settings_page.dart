@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/providers/providers.dart' as core_providers;
 import '../../core/providers/subscription_provider.dart';
@@ -45,6 +46,7 @@ class SettingsPage extends ConsumerWidget {
             const SizedBox(height: 8),
             _buildAuthButton(context, ref),
             const SizedBox(height: 8),
+            _buildSubscriptionSection(context, ref),
             const SizedBox(height: 16),
           ];
 
@@ -203,6 +205,85 @@ class SettingsPage extends ConsumerWidget {
         },
       ),
     );
+  }
+
+  /// Abo-Verwaltung für Premium-Nutzer (siehe #220): zeigt Laufzeit/
+  /// Verlängerungsstatus aus RevenueCat an und verlinkt auf die store-eigene
+  /// Verwaltungsseite (`getManagementURL()`), statt eine eigene Kündigungs-
+  /// /Verlängerungslogik nachzubauen.
+  Widget _buildSubscriptionSection(BuildContext context, WidgetRef ref) {
+    final isPremium = ref.watch(isPremiumProvider);
+    if (!isPremium) return const SizedBox.shrink();
+
+    final entitlement = ref.watch(activeEntitlementProvider);
+    final expirationDateString = entitlement?.expirationDate;
+    final expirationDate =
+        expirationDateString != null ? DateTime.tryParse(expirationDateString) : null;
+    final willRenew = entitlement?.willRenew ?? false;
+
+    String? statusText;
+    if (expirationDate != null) {
+      final formattedDate = DateFormat('dd.MM.yyyy').format(expirationDate);
+      statusText = willRenew
+          ? 'Verlängert sich automatisch am $formattedDate'
+          : 'Läuft aus am $formattedDate';
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.subscriptions, color: Colors.orange),
+                  const SizedBox(width: 12),
+                  Text('Dein Abo', style: Theme.of(context).textTheme.titleMedium),
+                ],
+              ),
+              if (statusText != null) ...[
+                const SizedBox(height: 8),
+                Text(statusText, style: const TextStyle(fontSize: 14)),
+              ],
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () => _openSubscriptionManagement(context),
+                icon: const Icon(Icons.open_in_new),
+                label: const Text('Abo verwalten'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openSubscriptionManagement(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final urlString = await getSubscriptionManagementUrl();
+    if (urlString == null) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Abo-Verwaltung ist auf diesem Gerät nicht verfügbar. '
+            'Bitte über den App Store bzw. Play Store verwalten.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    final url = Uri.parse(urlString);
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Der Abo-Verwaltungslink konnte nicht geöffnet werden.')),
+      );
+    }
   }
 
   Widget _buildDataSyncSection(BuildContext context, WidgetRef ref, AsyncValue authState) {
