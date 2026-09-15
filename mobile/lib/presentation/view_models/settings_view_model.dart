@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../core/providers/providers.dart' as core_providers;
 import '../../core/utils/timezone_utils.dart';
@@ -114,6 +115,12 @@ class NoOpSettingsRepository implements SettingsRepository {
 
   @override
   Future<void> setTimezoneOverride(String? timezone) async {}
+
+  @override
+  String getLocale() => 'de';
+
+  @override
+  Future<void> setLocale(String locale) async {}
 }
 
 class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
@@ -171,6 +178,7 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
       final undertimeThresholdHours = settingsRepository.getUndertimeThresholdHours();
       final use24HourFormat = settingsRepository.getUse24HourFormat();
       final timezoneOverride = settingsRepository.getTimezoneOverride();
+      final locale = settingsRepository.getLocale();
 
       final settings = SettingsEntity(
         weeklyTargetHours: weeklyTargetHours,
@@ -188,6 +196,7 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
         undertimeThresholdHours: undertimeThresholdHours,
         use24HourFormat: use24HourFormat,
         timezoneOverride: timezoneOverride,
+        locale: locale,
       );
       state = AsyncValue.data(SettingsState(
         settings: settings,
@@ -358,6 +367,17 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
     final newSettings = state.value!.settings.copyWithTimezoneOverride(timezone);
     state = state.whenData((value) => value.copyWith(settings: newSettings));
     await _rescheduleNotifications();
+  }
+
+  /// Speichert die Sprache der App-Oberfläche (`de`/`en`) und aktualisiert
+  /// [Intl.defaultLocale] sofort, damit z.B. `formatTime` (siehe #218) ohne
+  /// App-Neustart in der neuen Sprache formatiert. Siehe #221.
+  Future<void> updateLocale(String locale) async {
+    final settingsRepository = ref.read(core_providers.settingsRepositoryProvider);
+    await settingsRepository.setLocale(locale);
+    Intl.defaultLocale = locale == 'en' ? 'en_US' : 'de_DE';
+    final newSettings = state.value!.settings.copyWith(locale: locale);
+    state = state.whenData((value) => value.copyWith(settings: newSettings));
   }
 
   // --- Notification Rescheduling Logic ---

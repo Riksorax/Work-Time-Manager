@@ -14,6 +14,12 @@
 build/
 coverage/
 lib/generated_plugin_registrant.dart
+
+# Generierte Lokalisierungs-Klassen (aus lib/l10n/*.arb via l10n.yaml,
+# `generate: true` in pubspec.yaml) - werden bei `flutter pub get`/`build`/
+# `analyze`/`test` automatisch neu erzeugt, siehe #221.
+lib/l10n/app_localizations.dart
+lib/l10n/app_localizations_*.dart
 # For library packages, don’t commit the pubspec.lock file.
 # Regenerating the pubspec.lock file lets you test your package against the latest compatible versions of its dependencies.
 # See https://dart.dev/guides/libraries/private-files#pubspeclock

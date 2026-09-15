@@ -114,6 +114,10 @@ flutter_launcher_icons:
 # The following section is specific to Flutter packages.
 flutter:
 
+  # Aktiviert die Codegenerierung für AppLocalizations aus lib/l10n/*.arb
+  # (Konfiguration siehe l10n.yaml). Siehe #221.
+  generate: true
+
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.

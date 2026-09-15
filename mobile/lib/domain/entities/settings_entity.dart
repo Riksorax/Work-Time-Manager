@@ -57,6 +57,10 @@ class SettingsEntity extends Equatable {
   /// `null` = Systemzeitzone verwenden. Siehe #221.
   final String? timezoneOverride;
 
+  /// Sprache der App-Oberfläche als ISO-639-1-Kürzel (`de` oder `en`).
+  /// Siehe #221.
+  final String locale;
+
   const SettingsEntity({
     this.weeklyTargetHours = 40.0,
     this.workdays = const [1, 2, 3, 4, 5], // Monday to Friday
@@ -73,6 +77,7 @@ class SettingsEntity extends Equatable {
     this.undertimeThresholdHours = 10.0,
     this.use24HourFormat = true,
     this.timezoneOverride,
+    this.locale = 'de',
   });
 
   /// Creates a copy of this [SettingsEntity] but with the given fields
@@ -91,6 +96,7 @@ class SettingsEntity extends Equatable {
     bool? warnOnUndertimeThreshold,
     double? undertimeThresholdHours,
     bool? use24HourFormat,
+    String? locale,
   }) {
     return SettingsEntity(
       weeklyTargetHours: weeklyTargetHours ?? this.weeklyTargetHours,
@@ -108,6 +114,7 @@ class SettingsEntity extends Equatable {
       undertimeThresholdHours: undertimeThresholdHours ?? this.undertimeThresholdHours,
       use24HourFormat: use24HourFormat ?? this.use24HourFormat,
       timezoneOverride: timezoneOverride,
+      locale: locale ?? this.locale,
     );
   }
 
@@ -133,6 +140,7 @@ class SettingsEntity extends Equatable {
       undertimeThresholdHours: undertimeThresholdHours,
       use24HourFormat: use24HourFormat,
       timezoneOverride: timezoneOverride,
+      locale: locale,
     );
   }
 
@@ -156,6 +164,7 @@ class SettingsEntity extends Equatable {
       undertimeThresholdHours: undertimeThresholdHours,
       use24HourFormat: use24HourFormat,
       timezoneOverride: timezoneOverride,
+      locale: locale,
     );
   }
 
@@ -176,5 +185,6 @@ class SettingsEntity extends Equatable {
         undertimeThresholdHours,
         use24HourFormat,
         timezoneOverride,
+        locale,
       ];
 }

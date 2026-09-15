@@ -14,11 +14,13 @@ import '../../data/repositories/firebase_overtime_repository_impl.dart';
 import '../../domain/entities/bundesland.dart';
 import '../../domain/services/data_sync_service.dart';
 import '../../domain/utils/weekday_labels.dart';
+import '../../l10n/app_localizations.dart';
 import '../view_models/auth_view_model.dart';
 import '../view_models/dashboard_view_model.dart' as dashboard_vm;
 import '../view_models/settings_view_model.dart';
 import '../view_models/theme_view_model.dart';
 import '../widgets/add_adjustment_modal.dart';
+import '../widgets/edit_language_dialog.dart';
 import '../widgets/edit_target_hours_modal.dart';
 import '../widgets/edit_timezone_modal.dart';
 import '../widgets/edit_workdays_modal.dart';
@@ -36,10 +38,11 @@ class SettingsPage extends ConsumerWidget {
     final settingsValue = ref.watch(settingsViewModelProvider);
     final themeNotifier = ref.read(themeViewModelProvider.notifier);
     final authState = ref.watch(authStateProvider);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Einstellungen'),
+        title: Text(l10n.settingsTitle),
       ),
       body: settingsValue.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -96,6 +99,16 @@ class SettingsPage extends ConsumerWidget {
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 showEditTimezoneModal(context, settings.timezoneOverride);
+              },
+            ),
+            ListTile(
+              title: Text(l10n.languageSettingTitle),
+              subtitle: Text(
+                settings.locale == 'en' ? l10n.languageEnglish : l10n.languageGerman,
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                showEditLanguageDialog(context, settings.locale);
               },
             ),
             const Divider(height: 1),

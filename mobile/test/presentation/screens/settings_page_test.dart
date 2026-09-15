@@ -17,6 +17,7 @@ import 'package:flutter_work_time/domain/usecases/sign_out.dart';
 import 'package:flutter_work_time/domain/usecases/delete_account.dart';
 import 'package:flutter_work_time/core/providers/providers.dart';
 import 'package:flutter_work_time/core/providers/subscription_provider.dart';
+import 'package:flutter_work_time/l10n/app_localizations.dart';
 
 import 'settings_page_test.mocks.dart';
 
@@ -28,6 +29,7 @@ abstract class SettingsActions {
   Future<void> updateTargetHours(double hours);
   Future<void> updateWorkdays(List<int> days);
   Future<void> updateTimezoneOverride(String? timezone);
+  Future<void> updateLocale(String locale);
 }
 
 @GenerateMocks([SettingsActions, SignOut, DeleteAccount])
@@ -79,6 +81,9 @@ void main() {
         activeEntitlementProvider.overrideWithValue(null),
       ],
       child: MaterialApp(
+        locale: const Locale('de'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: const SettingsPage(),
       ),
     );
@@ -115,9 +120,34 @@ void main() {
       expect(find.text('Mo, Di, Mi, Do'), findsOneWidget);
       expect(find.textContaining('9.6 h/Tag'), findsOneWidget);
       expect(find.text('Systemstandard'), findsOneWidget);
+      expect(find.text('Deutsch'), findsOneWidget);
 
       expect(find.text('Gleitzeit-Bilanz'), findsOneWidget);
       expect(find.text('+05:00'), findsOneWidget);
+    });
+
+    testWidgets('displays English as language when locale is en', (tester) async {
+      final settings = const SettingsEntity(locale: 'en');
+
+      final settingsViewModel = FakeSettingsViewModel(
+        initialState: AsyncValue.data(SettingsState(
+          settings: settings,
+          overtimeBalance: Duration.zero,
+        )),
+        actions: mockActions,
+      );
+      final themeViewModel = FakeThemeViewModel(
+        initialState: ThemeMode.system,
+        actions: mockActions,
+      );
+
+      await tester.pumpWidget(createSubject(
+        settingsViewModel: settingsViewModel,
+        themeViewModel: themeViewModel,
+        authState: const AsyncValue.data(null),
+      ));
+
+      expect(find.text('Englisch'), findsOneWidget);
     });
 
     testWidgets('displays manual timezone override when set', (tester) async {
@@ -504,6 +534,36 @@ void main() {
       verify(mockActions.updateTimezoneOverride(null)).called(1);
     });
 
+    testWidgets('Edit Language flow: selecting English calls updateLocale', (tester) async {
+      final settings = const SettingsEntity(); // Standard: Deutsch
+
+      final settingsViewModel = FakeSettingsViewModel(
+        initialState: AsyncValue.data(SettingsState(
+          settings: settings,
+          overtimeBalance: Duration.zero,
+        )),
+        actions: mockActions,
+      );
+      final themeViewModel = FakeThemeViewModel(
+        initialState: ThemeMode.system,
+        actions: mockActions,
+      );
+
+      await tester.pumpWidget(createSubject(
+        settingsViewModel: settingsViewModel,
+        themeViewModel: themeViewModel,
+        authState: const AsyncValue.data(null),
+      ));
+
+      await tester.tap(find.text('Sprache'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(RadioListTile<String>, 'Englisch'));
+      await tester.pumpAndSettle();
+
+      verify(mockActions.updateLocale('en')).called(1);
+    });
+
     testWidgets('Adjust Overtime flow: Open dialog', (tester) async {
       final settingsViewModel = FakeSettingsViewModel(
         initialState: const AsyncValue.data(SettingsState(
@@ -662,6 +722,11 @@ class FakeSettingsViewModel extends SettingsViewModel {
   @override
   Future<void> updateTimezoneOverride(String? timezone) async {
     await actions.updateTimezoneOverride(timezone);
+  }
+
+  @override
+  Future<void> updateLocale(String locale) async {
+    await actions.updateLocale(locale);
   }
 }
 
