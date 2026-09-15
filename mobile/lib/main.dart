@@ -17,12 +17,14 @@ import 'dart:io' show Platform;
 
 import 'package:flutter_localizations/flutter_localizations.dart';
 
+import 'core/providers/app_lock_provider.dart';
 import 'core/providers/providers.dart';
 import 'core/services/notification_service.dart';
 import 'core/theme/app_theme.dart';
 import 'firebase_options.dart';
 import 'presentation/view_models/settings_view_model.dart';
 import 'presentation/view_models/theme_view_model.dart';
+import 'presentation/widgets/app_lock_screen.dart';
 
 // Global key for navigation from notifications
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -149,17 +151,46 @@ Future<void> main() async {
   );
 }
 
-class MyApp extends ConsumerWidget {
+class MyApp extends ConsumerStatefulWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  // Siehe #223: beim Wechsel in den Hintergrund erneut sperren, damit die
+  // App nicht offen bleibt, wenn sie später aus dem Task-Switcher zurückkehrt.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (kIsWeb || state != AppLifecycleState.paused) return;
+    final appLockService = ref.read(appLockServiceProvider);
+    if (appLockService.isEnabled && appLockService.hasPin) {
+      ref.read(isAppLockedProvider.notifier).state = true;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final themeMode = ref.watch(themeViewModelProvider);
     // Siehe #218: steuert app-weit, ob Zeitpicker/-anzeigen, die auf
     // MediaQuery.alwaysUse24HourFormat reagieren (z. B. showTimePicker,
     // MaterialLocalizations.formatTimeOfDay), 24h- oder 12h-Format nutzen.
     final use24HourFormat =
         ref.watch(settingsViewModelProvider).value?.settings.use24HourFormat ?? true;
+    final isLocked = !kIsWeb && ref.watch(isAppLockedProvider);
 
     return MaterialApp(
       navigatorKey: navigatorKey,
@@ -180,7 +211,12 @@ class MyApp extends ConsumerWidget {
       builder: (context, child) {
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: use24HourFormat),
-          child: child!,
+          child: Stack(
+            children: [
+              child!,
+              if (isLocked) const AppLockScreen(),
+            ],
+          ),
         );
       },
       home: const HomeScreen(),

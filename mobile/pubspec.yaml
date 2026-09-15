@@ -65,6 +65,9 @@ dependencies:
   # printing entsprechend auf die letzte mit pdf ^3.10.0 kompatible Version.
   pdf: ">=3.10.0 <3.13.0"
   printing: ^5.14.3
+  # PIN-/Biometrie-Sperre (#223)
+  local_auth: ^3.0.2
+  crypto: ^3.0.6
 
 dependency_overrides:
   meta: ^1.17.0
