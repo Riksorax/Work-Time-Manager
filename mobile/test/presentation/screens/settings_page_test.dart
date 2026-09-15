@@ -524,7 +524,12 @@ void main() {
       ));
 
       final lockSwitch = find.text('PIN-/Biometrie-Sperre');
-      await tester.scrollUntilVisible(lockSwitch, 500.0);
+      // ensureVisible statt scrollUntilVisible: garantiert vollständige
+      // Sichtbarkeit (nicht nur teilweise am Viewport-Rand), damit tap()
+      // zuverlässig trifft - relevant, seit die Bundesland-Kachel (#222)
+      // die Liste verlängert hat.
+      await tester.ensureVisible(lockSwitch);
+      await tester.pumpAndSettle();
       await tester.tap(lockSwitch);
       await tester.pumpAndSettle();
 
