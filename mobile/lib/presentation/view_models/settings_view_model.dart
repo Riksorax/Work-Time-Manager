@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers/providers.dart' as core_providers;
+import '../../core/utils/timezone_utils.dart';
 import '../../domain/entities/bundesland.dart';
 import '../../domain/entities/settings_entity.dart';
 import '../../domain/repositories/settings_repository.dart';
@@ -107,6 +108,12 @@ class NoOpSettingsRepository implements SettingsRepository {
 
   @override
   Future<void> setUse24HourFormat(bool use24Hour) async {}
+
+  @override
+  String? getTimezoneOverride() => null;
+
+  @override
+  Future<void> setTimezoneOverride(String? timezone) async {}
 }
 
 class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
@@ -163,6 +170,7 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
       final warnOnUndertimeThreshold = settingsRepository.getWarnOnUndertimeThreshold();
       final undertimeThresholdHours = settingsRepository.getUndertimeThresholdHours();
       final use24HourFormat = settingsRepository.getUse24HourFormat();
+      final timezoneOverride = settingsRepository.getTimezoneOverride();
 
       final settings = SettingsEntity(
         weeklyTargetHours: weeklyTargetHours,
@@ -179,6 +187,7 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
         warnOnUndertimeThreshold: warnOnUndertimeThreshold,
         undertimeThresholdHours: undertimeThresholdHours,
         use24HourFormat: use24HourFormat,
+        timezoneOverride: timezoneOverride,
       );
       state = AsyncValue.data(SettingsState(
         settings: settings,
@@ -337,6 +346,18 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
     await settingsRepository.setUse24HourFormat(use24Hour);
     final newSettings = state.value!.settings.copyWith(use24HourFormat: use24Hour);
     state = state.whenData((value) => value.copyWith(settings: newSettings));
+  }
+
+  /// Speichert die manuelle Zeitzone-Überschreibung (`null` = Systemzeitzone)
+  /// und wendet sie sofort auf [tz.local] an, damit z.B. Benachrichtigungs-
+  /// Zeitpunkte ohne App-Neustart korrekt berechnet werden. Siehe #221.
+  Future<void> updateTimezoneOverride(String? timezone) async {
+    final settingsRepository = ref.read(core_providers.settingsRepositoryProvider);
+    await settingsRepository.setTimezoneOverride(timezone);
+    await applyTimezone(timezone);
+    final newSettings = state.value!.settings.copyWithTimezoneOverride(timezone);
+    state = state.whenData((value) => value.copyWith(settings: newSettings));
+    await _rescheduleNotifications();
   }
 
   // --- Notification Rescheduling Logic ---

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
+import 'package:flutter_work_time/core/utils/timezone_utils.dart';
 
 import '../../domain/entities/bundesland.dart';
 import '../../domain/repositories/settings_repository.dart';
@@ -272,5 +273,19 @@ class SettingsRepositoryImpl implements SettingsRepository {
   @override
   Future<void> setUse24HourFormat(bool use24Hour) async {
     await _prefs.setBool(_use24HourFormatKey, use24Hour);
+  }
+
+  @override
+  String? getTimezoneOverride() {
+    return _prefs.getString(timezoneOverridePrefsKey);
+  }
+
+  @override
+  Future<void> setTimezoneOverride(String? timezone) async {
+    if (timezone == null) {
+      await _prefs.remove(timezoneOverridePrefsKey);
+    } else {
+      await _prefs.setString(timezoneOverridePrefsKey, timezone);
+    }
   }
 }

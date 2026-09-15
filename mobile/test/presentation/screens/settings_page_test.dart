@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:flutter_work_time/domain/entities/settings_entity.dart';
 import 'package:flutter_work_time/domain/entities/user_entity.dart';
 import 'package:flutter_work_time/presentation/screens/settings_page.dart';
@@ -26,6 +27,7 @@ abstract class SettingsActions {
   Future<void> deleteAccount();
   Future<void> updateTargetHours(double hours);
   Future<void> updateWorkdays(List<int> days);
+  Future<void> updateTimezoneOverride(String? timezone);
 }
 
 @GenerateMocks([SettingsActions, SignOut, DeleteAccount])
@@ -38,6 +40,7 @@ void main() {
   setUpAll(() async {
     SharedPreferences.setMockInitialValues({});
     prefs = await SharedPreferences.getInstance();
+    tz_data.initializeTimeZones();
   });
 
   setUp(() {
@@ -111,9 +114,34 @@ void main() {
       expect(find.text('38.5 h/Woche'), findsOneWidget);
       expect(find.text('Mo, Di, Mi, Do'), findsOneWidget);
       expect(find.textContaining('9.6 h/Tag'), findsOneWidget);
-      
+      expect(find.text('Systemstandard'), findsOneWidget);
+
       expect(find.text('Gleitzeit-Bilanz'), findsOneWidget);
       expect(find.text('+05:00'), findsOneWidget);
+    });
+
+    testWidgets('displays manual timezone override when set', (tester) async {
+      final settings = const SettingsEntity(timezoneOverride: 'Europe/London');
+
+      final settingsViewModel = FakeSettingsViewModel(
+        initialState: AsyncValue.data(SettingsState(
+          settings: settings,
+          overtimeBalance: Duration.zero,
+        )),
+        actions: mockActions,
+      );
+      final themeViewModel = FakeThemeViewModel(
+        initialState: ThemeMode.system,
+        actions: mockActions,
+      );
+
+      await tester.pumpWidget(createSubject(
+        settingsViewModel: settingsViewModel,
+        themeViewModel: themeViewModel,
+        authState: const AsyncValue.data(null),
+      ));
+
+      expect(find.text('Europe/London'), findsOneWidget);
     });
 
     testWidgets('shows Login button when not authenticated', (tester) async {
@@ -411,6 +439,71 @@ void main() {
       verify(mockActions.updateWorkdays(argThat(equals([1, 2, 3, 4, 6])))).called(1);
     });
 
+    testWidgets('Edit Timezone flow: search and select a zone', (tester) async {
+      final settings = const SettingsEntity(); // Standard: Systemstandard
+
+      final settingsViewModel = FakeSettingsViewModel(
+        initialState: AsyncValue.data(SettingsState(
+          settings: settings,
+          overtimeBalance: Duration.zero,
+        )),
+        actions: mockActions,
+      );
+      final themeViewModel = FakeThemeViewModel(
+        initialState: ThemeMode.system,
+        actions: mockActions,
+      );
+
+      await tester.pumpWidget(createSubject(
+        settingsViewModel: settingsViewModel,
+        themeViewModel: themeViewModel,
+        authState: const AsyncValue.data(null),
+      ));
+
+      await tester.tap(find.text('Zeitzone'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Systemstandard'), findsWidgets);
+
+      await tester.enterText(find.byType(TextField), 'Europe/Berlin');
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(ListTile, 'Europe/Berlin'));
+      await tester.pumpAndSettle();
+
+      verify(mockActions.updateTimezoneOverride('Europe/Berlin')).called(1);
+    });
+
+    testWidgets('Edit Timezone flow: selecting Systemstandard resets to null', (tester) async {
+      final settings = const SettingsEntity(timezoneOverride: 'Europe/Berlin');
+
+      final settingsViewModel = FakeSettingsViewModel(
+        initialState: AsyncValue.data(SettingsState(
+          settings: settings,
+          overtimeBalance: Duration.zero,
+        )),
+        actions: mockActions,
+      );
+      final themeViewModel = FakeThemeViewModel(
+        initialState: ThemeMode.system,
+        actions: mockActions,
+      );
+
+      await tester.pumpWidget(createSubject(
+        settingsViewModel: settingsViewModel,
+        themeViewModel: themeViewModel,
+        authState: const AsyncValue.data(null),
+      ));
+
+      await tester.tap(find.text('Europe/Berlin'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Systemstandard'));
+      await tester.pumpAndSettle();
+
+      verify(mockActions.updateTimezoneOverride(null)).called(1);
+    });
+
     testWidgets('Adjust Overtime flow: Open dialog', (tester) async {
       final settingsViewModel = FakeSettingsViewModel(
         initialState: const AsyncValue.data(SettingsState(
@@ -431,6 +524,9 @@ void main() {
       ));
 
       final btn = find.text('Überstunden / Minusstunden anpassen');
+      await tester.scrollUntilVisible(btn, 500.0);
+      await tester.ensureVisible(btn);
+      await tester.pumpAndSettle();
       await tester.tap(btn);
       await tester.pumpAndSettle();
 
@@ -458,6 +554,8 @@ void main() {
 
       final notificationTile = find.text('Benachrichtigungen');
       await tester.scrollUntilVisible(notificationTile, 500.0);
+      await tester.ensureVisible(notificationTile);
+      await tester.pumpAndSettle();
       await tester.tap(notificationTile);
       await tester.pumpAndSettle();
 
@@ -559,6 +657,11 @@ class FakeSettingsViewModel extends SettingsViewModel {
   @override
   Future<void> updateWorkdays(WidgetRef ref, List<int> days) async {
     await actions.updateWorkdays(days);
+  }
+
+  @override
+  Future<void> updateTimezoneOverride(String? timezone) async {
+    await actions.updateTimezoneOverride(timezone);
   }
 }
 

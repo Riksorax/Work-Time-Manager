@@ -115,4 +115,12 @@ abstract class SettingsRepository {
 
   /// Speichert, ob Uhrzeiten im 24-Stunden-Format angezeigt werden.
   Future<void> setUse24HourFormat(bool use24Hour);
+
+  /// Ruft die manuell überschriebene Zeitzone ab (IANA-Kennung, z.B.
+  /// `Europe/Berlin`). `null` = Systemzeitzone verwenden. Siehe #221.
+  String? getTimezoneOverride();
+
+  /// Speichert die manuell überschriebene Zeitzone (`null` setzt auf
+  /// Systemzeitzone zurück).
+  Future<void> setTimezoneOverride(String? timezone);
 }
