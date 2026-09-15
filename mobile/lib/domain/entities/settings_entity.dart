@@ -26,6 +26,20 @@ class SettingsEntity extends Equatable {
   /// Whether to notify about missing break entries.
   final bool notifyBreaks;
 
+  /// Whether to warn when the overtime balance exceeds
+  /// [overtimeThresholdHours]. Siehe #219.
+  final bool warnOnOvertimeThreshold;
+
+  /// Threshold in hours for the overtime warning.
+  final double overtimeThresholdHours;
+
+  /// Whether to warn when the overtime balance falls below
+  /// -[undertimeThresholdHours]. Siehe #219.
+  final bool warnOnUndertimeThreshold;
+
+  /// Threshold in hours for the undertime (minus hours) warning.
+  final double undertimeThresholdHours;
+
   const SettingsEntity({
     this.weeklyTargetHours = 40.0,
     this.workdaysPerWeek = 5,
@@ -35,6 +49,10 @@ class SettingsEntity extends Equatable {
     this.notifyWorkStart = true,
     this.notifyWorkEnd = true,
     this.notifyBreaks = true,
+    this.warnOnOvertimeThreshold = false,
+    this.overtimeThresholdHours = 10.0,
+    this.warnOnUndertimeThreshold = false,
+    this.undertimeThresholdHours = 10.0,
   });
 
   /// Creates a copy of this [SettingsEntity] but with the given fields
@@ -48,6 +66,10 @@ class SettingsEntity extends Equatable {
     bool? notifyWorkStart,
     bool? notifyWorkEnd,
     bool? notifyBreaks,
+    bool? warnOnOvertimeThreshold,
+    double? overtimeThresholdHours,
+    bool? warnOnUndertimeThreshold,
+    double? undertimeThresholdHours,
   }) {
     return SettingsEntity(
       weeklyTargetHours: weeklyTargetHours ?? this.weeklyTargetHours,
@@ -58,6 +80,10 @@ class SettingsEntity extends Equatable {
       notifyWorkStart: notifyWorkStart ?? this.notifyWorkStart,
       notifyWorkEnd: notifyWorkEnd ?? this.notifyWorkEnd,
       notifyBreaks: notifyBreaks ?? this.notifyBreaks,
+      warnOnOvertimeThreshold: warnOnOvertimeThreshold ?? this.warnOnOvertimeThreshold,
+      overtimeThresholdHours: overtimeThresholdHours ?? this.overtimeThresholdHours,
+      warnOnUndertimeThreshold: warnOnUndertimeThreshold ?? this.warnOnUndertimeThreshold,
+      undertimeThresholdHours: undertimeThresholdHours ?? this.undertimeThresholdHours,
     );
   }
 
@@ -71,5 +97,9 @@ class SettingsEntity extends Equatable {
         notifyWorkStart,
         notifyWorkEnd,
         notifyBreaks,
+        warnOnOvertimeThreshold,
+        overtimeThresholdHours,
+        warnOnUndertimeThreshold,
+        undertimeThresholdHours,
       ];
 }

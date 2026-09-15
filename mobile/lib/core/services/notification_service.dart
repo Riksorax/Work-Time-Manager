@@ -1,6 +1,7 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter_work_time/core/utils/logger.dart';
+import 'package:flutter_work_time/domain/utils/overtime_warning_utils.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -99,6 +100,42 @@ class NotificationService {
         ),
       ),
       payload: payload,
+    );
+  }
+
+  /// Sendet eine sofortige Warnung bei Über-/Minusstunden-Schwellwert
+  /// (siehe #219). Eigener Channel, damit Nutzer diese Warnungen unabhängig
+  /// von den täglichen Erinnerungen stumm schalten können.
+  Future<void> showOvertimeWarning({
+    required OvertimeWarningType type,
+    required Duration totalOvertime,
+  }) async {
+    if (type == OvertimeWarningType.none) return;
+
+    await initialize();
+
+    final hours = (totalOvertime.inMinutes.abs() / 60).toStringAsFixed(1);
+    final title = type == OvertimeWarningType.overtime
+        ? 'Überstunden-Warnung'
+        : 'Minusstunden-Warnung';
+    final body = type == OvertimeWarningType.overtime
+        ? 'Dein Gleitzeitkonto hat $hours Überstunden erreicht.'
+        : 'Dein Gleitzeitkonto liegt bei $hours Minusstunden.';
+
+    await _notifications.show(
+      1000,
+      title,
+      body,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'overtime_warning',
+          'Gleitzeit-Warnungen',
+          channelDescription: 'Warnung bei Über-/Minusstunden-Schwellwert',
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+      ),
+      payload: 'open_dashboard',
     );
   }
 

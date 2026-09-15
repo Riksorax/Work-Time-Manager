@@ -351,6 +351,90 @@ class MockSettingsRepository extends _i1.Mock
         returnValue: _i5.Future<void>.value(),
         returnValueForMissingStub: _i5.Future<void>.value(),
       ) as _i5.Future<void>);
+
+  // Manuell ergänzt (siehe #219 / SettingsRepository) - Flutter-SDK war in
+  // der Umgebung, in der diese Änderung entstand, nicht verfügbar, um
+  // `dart run build_runner build` auszuführen. Entspricht exakt dem Muster,
+  // das der Generator für die anderen bool-/double-Getter/-Setter erzeugt.
+  @override
+  bool getWarnOnOvertimeThreshold() => (super.noSuchMethod(
+        Invocation.method(
+          #getWarnOnOvertimeThreshold,
+          [],
+        ),
+        returnValue: false,
+      ) as bool);
+
+  @override
+  _i5.Future<void> setWarnOnOvertimeThreshold(bool? enabled) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #setWarnOnOvertimeThreshold,
+          [enabled],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  double getOvertimeThresholdHours() => (super.noSuchMethod(
+        Invocation.method(
+          #getOvertimeThresholdHours,
+          [],
+        ),
+        returnValue: 0.0,
+      ) as double);
+
+  @override
+  _i5.Future<void> setOvertimeThresholdHours(double? hours) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #setOvertimeThresholdHours,
+          [hours],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  bool getWarnOnUndertimeThreshold() => (super.noSuchMethod(
+        Invocation.method(
+          #getWarnOnUndertimeThreshold,
+          [],
+        ),
+        returnValue: false,
+      ) as bool);
+
+  @override
+  _i5.Future<void> setWarnOnUndertimeThreshold(bool? enabled) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #setWarnOnUndertimeThreshold,
+          [enabled],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  double getUndertimeThresholdHours() => (super.noSuchMethod(
+        Invocation.method(
+          #getUndertimeThresholdHours,
+          [],
+        ),
+        returnValue: 0.0,
+      ) as double);
+
+  @override
+  _i5.Future<void> setUndertimeThresholdHours(double? hours) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #setUndertimeThresholdHours,
+          [hours],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 }
 
 /// A class which mocks [SaveWorkEntry].

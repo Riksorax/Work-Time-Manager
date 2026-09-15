@@ -18,6 +18,10 @@ class SettingsRepositoryImpl implements SettingsRepository {
   static const String _notifyWorkStartKey = 'notify_work_start';
   static const String _notifyWorkEndKey = 'notify_work_end';
   static const String _notifyBreaksKey = 'notify_breaks';
+  static const String _warnOnOvertimeThresholdKey = 'warn_on_overtime_threshold';
+  static const String _overtimeThresholdHoursKey = 'overtime_threshold_hours';
+  static const String _warnOnUndertimeThresholdKey = 'warn_on_undertime_threshold';
+  static const String _undertimeThresholdHoursKey = 'undertime_threshold_hours';
 
   final SharedPreferences _prefs;
   final FirestoreDataSource _firestoreDataSource;
@@ -182,5 +186,45 @@ class SettingsRepositoryImpl implements SettingsRepository {
   @override
   Future<void> setNotifyBreaks(bool enabled) async {
     await _prefs.setBool(_notifyBreaksKey, enabled);
+  }
+
+  @override
+  bool getWarnOnOvertimeThreshold() {
+    return _prefs.getBool(_warnOnOvertimeThresholdKey) ?? false;
+  }
+
+  @override
+  Future<void> setWarnOnOvertimeThreshold(bool enabled) async {
+    await _prefs.setBool(_warnOnOvertimeThresholdKey, enabled);
+  }
+
+  @override
+  double getOvertimeThresholdHours() {
+    return _prefs.getDouble(_overtimeThresholdHoursKey) ?? 10.0;
+  }
+
+  @override
+  Future<void> setOvertimeThresholdHours(double hours) async {
+    await _prefs.setDouble(_overtimeThresholdHoursKey, hours);
+  }
+
+  @override
+  bool getWarnOnUndertimeThreshold() {
+    return _prefs.getBool(_warnOnUndertimeThresholdKey) ?? false;
+  }
+
+  @override
+  Future<void> setWarnOnUndertimeThreshold(bool enabled) async {
+    await _prefs.setBool(_warnOnUndertimeThresholdKey, enabled);
+  }
+
+  @override
+  double getUndertimeThresholdHours() {
+    return _prefs.getDouble(_undertimeThresholdHoursKey) ?? 10.0;
+  }
+
+  @override
+  Future<void> setUndertimeThresholdHours(double hours) async {
+    await _prefs.setDouble(_undertimeThresholdHoursKey, hours);
   }
 }
