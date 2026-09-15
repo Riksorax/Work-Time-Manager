@@ -19,9 +19,9 @@ export interface EditTargetHoursDialogResult { hours: number; }
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Stunden pro Woche</mat-label>
           <input matInput type="number" formControlName="hours"
-                 min="1" max="168" step="0.5"
+                 min="1" max="48" step="0.5"
                  aria-label="Soll-Arbeitsstunden pro Woche" />
-          <mat-hint>Zwischen 1 und 168 Stunden</mat-hint>
+          <mat-hint>Zwischen 1 und 48 Stunden (gesetzliches Maximum nach § 3 ArbZG)</mat-hint>
         </mat-form-field>
       </form>
     </mat-dialog-content>
@@ -40,7 +40,8 @@ export class EditTargetHoursDialogComponent {
   private  readonly fb         = inject(FormBuilder);
 
   protected readonly form = this.fb.group({
-    hours: [this.data.currentHours, [Validators.required, Validators.min(1), Validators.max(168)]],
+    // Gesetzliche Obergrenze nach § 3 ArbZG: max. 48 Std./Woche.
+    hours: [this.data.currentHours, [Validators.required, Validators.min(1), Validators.max(48)]],
   });
 
   submit(): void {
