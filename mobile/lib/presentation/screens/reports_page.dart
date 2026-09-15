@@ -2,15 +2,19 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_work_time/core/utils/logger.dart';
 import 'package:flutter_work_time/core/utils/time_precision.dart';
 import 'package:intl/intl.dart';
 import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 import '../../core/providers/subscription_provider.dart';
+import '../../core/services/pdf_report_service.dart';
 
 import '../../domain/entities/work_entry_extensions.dart';
 import '../widgets/common/responsive_center.dart';
 import '../widgets/premium_blur_gate.dart';
+import '../state/monthly_report_state.dart';
 import '../state/reports_state.dart';
+import '../state/weekly_report_state.dart';
 import '../view_models/reports_view_model.dart';
 import '../view_models/settings_view_model.dart';
 import '../view_models/yearly_report_view_model.dart';
@@ -665,6 +669,10 @@ class WeeklyReportView extends ConsumerWidget {
           final startOfWeek = DateTime(selectedDay.year, selectedDay.month,
               selectedDay.day - selectedDay.weekday + 1);
           final endOfWeek = startOfWeek.add(const Duration(days: 6));
+          final weekNumber =
+              (startOfWeek.difference(DateTime(startOfWeek.year, 1, 1)).inDays / 7)
+                      .floor() +
+                  1;
           final Duration weeklyOvertimeLocal = weeklyReport.dailyWork.entries
               .fold(Duration.zero, (sum, e) => sum + (e.value - dailyTarget));
 
@@ -698,7 +706,7 @@ class WeeklyReportView extends ConsumerWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'KW ${(startOfWeek.difference(DateTime(startOfWeek.year, 1, 1)).inDays / 7).floor() + 1}',
+                            'KW $weekNumber',
                             style: Theme.of(context).textTheme.bodyMedium,
                             textAlign: TextAlign.center,
                           ),
@@ -713,8 +721,22 @@ class WeeklyReportView extends ConsumerWidget {
                     ),
                   ],
                 ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () => _exportWeeklyReportPdf(
+                      context: context,
+                      startOfWeek: startOfWeek,
+                      endOfWeek: endOfWeek,
+                      weekNumber: weekNumber,
+                      weeklyReport: weeklyReport,
+                      overtime: weeklyOvertimeLocal,
+                    ),
+                    icon: const Icon(Icons.picture_as_pdf_outlined),
+                    label: const Text('Als PDF exportieren'),
+                  ),
+                ),
                 const SizedBox(height: 8),
-                const SizedBox(height: 16),
                 if (weeklyReport.workDays == 0)
                   const Center(child: Text('Keine Daten für diese Woche.'))
                 else
@@ -845,6 +867,73 @@ void _showDayEntriesBottomSheet(
   );
 }
 
+final _pdfReportService = PdfReportService();
+
+Future<void> _exportWeeklyReportPdf({
+  required BuildContext context,
+  required DateTime startOfWeek,
+  required DateTime endOfWeek,
+  required int weekNumber,
+  required WeeklyReportState weeklyReport,
+  required Duration overtime,
+}) async {
+  final messenger = ScaffoldMessenger.of(context);
+  try {
+    await _pdfReportService.exportWeeklyReport(
+      startOfWeek: startOfWeek,
+      endOfWeek: endOfWeek,
+      weekNumber: weekNumber,
+      workDays: weeklyReport.workDays,
+      totalWorkDuration:
+          weeklyReport.dailyWork.values.fold(Duration.zero, (prev, d) => prev + d),
+      totalBreakDuration: weeklyReport.totalBreakDuration,
+      averageWorkDuration: weeklyReport.averageWorkDuration,
+      overtime: overtime,
+      dailyWork: weeklyReport.dailyWork,
+    );
+  } catch (e) {
+    logger.e('[PDF-Export] Wochenbericht fehlgeschlagen: $e');
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text('PDF-Export fehlgeschlagen: $e'),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+}
+
+Future<void> _exportMonthlyReportPdf({
+  required BuildContext context,
+  required DateTime month,
+  required MonthlyReportState monthlyReport,
+  required Duration monthlyOvertime,
+}) async {
+  final messenger = ScaffoldMessenger.of(context);
+  try {
+    await _pdfReportService.exportMonthlyReport(
+      month: month,
+      workDays: monthlyReport.workDays,
+      totalWorkDuration:
+          monthlyReport.dailyWork.values.fold(Duration.zero, (prev, d) => prev + d),
+      totalBreakDuration: monthlyReport.totalBreakDuration,
+      averageWorkDuration: monthlyReport.averageWorkDuration,
+      avgWorkDurationPerWeek: monthlyReport.avgWorkDurationPerWeek,
+      monthlyOvertime: monthlyOvertime,
+      totalOvertime: monthlyReport.totalOvertime,
+      weeklyWork: monthlyReport.weeklyWork,
+      dailyWork: monthlyReport.dailyWork,
+    );
+  } catch (e) {
+    logger.e('[PDF-Export] Monatsbericht fehlgeschlagen: $e');
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text('PDF-Export fehlgeschlagen: $e'),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+}
+
 class MonthlyReportView extends ConsumerWidget {
   const MonthlyReportView({super.key});
 
@@ -959,8 +1048,21 @@ class MonthlyReportView extends ConsumerWidget {
           ],
         ));
 
+        monthChildren.add(Align(
+          alignment: Alignment.centerRight,
+          child: TextButton.icon(
+            onPressed: () => _exportMonthlyReportPdf(
+              context: context,
+              month: DateTime(selectedMonth.year, selectedMonth.month),
+              monthlyReport: monthlyReport,
+              monthlyOvertime: monthlyOvertimeLocal,
+            ),
+            icon: const Icon(Icons.picture_as_pdf_outlined),
+            label: const Text('Als PDF exportieren'),
+          ),
+        ));
+
         monthChildren.add(const SizedBox(height: 8));
-        monthChildren.add(const SizedBox(height: 16));
 
         if (monthlyReport.workDays == 0) {
           monthChildren.add(const Center(child: Text('Keine Daten für diesen Monat.')));
