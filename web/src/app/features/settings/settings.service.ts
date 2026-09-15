@@ -13,7 +13,7 @@ import { UserSettings } from '../../shared/models/index';
 
 const DEFAULT_SETTINGS: UserSettings = {
   weeklyTargetHours: 40,
-  workdaysPerWeek: 5,
+  workdays: [1, 2, 3, 4, 5],
   notificationsEnabled: false,
   notificationTime: '08:00',
   notificationDays: [1, 2, 3, 4, 5],
@@ -69,8 +69,8 @@ export class SettingsPageService {
   // ── Computed ──────────────────────────────────────────────────────────────
   readonly dailyTargetHours = computed(() => {
     const s = this.settings();
-    if (!s || s.workdaysPerWeek === 0) return '0.0';
-    return (s.weeklyTargetHours / s.workdaysPerWeek).toFixed(1);
+    if (!s || s.workdays.length === 0) return '0.0';
+    return (s.weeklyTargetHours / s.workdays.length).toFixed(1);
   });
 
   constructor() {
@@ -96,9 +96,9 @@ export class SettingsPageService {
     await this.coreSettings.saveSettings({ ...current, weeklyTargetHours: hours });
   }
 
-  async setWorkdays(days: number): Promise<void> {
+  async setWorkdays(days: number[]): Promise<void> {
     const current = this.settings();
-    await this.coreSettings.saveSettings({ ...current, workdaysPerWeek: days });
+    await this.coreSettings.saveSettings({ ...current, workdays: days });
   }
 
   async setOvertime(ms: number): Promise<void> {

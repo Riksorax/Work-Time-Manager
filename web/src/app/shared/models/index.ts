@@ -27,7 +27,8 @@ export interface WorkEntry {
 
 export interface UserSettings {
   weeklyTargetHours: number;
-  workdaysPerWeek: number;
+  /** Konkrete Arbeitstage als ISO-Wochentage (1 = Montag, 7 = Sonntag). Siehe #217. */
+  workdays: number[];
   notificationsEnabled: boolean;
   notificationTime: string; // HH:mm
   notificationDays: number[]; // 1-7

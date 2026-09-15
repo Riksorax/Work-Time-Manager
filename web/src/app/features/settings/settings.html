@@ -66,8 +66,8 @@
             <button mat-list-item (click)="openEditWorkdaysDialog()"
                     aria-label="Arbeitstage bearbeiten">
               <mat-icon matListItemIcon aria-hidden="true">calendar_today</mat-icon>
-              <span matListItemTitle>Arbeitstage pro Woche</span>
-              <span matListItemLine>{{ svc.settings().workdaysPerWeek }} Tage</span>
+              <span matListItemTitle>Arbeitstage</span>
+              <span matListItemLine>{{ formatWorkdays(svc.settings().workdays) }}</span>
               <mat-icon matListItemMeta aria-hidden="true">chevron_right</mat-icon>
             </button>
 

@@ -15,7 +15,7 @@ import { WorkEntry, WorkEntryType, UserSettings } from '../../shared/models/inde
 
 const DEFAULT_SETTINGS: UserSettings = {
   weeklyTargetHours: 40,
-  workdaysPerWeek: 5,
+  workdays: [1, 2, 3, 4, 5],
   notificationsEnabled: false,
   notificationTime: '08:00',
   notificationDays: [1, 2, 3, 4, 5],
@@ -253,7 +253,7 @@ export class ReportsService {
 
   addDateRangeSelection(dates: Date[]): void {
     if (!this.isMultiSelectActive()) this._isMultiSelectActive.set(true);
-    const workdays = this._settings().workdaysPerWeek;
+    const workdays = this._settings().workdays;
     const filtered = dates.filter(d => this._isWorkday(d, workdays));
     this._selectedDates.update((prev: Set<string>) => {
       const next = new Set(prev);
@@ -262,11 +262,10 @@ export class ReportsService {
     });
   }
 
-  private _isWorkday(date: Date, workdaysPerWeek: number): boolean {
+  private _isWorkday(date: Date, workdays: number[]): boolean {
     const dow = date.getDay(); // 0=So, 1=Mo, ..., 6=Sa
-    if (workdaysPerWeek >= 7) return true;
-    if (workdaysPerWeek >= 6) return dow !== 0;          // Mo–Sa
-    return dow >= 1 && dow <= 5;                         // Mo–Fr
+    const isoWeekday = dow === 0 ? 7 : dow;
+    return workdays.includes(isoWeekday);
   }
 
   clearDateSelection(): void {
