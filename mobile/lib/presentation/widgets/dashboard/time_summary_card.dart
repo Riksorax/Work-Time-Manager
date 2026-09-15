@@ -25,10 +25,15 @@ class TimeSummaryCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settingsRepository = ref.watch(settingsRepositoryProvider);
-    final workdaysPerWeek = settingsRepository.getWorkdaysPerWeek();
-    final targetDailyHours = roundDurationToMinute(Duration(
-      microseconds: (settingsRepository.getTargetWeeklyHours() / workdaysPerWeek * Duration.microsecondsPerHour).round(),
-    ));
+    final workdays = settingsRepository.getWorkdays();
+    final targetDailyHours = workdays.isEmpty
+        ? Duration.zero
+        : roundDurationToMinute(Duration(
+            microseconds: (settingsRepository.getTargetWeeklyHours() /
+                    workdays.length *
+                    Duration.microsecondsPerHour)
+                .round(),
+          ));
 
     return Card(
       elevation: 2,

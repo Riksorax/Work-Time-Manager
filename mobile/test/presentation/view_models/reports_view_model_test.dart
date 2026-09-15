@@ -28,7 +28,7 @@ void main() {
     );
 
     // Default Stubs
-    when(mockSettingsRepository.getWorkdaysPerWeek()).thenReturn(5);
+    when(mockSettingsRepository.getWorkdays()).thenReturn([1, 2, 3, 4, 5]);
     when(mockSettingsRepository.getTargetWeeklyHours()).thenReturn(40.0);
     
     // Stub for initial load (current date)
@@ -111,7 +111,7 @@ void main() {
       when(mockWorkRepository.getWorkEntriesForMonth(2023, 10))
           .thenAnswer((_) async => [entry1, entry2]);
       
-      when(mockSettingsRepository.getWorkdaysPerWeek()).thenReturn(5);
+      when(mockSettingsRepository.getWorkdays()).thenReturn([1, 2, 3, 4, 5]);
       when(mockSettingsRepository.getTargetWeeklyHours()).thenReturn(40.0);
       // Target per day = 8h. 
       // Work days in this week = 2.
@@ -183,7 +183,7 @@ void main() {
       when(mockWorkRepository.getWorkEntriesForMonth(2023, 10))
           .thenAnswer((_) async => entries);
 
-      when(mockSettingsRepository.getWorkdaysPerWeek()).thenReturn(5);
+      when(mockSettingsRepository.getWorkdays()).thenReturn([1, 2, 3, 4, 5]);
       when(mockSettingsRepository.getTargetWeeklyHours()).thenReturn(40.0);
       // Ohne Fix: Soll = 8h * 6 Tage = 48h, Ist = 46h, Overtime = -2h (FALSCH)
       // Mit Fix:  Soll = 8h * 5 Tage = 40h (gedeckelt), Ist = 46h, Overtime = +6h (RICHTIG)

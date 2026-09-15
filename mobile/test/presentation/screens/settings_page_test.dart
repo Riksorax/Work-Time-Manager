@@ -25,7 +25,7 @@ abstract class SettingsActions {
   Future<void> signOut();
   Future<void> deleteAccount();
   Future<void> updateTargetHours(double hours);
-  Future<void> updateWorkdays(int days);
+  Future<void> updateWorkdays(List<int> days);
 }
 
 @GenerateMocks([SettingsActions, SignOut, DeleteAccount])
@@ -85,7 +85,7 @@ void main() {
     testWidgets('displays current settings correctly', (tester) async {
       final settings = SettingsEntity(
         weeklyTargetHours: 38.5,
-        workdaysPerWeek: 4,
+        workdays: const [1, 2, 3, 4],
       );
       
       final settingsViewModel = FakeSettingsViewModel(
@@ -109,7 +109,7 @@ void main() {
 
       expect(find.text('Einstellungen'), findsOneWidget);
       expect(find.text('38.5 h/Woche'), findsOneWidget);
-      expect(find.text('4 Tage'), findsOneWidget);
+      expect(find.text('Mo, Di, Mi, Do'), findsOneWidget);
       expect(find.textContaining('9.6 h/Tag'), findsOneWidget);
       
       expect(find.text('Gleitzeit-Bilanz'), findsOneWidget);
@@ -373,11 +373,11 @@ void main() {
     });
 
     testWidgets('Edit Workdays flow: Toggle days and save', (tester) async {
-      final settings = const SettingsEntity(workdaysPerWeek: 5);
-      
+      final settings = const SettingsEntity(); // Standard: Mo-Fr
+
       final settingsViewModel = FakeSettingsViewModel(
         initialState: AsyncValue.data(SettingsState(
-          settings: settings, 
+          settings: settings,
           overtimeBalance: Duration.zero
         )),
         actions: mockActions,
@@ -393,26 +393,22 @@ void main() {
         authState: const AsyncValue.data(null),
       ));
 
-      await tester.tap(find.text('Arbeitstage pro Woche'));
+      await tester.tap(find.text('Arbeitstage'));
       await tester.pumpAndSettle();
 
-      // Verify Modal Title (which is the same as the list tile, so findsWidgets)
-      // We check if we can find the DropdownButton
-      expect(find.byType(DropdownButton<int>), findsOneWidget);
+      // 7 Wochentag-Chips (Mo-So) sichtbar
+      expect(find.byType(FilterChip), findsNWidgets(7));
 
-      // 2. Open Dropdown
-      await tester.tap(find.byType(DropdownButton<int>));
+      // Freitag abwählen, Samstag zusätzlich auswählen -> Mo,Di,Mi,Do,Sa
+      await tester.tap(find.widgetWithText(FilterChip, 'Fr'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilterChip, 'Sa'));
       await tester.pumpAndSettle();
 
-      // 3. Select '4 Tage'
-      await tester.tap(find.text('4 Tage').last); // .last because selected item might be duplicated in menu
-      await tester.pumpAndSettle();
-
-      // 4. Save
       await tester.tap(find.text('Speichern'));
       await tester.pumpAndSettle();
 
-      verify(mockActions.updateWorkdays(4)).called(1);
+      verify(mockActions.updateWorkdays(argThat(equals([1, 2, 3, 4, 6])))).called(1);
     });
 
     testWidgets('Adjust Overtime flow: Open dialog', (tester) async {
@@ -561,7 +557,7 @@ class FakeSettingsViewModel extends SettingsViewModel {
   }
 
   @override
-  Future<void> updateWorkdaysPerWeek(WidgetRef ref, int days) async {
+  Future<void> updateWorkdays(WidgetRef ref, List<int> days) async {
     await actions.updateWorkdays(days);
   }
 }

@@ -13,6 +13,7 @@ import '../../data/repositories/hybrid_overtime_repository_impl.dart';
 import '../../data/repositories/firebase_overtime_repository_impl.dart';
 import '../../domain/entities/bundesland.dart';
 import '../../domain/services/data_sync_service.dart';
+import '../../domain/utils/weekday_labels.dart';
 import '../view_models/auth_view_model.dart';
 import '../view_models/dashboard_view_model.dart' as dashboard_vm;
 import '../view_models/settings_view_model.dart';
@@ -72,22 +73,20 @@ class SettingsPage extends ConsumerWidget {
               },
             ),
             ListTile(
-              title: const Text('Arbeitstage pro Woche'),
-              subtitle: Text(
-                '${settings.workdaysPerWeek} Tage',
-              ),
+              title: const Text('Arbeitstage'),
+              subtitle: Text(formatWorkdays(settings.workdays)),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 showEditWorkdaysModal(
                   context,
-                  settings.workdaysPerWeek,
+                  settings.workdays,
                 );
               },
             ),
             ListTile(
               title: const Text('Tägliche Soll-Arbeitszeit'),
               subtitle: Text(
-                '≈ ${settings.workdaysPerWeek > 0 ? (settings.weeklyTargetHours / settings.workdaysPerWeek).toStringAsFixed(1) : '0.0'} h/Tag',
+                '≈ ${settings.workdays.isNotEmpty ? (settings.weeklyTargetHours / settings.workdays.length).toStringAsFixed(1) : '0.0'} h/Tag',
               ),
             ),
             const Divider(height: 1),

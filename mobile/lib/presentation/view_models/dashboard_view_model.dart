@@ -159,18 +159,17 @@ class DashboardViewModel extends Notifier<DashboardState> {
   /// Berechnet das effektive Tages-Soll unter Berücksichtigung von Zusatztagen.
   Duration _getEffectiveTargetDailyHours() {
     final settingsRepository = ref.read(settingsRepositoryProvider);
-    final workdaysPerWeek = settingsRepository.getWorkdaysPerWeek();
-    if (workdaysPerWeek <= 0) return Duration.zero;
+    final workdays = settingsRepository.getWorkdays();
+    if (workdays.isEmpty) return Duration.zero;
     final regularDailyTarget = roundDurationToMinute(Duration(
       microseconds: (settingsRepository.getTargetWeeklyHours() /
-              workdaysPerWeek *
+              workdays.length *
               Duration.microsecondsPerHour)
           .round(),
     ));
     return getEffectiveDailyTarget(
       date: DateTime.now(),
-      weekEntries: _weekEntries,
-      workdaysPerWeek: workdaysPerWeek,
+      workdays: workdays,
       regularDailyTarget: regularDailyTarget,
     );
   }

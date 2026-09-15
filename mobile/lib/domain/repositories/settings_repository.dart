@@ -19,11 +19,12 @@ abstract class SettingsRepository {
   /// Speichert die wöchentlichen Soll-Arbeitsstunden des Benutzers.
   Future<void> setTargetWeeklyHours(double hours);
 
-  /// Ruft die Anzahl der Arbeitstage pro Woche ab.
-  int getWorkdaysPerWeek();
+  /// Ruft die konkreten Arbeitstage ab (ISO-Wochentage, 1 = Montag,
+  /// 7 = Sonntag). Siehe #217.
+  List<int> getWorkdays();
 
-  /// Speichert die Anzahl der Arbeitstage pro Woche.
-  Future<void> setWorkdaysPerWeek(int days);
+  /// Speichert die konkreten Arbeitstage (ISO-Wochentage 1-7).
+  Future<void> setWorkdays(List<int> days);
 
   /// Ruft ab, ob die AGB akzeptiert wurden.
   bool hasAcceptedTermsOfService();

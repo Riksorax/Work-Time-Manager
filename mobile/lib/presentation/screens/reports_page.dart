@@ -657,7 +657,7 @@ class WeeklyReportView extends ConsumerWidget {
               settingsState.settings.weeklyTargetHours;
           final Duration dailyTarget = Duration(
             minutes:
-                ((weeklyTargetHours / settingsState.settings.workdaysPerWeek) *
+                ((weeklyTargetHours / settingsState.settings.workdays.length) *
                         60)
                     .round(),
           );
@@ -1012,7 +1012,7 @@ class MonthlyReportView extends ConsumerWidget {
             settingsState.settings.weeklyTargetHours;
         final Duration dailyTarget = Duration(
           minutes:
-              ((weeklyTargetHours / settingsState.settings.workdaysPerWeek) *
+              ((weeklyTargetHours / settingsState.settings.workdays.length) *
                       60)
                   .round(),
         );
@@ -1454,18 +1454,13 @@ class _CalendarState extends ConsumerState<_Calendar> {
     return weekday - 1;
   }
 
-  /// Prüft, ob ein bestimmtes Datum ein konfigurierter Arbeitstag ist
-  /// Wochentag: 1 = Montag, 7 = Sonntag
-  bool _isWorkday(DateTime date, int workdaysPerWeek) {
-    // Wochentag des Datums (1 = Montag, 7 = Sonntag)
-    int weekday = date.weekday;
-
-    // Arbeitstage sind von Montag (1) bis zu (workdaysPerWeek)
-    // z.B. bei 5 Arbeitstagen: 1-5 (Mo-Fr)
-    return weekday <= workdaysPerWeek;
+  /// Prüft, ob ein bestimmtes Datum ein konfigurierter Arbeitstag ist.
+  /// Wochentag: 1 = Montag, 7 = Sonntag (siehe #217).
+  bool _isWorkday(DateTime date, List<int> workdays) {
+    return workdays.contains(date.weekday);
   }
 
-  void _selectDateRange(DateTime startDate, DateTime endDate, int workdaysPerWeek) {
+  void _selectDateRange(DateTime startDate, DateTime endDate, List<int> workdays) {
     final reportsNotifier = ref.read(reportsViewModelProvider.notifier);
 
     // Normalize dates
@@ -1481,7 +1476,7 @@ class _CalendarState extends ConsumerState<_Calendar> {
 
     DateTime currentDate = minDate;
     while (!currentDate.isAfter(maxDate)) {
-      if (_isWorkday(currentDate, workdaysPerWeek)) {
+      if (_isWorkday(currentDate, workdays)) {
         reportsNotifier.addDateToSelection(currentDate);
       }
       currentDate = currentDate.add(const Duration(days: 1));
@@ -1529,9 +1524,9 @@ class _CalendarState extends ConsumerState<_Calendar> {
     return DateTime(widget.selectedDate.year, widget.selectedDate.month, day);
   }
 
-  void _startDragAt(Offset globalPosition, int workdaysPerWeek) {
+  void _startDragAt(Offset globalPosition, List<int> workdays) {
     final date = _getDateFromGlobalPosition(globalPosition);
-    if (date == null || !_isWorkday(date, workdaysPerWeek)) return;
+    if (date == null || !_isWorkday(date, workdays)) return;
 
     final reportsNotifier = ref.read(reportsViewModelProvider.notifier);
     setState(() {
@@ -1543,19 +1538,19 @@ class _CalendarState extends ConsumerState<_Calendar> {
     reportsNotifier.addDateToSelection(date);
   }
 
-  void _updateDragAt(Offset globalPosition, int workdaysPerWeek) {
+  void _updateDragAt(Offset globalPosition, List<int> workdays) {
     if (!_isDragging || _dragStartDate == null) return;
     final date = _getDateFromGlobalPosition(globalPosition);
     if (date == null) return;
     if (!DateUtils.isSameDay(date, _dragEndDate)) {
       setState(() => _dragEndDate = date);
-      _selectDateRange(_dragStartDate!, date, workdaysPerWeek);
+      _selectDateRange(_dragStartDate!, date, workdays);
     }
   }
 
-  void _endDrag(int workdaysPerWeek) {
+  void _endDrag(List<int> workdays) {
     if (_dragStartDate != null && _dragEndDate != null) {
-      _selectDateRange(_dragStartDate!, _dragEndDate!, workdaysPerWeek);
+      _selectDateRange(_dragStartDate!, _dragEndDate!, workdays);
     }
     setState(() {
       _dragStartDate = null;
@@ -1570,8 +1565,9 @@ class _CalendarState extends ConsumerState<_Calendar> {
     final reportsNotifier = ref.read(reportsViewModelProvider.notifier);
     final settingsState = ref.watch(settingsViewModelProvider);
 
-    // Hole workdaysPerWeek aus den Settings (default 5)
-    final workdaysPerWeek = settingsState.whenData((s) => s.settings.workdaysPerWeek).value ?? 5;
+    // Hole die konfigurierten Arbeitstage aus den Settings (default Mo-Fr)
+    final workdays =
+        settingsState.whenData((s) => s.settings.workdays).value ?? const [1, 2, 3, 4, 5];
 
     // Feiertage des angezeigten Monats/Jahres für das gewählte Bundesland (#222).
     // Rein visuelle Markierung - es werden keine WorkEntryType.holiday-Einträge erzeugt.
@@ -1665,30 +1661,30 @@ class _CalendarState extends ConsumerState<_Calendar> {
               behavior: HitTestBehavior.translucent,
               onLongPressStart: (details) {
                 if (!_isDragging) {
-                  _startDragAt(details.globalPosition, workdaysPerWeek);
+                  _startDragAt(details.globalPosition, workdays);
                 }
               },
               onLongPressMoveUpdate: (details) {
-                _updateDragAt(details.globalPosition, workdaysPerWeek);
+                _updateDragAt(details.globalPosition, workdays);
               },
-              onLongPressEnd: (_) => _endDrag(workdaysPerWeek),
-              onLongPressCancel: () => _endDrag(workdaysPerWeek),
+              onLongPressEnd: (_) => _endDrag(workdays),
+              onLongPressCancel: () => _endDrag(workdays),
               child: Listener(
                 behavior: HitTestBehavior.translucent,
                 onPointerDown: (event) {
                   // Nur für Maus: Drag sofort starten (kein Long-Press nötig)
                   if (event.kind == PointerDeviceKind.mouse && event.buttons == 1) {
-                    _startDragAt(event.position, workdaysPerWeek);
+                    _startDragAt(event.position, workdays);
                   }
                 },
                 onPointerMove: (event) {
                   if (event.kind == PointerDeviceKind.mouse && _isDragging) {
-                    _updateDragAt(event.position, workdaysPerWeek);
+                    _updateDragAt(event.position, workdays);
                   }
                 },
                 onPointerUp: (event) {
                   if (event.kind == PointerDeviceKind.mouse && _isDragging) {
-                    _endDrag(workdaysPerWeek);
+                    _endDrag(workdays);
                   }
                 },
                 child: GridView.builder(
@@ -1714,7 +1710,7 @@ class _CalendarState extends ConsumerState<_Calendar> {
                     final isMultiSelected = reportsState.selectedDates
                         .contains(DateTime(date.year, date.month, date.day));
                     final hasEntry = widget.daysWithEntries?.contains(day) ?? false;
-                    final isWorkday = _isWorkday(date, workdaysPerWeek);
+                    final isWorkday = _isWorkday(date, workdays);
                     final isHoliday = holidays.contains(DateTime(date.year, date.month, date.day));
 
                     Widget dayWidget = Center(
@@ -2082,7 +2078,7 @@ Future<void> _handleQuickEntry(
   if (settingsState != null) {
     dailyTarget = Duration(
       minutes: ((settingsState.settings.weeklyTargetHours /
-                  settingsState.settings.workdaysPerWeek) *
+                  settingsState.settings.workdays.length) *
               60)
           .round(),
     );
@@ -2127,7 +2123,7 @@ Future<void> _handleBatchQuickEntry(
   if (settingsState != null) {
     dailyTarget = Duration(
       minutes: ((settingsState.settings.weeklyTargetHours /
-                  settingsState.settings.workdaysPerWeek) *
+                  settingsState.settings.workdays.length) *
               60)
           .round(),
     );

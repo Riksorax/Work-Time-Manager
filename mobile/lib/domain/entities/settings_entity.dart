@@ -7,8 +7,10 @@ class SettingsEntity extends Equatable {
   /// The target number of work hours per week.
   final double weeklyTargetHours;
 
-  /// The number of workdays in a week.
-  final int workdaysPerWeek;
+  /// Die konkreten Wochentage, an denen gearbeitet wird (ISO-Wochentage,
+  /// 1 = Montag ... 7 = Sonntag). Ersetzt die reine Anzahl, damit z.B.
+  /// Di-Sa korrekt als Arbeitstage erkannt werden (siehe #217).
+  final List<int> workdays;
 
   /// Whether notifications are enabled globally.
   final bool notificationsEnabled;
@@ -53,7 +55,7 @@ class SettingsEntity extends Equatable {
 
   const SettingsEntity({
     this.weeklyTargetHours = 40.0,
-    this.workdaysPerWeek = 5,
+    this.workdays = const [1, 2, 3, 4, 5], // Monday to Friday
     this.notificationsEnabled = false,
     this.notificationTime = '18:00',
     this.notificationDays = const [1, 2, 3, 4, 5], // Monday to Friday
@@ -72,7 +74,7 @@ class SettingsEntity extends Equatable {
   /// replaced with the new values.
   SettingsEntity copyWith({
     double? weeklyTargetHours,
-    int? workdaysPerWeek,
+    List<int>? workdays,
     bool? notificationsEnabled,
     String? notificationTime,
     List<int>? notificationDays,
@@ -87,7 +89,7 @@ class SettingsEntity extends Equatable {
   }) {
     return SettingsEntity(
       weeklyTargetHours: weeklyTargetHours ?? this.weeklyTargetHours,
-      workdaysPerWeek: workdaysPerWeek ?? this.workdaysPerWeek,
+      workdays: workdays ?? this.workdays,
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
       notificationTime: notificationTime ?? this.notificationTime,
       notificationDays: notificationDays ?? this.notificationDays,
@@ -111,7 +113,7 @@ class SettingsEntity extends Equatable {
   SettingsEntity copyWithBundesland(Bundesland? bundesland) {
     return SettingsEntity(
       weeklyTargetHours: weeklyTargetHours,
-      workdaysPerWeek: workdaysPerWeek,
+      workdays: workdays,
       notificationsEnabled: notificationsEnabled,
       notificationTime: notificationTime,
       notificationDays: notificationDays,
@@ -130,7 +132,7 @@ class SettingsEntity extends Equatable {
   @override
   List<Object?> get props => [
         weeklyTargetHours,
-        workdaysPerWeek,
+        workdays,
         notificationsEnabled,
         notificationTime,
         notificationDays,
