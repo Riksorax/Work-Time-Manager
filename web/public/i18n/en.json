@@ -1,0 +1,21 @@
+{
+  "appTitle": "Work Time Manager",
+  "nav": {
+    "dashboard": "Dashboard",
+    "reports": "Reports",
+    "settings": "Settings"
+  },
+  "dashboard": {
+    "title": "Working Time"
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "languageGerman": "German",
+    "languageEnglish": "English"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel"
+  }
+}
