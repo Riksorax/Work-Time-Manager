@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers/providers.dart' as core_providers;
+import '../../domain/entities/bundesland.dart';
 import '../../domain/entities/settings_entity.dart';
 import '../../domain/repositories/settings_repository.dart';
 import '../state/settings_state.dart';
@@ -69,6 +70,12 @@ class NoOpSettingsRepository implements SettingsRepository {
 
   @override
   Future<void> setNotifyBreaks(bool enabled) async {}
+
+  @override
+  Bundesland? getBundesland() => null;
+
+  @override
+  Future<void> setBundesland(Bundesland? bundesland) async {}
 }
 
 class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
@@ -102,6 +109,12 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
       final notifyWorkStart = settingsRepository.getNotifyWorkStart();
       final notifyWorkEnd = settingsRepository.getNotifyWorkEnd();
       final notifyBreaks = settingsRepository.getNotifyBreaks();
+      Bundesland? bundesland;
+      try {
+        bundesland = settingsRepository.getBundesland();
+      } catch (_) {
+        bundesland = null;
+      }
 
       final settings = SettingsEntity(
         weeklyTargetHours: weeklyTargetHours,
@@ -112,6 +125,7 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
         notifyWorkStart: notifyWorkStart,
         notifyWorkEnd: notifyWorkEnd,
         notifyBreaks: notifyBreaks,
+        bundesland: bundesland,
       );
       state = AsyncValue.data(SettingsState(
         settings: settings,
@@ -200,6 +214,13 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
     final newSettings = state.value!.settings.copyWith(notifyBreaks: enabled);
     state = state.whenData((value) => value.copyWith(settings: newSettings));
     await _rescheduleNotifications();
+  }
+
+  Future<void> updateBundesland(Bundesland? bundesland) async {
+    final settingsRepository = ref.read(core_providers.settingsRepositoryProvider);
+    await settingsRepository.setBundesland(bundesland);
+    final newSettings = state.value!.settings.copyWithBundesland(bundesland);
+    state = state.whenData((value) => value.copyWith(settings: newSettings));
   }
 
   // --- Notification Rescheduling Logic ---

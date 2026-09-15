@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
 
+import 'bundesland.dart';
+
 /// Represents the user's settings for the application.
 class SettingsEntity extends Equatable {
   /// The target number of work hours per week.
@@ -26,6 +28,11 @@ class SettingsEntity extends Equatable {
   /// Whether to notify about missing break entries.
   final bool notifyBreaks;
 
+  /// Das ausgewählte Bundesland für die Feiertagsberechnung im Kalender
+  /// (siehe #222). `null` = keine Auswahl getroffen, keine automatischen
+  /// Feiertagsmarkierungen.
+  final Bundesland? bundesland;
+
   const SettingsEntity({
     this.weeklyTargetHours = 40.0,
     this.workdaysPerWeek = 5,
@@ -35,6 +42,7 @@ class SettingsEntity extends Equatable {
     this.notifyWorkStart = true,
     this.notifyWorkEnd = true,
     this.notifyBreaks = true,
+    this.bundesland,
   });
 
   /// Creates a copy of this [SettingsEntity] but with the given fields
@@ -58,6 +66,26 @@ class SettingsEntity extends Equatable {
       notifyWorkStart: notifyWorkStart ?? this.notifyWorkStart,
       notifyWorkEnd: notifyWorkEnd ?? this.notifyWorkEnd,
       notifyBreaks: notifyBreaks ?? this.notifyBreaks,
+      bundesland: bundesland ?? this.bundesland,
+    );
+  }
+
+  /// Eigene Methode statt über [copyWith], da `bundesland` explizit auf
+  /// `null` zurückgesetzt werden können muss (Nutzer wählt "Keine
+  /// Auswahl") - das normale `?? this.bundesland`-Muster in [copyWith]
+  /// kann "nicht angegeben" nicht von "bewusst auf null gesetzt"
+  /// unterscheiden.
+  SettingsEntity copyWithBundesland(Bundesland? bundesland) {
+    return SettingsEntity(
+      weeklyTargetHours: weeklyTargetHours,
+      workdaysPerWeek: workdaysPerWeek,
+      notificationsEnabled: notificationsEnabled,
+      notificationTime: notificationTime,
+      notificationDays: notificationDays,
+      notifyWorkStart: notifyWorkStart,
+      notifyWorkEnd: notifyWorkEnd,
+      notifyBreaks: notifyBreaks,
+      bundesland: bundesland,
     );
   }
 
@@ -71,5 +99,6 @@ class SettingsEntity extends Equatable {
         notifyWorkStart,
         notifyWorkEnd,
         notifyBreaks,
+        bundesland,
       ];
 }

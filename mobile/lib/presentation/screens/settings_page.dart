@@ -7,6 +7,7 @@ import '../../core/providers/subscription_provider.dart';
 import '../../data/repositories/hybrid_work_repository_impl.dart';
 import '../../data/repositories/hybrid_overtime_repository_impl.dart';
 import '../../data/repositories/firebase_overtime_repository_impl.dart';
+import '../../domain/entities/bundesland.dart';
 import '../../domain/services/data_sync_service.dart';
 import '../view_models/auth_view_model.dart';
 import '../view_models/dashboard_view_model.dart' as dashboard_vm;
@@ -116,6 +117,18 @@ class SettingsPage extends ConsumerWidget {
             ),
             const Divider(height: 1),
             ListTile(
+              title: const Text('Bundesland'),
+              subtitle: Text(
+                settings.bundesland?.displayName ??
+                    'Nicht ausgewählt – keine Feiertagsmarkierung im Kalender',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                _showBundeslandPicker(context, ref, settings.bundesland);
+              },
+            ),
+            const Divider(height: 1),
+            ListTile(
               title: const Text('Benachrichtigungen'),
               subtitle: settingsState.settings.notificationsEnabled
                   ? Text('Aktiviert um ${settingsState.settings.notificationTime} Uhr')
@@ -188,6 +201,47 @@ class SettingsPage extends ConsumerWidget {
             ),
           );
         },
+      ),
+    );
+  }
+
+  void _showBundeslandPicker(BuildContext context, WidgetRef ref, Bundesland? current) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => SimpleDialog(
+        title: const Text('Bundesland für Feiertage'),
+        children: [
+          SimpleDialogOption(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              ref.read(settingsViewModelProvider.notifier).updateBundesland(null);
+            },
+            child: Row(
+              children: [
+                if (current == null) const Icon(Icons.check, size: 18) else const SizedBox(width: 18),
+                const SizedBox(width: 8),
+                const Text('Keine Auswahl'),
+              ],
+            ),
+          ),
+          for (final bundesland in Bundesland.values)
+            SimpleDialogOption(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                ref.read(settingsViewModelProvider.notifier).updateBundesland(bundesland);
+              },
+              child: Row(
+                children: [
+                  if (current == bundesland)
+                    const Icon(Icons.check, size: 18)
+                  else
+                    const SizedBox(width: 18),
+                  const SizedBox(width: 8),
+                  Text(bundesland.displayName),
+                ],
+              ),
+            ),
+        ],
       ),
     );
   }
