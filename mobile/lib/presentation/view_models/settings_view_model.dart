@@ -80,9 +80,21 @@ class NoOpSettingsRepository implements SettingsRepository {
 class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
   @override
   AsyncValue<SettingsState> build() {
-    // Watch dependencies to trigger rebuild on updates (e.g. Auth change)
-    ref.watch(core_providers.getOvertimeUseCaseProvider);
-    ref.watch(core_providers.settingsRepositoryProvider);
+    // Watch dependencies to trigger rebuild on updates (e.g. Auth change).
+    // In try/catch: falls SharedPreferences (z.B. in Tests ohne Provider-
+    // Override) noch nicht verfügbar ist, würde dieser watch()-Aufruf sonst
+    // synchron eine ProviderException werfen, die als ungefangene Exception
+    // bei jedem Widget landet, das settingsViewModelProvider beobachtet -
+    // _init() unten fängt denselben Fehler zwar auch ab, aber erst
+    // asynchron, also zu spät für diesen synchronen build()-Aufruf.
+    try {
+      ref.watch(core_providers.getOvertimeUseCaseProvider);
+      ref.watch(core_providers.settingsRepositoryProvider);
+    } catch (_) {
+      // Reactivity auf diese Provider geht in diesem Fall verloren - der
+      // eigentliche Fehler wird unten in _init() erneut geworfen und dort
+      // reguär in einen AsyncValue.error verwandelt.
+    }
 
     Future.microtask(() => _init());
     return const AsyncValue.loading();
