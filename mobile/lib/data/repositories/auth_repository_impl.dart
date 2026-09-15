@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart' as firebase;
 import 'package:flutter/foundation.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
+import '../../core/utils/logger.dart';
 import '../../domain/entities/user_entity.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../datasources/remote/firestore_datasource.dart';
@@ -26,14 +27,18 @@ class AuthRepositoryImpl implements AuthRepository {
         if (firebaseUser != null) {
           try {
             await Purchases.logIn(firebaseUser.uid);
-          } catch (_) {
-            // Fehler ignorieren – kein gültiger Key oder Netzwerkproblem
+          } catch (e) {
+            // Erwarteter Fehlerfall (kein gültiger Key oder Netzwerkproblem) –
+            // bewusst nicht als Fehler geloggt (siehe #207), nur zur
+            // Nachvollziehbarkeit auf Debug-Level festgehalten.
+            logger.d('[Auth] RevenueCat logIn übersprungen: $e');
           }
         } else {
           try {
             await Purchases.logOut();
-          } catch (_) {
-            // Wird geworfen wenn der RC-User anonym ist – sicher ignorieren
+          } catch (e) {
+            // Wird geworfen wenn der RC-User anonym ist – erwartet, siehe oben.
+            logger.d('[Auth] RevenueCat logOut übersprungen: $e');
           }
         }
       }

@@ -57,6 +57,7 @@ jobs:
           FIREBASE_MEASUREMENT_ID:      ${{ secrets.FIREBASE_MEASUREMENT_ID }}
           RC_WEB_KEY:                   ${{ secrets.RC_WEB_KEY }}
           API_URL:                      ${{ vars.API_URL }}
+          SENTRY_DSN_WEB:               ${{ secrets.SENTRY_DSN_WEB }}
         run: |
           mkdir -p src/environments
           BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
@@ -75,6 +76,7 @@ jobs:
               measurementId:     '${FIREBASE_MEASUREMENT_ID}',
             },
             rcWebApiKey: '${RC_WEB_KEY}',
+            sentryDsn: '${SENTRY_DSN_WEB}',
           };
           EOF
           cp src/environments/environment.ts src/environments/environment.prod.ts
