@@ -1,9 +1,12 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/providers/app_lock_provider.dart';
 import '../../core/providers/providers.dart' as core_providers;
 import '../../core/providers/subscription_provider.dart';
+import '../../core/services/app_lock_service.dart';
 import '../../data/repositories/hybrid_work_repository_impl.dart';
 import '../../data/repositories/hybrid_overtime_repository_impl.dart';
 import '../../data/repositories/firebase_overtime_repository_impl.dart';
@@ -16,6 +19,7 @@ import '../widgets/add_adjustment_modal.dart';
 import '../widgets/edit_target_hours_modal.dart';
 import '../widgets/edit_workdays_modal.dart';
 import '../widgets/notification_settings_dialog.dart';
+import '../widgets/pin_setup_dialog.dart';
 import '../widgets/common/responsive_center.dart';
 import 'app_info_page.dart';
 import 'login_page.dart';
@@ -138,6 +142,10 @@ class SettingsPage extends ConsumerWidget {
                 NotificationSettingsDialog.show(context, settingsState.settings);
               },
             ),
+            if (!kIsWeb) ...[
+              const Divider(height: 1),
+              const _AppLockSection(),
+            ],
             const Divider(height: 1),
             ListTile(
               title: const Text('Über die App'),
@@ -568,6 +576,60 @@ class SettingsPage extends ConsumerWidget {
       loading: () => const SizedBox.shrink(),
       error: (_, __) => const SizedBox.shrink(),
     );
+  }
+}
+
+/// PIN-/Biometrie-Sperre der App (siehe #223). Eigenes
+/// [ConsumerStatefulWidget], da der Aktivierungsstatus direkt aus
+/// [AppLockService]/SharedPreferences kommt und nicht über
+/// [settingsViewModelProvider] läuft (rein lokale, geräteweite Einstellung
+/// ohne Firestore-Sync).
+class _AppLockSection extends ConsumerStatefulWidget {
+  const _AppLockSection();
+
+  @override
+  ConsumerState<_AppLockSection> createState() => _AppLockSectionState();
+}
+
+class _AppLockSectionState extends ConsumerState<_AppLockSection> {
+  @override
+  Widget build(BuildContext context) {
+    final service = ref.watch(appLockServiceProvider);
+    final isEnabled = service.isEnabled;
+
+    return Column(
+      children: [
+        SwitchListTile(
+          title: const Text('PIN-/Biometrie-Sperre'),
+          subtitle: Text(isEnabled
+              ? 'App wird beim Start und aus dem Hintergrund gesperrt'
+              : 'Deaktiviert'),
+          value: isEnabled,
+          onChanged: (value) => _onToggle(context, value, service),
+        ),
+        if (isEnabled)
+          ListTile(
+            title: const Text('PIN ändern'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => PinSetupDialog.show(context),
+          ),
+      ],
+    );
+  }
+
+  Future<void> _onToggle(BuildContext context, bool value, AppLockService service) async {
+    if (value) {
+      if (!service.hasPin) {
+        final success = await PinSetupDialog.show(context);
+        if (!success) return;
+      }
+      await service.setEnabled(true);
+    } else {
+      await service.setEnabled(false);
+    }
+    // Provider selbst ist nicht reaktiv (synchrone SharedPreferences-Reads) -
+    // setState erzwingt einen Rebuild dieses Abschnitts nach der Änderung.
+    if (mounted) setState(() {});
   }
 }
 
