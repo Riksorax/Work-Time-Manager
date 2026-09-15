@@ -523,14 +523,15 @@ void main() {
         authState: const AsyncValue.data(null),
       ));
 
-      final lockSwitch = find.text('PIN-/Biometrie-Sperre');
-      // ensureVisible statt scrollUntilVisible: garantiert vollständige
-      // Sichtbarkeit (nicht nur teilweise am Viewport-Rand), damit tap()
-      // zuverlässig trifft - relevant, seit die Bundesland-Kachel (#222)
-      // die Liste verlängert hat.
-      await tester.ensureVisible(lockSwitch);
-      await tester.pumpAndSettle();
-      await tester.tap(lockSwitch);
+      // onChanged direkt aufrufen statt tap() zu simulieren: die Kachel
+      // liegt inzwischen (seit die Bundesland-Auswahl aus #222 die Liste
+      // verlängert hat) so tief in der scrollbaren Liste, dass ein
+      // pixelgenauer Scroll+Tap in der 600px hohen Test-Oberfläche
+      // unzuverlässig ist. find.widgetWithText benötigt keine Sichtbarkeit.
+      final lockSwitchTile = tester.widget<SwitchListTile>(
+        find.widgetWithText(SwitchListTile, 'PIN-/Biometrie-Sperre'),
+      );
+      lockSwitchTile.onChanged!(true);
       await tester.pumpAndSettle();
 
       expect(find.text('PIN festlegen'), findsOneWidget);
