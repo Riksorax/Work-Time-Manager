@@ -83,6 +83,16 @@ class MockSettingsActions extends _i1.Mock implements _i2.SettingsActions {
         returnValue: _i4.Future<void>.value(),
         returnValueForMissingStub: _i4.Future<void>.value(),
       ) as _i4.Future<void>);
+
+  @override
+  _i4.Future<void> updateTimezoneOverride(String? timezone) => (super.noSuchMethod(
+        Invocation.method(
+          #updateTimezoneOverride,
+          [timezone],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
 }
 
 /// A class which mocks [SignOut].

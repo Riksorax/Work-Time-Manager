@@ -20,6 +20,7 @@ import '../view_models/settings_view_model.dart';
 import '../view_models/theme_view_model.dart';
 import '../widgets/add_adjustment_modal.dart';
 import '../widgets/edit_target_hours_modal.dart';
+import '../widgets/edit_timezone_modal.dart';
 import '../widgets/edit_workdays_modal.dart';
 import '../widgets/notification_settings_dialog.dart';
 import '../widgets/pin_setup_dialog.dart';
@@ -88,6 +89,14 @@ class SettingsPage extends ConsumerWidget {
               subtitle: Text(
                 '≈ ${settings.workdays.isNotEmpty ? (settings.weeklyTargetHours / settings.workdays.length).toStringAsFixed(1) : '0.0'} h/Tag',
               ),
+            ),
+            ListTile(
+              title: const Text('Zeitzone'),
+              subtitle: Text(settings.timezoneOverride ?? 'Systemstandard'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                showEditTimezoneModal(context, settings.timezoneOverride);
+              },
             ),
             const Divider(height: 1),
             const SizedBox(height: 16),

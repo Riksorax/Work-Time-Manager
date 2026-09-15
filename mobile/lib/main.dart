@@ -9,9 +9,8 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_work_time/app_check_initializer.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
-import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tz_data;
-import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:flutter_work_time/core/utils/timezone_utils.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'dart:io' show Platform;
 
@@ -30,23 +29,15 @@ import 'presentation/widgets/app_lock_screen.dart';
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // SharedPreferences früh laden, damit eine manuelle Zeitzone-Überschreibung
+  // (siehe #221) schon vor der Zeitzone-Initialisierung verfügbar ist.
+  final prefs = await SharedPreferences.getInstance();
 
   // Initialize timezone
   tz_data.initializeTimeZones();
-  try {
-    final timeZoneName = await FlutterTimezone.getLocalTimezone();
-    tz.setLocalLocation(tz.getLocation(timeZoneName.toString()));
-  } catch (e) {
-    WidgetsFlutterBinding.ensureInitialized();
-    logger.w("Could not get local timezone, falling back to UTC/Europe/Berlin");
-    // Fallback logic
-    try {
-      tz.setLocalLocation(tz.getLocation('Europe/Berlin'));
-    } catch (_) {
-      tz.setLocalLocation(tz.getLocation('UTC'));
-    }
-  }
-
+  await applyTimezone(prefs.getString(timezoneOverridePrefsKey));
 
   await initializeDateFormatting('de_DE', null);
   Intl.defaultLocale = 'de_DE';
@@ -95,8 +86,6 @@ Future<void> main() async {
   await AppBootstrap.ensureInitializedForEnv(
     webRecaptchaSiteKey: kWebRecaptchaSiteKey.isEmpty ? null : kWebRecaptchaSiteKey,
   );
-
-  final prefs = await SharedPreferences.getInstance();
 
   // Initialize notification service with deep-link callback
   final notificationService = NotificationService();

@@ -53,6 +53,10 @@ class SettingsEntity extends Equatable {
   /// format with AM/PM (false). Siehe #218.
   final bool use24HourFormat;
 
+  /// Manuell überschriebene Zeitzone (IANA-Kennung, z.B. `Europe/Berlin`).
+  /// `null` = Systemzeitzone verwenden. Siehe #221.
+  final String? timezoneOverride;
+
   const SettingsEntity({
     this.weeklyTargetHours = 40.0,
     this.workdays = const [1, 2, 3, 4, 5], // Monday to Friday
@@ -68,6 +72,7 @@ class SettingsEntity extends Equatable {
     this.warnOnUndertimeThreshold = false,
     this.undertimeThresholdHours = 10.0,
     this.use24HourFormat = true,
+    this.timezoneOverride,
   });
 
   /// Creates a copy of this [SettingsEntity] but with the given fields
@@ -102,6 +107,7 @@ class SettingsEntity extends Equatable {
       warnOnUndertimeThreshold: warnOnUndertimeThreshold ?? this.warnOnUndertimeThreshold,
       undertimeThresholdHours: undertimeThresholdHours ?? this.undertimeThresholdHours,
       use24HourFormat: use24HourFormat ?? this.use24HourFormat,
+      timezoneOverride: timezoneOverride,
     );
   }
 
@@ -126,6 +132,30 @@ class SettingsEntity extends Equatable {
       warnOnUndertimeThreshold: warnOnUndertimeThreshold,
       undertimeThresholdHours: undertimeThresholdHours,
       use24HourFormat: use24HourFormat,
+      timezoneOverride: timezoneOverride,
+    );
+  }
+
+  /// Eigene Methode statt über [copyWith], da `timezoneOverride` explizit
+  /// auf `null` zurückgesetzt werden können muss (Nutzer wählt
+  /// "Systemzeitzone verwenden"), analog zu [copyWithBundesland].
+  SettingsEntity copyWithTimezoneOverride(String? timezoneOverride) {
+    return SettingsEntity(
+      weeklyTargetHours: weeklyTargetHours,
+      workdays: workdays,
+      notificationsEnabled: notificationsEnabled,
+      notificationTime: notificationTime,
+      notificationDays: notificationDays,
+      notifyWorkStart: notifyWorkStart,
+      notifyWorkEnd: notifyWorkEnd,
+      notifyBreaks: notifyBreaks,
+      bundesland: bundesland,
+      warnOnOvertimeThreshold: warnOnOvertimeThreshold,
+      overtimeThresholdHours: overtimeThresholdHours,
+      warnOnUndertimeThreshold: warnOnUndertimeThreshold,
+      undertimeThresholdHours: undertimeThresholdHours,
+      use24HourFormat: use24HourFormat,
+      timezoneOverride: timezoneOverride,
     );
   }
 
@@ -145,5 +175,6 @@ class SettingsEntity extends Equatable {
         warnOnUndertimeThreshold,
         undertimeThresholdHours,
         use24HourFormat,
+        timezoneOverride,
       ];
 }
