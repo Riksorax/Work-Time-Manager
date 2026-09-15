@@ -79,4 +79,39 @@ abstract class SettingsRepository {
 
   /// Speichert das ausgewählte Bundesland (`null` löscht die Auswahl).
   Future<void> setBundesland(Bundesland? bundesland);
+
+  /// Ruft ab, ob bei Überschreiten des Überstunden-Schwellwerts gewarnt
+  /// werden soll. Siehe #219.
+  bool getWarnOnOvertimeThreshold();
+
+  /// Speichert, ob bei Überschreiten des Überstunden-Schwellwerts gewarnt
+  /// werden soll.
+  Future<void> setWarnOnOvertimeThreshold(bool enabled);
+
+  /// Ruft den Schwellwert (in Stunden) für die Überstunden-Warnung ab.
+  double getOvertimeThresholdHours();
+
+  /// Speichert den Schwellwert (in Stunden) für die Überstunden-Warnung.
+  Future<void> setOvertimeThresholdHours(double hours);
+
+  /// Ruft ab, ob bei Unterschreiten des Minusstunden-Schwellwerts gewarnt
+  /// werden soll. Siehe #219.
+  bool getWarnOnUndertimeThreshold();
+
+  /// Speichert, ob bei Unterschreiten des Minusstunden-Schwellwerts gewarnt
+  /// werden soll.
+  Future<void> setWarnOnUndertimeThreshold(bool enabled);
+
+  /// Ruft den Schwellwert (in Stunden) für die Minusstunden-Warnung ab.
+  double getUndertimeThresholdHours();
+
+  /// Speichert den Schwellwert (in Stunden) für die Minusstunden-Warnung.
+  Future<void> setUndertimeThresholdHours(double hours);
+
+  /// Ruft ab, ob Uhrzeiten im 24-Stunden-Format angezeigt werden
+  /// (false = 12-Stunden-Format mit AM/PM). Siehe #218.
+  bool getUse24HourFormat();
+
+  /// Speichert, ob Uhrzeiten im 24-Stunden-Format angezeigt werden.
+  Future<void> setUse24HourFormat(bool use24Hour);
 }

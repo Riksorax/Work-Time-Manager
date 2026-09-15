@@ -116,6 +116,19 @@ class SettingsPage extends ConsumerWidget {
               },
             ),
             const Divider(height: 1),
+            SwitchListTile(
+              title: const Text('24-Stunden-Format'),
+              subtitle: Text(settingsState.settings.use24HourFormat
+                  ? 'z. B. 18:00'
+                  : 'z. B. 6:00 PM'),
+              value: settingsState.settings.use24HourFormat,
+              onChanged: (use24Hour) {
+                ref
+                    .read(settingsViewModelProvider.notifier)
+                    .updateUse24HourFormat(use24Hour);
+              },
+            ),
+            const Divider(height: 1),
             ListTile(
               title: const Text('Bundesland'),
               subtitle: Text(

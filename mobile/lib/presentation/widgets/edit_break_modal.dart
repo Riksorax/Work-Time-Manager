@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
+import '../../core/utils/time_format.dart';
 import '../../domain/entities/break_entity.dart';
 import '../view_models/dashboard_view_model.dart';
+import '../view_models/settings_view_model.dart';
 
 class EditBreakModal extends ConsumerStatefulWidget {
   final BreakEntity breakEntity;
@@ -20,17 +21,22 @@ class _EditBreakModalState extends ConsumerState<EditBreakModal> {
   late TextEditingController _endController;
   late DateTime _startTime;
   late DateTime? _endTime;
+  late bool _use24HourFormat;
 
   @override
   void initState() {
     super.initState();
+    _use24HourFormat =
+        ref.read(settingsViewModelProvider).value?.settings.use24HourFormat ?? true;
     _nameController = TextEditingController(text: widget.breakEntity.name);
     _startTime = widget.breakEntity.start;
     _endTime = widget.breakEntity.end;
-    _startController =
-        TextEditingController(text: DateFormat.Hm().format(_startTime));
+    _startController = TextEditingController(
+        text: formatTime(_startTime, use24HourFormat: _use24HourFormat));
     _endController = TextEditingController(
-        text: _endTime != null ? DateFormat.Hm().format(_endTime!) : '');
+        text: _endTime != null
+            ? formatTime(_endTime!, use24HourFormat: _use24HourFormat)
+            : '');
   }
 
   @override
@@ -58,16 +64,16 @@ class _EditBreakModalState extends ConsumerState<EditBreakModal> {
           // Berechne die bisherige Dauer, um die Endzeit mitzuverschieben
           final Duration? previousDuration = _endTime?.difference(_startTime);
           _startTime = newDateTime;
-          _startController.text = DateFormat.Hm().format(_startTime);
+          _startController.text = formatTime(_startTime, use24HourFormat: _use24HourFormat);
 
           // Verschiebe die Endzeit, um die Dauer beizubehalten
           if (previousDuration != null) {
             _endTime = _startTime.add(previousDuration);
-            _endController.text = DateFormat.Hm().format(_endTime!);
+            _endController.text = formatTime(_endTime!, use24HourFormat: _use24HourFormat);
           }
         } else {
           _endTime = newDateTime;
-          _endController.text = DateFormat.Hm().format(_endTime!);
+          _endController.text = formatTime(_endTime!, use24HourFormat: _use24HourFormat);
         }
       });
     }
