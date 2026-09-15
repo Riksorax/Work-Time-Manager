@@ -523,9 +523,20 @@ void main() {
         authState: const AsyncValue.data(null),
       ));
 
-      final lockSwitch = find.text('PIN-/Biometrie-Sperre');
-      await tester.scrollUntilVisible(lockSwitch, 500.0);
-      await tester.tap(lockSwitch);
+      // Erst scrollen: die sliver-basierte ListView hält Elemente außerhalb
+      // von Viewport+CacheExtent gar nicht erst gemounted (rein lazy trotz
+      // "eager" Widget-Liste), seit die Bundesland-Auswahl (#222) die Liste
+      // so weit verlängert hat, dass die Kachel sonst nicht im Element-Baum
+      // existiert. Danach onChanged direkt aufrufen statt tap() zu
+      // simulieren, da ein pixelgenauer Tap in der 600px hohen
+      // Test-Oberfläche knapp daneben treffen kann.
+      final lockSwitchFinder = find.text('PIN-/Biometrie-Sperre');
+      await tester.scrollUntilVisible(lockSwitchFinder, 500.0);
+
+      final lockSwitchTile = tester.widget<SwitchListTile>(
+        find.widgetWithText(SwitchListTile, 'PIN-/Biometrie-Sperre'),
+      );
+      lockSwitchTile.onChanged!(true);
       await tester.pumpAndSettle();
 
       expect(find.text('PIN festlegen'), findsOneWidget);

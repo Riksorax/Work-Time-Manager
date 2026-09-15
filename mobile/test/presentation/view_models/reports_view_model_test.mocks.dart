@@ -6,6 +6,7 @@
 import 'dart:async' as _i4;
 
 import 'package:flutter/material.dart' as _i6;
+import 'package:flutter_work_time/domain/entities/bundesland.dart' as _i8;
 import 'package:flutter_work_time/domain/entities/work_entry_entity.dart'
     as _i2;
 import 'package:flutter_work_time/domain/repositories/settings_repository.dart'
@@ -327,6 +328,25 @@ class MockSettingsRepository extends _i1.Mock
         Invocation.method(
           #setNotifyBreaks,
           [enabled],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
+
+  @override
+  _i8.Bundesland? getBundesland() => (super.noSuchMethod(
+        Invocation.method(
+          #getBundesland,
+          [],
+        ),
+      ) as _i8.Bundesland?);
+
+  @override
+  _i4.Future<void> setBundesland(_i8.Bundesland? bundesland) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #setBundesland,
+          [bundesland],
         ),
         returnValue: _i4.Future<void>.value(),
         returnValueForMissingStub: _i4.Future<void>.value(),

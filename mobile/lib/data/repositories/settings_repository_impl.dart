@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
 
+import '../../domain/entities/bundesland.dart';
 import '../../domain/repositories/settings_repository.dart';
 import '../datasources/remote/firestore_datasource.dart';
 
@@ -18,6 +19,7 @@ class SettingsRepositoryImpl implements SettingsRepository {
   static const String _notifyWorkStartKey = 'notify_work_start';
   static const String _notifyWorkEndKey = 'notify_work_end';
   static const String _notifyBreaksKey = 'notify_breaks';
+  static const String _bundeslandKey = 'bundesland';
   static const String _warnOnOvertimeThresholdKey = 'warn_on_overtime_threshold';
   static const String _overtimeThresholdHoursKey = 'overtime_threshold_hours';
   static const String _warnOnUndertimeThresholdKey = 'warn_on_undertime_threshold';
@@ -188,6 +190,20 @@ class SettingsRepositoryImpl implements SettingsRepository {
   @override
   Future<void> setNotifyBreaks(bool enabled) async {
     await _prefs.setBool(_notifyBreaksKey, enabled);
+  }
+
+  @override
+  Bundesland? getBundesland() {
+    return bundeslandFromName(_prefs.getString(_bundeslandKey));
+  }
+
+  @override
+  Future<void> setBundesland(Bundesland? bundesland) async {
+    if (bundesland == null) {
+      await _prefs.remove(_bundeslandKey);
+    } else {
+      await _prefs.setString(_bundeslandKey, bundesland.name);
+    }
   }
 
   @override

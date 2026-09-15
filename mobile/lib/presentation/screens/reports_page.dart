@@ -11,6 +11,7 @@ import '../../core/providers/subscription_provider.dart';
 import '../../core/services/pdf_report_service.dart';
 
 import '../../domain/entities/work_entry_extensions.dart';
+import '../../domain/utils/german_holidays.dart';
 import '../widgets/common/responsive_center.dart';
 import '../widgets/premium_blur_gate.dart';
 import '../state/monthly_report_state.dart';
@@ -1572,6 +1573,13 @@ class _CalendarState extends ConsumerState<_Calendar> {
     // Hole workdaysPerWeek aus den Settings (default 5)
     final workdaysPerWeek = settingsState.whenData((s) => s.settings.workdaysPerWeek).value ?? 5;
 
+    // Feiertage des angezeigten Monats/Jahres für das gewählte Bundesland (#222).
+    // Rein visuelle Markierung - es werden keine WorkEntryType.holiday-Einträge erzeugt.
+    final bundesland = settingsState.whenData((s) => s.settings.bundesland).value;
+    final Set<DateTime> holidays = bundesland != null
+        ? getGermanHolidays(widget.selectedDate.year, bundesland).toSet()
+        : const <DateTime>{};
+
     return Card(
       margin: const EdgeInsets.all(8.0),
       child: Padding(
@@ -1707,6 +1715,7 @@ class _CalendarState extends ConsumerState<_Calendar> {
                         .contains(DateTime(date.year, date.month, date.day));
                     final hasEntry = widget.daysWithEntries?.contains(day) ?? false;
                     final isWorkday = _isWorkday(date, workdaysPerWeek);
+                    final isHoliday = holidays.contains(DateTime(date.year, date.month, date.day));
 
                     Widget dayWidget = Center(
                       child: Text(
@@ -1714,7 +1723,10 @@ class _CalendarState extends ConsumerState<_Calendar> {
                         style: TextStyle(
                           color: isSelected || isMultiSelected
                               ? Colors.white
-                              : (isWorkday ? Theme.of(context).textTheme.bodyLarge?.color : Colors.grey),
+                              : (isHoliday
+                                  ? Colors.red
+                                  : (isWorkday ? Theme.of(context).textTheme.bodyLarge?.color : Colors.grey)),
+                          fontWeight: isHoliday ? FontWeight.bold : null,
                         ),
                       ),
                     );
@@ -1741,7 +1753,8 @@ class _CalendarState extends ConsumerState<_Calendar> {
                       );
                     }
 
-                    final semanticLabel = DateFormat('EEEE, d. MMMM yyyy', 'de_DE').format(date);
+                    final semanticLabel =
+                        '${DateFormat('EEEE, d. MMMM yyyy', 'de_DE').format(date)}${isHoliday ? ', Feiertag' : ''}';
                     return Semantics(
                       label: semanticLabel,
                       button: true,

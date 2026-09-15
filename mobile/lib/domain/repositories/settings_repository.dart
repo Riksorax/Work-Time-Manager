@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart' show ThemeMode;
 
+import '../entities/bundesland.dart';
+
 /// Die Schnittstelle (der Vertrag) für den Zugriff auf lokale App-Einstellungen.
 ///
 /// Dieses Repository abstrahiert, wo und wie die Einstellungen gespeichert werden
@@ -70,6 +72,13 @@ abstract class SettingsRepository {
 
   /// Speichert, ob Pausen-Benachrichtigungen aktiviert sind.
   Future<void> setNotifyBreaks(bool enabled);
+
+  /// Ruft das für die Feiertagsberechnung ausgewählte Bundesland ab
+  /// (`null` = keine Auswahl getroffen, siehe #222).
+  Bundesland? getBundesland();
+
+  /// Speichert das ausgewählte Bundesland (`null` löscht die Auswahl).
+  Future<void> setBundesland(Bundesland? bundesland);
 
   /// Ruft ab, ob bei Überschreiten des Überstunden-Schwellwerts gewarnt
   /// werden soll. Siehe #219.
