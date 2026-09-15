@@ -74,3 +74,47 @@ Future<void> refreshCustomerInfo(WidgetRef ref) async {
     }
   }
 }
+
+/// Liefert das aktive Premium-[EntitlementInfo] (falls vorhanden), um z.B.
+/// Ablaufdatum und Verlängerungsstatus in den Einstellungen anzuzeigen
+/// (siehe #220).
+EntitlementInfo? activeEntitlement(CustomerInfo info) {
+  const ids = [
+    'work_time_manager_premium',
+    'work_time_manager_premiun', // Falls Tippfehler
+    'premium',
+    'Premium',
+  ];
+  for (final id in ids) {
+    final entitlement = info.entitlements.all[id];
+    if (entitlement?.isActive ?? false) return entitlement;
+  }
+  return null;
+}
+
+// Provider für das aktive Premium-Entitlement (Laufzeit, Verlängerungsstatus)
+final activeEntitlementProvider = Provider<EntitlementInfo?>((ref) {
+  final customerInfoAsync = ref.watch(customerInfoProvider);
+  return customerInfoAsync.when(
+    data: activeEntitlement,
+    error: (_, __) => null,
+    loading: () => null,
+  );
+});
+
+/// Ruft den store-eigenen Link zur Abo-Verwaltung ab (Kündigung/Verlängerung
+/// direkt im App Store bzw. Play Store). Gibt `null` zurück, wenn kein Link
+/// verfügbar ist (z.B. Web oder Fehler) - siehe #220.
+///
+/// `purchases_flutter` bietet dafür keine eigene statische Methode - der
+/// Link steckt direkt als Feld in [CustomerInfo.managementURL].
+Future<String?> getSubscriptionManagementUrl() async {
+  if (kIsWeb) return null;
+  try {
+    final info = await Purchases.getCustomerInfo();
+    return info.managementURL;
+  } catch (e) {
+    debugPrint('[Premium] managementURL nicht verfügbar: $e');
+    return null;
+  }
+}

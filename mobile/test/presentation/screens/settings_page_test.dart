@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_work_time/domain/entities/settings_entity.dart';
 import 'package:flutter_work_time/domain/entities/user_entity.dart';
 import 'package:flutter_work_time/presentation/screens/settings_page.dart';
@@ -13,6 +14,7 @@ import 'package:flutter_work_time/presentation/view_models/theme_view_model.dart
 import 'package:flutter_work_time/presentation/widgets/add_adjustment_modal.dart';
 import 'package:flutter_work_time/domain/usecases/sign_out.dart';
 import 'package:flutter_work_time/domain/usecases/delete_account.dart';
+import 'package:flutter_work_time/core/providers/providers.dart';
 import 'package:flutter_work_time/core/providers/subscription_provider.dart';
 
 import 'settings_page_test.mocks.dart';
@@ -31,6 +33,12 @@ void main() {
   late MockSettingsActions mockActions;
   late MockSignOut mockSignOut;
   late MockDeleteAccount mockDeleteAccount;
+  late SharedPreferences prefs;
+
+  setUpAll(() async {
+    SharedPreferences.setMockInitialValues({});
+    prefs = await SharedPreferences.getInstance();
+  });
 
   setUp(() {
     mockActions = MockSettingsActions();
@@ -55,12 +63,17 @@ void main() {
   }) {
     return ProviderScope(
       overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
         settingsViewModelProvider.overrideWith(() => settingsViewModel),
         themeViewModelProvider.overrideWith(() => themeViewModel),
         authStateProvider.overrideWithValue(authState),
         signOutProvider.overrideWithValue(mockSignOut),
         deleteAccountProvider.overrideWithValue(mockDeleteAccount),
         isPremiumProvider.overrideWithValue(isPremium),
+        // Verhindert, dass die Abo-Verwaltungssektion (#220) das echte
+        // RevenueCat-Plugin über customerInfoProvider anspricht - in Tests
+        // gibt es keinen Platform-Channel dafür.
+        activeEntitlementProvider.overrideWithValue(null),
       ],
       child: MaterialApp(
         home: const SettingsPage(),
@@ -453,6 +466,69 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Benachrichtigungen aktivieren'), findsOneWidget);
+    });
+
+    testWidgets('zeigt PIN-/Biometrie-Sperre deaktiviert, wenn noch nichts eingerichtet ist',
+        (tester) async {
+      final settingsViewModel = FakeSettingsViewModel(
+        initialState: const AsyncValue.data(SettingsState(
+          settings: SettingsEntity(),
+          overtimeBalance: Duration.zero,
+        )),
+        actions: mockActions,
+      );
+      final themeViewModel = FakeThemeViewModel(
+        initialState: ThemeMode.system,
+        actions: mockActions,
+      );
+
+      await tester.pumpWidget(createSubject(
+        settingsViewModel: settingsViewModel,
+        themeViewModel: themeViewModel,
+        authState: const AsyncValue.data(null),
+      ));
+
+      final lockTile = find.text('PIN-/Biometrie-Sperre');
+      await tester.scrollUntilVisible(lockTile, 500.0);
+      expect(lockTile, findsOneWidget);
+      // "Deaktiviert" erscheint auch beim Benachrichtigungen-Eintrag im
+      // Standardzustand - deshalb gezielt innerhalb des Sperr-SwitchListTile
+      // suchen statt global.
+      expect(
+        find.descendant(
+          of: find.widgetWithText(SwitchListTile, 'PIN-/Biometrie-Sperre'),
+          matching: find.text('Deaktiviert'),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('Aktivieren der Sperre ohne vorhandene PIN öffnet PIN-Einrichtung',
+        (tester) async {
+      final settingsViewModel = FakeSettingsViewModel(
+        initialState: const AsyncValue.data(SettingsState(
+          settings: SettingsEntity(),
+          overtimeBalance: Duration.zero,
+        )),
+        actions: mockActions,
+      );
+      final themeViewModel = FakeThemeViewModel(
+        initialState: ThemeMode.system,
+        actions: mockActions,
+      );
+
+      await tester.pumpWidget(createSubject(
+        settingsViewModel: settingsViewModel,
+        themeViewModel: themeViewModel,
+        authState: const AsyncValue.data(null),
+      ));
+
+      final lockSwitch = find.text('PIN-/Biometrie-Sperre');
+      await tester.scrollUntilVisible(lockSwitch, 500.0);
+      await tester.tap(lockSwitch);
+      await tester.pumpAndSettle();
+
+      expect(find.text('PIN festlegen'), findsOneWidget);
     });
   });
 }
