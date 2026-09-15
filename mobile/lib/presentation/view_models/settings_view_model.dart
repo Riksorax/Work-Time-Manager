@@ -69,6 +69,12 @@ class NoOpSettingsRepository implements SettingsRepository {
 
   @override
   Future<void> setNotifyBreaks(bool enabled) async {}
+
+  @override
+  bool getUse24HourFormat() => true;
+
+  @override
+  Future<void> setUse24HourFormat(bool use24Hour) async {}
 }
 
 class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
@@ -102,6 +108,7 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
       final notifyWorkStart = settingsRepository.getNotifyWorkStart();
       final notifyWorkEnd = settingsRepository.getNotifyWorkEnd();
       final notifyBreaks = settingsRepository.getNotifyBreaks();
+      final use24HourFormat = settingsRepository.getUse24HourFormat();
 
       final settings = SettingsEntity(
         weeklyTargetHours: weeklyTargetHours,
@@ -112,6 +119,7 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
         notifyWorkStart: notifyWorkStart,
         notifyWorkEnd: notifyWorkEnd,
         notifyBreaks: notifyBreaks,
+        use24HourFormat: use24HourFormat,
       );
       state = AsyncValue.data(SettingsState(
         settings: settings,
@@ -200,6 +208,13 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
     final newSettings = state.value!.settings.copyWith(notifyBreaks: enabled);
     state = state.whenData((value) => value.copyWith(settings: newSettings));
     await _rescheduleNotifications();
+  }
+
+  Future<void> updateUse24HourFormat(bool use24Hour) async {
+    final settingsRepository = ref.read(core_providers.settingsRepositoryProvider);
+    await settingsRepository.setUse24HourFormat(use24Hour);
+    final newSettings = state.value!.settings.copyWith(use24HourFormat: use24Hour);
+    state = state.whenData((value) => value.copyWith(settings: newSettings));
   }
 
   // --- Notification Rescheduling Logic ---
