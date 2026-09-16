@@ -59,6 +59,8 @@ npm run build -- --configuration production
 - **Deploy**: SSH auf Hetzner-Server, `docker compose up` (nur bei Push auf `main`) — Firebase-Projekt-ID und Service-Account-Credential werden als GitHub Secrets per SSH-Session-Env injiziert (`appleboy/ssh-action` `envs:`), es liegt **keine** `.env`-Datei auf dem Server
 - Manueller Trigger via `workflow_dispatch` baut & pusht Docker Image, deployt aber **nicht** (kein `main`-Branch)
 
+**Uptime-Monitoring (Hetzner, siehe #207):** [Uptime-Kuma](https://github.com/louislam/uptime-kuma) läuft als weiterer Service (`uptime-kuma`) in `server/docker-compose.yml`, self-hosted hinter Traefik unter `status.work-time-manager.app`. Sowohl `deploy-api.yml` als auch `deploy-angular.yml` stellen den Container per `docker compose up -d --no-deps uptime-kuma` sicher (idempotent, kein eigener CI-Build nötig — öffentliches Image). Monitore (welche URLs überwacht werden) und Alerting-Kanäle (E-Mail/Telegram/Discord/...) werden einmalig über die Uptime-Kuma-Weboberfläche eingerichtet, dafür gibt es keine Env-Var-/Config-Datei-Konfiguration. Benötigt einen DNS-Eintrag für `status.work-time-manager.app` → Hetzner-Host (außerhalb dieses Repos).
+
 **Required Secrets (Web):** `FIREBASE_API_KEY`, `FIREBASE_AUTH_DOMAIN`, `FIREBASE_PROJECT_ID`, `FIREBASE_STORAGE_BUCKET`, `FIREBASE_MESSAGING_SENDER_ID`, `FIREBASE_APP_ID`, `FIREBASE_MEASUREMENT_ID`, `RC_WEB_KEY`, `DOCKERHUB_TOKEN`, `HETZNER_SSH_PRIVATE_KEY`
 
 **Optionales Secret (Web):** `SENTRY_DSN_WEB` — Sentry-Fehler-Tracking (#207). Leer/nicht gesetzt = Sentry bleibt deaktiviert, kein Build-Fehler.

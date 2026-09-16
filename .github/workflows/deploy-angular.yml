@@ -200,5 +200,11 @@ jobs:
             # Container starten/aktualisieren
             docker compose up -d --no-deps work-time-manager-web
 
+            # Uptime-Kuma sicherstellen (siehe #207) - idempotent, no-op falls
+            # bereits laufend; läuft hier zusätzlich mit (wie im API-Deploy),
+            # damit es unabhängig davon ankommt, welcher der beiden Deploys
+            # nach dem Merge dieser Änderung zuerst läuft
+            docker compose up -d --no-deps uptime-kuma
+
             # Alte Images aufräumen
             docker image prune -f
