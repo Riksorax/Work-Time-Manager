@@ -11,19 +11,20 @@ internal static class SettingsEndpoints
         var settings = group.MapGroup("/settings").WithTags("Settings");
 
         settings.MapGet("/", async (
-            ClaimsPrincipal user, SettingsRepository repo, CancellationToken ct) =>
+            string? profileId, ClaimsPrincipal user, SettingsRepository repo, CancellationToken ct) =>
         {
             if (user.GetUid() is not { } uid) return Results.Unauthorized();
-            return Results.Ok(await repo.GetAsync(uid, ct));
+            return Results.Ok(await repo.GetAsync(uid, profileId, ct));
         })
         .WithName("GetSettings");
 
         settings.MapPut("/", async (
-            SettingsDto dto, ClaimsPrincipal user, SettingsRepository repo, CancellationToken ct) =>
+            SettingsDto dto, string? profileId,
+            ClaimsPrincipal user, SettingsRepository repo, CancellationToken ct) =>
         {
             if (user.GetUid() is not { } uid) return Results.Unauthorized();
-            await repo.SaveAsync(uid, dto, ct);
-            return Results.Ok(await repo.GetAsync(uid, ct));
+            await repo.SaveAsync(uid, dto, profileId, ct);
+            return Results.Ok(await repo.GetAsync(uid, profileId, ct));
         })
         .WithName("SaveSettings");
 

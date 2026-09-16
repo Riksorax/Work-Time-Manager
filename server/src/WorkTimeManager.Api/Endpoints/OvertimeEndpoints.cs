@@ -13,19 +13,20 @@ internal static class OvertimeEndpoints
         var overtime = group.MapGroup("/overtime").WithTags("Overtime");
 
         overtime.MapGet("/", async (
-            ClaimsPrincipal user, OvertimeRepository repo, CancellationToken ct) =>
+            string? profileId, ClaimsPrincipal user, OvertimeRepository repo, CancellationToken ct) =>
         {
             if (user.GetUid() is not { } uid) return Results.Unauthorized();
-            return Results.Ok(await repo.GetAsync(uid, ct));
+            return Results.Ok(await repo.GetAsync(uid, profileId, ct));
         })
         .WithName("GetOvertime");
 
         overtime.MapPut("/", async (
-            SaveOvertimeRequest request, ClaimsPrincipal user, OvertimeRepository repo, CancellationToken ct) =>
+            SaveOvertimeRequest request, string? profileId,
+            ClaimsPrincipal user, OvertimeRepository repo, CancellationToken ct) =>
         {
             if (user.GetUid() is not { } uid) return Results.Unauthorized();
-            await repo.SaveAsync(uid, request.Minutes, ct);
-            return Results.Ok(await repo.GetAsync(uid, ct));
+            await repo.SaveAsync(uid, request.Minutes, profileId, ct);
+            return Results.Ok(await repo.GetAsync(uid, profileId, ct));
         })
         .WithName("SaveOvertime");
 

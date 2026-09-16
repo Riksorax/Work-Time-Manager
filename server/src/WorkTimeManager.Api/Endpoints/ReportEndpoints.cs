@@ -11,45 +11,45 @@ internal static class ReportEndpoints
         var reports = group.MapGroup("/reports").WithTags("Reports");
 
         reports.MapGet("/daily/{year:int}/{month:int}/{day:int}", async (
-            int year, int month, int day, ClaimsPrincipal user,
+            int year, int month, int day, string? profileId, ClaimsPrincipal user,
             WorkEntryRepository entries, SettingsRepository settingsRepo, CancellationToken ct) =>
         {
             if (user.GetUid() is not { } uid) return Results.Unauthorized();
             if (!IsValidDay(year, month, day)) return Results.BadRequest("Ungültiges Datum.");
 
-            var monthEntries = await entries.GetMonthAsync(uid, year, month, ct);
-            var settings = await settingsRepo.GetAsync(uid, ct);
+            var monthEntries = await entries.GetMonthAsync(uid, year, month, profileId, ct);
+            var settings = await settingsRepo.GetAsync(uid, profileId, ct);
             var stat = ReportCalculator.CalculateDailyStat(monthEntries, new DateOnly(year, month, day), settings);
             return Results.Ok(stat);
         })
         .WithName("GetDailyReport");
 
         reports.MapGet("/weekly/{year:int}/{month:int}/{day:int}", async (
-            int year, int month, int day, ClaimsPrincipal user,
+            int year, int month, int day, string? profileId, ClaimsPrincipal user,
             WorkEntryRepository entries, SettingsRepository settingsRepo, CancellationToken ct) =>
         {
             if (user.GetUid() is not { } uid) return Results.Unauthorized();
             if (!IsValidDay(year, month, day)) return Results.BadRequest("Ungültiges Datum.");
 
             var date = new DateOnly(year, month, day);
-            var weekEntries = await entries.GetWeekAsync(uid, date, ct);
-            var settings = await settingsRepo.GetAsync(uid, ct);
+            var weekEntries = await entries.GetWeekAsync(uid, date, profileId, ct);
+            var settings = await settingsRepo.GetAsync(uid, profileId, ct);
             var report = ReportCalculator.CalculateWeeklyReport(weekEntries, date, settings);
             return Results.Ok(report);
         })
         .WithName("GetWeeklyReport");
 
         reports.MapGet("/monthly/{year:int}/{month:int}", async (
-            int year, int month, ClaimsPrincipal user,
+            int year, int month, string? profileId, ClaimsPrincipal user,
             WorkEntryRepository entries, SettingsRepository settingsRepo,
             OvertimeRepository overtimeRepo, CancellationToken ct) =>
         {
             if (user.GetUid() is not { } uid) return Results.Unauthorized();
             if (!IsValidMonth(year, month)) return Results.BadRequest("Ungültiger Monat.");
 
-            var monthEntries = await entries.GetMonthAsync(uid, year, month, ct);
-            var settings = await settingsRepo.GetAsync(uid, ct);
-            var overtime = await overtimeRepo.GetAsync(uid, ct);
+            var monthEntries = await entries.GetMonthAsync(uid, year, month, profileId, ct);
+            var settings = await settingsRepo.GetAsync(uid, profileId, ct);
+            var overtime = await overtimeRepo.GetAsync(uid, profileId, ct);
             var report = ReportCalculator.CalculateMonthlyReport(
                 monthEntries, new DateOnly(year, month, 1), settings, overtime.Minutes * 60_000L);
             return Results.Ok(report);
