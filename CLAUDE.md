@@ -86,9 +86,11 @@ core/
 ├── auth/           AuthService (Firebase Auth, Google Sign-In), AuthGuard
 │                   — deleteAccount() via Firebase deleteUser()
 ├── services/
-│   ├── work-entry.ts      Hybrid Firebase/localStorage — getAllLocalEntries() für DataSync
-│   ├── overtime.ts        Hybrid — getOvertime() / saveOvertime() / getLastUpdateDate()
-│   ├── settings.ts        Hybrid — getSettings() Observable / saveSettings()
+│   ├── work-entry.ts      Hybrid — eingeloggt: Reads live via Firestore onSnapshot, Writes über ApiClient (Backend-API); ausgeloggt: localStorage. getAllLocalEntries() für DataSync
+│   ├── overtime.ts        Hybrid — eingeloggt komplett über ApiClient (Reads + Writes), sonst localStorage
+│   ├── settings.ts        Hybrid — wie work-entry.ts (Reads via Firestore onSnapshot, Writes via ApiClient)
+│   ├── api-client.ts      ApiClient — typisierter Client für die .NET-Backend-API (siehe Backend-Abschnitt), Token via authInterceptor
+│   ├── work-profile.ts    WorkProfileService — aktives/zusätzliche Arbeitszeit-Profile (siehe #138/#244), profileId für ApiClient + Firestore-Pfade
 │   ├── profile.ts         ProfileService — isPremium Signal (Firestore-Flag)
 │   ├── theme.ts           ThemeService — isDarkMode Signal + localStorage-Persistenz
 │   ├── data-sync.ts       DataSyncService — localStorage→Firebase-Migration bei Login
@@ -110,10 +112,11 @@ features/
 
 shared/
 ├── components/
-│   ├── calendar/          CalendarComponent — Multi-Select + Pointer-Drag
-│   ├── edit-entry-dialog/ EditEntryDialogComponent
-│   └── time-input/        TimeInputComponent
-└── models/index.ts        WorkEntry, WorkEntryType, Break, UserSettings, UserProfile
+│   ├── calendar/               CalendarComponent — Multi-Select + Pointer-Drag
+│   ├── edit-entry-dialog/      EditEntryDialogComponent
+│   ├── time-input/             TimeInputComponent
+│   └── work-profile-switcher/  WorkProfileSwitcherComponent + Add-/Manage-Dialoge (siehe #138/#244)
+└── models/index.ts        WorkEntry, WorkEntryType, Break, UserSettings, UserProfile, WorkProfile
 ```
 
 ### Feature-Services (Pattern)

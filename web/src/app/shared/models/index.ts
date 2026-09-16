@@ -45,3 +45,13 @@ export interface UserProfile {
   isPremium: boolean;
   settings: UserSettings;
 }
+
+/** Ein zusätzliches Arbeitszeit-Profil (siehe #138/#239/#244). */
+export interface WorkProfile {
+  id: string;
+  name: string;
+}
+
+/** ID des immer vorhandenen Standard-Profils - bildet die bestehenden,
+ * nicht migrierten Firestore-Pfade ab (kein Datenverlust-Risiko). */
+export const DEFAULT_WORK_PROFILE_ID = 'default';

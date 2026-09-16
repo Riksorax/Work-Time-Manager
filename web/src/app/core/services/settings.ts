@@ -1,9 +1,11 @@
 import { Injectable, Injector, inject, runInInjectionContext } from '@angular/core';
 import { Firestore, doc, onSnapshot } from '@angular/fire/firestore';
-import { BehaviorSubject, Observable, switchMap } from 'rxjs';
+import { BehaviorSubject, Observable, combineLatest, switchMap } from 'rxjs';
 import { AuthService } from '../auth/auth';
 import { ApiClient } from './api-client';
+import { WorkProfileService } from './work-profile';
 import { UserSettings } from '../../shared/models';
+import { profileScopedPath } from '../../shared/utils/work-profile-path.util';
 
 const LS_KEY = 'user_settings';
 
@@ -22,10 +24,11 @@ function migrateWorkdays(raw: Partial<UserSettings> & { workdaysPerWeek?: number
 
 @Injectable({ providedIn: 'root' })
 export class SettingsService {
-  private readonly firestore = inject(Firestore);
-  private readonly auth      = inject(AuthService);
-  private readonly injector  = inject(Injector);
-  private readonly api       = inject(ApiClient);
+  private readonly firestore   = inject(Firestore);
+  private readonly auth        = inject(AuthService);
+  private readonly injector    = inject(Injector);
+  private readonly api         = inject(ApiClient);
+  private readonly workProfile = inject(WorkProfileService);
 
   private readonly defaultSettings: UserSettings = {
     weeklyTargetHours: 40,
@@ -41,14 +44,14 @@ export class SettingsService {
   private readonly _local$ = new BehaviorSubject<UserSettings>(this._localGet());
 
   getSettings(): Observable<UserSettings> {
-    return this.auth.user$.pipe(
-      switchMap(user => {
+    return combineLatest([this.auth.user$, this.workProfile.activeProfileId$]).pipe(
+      switchMap(([user, profileId]) => {
         if (!user) return this._local$.asObservable();
 
         return new Observable<UserSettings>(observer => {
           let unsub: (() => void) | undefined;
           runInInjectionContext(this.injector, () => {
-            const ref = doc(this.firestore, `users/${user.uid}/settings/current`);
+            const ref = doc(this.firestore, `${profileScopedPath(user.uid, 'settings', profileId)}/current`);
             unsub = onSnapshot(ref,
               snap => observer.next({
                 ...this.defaultSettings,
@@ -65,7 +68,7 @@ export class SettingsService {
 
   async saveSettings(settings: UserSettings): Promise<void> {
     // Eingeloggt: Schreibvorgang über die API; getSettings bleibt onSnapshot (Hybrid).
-    if (this.auth.uid) await this.api.saveSettings(settings);
+    if (this.auth.uid) await this.api.saveSettings(settings, this.workProfile.activeProfileIdForApi);
     else               this._localSave(settings);
   }
 

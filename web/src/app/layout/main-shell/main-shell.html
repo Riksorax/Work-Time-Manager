@@ -34,6 +34,7 @@
           <div class="sidenav-user">
             <mat-icon class="user-icon" aria-hidden="true">account_circle</mat-icon>
             <span class="user-email" [title]="user()!.email ?? ''">{{ user()!.email }}</span>
+            <app-work-profile-switcher />
             <button mat-icon-button (click)="logout()" aria-label="Abmelden"
                     matTooltip="Abmelden">
               <mat-icon>logout</mat-icon>
@@ -66,6 +67,9 @@
       <mat-toolbar>
         <span>{{ 'appTitle' | translate }}</span>
         <span class="spacer"></span>
+        @if (user()) {
+          <app-work-profile-switcher />
+        }
       </mat-toolbar>
     }
 
