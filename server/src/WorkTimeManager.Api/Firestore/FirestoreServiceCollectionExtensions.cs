@@ -24,6 +24,7 @@ public static class FirestoreServiceCollectionExtensions
         services.AddSingleton<OvertimeRepository>();
         services.AddSingleton<SettingsRepository>();
         services.AddSingleton<ProfileRepository>();
+        services.AddSingleton<WorkProfileRepository>();
 
         return services;
     }

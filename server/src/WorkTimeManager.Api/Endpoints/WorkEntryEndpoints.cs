@@ -11,39 +11,43 @@ internal static class WorkEntryEndpoints
         var entries = group.MapGroup("/work-entries").WithTags("Work Entries");
 
         entries.MapGet("/{year:int}/{month:int}", async (
-            int year, int month, ClaimsPrincipal user, WorkEntryRepository repo, CancellationToken ct) =>
+            int year, int month, string? profileId,
+            ClaimsPrincipal user, WorkEntryRepository repo, CancellationToken ct) =>
         {
             if (user.GetUid() is not { } uid) return Results.Unauthorized();
             if (!IsValidMonth(year, month)) return Results.BadRequest("Ungültiger Monat.");
-            return Results.Ok(await repo.GetMonthAsync(uid, year, month, ct));
+            return Results.Ok(await repo.GetMonthAsync(uid, year, month, profileId, ct));
         })
         .WithName("GetWorkEntriesForMonth");
 
         entries.MapGet("/{year:int}/{month:int}/{day:int}", async (
-            int year, int month, int day, ClaimsPrincipal user, WorkEntryRepository repo, CancellationToken ct) =>
+            int year, int month, int day, string? profileId,
+            ClaimsPrincipal user, WorkEntryRepository repo, CancellationToken ct) =>
         {
             if (user.GetUid() is not { } uid) return Results.Unauthorized();
             if (!IsValidDay(year, month, day)) return Results.BadRequest("Ungültiges Datum.");
-            var entry = await repo.GetDayAsync(uid, year, month, day, ct);
+            var entry = await repo.GetDayAsync(uid, year, month, day, profileId, ct);
             return entry is null ? Results.NotFound() : Results.Ok(entry);
         })
         .WithName("GetWorkEntry");
 
         entries.MapPut("/", async (
-            WorkEntryDto entry, ClaimsPrincipal user, WorkEntryRepository repo, CancellationToken ct) =>
+            WorkEntryDto entry, string? profileId,
+            ClaimsPrincipal user, WorkEntryRepository repo, CancellationToken ct) =>
         {
             if (user.GetUid() is not { } uid) return Results.Unauthorized();
-            await repo.SaveAsync(uid, entry, ct);
+            await repo.SaveAsync(uid, entry, profileId, ct);
             return Results.Ok(entry);
         })
         .WithName("SaveWorkEntry");
 
         entries.MapDelete("/{year:int}/{month:int}/{day:int}", async (
-            int year, int month, int day, ClaimsPrincipal user, WorkEntryRepository repo, CancellationToken ct) =>
+            int year, int month, int day, string? profileId,
+            ClaimsPrincipal user, WorkEntryRepository repo, CancellationToken ct) =>
         {
             if (user.GetUid() is not { } uid) return Results.Unauthorized();
             if (!IsValidDay(year, month, day)) return Results.BadRequest("Ungültiges Datum.");
-            await repo.DeleteAsync(uid, year, month, day, ct);
+            await repo.DeleteAsync(uid, year, month, day, profileId, ct);
             return Results.NoContent();
         })
         .WithName("DeleteWorkEntry");

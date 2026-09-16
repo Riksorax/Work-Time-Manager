@@ -171,6 +171,8 @@ runInInjectionContext(this.injector, () => {
 | Gleitzeit | `users/{uid}/overtime/balance` | `minutes` (int), `lastUpdated` (Timestamp) |
 | Einstellungen | `users/{uid}/settings/current` | nur Web — Flutter nutzt SharedPreferences |
 | Profil/Premium | `users/{uid}` | `isPremium` (bool) |
+| Zusätzliches Arbeitszeit-Profil | `users/{uid}/profiles/{profileId}` | `name` (string), `createdAt` (Timestamp) — siehe #138/#239 |
+| Profil-Daten (Arbeitszeit-Profil) | `users/{uid}/profiles/{profileId}/{work_entries\|overtime\|settings}/...` | wie oben, nur unter dem Profil verschachtelt. Das Standard-Profil bleibt unter dem unveränderten `users/{uid}/...`-Pfad (keine Migration) |
 
 ### Dark Mode
 
@@ -214,6 +216,11 @@ Endpoints/    Minimal-API-Mappings je Ressource + ClaimsPrincipalExtensions.GetU
 | GET | `/api/reports/daily/{year}/{month}/{day}` | Tagesstatistik |
 | GET | `/api/reports/weekly/{year}/{month}/{day}` | Wochenbericht |
 | GET | `/api/reports/monthly/{year}/{month}` | Monatsbericht |
+| GET | `/api/work-profiles` | Zusätzliche Arbeitszeit-Profile auflisten (ohne Standard-Profil, siehe #138/#239) |
+| POST | `/api/work-profiles` | Neues Profil anlegen (`{ name }`) |
+| DELETE | `/api/work-profiles/{profileId}` | Profil inkl. aller Daten löschen |
+
+**Multi-Profile (`profileId`, siehe #239):** `work-entries`/`overtime`/`settings`/`reports`-Endpunkte akzeptieren optional `?profileId=...` (Query-Parameter). Fehlt er oder ist er `"default"`, wird der bestehende, nicht migrierte Pfad verwendet — vollständig abwärtskompatibel für bestehende Clients ohne den Parameter.
 
 ### Backend-Regeln
 
