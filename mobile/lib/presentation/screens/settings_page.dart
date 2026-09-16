@@ -27,6 +27,7 @@ import '../widgets/edit_workdays_modal.dart';
 import '../widgets/notification_settings_dialog.dart';
 import '../widgets/pin_setup_dialog.dart';
 import '../widgets/common/responsive_center.dart';
+import '../widgets/work_profile_switcher.dart';
 import 'app_info_page.dart';
 import 'login_page.dart';
 
@@ -43,6 +44,7 @@ class SettingsPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.settingsTitle),
+        actions: const [WorkProfileSwitcher()],
       ),
       body: settingsValue.when(
         loading: () => const Center(child: CircularProgressIndicator()),

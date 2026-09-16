@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -18,12 +19,15 @@ import '../../data/repositories/local_work_repository_impl.dart';
 import '../../data/repositories/firebase_overtime_repository_impl.dart';
 import '../../data/repositories/settings_repository_impl.dart';
 import '../../data/repositories/weekly_reflection_repository_impl.dart';
+import '../../data/repositories/work_profile_repository_impl.dart';
 import '../../data/repositories/work_repository_impl.dart';
 import '../../domain/entities/user_entity.dart';
+import '../../domain/entities/work_profile_entity.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../domain/repositories/overtime_repository.dart';
 import '../../domain/repositories/settings_repository.dart';
 import '../../domain/repositories/weekly_reflection_repository.dart';
+import '../../domain/repositories/work_profile_repository.dart';
 import '../../domain/repositories/work_repository.dart';
 import '../../domain/usecases/delete_account.dart';
 import '../../domain/usecases/get_auth_state_changes.dart';
@@ -116,10 +120,12 @@ AuthRepository authRepository(Ref ref) {
 @riverpod
 SettingsRepository settingsRepository(Ref ref) {
   final userId = ref.watch(firebaseAuthProvider).currentUser?.uid;
+  final profileId = ref.watch(activeWorkProfileIdProvider);
   final repo = SettingsRepositoryImpl(
     ref.watch(sharedPreferencesProvider),
     ref.watch(apiDataSourceProvider),
     userId ?? 'local',
+    profileId,
   );
   // Beim Login Firestore-Einstellungen in SharedPrefs übernehmen
   if (userId != null) repo.syncFromFirestore();
@@ -130,9 +136,10 @@ SettingsRepository settingsRepository(Ref ref) {
 WorkRepository workRepository(Ref ref) {
   final authState = ref.watch(authStateProvider);
   final userId = authState.asData?.value?.id;
+  final profileId = ref.watch(activeWorkProfileIdProvider);
   final prefs = ref.watch(sharedPreferencesProvider);
 
-  logger.i('[workRepositoryProvider] Auth State geändert - userId: $userId');
+  logger.i('[workRepositoryProvider] Auth State geändert - userId: $userId, Profil: $profileId');
 
   final localRepository = LocalWorkRepositoryImpl(prefs);
 
@@ -140,6 +147,7 @@ WorkRepository workRepository(Ref ref) {
       ? WorkRepositoryImpl(
           dataSource: ref.watch(apiDataSourceProvider),
           userId: userId,
+          profileId: profileId,
         )
       : localRepository;
 
@@ -154,9 +162,10 @@ WorkRepository workRepository(Ref ref) {
 OvertimeRepository overtimeRepository(Ref ref) {
   final authState = ref.watch(authStateProvider);
   final userId = authState.asData?.value?.id;
+  final profileId = ref.watch(activeWorkProfileIdProvider);
   final prefs = ref.watch(sharedPreferencesProvider);
 
-  logger.i('[overtimeRepositoryProvider] Auth State geändert - userId: $userId');
+  logger.i('[overtimeRepositoryProvider] Auth State geändert - userId: $userId, Profil: $profileId');
 
   final localRepository = LocalOvertimeRepositoryImpl(prefs);
 
@@ -164,6 +173,7 @@ OvertimeRepository overtimeRepository(Ref ref) {
       ? FirebaseOvertimeRepositoryImpl(
           dataSource: ref.watch(apiDataSourceProvider),
           userId: userId,
+          profileId: profileId,
         )
       : localRepository;
 
@@ -187,6 +197,76 @@ WeeklyReflectionRepository? weeklyReflectionRepository(Ref ref) {
     dataSource: ref.watch(apiDataSourceProvider),
     userId: userId,
   );
+}
+
+/// `null`, wenn kein Nutzer eingeloggt ist - wie [WeeklyReflectionRepository]
+/// ein Premium-Feature, das ein Login voraussetzt (#138).
+@riverpod
+WorkProfileRepository? workProfileRepository(Ref ref) {
+  final authState = ref.watch(authStateProvider);
+  final userId = authState.asData?.value?.id;
+  if (userId == null) return null;
+
+  return WorkProfileRepositoryImpl(
+    dataSource: ref.watch(apiDataSourceProvider),
+    userId: userId,
+  );
+}
+
+//==============================================================================
+// ARBEITSZEIT-PROFILE (siehe #138)
+//==============================================================================
+
+/// Maximale Anzahl Arbeitszeit-Profile inkl. des immer vorhandenen
+/// Standard-Profils. Aktuell fix - soll künftig je nach Abo-Stufe erhöhbar
+/// werden (noch nicht umgesetzt).
+const int maxWorkProfileCount = 2;
+
+/// Alle Profile des Nutzers inkl. des stets vorhandenen Standard-Profils,
+/// für den Profil-Wechsler in der UI.
+@riverpod
+Future<List<WorkProfileEntity>> workProfiles(Ref ref) async {
+  final repository = ref.watch(workProfileRepositoryProvider);
+  final profiles = [WorkProfileEntity.defaultProfile()];
+  if (repository == null) return profiles;
+
+  final additional = await repository.getAdditionalProfiles();
+  return [...profiles, ...additional];
+}
+
+/// Das aktuell aktive Arbeitszeit-Profil (`null` = Standard-Profil). Wird
+/// pro Nutzer in SharedPreferences gemerkt, damit ein App-Neustart nicht
+/// unbemerkt auf das Standard-Profil zurückfällt (Gefahr fehlgeleiteter
+/// Einträge, falls der Nutzer denkt, er sei noch im Zweitprofil).
+final activeWorkProfileIdProvider =
+    NotifierProvider<ActiveWorkProfileIdNotifier, String?>(
+        ActiveWorkProfileIdNotifier.new);
+
+class ActiveWorkProfileIdNotifier extends Notifier<String?> {
+  static const _prefsKeyPrefix = 'active_work_profile_';
+
+  @override
+  String? build() {
+    final userId = ref.watch(authStateProvider).asData?.value?.id;
+    if (userId == null) return null;
+
+    final prefs = ref.watch(sharedPreferencesProvider);
+    final stored = prefs.getString('$_prefsKeyPrefix$userId');
+    return (stored == null || stored == WorkProfileEntity.defaultProfileId) ? null : stored;
+  }
+
+  Future<void> setActiveProfile(String? profileId) async {
+    final userId = ref.read(authStateProvider).asData?.value?.id;
+    state = profileId;
+    if (userId == null) return;
+
+    final prefs = ref.read(sharedPreferencesProvider);
+    if (profileId == null) {
+      await prefs.remove('$_prefsKeyPrefix$userId');
+    } else {
+      await prefs.setString('$_prefsKeyPrefix$userId', profileId);
+    }
+  }
 }
 
 //==============================================================================

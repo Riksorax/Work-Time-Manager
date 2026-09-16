@@ -521,7 +521,7 @@ final class SettingsRepositoryProvider extends $FunctionalProvider<
 }
 
 String _$settingsRepositoryHash() =>
-    r'1b079df9e1a20159d6220a0440589b69fbe232c2';
+    r'1ff64a28662ff795a68a5b7a12a1164c2338feab';
 
 @ProviderFor(workRepository)
 const workRepositoryProvider = WorkRepositoryProvider._();
@@ -562,7 +562,7 @@ final class WorkRepositoryProvider
   }
 }
 
-String _$workRepositoryHash() => r'8dc588d3a63ee4ce4263f6bbad2a10b97d323304';
+String _$workRepositoryHash() => r'3b59252ad86522d920133f40d32b0057570fb130';
 
 @ProviderFor(overtimeRepository)
 const overtimeRepositoryProvider = OvertimeRepositoryProvider._();
@@ -606,7 +606,7 @@ final class OvertimeRepositoryProvider extends $FunctionalProvider<
 }
 
 String _$overtimeRepositoryHash() =>
-    r'5cb1492b8414df0694565293ce341c00eec7f196';
+    r'90083d8e68d3fe9421241d48ced57f08dc652192';
 
 /// `null`, wenn kein Nutzer eingeloggt ist - anders als [WorkRepository]/
 /// [OvertimeRepository] ohne Local-Fallback, da Wochen-Reflexionen ein
@@ -663,6 +663,104 @@ final class WeeklyReflectionRepositoryProvider extends $FunctionalProvider<
 
 String _$weeklyReflectionRepositoryHash() =>
     r'caa22074ec2760b432dba9deafa0f2a2fcbd4640';
+
+/// `null`, wenn kein Nutzer eingeloggt ist - wie [WeeklyReflectionRepository]
+/// ein Premium-Feature, das ein Login voraussetzt (#138).
+
+@ProviderFor(workProfileRepository)
+const workProfileRepositoryProvider = WorkProfileRepositoryProvider._();
+
+/// `null`, wenn kein Nutzer eingeloggt ist - wie [WeeklyReflectionRepository]
+/// ein Premium-Feature, das ein Login voraussetzt (#138).
+
+final class WorkProfileRepositoryProvider extends $FunctionalProvider<
+    WorkProfileRepository?,
+    WorkProfileRepository?,
+    WorkProfileRepository?> with $Provider<WorkProfileRepository?> {
+  /// `null`, wenn kein Nutzer eingeloggt ist - wie [WeeklyReflectionRepository]
+  /// ein Premium-Feature, das ein Login voraussetzt (#138).
+  const WorkProfileRepositoryProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'workProfileRepositoryProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$workProfileRepositoryHash();
+
+  @$internal
+  @override
+  $ProviderElement<WorkProfileRepository?> $createElement(
+          $ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  WorkProfileRepository? create(Ref ref) {
+    return workProfileRepository(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(WorkProfileRepository? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<WorkProfileRepository?>(value),
+    );
+  }
+}
+
+String _$workProfileRepositoryHash() =>
+    r'8ae78af8b649cd469d6cc8999413ef245201907b';
+
+/// Alle Profile des Nutzers inkl. des stets vorhandenen Standard-Profils,
+/// für den Profil-Wechsler in der UI.
+
+@ProviderFor(workProfiles)
+const workProfilesProvider = WorkProfilesProvider._();
+
+/// Alle Profile des Nutzers inkl. des stets vorhandenen Standard-Profils,
+/// für den Profil-Wechsler in der UI.
+
+final class WorkProfilesProvider extends $FunctionalProvider<
+        AsyncValue<List<WorkProfileEntity>>,
+        List<WorkProfileEntity>,
+        FutureOr<List<WorkProfileEntity>>>
+    with
+        $FutureModifier<List<WorkProfileEntity>>,
+        $FutureProvider<List<WorkProfileEntity>> {
+  /// Alle Profile des Nutzers inkl. des stets vorhandenen Standard-Profils,
+  /// für den Profil-Wechsler in der UI.
+  const WorkProfilesProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'workProfilesProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$workProfilesHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<List<WorkProfileEntity>> $createElement(
+          $ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<List<WorkProfileEntity>> create(Ref ref) {
+    return workProfiles(ref);
+  }
+}
+
+String _$workProfilesHash() => r'4611511e2e740db34fffb3cc6bc28111d2268763';
 
 @ProviderFor(getAuthStateChangesUseCase)
 const getAuthStateChangesUseCaseProvider =
