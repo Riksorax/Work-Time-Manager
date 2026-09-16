@@ -40,6 +40,7 @@ lädt den Inhalt beim Play-Upload automatisch als Änderungsprotokoll mit hoch.
 
 | Version | Charakter | Datum |
 | --- | --- | --- |
+| 1.4.0 | Demyx | 2026-09-16 |
 | 1.3.5 | Luxord | 2026-09-08 |
 | 1.3.4 | Marluxia | 2026-09-03 |
 | 1.3.3 | Larxene | 2026-09-01 |
@@ -76,7 +77,6 @@ Einige Einträge sind alternative Identitäten derselben Figur (Lea/Axel,
 Isa/Saix). Ist eine Variante vergeben, sollte die andere nicht mehr
 verwendet werden, auch wenn die Prüfung sie formal durchlässt.
 
-- Demyx
 - Zexion
 - Lexaeus
 - Vexen
