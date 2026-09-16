@@ -1,8 +1,8 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, firstValueFrom, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { Break, UserSettings, WorkEntry, WorkEntryType } from '../../shared/models';
+import { Break, UserSettings, WorkEntry, WorkEntryType, WorkProfile } from '../../shared/models';
 import { DailyStat, MonthlyReport, WeeklyReport } from '../../domain/models/reports.models';
 import {
   roundToMinute,
@@ -32,6 +32,7 @@ interface BreakDto {
 }
 interface OvertimeDto { minutes: number; lastUpdated: string | null; }
 interface ProfileDto { uid: string; isPremium: boolean; }
+interface WorkProfileDto { id: string; name: string; }
 interface DailyStatDto { targetMs: number; workedMs: number; overtimeMs: number; }
 interface ReportDayDto { date: string; workedMs: number; }
 interface WeeklyReportDto {
@@ -58,53 +59,62 @@ export class ApiClient {
 
   // ── Work-Entries ──────────────────────────────────────────────────────────
 
-  saveWorkEntry(entry: WorkEntry): Promise<void> {
+  saveWorkEntry(entry: WorkEntry, profileId?: string): Promise<void> {
     return firstValueFrom(
-      this.http.put<WorkEntryDto>(`${this.base}/work-entries`, this.toDto(entry)).pipe(map(() => void 0))
+      this.http.put<WorkEntryDto>(`${this.base}/work-entries`, this.toDto(entry), { params: this._params(profileId) })
+        .pipe(map(() => void 0))
     );
   }
 
-  deleteWorkEntry(id: string): Promise<void> {
+  deleteWorkEntry(id: string, profileId?: string): Promise<void> {
     const [y, m, d] = id.split('-').map(Number);
     return firstValueFrom(
-      this.http.delete<void>(`${this.base}/work-entries/${y}/${m}/${d}`)
+      this.http.delete<void>(`${this.base}/work-entries/${y}/${m}/${d}`, { params: this._params(profileId) })
     );
   }
 
-  async getWorkEntriesForMonth(year: number, month: number): Promise<WorkEntry[]> {
+  async getWorkEntriesForMonth(year: number, month: number, profileId?: string): Promise<WorkEntry[]> {
     const dtos = await firstValueFrom(
-      this.http.get<WorkEntryDto[]>(`${this.base}/work-entries/${year}/${month}`)
+      this.http.get<WorkEntryDto[]>(`${this.base}/work-entries/${year}/${month}`, { params: this._params(profileId) })
     );
     return dtos.map(dto => this.fromDto(dto));
   }
 
   // ── Overtime ──────────────────────────────────────────────────────────────
 
-  async getOvertimeMs(): Promise<number> {
-    const dto = await firstValueFrom(this.http.get<OvertimeDto>(`${this.base}/overtime`));
+  async getOvertimeMs(profileId?: string): Promise<number> {
+    const dto = await firstValueFrom(
+      this.http.get<OvertimeDto>(`${this.base}/overtime`, { params: this._params(profileId) })
+    );
     return (dto.minutes ?? 0) * 60_000;
   }
 
-  async getOvertimeLastUpdate(): Promise<Date | null> {
-    const dto = await firstValueFrom(this.http.get<OvertimeDto>(`${this.base}/overtime`));
+  async getOvertimeLastUpdate(profileId?: string): Promise<Date | null> {
+    const dto = await firstValueFrom(
+      this.http.get<OvertimeDto>(`${this.base}/overtime`, { params: this._params(profileId) })
+    );
     return dto.lastUpdated ? new Date(dto.lastUpdated) : null;
   }
 
-  saveOvertimeMs(ms: number): Promise<void> {
+  saveOvertimeMs(ms: number, profileId?: string): Promise<void> {
     return firstValueFrom(
-      this.http.put<OvertimeDto>(`${this.base}/overtime`, { minutes: toStoredMinutes(ms) }).pipe(map(() => void 0))
+      this.http.put<OvertimeDto>(`${this.base}/overtime`, { minutes: toStoredMinutes(ms) }, { params: this._params(profileId) })
+        .pipe(map(() => void 0))
     );
   }
 
   // ── Settings ──────────────────────────────────────────────────────────────
 
-  async getSettings(): Promise<UserSettings> {
-    return firstValueFrom(this.http.get<UserSettings>(`${this.base}/settings`));
+  async getSettings(profileId?: string): Promise<UserSettings> {
+    return firstValueFrom(
+      this.http.get<UserSettings>(`${this.base}/settings`, { params: this._params(profileId) })
+    );
   }
 
-  saveSettings(settings: UserSettings): Promise<void> {
+  saveSettings(settings: UserSettings, profileId?: string): Promise<void> {
     return firstValueFrom(
-      this.http.put<UserSettings>(`${this.base}/settings`, settings).pipe(map(() => void 0))
+      this.http.put<UserSettings>(`${this.base}/settings`, settings, { params: this._params(profileId) })
+        .pipe(map(() => void 0))
     );
   }
 
@@ -114,16 +124,30 @@ export class ApiClient {
     return firstValueFrom(this.http.get<ProfileDto>(`${this.base}/profile`));
   }
 
+  // ── Arbeitszeit-Profile (siehe #138/#239/#244) ──────────────────────────────
+
+  async getWorkProfiles(): Promise<WorkProfile[]> {
+    return firstValueFrom(this.http.get<WorkProfileDto[]>(`${this.base}/work-profiles`));
+  }
+
+  async addWorkProfile(name: string): Promise<WorkProfile> {
+    return firstValueFrom(this.http.post<WorkProfileDto>(`${this.base}/work-profiles`, { name }));
+  }
+
+  async deleteWorkProfile(id: string): Promise<void> {
+    await firstValueFrom(this.http.delete<void>(`${this.base}/work-profiles/${id}`));
+  }
+
   // ── Reports (reaktiv) ─────────────────────────────────────────────────────
 
-  getDailyReport(year: number, month: number, day: number): Observable<DailyStat> {
-    return this.http.get<DailyStatDto>(`${this.base}/reports/daily/${year}/${month}/${day}`).pipe(
+  getDailyReport(year: number, month: number, day: number, profileId?: string): Observable<DailyStat> {
+    return this.http.get<DailyStatDto>(`${this.base}/reports/daily/${year}/${month}/${day}`, { params: this._params(profileId) }).pipe(
       map(dto => ({ target: dto.targetMs, worked: dto.workedMs, overtime: dto.overtimeMs }))
     );
   }
 
-  getWeeklyReport(year: number, month: number, day: number): Observable<WeeklyReport> {
-    return this.http.get<WeeklyReportDto>(`${this.base}/reports/weekly/${year}/${month}/${day}`).pipe(
+  getWeeklyReport(year: number, month: number, day: number, profileId?: string): Observable<WeeklyReport> {
+    return this.http.get<WeeklyReportDto>(`${this.base}/reports/weekly/${year}/${month}/${day}`, { params: this._params(profileId) }).pipe(
       map(dto => ({
         weekNumber: dto.weekNumber,
         start: new Date(dto.start),
@@ -138,8 +162,8 @@ export class ApiClient {
     );
   }
 
-  getMonthlyReport(year: number, month: number): Observable<MonthlyReport> {
-    return this.http.get<MonthlyReportDto>(`${this.base}/reports/monthly/${year}/${month}`).pipe(
+  getMonthlyReport(year: number, month: number, profileId?: string): Observable<MonthlyReport> {
+    return this.http.get<MonthlyReportDto>(`${this.base}/reports/monthly/${year}/${month}`, { params: this._params(profileId) }).pipe(
       map(dto => ({
         month: new Date(dto.month),
         totalWorked: dto.totalWorkedMs,
@@ -153,6 +177,12 @@ export class ApiClient {
         days: dto.days.map(d => ({ date: new Date(d.date), worked: d.workedMs })),
       }))
     );
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
+  private _params(profileId?: string): HttpParams | undefined {
+    return profileId ? new HttpParams().set('profileId', profileId) : undefined;
   }
 
   // ── Mapping ───────────────────────────────────────────────────────────────

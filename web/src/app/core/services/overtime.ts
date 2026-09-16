@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { AuthService } from '../auth/auth';
 import { ApiClient } from './api-client';
+import { WorkProfileService } from './work-profile';
 import { toStoredMinutes } from '../../shared/utils/time-precision.util';
 
 const LS_OVERTIME    = 'overtime_value';
@@ -8,16 +9,17 @@ const LS_LAST_UPDATE = 'overtime_last_update';
 
 @Injectable({ providedIn: 'root' })
 export class OvertimeService {
-  private readonly auth = inject(AuthService);
-  private readonly api  = inject(ApiClient);
+  private readonly auth        = inject(AuthService);
+  private readonly api         = inject(ApiClient);
+  private readonly workProfile = inject(WorkProfileService);
 
   async getOvertime(): Promise<number> {
-    if (this.auth.uid) return this.api.getOvertimeMs();
+    if (this.auth.uid) return this.api.getOvertimeMs(this.workProfile.activeProfileIdForApi);
     return this._localGetOvertime();
   }
 
   async getLastUpdateDate(): Promise<Date | null> {
-    if (this.auth.uid) return this.api.getOvertimeLastUpdate();
+    if (this.auth.uid) return this.api.getOvertimeLastUpdate(this.workProfile.activeProfileIdForApi);
     return this._localGetLastUpdate();
   }
 
@@ -25,7 +27,7 @@ export class OvertimeService {
     if (this.auth.uid) {
       // Backend setzt lastUpdated automatisch beim Speichern.
       // Auf Minuten gerundet wird im ApiClient — das Backend nimmt bereits int entgegen.
-      await this.api.saveOvertimeMs(ms);
+      await this.api.saveOvertimeMs(ms, this.workProfile.activeProfileIdForApi);
     } else {
       localStorage.setItem(LS_OVERTIME, String(toStoredMinutes(ms)));
     }
