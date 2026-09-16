@@ -102,6 +102,18 @@ final activeEntitlementProvider = Provider<EntitlementInfo?>((ref) {
   );
 });
 
+/// Maximale Anzahl Arbeitszeit-Profile abhängig vom Abo-Status (siehe #240):
+/// - Kein Abo: 1 (nur das immer vorhandene Standard-Profil)
+/// - Premium (aktuell einzige Stufe): 2
+///
+/// Eine höhere Abo-Stufe mit noch mehr Profilen existiert aktuell noch
+/// nicht - sobald es sie gibt, hier per zusätzlicher Entitlement-Prüfung
+/// erweitern (siehe [activeEntitlementProvider]/[activeEntitlement]).
+final maxWorkProfileCountProvider = Provider<int>((ref) {
+  final isPremium = ref.watch(isPremiumProvider);
+  return isPremium ? 2 : 1;
+});
+
 /// Ruft den store-eigenen Link zur Abo-Verwaltung ab (Kündigung/Verlängerung
 /// direkt im App Store bzw. Play Store). Gibt `null` zurück, wenn kein Link
 /// verfügbar ist (z.B. Web oder Fehler) - siehe #220.
