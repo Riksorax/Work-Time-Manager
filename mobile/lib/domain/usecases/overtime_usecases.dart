@@ -29,18 +29,11 @@ class SetOvertime {
   SetOvertime(this.repository);
 
   Future<void> call({required Duration overtime, bool isManual = false}) async {
+    await repository.saveOvertime(overtime);
     if (isManual) {
-      // Beide Schreibvorgänge betreffen unterschiedliche Felder desselben Dokuments
-      // und sind unabhängig voneinander - parallel ausführen statt sequentiell zu
-      // awaiten, das spart einen Netzwerk-Roundtrip beim Bearbeiten der Überstunden.
-      await Future.wait([
-        repository.saveOvertime(overtime),
-        // Epoch-Datum setzen damit _init den gespeicherten Wert als Basis behandelt
-        // (nicht als "heutiger Gesamtstand inkl. Daily-Overtime").
-        repository.saveLastUpdateDate(DateTime.utc(1970, 1, 1)),
-      ]);
-    } else {
-      await repository.saveOvertime(overtime);
+      // Epoch-Datum setzen damit _init den gespeicherten Wert als Basis behandelt
+      // (nicht als "heutiger Gesamtstand inkl. Daily-Overtime").
+      await repository.saveLastUpdateDate(DateTime.utc(1970, 1, 1));
     }
   }
 }
