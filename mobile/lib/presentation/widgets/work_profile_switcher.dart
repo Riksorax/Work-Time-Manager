@@ -8,9 +8,9 @@ import 'add_work_profile_dialog.dart';
 import 'manage_work_profiles_dialog.dart';
 
 /// Profil-Wechsler im Header (siehe #138): zeigt alle Arbeitszeit-Profile
-/// des Nutzers und erlaubt das Anlegen eines weiteren Profils (Premium,
-/// begrenzt auf [maxWorkProfileCount]). Für ausgeloggte Nutzer unsichtbar,
-/// da Profile ein Login voraussetzen.
+/// des Nutzers und erlaubt das Anlegen eines weiteren Profils, begrenzt auf
+/// [maxWorkProfileCountProvider] (siehe #240). Für ausgeloggte Nutzer
+/// unsichtbar, da Profile ein Login voraussetzen.
 class WorkProfileSwitcher extends ConsumerWidget {
   const WorkProfileSwitcher({super.key});
 
@@ -32,14 +32,16 @@ class WorkProfileSwitcher extends ConsumerWidget {
           orElse: WorkProfileEntity.defaultProfile,
         );
         final isPremium = ref.watch(isPremiumProvider);
-        final canAddProfile = isPremium && profiles.length < maxWorkProfileCount;
+        final maxProfiles = ref.watch(maxWorkProfileCountProvider);
+        final canAddProfile = profiles.length < maxProfiles;
 
         return PopupMenuButton<String>(
           tooltip: 'Profil wechseln',
           icon: const Icon(Icons.badge_outlined),
           onSelected: (value) {
             if (value == '__add__') {
-              _handleAddProfile(context, ref, isPremium: isPremium, canAdd: canAddProfile);
+              _handleAddProfile(context, ref,
+                  isPremium: isPremium, canAdd: canAddProfile, maxProfiles: maxProfiles);
             } else if (value == '__manage__') {
               showDialog(context: context, builder: (_) => const ManageWorkProfilesDialog());
             } else {
@@ -87,6 +89,7 @@ class WorkProfileSwitcher extends ConsumerWidget {
     WidgetRef ref, {
     required bool isPremium,
     required bool canAdd,
+    required int maxProfiles,
   }) {
     if (!isPremium) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -96,7 +99,7 @@ class WorkProfileSwitcher extends ConsumerWidget {
     }
     if (!canAdd) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Maximal $maxWorkProfileCount Profile möglich.')),
+        SnackBar(content: Text('Maximal $maxProfiles Profile möglich.')),
       );
       return;
     }

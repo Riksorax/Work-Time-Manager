@@ -217,11 +217,6 @@ WorkProfileRepository? workProfileRepository(Ref ref) {
 // ARBEITSZEIT-PROFILE (siehe #138)
 //==============================================================================
 
-/// Maximale Anzahl Arbeitszeit-Profile inkl. des immer vorhandenen
-/// Standard-Profils. Aktuell fix - soll künftig je nach Abo-Stufe erhöhbar
-/// werden (noch nicht umgesetzt).
-const int maxWorkProfileCount = 2;
-
 /// Alle Profile des Nutzers inkl. des stets vorhandenen Standard-Profils,
 /// für den Profil-Wechsler in der UI.
 @riverpod
