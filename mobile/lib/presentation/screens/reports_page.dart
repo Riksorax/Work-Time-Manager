@@ -27,6 +27,7 @@ import '../widgets/common/loading_indicator.dart';
 import '../widgets/edit_work_entry_modal.dart';
 import '../widgets/quick_entry_dialog.dart';
 import '../widgets/batch_quick_entry_dialog.dart';
+import '../widgets/weekly_reflection_dialog.dart';
 import '../../domain/entities/work_entry_entity.dart';
 import 'login_page.dart';
 
@@ -727,20 +728,34 @@ class WeeklyReportView extends ConsumerWidget {
                     ),
                   ],
                 ),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton.icon(
-                    onPressed: () => _exportWeeklyReportPdf(
-                      context: context,
-                      startOfWeek: startOfWeek,
-                      endOfWeek: endOfWeek,
-                      weekNumber: weekNumber,
-                      weeklyReport: weeklyReport,
-                      overtime: weeklyOvertimeLocal,
+                Wrap(
+                  alignment: WrapAlignment.end,
+                  spacing: 8,
+                  children: [
+                    TextButton.icon(
+                      onPressed: () => showDialog(
+                        context: context,
+                        builder: (_) => WeeklyReflectionDialog(
+                          year: startOfWeek.year,
+                          week: weekNumber,
+                        ),
+                      ),
+                      icon: const Icon(Icons.rate_review_outlined),
+                      label: const Text('Wochen-Reflexion'),
                     ),
-                    icon: const Icon(Icons.picture_as_pdf_outlined),
-                    label: const Text('Als PDF exportieren'),
-                  ),
+                    TextButton.icon(
+                      onPressed: () => _exportWeeklyReportPdf(
+                        context: context,
+                        startOfWeek: startOfWeek,
+                        endOfWeek: endOfWeek,
+                        weekNumber: weekNumber,
+                        weeklyReport: weeklyReport,
+                        overtime: weeklyOvertimeLocal,
+                      ),
+                      icon: const Icon(Icons.picture_as_pdf_outlined),
+                      label: const Text('Als PDF exportieren'),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 8),
                 if (weeklyReport.workDays == 0)

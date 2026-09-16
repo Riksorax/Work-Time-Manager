@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart' as firebase;
 import 'package:flutter_work_time/core/utils/time_precision.dart';
+import 'package:flutter_work_time/domain/entities/weekly_reflection_entity.dart';
 
 import '../../models/work_entry_model.dart';
 import 'api_client.dart';
@@ -88,4 +89,15 @@ class ApiDataSource implements FirestoreDataSource {
     final current = await _api.getSettings() ?? <String, dynamic>{};
     await _api.putSettings({...current, ...settings});
   }
+
+  // ── Weekly Reflection → an Firestore-DataSource delegiert (kein Backend-
+  //    Endpoint, siehe #137) ─────────────────────────────────────────────────
+
+  @override
+  Future<WeeklyReflectionEntity?> getWeeklyReflection(String userId, int year, int week) =>
+      _auth.getWeeklyReflection(userId, year, week);
+
+  @override
+  Future<void> saveWeeklyReflection(String userId, WeeklyReflectionEntity reflection) =>
+      _auth.saveWeeklyReflection(userId, reflection);
 }
