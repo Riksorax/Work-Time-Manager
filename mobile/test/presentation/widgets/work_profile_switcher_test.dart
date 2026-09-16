@@ -100,5 +100,32 @@ void main() {
       expect(find.byType(AlertDialog), findsNothing);
       expect(find.textContaining('angelegt'), findsOneWidget);
     });
+
+    testWidgets('löscht ein zusätzliches Profil nach Bestätigung', (tester) async {
+      when(mockRepository.getAdditionalProfiles())
+          .thenAnswer((_) async => [const WorkProfileEntity(id: 'p1', name: 'Zweitjob')]);
+      when(mockRepository.deleteProfile('p1')).thenAnswer((_) async {});
+
+      await tester.pumpWidget(createSubject(isPremium: true));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(PopupMenuButton<String>));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Profile verwalten'), findsOneWidget);
+      await tester.tap(find.text('Profile verwalten'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Zweitjob'), findsOneWidget);
+      await tester.tap(find.byIcon(Icons.delete_outline));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Profil löschen?'), findsOneWidget);
+      await tester.tap(find.text('Löschen'));
+      await tester.pumpAndSettle();
+
+      verify(mockRepository.deleteProfile('p1')).called(1);
+      expect(find.textContaining('gelöscht'), findsOneWidget);
+    });
   });
 }

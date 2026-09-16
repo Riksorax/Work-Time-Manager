@@ -44,6 +44,7 @@ abstract class FirestoreDataSource {
   // Arbeitszeit-Profile (siehe #138)
   Future<List<Map<String, dynamic>>> getWorkProfiles(String userId);
   Future<String> addWorkProfile(String userId, String name);
+  Future<void> deleteWorkProfile(String userId, String profileId);
 }
 
 class FirestoreDataSourceImpl implements FirestoreDataSource {
@@ -410,5 +411,26 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
       'createdAt': Timestamp.now(),
     });
     return docRef.id;
+  }
+
+  @override
+  Future<void> deleteWorkProfile(String userId, String profileId) async {
+    logger.i('[Firestore] Lösche Arbeitszeit-Profil $profileId für User: $userId');
+    final profileDocRef = _profilesCollection(userId).doc(profileId);
+    final batch = _firestore.batch();
+
+    // Alle Subcollections des Profils löschen (Work Entries, Overtime,
+    // Settings) - analog zu deleteAccount(): Collections lassen sich
+    // clientseitig per get() auflisten, eine Kenntnis aller Dokument-IDs
+    // im Voraus ist dafür nicht nötig.
+    for (final collection in ['work_entries', 'overtime', 'settings']) {
+      final snapshot = await profileDocRef.collection(collection).get();
+      for (final doc in snapshot.docs) {
+        batch.delete(doc.reference);
+      }
+    }
+
+    batch.delete(profileDocRef);
+    await batch.commit();
   }
 }

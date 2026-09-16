@@ -354,4 +354,21 @@ class MockFirestoreDataSource extends _i1.Mock
           ),
         )),
       ) as _i3.Future<String>);
+
+  @override
+  _i3.Future<void> deleteWorkProfile(
+    String? userId,
+    String? profileId,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #deleteWorkProfile,
+          [
+            userId,
+            profileId,
+          ],
+        ),
+        returnValue: _i3.Future<void>.value(),
+        returnValueForMissingStub: _i3.Future<void>.value(),
+      ) as _i3.Future<void>);
 }
