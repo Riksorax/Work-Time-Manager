@@ -186,4 +186,59 @@ class PdfReportService {
       filename: 'Monatsbericht_${DateFormat('yyyy-MM').format(month)}.pdf',
     );
   }
+
+  pw.Widget _monthlyTable(List<(String name, Duration net, Duration overtime, int workDays)> months) {
+    return pw.TableHelper.fromTextArray(
+      headers: const ['Monat', 'Arbeitstage', 'Arbeitszeit', 'Überstunden'],
+      cellAlignments: {
+        0: pw.Alignment.centerLeft,
+        1: pw.Alignment.centerRight,
+        2: pw.Alignment.centerRight,
+        3: pw.Alignment.centerRight,
+      },
+      cellPadding: const pw.EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+      data: [
+        for (final m in months)
+          [m.$1, '${m.$4}', _fmtDuration(m.$2), _fmtSignedDuration(m.$3)],
+      ],
+    );
+  }
+
+  /// Exportiert den Jahresbericht als PDF (siehe #256).
+  Future<void> exportYearlyReport({
+    required int year,
+    required int totalWorkDays,
+    required int totalVacationDays,
+    required int totalSickDays,
+    required int totalHolidayDays,
+    required Duration totalNetWorkDuration,
+    required Duration totalOvertime,
+    required List<(String name, Duration net, Duration overtime, int workDays)> months,
+  }) async {
+    final doc = pw.Document(theme: await _loadTheme());
+    doc.addPage(
+      pw.MultiPage(
+        build: (context) => [
+          _header('Jahresbericht', '$year'),
+          _summaryTable([
+            ('Arbeitstage', '$totalWorkDays'),
+            ('Gesamte Arbeitszeit', _fmtDuration(totalNetWorkDuration)),
+            ('Urlaubstage', '$totalVacationDays'),
+            ('Krankheitstage', '$totalSickDays'),
+            ('Feiertage', '$totalHolidayDays'),
+            ('Gesamt-Überstunden', _fmtSignedDuration(totalOvertime)),
+          ]),
+          pw.SizedBox(height: 20),
+          pw.Text('Monatsübersicht', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+          pw.SizedBox(height: 8),
+          _monthlyTable(months),
+        ],
+      ),
+    );
+
+    await Printing.sharePdf(
+      bytes: await doc.save(),
+      filename: 'Jahresbericht_$year.pdf',
+    );
+  }
 }

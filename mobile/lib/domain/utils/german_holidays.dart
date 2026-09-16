@@ -9,19 +9,27 @@ import '../entities/bundesland.dart';
 /// überwiegend katholischen Gemeinden - hier landesweit angenommen, da eine
 /// gemeindegenaue Zuordnung den Rahmen dieses Features sprengen würde.
 List<DateTime> getGermanHolidays(int year, Bundesland bundesland) {
+  return getGermanHolidayNames(year, bundesland).keys.toList();
+}
+
+/// Wie [getGermanHolidays], liefert aber zusätzlich den Namen jedes
+/// Feiertags (siehe #253 - im Kalender waren Feiertage bisher nur rot
+/// markiert, ohne dass ersichtlich war, um welchen Feiertag es sich
+/// handelt).
+Map<DateTime, String> getGermanHolidayNames(int year, Bundesland bundesland) {
   final easter = _calculateEasterSunday(year);
 
-  final holidays = <DateTime>[
-    DateTime(year, 1, 1), // Neujahr
-    easter.subtract(const Duration(days: 2)), // Karfreitag
-    easter.add(const Duration(days: 1)), // Ostermontag
-    DateTime(year, 5, 1), // Tag der Arbeit
-    easter.add(const Duration(days: 39)), // Christi Himmelfahrt
-    easter.add(const Duration(days: 50)), // Pfingstmontag
-    DateTime(year, 10, 3), // Tag der Deutschen Einheit
-    DateTime(year, 12, 25), // 1. Weihnachtsfeiertag
-    DateTime(year, 12, 26), // 2. Weihnachtsfeiertag
-  ];
+  final holidays = <DateTime, String>{
+    DateTime(year, 1, 1): 'Neujahr',
+    easter.subtract(const Duration(days: 2)): 'Karfreitag',
+    easter.add(const Duration(days: 1)): 'Ostermontag',
+    DateTime(year, 5, 1): 'Tag der Arbeit',
+    easter.add(const Duration(days: 39)): 'Christi Himmelfahrt',
+    easter.add(const Duration(days: 50)): 'Pfingstmontag',
+    DateTime(year, 10, 3): 'Tag der Deutschen Einheit',
+    DateTime(year, 12, 25): '1. Weihnachtsfeiertag',
+    DateTime(year, 12, 26): '2. Weihnachtsfeiertag',
+  };
 
   final heiligeDreiKoenige = DateTime(year, 1, 6);
   final fronleichnam = easter.add(const Duration(days: 60));
@@ -31,52 +39,65 @@ List<DateTime> getGermanHolidays(int year, Bundesland bundesland) {
 
   switch (bundesland) {
     case Bundesland.badenWuerttemberg:
-      holidays.addAll([heiligeDreiKoenige, fronleichnam, allerheiligen]);
+      holidays[heiligeDreiKoenige] = 'Heilige Drei Könige';
+      holidays[fronleichnam] = 'Fronleichnam';
+      holidays[allerheiligen] = 'Allerheiligen';
       break;
     case Bundesland.bayern:
-      holidays.addAll([heiligeDreiKoenige, fronleichnam, mariaeHimmelfahrt, allerheiligen]);
+      holidays[heiligeDreiKoenige] = 'Heilige Drei Könige';
+      holidays[fronleichnam] = 'Fronleichnam';
+      holidays[mariaeHimmelfahrt] = 'Mariä Himmelfahrt';
+      holidays[allerheiligen] = 'Allerheiligen';
       break;
     case Bundesland.berlin:
-      holidays.add(DateTime(year, 3, 8)); // Internationaler Frauentag
+      holidays[DateTime(year, 3, 8)] = 'Internationaler Frauentag';
       break;
     case Bundesland.brandenburg:
-      holidays.add(reformationstag);
+      holidays[reformationstag] = 'Reformationstag';
       break;
     case Bundesland.bremen:
-      holidays.add(reformationstag);
+      holidays[reformationstag] = 'Reformationstag';
       break;
     case Bundesland.hamburg:
-      holidays.add(reformationstag);
+      holidays[reformationstag] = 'Reformationstag';
       break;
     case Bundesland.hessen:
-      holidays.add(fronleichnam);
+      holidays[fronleichnam] = 'Fronleichnam';
       break;
     case Bundesland.mecklenburgVorpommern:
-      holidays.addAll([DateTime(year, 3, 8), reformationstag]);
+      holidays[DateTime(year, 3, 8)] = 'Internationaler Frauentag';
+      holidays[reformationstag] = 'Reformationstag';
       break;
     case Bundesland.niedersachsen:
-      holidays.add(reformationstag);
+      holidays[reformationstag] = 'Reformationstag';
       break;
     case Bundesland.nordrheinWestfalen:
-      holidays.addAll([fronleichnam, allerheiligen]);
+      holidays[fronleichnam] = 'Fronleichnam';
+      holidays[allerheiligen] = 'Allerheiligen';
       break;
     case Bundesland.rheinlandPfalz:
-      holidays.addAll([fronleichnam, allerheiligen]);
+      holidays[fronleichnam] = 'Fronleichnam';
+      holidays[allerheiligen] = 'Allerheiligen';
       break;
     case Bundesland.saarland:
-      holidays.addAll([fronleichnam, mariaeHimmelfahrt, allerheiligen]);
+      holidays[fronleichnam] = 'Fronleichnam';
+      holidays[mariaeHimmelfahrt] = 'Mariä Himmelfahrt';
+      holidays[allerheiligen] = 'Allerheiligen';
       break;
     case Bundesland.sachsen:
-      holidays.addAll([reformationstag, _bussUndBettag(year)]);
+      holidays[reformationstag] = 'Reformationstag';
+      holidays[_bussUndBettag(year)] = 'Buß- und Bettag';
       break;
     case Bundesland.sachsenAnhalt:
-      holidays.addAll([heiligeDreiKoenige, reformationstag]);
+      holidays[heiligeDreiKoenige] = 'Heilige Drei Könige';
+      holidays[reformationstag] = 'Reformationstag';
       break;
     case Bundesland.schleswigHolstein:
-      holidays.add(reformationstag);
+      holidays[reformationstag] = 'Reformationstag';
       break;
     case Bundesland.thueringen:
-      holidays.addAll([DateTime(year, 9, 20), reformationstag]); // Weltkindertag
+      holidays[DateTime(year, 9, 20)] = 'Weltkindertag';
+      holidays[reformationstag] = 'Reformationstag';
       break;
   }
 

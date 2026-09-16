@@ -586,14 +586,11 @@ class SettingsPage extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
           child: Row(
             children: [
-              CircleAvatar(
-                radius: 30,
-                backgroundImage: user.photoURL != null ? NetworkImage(user.photoURL!) : null,
-                child: user.photoURL == null
-                    ? Text(user.displayName?.isNotEmpty == true
-                        ? user.displayName![0].toUpperCase()
-                        : '?')
-                    : null,
+              _ProfileAvatar(
+                photoUrl: user.photoURL,
+                fallback: Text(user.displayName?.isNotEmpty == true
+                    ? user.displayName![0].toUpperCase()
+                    : '?'),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -788,6 +785,47 @@ class _AppLockSectionState extends ConsumerState<_AppLockSection> {
     // Provider selbst ist nicht reaktiv (synchrone SharedPreferences-Reads) -
     // setState erzwingt einen Rebuild dieses Abschnitts nach der Änderung.
     if (mounted) setState(() {});
+  }
+}
+
+/// Zeigt das Profilbild (z.B. vom Google-Account) und fällt bei einem
+/// fehlgeschlagenen Ladevorgang auf [fallback] zurück, statt einen leeren
+/// Kreis anzuzeigen (siehe #252).
+class _ProfileAvatar extends StatefulWidget {
+  final String? photoUrl;
+  final Widget fallback;
+
+  const _ProfileAvatar({required this.photoUrl, required this.fallback});
+
+  @override
+  State<_ProfileAvatar> createState() => _ProfileAvatarState();
+}
+
+class _ProfileAvatarState extends State<_ProfileAvatar> {
+  bool _loadFailed = false;
+
+  @override
+  void didUpdateWidget(covariant _ProfileAvatar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.photoUrl != widget.photoUrl) {
+      _loadFailed = false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final photoUrl = widget.photoUrl;
+    final showImage = photoUrl != null && !_loadFailed;
+    return CircleAvatar(
+      radius: 30,
+      backgroundImage: showImage ? NetworkImage(photoUrl) : null,
+      onBackgroundImageError: showImage
+          ? (_, __) {
+              if (mounted) setState(() => _loadFailed = true);
+            }
+          : null,
+      child: showImage ? null : widget.fallback,
+    );
   }
 }
 

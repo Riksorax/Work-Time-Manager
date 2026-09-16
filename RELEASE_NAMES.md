@@ -40,6 +40,7 @@ lädt den Inhalt beim Play-Upload automatisch als Änderungsprotokoll mit hoch.
 
 | Version | Charakter | Datum |
 | --- | --- | --- |
+| 1.4.1 | Vexen | 2026-09-16 |
 | 1.4.0 | Demyx | 2026-09-16 |
 | 1.3.5 | Luxord | 2026-09-08 |
 | 1.3.4 | Marluxia | 2026-09-03 |
@@ -79,7 +80,6 @@ verwendet werden, auch wenn die Prüfung sie formal durchlässt.
 
 - Zexion
 - Lexaeus
-- Vexen
 - Xigbar
 - Xaldin
 - Saix
