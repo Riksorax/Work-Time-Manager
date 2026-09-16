@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../domain/utils/weekday_labels.dart';
 import '../view_models/settings_view_model.dart';
 
-void showEditWorkdaysModal(BuildContext context, int currentWorkdays) {
+void showEditWorkdaysModal(BuildContext context, List<int> currentWorkdays) {
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
@@ -12,7 +13,7 @@ void showEditWorkdaysModal(BuildContext context, int currentWorkdays) {
 }
 
 class EditWorkdaysModal extends ConsumerStatefulWidget {
-  final int currentWorkdays;
+  final List<int> currentWorkdays;
 
   const EditWorkdaysModal({super.key, required this.currentWorkdays});
 
@@ -21,12 +22,12 @@ class EditWorkdaysModal extends ConsumerStatefulWidget {
 }
 
 class _EditWorkdaysModalState extends ConsumerState<EditWorkdaysModal> {
-  late int _selectedWorkdays;
+  late Set<int> _selectedWorkdays;
 
   @override
   void initState() {
     super.initState();
-    _selectedWorkdays = widget.currentWorkdays;
+    _selectedWorkdays = widget.currentWorkdays.toSet();
   }
 
   @override
@@ -40,27 +41,43 @@ class _EditWorkdaysModalState extends ConsumerState<EditWorkdaysModal> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Arbeitstage pro Woche',
+              'Arbeitstage',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
-            const SizedBox(height: 24),
-            DropdownButton<int>(
-              value: _selectedWorkdays,
-              isExpanded: true,
-              items: List.generate(7, (index) => index + 1)
-                  .map((days) => DropdownMenuItem(
-                        value: days,
-                        child: Text('$days Tage'),
-                      ))
-                  .toList(),
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() {
-                    _selectedWorkdays = value;
-                  });
-                }
-              },
+            const SizedBox(height: 8),
+            Text(
+              'Wähle die konkreten Wochentage aus, an denen du arbeitest.',
+              style: Theme.of(context).textTheme.bodySmall,
             ),
+            const SizedBox(height: 24),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: List.generate(7, (index) {
+                final isoWeekday = index + 1;
+                final isSelected = _selectedWorkdays.contains(isoWeekday);
+                return FilterChip(
+                  label: Text(germanWeekdayShortLabels[index]),
+                  selected: isSelected,
+                  onSelected: (selected) {
+                    setState(() {
+                      if (selected) {
+                        _selectedWorkdays.add(isoWeekday);
+                      } else {
+                        _selectedWorkdays.remove(isoWeekday);
+                      }
+                    });
+                  },
+                );
+              }),
+            ),
+            if (_selectedWorkdays.isEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Bitte mindestens einen Arbeitstag auswählen.',
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ],
             const SizedBox(height: 24),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
@@ -71,12 +88,15 @@ class _EditWorkdaysModalState extends ConsumerState<EditWorkdaysModal> {
                 ),
                 const SizedBox(width: 16),
                 FilledButton(
-                  onPressed: () {
-                    ref
-                        .read(settingsViewModelProvider.notifier)
-                        .updateWorkdaysPerWeek(ref, _selectedWorkdays);
-                    Navigator.of(context).pop();
-                  },
+                  onPressed: _selectedWorkdays.isEmpty
+                      ? null
+                      : () {
+                          final sorted = _selectedWorkdays.toList()..sort();
+                          ref
+                              .read(settingsViewModelProvider.notifier)
+                              .updateWorkdays(ref, sorted);
+                          Navigator.of(context).pop();
+                        },
                   child: const Text('Speichern'),
                 ),
               ],

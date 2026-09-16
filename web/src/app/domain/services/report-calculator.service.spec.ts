@@ -4,7 +4,7 @@ import { WorkEntry, WorkEntryType, UserSettings } from '../../shared/models/inde
 
 const DEFAULT_SETTINGS: UserSettings = {
   weeklyTargetHours: 40,
-  workdaysPerWeek: 5,
+  workdays: [1, 2, 3, 4, 5],
   notificationsEnabled: false,
   notificationTime: '08:00',
   notificationDays: [1, 2, 3, 4, 5],
@@ -150,8 +150,8 @@ describe('ReportCalculatorService', () => {
       expect(stat.overtime).toBe(30 * 60000);
     });
 
-    it('sets target = 0 for extra day beyond workdaysPerWeek', () => {
-      // Mon–Fri already filled (5 days, workdaysPerWeek = 5)
+    it('sets target = 0 for extra day beyond workdays', () => {
+      // Mon–Fri already filled (5 days, workdays = [1..5])
       // Saturday → target should be 0
       const monday = d(2026, 4, 20);
       const saturday = d(2026, 4, 25);
@@ -167,6 +167,18 @@ describe('ReportCalculatorService', () => {
       const stat = svc.calculateDailyStat(entries, saturday, DEFAULT_SETTINGS);
       expect(stat.target).toBe(0);
       expect(stat.overtime).toBeGreaterThan(0);
+    });
+
+    it('Di-Sa-Vertrag: Montag hat kein Soll, Samstag hat volles Soll (Bug-Fix #217)', () => {
+      const tueSatSettings: UserSettings = { ...DEFAULT_SETTINGS, workdays: [2, 3, 4, 5, 6] };
+      const monday = d(2026, 4, 20);
+      const saturday = d(2026, 4, 25);
+
+      const mondayStat = svc.calculateDailyStat([], monday, tueSatSettings);
+      expect(mondayStat.target).toBe(0);
+
+      const saturdayStat = svc.calculateDailyStat([], saturday, tueSatSettings);
+      expect(saturdayStat.target).toBe(8 * 3600000);
     });
   });
 
@@ -238,8 +250,8 @@ describe('ReportCalculatorService', () => {
       expect(report.totalOvertime).toBe(stored);
     });
 
-    it('groups days into weeks and caps each week at workdaysPerWeek', () => {
-      // 6 work entries in a single week → capped to 5
+    it('groups days into weeks and only counts days matching workdays', () => {
+      // 6 work entries in a single week (Mon-Sat), only Mon-Fri are contract workdays → 5 count
       const entries: WorkEntry[] = [1, 2, 3, 4, 5, 6].map(day =>
         makeWorkEntry({
           date: d(2026, 4, day + 19), // Mon(20)–Sat(25)
@@ -248,7 +260,7 @@ describe('ReportCalculatorService', () => {
         })
       );
       const report = svc.calculateMonthlyReport(entries, d(2026, 4, 1), DEFAULT_SETTINGS, 0);
-      // effectiveTotalWorkDays = min(6, 5) = 5 → monthTarget = 5 × 8h = 40h
+      // effectiveTotalWorkDays = 5 (Mon-Fri, Saturday excluded) → monthTarget = 5 × 8h = 40h
       const monthTarget = 5 * DAILY_MS;
       const netWork = 6 * 8 * 3600000; // 6 × 8h, no breaks
       expect(report.monthlyOvertime).toBe(netWork - monthTarget);

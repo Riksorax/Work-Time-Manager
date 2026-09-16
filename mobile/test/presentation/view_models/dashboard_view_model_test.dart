@@ -46,7 +46,7 @@ void main() {
     );
 
     // Default Stubs
-    when(mockSettingsRepository.getWorkdaysPerWeek()).thenReturn(5);
+    when(mockSettingsRepository.getWorkdays()).thenReturn([1, 2, 3, 4, 5]);
     when(mockSettingsRepository.getTargetWeeklyHours()).thenReturn(40.0);
     when(mockOvertimeRepository.getOvertime()).thenReturn(Duration.zero);
     when(mockOvertimeRepository.getLastUpdateDate()).thenReturn(null);

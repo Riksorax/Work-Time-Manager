@@ -6,7 +6,7 @@ namespace WorkTimeManager.Api.Tests;
 
 public class ReportCalculatorTests
 {
-    private static readonly SettingsDto Settings = new() { WeeklyTargetHours = 40, WorkdaysPerWeek = 5 };
+    private static readonly SettingsDto Settings = new() { WeeklyTargetHours = 40, Workdays = new[] { 1, 2, 3, 4, 5 } };
     private const long EightHoursMs = 8 * 3_600_000L;
 
     private static WorkEntryDto WorkDay(int day, int startHour, int endHour, int breakMinutes = 0)
@@ -89,5 +89,18 @@ public class ReportCalculatorTests
         Assert.Equal((long)(-0.5 * 3_600_000), report.MonthlyOvertimeMs);
         Assert.Equal((long)(-0.5 * 3_600_000) + stored, report.TotalOvertimeMs);
         Assert.Equal(1, report.WorkDays);
+    }
+
+    [Fact]
+    public void DailyStat_TueSatContract_MondayHasNoTarget_SaturdayHasFullTarget_BugFix217()
+    {
+        // 2026-06-01 = Montag, 2026-06-06 = Samstag
+        var tueSat = new SettingsDto { WeeklyTargetHours = 40, Workdays = new[] { 2, 3, 4, 5, 6 } };
+
+        var mondayStat = ReportCalculator.CalculateDailyStat(Array.Empty<WorkEntryDto>(), new DateOnly(2026, 6, 1), tueSat);
+        Assert.Equal(0, mondayStat.TargetMs);
+
+        var saturdayStat = ReportCalculator.CalculateDailyStat(Array.Empty<WorkEntryDto>(), new DateOnly(2026, 6, 6), tueSat);
+        Assert.Equal(EightHoursMs, saturdayStat.TargetMs);
     }
 }

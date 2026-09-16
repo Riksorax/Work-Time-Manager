@@ -138,5 +138,10 @@ jobs:
             # Container starten/aktualisieren (Firebase-Env-Vars kommen aus der Pipeline)
             docker compose up -d --no-deps work-time-manager-api
 
+            # Uptime-Kuma sicherstellen (siehe #207) - idempotent, no-op falls
+            # bereits laufend; läuft hier mit statt in einem eigenen Workflow,
+            # da es kein eigenes CI-Build/Push benötigt (öffentliches Image)
+            docker compose up -d --no-deps uptime-kuma
+
             # Alte Images aufräumen
             docker image prune -f

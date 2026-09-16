@@ -1,12 +1,13 @@
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
+import '../../../core/utils/time_format.dart';
 import '../../../domain/entities/break_entity.dart';
 import '../../../domain/entities/work_entry_entity.dart';
 import '../../../domain/services/break_calculator_service.dart';
 import '../../view_models/dashboard_view_model.dart';
+import '../../view_models/settings_view_model.dart';
 
 /// Eine Karte zur Anzeige und Verwaltung von Pausen.
 class BreaksCard extends ConsumerWidget {
@@ -19,7 +20,8 @@ class BreaksCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final timeFormat = DateFormat('HH:mm');
+    final use24HourFormat =
+        ref.watch(settingsViewModelProvider).value?.settings.use24HourFormat ?? true;
     final BreakEntity? activeBreak = workEntry.breaks.firstWhereOrNull(
           (b) => b.end == null,
     );
@@ -57,7 +59,8 @@ class BreaksCard extends ConsumerWidget {
                 ),
                 title: Text(b.name),
                 trailing: Text(
-                  '${timeFormat.format(b.start)} - ${b.end != null ? timeFormat.format(b.end!) : '...'}',
+                  '${formatTime(b.start, use24HourFormat: use24HourFormat)} - '
+                  '${b.end != null ? formatTime(b.end!, use24HourFormat: use24HourFormat) : '...'}',
                 ),
               ),
             ),

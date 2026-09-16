@@ -2,22 +2,33 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_work_time/core/utils/logger.dart';
+import 'package:flutter_work_time/core/utils/time_format.dart';
 import 'package:flutter_work_time/core/utils/time_precision.dart';
 import 'package:intl/intl.dart';
 import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 import '../../core/providers/subscription_provider.dart';
+import '../../core/services/pdf_report_service.dart';
 
 import '../../domain/entities/work_entry_extensions.dart';
+import '../../domain/utils/german_holidays.dart';
+import '../../domain/utils/weekday_labels.dart';
 import '../widgets/common/responsive_center.dart';
 import '../widgets/premium_blur_gate.dart';
+import '../state/monthly_report_state.dart';
 import '../state/reports_state.dart';
+import '../state/weekly_report_state.dart';
+import '../view_models/insights_view_model.dart';
 import '../view_models/reports_view_model.dart';
 import '../view_models/settings_view_model.dart';
+import '../view_models/yearly_report_view_model.dart';
 import '../view_models/auth_view_model.dart';
 import '../widgets/common/loading_indicator.dart';
 import '../widgets/edit_work_entry_modal.dart';
 import '../widgets/quick_entry_dialog.dart';
 import '../widgets/batch_quick_entry_dialog.dart';
+import '../widgets/weekly_reflection_dialog.dart';
+import '../widgets/work_profile_switcher.dart';
 import '../../domain/entities/work_entry_entity.dart';
 import 'login_page.dart';
 
@@ -82,7 +93,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(reportsViewModelProvider.notifier).loadCurrentMonthData();
@@ -119,12 +130,15 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
     return Scaffold(
       appBar: AppBar(
         title: const Text('Berichte'),
+        actions: const [WorkProfileSwitcher()],
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
             Tab(text: 'Täglich'),
             Tab(text: 'Wöchentlich'),
             Tab(text: 'Monatlich'),
+            Tab(text: 'Jährlich'),
+            Tab(text: 'Insights'),
           ],
         ),
       ),
@@ -135,6 +149,8 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
               onEntryTap: (entry) => _showEditWorkEntryModal(entry, context)),
           const WeeklyReportView(),
           const MonthlyReportView(),
+          const YearlyReportView(),
+          const InsightsView(),
         ],
       ),
     );
@@ -497,9 +513,9 @@ class DailyReportView extends ConsumerWidget {
                             displayEntry.workEnd != null) ...[
                           const SizedBox(height: 8),
                           Text(
-                              'Start: ${displayEntry.workStart != null ? DateFormat('HH:mm').format(displayEntry.workStart!) : '-'}'),
+                              'Start: ${displayEntry.workStart != null ? formatTime(displayEntry.workStart!, use24HourFormat: settingsState.settings.use24HourFormat) : '-'}'),
                           Text(
-                              'Ende: ${displayEntry.workEnd != null ? DateFormat('HH:mm').format(displayEntry.workEnd!) : (isSpecialType ? '-' : 'läuft...')}'),
+                              'Ende: ${displayEntry.workEnd != null ? formatTime(displayEntry.workEnd!, use24HourFormat: settingsState.settings.use24HourFormat) : (isSpecialType ? '-' : 'läuft...')}'),
                           if (!isSpecialType)
                             Text(
                                 'Pause: ${displayEntry.totalBreakDuration.toString().split('.').first}'),
@@ -648,7 +664,7 @@ class WeeklyReportView extends ConsumerWidget {
               settingsState.settings.weeklyTargetHours;
           final Duration dailyTarget = Duration(
             minutes:
-                ((weeklyTargetHours / settingsState.settings.workdaysPerWeek) *
+                ((weeklyTargetHours / settingsState.settings.workdays.length) *
                         60)
                     .round(),
           );
@@ -662,6 +678,10 @@ class WeeklyReportView extends ConsumerWidget {
           final startOfWeek = DateTime(selectedDay.year, selectedDay.month,
               selectedDay.day - selectedDay.weekday + 1);
           final endOfWeek = startOfWeek.add(const Duration(days: 6));
+          final weekNumber =
+              (startOfWeek.difference(DateTime(startOfWeek.year, 1, 1)).inDays / 7)
+                      .floor() +
+                  1;
           final Duration weeklyOvertimeLocal = weeklyReport.dailyWork.entries
               .fold(Duration.zero, (sum, e) => sum + (e.value - dailyTarget));
 
@@ -695,7 +715,7 @@ class WeeklyReportView extends ConsumerWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'KW ${(startOfWeek.difference(DateTime(startOfWeek.year, 1, 1)).inDays / 7).floor() + 1}',
+                            'KW $weekNumber',
                             style: Theme.of(context).textTheme.bodyMedium,
                             textAlign: TextAlign.center,
                           ),
@@ -710,8 +730,36 @@ class WeeklyReportView extends ConsumerWidget {
                     ),
                   ],
                 ),
+                Wrap(
+                  alignment: WrapAlignment.end,
+                  spacing: 8,
+                  children: [
+                    TextButton.icon(
+                      onPressed: () => showDialog(
+                        context: context,
+                        builder: (_) => WeeklyReflectionDialog(
+                          year: startOfWeek.year,
+                          week: weekNumber,
+                        ),
+                      ),
+                      icon: const Icon(Icons.rate_review_outlined),
+                      label: const Text('Wochen-Reflexion'),
+                    ),
+                    TextButton.icon(
+                      onPressed: () => _exportWeeklyReportPdf(
+                        context: context,
+                        startOfWeek: startOfWeek,
+                        endOfWeek: endOfWeek,
+                        weekNumber: weekNumber,
+                        weeklyReport: weeklyReport,
+                        overtime: weeklyOvertimeLocal,
+                      ),
+                      icon: const Icon(Icons.picture_as_pdf_outlined),
+                      label: const Text('Als PDF exportieren'),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 8),
-                const SizedBox(height: 16),
                 if (weeklyReport.workDays == 0)
                   const Center(child: Text('Keine Daten für diese Woche.'))
                 else
@@ -842,6 +890,73 @@ void _showDayEntriesBottomSheet(
   );
 }
 
+final _pdfReportService = PdfReportService();
+
+Future<void> _exportWeeklyReportPdf({
+  required BuildContext context,
+  required DateTime startOfWeek,
+  required DateTime endOfWeek,
+  required int weekNumber,
+  required WeeklyReportState weeklyReport,
+  required Duration overtime,
+}) async {
+  final messenger = ScaffoldMessenger.of(context);
+  try {
+    await _pdfReportService.exportWeeklyReport(
+      startOfWeek: startOfWeek,
+      endOfWeek: endOfWeek,
+      weekNumber: weekNumber,
+      workDays: weeklyReport.workDays,
+      totalWorkDuration:
+          weeklyReport.dailyWork.values.fold(Duration.zero, (prev, d) => prev + d),
+      totalBreakDuration: weeklyReport.totalBreakDuration,
+      averageWorkDuration: weeklyReport.averageWorkDuration,
+      overtime: overtime,
+      dailyWork: weeklyReport.dailyWork,
+    );
+  } catch (e) {
+    logger.e('[PDF-Export] Wochenbericht fehlgeschlagen: $e');
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text('PDF-Export fehlgeschlagen: $e'),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+}
+
+Future<void> _exportMonthlyReportPdf({
+  required BuildContext context,
+  required DateTime month,
+  required MonthlyReportState monthlyReport,
+  required Duration monthlyOvertime,
+}) async {
+  final messenger = ScaffoldMessenger.of(context);
+  try {
+    await _pdfReportService.exportMonthlyReport(
+      month: month,
+      workDays: monthlyReport.workDays,
+      totalWorkDuration:
+          monthlyReport.dailyWork.values.fold(Duration.zero, (prev, d) => prev + d),
+      totalBreakDuration: monthlyReport.totalBreakDuration,
+      averageWorkDuration: monthlyReport.averageWorkDuration,
+      avgWorkDurationPerWeek: monthlyReport.avgWorkDurationPerWeek,
+      monthlyOvertime: monthlyOvertime,
+      totalOvertime: monthlyReport.totalOvertime,
+      weeklyWork: monthlyReport.weeklyWork,
+      dailyWork: monthlyReport.dailyWork,
+    );
+  } catch (e) {
+    logger.e('[PDF-Export] Monatsbericht fehlgeschlagen: $e');
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text('PDF-Export fehlgeschlagen: $e'),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+}
+
 class MonthlyReportView extends ConsumerWidget {
   const MonthlyReportView({super.key});
 
@@ -918,7 +1033,7 @@ class MonthlyReportView extends ConsumerWidget {
             settingsState.settings.weeklyTargetHours;
         final Duration dailyTarget = Duration(
           minutes:
-              ((weeklyTargetHours / settingsState.settings.workdaysPerWeek) *
+              ((weeklyTargetHours / settingsState.settings.workdays.length) *
                       60)
                   .round(),
         );
@@ -956,8 +1071,21 @@ class MonthlyReportView extends ConsumerWidget {
           ],
         ));
 
+        monthChildren.add(Align(
+          alignment: Alignment.centerRight,
+          child: TextButton.icon(
+            onPressed: () => _exportMonthlyReportPdf(
+              context: context,
+              month: DateTime(selectedMonth.year, selectedMonth.month),
+              monthlyReport: monthlyReport,
+              monthlyOvertime: monthlyOvertimeLocal,
+            ),
+            icon: const Icon(Icons.picture_as_pdf_outlined),
+            label: const Text('Als PDF exportieren'),
+          ),
+        ));
+
         monthChildren.add(const SizedBox(height: 8));
-        monthChildren.add(const SizedBox(height: 16));
 
         if (monthlyReport.workDays == 0) {
           monthChildren.add(const Center(child: Text('Keine Daten für diesen Monat.')));
@@ -1089,6 +1217,404 @@ class MonthlyReportView extends ConsumerWidget {
   }
 }
 
+/// Jahresbericht (Premium, siehe #136): Monatsvergleich, Gesamtüberstunden
+/// sowie Urlaubs-/Kranktage über ein Kalenderjahr.
+class YearlyReportView extends ConsumerStatefulWidget {
+  const YearlyReportView({super.key});
+
+  @override
+  ConsumerState<YearlyReportView> createState() => _YearlyReportViewState();
+}
+
+class _YearlyReportViewState extends ConsumerState<YearlyReportView> {
+  // TabBarView baut alle Tabs sofort auf - der Ladevorgang wird daher nicht
+  // in initState() ausgelöst, sondern erst wenn der Bericht tatsächlich
+  // sichtbar wäre (eingeloggt + Premium). Vermeidet unnötige
+  // Firestore-/API-Reads für Nutzer ohne Zugriff auf diesen Tab und lädt
+  // auch nach, falls ein Premium-Upgrade erst während der Session passiert.
+  bool _loadTriggered = false;
+
+  void _loadIfNeeded() {
+    if (_loadTriggered) return;
+    _loadTriggered = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(yearlyReportViewModelProvider.notifier).loadYear(DateTime.now().year);
+    });
+  }
+
+  String _formatDuration(Duration duration) {
+    final bool isNegative = duration.isNegative;
+    final Duration absDuration = duration.abs();
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final hours = twoDigits(absDuration.inHours);
+    final minutes = twoDigits(absDuration.inMinutes.remainder(60));
+    final sign = isNegative ? '-' : '+';
+    return '$sign$hours:$minutes';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final authState = ref.watch(authStateProvider);
+    final user = authState.asData?.value;
+
+    // 1. Nicht eingeloggt: Nur Anmelde-Aufforderung
+    if (user == null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('Anmeldung erforderlich für Jahresberichte'),
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: () {
+                ref.read(pendingReportTabIndexProvider.notifier).state = 3;
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                      builder: (context) => const LoginPage(returnToIndex: 1)),
+                );
+              },
+              child: const Text('Anmelden'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // 2. Eingeloggt: Prüfe Premium-Status
+    final isPremium = ref.watch(isPremiumProvider);
+
+    if (!isPremium) {
+      return PremiumBlurGate(
+        featureTitle: 'Jahresberichte',
+        featureText:
+            'Jahresübersicht mit Monatsvergleich, Gesamtüberstunden sowie Urlaubs- und Kranktagen.',
+        onUpgrade: kIsWeb ? null : () {
+          if (context.mounted) _showPaywall(context);
+        },
+        child: const _MonthlyReportPlaceholder(),
+      );
+    }
+
+    // 3. Eingeloggt & Premium: Zeige Bericht
+    _loadIfNeeded();
+    final yearlyState = ref.watch(yearlyReportViewModelProvider);
+    final yearlyNotifier = ref.read(yearlyReportViewModelProvider.notifier);
+
+    if (yearlyState.isLoading) {
+      return const LoadingIndicator();
+    }
+
+    const monthNames = [
+      'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
+      'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember',
+    ];
+
+    return ResponsiveCenter(
+      child: ListView(
+        padding: const EdgeInsets.all(16.0),
+        children: [
+          // Jahresnavigation
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.chevron_left),
+                onPressed: () => yearlyNotifier.loadYear(yearlyState.year - 1),
+                tooltip: 'Vorheriges Jahr',
+              ),
+              Expanded(
+                child: Text(
+                  '${yearlyState.year}',
+                  style: Theme.of(context).textTheme.titleLarge,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.chevron_right),
+                onPressed: () => yearlyNotifier.loadYear(yearlyState.year + 1),
+                tooltip: 'Nächstes Jahr',
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (yearlyState.totalWorkDays == 0 &&
+              yearlyState.totalVacationDays == 0 &&
+              yearlyState.totalSickDays == 0)
+            const Center(child: Text('Keine Daten für dieses Jahr.'))
+          else ...[
+            // Statistikkarte
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Gesamte Arbeitszeit:',
+                            style: TextStyle(fontWeight: FontWeight.bold)),
+                        Text(
+                            yearlyState.totalNetWorkDuration.toString().split('.').first,
+                            style: const TextStyle(fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Arbeitstage:'),
+                        Text('${yearlyState.totalWorkDays}'),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Urlaubstage:'),
+                        Text('${yearlyState.totalVacationDays}'),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Krankheitstage:'),
+                        Text('${yearlyState.totalSickDays}'),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Feiertage:'),
+                        Text('${yearlyState.totalHolidayDays}'),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Gesamt-Überstunden:',
+                            style: TextStyle(fontWeight: FontWeight.bold)),
+                        Text(
+                          _formatDuration(yearlyState.totalOvertime),
+                          style: TextStyle(
+                              color: yearlyState.totalOvertime.isNegative
+                                  ? Colors.red
+                                  : Colors.green,
+                              fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Text('Monatsübersicht:',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            const SizedBox(height: 8),
+            for (final monthSummary in yearlyState.months)
+              if (monthSummary.workDays > 0 ||
+                  monthSummary.vacationDays > 0 ||
+                  monthSummary.sickDays > 0 ||
+                  monthSummary.holidayDays > 0)
+                Card(
+                  margin: const EdgeInsets.symmetric(vertical: 4.0),
+                  child: ListTile(
+                    title: Text(monthNames[monthSummary.month - 1]),
+                    subtitle: Text(
+                        '${monthSummary.workDays} Arbeitstage · ${monthSummary.netWorkDuration.toString().split('.').first}'),
+                    trailing: Text(
+                      _formatDuration(monthSummary.overtime),
+                      style: TextStyle(
+                          color: monthSummary.overtime.isNegative
+                              ? Colors.red
+                              : Colors.green),
+                    ),
+                  ),
+                ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Zeigt automatisch erkannte Muster in der Arbeitszeit: Wochentags-Analyse,
+/// Burnout-Indikator und Produktivitäts-Heatmap nach Startzeit (siehe #134).
+class InsightsView extends ConsumerStatefulWidget {
+  const InsightsView({super.key});
+
+  @override
+  ConsumerState<InsightsView> createState() => _InsightsViewState();
+}
+
+class _InsightsViewState extends ConsumerState<InsightsView> {
+  // Siehe _YearlyReportViewState: TabBarView baut alle Tabs sofort auf, der
+  // Ladevorgang wird daher erst ausgelöst, wenn der Tab tatsächlich sichtbar
+  // wäre (eingeloggt + Premium).
+  bool _loadTriggered = false;
+
+  void _loadIfNeeded() {
+    if (_loadTriggered) return;
+    _loadTriggered = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(insightsViewModelProvider.notifier).loadInsights();
+    });
+  }
+
+  String _formatSignedDuration(Duration duration) {
+    final isNegative = duration.isNegative;
+    final abs = duration.abs();
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final hours = twoDigits(abs.inHours);
+    final minutes = twoDigits(abs.inMinutes.remainder(60));
+    return '${isNegative ? '-' : '+'}$hours:$minutes';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final authState = ref.watch(authStateProvider);
+    final user = authState.asData?.value;
+
+    if (user == null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('Anmeldung erforderlich für Insights'),
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: () {
+                ref.read(pendingReportTabIndexProvider.notifier).state = 4;
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                      builder: (context) => const LoginPage(returnToIndex: 1)),
+                );
+              },
+              child: const Text('Anmelden'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final isPremium = ref.watch(isPremiumProvider);
+
+    if (!isPremium) {
+      return PremiumBlurGate(
+        featureTitle: 'Arbeitszeit-Insights',
+        featureText:
+            'Automatisch erkannte Muster in deiner Arbeitszeit: Wochentags-Analyse, Burnout-Warnung und Produktivitäts-Heatmap.',
+        onUpgrade: kIsWeb ? null : () {
+          if (context.mounted) _showPaywall(context);
+        },
+        child: const _MonthlyReportPlaceholder(),
+      );
+    }
+
+    _loadIfNeeded();
+    final insightsState = ref.watch(insightsViewModelProvider);
+
+    if (insightsState.isLoading) {
+      return const LoadingIndicator();
+    }
+
+    if (insightsState.hasNoData) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24.0),
+          child: Text(
+            'Noch nicht genug Daten für Insights. Trage ein paar Arbeitstage ein und schau später wieder vorbei.',
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
+    return ResponsiveCenter(
+      child: ListView(
+        padding: const EdgeInsets.all(16.0),
+        children: [
+          if (insightsState.burnoutStatus.isWarning)
+            Card(
+              color: Theme.of(context).colorScheme.errorContainer,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    Icon(Icons.warning_amber_rounded,
+                        color: Theme.of(context).colorScheme.onErrorContainer),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Du liegst seit ${insightsState.burnoutStatus.currentStreak} aufeinanderfolgenden Arbeitstagen über deinem Soll. Denk an ausreichend Erholung.',
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.onErrorContainer),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          if (insightsState.burnoutStatus.isWarning) const SizedBox(height: 16),
+          if (insightsState.weekdayAverages.isNotEmpty) ...[
+            const Text('Wochentags-Analyse',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            const SizedBox(height: 8),
+            Card(
+              child: Column(
+                children: [
+                  for (final weekdayAverage in insightsState.weekdayAverages)
+                    ListTile(
+                      title: Text(germanWeekdayShortLabels[weekdayAverage.weekday - 1]),
+                      subtitle: Text(
+                          'Ø ${weekdayAverage.averageWorkDuration.toString().split('.').first} h (${weekdayAverage.sampleCount}x)'),
+                      trailing: Text(
+                        _formatSignedDuration(weekdayAverage.deviationFromOverallAverage),
+                        style: TextStyle(
+                          color: weekdayAverage.deviationFromOverallAverage.isNegative
+                              ? Colors.blue
+                              : Colors.orange,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+          if (insightsState.heatmap.isNotEmpty) ...[
+            const Text('Produktivitäts-Heatmap nach Startzeit',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            const SizedBox(height: 8),
+            Card(
+              child: Column(
+                children: [
+                  for (final bucket in insightsState.heatmap)
+                    ListTile(
+                      title: Text('Start ${bucket.startHour.toString().padLeft(2, '0')}:00 Uhr'),
+                      subtitle: Text('${bucket.sampleCount}x'),
+                      trailing: Text(
+                        _formatSignedDuration(bucket.averageOvertime),
+                        style: TextStyle(
+                          color: bucket.averageOvertime.isNegative
+                              ? Colors.red
+                              : Colors.green,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 class _Calendar extends ConsumerStatefulWidget {
   final DateTime selectedDate;
   final ValueChanged<DateTime> onDateSelected;
@@ -1123,18 +1649,13 @@ class _CalendarState extends ConsumerState<_Calendar> {
     return weekday - 1;
   }
 
-  /// Prüft, ob ein bestimmtes Datum ein konfigurierter Arbeitstag ist
-  /// Wochentag: 1 = Montag, 7 = Sonntag
-  bool _isWorkday(DateTime date, int workdaysPerWeek) {
-    // Wochentag des Datums (1 = Montag, 7 = Sonntag)
-    int weekday = date.weekday;
-
-    // Arbeitstage sind von Montag (1) bis zu (workdaysPerWeek)
-    // z.B. bei 5 Arbeitstagen: 1-5 (Mo-Fr)
-    return weekday <= workdaysPerWeek;
+  /// Prüft, ob ein bestimmtes Datum ein konfigurierter Arbeitstag ist.
+  /// Wochentag: 1 = Montag, 7 = Sonntag (siehe #217).
+  bool _isWorkday(DateTime date, List<int> workdays) {
+    return workdays.contains(date.weekday);
   }
 
-  void _selectDateRange(DateTime startDate, DateTime endDate, int workdaysPerWeek) {
+  void _selectDateRange(DateTime startDate, DateTime endDate, List<int> workdays) {
     final reportsNotifier = ref.read(reportsViewModelProvider.notifier);
 
     // Normalize dates
@@ -1150,7 +1671,7 @@ class _CalendarState extends ConsumerState<_Calendar> {
 
     DateTime currentDate = minDate;
     while (!currentDate.isAfter(maxDate)) {
-      if (_isWorkday(currentDate, workdaysPerWeek)) {
+      if (_isWorkday(currentDate, workdays)) {
         reportsNotifier.addDateToSelection(currentDate);
       }
       currentDate = currentDate.add(const Duration(days: 1));
@@ -1198,9 +1719,9 @@ class _CalendarState extends ConsumerState<_Calendar> {
     return DateTime(widget.selectedDate.year, widget.selectedDate.month, day);
   }
 
-  void _startDragAt(Offset globalPosition, int workdaysPerWeek) {
+  void _startDragAt(Offset globalPosition, List<int> workdays) {
     final date = _getDateFromGlobalPosition(globalPosition);
-    if (date == null || !_isWorkday(date, workdaysPerWeek)) return;
+    if (date == null || !_isWorkday(date, workdays)) return;
 
     final reportsNotifier = ref.read(reportsViewModelProvider.notifier);
     setState(() {
@@ -1212,19 +1733,19 @@ class _CalendarState extends ConsumerState<_Calendar> {
     reportsNotifier.addDateToSelection(date);
   }
 
-  void _updateDragAt(Offset globalPosition, int workdaysPerWeek) {
+  void _updateDragAt(Offset globalPosition, List<int> workdays) {
     if (!_isDragging || _dragStartDate == null) return;
     final date = _getDateFromGlobalPosition(globalPosition);
     if (date == null) return;
     if (!DateUtils.isSameDay(date, _dragEndDate)) {
       setState(() => _dragEndDate = date);
-      _selectDateRange(_dragStartDate!, date, workdaysPerWeek);
+      _selectDateRange(_dragStartDate!, date, workdays);
     }
   }
 
-  void _endDrag(int workdaysPerWeek) {
+  void _endDrag(List<int> workdays) {
     if (_dragStartDate != null && _dragEndDate != null) {
-      _selectDateRange(_dragStartDate!, _dragEndDate!, workdaysPerWeek);
+      _selectDateRange(_dragStartDate!, _dragEndDate!, workdays);
     }
     setState(() {
       _dragStartDate = null;
@@ -1239,8 +1760,16 @@ class _CalendarState extends ConsumerState<_Calendar> {
     final reportsNotifier = ref.read(reportsViewModelProvider.notifier);
     final settingsState = ref.watch(settingsViewModelProvider);
 
-    // Hole workdaysPerWeek aus den Settings (default 5)
-    final workdaysPerWeek = settingsState.whenData((s) => s.settings.workdaysPerWeek).value ?? 5;
+    // Hole die konfigurierten Arbeitstage aus den Settings (default Mo-Fr)
+    final workdays =
+        settingsState.whenData((s) => s.settings.workdays).value ?? const [1, 2, 3, 4, 5];
+
+    // Feiertage des angezeigten Monats/Jahres für das gewählte Bundesland (#222).
+    // Rein visuelle Markierung - es werden keine WorkEntryType.holiday-Einträge erzeugt.
+    final bundesland = settingsState.whenData((s) => s.settings.bundesland).value;
+    final Set<DateTime> holidays = bundesland != null
+        ? getGermanHolidays(widget.selectedDate.year, bundesland).toSet()
+        : const <DateTime>{};
 
     return Card(
       margin: const EdgeInsets.all(8.0),
@@ -1327,30 +1856,30 @@ class _CalendarState extends ConsumerState<_Calendar> {
               behavior: HitTestBehavior.translucent,
               onLongPressStart: (details) {
                 if (!_isDragging) {
-                  _startDragAt(details.globalPosition, workdaysPerWeek);
+                  _startDragAt(details.globalPosition, workdays);
                 }
               },
               onLongPressMoveUpdate: (details) {
-                _updateDragAt(details.globalPosition, workdaysPerWeek);
+                _updateDragAt(details.globalPosition, workdays);
               },
-              onLongPressEnd: (_) => _endDrag(workdaysPerWeek),
-              onLongPressCancel: () => _endDrag(workdaysPerWeek),
+              onLongPressEnd: (_) => _endDrag(workdays),
+              onLongPressCancel: () => _endDrag(workdays),
               child: Listener(
                 behavior: HitTestBehavior.translucent,
                 onPointerDown: (event) {
                   // Nur für Maus: Drag sofort starten (kein Long-Press nötig)
                   if (event.kind == PointerDeviceKind.mouse && event.buttons == 1) {
-                    _startDragAt(event.position, workdaysPerWeek);
+                    _startDragAt(event.position, workdays);
                   }
                 },
                 onPointerMove: (event) {
                   if (event.kind == PointerDeviceKind.mouse && _isDragging) {
-                    _updateDragAt(event.position, workdaysPerWeek);
+                    _updateDragAt(event.position, workdays);
                   }
                 },
                 onPointerUp: (event) {
                   if (event.kind == PointerDeviceKind.mouse && _isDragging) {
-                    _endDrag(workdaysPerWeek);
+                    _endDrag(workdays);
                   }
                 },
                 child: GridView.builder(
@@ -1376,7 +1905,8 @@ class _CalendarState extends ConsumerState<_Calendar> {
                     final isMultiSelected = reportsState.selectedDates
                         .contains(DateTime(date.year, date.month, date.day));
                     final hasEntry = widget.daysWithEntries?.contains(day) ?? false;
-                    final isWorkday = _isWorkday(date, workdaysPerWeek);
+                    final isWorkday = _isWorkday(date, workdays);
+                    final isHoliday = holidays.contains(DateTime(date.year, date.month, date.day));
 
                     Widget dayWidget = Center(
                       child: Text(
@@ -1384,7 +1914,10 @@ class _CalendarState extends ConsumerState<_Calendar> {
                         style: TextStyle(
                           color: isSelected || isMultiSelected
                               ? Colors.white
-                              : (isWorkday ? Theme.of(context).textTheme.bodyLarge?.color : Colors.grey),
+                              : (isHoliday
+                                  ? Colors.red
+                                  : (isWorkday ? Theme.of(context).textTheme.bodyLarge?.color : Colors.grey)),
+                          fontWeight: isHoliday ? FontWeight.bold : null,
                         ),
                       ),
                     );
@@ -1411,7 +1944,8 @@ class _CalendarState extends ConsumerState<_Calendar> {
                       );
                     }
 
-                    final semanticLabel = DateFormat('EEEE, d. MMMM yyyy', 'de_DE').format(date);
+                    final semanticLabel =
+                        '${DateFormat('EEEE, d. MMMM yyyy', 'de_DE').format(date)}${isHoliday ? ', Feiertag' : ''}';
                     return Semantics(
                       label: semanticLabel,
                       button: true,
@@ -1536,6 +2070,8 @@ class _DayEntriesBottomSheetState extends ConsumerState<DayEntriesBottomSheet> {
   @override
   Widget build(BuildContext context) {
     final reportsState = ref.watch(reportsViewModelProvider);
+    final use24HourFormat =
+        ref.watch(settingsViewModelProvider).value?.settings.use24HourFormat ?? true;
 
     if (reportsState.isLoading &&
         (reportsState.selectedDay == null ||
@@ -1689,9 +2225,9 @@ class _DayEntriesBottomSheetState extends ConsumerState<DayEntriesBottomSheet> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                          'Start: ${start != null ? DateFormat('HH:mm').format(start) : '-'}'),
+                                          'Start: ${start != null ? formatTime(start, use24HourFormat: use24HourFormat) : '-'}'),
                                       Text(
-                                          'Ende: ${displayEntry.workEnd != null ? DateFormat('HH:mm').format(displayEntry.workEnd!) : (isSpecialType ? '-' : 'läuft...')}'),
+                                          'Ende: ${displayEntry.workEnd != null ? formatTime(displayEntry.workEnd!, use24HourFormat: use24HourFormat) : (isSpecialType ? '-' : 'läuft...')}'),
                                       if (!isSpecialType)
                                         Text(
                                             'Pause: ${displayEntry.totalBreakDuration.toString().split('.').first}'),
@@ -1737,7 +2273,7 @@ Future<void> _handleQuickEntry(
   if (settingsState != null) {
     dailyTarget = Duration(
       minutes: ((settingsState.settings.weeklyTargetHours /
-                  settingsState.settings.workdaysPerWeek) *
+                  settingsState.settings.workdays.length) *
               60)
           .round(),
     );
@@ -1782,7 +2318,7 @@ Future<void> _handleBatchQuickEntry(
   if (settingsState != null) {
     dailyTarget = Duration(
       minutes: ((settingsState.settings.weeklyTargetHours /
-                  settingsState.settings.workdaysPerWeek) *
+                  settingsState.settings.workdays.length) *
               60)
           .round(),
     );

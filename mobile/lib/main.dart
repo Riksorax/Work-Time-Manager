@@ -1,4 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,48 +9,58 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_work_time/app_check_initializer.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
-import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tz_data;
-import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:flutter_work_time/core/utils/timezone_utils.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'dart:io' show Platform;
 
 import 'package:flutter_localizations/flutter_localizations.dart';
 
+import 'core/providers/app_lock_provider.dart';
 import 'core/providers/providers.dart';
 import 'core/services/notification_service.dart';
 import 'core/theme/app_theme.dart';
 import 'firebase_options.dart';
+import 'l10n/app_localizations.dart';
+import 'presentation/view_models/settings_view_model.dart';
 import 'presentation/view_models/theme_view_model.dart';
+import 'presentation/widgets/app_lock_screen.dart';
 
 // Global key for navigation from notifications
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // SharedPreferences früh laden, damit eine manuelle Zeitzone-Überschreibung
+  // (siehe #221) schon vor der Zeitzone-Initialisierung verfügbar ist.
+  final prefs = await SharedPreferences.getInstance();
 
   // Initialize timezone
   tz_data.initializeTimeZones();
-  try {
-    final timeZoneName = await FlutterTimezone.getLocalTimezone();
-    tz.setLocalLocation(tz.getLocation(timeZoneName.toString()));
-  } catch (e) {
-    WidgetsFlutterBinding.ensureInitialized();
-    logger.w("Could not get local timezone, falling back to UTC/Europe/Berlin");
-    // Fallback logic
-    try {
-      tz.setLocalLocation(tz.getLocation('Europe/Berlin'));
-    } catch (_) {
-      tz.setLocalLocation(tz.getLocation('UTC'));
-    }
-  }
+  await applyTimezone(prefs.getString(timezoneOverridePrefsKey));
 
-
+  // Beide unterstützten Sprachen laden (siehe #221) - unabhängig von der
+  // aktuellen Auswahl, damit ein Sprachwechsel zur Laufzeit ohne erneutes
+  // Nachladen funktioniert.
   await initializeDateFormatting('de_DE', null);
-  Intl.defaultLocale = 'de_DE';
+  await initializeDateFormatting('en_US', null);
+  final locale = prefs.getString('locale') ?? 'de';
+  Intl.defaultLocale = locale == 'en' ? 'en_US' : 'de_DE';
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // Crash-/Fehler-Tracking (siehe #207): Crashlytics ist nur auf
+  // Android/iOS verfügbar, auf Web gibt es keine native Absturzerfassung.
+  if (!kIsWeb) {
+    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+    PlatformDispatcher.instance.onError = (error, stack) {
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      return true;
+    };
+  }
 
   // RevenueCat Setup
   // Wir initialisieren RevenueCat NUR auf mobilen Plattformen (Android/iOS),
@@ -81,8 +92,6 @@ Future<void> main() async {
   await AppBootstrap.ensureInitializedForEnv(
     webRecaptchaSiteKey: kWebRecaptchaSiteKey.isEmpty ? null : kWebRecaptchaSiteKey,
   );
-
-  final prefs = await SharedPreferences.getInstance();
 
   // Initialize notification service with deep-link callback
   final notificationService = NotificationService();
@@ -137,12 +146,48 @@ Future<void> main() async {
   );
 }
 
-class MyApp extends ConsumerWidget {
+class MyApp extends ConsumerStatefulWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  // Siehe #223: beim Wechsel in den Hintergrund erneut sperren, damit die
+  // App nicht offen bleibt, wenn sie später aus dem Task-Switcher zurückkehrt.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (kIsWeb || state != AppLifecycleState.paused) return;
+    final appLockService = ref.read(appLockServiceProvider);
+    if (appLockService.isEnabled && appLockService.hasPin) {
+      ref.read(isAppLockedProvider.notifier).state = true;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final themeMode = ref.watch(themeViewModelProvider);
+    // Siehe #218: steuert app-weit, ob Zeitpicker/-anzeigen, die auf
+    // MediaQuery.alwaysUse24HourFormat reagieren (z. B. showTimePicker,
+    // MaterialLocalizations.formatTimeOfDay), 24h- oder 12h-Format nutzen.
+    final use24HourFormat =
+        ref.watch(settingsViewModelProvider).value?.settings.use24HourFormat ?? true;
+    // Siehe #221: steuert die Sprache der App-Oberfläche zur Laufzeit.
+    final localeCode = ref.watch(settingsViewModelProvider).value?.settings.locale ?? 'de';
+    final isLocked = !kIsWeb && ref.watch(isAppLockedProvider);
 
     return MaterialApp(
       navigatorKey: navigatorKey,
@@ -151,15 +196,25 @@ class MyApp extends ConsumerWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: themeMode,
-      locale: const Locale('de', 'DE'),
+      locale: Locale(localeCode),
       localizationsDelegates: const [
+        AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      supportedLocales: const [
-        Locale('de', 'DE'),
-      ],
+      supportedLocales: AppLocalizations.supportedLocales,
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: use24HourFormat),
+          child: Stack(
+            children: [
+              child!,
+              if (isLocked) const AppLockScreen(),
+            ],
+          ),
+        );
+      },
       home: const HomeScreen(),
     );
   }

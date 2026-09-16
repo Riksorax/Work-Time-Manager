@@ -67,14 +67,20 @@ export class DataSyncService {
       }
 
       // ── Einstellungen ─────────────────────────────────────────────────────
-      // Nur weeklyTargetHours und workdaysPerWeek — Benachrichtigungen sind gerätespezifisch
+      // Nur weeklyTargetHours und workdays — Benachrichtigungen sind gerätespezifisch
       const localSettingsRaw = localStorage.getItem(LS_SETTINGS);
       if (localSettingsRaw) {
         try {
           const local = JSON.parse(localSettingsRaw) as Record<string, unknown>;
           const patch: Record<string, unknown> = {};
           if (typeof local['weeklyTargetHours'] === 'number') patch['weeklyTargetHours'] = local['weeklyTargetHours'];
-          if (typeof local['workdaysPerWeek']   === 'number') patch['workdaysPerWeek']   = local['workdaysPerWeek'];
+          if (Array.isArray(local['workdays'])) {
+            patch['workdays'] = local['workdays'];
+          } else if (typeof local['workdaysPerWeek'] === 'number') {
+            // Legacy-Feld: erste N Wochentage ab Montag, um bisheriges Verhalten zu erhalten (#217)
+            const count = Math.min(Math.max(local['workdaysPerWeek'], 0), 7);
+            patch['workdays'] = Array.from({ length: count }, (_, i) => i + 1);
+          }
           if (Object.keys(patch).length > 0) {
             const current = await firstValueFrom(this.settingsService.getSettings());
             await this.settingsService.saveSettings({ ...current, ...patch });

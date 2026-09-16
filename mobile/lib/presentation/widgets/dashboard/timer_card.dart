@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
+import '../../../core/utils/time_format.dart';
 import '../../../domain/entities/work_entry_entity.dart';
 import '../../view_models/dashboard_view_model.dart';
+import '../../view_models/settings_view_model.dart';
 
 class TimerCard extends ConsumerWidget {
   final WorkEntryEntity workEntry;
@@ -15,7 +16,8 @@ class TimerCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final timeFormat = DateFormat('HH:mm');
+    final use24HourFormat =
+        ref.watch(settingsViewModelProvider).value?.settings.use24HourFormat ?? true;
     final bool isTimerRunning = workEntry.workStart != null && workEntry.workEnd == null;
     final bool isWorkDone = workEntry.workStart != null && workEntry.workEnd != null;
 
@@ -36,13 +38,13 @@ class TimerCard extends ConsumerWidget {
                 _TimeDisplay(
                   label: 'Start',
                   time: workEntry.workStart != null
-                      ? timeFormat.format(workEntry.workStart!)
+                      ? formatTime(workEntry.workStart!, use24HourFormat: use24HourFormat)
                       : '--:--',
                 ),
                 _TimeDisplay(
                   label: 'Ende',
                   time: workEntry.workEnd != null
-                      ? timeFormat.format(workEntry.workEnd!)
+                      ? formatTime(workEntry.workEnd!, use24HourFormat: use24HourFormat)
                       : '--:--',
                 ),
               ],

@@ -1,22 +1,33 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/providers/app_lock_provider.dart';
 import '../../core/providers/providers.dart' as core_providers;
 import '../../core/providers/subscription_provider.dart';
+import '../../core/services/app_lock_service.dart';
 import '../../data/repositories/hybrid_work_repository_impl.dart';
 import '../../data/repositories/hybrid_overtime_repository_impl.dart';
 import '../../data/repositories/firebase_overtime_repository_impl.dart';
+import '../../domain/entities/bundesland.dart';
 import '../../domain/services/data_sync_service.dart';
+import '../../domain/utils/weekday_labels.dart';
+import '../../l10n/app_localizations.dart';
 import '../view_models/auth_view_model.dart';
 import '../view_models/dashboard_view_model.dart' as dashboard_vm;
 import '../view_models/settings_view_model.dart';
 import '../view_models/theme_view_model.dart';
 import '../widgets/add_adjustment_modal.dart';
+import '../widgets/edit_language_dialog.dart';
 import '../widgets/edit_target_hours_modal.dart';
+import '../widgets/edit_timezone_modal.dart';
 import '../widgets/edit_workdays_modal.dart';
 import '../widgets/notification_settings_dialog.dart';
+import '../widgets/pin_setup_dialog.dart';
 import '../widgets/common/responsive_center.dart';
+import '../widgets/work_profile_switcher.dart';
 import 'app_info_page.dart';
 import 'login_page.dart';
 
@@ -28,10 +39,12 @@ class SettingsPage extends ConsumerWidget {
     final settingsValue = ref.watch(settingsViewModelProvider);
     final themeNotifier = ref.read(themeViewModelProvider.notifier);
     final authState = ref.watch(authStateProvider);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Einstellungen'),
+        title: Text(l10n.settingsTitle),
+        actions: const [WorkProfileSwitcher()],
       ),
       body: settingsValue.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -45,6 +58,7 @@ class SettingsPage extends ConsumerWidget {
             const SizedBox(height: 8),
             _buildAuthButton(context, ref),
             const SizedBox(height: 8),
+            _buildSubscriptionSection(context, ref),
             const SizedBox(height: 16),
           ];
 
@@ -65,23 +79,39 @@ class SettingsPage extends ConsumerWidget {
               },
             ),
             ListTile(
-              title: const Text('Arbeitstage pro Woche'),
-              subtitle: Text(
-                '${settings.workdaysPerWeek} Tage',
-              ),
+              title: const Text('Arbeitstage'),
+              subtitle: Text(formatWorkdays(settings.workdays)),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 showEditWorkdaysModal(
                   context,
-                  settings.workdaysPerWeek,
+                  settings.workdays,
                 );
               },
             ),
             ListTile(
               title: const Text('Tägliche Soll-Arbeitszeit'),
               subtitle: Text(
-                '≈ ${settings.workdaysPerWeek > 0 ? (settings.weeklyTargetHours / settings.workdaysPerWeek).toStringAsFixed(1) : '0.0'} h/Tag',
+                '≈ ${settings.workdays.isNotEmpty ? (settings.weeklyTargetHours / settings.workdays.length).toStringAsFixed(1) : '0.0'} h/Tag',
               ),
+            ),
+            ListTile(
+              title: const Text('Zeitzone'),
+              subtitle: Text(settings.timezoneOverride ?? 'Systemstandard'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                showEditTimezoneModal(context, settings.timezoneOverride);
+              },
+            ),
+            ListTile(
+              title: Text(l10n.languageSettingTitle),
+              subtitle: Text(
+                settings.locale == 'en' ? l10n.languageEnglish : l10n.languageGerman,
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                showEditLanguageDialog(context, settings.locale);
+              },
             ),
             const Divider(height: 1),
             const SizedBox(height: 16),
@@ -115,6 +145,31 @@ class SettingsPage extends ConsumerWidget {
               },
             ),
             const Divider(height: 1),
+            SwitchListTile(
+              title: const Text('24-Stunden-Format'),
+              subtitle: Text(settingsState.settings.use24HourFormat
+                  ? 'z. B. 18:00'
+                  : 'z. B. 6:00 PM'),
+              value: settingsState.settings.use24HourFormat,
+              onChanged: (use24Hour) {
+                ref
+                    .read(settingsViewModelProvider.notifier)
+                    .updateUse24HourFormat(use24Hour);
+              },
+            ),
+            const Divider(height: 1),
+            ListTile(
+              title: const Text('Bundesland'),
+              subtitle: Text(
+                settings.bundesland?.displayName ??
+                    'Nicht ausgewählt – keine Feiertagsmarkierung im Kalender',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                _showBundeslandPicker(context, ref, settings.bundesland);
+              },
+            ),
+            const Divider(height: 1),
             ListTile(
               title: const Text('Benachrichtigungen'),
               subtitle: settingsState.settings.notificationsEnabled
@@ -125,6 +180,10 @@ class SettingsPage extends ConsumerWidget {
                 NotificationSettingsDialog.show(context, settingsState.settings);
               },
             ),
+            if (!kIsWeb) ...[
+              const Divider(height: 1),
+              const _AppLockSection(),
+            ],
             const Divider(height: 1),
             ListTile(
               title: const Text('Über die App'),
@@ -190,6 +249,126 @@ class SettingsPage extends ConsumerWidget {
         },
       ),
     );
+  }
+
+  void _showBundeslandPicker(BuildContext context, WidgetRef ref, Bundesland? current) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => SimpleDialog(
+        title: const Text('Bundesland für Feiertage'),
+        children: [
+          SimpleDialogOption(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              ref.read(settingsViewModelProvider.notifier).updateBundesland(null);
+            },
+            child: Row(
+              children: [
+                if (current == null) const Icon(Icons.check, size: 18) else const SizedBox(width: 18),
+                const SizedBox(width: 8),
+                const Text('Keine Auswahl'),
+              ],
+            ),
+          ),
+          for (final bundesland in Bundesland.values)
+            SimpleDialogOption(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                ref.read(settingsViewModelProvider.notifier).updateBundesland(bundesland);
+              },
+              child: Row(
+                children: [
+                  if (current == bundesland)
+                    const Icon(Icons.check, size: 18)
+                  else
+                    const SizedBox(width: 18),
+                  const SizedBox(width: 8),
+                  Text(bundesland.displayName),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Abo-Verwaltung für Premium-Nutzer (siehe #220): zeigt Laufzeit/
+  /// Verlängerungsstatus aus RevenueCat an und verlinkt auf die store-eigene
+  /// Verwaltungsseite (`getManagementURL()`), statt eine eigene Kündigungs-
+  /// /Verlängerungslogik nachzubauen.
+  Widget _buildSubscriptionSection(BuildContext context, WidgetRef ref) {
+    final isPremium = ref.watch(isPremiumProvider);
+    if (!isPremium) return const SizedBox.shrink();
+
+    final entitlement = ref.watch(activeEntitlementProvider);
+    final expirationDateString = entitlement?.expirationDate;
+    final expirationDate =
+        expirationDateString != null ? DateTime.tryParse(expirationDateString) : null;
+    final willRenew = entitlement?.willRenew ?? false;
+
+    String? statusText;
+    if (expirationDate != null) {
+      final formattedDate = DateFormat('dd.MM.yyyy').format(expirationDate);
+      statusText = willRenew
+          ? 'Verlängert sich automatisch am $formattedDate'
+          : 'Läuft aus am $formattedDate';
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.subscriptions, color: Colors.orange),
+                  const SizedBox(width: 12),
+                  Text('Dein Abo', style: Theme.of(context).textTheme.titleMedium),
+                ],
+              ),
+              if (statusText != null) ...[
+                const SizedBox(height: 8),
+                Text(statusText, style: const TextStyle(fontSize: 14)),
+              ],
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () => _openSubscriptionManagement(context),
+                icon: const Icon(Icons.open_in_new),
+                label: const Text('Abo verwalten'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openSubscriptionManagement(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final urlString = await getSubscriptionManagementUrl();
+    if (urlString == null) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Abo-Verwaltung ist auf diesem Gerät nicht verfügbar. '
+            'Bitte über den App Store bzw. Play Store verwalten.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    final url = Uri.parse(urlString);
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Der Abo-Verwaltungslink konnte nicht geöffnet werden.')),
+      );
+    }
   }
 
   Widget _buildDataSyncSection(BuildContext context, WidgetRef ref, AsyncValue authState) {
@@ -555,6 +734,60 @@ class SettingsPage extends ConsumerWidget {
       loading: () => const SizedBox.shrink(),
       error: (_, __) => const SizedBox.shrink(),
     );
+  }
+}
+
+/// PIN-/Biometrie-Sperre der App (siehe #223). Eigenes
+/// [ConsumerStatefulWidget], da der Aktivierungsstatus direkt aus
+/// [AppLockService]/SharedPreferences kommt und nicht über
+/// [settingsViewModelProvider] läuft (rein lokale, geräteweite Einstellung
+/// ohne Firestore-Sync).
+class _AppLockSection extends ConsumerStatefulWidget {
+  const _AppLockSection();
+
+  @override
+  ConsumerState<_AppLockSection> createState() => _AppLockSectionState();
+}
+
+class _AppLockSectionState extends ConsumerState<_AppLockSection> {
+  @override
+  Widget build(BuildContext context) {
+    final service = ref.watch(appLockServiceProvider);
+    final isEnabled = service.isEnabled;
+
+    return Column(
+      children: [
+        SwitchListTile(
+          title: const Text('PIN-/Biometrie-Sperre'),
+          subtitle: Text(isEnabled
+              ? 'App wird beim Start und aus dem Hintergrund gesperrt'
+              : 'Deaktiviert'),
+          value: isEnabled,
+          onChanged: (value) => _onToggle(context, value, service),
+        ),
+        if (isEnabled)
+          ListTile(
+            title: const Text('PIN ändern'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => PinSetupDialog.show(context),
+          ),
+      ],
+    );
+  }
+
+  Future<void> _onToggle(BuildContext context, bool value, AppLockService service) async {
+    if (value) {
+      if (!service.hasPin) {
+        final success = await PinSetupDialog.show(context);
+        if (!success) return;
+      }
+      await service.setEnabled(true);
+    } else {
+      await service.setEnabled(false);
+    }
+    // Provider selbst ist nicht reaktiv (synchrone SharedPreferences-Reads) -
+    // setState erzwingt einen Rebuild dieses Abschnitts nach der Änderung.
+    if (mounted) setState(() {});
   }
 }
 

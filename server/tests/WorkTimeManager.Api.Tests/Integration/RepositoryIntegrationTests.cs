@@ -45,8 +45,8 @@ public class RepositoryIntegrationTests(FirestoreEmulatorFixture fixture)
             ],
         };
 
-        await repo.SaveAsync(uid, entry, Ct);
-        var month = await repo.GetMonthAsync(uid, 2026, 6, Ct);
+        await repo.SaveAsync(uid, entry, null, Ct);
+        var month = await repo.GetMonthAsync(uid, 2026, 6, null, Ct);
 
         var loaded = Assert.Single(month);
         Assert.Equal("2026-06-05", loaded.Id);
@@ -64,7 +64,7 @@ public class RepositoryIntegrationTests(FirestoreEmulatorFixture fixture)
     {
         RequireEmulator();
         var repo = new WorkEntryRepository(fixture.Db!);
-        Assert.Null(await repo.GetDayAsync(NewUid(), 2026, 6, 5, Ct));
+        Assert.Null(await repo.GetDayAsync(NewUid(), 2026, 6, 5, null, Ct));
     }
 
     [SkippableFact]
@@ -73,12 +73,12 @@ public class RepositoryIntegrationTests(FirestoreEmulatorFixture fixture)
         RequireEmulator();
         var repo = new WorkEntryRepository(fixture.Db!);
         var uid = NewUid();
-        await repo.SaveAsync(uid, Day(5), Ct);
-        await repo.SaveAsync(uid, Day(6), Ct);
+        await repo.SaveAsync(uid, Day(5), null, Ct);
+        await repo.SaveAsync(uid, Day(6), null, Ct);
 
-        await repo.DeleteAsync(uid, 2026, 6, 5, Ct);
+        await repo.DeleteAsync(uid, 2026, 6, 5, null, Ct);
 
-        var month = await repo.GetMonthAsync(uid, 2026, 6, Ct);
+        var month = await repo.GetMonthAsync(uid, 2026, 6, null, Ct);
         var remaining = Assert.Single(month);
         Assert.Equal("2026-06-06", remaining.Id);
 
@@ -98,10 +98,10 @@ public class RepositoryIntegrationTests(FirestoreEmulatorFixture fixture)
         var repo = new WorkEntryRepository(fixture.Db!);
         var uid = NewUid();
         // Woche Mo 30.03.2026 – So 05.04.2026 (kreuzt März/April)
-        await repo.SaveAsync(uid, Day(2026, 3, 31), Ct);
-        await repo.SaveAsync(uid, Day(2026, 4, 1), Ct);
+        await repo.SaveAsync(uid, Day(2026, 3, 31), null, Ct);
+        await repo.SaveAsync(uid, Day(2026, 4, 1), null, Ct);
 
-        var week = await repo.GetWeekAsync(uid, new DateOnly(2026, 4, 1), Ct);
+        var week = await repo.GetWeekAsync(uid, new DateOnly(2026, 4, 1), null, Ct);
 
         Assert.Equal(2, week.Count);
         Assert.Contains(week, e => e.Id == "2026-03-31");
@@ -123,8 +123,8 @@ public class RepositoryIntegrationTests(FirestoreEmulatorFixture fixture)
         var repo = new OvertimeRepository(fixture.Db!);
         var uid = NewUid();
 
-        await repo.SaveAsync(uid, -125, Ct);
-        var result = await repo.GetAsync(uid, Ct);
+        await repo.SaveAsync(uid, -125, null, Ct);
+        var result = await repo.GetAsync(uid, null, Ct);
 
         Assert.Equal(-125, result.Minutes);
         Assert.NotNull(result.LastUpdated);
@@ -139,18 +139,18 @@ public class RepositoryIntegrationTests(FirestoreEmulatorFixture fixture)
         var settings = new SettingsDto
         {
             WeeklyTargetHours = 38.5,
-            WorkdaysPerWeek = 4,
+            Workdays = [1, 2, 3, 4],
             NotificationsEnabled = true,
             NotificationTime = "07:30",
             NotificationDays = [1, 3, 5],
             NotifyBreaks = true,
         };
 
-        await repo.SaveAsync(uid, settings, Ct);
-        var loaded = await repo.GetAsync(uid, Ct);
+        await repo.SaveAsync(uid, settings, null, Ct);
+        var loaded = await repo.GetAsync(uid, null, Ct);
 
         Assert.Equal(38.5, loaded.WeeklyTargetHours);
-        Assert.Equal(4, loaded.WorkdaysPerWeek);
+        Assert.Equal([1, 2, 3, 4], loaded.Workdays);
         Assert.True(loaded.NotificationsEnabled);
         Assert.Equal("07:30", loaded.NotificationTime);
         Assert.Equal([1, 3, 5], loaded.NotificationDays);
@@ -168,5 +168,86 @@ public class RepositoryIntegrationTests(FirestoreEmulatorFixture fixture)
 
         Assert.Equal(uid, profile.Uid);
         Assert.False(profile.IsPremium);
+    }
+
+    // ── Multi-Profile (siehe #138/#239) ────────────────────────────────────
+
+    [SkippableFact]
+    public async Task WorkEntry_DifferentProfiles_AreIsolated()
+    {
+        RequireEmulator();
+        var repo = new WorkEntryRepository(fixture.Db!);
+        var uid = NewUid();
+        var defaultEntry = new WorkEntryDto
+        {
+            Id = "2026-06-05",
+            Date = new DateTimeOffset(2026, 6, 5, 0, 0, 0, TimeSpan.Zero),
+            WorkStart = new DateTimeOffset(2026, 6, 5, 8, 0, 0, TimeSpan.Zero),
+        };
+        var secondProfileEntry = new WorkEntryDto
+        {
+            Id = "2026-06-05",
+            Date = new DateTimeOffset(2026, 6, 5, 0, 0, 0, TimeSpan.Zero),
+            WorkStart = new DateTimeOffset(2026, 6, 5, 9, 0, 0, TimeSpan.Zero),
+        };
+
+        await repo.SaveAsync(uid, defaultEntry, null, Ct);
+        await repo.SaveAsync(uid, secondProfileEntry, "second", Ct);
+
+        var defaultMonth = await repo.GetMonthAsync(uid, 2026, 6, null, Ct);
+        var secondMonth = await repo.GetMonthAsync(uid, 2026, 6, "second", Ct);
+
+        Assert.Equal(defaultEntry.WorkStart, Assert.Single(defaultMonth).WorkStart);
+        Assert.Equal(secondProfileEntry.WorkStart, Assert.Single(secondMonth).WorkStart);
+    }
+
+    [SkippableFact]
+    public async Task Overtime_DifferentProfiles_AreIsolated()
+    {
+        RequireEmulator();
+        var repo = new OvertimeRepository(fixture.Db!);
+        var uid = NewUid();
+
+        await repo.SaveAsync(uid, 60, null, Ct);
+        await repo.SaveAsync(uid, -30, "second", Ct);
+
+        Assert.Equal(60, (await repo.GetAsync(uid, null, Ct)).Minutes);
+        Assert.Equal(-30, (await repo.GetAsync(uid, "second", Ct)).Minutes);
+    }
+
+    [SkippableFact]
+    public async Task WorkProfile_AddAndGetAll_RoundTrips()
+    {
+        RequireEmulator();
+        var repo = new WorkProfileRepository(fixture.Db!);
+        var uid = NewUid();
+
+        var created = await repo.AddAsync(uid, "Zweitjob", Ct);
+        var all = await repo.GetAllAsync(uid, Ct);
+
+        var found = Assert.Single(all);
+        Assert.Equal(created.Id, found.Id);
+        Assert.Equal("Zweitjob", found.Name);
+    }
+
+    [SkippableFact]
+    public async Task WorkProfile_Delete_RemovesProfileAndItsData()
+    {
+        RequireEmulator();
+        var profileRepo = new WorkProfileRepository(fixture.Db!);
+        var entryRepo = new WorkEntryRepository(fixture.Db!);
+        var uid = NewUid();
+        var profile = await profileRepo.AddAsync(uid, "Zweitjob", Ct);
+        await entryRepo.SaveAsync(uid, new WorkEntryDto
+        {
+            Id = "2026-06-05",
+            Date = new DateTimeOffset(2026, 6, 5, 0, 0, 0, TimeSpan.Zero),
+            WorkStart = new DateTimeOffset(2026, 6, 5, 8, 0, 0, TimeSpan.Zero),
+        }, profile.Id, Ct);
+
+        await profileRepo.DeleteAsync(uid, profile.Id, Ct);
+
+        Assert.Empty(await profileRepo.GetAllAsync(uid, Ct));
+        Assert.Empty(await entryRepo.GetMonthAsync(uid, 2026, 6, profile.Id, Ct));
     }
 }

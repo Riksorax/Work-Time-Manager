@@ -6,6 +6,7 @@ import { ProfileService } from '../../core/services/profile';
 import { SettingsService } from '../../core/services/settings';
 import { OvertimeService } from '../../core/services/overtime';
 import { ThemeService } from '../../core/services/theme';
+import { LanguageService } from '../../core/services/language';
 import { DataSyncService, DataSyncResult } from '../../core/services/data-sync';
 import { WebPremiumService } from '../../core/services/web-premium.service';
 import { DashboardService } from '../dashboard/dashboard.service';
@@ -13,7 +14,7 @@ import { UserSettings } from '../../shared/models/index';
 
 const DEFAULT_SETTINGS: UserSettings = {
   weeklyTargetHours: 40,
-  workdaysPerWeek: 5,
+  workdays: [1, 2, 3, 4, 5],
   notificationsEnabled: false,
   notificationTime: '08:00',
   notificationDays: [1, 2, 3, 4, 5],
@@ -29,6 +30,7 @@ export class SettingsPageService {
   private readonly profileService = inject(ProfileService);
   private readonly overtimeSvc    = inject(OvertimeService);
   private readonly themeSvc       = inject(ThemeService);
+  private readonly languageSvc    = inject(LanguageService);
   private readonly dataSyncSvc    = inject(DataSyncService);
   private readonly premiumSvc     = inject(WebPremiumService);
   private readonly dashboardSvc   = inject(DashboardService);
@@ -58,6 +60,9 @@ export class SettingsPageService {
   // ── Theme ─────────────────────────────────────────────────────────────────
   readonly isDarkMode = this.themeSvc.isDarkMode;
 
+  // ── Sprache ───────────────────────────────────────────────────────────────
+  readonly locale = this.languageSvc.locale;
+
   // ── Sync ──────────────────────────────────────────────────────────────────
   readonly isSyncing = this.dataSyncSvc.isSyncing;
 
@@ -69,8 +74,8 @@ export class SettingsPageService {
   // ── Computed ──────────────────────────────────────────────────────────────
   readonly dailyTargetHours = computed(() => {
     const s = this.settings();
-    if (!s || s.workdaysPerWeek === 0) return '0.0';
-    return (s.weeklyTargetHours / s.workdaysPerWeek).toFixed(1);
+    if (!s || s.workdays.length === 0) return '0.0';
+    return (s.weeklyTargetHours / s.workdays.length).toFixed(1);
   });
 
   constructor() {
@@ -96,9 +101,9 @@ export class SettingsPageService {
     await this.coreSettings.saveSettings({ ...current, weeklyTargetHours: hours });
   }
 
-  async setWorkdays(days: number): Promise<void> {
+  async setWorkdays(days: number[]): Promise<void> {
     const current = this.settings();
-    await this.coreSettings.saveSettings({ ...current, workdaysPerWeek: days });
+    await this.coreSettings.saveSettings({ ...current, workdays: days });
   }
 
   async setOvertime(ms: number): Promise<void> {
@@ -110,6 +115,10 @@ export class SettingsPageService {
 
   setTheme(dark: boolean): void {
     this.themeSvc.setTheme(dark);
+  }
+
+  setLocale(locale: string): void {
+    this.languageSvc.setLocale(locale);
   }
 
   async sync(): Promise<DataSyncResult> {

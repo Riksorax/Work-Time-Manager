@@ -48,6 +48,37 @@ services:
       - "traefik.http.routers.work-time-manager-api-web.middlewares=wtm-https-redirect"
       - "traefik.http.middlewares.wtm-https-redirect.redirectscheme.scheme=https"
 
+  # Uptime-/Server-Monitoring (siehe #207) - self-hosted, kein externer Dienst
+  # nötig. Monitore (welche URLs/Endpunkte überwacht werden) und Alerting-
+  # Kanäle (E-Mail/Telegram/Discord/...) werden einmalig über die
+  # Uptime-Kuma-Weboberfläche unter https://status.work-time-manager.app
+  # eingerichtet - Uptime-Kuma bietet dafür keine Env-Var-/Config-Datei-
+  # Konfiguration an.
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: uptime-kuma
+    restart: unless-stopped
+    volumes:
+      - uptime-kuma-data:/app/data
+    networks:
+      - traefik-proxy
+    labels:
+      # Traefik aktivieren
+      - "traefik.enable=true"
+      # HTTPS-Router
+      - "traefik.http.routers.uptime-kuma.rule=Host(`status.work-time-manager.app`)"
+      - "traefik.http.routers.uptime-kuma.entrypoints=websecure"
+      - "traefik.http.routers.uptime-kuma.tls.certresolver=letsencrypt"
+      # Port im Container (Uptime-Kuma läuft auf 3001)
+      - "traefik.http.services.uptime-kuma.loadbalancer.server.port=3001"
+      # HTTP → HTTPS Redirect
+      - "traefik.http.routers.uptime-kuma-web.rule=Host(`status.work-time-manager.app`)"
+      - "traefik.http.routers.uptime-kuma-web.entrypoints=web"
+      - "traefik.http.routers.uptime-kuma-web.middlewares=wtm-https-redirect"
+
 networks:
   traefik-proxy:
     external: true
+
+volumes:
+  uptime-kuma-data:

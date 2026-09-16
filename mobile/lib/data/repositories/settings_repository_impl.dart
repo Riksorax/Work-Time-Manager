@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
+import 'package:flutter_work_time/core/utils/timezone_utils.dart';
 
+import '../../domain/entities/bundesland.dart';
 import '../../domain/repositories/settings_repository.dart';
 import '../datasources/remote/firestore_datasource.dart';
 
@@ -18,16 +20,37 @@ class SettingsRepositoryImpl implements SettingsRepository {
   static const String _notifyWorkStartKey = 'notify_work_start';
   static const String _notifyWorkEndKey = 'notify_work_end';
   static const String _notifyBreaksKey = 'notify_breaks';
+  static const String _bundeslandKey = 'bundesland';
+  static const String _warnOnOvertimeThresholdKey = 'warn_on_overtime_threshold';
+  static const String _overtimeThresholdHoursKey = 'overtime_threshold_hours';
+  static const String _warnOnUndertimeThresholdKey = 'warn_on_undertime_threshold';
+  static const String _undertimeThresholdHoursKey = 'undertime_threshold_hours';
+  // Zeitformat ist geräteweit, nicht userId-spezifisch (wie Theme/Benachrichtigungen).
+  static const String _use24HourFormatKey = 'use_24_hour_format';
+  // Sprache ist geräteweit, nicht userId-spezifisch (wie Zeitformat) - siehe #221.
+  static const String _localeKey = 'locale';
 
   final SharedPreferences _prefs;
   final FirestoreDataSource _firestoreDataSource;
   final String _userId;
 
-  SettingsRepositoryImpl(this._prefs, this._firestoreDataSource, this._userId);
+  /// Aktives Arbeitszeit-Profil (siehe #138). Nur Soll-Wochenstunden und
+  /// Arbeitstage sind profil-spezifisch - alle anderen Einstellungen
+  /// (Theme, Benachrichtigungen, Zeitformat, Sprache, ...) bleiben bewusst
+  /// geräte-/kontoweit, wie schon vor #138 (siehe Kommentare unten).
+  final String? _profileId;
 
-  // Generiere userId-spezifische Keys für Einstellungen
-  String get _targetHoursKey => 'target_weekly_hours_$_userId';
-  String get _workdaysPerWeekKey => 'workdays_per_week_$_userId';
+  SettingsRepositoryImpl(this._prefs, this._firestoreDataSource, this._userId, [this._profileId]);
+
+  String get _profileSuffix =>
+      (_profileId == null || _profileId == 'default') ? '' : '_$_profileId';
+
+  // Generiere userId- (und profil-)spezifische Keys für Einstellungen
+  String get _targetHoursKey => 'target_weekly_hours_$_userId$_profileSuffix';
+  String get _workdaysKey => 'workdays_$_userId$_profileSuffix';
+  // Alter Schlüssel (reine Anzahl statt konkreter Wochentage) - nur noch
+  // zur Migration bestehender Nutzer beim ersten Lesen relevant (#217).
+  String get _legacyWorkdaysPerWeekKey => 'workdays_per_week_$_userId$_profileSuffix';
 
   @override
   ThemeMode getThemeMode() {
@@ -60,32 +83,47 @@ class SettingsRepositoryImpl implements SettingsRepository {
   }
 
   @override
-  int getWorkdaysPerWeek() {
-    final value = _prefs.getInt(_workdaysPerWeekKey);
-    logger.i('[SettingsRepository] getWorkdaysPerWeek for user $_userId: $value');
-    return value ?? 5;
+  List<int> getWorkdays() {
+    final stored = _prefs.getString(_workdaysKey);
+    if (stored != null && stored.isNotEmpty) {
+      return stored.split(',').map(int.parse).toList();
+    }
+    // Migration: bestehende Nutzer hatten nur eine Anzahl gespeichert -
+    // das entsprach implizit "die ersten N Tage ab Montag" (siehe #217).
+    final legacyCount = _prefs.getInt(_legacyWorkdaysPerWeekKey);
+    if (legacyCount != null) {
+      return List.generate(legacyCount.clamp(0, 7), (i) => i + 1);
+    }
+    return const [1, 2, 3, 4, 5];
   }
 
   @override
-  Future<void> setWorkdaysPerWeek(int days) async {
-    logger.i('[SettingsRepository] setWorkdaysPerWeek for user $_userId: $days');
-    await _prefs.setInt(_workdaysPerWeekKey, days);
-    _syncToFirestore({'workdaysPerWeek': days});
+  Future<void> setWorkdays(List<int> days) async {
+    logger.i('[SettingsRepository] setWorkdays for user $_userId: $days');
+    await _prefs.setString(_workdaysKey, days.join(','));
+    _syncToFirestore({'workdays': days});
   }
 
   /// Beim Login: Firestore-Einstellungen in SharedPreferences übernehmen.
-  /// Nur weeklyTargetHours und workdaysPerWeek werden synchronisiert —
+  /// Nur weeklyTargetHours und workdays werden synchronisiert —
   /// Benachrichtigungen sind gerätespezifisch.
   Future<void> syncFromFirestore() async {
     if (_userId == 'local' || _userId.isEmpty) return;
     try {
-      final data = await _firestoreDataSource.getSettings(_userId);
+      final data = await _firestoreDataSource.getSettings(_userId, profileId: _profileId);
       if (data == null) return;
       if (data['weeklyTargetHours'] != null) {
         await _prefs.setDouble(_targetHoursKey, (data['weeklyTargetHours'] as num).toDouble());
       }
-      if (data['workdaysPerWeek'] != null) {
-        await _prefs.setInt(_workdaysPerWeekKey, (data['workdaysPerWeek'] as num).toInt());
+      if (data['workdays'] != null) {
+        final days = (data['workdays'] as List).map((e) => (e as num).toInt()).toList();
+        await _prefs.setString(_workdaysKey, days.join(','));
+      } else if (data['workdaysPerWeek'] != null) {
+        final legacyCount = (data['workdaysPerWeek'] as num).toInt();
+        await _prefs.setString(
+          _workdaysKey,
+          List.generate(legacyCount.clamp(0, 7), (i) => i + 1).join(','),
+        );
       }
       logger.i('[SettingsRepository] Einstellungen von Firestore geladen.');
     } catch (e) {
@@ -96,7 +134,7 @@ class SettingsRepositoryImpl implements SettingsRepository {
   void _syncToFirestore(Map<String, dynamic> data) {
     if (_userId == 'local' || _userId.isEmpty) return;
     _firestoreDataSource
-        .saveSettings(_userId, data)
+        .saveSettings(_userId, data, profileId: _profileId)
         .catchError((e) => logger.w('[SettingsRepository] Firestore-Sync fehlgeschlagen: $e'));
   }
 
@@ -182,5 +220,93 @@ class SettingsRepositoryImpl implements SettingsRepository {
   @override
   Future<void> setNotifyBreaks(bool enabled) async {
     await _prefs.setBool(_notifyBreaksKey, enabled);
+  }
+
+  @override
+  Bundesland? getBundesland() {
+    return bundeslandFromName(_prefs.getString(_bundeslandKey));
+  }
+
+  @override
+  Future<void> setBundesland(Bundesland? bundesland) async {
+    if (bundesland == null) {
+      await _prefs.remove(_bundeslandKey);
+    } else {
+      await _prefs.setString(_bundeslandKey, bundesland.name);
+    }
+  }
+
+  @override
+  bool getWarnOnOvertimeThreshold() {
+    return _prefs.getBool(_warnOnOvertimeThresholdKey) ?? false;
+  }
+
+  @override
+  Future<void> setWarnOnOvertimeThreshold(bool enabled) async {
+    await _prefs.setBool(_warnOnOvertimeThresholdKey, enabled);
+  }
+
+  @override
+  double getOvertimeThresholdHours() {
+    return _prefs.getDouble(_overtimeThresholdHoursKey) ?? 10.0;
+  }
+
+  @override
+  Future<void> setOvertimeThresholdHours(double hours) async {
+    await _prefs.setDouble(_overtimeThresholdHoursKey, hours);
+  }
+
+  @override
+  bool getWarnOnUndertimeThreshold() {
+    return _prefs.getBool(_warnOnUndertimeThresholdKey) ?? false;
+  }
+
+  @override
+  Future<void> setWarnOnUndertimeThreshold(bool enabled) async {
+    await _prefs.setBool(_warnOnUndertimeThresholdKey, enabled);
+  }
+
+  @override
+  double getUndertimeThresholdHours() {
+    return _prefs.getDouble(_undertimeThresholdHoursKey) ?? 10.0;
+  }
+
+  @override
+  Future<void> setUndertimeThresholdHours(double hours) async {
+    await _prefs.setDouble(_undertimeThresholdHoursKey, hours);
+  }
+
+  @override
+  bool getUse24HourFormat() {
+    return _prefs.getBool(_use24HourFormatKey) ?? true;
+  }
+
+  @override
+  Future<void> setUse24HourFormat(bool use24Hour) async {
+    await _prefs.setBool(_use24HourFormatKey, use24Hour);
+  }
+
+  @override
+  String? getTimezoneOverride() {
+    return _prefs.getString(timezoneOverridePrefsKey);
+  }
+
+  @override
+  Future<void> setTimezoneOverride(String? timezone) async {
+    if (timezone == null) {
+      await _prefs.remove(timezoneOverridePrefsKey);
+    } else {
+      await _prefs.setString(timezoneOverridePrefsKey, timezone);
+    }
+  }
+
+  @override
+  String getLocale() {
+    return _prefs.getString(_localeKey) ?? 'de';
+  }
+
+  @override
+  Future<void> setLocale(String locale) async {
+    await _prefs.setString(_localeKey, locale);
   }
 }

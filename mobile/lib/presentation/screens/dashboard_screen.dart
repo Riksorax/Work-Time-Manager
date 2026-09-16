@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
+import '../../core/utils/time_format.dart';
 import '../../domain/entities/break_entity.dart';
 import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/services/break_calculator_service.dart';
+import '../../l10n/app_localizations.dart';
 import '../view_models/dashboard_view_model.dart';
+import '../view_models/settings_view_model.dart';
 import '../widgets/common/responsive_center.dart';
 import '../widgets/edit_break_modal.dart';
+import '../widgets/work_profile_switcher.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -35,6 +38,8 @@ class DashboardScreen extends ConsumerWidget {
     final dashboardState = ref.watch(dashboardViewModelProvider);
     final dashboardViewModel = ref.read(dashboardViewModelProvider.notifier);
     final workEntry = dashboardState.workEntry;
+    final use24HourFormat =
+        ref.watch(settingsViewModelProvider).value?.settings.use24HourFormat ?? true;
 
     final workEntryWithAutoBreaks = workEntry.workStart != null && workEntry.workEnd != null && workEntry.type == WorkEntryType.work
         ? BreakCalculatorService.calculateAndApplyBreaks(workEntry)
@@ -58,7 +63,8 @@ class DashboardScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Arbeitszeit'),
+        title: Text(AppLocalizations.of(context).dashboardTitle),
+        actions: const [WorkProfileSwitcher()],
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
@@ -90,8 +96,9 @@ class DashboardScreen extends ConsumerWidget {
               _buildOvertime(context, dashboardState.dailyOvertime, 'Heutige Überstunden'),
               // Voraussichtlichen Feierabend nur anzeigen, wenn Arbeit noch läuft
               if (workEntry.workEnd == null) ...[
-                _buildExpectedEndTime(context, dashboardState.expectedEndTime),
-                _buildExpectedEndTimeWithBalance(context, dashboardState.expectedEndTotalZero),
+                _buildExpectedEndTime(context, dashboardState.expectedEndTime, use24HourFormat),
+                _buildExpectedEndTimeWithBalance(
+                    context, dashboardState.expectedEndTotalZero, use24HourFormat),
               ],
             ],
           );
@@ -102,6 +109,7 @@ class DashboardScreen extends ConsumerWidget {
               _TimeInputField(
                 label: 'Startzeit',
                 initialValue: workEntry.workStart,
+                use24HourFormat: use24HourFormat,
                 onTimeSelected: (time) => dashboardViewModel.setManualStartTime(time),
               ),
               const SizedBox(height: 16),
@@ -109,6 +117,7 @@ class DashboardScreen extends ConsumerWidget {
                 label: 'Endzeit',
                 initialValue: workEntry.workEnd,
                 enabled: workEntry.workStart != null,
+                use24HourFormat: use24HourFormat,
                 onTimeSelected: (time) => dashboardViewModel.setManualEndTime(time),
                 onClear: workEntry.workEnd != null ? () => dashboardViewModel.clearEndTime() : null,
               ),
@@ -135,7 +144,8 @@ class DashboardScreen extends ConsumerWidget {
           final breaksSection = Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildBreaksSection(context, ref, workEntryWithAutoBreaks.breaks),
+              _buildBreaksSection(
+                  context, ref, workEntryWithAutoBreaks.breaks, use24HourFormat),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () => dashboardViewModel.startOrStopBreak(),
@@ -219,17 +229,20 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildExpectedEndTime(BuildContext context, DateTime? expectedEndTime) {
+  Widget _buildExpectedEndTime(
+      BuildContext context, DateTime? expectedEndTime, bool use24HourFormat) {
     if (expectedEndTime == null) {
       return const SizedBox.shrink();
     }
 
-    final formattedTime = DateFormat.Hm().format(expectedEndTime);
+    final formattedTime = formatTime(expectedEndTime, use24HourFormat: use24HourFormat);
+    // "Uhr"-Suffix passt nur zum 24h-Format - AM/PM ist im 12h-Format bereits eindeutig.
+    final suffix = use24HourFormat ? ' Uhr' : '';
 
     return Padding(
       padding: const EdgeInsets.only(top: 4.0),
       child: Text(
-        'Voraussichtlicher Feierabend (±0): $formattedTime Uhr',
+        'Voraussichtlicher Feierabend (±0): $formattedTime$suffix',
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
           color: Colors.grey[600],
           fontStyle: FontStyle.italic,
@@ -239,17 +252,20 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildExpectedEndTimeWithBalance(BuildContext context, DateTime? expectedEndTimeWithBalance) {
+  Widget _buildExpectedEndTimeWithBalance(
+      BuildContext context, DateTime? expectedEndTimeWithBalance, bool use24HourFormat) {
     if (expectedEndTimeWithBalance == null) {
       return const SizedBox.shrink();
     }
 
-    final formattedTimeWithBalance = DateFormat.Hm().format(expectedEndTimeWithBalance);
+    final formattedTimeWithBalance =
+        formatTime(expectedEndTimeWithBalance, use24HourFormat: use24HourFormat);
+    final suffix = use24HourFormat ? ' Uhr' : '';
 
     return Padding(
       padding: const EdgeInsets.only(top: 2.0),
       child: Text(
-        'Mit Gleitzeit-Bilanz auf 0: $formattedTimeWithBalance Uhr',
+        'Mit Gleitzeit-Bilanz auf 0: $formattedTimeWithBalance$suffix',
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
           color: Colors.grey[500],
           fontStyle: FontStyle.italic,
@@ -260,8 +276,8 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildBreaksSection(
-      BuildContext context, WidgetRef ref, List<BreakEntity> breaks) {
+  Widget _buildBreaksSection(BuildContext context, WidgetRef ref,
+      List<BreakEntity> breaks, bool use24HourFormat) {
     final dashboardViewModel = ref.read(dashboardViewModelProvider.notifier);
 
     return Column(
@@ -298,7 +314,8 @@ class DashboardScreen extends ConsumerWidget {
                   ],
                 ),
                 subtitle: Text(
-                    '${DateFormat.Hm().format(b.start)} - ${b.end != null ? DateFormat.Hm().format(b.end!) : 'läuft...'}'),
+                    '${formatTime(b.start, use24HourFormat: use24HourFormat)} - '
+                    '${b.end != null ? formatTime(b.end!, use24HourFormat: use24HourFormat) : 'läuft...'}'),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -364,6 +381,7 @@ class _TimeInputField extends StatefulWidget {
   final ValueChanged<TimeOfDay>? onTimeSelected;
   final VoidCallback? onClear;
   final bool enabled;
+  final bool use24HourFormat;
 
   const _TimeInputField({
     required this.label,
@@ -371,6 +389,7 @@ class _TimeInputField extends StatefulWidget {
     this.onTimeSelected,
     this.onClear,
     this.enabled = true,
+    this.use24HourFormat = true,
   });
 
   @override
@@ -390,14 +409,16 @@ class _TimeInputFieldState extends State<_TimeInputField> {
   @override
   void didUpdateWidget(covariant _TimeInputField oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.initialValue != oldWidget.initialValue) {
+    if (widget.initialValue != oldWidget.initialValue ||
+        widget.use24HourFormat != oldWidget.use24HourFormat) {
       _updateText();
     }
   }
 
   void _updateText() {
     if (widget.initialValue != null) {
-      _controller.text = DateFormat.Hm().format(widget.initialValue!);
+      _controller.text =
+          formatTime(widget.initialValue!, use24HourFormat: widget.use24HourFormat);
     } else {
       _controller.text = '';
     }

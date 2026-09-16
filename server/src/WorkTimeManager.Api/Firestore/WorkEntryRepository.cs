@@ -9,14 +9,14 @@ namespace WorkTimeManager.Api.Firestore;
 /// <summary>Zugriff auf <c>users/{uid}/work_entries/{yyyy-MM}</c> (Flutter-kompatibles days-Map-Format).</summary>
 public sealed class WorkEntryRepository(FirestoreDb db)
 {
-    private DocumentReference MonthDoc(string uid, int year, int month) =>
-        db.Collection("users").Document(uid)
-          .Collection("work_entries").Document(FirestoreMappings.MonthId(year, month));
+    private DocumentReference MonthDoc(string uid, int year, int month, string? profileId) =>
+        ProfileScope.Collection(db, uid, "work_entries", profileId)
+            .Document(FirestoreMappings.MonthId(year, month));
 
     public async Task<IReadOnlyList<WorkEntryDto>> GetMonthAsync(
-        string uid, int year, int month, CancellationToken ct)
+        string uid, int year, int month, string? profileId, CancellationToken ct)
     {
-        var snapshot = await MonthDoc(uid, year, month).GetSnapshotAsync(ct);
+        var snapshot = await MonthDoc(uid, year, month, profileId).GetSnapshotAsync(ct);
         if (!snapshot.Exists)
         {
             return Array.Empty<WorkEntryDto>();
@@ -39,7 +39,7 @@ public sealed class WorkEntryRepository(FirestoreDb db)
     /// Monatsgrenzen hinweg (1–2 Monatsdokumente). Für den Wochenbericht.
     /// </summary>
     public async Task<IReadOnlyList<WorkEntryDto>> GetWeekAsync(
-        string uid, DateOnly date, CancellationToken ct)
+        string uid, DateOnly date, string? profileId, CancellationToken ct)
     {
         var (start, end) = Domain.ReportCalculator.WeekBounds(date);
         var months = new[] { (start.Year, start.Month), (end.Year, end.Month) }.Distinct();
@@ -47,15 +47,15 @@ public sealed class WorkEntryRepository(FirestoreDb db)
         var all = new List<WorkEntryDto>();
         foreach (var (year, month) in months)
         {
-            all.AddRange(await GetMonthAsync(uid, year, month, ct));
+            all.AddRange(await GetMonthAsync(uid, year, month, profileId, ct));
         }
         return all;
     }
 
     public async Task<WorkEntryDto?> GetDayAsync(
-        string uid, int year, int month, int day, CancellationToken ct)
+        string uid, int year, int month, int day, string? profileId, CancellationToken ct)
     {
-        var snapshot = await MonthDoc(uid, year, month).GetSnapshotAsync(ct);
+        var snapshot = await MonthDoc(uid, year, month, profileId).GetSnapshotAsync(ct);
         if (!snapshot.Exists)
         {
             return null;
@@ -67,7 +67,7 @@ public sealed class WorkEntryRepository(FirestoreDb db)
             : null;
     }
 
-    public async Task SaveAsync(string uid, WorkEntryDto entry, CancellationToken ct)
+    public async Task SaveAsync(string uid, WorkEntryDto entry, string? profileId, CancellationToken ct)
     {
         var dayKey = FirestoreMappings.DayKey(entry.Date);
         var update = new Dictionary<string, object>
@@ -77,16 +77,17 @@ public sealed class WorkEntryRepository(FirestoreDb db)
                 [dayKey] = FirestoreMappings.ToDocument(entry),
             },
         };
-        await MonthDoc(uid, entry.Date.Year, entry.Date.Month)
+        await MonthDoc(uid, entry.Date.Year, entry.Date.Month, profileId)
             .SetAsync(update, SetOptions.MergeAll, ct);
     }
 
-    public async Task DeleteAsync(string uid, int year, int month, int day, CancellationToken ct)
+    public async Task DeleteAsync(
+        string uid, int year, int month, int day, string? profileId, CancellationToken ct)
     {
         var dayKey = day.ToString(CultureInfo.InvariantCulture);
         try
         {
-            await MonthDoc(uid, year, month).UpdateAsync(
+            await MonthDoc(uid, year, month, profileId).UpdateAsync(
                 new Dictionary<FieldPath, object> { [new FieldPath("days", dayKey)] = FieldValue.Delete },
                 cancellationToken: ct);
         }

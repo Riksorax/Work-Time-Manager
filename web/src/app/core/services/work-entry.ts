@@ -7,9 +7,11 @@ import {
 } from '@angular/fire/firestore';
 import { AuthService } from '../auth/auth';
 import { ApiClient } from './api-client';
+import { WorkProfileService } from './work-profile';
 import { WorkEntry, WorkEntryType, Break } from '../../shared/models';
-import { Observable, of, switchMap } from 'rxjs';
+import { Observable, combineLatest, of, switchMap } from 'rxjs';
 import { roundToMinute, roundToMinuteOrUndefined } from '../../shared/utils/time-precision.util';
+import { profileScopedPath } from '../../shared/utils/work-profile-path.util';
 
 // localStorage Keys — identisch zu Flutter LocalWorkRepositoryImpl
 const LS_PREFIX = 'local_work_entries_';
@@ -17,26 +19,27 @@ const LS_KEYS   = 'local_monthly_keys';
 
 @Injectable({ providedIn: 'root' })
 export class WorkEntryService {
-  private readonly firestore = inject(Firestore);
-  private readonly auth      = inject(AuthService);
-  private readonly injector  = inject(Injector);
-  private readonly api       = inject(ApiClient);
+  private readonly firestore   = inject(Firestore);
+  private readonly auth        = inject(AuthService);
+  private readonly injector    = inject(Injector);
+  private readonly api         = inject(ApiClient);
+  private readonly workProfile = inject(WorkProfileService);
 
   // ─── Public API ────────────────────────────────────────────────────────────
 
   getTodayEntry(): Observable<WorkEntry | null> {
-    return this.auth.user$.pipe(
-      switchMap(user => {
-        if (user) return this._firebaseToday(user.uid);
+    return combineLatest([this.auth.user$, this.workProfile.activeProfileId$]).pipe(
+      switchMap(([user, profileId]) => {
+        if (user) return this._firebaseToday(user.uid, profileId);
         return of(this._localGet(new Date()));
       })
     );
   }
 
   getEntriesForMonth(year: number, month: number): Observable<WorkEntry[]> {
-    return this.auth.user$.pipe(
-      switchMap(user => {
-        if (user) return this._firebaseMonth(user.uid, year, month);
+    return combineLatest([this.auth.user$, this.workProfile.activeProfileId$]).pipe(
+      switchMap(([user, profileId]) => {
+        if (user) return this._firebaseMonth(user.uid, year, month, profileId);
         return of(this._localGetMonth(year, month));
       })
     );
@@ -44,12 +47,12 @@ export class WorkEntryService {
 
   async saveEntry(entry: WorkEntry): Promise<void> {
     // Eingeloggt: Schreibvorgang über die Backend-API; Reads bleiben onSnapshot (Hybrid).
-    if (this.auth.uid) await this.api.saveWorkEntry(entry);
+    if (this.auth.uid) await this.api.saveWorkEntry(entry, this.workProfile.activeProfileIdForApi);
     else               this._localSave(entry);
   }
 
   async deleteEntry(id: string): Promise<void> {
-    if (this.auth.uid) await this.api.deleteWorkEntry(id);
+    if (this.auth.uid) await this.api.deleteWorkEntry(id, this.workProfile.activeProfileIdForApi);
     else               this._localDelete(id);
   }
 
@@ -67,7 +70,7 @@ export class WorkEntryService {
 
   // ─── Firebase (Flutter-kompatibles Format: work_entries/{yyyy-MM}/days/{day}) ─
 
-  private _firebaseToday(uid: string): Observable<WorkEntry | null> {
+  private _firebaseToday(uid: string, profileId: string): Observable<WorkEntry | null> {
     const today   = new Date();
     const monthId = this._monthId(today);
     const dayKey  = String(today.getDate());
@@ -76,7 +79,7 @@ export class WorkEntryService {
     return new Observable<WorkEntry | null>(observer => {
       let unsub: (() => void) | undefined;
       runInInjectionContext(this.injector, () => {
-        const ref = doc(this.firestore, `users/${uid}/work_entries/${monthId}`);
+        const ref = doc(this.firestore, `${profileScopedPath(uid, 'work_entries', profileId)}/${monthId}`);
         unsub = onSnapshot(ref,
           snap => {
             if (!snap.exists()) { observer.next(null); return; }
@@ -91,13 +94,15 @@ export class WorkEntryService {
     });
   }
 
-  private _firebaseMonth(uid: string, year: number, month: number): Observable<WorkEntry[]> {
+  private _firebaseMonth(
+    uid: string, year: number, month: number, profileId: string,
+  ): Observable<WorkEntry[]> {
     const monthId = `${year}-${String(month).padStart(2, '0')}`;
 
     return new Observable<WorkEntry[]>(observer => {
       let unsub: (() => void) | undefined;
       runInInjectionContext(this.injector, () => {
-        const ref = doc(this.firestore, `users/${uid}/work_entries/${monthId}`);
+        const ref = doc(this.firestore, `${profileScopedPath(uid, 'work_entries', profileId)}/${monthId}`);
         unsub = onSnapshot(ref,
           snap => {
             if (!snap.exists()) { observer.next([]); return; }

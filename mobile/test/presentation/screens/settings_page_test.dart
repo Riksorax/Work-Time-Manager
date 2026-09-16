@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:flutter_work_time/domain/entities/settings_entity.dart';
 import 'package:flutter_work_time/domain/entities/user_entity.dart';
 import 'package:flutter_work_time/presentation/screens/settings_page.dart';
@@ -13,7 +15,9 @@ import 'package:flutter_work_time/presentation/view_models/theme_view_model.dart
 import 'package:flutter_work_time/presentation/widgets/add_adjustment_modal.dart';
 import 'package:flutter_work_time/domain/usecases/sign_out.dart';
 import 'package:flutter_work_time/domain/usecases/delete_account.dart';
+import 'package:flutter_work_time/core/providers/providers.dart';
 import 'package:flutter_work_time/core/providers/subscription_provider.dart';
+import 'package:flutter_work_time/l10n/app_localizations.dart';
 
 import 'settings_page_test.mocks.dart';
 
@@ -23,7 +27,9 @@ abstract class SettingsActions {
   Future<void> signOut();
   Future<void> deleteAccount();
   Future<void> updateTargetHours(double hours);
-  Future<void> updateWorkdays(int days);
+  Future<void> updateWorkdays(List<int> days);
+  Future<void> updateTimezoneOverride(String? timezone);
+  Future<void> updateLocale(String locale);
 }
 
 @GenerateMocks([SettingsActions, SignOut, DeleteAccount])
@@ -31,6 +37,13 @@ void main() {
   late MockSettingsActions mockActions;
   late MockSignOut mockSignOut;
   late MockDeleteAccount mockDeleteAccount;
+  late SharedPreferences prefs;
+
+  setUpAll(() async {
+    SharedPreferences.setMockInitialValues({});
+    prefs = await SharedPreferences.getInstance();
+    tz_data.initializeTimeZones();
+  });
 
   setUp(() {
     mockActions = MockSettingsActions();
@@ -55,14 +68,22 @@ void main() {
   }) {
     return ProviderScope(
       overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
         settingsViewModelProvider.overrideWith(() => settingsViewModel),
         themeViewModelProvider.overrideWith(() => themeViewModel),
         authStateProvider.overrideWithValue(authState),
         signOutProvider.overrideWithValue(mockSignOut),
         deleteAccountProvider.overrideWithValue(mockDeleteAccount),
         isPremiumProvider.overrideWithValue(isPremium),
+        // Verhindert, dass die Abo-Verwaltungssektion (#220) das echte
+        // RevenueCat-Plugin über customerInfoProvider anspricht - in Tests
+        // gibt es keinen Platform-Channel dafür.
+        activeEntitlementProvider.overrideWithValue(null),
       ],
       child: MaterialApp(
+        locale: const Locale('de'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: const SettingsPage(),
       ),
     );
@@ -72,7 +93,7 @@ void main() {
     testWidgets('displays current settings correctly', (tester) async {
       final settings = SettingsEntity(
         weeklyTargetHours: 38.5,
-        workdaysPerWeek: 4,
+        workdays: const [1, 2, 3, 4],
       );
       
       final settingsViewModel = FakeSettingsViewModel(
@@ -96,11 +117,61 @@ void main() {
 
       expect(find.text('Einstellungen'), findsOneWidget);
       expect(find.text('38.5 h/Woche'), findsOneWidget);
-      expect(find.text('4 Tage'), findsOneWidget);
+      expect(find.text('Mo, Di, Mi, Do'), findsOneWidget);
       expect(find.textContaining('9.6 h/Tag'), findsOneWidget);
-      
+      expect(find.text('Systemstandard'), findsOneWidget);
+      expect(find.text('Deutsch'), findsOneWidget);
+
       expect(find.text('Gleitzeit-Bilanz'), findsOneWidget);
       expect(find.text('+05:00'), findsOneWidget);
+    });
+
+    testWidgets('displays English as language when locale is en', (tester) async {
+      final settings = const SettingsEntity(locale: 'en');
+
+      final settingsViewModel = FakeSettingsViewModel(
+        initialState: AsyncValue.data(SettingsState(
+          settings: settings,
+          overtimeBalance: Duration.zero,
+        )),
+        actions: mockActions,
+      );
+      final themeViewModel = FakeThemeViewModel(
+        initialState: ThemeMode.system,
+        actions: mockActions,
+      );
+
+      await tester.pumpWidget(createSubject(
+        settingsViewModel: settingsViewModel,
+        themeViewModel: themeViewModel,
+        authState: const AsyncValue.data(null),
+      ));
+
+      expect(find.text('Englisch'), findsOneWidget);
+    });
+
+    testWidgets('displays manual timezone override when set', (tester) async {
+      final settings = const SettingsEntity(timezoneOverride: 'Europe/London');
+
+      final settingsViewModel = FakeSettingsViewModel(
+        initialState: AsyncValue.data(SettingsState(
+          settings: settings,
+          overtimeBalance: Duration.zero,
+        )),
+        actions: mockActions,
+      );
+      final themeViewModel = FakeThemeViewModel(
+        initialState: ThemeMode.system,
+        actions: mockActions,
+      );
+
+      await tester.pumpWidget(createSubject(
+        settingsViewModel: settingsViewModel,
+        themeViewModel: themeViewModel,
+        authState: const AsyncValue.data(null),
+      ));
+
+      expect(find.text('Europe/London'), findsOneWidget);
     });
 
     testWidgets('shows Login button when not authenticated', (tester) async {
@@ -360,11 +431,11 @@ void main() {
     });
 
     testWidgets('Edit Workdays flow: Toggle days and save', (tester) async {
-      final settings = const SettingsEntity(workdaysPerWeek: 5);
-      
+      final settings = const SettingsEntity(); // Standard: Mo-Fr
+
       final settingsViewModel = FakeSettingsViewModel(
         initialState: AsyncValue.data(SettingsState(
-          settings: settings, 
+          settings: settings,
           overtimeBalance: Duration.zero
         )),
         actions: mockActions,
@@ -380,26 +451,117 @@ void main() {
         authState: const AsyncValue.data(null),
       ));
 
-      await tester.tap(find.text('Arbeitstage pro Woche'));
+      await tester.tap(find.text('Arbeitstage'));
       await tester.pumpAndSettle();
 
-      // Verify Modal Title (which is the same as the list tile, so findsWidgets)
-      // We check if we can find the DropdownButton
-      expect(find.byType(DropdownButton<int>), findsOneWidget);
+      // 7 Wochentag-Chips (Mo-So) sichtbar
+      expect(find.byType(FilterChip), findsNWidgets(7));
 
-      // 2. Open Dropdown
-      await tester.tap(find.byType(DropdownButton<int>));
+      // Freitag abwählen, Samstag zusätzlich auswählen -> Mo,Di,Mi,Do,Sa
+      await tester.tap(find.widgetWithText(FilterChip, 'Fr'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilterChip, 'Sa'));
       await tester.pumpAndSettle();
 
-      // 3. Select '4 Tage'
-      await tester.tap(find.text('4 Tage').last); // .last because selected item might be duplicated in menu
-      await tester.pumpAndSettle();
-
-      // 4. Save
       await tester.tap(find.text('Speichern'));
       await tester.pumpAndSettle();
 
-      verify(mockActions.updateWorkdays(4)).called(1);
+      verify(mockActions.updateWorkdays(argThat(equals([1, 2, 3, 4, 6])))).called(1);
+    });
+
+    testWidgets('Edit Timezone flow: search and select a zone', (tester) async {
+      final settings = const SettingsEntity(); // Standard: Systemstandard
+
+      final settingsViewModel = FakeSettingsViewModel(
+        initialState: AsyncValue.data(SettingsState(
+          settings: settings,
+          overtimeBalance: Duration.zero,
+        )),
+        actions: mockActions,
+      );
+      final themeViewModel = FakeThemeViewModel(
+        initialState: ThemeMode.system,
+        actions: mockActions,
+      );
+
+      await tester.pumpWidget(createSubject(
+        settingsViewModel: settingsViewModel,
+        themeViewModel: themeViewModel,
+        authState: const AsyncValue.data(null),
+      ));
+
+      await tester.tap(find.text('Zeitzone'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Systemstandard'), findsWidgets);
+
+      await tester.enterText(find.byType(TextField), 'Europe/Berlin');
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(ListTile, 'Europe/Berlin'));
+      await tester.pumpAndSettle();
+
+      verify(mockActions.updateTimezoneOverride('Europe/Berlin')).called(1);
+    });
+
+    testWidgets('Edit Timezone flow: selecting Systemstandard resets to null', (tester) async {
+      final settings = const SettingsEntity(timezoneOverride: 'Europe/Berlin');
+
+      final settingsViewModel = FakeSettingsViewModel(
+        initialState: AsyncValue.data(SettingsState(
+          settings: settings,
+          overtimeBalance: Duration.zero,
+        )),
+        actions: mockActions,
+      );
+      final themeViewModel = FakeThemeViewModel(
+        initialState: ThemeMode.system,
+        actions: mockActions,
+      );
+
+      await tester.pumpWidget(createSubject(
+        settingsViewModel: settingsViewModel,
+        themeViewModel: themeViewModel,
+        authState: const AsyncValue.data(null),
+      ));
+
+      await tester.tap(find.text('Europe/Berlin'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Systemstandard'));
+      await tester.pumpAndSettle();
+
+      verify(mockActions.updateTimezoneOverride(null)).called(1);
+    });
+
+    testWidgets('Edit Language flow: selecting English calls updateLocale', (tester) async {
+      final settings = const SettingsEntity(); // Standard: Deutsch
+
+      final settingsViewModel = FakeSettingsViewModel(
+        initialState: AsyncValue.data(SettingsState(
+          settings: settings,
+          overtimeBalance: Duration.zero,
+        )),
+        actions: mockActions,
+      );
+      final themeViewModel = FakeThemeViewModel(
+        initialState: ThemeMode.system,
+        actions: mockActions,
+      );
+
+      await tester.pumpWidget(createSubject(
+        settingsViewModel: settingsViewModel,
+        themeViewModel: themeViewModel,
+        authState: const AsyncValue.data(null),
+      ));
+
+      await tester.tap(find.text('Sprache'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(RadioListTile<String>, 'Englisch'));
+      await tester.pumpAndSettle();
+
+      verify(mockActions.updateLocale('en')).called(1);
     });
 
     testWidgets('Adjust Overtime flow: Open dialog', (tester) async {
@@ -422,6 +584,9 @@ void main() {
       ));
 
       final btn = find.text('Überstunden / Minusstunden anpassen');
+      await tester.scrollUntilVisible(btn, 500.0);
+      await tester.ensureVisible(btn);
+      await tester.pumpAndSettle();
       await tester.tap(btn);
       await tester.pumpAndSettle();
 
@@ -449,10 +614,86 @@ void main() {
 
       final notificationTile = find.text('Benachrichtigungen');
       await tester.scrollUntilVisible(notificationTile, 500.0);
+      await tester.ensureVisible(notificationTile);
+      await tester.pumpAndSettle();
       await tester.tap(notificationTile);
       await tester.pumpAndSettle();
 
       expect(find.text('Benachrichtigungen aktivieren'), findsOneWidget);
+    });
+
+    testWidgets('zeigt PIN-/Biometrie-Sperre deaktiviert, wenn noch nichts eingerichtet ist',
+        (tester) async {
+      final settingsViewModel = FakeSettingsViewModel(
+        initialState: const AsyncValue.data(SettingsState(
+          settings: SettingsEntity(),
+          overtimeBalance: Duration.zero,
+        )),
+        actions: mockActions,
+      );
+      final themeViewModel = FakeThemeViewModel(
+        initialState: ThemeMode.system,
+        actions: mockActions,
+      );
+
+      await tester.pumpWidget(createSubject(
+        settingsViewModel: settingsViewModel,
+        themeViewModel: themeViewModel,
+        authState: const AsyncValue.data(null),
+      ));
+
+      final lockTile = find.text('PIN-/Biometrie-Sperre');
+      await tester.scrollUntilVisible(lockTile, 500.0);
+      expect(lockTile, findsOneWidget);
+      // "Deaktiviert" erscheint auch beim Benachrichtigungen-Eintrag im
+      // Standardzustand - deshalb gezielt innerhalb des Sperr-SwitchListTile
+      // suchen statt global.
+      expect(
+        find.descendant(
+          of: find.widgetWithText(SwitchListTile, 'PIN-/Biometrie-Sperre'),
+          matching: find.text('Deaktiviert'),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('Aktivieren der Sperre ohne vorhandene PIN öffnet PIN-Einrichtung',
+        (tester) async {
+      final settingsViewModel = FakeSettingsViewModel(
+        initialState: const AsyncValue.data(SettingsState(
+          settings: SettingsEntity(),
+          overtimeBalance: Duration.zero,
+        )),
+        actions: mockActions,
+      );
+      final themeViewModel = FakeThemeViewModel(
+        initialState: ThemeMode.system,
+        actions: mockActions,
+      );
+
+      await tester.pumpWidget(createSubject(
+        settingsViewModel: settingsViewModel,
+        themeViewModel: themeViewModel,
+        authState: const AsyncValue.data(null),
+      ));
+
+      // Erst scrollen: die sliver-basierte ListView hält Elemente außerhalb
+      // von Viewport+CacheExtent gar nicht erst gemounted (rein lazy trotz
+      // "eager" Widget-Liste), seit die Bundesland-Auswahl (#222) die Liste
+      // so weit verlängert hat, dass die Kachel sonst nicht im Element-Baum
+      // existiert. Danach onChanged direkt aufrufen statt tap() zu
+      // simulieren, da ein pixelgenauer Tap in der 600px hohen
+      // Test-Oberfläche knapp daneben treffen kann.
+      final lockSwitchFinder = find.text('PIN-/Biometrie-Sperre');
+      await tester.scrollUntilVisible(lockSwitchFinder, 500.0);
+
+      final lockSwitchTile = tester.widget<SwitchListTile>(
+        find.widgetWithText(SwitchListTile, 'PIN-/Biometrie-Sperre'),
+      );
+      lockSwitchTile.onChanged!(true);
+      await tester.pumpAndSettle();
+
+      expect(find.text('PIN festlegen'), findsOneWidget);
     });
   });
 }
@@ -474,8 +715,18 @@ class FakeSettingsViewModel extends SettingsViewModel {
   }
 
   @override
-  Future<void> updateWorkdaysPerWeek(WidgetRef ref, int days) async {
+  Future<void> updateWorkdays(WidgetRef ref, List<int> days) async {
     await actions.updateWorkdays(days);
+  }
+
+  @override
+  Future<void> updateTimezoneOverride(String? timezone) async {
+    await actions.updateTimezoneOverride(timezone);
+  }
+
+  @override
+  Future<void> updateLocale(String locale) async {
+    await actions.updateLocale(locale);
   }
 }
 

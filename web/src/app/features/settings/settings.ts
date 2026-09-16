@@ -8,7 +8,10 @@ import { MatListModule } from '@angular/material/list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { TranslatePipe } from '@ngx-translate/core';
 import { SettingsPageService } from './settings.service';
+import { formatWorkdays } from '../../shared/utils/weekday-labels.util';
 import {
   EditTargetHoursDialogComponent,
   EditTargetHoursDialogResult,
@@ -32,6 +35,8 @@ import {
     MatListModule,
     MatProgressSpinnerModule,
     MatSlideToggleModule,
+    MatButtonToggleModule,
+    TranslatePipe,
   ],
   templateUrl: './settings.html',
   styleUrl: './settings.scss',
@@ -56,6 +61,10 @@ export class SettingsComponent {
     return this.svc.dailyTargetHours();
   }
 
+  formatWorkdays(workdays: number[]): string {
+    return formatWorkdays(workdays);
+  }
+
   // ── Actions ─────────────────────────────────────────────────────────────────
 
   openEditTargetHoursDialog(): void {
@@ -71,7 +80,7 @@ export class SettingsComponent {
 
   openEditWorkdaysDialog(): void {
     const ref = this.dialog.open(EditWorkdaysDialogComponent, {
-      data: { currentDays: this.svc.settings()?.workdaysPerWeek ?? 5 },
+      data: { currentDays: this.svc.settings()?.workdays ?? [1, 2, 3, 4, 5] },
     });
     ref.afterClosed().subscribe(async (result: EditWorkdaysDialogResult | undefined) => {
       if (!result) return;
@@ -94,6 +103,10 @@ export class SettingsComponent {
 
   onThemeToggle(dark: boolean): void {
     this.svc.setTheme(dark);
+  }
+
+  onLocaleChange(locale: string): void {
+    this.svc.setLocale(locale);
   }
 
   onDeleteAccount(): void {

@@ -6,6 +6,7 @@
 import 'dart:async' as _i4;
 
 import 'package:flutter/material.dart' as _i6;
+import 'package:flutter_work_time/domain/entities/bundesland.dart' as _i8;
 import 'package:flutter_work_time/domain/entities/work_entry_entity.dart'
     as _i2;
 import 'package:flutter_work_time/domain/repositories/settings_repository.dart'
@@ -153,18 +154,18 @@ class MockSettingsRepository extends _i1.Mock
       ) as _i4.Future<void>);
 
   @override
-  int getWorkdaysPerWeek() => (super.noSuchMethod(
+  List<int> getWorkdays() => (super.noSuchMethod(
         Invocation.method(
-          #getWorkdaysPerWeek,
+          #getWorkdays,
           [],
         ),
-        returnValue: 0,
-      ) as int);
+        returnValue: <int>[],
+      ) as List<int>);
 
   @override
-  _i4.Future<void> setWorkdaysPerWeek(int? days) => (super.noSuchMethod(
+  _i4.Future<void> setWorkdays(List<int>? days) => (super.noSuchMethod(
         Invocation.method(
-          #setWorkdaysPerWeek,
+          #setWorkdays,
           [days],
         ),
         returnValue: _i4.Future<void>.value(),
@@ -327,6 +328,132 @@ class MockSettingsRepository extends _i1.Mock
         Invocation.method(
           #setNotifyBreaks,
           [enabled],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
+
+  @override
+  _i8.Bundesland? getBundesland() => (super.noSuchMethod(
+        Invocation.method(
+          #getBundesland,
+          [],
+        ),
+      ) as _i8.Bundesland?);
+
+  @override
+  _i4.Future<void> setBundesland(_i8.Bundesland? bundesland) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #setBundesland,
+          [bundesland],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
+
+  // Manuell ergänzt (siehe #219 / SettingsRepository) - Flutter-SDK war in
+  // der Umgebung, in der diese Änderung entstand, nicht verfügbar, um
+  // `dart run build_runner build` auszuführen. Entspricht exakt dem Muster,
+  // das der Generator für die anderen bool-/double-Getter/-Setter erzeugt.
+  @override
+  bool getWarnOnOvertimeThreshold() => (super.noSuchMethod(
+        Invocation.method(
+          #getWarnOnOvertimeThreshold,
+          [],
+        ),
+        returnValue: false,
+      ) as bool);
+
+  @override
+  _i4.Future<void> setWarnOnOvertimeThreshold(bool? enabled) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #setWarnOnOvertimeThreshold,
+          [enabled],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
+
+  @override
+  double getOvertimeThresholdHours() => (super.noSuchMethod(
+        Invocation.method(
+          #getOvertimeThresholdHours,
+          [],
+        ),
+        returnValue: 0.0,
+      ) as double);
+
+  @override
+  _i4.Future<void> setOvertimeThresholdHours(double? hours) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #setOvertimeThresholdHours,
+          [hours],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
+
+  @override
+  bool getWarnOnUndertimeThreshold() => (super.noSuchMethod(
+        Invocation.method(
+          #getWarnOnUndertimeThreshold,
+          [],
+        ),
+        returnValue: false,
+      ) as bool);
+
+  @override
+  _i4.Future<void> setWarnOnUndertimeThreshold(bool? enabled) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #setWarnOnUndertimeThreshold,
+          [enabled],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
+
+  @override
+  double getUndertimeThresholdHours() => (super.noSuchMethod(
+        Invocation.method(
+          #getUndertimeThresholdHours,
+          [],
+        ),
+        returnValue: 0.0,
+      ) as double);
+
+  @override
+  _i4.Future<void> setUndertimeThresholdHours(double? hours) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #setUndertimeThresholdHours,
+          [hours],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
+
+  // Manuell ergänzt (siehe #218 / SettingsRepository) - Flutter-SDK war in
+  // der Umgebung, in der diese Änderung entstand, nicht verfügbar, um
+  // `dart run build_runner build` auszuführen. Entspricht exakt dem Muster,
+  // das der Generator für die anderen bool-Getter/-Setter erzeugt.
+  @override
+  bool getUse24HourFormat() => (super.noSuchMethod(
+        Invocation.method(
+          #getUse24HourFormat,
+          [],
+        ),
+        returnValue: true,
+      ) as bool);
+
+  @override
+  _i4.Future<void> setUse24HourFormat(bool? use24Hour) => (super.noSuchMethod(
+        Invocation.method(
+          #setUse24HourFormat,
+          [use24Hour],
         ),
         returnValue: _i4.Future<void>.value(),
         returnValueForMissingStub: _i4.Future<void>.value(),

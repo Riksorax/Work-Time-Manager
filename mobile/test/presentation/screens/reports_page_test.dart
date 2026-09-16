@@ -10,6 +10,9 @@ import 'package:flutter_work_time/core/providers/providers.dart';
 import 'package:flutter_work_time/core/providers/subscription_provider.dart';
 import 'package:flutter_work_time/domain/entities/settings_entity.dart';
 import 'package:flutter_work_time/domain/entities/user_entity.dart';
+import 'package:flutter_work_time/domain/entities/weekly_reflection_entity.dart';
+import 'package:flutter_work_time/domain/entities/work_entry_entity.dart';
+import 'package:flutter_work_time/domain/repositories/weekly_reflection_repository.dart';
 import 'package:flutter_work_time/presentation/screens/reports_page.dart';
 import 'package:flutter_work_time/presentation/state/reports_state.dart';
 import 'package:flutter_work_time/presentation/state/settings_state.dart';
@@ -28,11 +31,13 @@ abstract class NavigationCallback {
   void selectDate(DateTime date);
 }
 
-@GenerateMocks([NavigationCallback])
+@GenerateMocks([NavigationCallback, WeeklyReflectionRepository])
 void main() {
   late MockNavigationCallback mockCallback;
   late MockSettingsRepository mockSettingsRepository;
   late MockOvertimeRepository mockOvertimeRepository;
+  late MockWorkRepository mockWorkRepository;
+  late MockWeeklyReflectionRepository mockWeeklyReflectionRepository;
   late SharedPreferences prefs;
 
   setUpAll(() async {
@@ -45,10 +50,17 @@ void main() {
     mockCallback = MockNavigationCallback();
     mockSettingsRepository = MockSettingsRepository();
     mockOvertimeRepository = MockOvertimeRepository();
-    when(mockSettingsRepository.getWorkdaysPerWeek()).thenReturn(5);
+    mockWorkRepository = MockWorkRepository();
+    mockWeeklyReflectionRepository = MockWeeklyReflectionRepository();
+    when(mockSettingsRepository.getWorkdays()).thenReturn([1, 2, 3, 4, 5]);
     when(mockSettingsRepository.getTargetWeeklyHours()).thenReturn(40.0);
     when(mockOvertimeRepository.getOvertime()).thenReturn(Duration.zero);
     when(mockOvertimeRepository.getLastUpdateDate()).thenReturn(null);
+    when(mockWorkRepository.getWorkEntriesForMonth(any, any)).thenAnswer((_) async => []);
+    when(mockWeeklyReflectionRepository.getReflection(any, any))
+        .thenAnswer((_) async => null);
+    when(mockWeeklyReflectionRepository.saveReflection(any))
+        .thenAnswer((_) async {});
   });
 
   Widget createSubject({
@@ -62,6 +74,8 @@ void main() {
         isPremiumProvider.overrideWithValue(true),
         settingsRepositoryProvider.overrideWithValue(mockSettingsRepository),
         overtimeRepositoryProvider.overrideWithValue(mockOvertimeRepository),
+        workRepositoryProvider.overrideWithValue(mockWorkRepository),
+        weeklyReflectionRepositoryProvider.overrideWithValue(mockWeeklyReflectionRepository),
         reportsViewModelProvider.overrideWith(() => reportsViewModel),
         settingsViewModelProvider.overrideWith(() => settingsViewModel),
         authStateProvider.overrideWithValue(authState),
@@ -163,6 +177,115 @@ void main() {
       await tester.tap(find.text('Monatlich'));
       await tester.pumpAndSettle();
       expect(find.textContaining('Wochenübersicht'), findsOneWidget); 
+    });
+
+    testWidgets('Wochen-Reflexion Button öffnet Dialog und speichert', (tester) async {
+      final reportsViewModel = FakeReportsViewModel(
+        initialState: ReportsState.initial().copyWith(isLoading: false),
+        callback: mockCallback,
+      );
+      final settingsViewModel = FakeSettingsViewModel(
+        initialState: const AsyncValue.data(SettingsState(settings: SettingsEntity(), overtimeBalance: Duration.zero)),
+      );
+
+      await tester.pumpWidget(createSubject(
+        reportsViewModel: reportsViewModel,
+        settingsViewModel: settingsViewModel,
+        authState: const AsyncValue.data(UserEntity(id: '1', email: 'test@test.com')),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Wöchentlich'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Wochen-Reflexion'));
+      await tester.pumpAndSettle();
+
+      verify(mockWeeklyReflectionRepository.getReflection(any, any)).called(1);
+      expect(find.text('Was lief gut?'), findsOneWidget);
+      expect(find.text('Was war anstrengend?'), findsOneWidget);
+
+      await tester.enterText(
+          find.widgetWithText(TextField, 'Was lief gut?'), 'Guter Sprint');
+      await tester.tap(find.text('Speichern'));
+      await tester.pumpAndSettle();
+
+      final captured = verify(
+              mockWeeklyReflectionRepository.saveReflection(captureAny))
+          .captured
+          .single as WeeklyReflectionEntity;
+      expect(captured.whatWentWell, 'Guter Sprint');
+      expect(find.text('Was lief gut?'), findsNothing); // Dialog geschlossen
+      expect(find.textContaining('Reflexion gespeichert'), findsOneWidget);
+    });
+
+    testWidgets('Insights-Tab zeigt Platzhalter ohne Datenbasis', (tester) async {
+      final reportsViewModel = FakeReportsViewModel(
+        initialState: ReportsState.initial().copyWith(isLoading: false),
+        callback: mockCallback,
+      );
+      final settingsViewModel = FakeSettingsViewModel(
+        initialState: const AsyncValue.data(SettingsState(settings: SettingsEntity(), overtimeBalance: Duration.zero)),
+      );
+
+      await tester.pumpWidget(createSubject(
+        reportsViewModel: reportsViewModel,
+        settingsViewModel: settingsViewModel,
+        authState: const AsyncValue.data(UserEntity(id: '1', email: 'test@test.com')),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Insights'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ErrorWidget), findsNothing);
+      expect(find.textContaining('Noch nicht genug Daten'), findsOneWidget);
+    });
+
+    testWidgets('Insights-Tab zeigt Wochentags-Analyse und Heatmap mit Datenbasis', (tester) async {
+      final now = DateTime.now();
+      // Zwei Einträge am selben Wochentag + selber Startstunde, damit sowohl
+      // die Wochentags-Analyse als auch die Heatmap (minSampleCount: 2)
+      // Ergebnisse liefern.
+      final testEntries = [
+        WorkEntryEntity(
+          id: '1',
+          date: DateTime(now.year, now.month, 1, 8),
+          workStart: DateTime(now.year, now.month, 1, 8),
+          workEnd: DateTime(now.year, now.month, 1, 17),
+        ),
+        WorkEntryEntity(
+          id: '2',
+          date: DateTime(now.year, now.month, 2, 8),
+          workStart: DateTime(now.year, now.month, 2, 8),
+          workEnd: DateTime(now.year, now.month, 2, 17),
+        ),
+      ];
+      when(mockWorkRepository.getWorkEntriesForMonth(any, any))
+          .thenAnswer((_) async => testEntries);
+
+      final reportsViewModel = FakeReportsViewModel(
+        initialState: ReportsState.initial().copyWith(isLoading: false),
+        callback: mockCallback,
+      );
+      final settingsViewModel = FakeSettingsViewModel(
+        initialState: const AsyncValue.data(SettingsState(settings: SettingsEntity(), overtimeBalance: Duration.zero)),
+      );
+
+      await tester.pumpWidget(createSubject(
+        reportsViewModel: reportsViewModel,
+        settingsViewModel: settingsViewModel,
+        authState: const AsyncValue.data(UserEntity(id: '1', email: 'test@test.com')),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Insights'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ErrorWidget), findsNothing);
+      expect(find.text('Wochentags-Analyse'), findsOneWidget);
+      expect(find.text('Produktivitäts-Heatmap nach Startzeit'), findsOneWidget);
+      expect(find.text('Start 08:00 Uhr'), findsOneWidget);
     });
 
     testWidgets('navigating previous month calls onMonthChanged', (tester) async {

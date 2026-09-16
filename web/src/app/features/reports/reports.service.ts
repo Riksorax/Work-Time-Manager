@@ -6,6 +6,7 @@ import { AuthService } from '../../core/auth/auth';
 import { ProfileService } from '../../core/services/profile';
 import { SettingsService } from '../../core/services/settings';
 import { WorkEntryService } from '../../core/services/work-entry';
+import { WorkProfileService } from '../../core/services/work-profile';
 import { ApiClient } from '../../core/services/api-client';
 import { ReportCalculatorService, isSameDayRc, toDateKey } from '../../domain/services/report-calculator.service';
 import { DailyStat, MonthlyReport, WeeklyReport } from '../../domain/models/reports.models';
@@ -15,7 +16,7 @@ import { WorkEntry, WorkEntryType, UserSettings } from '../../shared/models/inde
 
 const DEFAULT_SETTINGS: UserSettings = {
   weeklyTargetHours: 40,
-  workdaysPerWeek: 5,
+  workdays: [1, 2, 3, 4, 5],
   notificationsEnabled: false,
   notificationTime: '08:00',
   notificationDays: [1, 2, 3, 4, 5],
@@ -55,13 +56,14 @@ const EMPTY_MONTHLY: MonthlyReport = {
 
 @Injectable({ providedIn: 'root' })
 export class ReportsService {
-  private readonly workEntryService = inject(WorkEntryService);
-  private readonly settingsService  = inject(SettingsService);
-  private readonly profileService   = inject(ProfileService);
-  private readonly authService      = inject(AuthService);
-  private readonly apiClient        = inject(ApiClient);
-  private readonly calc             = inject(ReportCalculatorService);
-  private readonly router           = inject(Router);
+  private readonly workEntryService  = inject(WorkEntryService);
+  private readonly settingsService   = inject(SettingsService);
+  private readonly profileService    = inject(ProfileService);
+  private readonly workProfileService = inject(WorkProfileService);
+  private readonly authService       = inject(AuthService);
+  private readonly apiClient         = inject(ApiClient);
+  private readonly calc              = inject(ReportCalculatorService);
+  private readonly router            = inject(Router);
 
   // ── Auth / Premium ────────────────────────────────────────────────────────────
   readonly isLoggedIn = computed(() => !!this.authService.user());
@@ -119,11 +121,14 @@ export class ReportsService {
   // (_monthlyEntries via onSnapshot) bleiben für Kalender/Tagesliste erhalten.
 
   private readonly _apiDaily = toSignal(
-    combineLatest([toObservable(this._selectedDate), this.authService.user$]).pipe(
+    combineLatest([
+      toObservable(this._selectedDate), this.authService.user$, this.workProfileService.activeProfileId$,
+    ]).pipe(
       switchMap(([date, user]) =>
         user
-          ? this.apiClient.getDailyReport(date.getFullYear(), date.getMonth() + 1, date.getDate())
-              .pipe(catchError(() => of(EMPTY_DAILY_STAT)))
+          ? this.apiClient.getDailyReport(
+              date.getFullYear(), date.getMonth() + 1, date.getDate(), this.workProfileService.activeProfileIdForApi,
+            ).pipe(catchError(() => of(EMPTY_DAILY_STAT)))
           : of(null)
       ),
     ),
@@ -131,11 +136,15 @@ export class ReportsService {
   );
 
   private readonly _apiWeekly = toSignal(
-    combineLatest([toObservable(this._weekRef), this.authService.user$, toObservable(this.isPremium)]).pipe(
+    combineLatest([
+      toObservable(this._weekRef), this.authService.user$, toObservable(this.isPremium),
+      this.workProfileService.activeProfileId$,
+    ]).pipe(
       switchMap(([date, user, premium]) =>
         user && premium
-          ? this.apiClient.getWeeklyReport(date.getFullYear(), date.getMonth() + 1, date.getDate())
-              .pipe(catchError(() => of(EMPTY_WEEKLY)))
+          ? this.apiClient.getWeeklyReport(
+              date.getFullYear(), date.getMonth() + 1, date.getDate(), this.workProfileService.activeProfileIdForApi,
+            ).pipe(catchError(() => of(EMPTY_WEEKLY)))
           : of(EMPTY_WEEKLY)
       ),
     ),
@@ -143,11 +152,15 @@ export class ReportsService {
   );
 
   private readonly _apiMonthly = toSignal(
-    combineLatest([toObservable(this._monthRef), this.authService.user$, toObservable(this.isPremium)]).pipe(
+    combineLatest([
+      toObservable(this._monthRef), this.authService.user$, toObservable(this.isPremium),
+      this.workProfileService.activeProfileId$,
+    ]).pipe(
       switchMap(([date, user, premium]) =>
         user && premium
-          ? this.apiClient.getMonthlyReport(date.getFullYear(), date.getMonth() + 1)
-              .pipe(catchError(() => of(EMPTY_MONTHLY)))
+          ? this.apiClient.getMonthlyReport(
+              date.getFullYear(), date.getMonth() + 1, this.workProfileService.activeProfileIdForApi,
+            ).pipe(catchError(() => of(EMPTY_MONTHLY)))
           : of(EMPTY_MONTHLY)
       ),
     ),
@@ -253,7 +266,7 @@ export class ReportsService {
 
   addDateRangeSelection(dates: Date[]): void {
     if (!this.isMultiSelectActive()) this._isMultiSelectActive.set(true);
-    const workdays = this._settings().workdaysPerWeek;
+    const workdays = this._settings().workdays;
     const filtered = dates.filter(d => this._isWorkday(d, workdays));
     this._selectedDates.update((prev: Set<string>) => {
       const next = new Set(prev);
@@ -262,11 +275,10 @@ export class ReportsService {
     });
   }
 
-  private _isWorkday(date: Date, workdaysPerWeek: number): boolean {
+  private _isWorkday(date: Date, workdays: number[]): boolean {
     const dow = date.getDay(); // 0=So, 1=Mo, ..., 6=Sa
-    if (workdaysPerWeek >= 7) return true;
-    if (workdaysPerWeek >= 6) return dow !== 0;          // Mo–Sa
-    return dow >= 1 && dow <= 5;                         // Mo–Fr
+    const isoWeekday = dow === 0 ? 7 : dow;
+    return workdays.includes(isoWeekday);
   }
 
   clearDateSelection(): void {

@@ -59,7 +59,11 @@ npm run build -- --configuration production
 - **Deploy**: SSH auf Hetzner-Server, `docker compose up` (nur bei Push auf `main`) — Firebase-Projekt-ID und Service-Account-Credential werden als GitHub Secrets per SSH-Session-Env injiziert (`appleboy/ssh-action` `envs:`), es liegt **keine** `.env`-Datei auf dem Server
 - Manueller Trigger via `workflow_dispatch` baut & pusht Docker Image, deployt aber **nicht** (kein `main`-Branch)
 
+**Uptime-Monitoring (Hetzner, siehe #207):** [Uptime-Kuma](https://github.com/louislam/uptime-kuma) läuft als weiterer Service (`uptime-kuma`) in `server/docker-compose.yml`, self-hosted hinter Traefik unter `status.work-time-manager.app`. Sowohl `deploy-api.yml` als auch `deploy-angular.yml` stellen den Container per `docker compose up -d --no-deps uptime-kuma` sicher (idempotent, kein eigener CI-Build nötig — öffentliches Image). Monitore (welche URLs überwacht werden) und Alerting-Kanäle (E-Mail/Telegram/Discord/...) werden einmalig über die Uptime-Kuma-Weboberfläche eingerichtet, dafür gibt es keine Env-Var-/Config-Datei-Konfiguration. Benötigt einen DNS-Eintrag für `status.work-time-manager.app` → Hetzner-Host (außerhalb dieses Repos).
+
 **Required Secrets (Web):** `FIREBASE_API_KEY`, `FIREBASE_AUTH_DOMAIN`, `FIREBASE_PROJECT_ID`, `FIREBASE_STORAGE_BUCKET`, `FIREBASE_MESSAGING_SENDER_ID`, `FIREBASE_APP_ID`, `FIREBASE_MEASUREMENT_ID`, `RC_WEB_KEY`, `DOCKERHUB_TOKEN`, `HETZNER_SSH_PRIVATE_KEY`
+
+**Optionales Secret (Web):** `SENTRY_DSN_WEB` — Sentry-Fehler-Tracking (#207). Leer/nicht gesetzt = Sentry bleibt deaktiviert, kein Build-Fehler.
 
 **Required Vars (Web):** `DOCKERHUB_USERNAME`, `HETZNER_HOST`, `HETZNER_USER`
 
@@ -82,9 +86,11 @@ core/
 ├── auth/           AuthService (Firebase Auth, Google Sign-In), AuthGuard
 │                   — deleteAccount() via Firebase deleteUser()
 ├── services/
-│   ├── work-entry.ts      Hybrid Firebase/localStorage — getAllLocalEntries() für DataSync
-│   ├── overtime.ts        Hybrid — getOvertime() / saveOvertime() / getLastUpdateDate()
-│   ├── settings.ts        Hybrid — getSettings() Observable / saveSettings()
+│   ├── work-entry.ts      Hybrid — eingeloggt: Reads live via Firestore onSnapshot, Writes über ApiClient (Backend-API); ausgeloggt: localStorage. getAllLocalEntries() für DataSync
+│   ├── overtime.ts        Hybrid — eingeloggt komplett über ApiClient (Reads + Writes), sonst localStorage
+│   ├── settings.ts        Hybrid — wie work-entry.ts (Reads via Firestore onSnapshot, Writes via ApiClient)
+│   ├── api-client.ts      ApiClient — typisierter Client für die .NET-Backend-API (siehe Backend-Abschnitt), Token via authInterceptor
+│   ├── work-profile.ts    WorkProfileService — aktives/zusätzliche Arbeitszeit-Profile (siehe #138/#244), profileId für ApiClient + Firestore-Pfade
 │   ├── profile.ts         ProfileService — isPremium Signal (Firestore-Flag)
 │   ├── theme.ts           ThemeService — isDarkMode Signal + localStorage-Persistenz
 │   ├── data-sync.ts       DataSyncService — localStorage→Firebase-Migration bei Login
@@ -106,10 +112,11 @@ features/
 
 shared/
 ├── components/
-│   ├── calendar/          CalendarComponent — Multi-Select + Pointer-Drag
-│   ├── edit-entry-dialog/ EditEntryDialogComponent
-│   └── time-input/        TimeInputComponent
-└── models/index.ts        WorkEntry, WorkEntryType, Break, UserSettings, UserProfile
+│   ├── calendar/               CalendarComponent — Multi-Select + Pointer-Drag
+│   ├── edit-entry-dialog/      EditEntryDialogComponent
+│   ├── time-input/             TimeInputComponent
+│   └── work-profile-switcher/  WorkProfileSwitcherComponent + Add-/Manage-Dialoge (siehe #138/#244)
+└── models/index.ts        WorkEntry, WorkEntryType, Break, UserSettings, UserProfile, WorkProfile
 ```
 
 ### Feature-Services (Pattern)
@@ -167,6 +174,8 @@ runInInjectionContext(this.injector, () => {
 | Gleitzeit | `users/{uid}/overtime/balance` | `minutes` (int), `lastUpdated` (Timestamp) |
 | Einstellungen | `users/{uid}/settings/current` | nur Web — Flutter nutzt SharedPreferences |
 | Profil/Premium | `users/{uid}` | `isPremium` (bool) |
+| Zusätzliches Arbeitszeit-Profil | `users/{uid}/profiles/{profileId}` | `name` (string), `createdAt` (Timestamp) — siehe #138/#239 |
+| Profil-Daten (Arbeitszeit-Profil) | `users/{uid}/profiles/{profileId}/{work_entries\|overtime\|settings}/...` | wie oben, nur unter dem Profil verschachtelt. Das Standard-Profil bleibt unter dem unveränderten `users/{uid}/...`-Pfad (keine Migration) |
 
 ### Dark Mode
 
@@ -210,6 +219,11 @@ Endpoints/    Minimal-API-Mappings je Ressource + ClaimsPrincipalExtensions.GetU
 | GET | `/api/reports/daily/{year}/{month}/{day}` | Tagesstatistik |
 | GET | `/api/reports/weekly/{year}/{month}/{day}` | Wochenbericht |
 | GET | `/api/reports/monthly/{year}/{month}` | Monatsbericht |
+| GET | `/api/work-profiles` | Zusätzliche Arbeitszeit-Profile auflisten (ohne Standard-Profil, siehe #138/#239) |
+| POST | `/api/work-profiles` | Neues Profil anlegen (`{ name }`) |
+| DELETE | `/api/work-profiles/{profileId}` | Profil inkl. aller Daten löschen |
+
+**Multi-Profile (`profileId`, siehe #239):** `work-entries`/`overtime`/`settings`/`reports`-Endpunkte akzeptieren optional `?profileId=...` (Query-Parameter). Fehlt er oder ist er `"default"`, wird der bestehende, nicht migrierte Pfad verwendet — vollständig abwärtskompatibel für bestehende Clients ohne den Parameter.
 
 ### Backend-Regeln
 
