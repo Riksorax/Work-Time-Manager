@@ -608,6 +608,62 @@ final class OvertimeRepositoryProvider extends $FunctionalProvider<
 String _$overtimeRepositoryHash() =>
     r'5cb1492b8414df0694565293ce341c00eec7f196';
 
+/// `null`, wenn kein Nutzer eingeloggt ist - anders als [WorkRepository]/
+/// [OvertimeRepository] ohne Local-Fallback, da Wochen-Reflexionen ein
+/// Premium-Feature sind und die UI ohnehin ein Login voraussetzt (#137).
+
+@ProviderFor(weeklyReflectionRepository)
+const weeklyReflectionRepositoryProvider =
+    WeeklyReflectionRepositoryProvider._();
+
+/// `null`, wenn kein Nutzer eingeloggt ist - anders als [WorkRepository]/
+/// [OvertimeRepository] ohne Local-Fallback, da Wochen-Reflexionen ein
+/// Premium-Feature sind und die UI ohnehin ein Login voraussetzt (#137).
+
+final class WeeklyReflectionRepositoryProvider extends $FunctionalProvider<
+    WeeklyReflectionRepository?,
+    WeeklyReflectionRepository?,
+    WeeklyReflectionRepository?> with $Provider<WeeklyReflectionRepository?> {
+  /// `null`, wenn kein Nutzer eingeloggt ist - anders als [WorkRepository]/
+  /// [OvertimeRepository] ohne Local-Fallback, da Wochen-Reflexionen ein
+  /// Premium-Feature sind und die UI ohnehin ein Login voraussetzt (#137).
+  const WeeklyReflectionRepositoryProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'weeklyReflectionRepositoryProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$weeklyReflectionRepositoryHash();
+
+  @$internal
+  @override
+  $ProviderElement<WeeklyReflectionRepository?> $createElement(
+          $ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  WeeklyReflectionRepository? create(Ref ref) {
+    return weeklyReflectionRepository(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(WeeklyReflectionRepository? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<WeeklyReflectionRepository?>(value),
+    );
+  }
+}
+
+String _$weeklyReflectionRepositoryHash() =>
+    r'caa22074ec2760b432dba9deafa0f2a2fcbd4640';
+
 @ProviderFor(getAuthStateChangesUseCase)
 const getAuthStateChangesUseCaseProvider =
     GetAuthStateChangesUseCaseProvider._();

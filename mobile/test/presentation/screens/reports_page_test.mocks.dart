@@ -3,6 +3,12 @@
 // Do not manually edit this file.
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
+import 'dart:async' as _i4;
+
+import 'package:flutter_work_time/domain/entities/weekly_reflection_entity.dart'
+    as _i5;
+import 'package:flutter_work_time/domain/repositories/weekly_reflection_repository.dart'
+    as _i3;
 import 'package:mockito/mockito.dart' as _i1;
 
 import 'reports_page_test.dart' as _i2;
@@ -48,4 +54,41 @@ class MockNavigationCallback extends _i1.Mock
         ),
         returnValueForMissingStub: null,
       );
+}
+
+/// A class which mocks [WeeklyReflectionRepository].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockWeeklyReflectionRepository extends _i1.Mock
+    implements _i3.WeeklyReflectionRepository {
+  MockWeeklyReflectionRepository() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  _i4.Future<_i5.WeeklyReflectionEntity?> getReflection(
+    int? year,
+    int? week,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getReflection,
+          [
+            year,
+            week,
+          ],
+        ),
+        returnValue: _i4.Future<_i5.WeeklyReflectionEntity?>.value(),
+      ) as _i4.Future<_i5.WeeklyReflectionEntity?>);
+
+  @override
+  _i4.Future<void> saveReflection(_i5.WeeklyReflectionEntity? reflection) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #saveReflection,
+          [reflection],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
 }

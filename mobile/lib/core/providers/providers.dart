@@ -17,11 +17,13 @@ import '../../data/repositories/local_overtime_repository_impl.dart';
 import '../../data/repositories/local_work_repository_impl.dart';
 import '../../data/repositories/firebase_overtime_repository_impl.dart';
 import '../../data/repositories/settings_repository_impl.dart';
+import '../../data/repositories/weekly_reflection_repository_impl.dart';
 import '../../data/repositories/work_repository_impl.dart';
 import '../../domain/entities/user_entity.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../domain/repositories/overtime_repository.dart';
 import '../../domain/repositories/settings_repository.dart';
+import '../../domain/repositories/weekly_reflection_repository.dart';
 import '../../domain/repositories/work_repository.dart';
 import '../../domain/usecases/delete_account.dart';
 import '../../domain/usecases/get_auth_state_changes.dart';
@@ -168,6 +170,21 @@ OvertimeRepository overtimeRepository(Ref ref) {
   return HybridOvertimeRepositoryImpl(
     firebaseRepository: firebaseRepository,
     localRepository: localRepository,
+    userId: userId,
+  );
+}
+
+/// `null`, wenn kein Nutzer eingeloggt ist - anders als [WorkRepository]/
+/// [OvertimeRepository] ohne Local-Fallback, da Wochen-Reflexionen ein
+/// Premium-Feature sind und die UI ohnehin ein Login voraussetzt (#137).
+@riverpod
+WeeklyReflectionRepository? weeklyReflectionRepository(Ref ref) {
+  final authState = ref.watch(authStateProvider);
+  final userId = authState.asData?.value?.id;
+  if (userId == null) return null;
+
+  return WeeklyReflectionRepositoryImpl(
+    dataSource: ref.watch(apiDataSourceProvider),
     userId: userId,
   );
 }

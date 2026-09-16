@@ -8,6 +8,7 @@ import 'package:flutter_work_time/core/utils/logger.dart';
 
 import '../../models/work_entry_model.dart';
 import 'package:flutter_work_time/core/utils/time_precision.dart';
+import 'package:flutter_work_time/domain/entities/weekly_reflection_entity.dart';
 
 abstract class FirestoreDataSource {
   Stream<firebase.User?> get authStateChanges;
@@ -33,6 +34,10 @@ abstract class FirestoreDataSource {
   // Settings (plattformübergreifend: weeklyTargetHours, workdays)
   Future<Map<String, dynamic>?> getSettings(String userId);
   Future<void> saveSettings(String userId, Map<String, dynamic> settings);
+
+  // Weekly Reflection (siehe #137)
+  Future<WeeklyReflectionEntity?> getWeeklyReflection(String userId, int year, int week);
+  Future<void> saveWeeklyReflection(String userId, WeeklyReflectionEntity reflection);
 }
 
 class FirestoreDataSourceImpl implements FirestoreDataSource {
@@ -324,5 +329,45 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
         .collection('users').doc(userId)
         .collection('settings').doc('current')
         .set(settings, SetOptions(merge: true));
+  }
+
+  // ============================================================================
+  // WEEKLY REFLECTION METHODS (siehe #137)
+  // ============================================================================
+
+  DocumentReference<Map<String, dynamic>> _getWeeklyReflectionDocRef(
+      String userId, String docId) {
+    return _firestore
+        .collection('users').doc(userId)
+        .collection('weekly_reflections').doc(docId);
+  }
+
+  @override
+  Future<WeeklyReflectionEntity?> getWeeklyReflection(
+      String userId, int year, int week) async {
+    final empty = WeeklyReflectionEntity(year: year, week: week);
+    final snapshot = await _getWeeklyReflectionDocRef(userId, empty.id).get();
+
+    if (!snapshot.exists || snapshot.data() == null) return null;
+
+    final data = snapshot.data()!;
+    return WeeklyReflectionEntity(
+      year: year,
+      week: week,
+      whatWentWell: data['whatWentWell'] as String? ?? '',
+      whatWasHard: data['whatWasHard'] as String? ?? '',
+      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
+    );
+  }
+
+  @override
+  Future<void> saveWeeklyReflection(
+      String userId, WeeklyReflectionEntity reflection) async {
+    logger.i('[Firestore] Speichere Wochen-Reflexion ${reflection.id} für User: $userId');
+    await _getWeeklyReflectionDocRef(userId, reflection.id).set({
+      'whatWentWell': reflection.whatWentWell,
+      'whatWasHard': reflection.whatWasHard,
+      'updatedAt': Timestamp.fromDate(reflection.updatedAt ?? DateTime.now()),
+    }, SetOptions(merge: true));
   }
 }
