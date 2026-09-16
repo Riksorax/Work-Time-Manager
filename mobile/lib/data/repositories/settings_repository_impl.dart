@@ -34,14 +34,23 @@ class SettingsRepositoryImpl implements SettingsRepository {
   final FirestoreDataSource _firestoreDataSource;
   final String _userId;
 
-  SettingsRepositoryImpl(this._prefs, this._firestoreDataSource, this._userId);
+  /// Aktives Arbeitszeit-Profil (siehe #138). Nur Soll-Wochenstunden und
+  /// Arbeitstage sind profil-spezifisch - alle anderen Einstellungen
+  /// (Theme, Benachrichtigungen, Zeitformat, Sprache, ...) bleiben bewusst
+  /// geräte-/kontoweit, wie schon vor #138 (siehe Kommentare unten).
+  final String? _profileId;
 
-  // Generiere userId-spezifische Keys für Einstellungen
-  String get _targetHoursKey => 'target_weekly_hours_$_userId';
-  String get _workdaysKey => 'workdays_$_userId';
+  SettingsRepositoryImpl(this._prefs, this._firestoreDataSource, this._userId, [this._profileId]);
+
+  String get _profileSuffix =>
+      (_profileId == null || _profileId == 'default') ? '' : '_$_profileId';
+
+  // Generiere userId- (und profil-)spezifische Keys für Einstellungen
+  String get _targetHoursKey => 'target_weekly_hours_$_userId$_profileSuffix';
+  String get _workdaysKey => 'workdays_$_userId$_profileSuffix';
   // Alter Schlüssel (reine Anzahl statt konkreter Wochentage) - nur noch
   // zur Migration bestehender Nutzer beim ersten Lesen relevant (#217).
-  String get _legacyWorkdaysPerWeekKey => 'workdays_per_week_$_userId';
+  String get _legacyWorkdaysPerWeekKey => 'workdays_per_week_$_userId$_profileSuffix';
 
   @override
   ThemeMode getThemeMode() {
@@ -101,7 +110,7 @@ class SettingsRepositoryImpl implements SettingsRepository {
   Future<void> syncFromFirestore() async {
     if (_userId == 'local' || _userId.isEmpty) return;
     try {
-      final data = await _firestoreDataSource.getSettings(_userId);
+      final data = await _firestoreDataSource.getSettings(_userId, profileId: _profileId);
       if (data == null) return;
       if (data['weeklyTargetHours'] != null) {
         await _prefs.setDouble(_targetHoursKey, (data['weeklyTargetHours'] as num).toDouble());
@@ -125,7 +134,7 @@ class SettingsRepositoryImpl implements SettingsRepository {
   void _syncToFirestore(Map<String, dynamic> data) {
     if (_userId == 'local' || _userId.isEmpty) return;
     _firestoreDataSource
-        .saveSettings(_userId, data)
+        .saveSettings(_userId, data, profileId: _profileId)
         .catchError((e) => logger.w('[SettingsRepository] Firestore-Sync fehlgeschlagen: $e'));
   }
 

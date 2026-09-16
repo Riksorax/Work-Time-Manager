@@ -9,7 +9,10 @@ import 'package:firebase_auth/firebase_auth.dart' as _i4;
 import 'package:flutter_work_time/data/datasources/remote/firestore_datasource.dart'
     as _i2;
 import 'package:flutter_work_time/data/models/work_entry_model.dart' as _i5;
+import 'package:flutter_work_time/domain/entities/weekly_reflection_entity.dart'
+    as _i6;
 import 'package:mockito/mockito.dart' as _i1;
+import 'package:mockito/src/dummies.dart' as _i7;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -84,8 +87,9 @@ class MockFirestoreDataSource extends _i1.Mock
   @override
   _i3.Future<_i5.WorkEntryModel?> getWorkEntry(
     String? userId,
-    DateTime? date,
-  ) =>
+    DateTime? date, {
+    String? profileId,
+  }) =>
       (super.noSuchMethod(
         Invocation.method(
           #getWorkEntry,
@@ -93,6 +97,7 @@ class MockFirestoreDataSource extends _i1.Mock
             userId,
             date,
           ],
+          {#profileId: profileId},
         ),
         returnValue: _i3.Future<_i5.WorkEntryModel?>.value(),
       ) as _i3.Future<_i5.WorkEntryModel?>);
@@ -100,8 +105,9 @@ class MockFirestoreDataSource extends _i1.Mock
   @override
   _i3.Future<void> saveWorkEntry(
     String? userId,
-    _i5.WorkEntryModel? model,
-  ) =>
+    _i5.WorkEntryModel? model, {
+    String? profileId,
+  }) =>
       (super.noSuchMethod(
         Invocation.method(
           #saveWorkEntry,
@@ -109,6 +115,7 @@ class MockFirestoreDataSource extends _i1.Mock
             userId,
             model,
           ],
+          {#profileId: profileId},
         ),
         returnValue: _i3.Future<void>.value(),
         returnValueForMissingStub: _i3.Future<void>.value(),
@@ -118,8 +125,9 @@ class MockFirestoreDataSource extends _i1.Mock
   _i3.Future<List<_i5.WorkEntryModel>> getWorkEntriesForMonth(
     String? userId,
     int? year,
-    int? month,
-  ) =>
+    int? month, {
+    String? profileId,
+  }) =>
       (super.noSuchMethod(
         Invocation.method(
           #getWorkEntriesForMonth,
@@ -128,6 +136,7 @@ class MockFirestoreDataSource extends _i1.Mock
             year,
             month,
           ],
+          {#profileId: profileId},
         ),
         returnValue:
             _i3.Future<List<_i5.WorkEntryModel>>.value(<_i5.WorkEntryModel>[]),
@@ -136,8 +145,9 @@ class MockFirestoreDataSource extends _i1.Mock
   @override
   _i3.Future<void> deleteWorkEntry(
     String? userId,
-    String? entryId,
-  ) =>
+    String? entryId, {
+    String? profileId,
+  }) =>
       (super.noSuchMethod(
         Invocation.method(
           #deleteWorkEntry,
@@ -145,22 +155,29 @@ class MockFirestoreDataSource extends _i1.Mock
             userId,
             entryId,
           ],
+          {#profileId: profileId},
         ),
         returnValue: _i3.Future<void>.value(),
         returnValueForMissingStub: _i3.Future<void>.value(),
       ) as _i3.Future<void>);
 
   @override
-  _i3.Future<Duration> getOvertime(String? userId) => (super.noSuchMethod(
+  _i3.Future<Duration> getOvertime(
+    String? userId, {
+    String? profileId,
+  }) =>
+      (super.noSuchMethod(
         Invocation.method(
           #getOvertime,
           [userId],
+          {#profileId: profileId},
         ),
         returnValue: _i3.Future<Duration>.value(_FakeDuration_0(
           this,
           Invocation.method(
             #getOvertime,
             [userId],
+            {#profileId: profileId},
           ),
         )),
       ) as _i3.Future<Duration>);
@@ -168,8 +185,9 @@ class MockFirestoreDataSource extends _i1.Mock
   @override
   _i3.Future<void> saveOvertime(
     String? userId,
-    Duration? overtime,
-  ) =>
+    Duration? overtime, {
+    String? profileId,
+  }) =>
       (super.noSuchMethod(
         Invocation.method(
           #saveOvertime,
@@ -177,17 +195,22 @@ class MockFirestoreDataSource extends _i1.Mock
             userId,
             overtime,
           ],
+          {#profileId: profileId},
         ),
         returnValue: _i3.Future<void>.value(),
         returnValueForMissingStub: _i3.Future<void>.value(),
       ) as _i3.Future<void>);
 
   @override
-  _i3.Future<DateTime?> getLastOvertimeUpdate(String? userId) =>
+  _i3.Future<DateTime?> getLastOvertimeUpdate(
+    String? userId, {
+    String? profileId,
+  }) =>
       (super.noSuchMethod(
         Invocation.method(
           #getLastOvertimeUpdate,
           [userId],
+          {#profileId: profileId},
         ),
         returnValue: _i3.Future<DateTime?>.value(),
       ) as _i3.Future<DateTime?>);
@@ -195,8 +218,9 @@ class MockFirestoreDataSource extends _i1.Mock
   @override
   _i3.Future<void> saveLastOvertimeUpdate(
     String? userId,
-    DateTime? date,
-  ) =>
+    DateTime? date, {
+    String? profileId,
+  }) =>
       (super.noSuchMethod(
         Invocation.method(
           #saveLastOvertimeUpdate,
@@ -204,6 +228,7 @@ class MockFirestoreDataSource extends _i1.Mock
             userId,
             date,
           ],
+          {#profileId: profileId},
         ),
         returnValue: _i3.Future<void>.value(),
         returnValueForMissingStub: _i3.Future<void>.value(),
@@ -227,11 +252,15 @@ class MockFirestoreDataSource extends _i1.Mock
       ) as _i3.Future<void>);
 
   @override
-  _i3.Future<Map<String, dynamic>?> getSettings(String? userId) =>
+  _i3.Future<Map<String, dynamic>?> getSettings(
+    String? userId, {
+    String? profileId,
+  }) =>
       (super.noSuchMethod(
         Invocation.method(
           #getSettings,
           [userId],
+          {#profileId: profileId},
         ),
         returnValue: _i3.Future<Map<String, dynamic>?>.value(),
       ) as _i3.Future<Map<String, dynamic>?>);
@@ -239,8 +268,9 @@ class MockFirestoreDataSource extends _i1.Mock
   @override
   _i3.Future<void> saveSettings(
     String? userId,
-    Map<String, dynamic>? settings,
-  ) =>
+    Map<String, dynamic>? settings, {
+    String? profileId,
+  }) =>
       (super.noSuchMethod(
         Invocation.method(
           #saveSettings,
@@ -248,8 +278,80 @@ class MockFirestoreDataSource extends _i1.Mock
             userId,
             settings,
           ],
+          {#profileId: profileId},
         ),
         returnValue: _i3.Future<void>.value(),
         returnValueForMissingStub: _i3.Future<void>.value(),
       ) as _i3.Future<void>);
+
+  @override
+  _i3.Future<_i6.WeeklyReflectionEntity?> getWeeklyReflection(
+    String? userId,
+    int? year,
+    int? week,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getWeeklyReflection,
+          [
+            userId,
+            year,
+            week,
+          ],
+        ),
+        returnValue: _i3.Future<_i6.WeeklyReflectionEntity?>.value(),
+      ) as _i3.Future<_i6.WeeklyReflectionEntity?>);
+
+  @override
+  _i3.Future<void> saveWeeklyReflection(
+    String? userId,
+    _i6.WeeklyReflectionEntity? reflection,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #saveWeeklyReflection,
+          [
+            userId,
+            reflection,
+          ],
+        ),
+        returnValue: _i3.Future<void>.value(),
+        returnValueForMissingStub: _i3.Future<void>.value(),
+      ) as _i3.Future<void>);
+
+  @override
+  _i3.Future<List<Map<String, dynamic>>> getWorkProfiles(String? userId) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getWorkProfiles,
+          [userId],
+        ),
+        returnValue: _i3.Future<List<Map<String, dynamic>>>.value(
+            <Map<String, dynamic>>[]),
+      ) as _i3.Future<List<Map<String, dynamic>>>);
+
+  @override
+  _i3.Future<String> addWorkProfile(
+    String? userId,
+    String? name,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #addWorkProfile,
+          [
+            userId,
+            name,
+          ],
+        ),
+        returnValue: _i3.Future<String>.value(_i7.dummyValue<String>(
+          this,
+          Invocation.method(
+            #addWorkProfile,
+            [
+              userId,
+              name,
+            ],
+          ),
+        )),
+      ) as _i3.Future<String>);
 }

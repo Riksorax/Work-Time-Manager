@@ -16,28 +16,34 @@ abstract class FirestoreDataSource {
   Future<void> signOut();
   Future<void> deleteAccount();
 
-  // Work Entries
-  Future<WorkEntryModel?> getWorkEntry(String userId, DateTime date);
-  Future<void> saveWorkEntry(String userId, WorkEntryModel model);
-  Future<List<WorkEntryModel>> getWorkEntriesForMonth(String userId, int year, int month);
-  Future<void> deleteWorkEntry(String userId, String entryId);
+  // Work Entries (optionales profileId siehe #138 - null/'default' = bestehender,
+  // nicht migrierter Pfad; jedes andere Profil lebt in einer Subcollection)
+  Future<WorkEntryModel?> getWorkEntry(String userId, DateTime date, {String? profileId});
+  Future<void> saveWorkEntry(String userId, WorkEntryModel model, {String? profileId});
+  Future<List<WorkEntryModel>> getWorkEntriesForMonth(String userId, int year, int month,
+      {String? profileId});
+  Future<void> deleteWorkEntry(String userId, String entryId, {String? profileId});
 
   // Overtime
-  Future<Duration> getOvertime(String userId);
-  Future<void> saveOvertime(String userId, Duration overtime);
-  Future<DateTime?> getLastOvertimeUpdate(String userId);
-  Future<void> saveLastOvertimeUpdate(String userId, DateTime date);
+  Future<Duration> getOvertime(String userId, {String? profileId});
+  Future<void> saveOvertime(String userId, Duration overtime, {String? profileId});
+  Future<DateTime?> getLastOvertimeUpdate(String userId, {String? profileId});
+  Future<void> saveLastOvertimeUpdate(String userId, DateTime date, {String? profileId});
 
   // User Profile
   Future<void> setUserProfile(String userId, Map<String, dynamic> data);
 
   // Settings (plattformübergreifend: weeklyTargetHours, workdays)
-  Future<Map<String, dynamic>?> getSettings(String userId);
-  Future<void> saveSettings(String userId, Map<String, dynamic> settings);
+  Future<Map<String, dynamic>?> getSettings(String userId, {String? profileId});
+  Future<void> saveSettings(String userId, Map<String, dynamic> settings, {String? profileId});
 
   // Weekly Reflection (siehe #137)
   Future<WeeklyReflectionEntity?> getWeeklyReflection(String userId, int year, int week);
   Future<void> saveWeeklyReflection(String userId, WeeklyReflectionEntity reflection);
+
+  // Arbeitszeit-Profile (siehe #138)
+  Future<List<Map<String, dynamic>>> getWorkProfiles(String userId);
+  Future<String> addWorkProfile(String userId, String name);
 }
 
 class FirestoreDataSourceImpl implements FirestoreDataSource {
@@ -179,22 +185,35 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
     return DateFormat('yyyy-MM').format(date);
   }
 
-  DocumentReference<Map<String, dynamic>> _getMonthDocRef(String userId, DateTime date) {
-    final monthId = _getMonthDocId(date);
-    return _firestore.collection('users').doc(userId).collection('work_entries').doc(monthId);
+  /// Basis-Dokumentpfad für profil-gebundene Daten (siehe #138): `null`/
+  /// `'default'` verweist auf den bestehenden, nicht migrierten Pfad
+  /// `users/{uid}/{collection}/{docId}`; jedes andere Profil liegt unter
+  /// `users/{uid}/profiles/{profileId}/{collection}/{docId}`.
+  DocumentReference<Map<String, dynamic>> _profileScopedDoc(
+      String userId, String collection, String docId, {String? profileId}) {
+    final userDoc = _firestore.collection('users').doc(userId);
+    if (profileId == null || profileId == 'default') {
+      return userDoc.collection(collection).doc(docId);
+    }
+    return userDoc.collection('profiles').doc(profileId).collection(collection).doc(docId);
+  }
+
+  DocumentReference<Map<String, dynamic>> _getMonthDocRef(String userId, DateTime date,
+      {String? profileId}) {
+    return _profileScopedDoc(userId, 'work_entries', _getMonthDocId(date), profileId: profileId);
   }
 
   @override
-  Future<WorkEntryModel?> getWorkEntry(String userId, DateTime date) async {
-    logger.i('[Firestore] Lade WorkEntry für User: $userId, Datum: $date');
-    final docRef = _getMonthDocRef(userId, date);
+  Future<WorkEntryModel?> getWorkEntry(String userId, DateTime date, {String? profileId}) async {
+    logger.i('[Firestore] Lade WorkEntry für User: $userId, Datum: $date, Profil: $profileId');
+    final docRef = _getMonthDocRef(userId, date, profileId: profileId);
     final snapshot = await docRef.get();
     final dayKey = date.day.toString();
-    
+
     if (snapshot.exists && snapshot.data() != null) {
       final monthData = snapshot.data()!;
       final dayData = monthData['days']?[dayKey];
-      
+
       if (dayData != null) {
         final entry = WorkEntryModel.fromMap(dayData).copyWith(id: WorkEntryModel.generateId(date));
         return entry;
@@ -204,12 +223,12 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
   }
 
   @override
-  Future<void> saveWorkEntry(String userId, WorkEntryModel model) async {
-    logger.i('[Firestore] Speichere WorkEntry für User: $userId, Datum: ${model.date}');
-    final docRef = _getMonthDocRef(userId, model.date);
+  Future<void> saveWorkEntry(String userId, WorkEntryModel model, {String? profileId}) async {
+    logger.i('[Firestore] Speichere WorkEntry für User: $userId, Datum: ${model.date}, Profil: $profileId');
+    final docRef = _getMonthDocRef(userId, model.date, profileId: profileId);
     final dayKey = model.date.day.toString();
     final data = { 'days': { dayKey: model.toMap() } };
-    
+
     try {
       await docRef.set(data, SetOptions(merge: true));
     } catch (e) {
@@ -219,9 +238,10 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
   }
 
   @override
-  Future<List<WorkEntryModel>> getWorkEntriesForMonth(String userId, int year, int month) async {
+  Future<List<WorkEntryModel>> getWorkEntriesForMonth(String userId, int year, int month,
+      {String? profileId}) async {
     final date = DateTime(year, month);
-    final docRef = _getMonthDocRef(userId, date);
+    final docRef = _getMonthDocRef(userId, date, profileId: profileId);
     final snapshot = await docRef.get();
     if (snapshot.exists && snapshot.data() != null) {
       final monthData = snapshot.data()!;
@@ -242,9 +262,9 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
   }
 
   @override
-  Future<void> deleteWorkEntry(String userId, String entryId) async {
+  Future<void> deleteWorkEntry(String userId, String entryId, {String? profileId}) async {
     final date = WorkEntryModel.parseId(entryId);
-    final docRef = _getMonthDocRef(userId, date);
+    final docRef = _getMonthDocRef(userId, date, profileId: profileId);
     final dayKey = date.day.toString();
     await docRef.update({ 'days.$dayKey': FieldValue.delete() });
   }
@@ -253,14 +273,14 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
   // OVERTIME METHODS
   // ============================================================================
 
-  DocumentReference<Map<String, dynamic>> _getOvertimeDocRef(String userId) {
-    return _firestore.collection('users').doc(userId).collection('overtime').doc('balance');
+  DocumentReference<Map<String, dynamic>> _getOvertimeDocRef(String userId, {String? profileId}) {
+    return _profileScopedDoc(userId, 'overtime', 'balance', profileId: profileId);
   }
 
   @override
-  Future<Duration> getOvertime(String userId) async {
-    logger.i('[Firestore] Lade Overtime für User: $userId');
-    final docRef = _getOvertimeDocRef(userId);
+  Future<Duration> getOvertime(String userId, {String? profileId}) async {
+    logger.i('[Firestore] Lade Overtime für User: $userId, Profil: $profileId');
+    final docRef = _getOvertimeDocRef(userId, profileId: profileId);
     final snapshot = await docRef.get();
 
     if (snapshot.exists && snapshot.data() != null) {
@@ -275,9 +295,9 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
   }
 
   @override
-  Future<void> saveOvertime(String userId, Duration overtime) async {
+  Future<void> saveOvertime(String userId, Duration overtime, {String? profileId}) async {
     logger.i('[Firestore] Speichere Overtime für User: $userId, Wert: ${toStoredMinutes(overtime)} Minuten');
-    final docRef = _getOvertimeDocRef(userId);
+    final docRef = _getOvertimeDocRef(userId, profileId: profileId);
 
     await docRef.set({
       'minutes': toStoredMinutes(overtime),
@@ -285,8 +305,8 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
   }
 
   @override
-  Future<DateTime?> getLastOvertimeUpdate(String userId) async {
-    final docRef = _getOvertimeDocRef(userId);
+  Future<DateTime?> getLastOvertimeUpdate(String userId, {String? profileId}) async {
+    final docRef = _getOvertimeDocRef(userId, profileId: profileId);
     final snapshot = await docRef.get();
 
     if (snapshot.exists && snapshot.data() != null) {
@@ -299,9 +319,9 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
   }
 
   @override
-  Future<void> saveLastOvertimeUpdate(String userId, DateTime date) async {
+  Future<void> saveLastOvertimeUpdate(String userId, DateTime date, {String? profileId}) async {
     logger.i('[Firestore] Speichere Overtime-Update-Datum für User: $userId');
-    final docRef = _getOvertimeDocRef(userId);
+    final docRef = _getOvertimeDocRef(userId, profileId: profileId);
 
     await docRef.set({
       'lastUpdated': Timestamp.fromDate(date),
@@ -315,19 +335,16 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
   }
 
   @override
-  Future<Map<String, dynamic>?> getSettings(String userId) async {
-    final snap = await _firestore
-        .collection('users').doc(userId)
-        .collection('settings').doc('current')
-        .get();
+  Future<Map<String, dynamic>?> getSettings(String userId, {String? profileId}) async {
+    final snap =
+        await _profileScopedDoc(userId, 'settings', 'current', profileId: profileId).get();
     return snap.exists ? snap.data() : null;
   }
 
   @override
-  Future<void> saveSettings(String userId, Map<String, dynamic> settings) async {
-    await _firestore
-        .collection('users').doc(userId)
-        .collection('settings').doc('current')
+  Future<void> saveSettings(String userId, Map<String, dynamic> settings,
+      {String? profileId}) async {
+    await _profileScopedDoc(userId, 'settings', 'current', profileId: profileId)
         .set(settings, SetOptions(merge: true));
   }
 
@@ -369,5 +386,29 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
       'whatWasHard': reflection.whatWasHard,
       'updatedAt': Timestamp.fromDate(reflection.updatedAt ?? DateTime.now()),
     }, SetOptions(merge: true));
+  }
+
+  // ============================================================================
+  // WORK PROFILE METHODS (siehe #138)
+  // ============================================================================
+
+  CollectionReference<Map<String, dynamic>> _profilesCollection(String userId) {
+    return _firestore.collection('users').doc(userId).collection('profiles');
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getWorkProfiles(String userId) async {
+    final snapshot = await _profilesCollection(userId).get();
+    return snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList();
+  }
+
+  @override
+  Future<String> addWorkProfile(String userId, String name) async {
+    logger.i('[Firestore] Lege neues Arbeitszeit-Profil an für User: $userId, Name: $name');
+    final docRef = await _profilesCollection(userId).add({
+      'name': name,
+      'createdAt': Timestamp.now(),
+    });
+    return docRef.id;
   }
 }

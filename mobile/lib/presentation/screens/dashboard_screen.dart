@@ -10,6 +10,7 @@ import '../view_models/dashboard_view_model.dart';
 import '../view_models/settings_view_model.dart';
 import '../widgets/common/responsive_center.dart';
 import '../widgets/edit_break_modal.dart';
+import '../widgets/work_profile_switcher.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -63,6 +64,7 @@ class DashboardScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(AppLocalizations.of(context).dashboardTitle),
+        actions: const [WorkProfileSwitcher()],
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {

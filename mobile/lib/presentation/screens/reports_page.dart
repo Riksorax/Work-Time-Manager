@@ -28,6 +28,7 @@ import '../widgets/edit_work_entry_modal.dart';
 import '../widgets/quick_entry_dialog.dart';
 import '../widgets/batch_quick_entry_dialog.dart';
 import '../widgets/weekly_reflection_dialog.dart';
+import '../widgets/work_profile_switcher.dart';
 import '../../domain/entities/work_entry_entity.dart';
 import 'login_page.dart';
 
@@ -129,6 +130,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
     return Scaffold(
       appBar: AppBar(
         title: const Text('Berichte'),
+        actions: const [WorkProfileSwitcher()],
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
