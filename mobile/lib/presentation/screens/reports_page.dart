@@ -12,11 +12,13 @@ import '../../core/services/pdf_report_service.dart';
 
 import '../../domain/entities/work_entry_extensions.dart';
 import '../../domain/utils/german_holidays.dart';
+import '../../domain/utils/weekday_labels.dart';
 import '../widgets/common/responsive_center.dart';
 import '../widgets/premium_blur_gate.dart';
 import '../state/monthly_report_state.dart';
 import '../state/reports_state.dart';
 import '../state/weekly_report_state.dart';
+import '../view_models/insights_view_model.dart';
 import '../view_models/reports_view_model.dart';
 import '../view_models/settings_view_model.dart';
 import '../view_models/yearly_report_view_model.dart';
@@ -89,7 +91,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(reportsViewModelProvider.notifier).loadCurrentMonthData();
@@ -133,6 +135,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
             Tab(text: 'Wöchentlich'),
             Tab(text: 'Monatlich'),
             Tab(text: 'Jährlich'),
+            Tab(text: 'Insights'),
           ],
         ),
       ),
@@ -144,6 +147,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
           const WeeklyReportView(),
           const MonthlyReportView(),
           const YearlyReportView(),
+          const InsightsView(),
         ],
       ),
     );
@@ -1413,6 +1417,180 @@ class _YearlyReportViewState extends ConsumerState<YearlyReportView> {
                     ),
                   ),
                 ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Zeigt automatisch erkannte Muster in der Arbeitszeit: Wochentags-Analyse,
+/// Burnout-Indikator und Produktivitäts-Heatmap nach Startzeit (siehe #134).
+class InsightsView extends ConsumerStatefulWidget {
+  const InsightsView({super.key});
+
+  @override
+  ConsumerState<InsightsView> createState() => _InsightsViewState();
+}
+
+class _InsightsViewState extends ConsumerState<InsightsView> {
+  // Siehe _YearlyReportViewState: TabBarView baut alle Tabs sofort auf, der
+  // Ladevorgang wird daher erst ausgelöst, wenn der Tab tatsächlich sichtbar
+  // wäre (eingeloggt + Premium).
+  bool _loadTriggered = false;
+
+  void _loadIfNeeded() {
+    if (_loadTriggered) return;
+    _loadTriggered = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(insightsViewModelProvider.notifier).loadInsights();
+    });
+  }
+
+  String _formatSignedDuration(Duration duration) {
+    final isNegative = duration.isNegative;
+    final abs = duration.abs();
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final hours = twoDigits(abs.inHours);
+    final minutes = twoDigits(abs.inMinutes.remainder(60));
+    return '${isNegative ? '-' : '+'}$hours:$minutes';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final authState = ref.watch(authStateProvider);
+    final user = authState.asData?.value;
+
+    if (user == null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('Anmeldung erforderlich für Insights'),
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: () {
+                ref.read(pendingReportTabIndexProvider.notifier).state = 4;
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                      builder: (context) => const LoginPage(returnToIndex: 1)),
+                );
+              },
+              child: const Text('Anmelden'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final isPremium = ref.watch(isPremiumProvider);
+
+    if (!isPremium) {
+      return PremiumBlurGate(
+        featureTitle: 'Arbeitszeit-Insights',
+        featureText:
+            'Automatisch erkannte Muster in deiner Arbeitszeit: Wochentags-Analyse, Burnout-Warnung und Produktivitäts-Heatmap.',
+        onUpgrade: kIsWeb ? null : () {
+          if (context.mounted) _showPaywall(context);
+        },
+        child: const _MonthlyReportPlaceholder(),
+      );
+    }
+
+    _loadIfNeeded();
+    final insightsState = ref.watch(insightsViewModelProvider);
+
+    if (insightsState.isLoading) {
+      return const LoadingIndicator();
+    }
+
+    if (insightsState.hasNoData) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24.0),
+          child: Text(
+            'Noch nicht genug Daten für Insights. Trage ein paar Arbeitstage ein und schau später wieder vorbei.',
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
+    return ResponsiveCenter(
+      child: ListView(
+        padding: const EdgeInsets.all(16.0),
+        children: [
+          if (insightsState.burnoutStatus.isWarning)
+            Card(
+              color: Theme.of(context).colorScheme.errorContainer,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    Icon(Icons.warning_amber_rounded,
+                        color: Theme.of(context).colorScheme.onErrorContainer),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Du liegst seit ${insightsState.burnoutStatus.currentStreak} aufeinanderfolgenden Arbeitstagen über deinem Soll. Denk an ausreichend Erholung.',
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.onErrorContainer),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          if (insightsState.burnoutStatus.isWarning) const SizedBox(height: 16),
+          if (insightsState.weekdayAverages.isNotEmpty) ...[
+            const Text('Wochentags-Analyse',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            const SizedBox(height: 8),
+            Card(
+              child: Column(
+                children: [
+                  for (final weekdayAverage in insightsState.weekdayAverages)
+                    ListTile(
+                      title: Text(germanWeekdayShortLabels[weekdayAverage.weekday - 1]),
+                      subtitle: Text(
+                          'Ø ${weekdayAverage.averageWorkDuration.toString().split('.').first} h (${weekdayAverage.sampleCount}x)'),
+                      trailing: Text(
+                        _formatSignedDuration(weekdayAverage.deviationFromOverallAverage),
+                        style: TextStyle(
+                          color: weekdayAverage.deviationFromOverallAverage.isNegative
+                              ? Colors.blue
+                              : Colors.orange,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+          if (insightsState.heatmap.isNotEmpty) ...[
+            const Text('Produktivitäts-Heatmap nach Startzeit',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            const SizedBox(height: 8),
+            Card(
+              child: Column(
+                children: [
+                  for (final bucket in insightsState.heatmap)
+                    ListTile(
+                      title: Text('Start ${bucket.startHour.toString().padLeft(2, '0')}:00 Uhr'),
+                      subtitle: Text('${bucket.sampleCount}x'),
+                      trailing: Text(
+                        _formatSignedDuration(bucket.averageOvertime),
+                        style: TextStyle(
+                          color: bucket.averageOvertime.isNegative
+                              ? Colors.red
+                              : Colors.green,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ],
         ],
       ),
