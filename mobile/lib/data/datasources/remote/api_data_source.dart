@@ -156,4 +156,8 @@ class ApiDataSource implements FirestoreDataSource {
   @override
   Future<String> addWorkProfile(String userId, String name) =>
       _auth.addWorkProfile(userId, name);
+
+  @override
+  Future<void> deleteWorkProfile(String userId, String profileId) =>
+      _auth.deleteWorkProfile(userId, profileId);
 }

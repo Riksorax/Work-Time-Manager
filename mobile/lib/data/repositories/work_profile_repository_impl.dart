@@ -30,4 +30,9 @@ class WorkProfileRepositoryImpl implements WorkProfileRepository {
     final id = await _dataSource.addWorkProfile(_userId, name);
     return WorkProfileEntity(id: id, name: name);
   }
+
+  @override
+  Future<void> deleteProfile(String profileId) {
+    return _dataSource.deleteWorkProfile(_userId, profileId);
+  }
 }

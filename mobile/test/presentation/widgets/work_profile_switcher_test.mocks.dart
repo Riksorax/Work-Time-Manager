@@ -73,4 +73,14 @@ class MockWorkProfileRepository extends _i1.Mock
           ),
         )),
       ) as _i4.Future<_i2.WorkProfileEntity>);
+
+  @override
+  _i4.Future<void> deleteProfile(String? profileId) => (super.noSuchMethod(
+        Invocation.method(
+          #deleteProfile,
+          [profileId],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
 }

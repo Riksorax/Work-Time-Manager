@@ -5,6 +5,7 @@ import '../../core/providers/providers.dart';
 import '../../core/providers/subscription_provider.dart';
 import '../../domain/entities/work_profile_entity.dart';
 import 'add_work_profile_dialog.dart';
+import 'manage_work_profiles_dialog.dart';
 
 /// Profil-Wechsler im Header (siehe #138): zeigt alle Arbeitszeit-Profile
 /// des Nutzers und erlaubt das Anlegen eines weiteren Profils (Premium,
@@ -39,6 +40,8 @@ class WorkProfileSwitcher extends ConsumerWidget {
           onSelected: (value) {
             if (value == '__add__') {
               _handleAddProfile(context, ref, isPremium: isPremium, canAdd: canAddProfile);
+            } else if (value == '__manage__') {
+              showDialog(context: context, builder: (_) => const ManageWorkProfilesDialog());
             } else {
               ref.read(activeWorkProfileIdProvider.notifier).setActiveProfile(
                   value == WorkProfileEntity.defaultProfileId ? null : value);
@@ -58,10 +61,21 @@ class WorkProfileSwitcher extends ConsumerWidget {
                 children: [
                   Icon(canAddProfile ? Icons.add : Icons.lock_outline, size: 20),
                   const SizedBox(width: 8),
-                  const Text('Neues Profil'),
+                  const Flexible(child: Text('Neues Profil', overflow: TextOverflow.ellipsis)),
                 ],
               ),
             ),
+            if (profiles.length > 1)
+              const PopupMenuItem<String>(
+                value: '__manage__',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete_outline, size: 20),
+                    SizedBox(width: 8),
+                    Flexible(child: Text('Profile verwalten', overflow: TextOverflow.ellipsis)),
+                  ],
+                ),
+              ),
           ],
         );
       },
