@@ -18,6 +18,7 @@ import '../widgets/premium_blur_gate.dart';
 import '../state/monthly_report_state.dart';
 import '../state/reports_state.dart';
 import '../state/weekly_report_state.dart';
+import '../state/yearly_report_state.dart';
 import '../view_models/insights_view_model.dart';
 import '../view_models/reports_view_model.dart';
 import '../view_models/settings_view_model.dart';
@@ -127,12 +128,25 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
 
   @override
   Widget build(BuildContext context) {
+    // Reagiert auch dann auf einen Tab-Wechsel-Wunsch (z.B. Klick auf eine
+    // Kalenderwoche im Monatsbericht oder einen Monat im Jahresbericht, siehe
+    // #258), wenn ReportsPage schon gemountet ist - anders als der einmalige
+    // Check in initState(), der nur den allerersten Frame abdeckt.
+    ref.listen<int?>(pendingReportTabIndexProvider, (previous, next) {
+      if (next != null) {
+        _tabController.animateTo(next);
+        ref.read(pendingReportTabIndexProvider.notifier).state = null;
+      }
+    });
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Berichte'),
         actions: const [WorkProfileSwitcher()],
         bottom: TabBar(
           controller: _tabController,
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
           tabs: const [
             Tab(text: 'Täglich'),
             Tab(text: 'Wöchentlich'),
@@ -730,32 +744,36 @@ class WeeklyReportView extends ConsumerWidget {
                     ),
                   ],
                 ),
-                Wrap(
-                  alignment: WrapAlignment.end,
-                  spacing: 8,
+                Row(
                   children: [
-                    TextButton.icon(
-                      onPressed: () => showDialog(
-                        context: context,
-                        builder: (_) => WeeklyReflectionDialog(
-                          year: startOfWeek.year,
-                          week: weekNumber,
+                    Expanded(
+                      child: TextButton.icon(
+                        onPressed: () => showDialog(
+                          context: context,
+                          builder: (_) => WeeklyReflectionDialog(
+                            year: startOfWeek.year,
+                            week: weekNumber,
+                          ),
                         ),
+                        icon: const Icon(Icons.rate_review_outlined),
+                        label: const Text('Wochen-Reflexion',
+                            overflow: TextOverflow.ellipsis, maxLines: 1),
                       ),
-                      icon: const Icon(Icons.rate_review_outlined),
-                      label: const Text('Wochen-Reflexion'),
                     ),
-                    TextButton.icon(
-                      onPressed: () => _exportWeeklyReportPdf(
-                        context: context,
-                        startOfWeek: startOfWeek,
-                        endOfWeek: endOfWeek,
-                        weekNumber: weekNumber,
-                        weeklyReport: weeklyReport,
-                        overtime: weeklyOvertimeLocal,
+                    Expanded(
+                      child: TextButton.icon(
+                        onPressed: () => _exportWeeklyReportPdf(
+                          context: context,
+                          startOfWeek: startOfWeek,
+                          endOfWeek: endOfWeek,
+                          weekNumber: weekNumber,
+                          weeklyReport: weeklyReport,
+                          overtime: weeklyOvertimeLocal,
+                        ),
+                        icon: const Icon(Icons.picture_as_pdf_outlined),
+                        label: const Text('Als PDF exportieren',
+                            overflow: TextOverflow.ellipsis, maxLines: 1),
                       ),
-                      icon: const Icon(Icons.picture_as_pdf_outlined),
-                      label: const Text('Als PDF exportieren'),
                     ),
                   ],
                 ),
@@ -890,6 +908,46 @@ void _showDayEntriesBottomSheet(
   );
 }
 
+/// Entspricht exakt `_getWeekNumber` in [ReportsViewModel] - dort werden die
+/// Schlüssel für `monthlyReport.weeklyWork` berechnet. Muss identisch bleiben,
+/// damit ein Tap auf eine Kalenderwoche im Monatsbericht (#258) auf die
+/// richtige Woche navigiert.
+int _isoWeekNumber(DateTime date) {
+  final firstWeek = DateTime(date.year, 1, 4);
+  final dayOfWeek = firstWeek.weekday;
+  final firstDayOfFirstWeek = firstWeek.subtract(Duration(days: dayOfWeek - 1));
+  final diff = date.difference(firstDayOfFirstWeek).inDays;
+  return (diff / 7).floor() + 1;
+}
+
+/// Sucht innerhalb von [month] den ersten Tag, dessen Kalenderwoche
+/// [weekNumber] entspricht (siehe #258 - Klick auf Kalenderwoche im
+/// Monatsbericht → Wochenbericht).
+DateTime? _firstDateInMonthForWeek(DateTime month, int weekNumber) {
+  final daysInMonth = DateTime(month.year, month.month + 1, 0).day;
+  for (var day = 1; day <= daysInMonth; day++) {
+    final date = DateTime(month.year, month.month, day);
+    if (_isoWeekNumber(date) == weekNumber) return date;
+  }
+  return null;
+}
+
+/// Navigiert vom Monatsbericht zum Wochenbericht der angetippten
+/// Kalenderwoche (#258).
+void _navigateToWeek(
+    WidgetRef ref, {required DateTime month, required int weekNumber}) {
+  final date = _firstDateInMonthForWeek(month, weekNumber) ?? month;
+  ref.read(reportsViewModelProvider.notifier).selectDate(date);
+  ref.read(pendingReportTabIndexProvider.notifier).state = 1;
+}
+
+/// Navigiert vom Jahresbericht zum Monatsbericht des angetippten Monats
+/// (#258).
+void _navigateToMonth(WidgetRef ref, {required int year, required int month}) {
+  ref.read(reportsViewModelProvider.notifier).onMonthChanged(DateTime(year, month, 1));
+  ref.read(pendingReportTabIndexProvider.notifier).state = 2;
+}
+
 final _pdfReportService = PdfReportService();
 
 Future<void> _exportWeeklyReportPdf({
@@ -948,6 +1006,43 @@ Future<void> _exportMonthlyReportPdf({
     );
   } catch (e) {
     logger.e('[PDF-Export] Monatsbericht fehlgeschlagen: $e');
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text('PDF-Export fehlgeschlagen: $e'),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+}
+
+/// Exportiert den Jahresbericht als PDF (siehe #256 - fehlte bisher im
+/// Gegensatz zu Wochen-/Monatsbericht).
+Future<void> _exportYearlyReportPdf({
+  required BuildContext context,
+  required YearlyReportState yearlyReport,
+}) async {
+  final messenger = ScaffoldMessenger.of(context);
+  try {
+    await _pdfReportService.exportYearlyReport(
+      year: yearlyReport.year,
+      totalWorkDays: yearlyReport.totalWorkDays,
+      totalVacationDays: yearlyReport.totalVacationDays,
+      totalSickDays: yearlyReport.totalSickDays,
+      totalHolidayDays: yearlyReport.totalHolidayDays,
+      totalNetWorkDuration: yearlyReport.totalNetWorkDuration,
+      totalOvertime: yearlyReport.totalOvertime,
+      months: [
+        for (final m in yearlyReport.months)
+          (
+            DateFormat.MMMM('de_DE').format(DateTime(yearlyReport.year, m.month)),
+            m.netWorkDuration,
+            m.overtime,
+            m.workDays,
+          ),
+      ],
+    );
+  } catch (e) {
+    logger.e('[PDF-Export] Jahresbericht fehlgeschlagen: $e');
     messenger.showSnackBar(
       SnackBar(
         content: Text('PDF-Export fehlgeschlagen: $e'),
@@ -1172,6 +1267,8 @@ class MonthlyReportView extends ConsumerWidget {
               child: ListTile(
                 title: Text('Kalenderwoche $weekNumber'),
                 trailing: Text(duration.toString().split('.').first),
+                onTap: () => _navigateToWeek(ref,
+                    month: selectedMonth, weekNumber: weekNumber),
               ),
             ));
           }
@@ -1336,7 +1433,18 @@ class _YearlyReportViewState extends ConsumerState<YearlyReportView> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: () => _exportYearlyReportPdf(
+                context: context,
+                yearlyReport: yearlyState,
+              ),
+              icon: const Icon(Icons.picture_as_pdf_outlined),
+              label: const Text('Als PDF exportieren'),
+            ),
+          ),
+          const SizedBox(height: 8),
           if (yearlyState.totalWorkDays == 0 &&
               yearlyState.totalVacationDays == 0 &&
               yearlyState.totalSickDays == 0)
@@ -1432,6 +1540,8 @@ class _YearlyReportViewState extends ConsumerState<YearlyReportView> {
                               ? Colors.red
                               : Colors.green),
                     ),
+                    onTap: () => _navigateToMonth(ref,
+                        year: yearlyState.year, month: monthSummary.month),
                   ),
                 ),
           ],
@@ -1560,8 +1670,11 @@ class _InsightsViewState extends ConsumerState<InsightsView> {
             ),
           if (insightsState.burnoutStatus.isWarning) const SizedBox(height: 16),
           if (insightsState.weekdayAverages.isNotEmpty) ...[
-            const Text('Wochentags-Analyse',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            const _InsightSectionHeader(
+              title: 'Wochentags-Analyse',
+              explanation:
+                  'Deine durchschnittliche Arbeitszeit je Wochentag. Der Wert rechts zeigt die Abweichung vom Durchschnitt über alle Wochentage - so siehst du z.B., ob du montags typischerweise länger arbeitest als sonst.',
+            ),
             const SizedBox(height: 8),
             Card(
               child: Column(
@@ -1586,8 +1699,11 @@ class _InsightsViewState extends ConsumerState<InsightsView> {
             const SizedBox(height: 24),
           ],
           if (insightsState.heatmap.isNotEmpty) ...[
-            const Text('Produktivitäts-Heatmap nach Startzeit',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            const _InsightSectionHeader(
+              title: 'Produktivitäts-Heatmap nach Startzeit',
+              explanation:
+                  'Durchschnittliche Überstunden abhängig davon, um wie viel Uhr du deinen Arbeitstag begonnen hast. Hilft zu erkennen, ob ein früherer oder späterer Start bei dir mit mehr oder weniger Überstunden einhergeht.',
+            ),
             const SizedBox(height: 8),
             Card(
               child: Column(
@@ -1611,6 +1727,33 @@ class _InsightsViewState extends ConsumerState<InsightsView> {
           ],
         ],
       ),
+    );
+  }
+}
+
+/// Überschrift einer Insights-Sektion mit Info-Icon, das per Tooltip erklärt,
+/// was die Zahlen darunter bedeuten und wie sie zustande kommen (siehe #259 -
+/// Insights waren bisher ohne jede Erläuterung).
+class _InsightSectionHeader extends StatelessWidget {
+  final String title;
+  final String explanation;
+
+  const _InsightSectionHeader({required this.title, required this.explanation});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        const SizedBox(width: 4),
+        Tooltip(
+          message: explanation,
+          triggerMode: TooltipTriggerMode.tap,
+          showDuration: const Duration(seconds: 8),
+          child: Icon(Icons.info_outline,
+              size: 18, color: Theme.of(context).colorScheme.onSurfaceVariant),
+        ),
+      ],
     );
   }
 }
@@ -1766,10 +1909,13 @@ class _CalendarState extends ConsumerState<_Calendar> {
 
     // Feiertage des angezeigten Monats/Jahres für das gewählte Bundesland (#222).
     // Rein visuelle Markierung - es werden keine WorkEntryType.holiday-Einträge erzeugt.
+    // Namen zusätzlich zur Datumsmarkierung, damit im Kalender ersichtlich ist,
+    // um welchen Feiertag es sich handelt (siehe #253).
     final bundesland = settingsState.whenData((s) => s.settings.bundesland).value;
-    final Set<DateTime> holidays = bundesland != null
-        ? getGermanHolidays(widget.selectedDate.year, bundesland).toSet()
-        : const <DateTime>{};
+    final Map<DateTime, String> holidayNames = bundesland != null
+        ? getGermanHolidayNames(widget.selectedDate.year, bundesland)
+        : const <DateTime, String>{};
+    final Set<DateTime> holidays = holidayNames.keys.toSet();
 
     return Card(
       margin: const EdgeInsets.all(8.0),
@@ -1907,6 +2053,7 @@ class _CalendarState extends ConsumerState<_Calendar> {
                     final hasEntry = widget.daysWithEntries?.contains(day) ?? false;
                     final isWorkday = _isWorkday(date, workdays);
                     final isHoliday = holidays.contains(DateTime(date.year, date.month, date.day));
+                    final holidayName = holidayNames[DateTime(date.year, date.month, date.day)];
 
                     Widget dayWidget = Center(
                       child: Text(
@@ -1921,6 +2068,16 @@ class _CalendarState extends ConsumerState<_Calendar> {
                         ),
                       ),
                     );
+
+                    // Name des Feiertags per Tooltip (Long-Press/Hover) sichtbar
+                    // machen - vorher war nur die rote Markierung ohne
+                    // Erklärung, welcher Feiertag es ist (siehe #253).
+                    if (holidayName != null) {
+                      dayWidget = Tooltip(
+                        message: holidayName,
+                        child: dayWidget,
+                      );
+                    }
 
                     if (hasEntry) {
                       dayWidget = Stack(
@@ -1945,7 +2102,7 @@ class _CalendarState extends ConsumerState<_Calendar> {
                     }
 
                     final semanticLabel =
-                        '${DateFormat('EEEE, d. MMMM yyyy', 'de_DE').format(date)}${isHoliday ? ', Feiertag' : ''}';
+                        '${DateFormat('EEEE, d. MMMM yyyy', 'de_DE').format(date)}${holidayName != null ? ', Feiertag: $holidayName' : ''}';
                     return Semantics(
                       label: semanticLabel,
                       button: true,
