@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../view_models/settings_view_model.dart';
 
 class AddAdjustmentModal extends ConsumerStatefulWidget {
@@ -23,7 +24,7 @@ class _AddAdjustmentModalState extends ConsumerState<AddAdjustmentModal> {
     super.dispose();
   }
 
-  void _save() {
+  Future<void> _save() async {
     // Stunden und Minuten als positive Werte parsen
     int parsedHours = int.tryParse(_hoursController.text) ?? 0;
     int parsedMinutes = int.tryParse(_minutesController.text) ?? 0;
@@ -31,7 +32,7 @@ class _AddAdjustmentModalState extends ConsumerState<AddAdjustmentModal> {
     // Bei Minuten auf gültige Werte prüfen (0-59)
     if (parsedMinutes > 59) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Minuten müssen zwischen 0 und 59 liegen')),
+        SnackBar(content: Text(AppLocalizations.of(context).minutesRangeError)),
       );
       return;
     }
@@ -40,8 +41,10 @@ class _AddAdjustmentModalState extends ConsumerState<AddAdjustmentModal> {
     int totalMinutes = parsedHours * 60 + parsedMinutes;
     Duration duration = Duration(minutes: _isNegative ? -totalMinutes : totalMinutes);
 
-    // Rufe die Methode im ViewModel auf
-    ref.read(settingsViewModelProvider.notifier).setOvertimeBalance(ref, duration);
+    // Rufe die Methode im ViewModel auf und warte den Abschluss ab, bevor das
+    // Modal geschlossen wird - sonst bekäme das Dashboard die Änderung nicht
+    // mehr mit (siehe #266).
+    await ref.read(settingsViewModelProvider.notifier).setOvertimeBalance(duration);
 
     // Modal schließen
     if (mounted) {
@@ -49,9 +52,9 @@ class _AddAdjustmentModalState extends ConsumerState<AddAdjustmentModal> {
     }
   }
 
-  void _reset() {
+  Future<void> _reset() async {
     // Setze die Gleitzeit-Bilanz auf 0 zurück
-    ref.read(settingsViewModelProvider.notifier).setOvertimeBalance(ref, Duration.zero);
+    await ref.read(settingsViewModelProvider.notifier).setOvertimeBalance(Duration.zero);
 
     // Modal schließen
     if (mounted) {
@@ -61,14 +64,15 @@ class _AddAdjustmentModalState extends ConsumerState<AddAdjustmentModal> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return AlertDialog(
-      title: const Text('Überstunden / Minusstunden'),
+      title: Text(l10n.adjustOvertimeTitle),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-          const Text(
-            'Geben Sie einen neuen Wert ein oder setzen Sie die Bilanz auf 0 zurück.',
+          Text(
+            l10n.adjustOvertimeDescription,
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
@@ -77,7 +81,7 @@ class _AddAdjustmentModalState extends ConsumerState<AddAdjustmentModal> {
             children: [
               Expanded(
                 child: ChoiceChip(
-                  label: const Text('Überstunden (+)'),
+                  label: Text(l10n.overtimePositiveChip),
                   selected: !_isNegative,
                   onSelected: (selected) {
                     if (selected) {
@@ -91,7 +95,7 @@ class _AddAdjustmentModalState extends ConsumerState<AddAdjustmentModal> {
               const SizedBox(width: 8),
               Expanded(
                 child: ChoiceChip(
-                  label: const Text('Minusstunden (-)'),
+                  label: Text(l10n.overtimeNegativeChip),
                   selected: _isNegative,
                   onSelected: (selected) {
                     if (selected) {
@@ -108,10 +112,10 @@ class _AddAdjustmentModalState extends ConsumerState<AddAdjustmentModal> {
           TextField(
             controller: _hoursController,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Stunden',
-              border: OutlineInputBorder(),
-              helperText: 'Leer lassen für 0 Stunden',
+            decoration: InputDecoration(
+              labelText: l10n.hoursLabel,
+              border: const OutlineInputBorder(),
+              helperText: l10n.hoursHelperText,
             ),
             onChanged: (value) {
               // Nur positive Zahlen erlauben
@@ -130,10 +134,10 @@ class _AddAdjustmentModalState extends ConsumerState<AddAdjustmentModal> {
           TextField(
             controller: _minutesController,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Minuten (0-59)',
-              border: OutlineInputBorder(),
-              helperText: 'Leer lassen für 0 Minuten',
+            decoration: InputDecoration(
+              labelText: l10n.minutesLabel,
+              border: const OutlineInputBorder(),
+              helperText: l10n.minutesHelperText,
             ),
             onChanged: (value) {
               // Nur positive Zahlen erlauben und auf 59 begrenzen
@@ -159,15 +163,15 @@ class _AddAdjustmentModalState extends ConsumerState<AddAdjustmentModal> {
       actions: [
         TextButton(
           onPressed: _reset,
-          child: const Text('Auf 0 zurücksetzen'),
+          child: Text(l10n.resetToZeroAction),
         ),
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Abbrechen'),
+          child: Text(l10n.cancel),
         ),
         FilledButton(
           onPressed: _save,
-          child: const Text('Speichern'),
+          child: Text(l10n.save),
         ),
       ],
     );

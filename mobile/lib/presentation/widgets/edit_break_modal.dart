@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/utils/time_format.dart';
 import '../../domain/entities/break_entity.dart';
+import '../../l10n/app_localizations.dart';
 import '../view_models/dashboard_view_model.dart';
 import '../view_models/settings_view_model.dart';
 
@@ -81,8 +82,8 @@ class _EditBreakModalState extends ConsumerState<EditBreakModal> {
 
   void _saveChanges() {
     if (_endTime != null && _endTime!.isBefore(_startTime)) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Endzeit kann nicht vor der Startzeit liegen.'),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(AppLocalizations.of(context).endBeforeStartError),
         backgroundColor: Colors.red,
       ));
       return;
@@ -100,23 +101,24 @@ class _EditBreakModalState extends ConsumerState<EditBreakModal> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return AlertDialog(
-      title: const Text('Pause bearbeiten'),
+      title: Text(l10n.editBreakTitle),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           TextField(
             controller: _nameController,
-            decoration: const InputDecoration(
-              labelText: 'Pausenname',
+            decoration: InputDecoration(
+              labelText: l10n.breakNameLabel,
             ),
           ),
           const SizedBox(height: 16),
           TextField(
             controller: _startController,
-            decoration: const InputDecoration(
-              labelText: 'Startzeit',
-              suffixIcon: Icon(Icons.access_time),
+            decoration: InputDecoration(
+              labelText: l10n.startTimeLabel,
+              suffixIcon: const Icon(Icons.access_time),
             ),
             readOnly: true,
             onTap: () => _selectTime(context, true),
@@ -124,9 +126,9 @@ class _EditBreakModalState extends ConsumerState<EditBreakModal> {
           const SizedBox(height: 16),
           TextField(
             controller: _endController,
-            decoration: const InputDecoration(
-              labelText: 'Endzeit',
-              suffixIcon: Icon(Icons.access_time),
+            decoration: InputDecoration(
+              labelText: l10n.endTimeLabel,
+              suffixIcon: const Icon(Icons.access_time),
             ),
             readOnly: true,
             onTap: () => _selectTime(context, false),
@@ -136,11 +138,11 @@ class _EditBreakModalState extends ConsumerState<EditBreakModal> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Abbrechen'),
+          child: Text(l10n.cancel),
         ),
         ElevatedButton(
           onPressed: _saveChanges,
-          child: const Text('Speichern'),
+          child: Text(l10n.save),
         ),
       ],
     );

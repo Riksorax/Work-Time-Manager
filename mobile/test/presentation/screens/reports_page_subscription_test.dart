@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_work_time/core/providers/subscription_provider.dart';
 import 'package:flutter_work_time/domain/entities/user_entity.dart';
+import 'package:flutter_work_time/l10n/app_localizations.dart';
 import 'package:flutter_work_time/presentation/screens/reports_page.dart';
 import 'package:flutter_work_time/presentation/view_models/auth_view_model.dart';
 
@@ -17,8 +18,11 @@ void main() {
           overrides: [
             authStateProvider.overrideWith((ref) => controller.stream),
           ],
-          child: const MaterialApp(
-            home: Scaffold(body: WeeklyReportView()),
+          child: MaterialApp(
+            locale: const Locale('de'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const Scaffold(body: WeeklyReportView()),
           ),
         ),
       );
@@ -42,8 +46,11 @@ void main() {
             authStateProvider.overrideWith((ref) => Stream.value(user)),
             isPremiumProvider.overrideWithValue(false),
           ],
-          child: const MaterialApp(
-            home: Scaffold(body: WeeklyReportView()),
+          child: MaterialApp(
+            locale: const Locale('de'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const Scaffold(body: WeeklyReportView()),
           ),
         ),
       );
@@ -66,8 +73,11 @@ void main() {
           overrides: [
             authStateProvider.overrideWith((ref) => controller.stream),
           ],
-          child: const MaterialApp(
-            home: Scaffold(body: MonthlyReportView()),
+          child: MaterialApp(
+            locale: const Locale('de'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const Scaffold(body: MonthlyReportView()),
           ),
         ),
       );
@@ -90,8 +100,11 @@ void main() {
             authStateProvider.overrideWith((ref) => Stream.value(user)),
             isPremiumProvider.overrideWithValue(false),
           ],
-          child: const MaterialApp(
-            home: Scaffold(body: MonthlyReportView()),
+          child: MaterialApp(
+            locale: const Locale('de'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const Scaffold(body: MonthlyReportView()),
           ),
         ),
       );

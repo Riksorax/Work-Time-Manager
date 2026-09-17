@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../view_models/settings_view_model.dart';
 
 void showEditTargetHoursModal(BuildContext context, double currentHours) {
@@ -48,7 +49,7 @@ class _EditTargetHoursModalState extends ConsumerState<EditTargetHoursModal> {
       if (hours != null) {
         await ref
             .read(settingsViewModelProvider.notifier)
-            .updateWeeklyTargetHours(ref, hours);
+            .updateWeeklyTargetHours(hours);
 
         if (mounted) {
           Navigator.of(context).pop();
@@ -59,6 +60,7 @@ class _EditTargetHoursModalState extends ConsumerState<EditTargetHoursModal> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.all(24.0),
       child: Form(
@@ -68,28 +70,28 @@ class _EditTargetHoursModalState extends ConsumerState<EditTargetHoursModal> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Soll-Arbeitsstunden bearbeiten',
+              l10n.editTargetHoursTitle,
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 24),
             TextFormField(
               controller: _controller,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Wöchentliche Soll-Stunden',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: l10n.weeklyTargetHoursFieldLabel,
+                border: const OutlineInputBorder(),
               ),
               validator: (value) {
                 if (value == null || value.isEmpty) {
-                  return 'Bitte geben Sie eine Zahl ein.';
+                  return l10n.pleaseEnterNumber;
                 }
                 final number = double.tryParse(value.replaceAll(',', '.'));
                 if (number == null) {
-                  return 'Ungültige Zahl.';
+                  return l10n.invalidNumber;
                 }
                 // Gesetzliche Obergrenze nach § 3 ArbZG: max. 48 Std./Woche.
                 if (number <= 0 || number > 48) {
-                  return 'Bitte geben Sie einen Wert zwischen 1 und 48 ein (gesetzliches Maximum nach § 3 ArbZG).';
+                  return l10n.weeklyHoursRangeError;
                 }
                 return null;
               },
@@ -100,12 +102,12 @@ class _EditTargetHoursModalState extends ConsumerState<EditTargetHoursModal> {
               children: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Abbrechen'),
+                  child: Text(l10n.cancel),
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton(
                   onPressed: _save,
-                  child: const Text('Speichern'),
+                  child: Text(l10n.save),
                 ),
               ],
             ),

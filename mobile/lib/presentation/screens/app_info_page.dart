@@ -5,6 +5,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/providers/providers.dart' as core_providers;
+import '../../l10n/app_localizations.dart';
 import '../widgets/imprint_dialog.dart';
 import '../widgets/privacy_policy_dialog.dart';
 import '../widgets/terms_of_service_dialog.dart';
@@ -15,9 +16,10 @@ class AppInfoPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Über die App'),
+        title: Text(l10n.aboutAppTitle),
       ),
       body: ListView(
         children: [
@@ -32,12 +34,12 @@ class AppInfoPage extends ConsumerWidget {
               return Column(
                 children: [
                   Text(
-                    'Work Time Manager',
+                    l10n.appTitle,
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Version $version ($buildNumber)',
+                    l10n.versionLabel(version, buildNumber),
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Theme.of(context).textTheme.bodySmall?.color,
                         ),
@@ -50,8 +52,8 @@ class AppInfoPage extends ConsumerWidget {
           const Divider(height: 1),
           ListTile(
             leading: const Icon(Icons.shop, color: Colors.green),
-            title: const Text('App im Google Play Store bewerten'),
-            subtitle: const Text('Unterstützen Sie uns mit einer Bewertung'),
+            title: Text(l10n.rateAppTitle),
+            subtitle: Text(l10n.rateAppSubtitle),
             trailing: const Icon(Icons.open_in_new),
             onTap: () async {
               final url = Uri.parse(
@@ -66,8 +68,8 @@ class AppInfoPage extends ConsumerWidget {
             const Divider(height: 1),
             ListTile(
               leading: const Icon(Icons.bug_report, color: Colors.orange),
-              title: const Text('🧪 TEST: Version Check'),
-              subtitle: const Text('Update-Dialog manuell anzeigen'),
+              title: Text(l10n.testVersionCheckTitle),
+              subtitle: Text(l10n.testVersionCheckSubtitle),
               onTap: () async {
                 final versionService = ref.read(core_providers.versionServiceProvider);
                 await UpdateRequiredDialog.checkAndShow(context, versionService);
@@ -76,19 +78,19 @@ class AppInfoPage extends ConsumerWidget {
           ],
           const Divider(height: 1),
           ListTile(
-            title: const Text('Impressum'),
+            title: Text(l10n.imprintTitle),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => ImprintDialog.show(context),
           ),
           const Divider(height: 1),
           ListTile(
-            title: const Text('Allgemeine Geschäftsbedingungen'),
+            title: Text(l10n.termsOfServiceTitle),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => TermsOfServiceDialog.show(context),
           ),
           const Divider(height: 1),
           ListTile(
-            title: const Text('Datenschutzerklärung'),
+            title: Text(l10n.privacyPolicyTitle),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => PrivacyPolicyDialog.show(context),
           ),

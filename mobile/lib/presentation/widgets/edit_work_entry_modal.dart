@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../domain/entities/break_entity.dart';
 import '../../../domain/entities/work_entry_entity.dart';
+import '../../l10n/app_localizations.dart';
 import '../state/edit_work_entry_state.dart';
 import '../view_models/edit_work_entry_view_model.dart';
 
@@ -17,6 +18,8 @@ class EditWorkEntryModal extends ConsumerWidget {
     final provider = editWorkEntryViewModelProvider(workEntry);
     final state = ref.watch(provider);
     final viewModel = ref.read(provider.notifier);
+    final l10n = AppLocalizations.of(context);
+    final locale = Localizations.localeOf(context).toString();
 
     return DraggableScrollableSheet(
       expand: false,
@@ -31,21 +34,21 @@ class EditWorkEntryModal extends ConsumerWidget {
           child: Column(
             children: [
               Text(
-                'Eintrag für den ${DateFormat.yMd('de_DE').format(workEntry.date)} bearbeiten',
+                l10n.editEntryForDate(DateFormat.yMd(locale).format(workEntry.date)),
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<WorkEntryType>(
                 value: state.type,
-                decoration: const InputDecoration(
-                  labelText: 'Typ',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.typeLabel,
+                  border: const OutlineInputBorder(),
                 ),
-                items: const [
-                  DropdownMenuItem(value: WorkEntryType.work, child: Text('Arbeit')),
-                  DropdownMenuItem(value: WorkEntryType.vacation, child: Text('Urlaub')),
-                  DropdownMenuItem(value: WorkEntryType.sick, child: Text('Krankheit')),
-                  DropdownMenuItem(value: WorkEntryType.holiday, child: Text('Feiertag')),
+                items: [
+                  DropdownMenuItem(value: WorkEntryType.work, child: Text(l10n.workEntryTypeWorkPlain)),
+                  DropdownMenuItem(value: WorkEntryType.vacation, child: Text(l10n.workEntryTypeVacationPlain)),
+                  DropdownMenuItem(value: WorkEntryType.sick, child: Text(l10n.workEntryTypeSickPlain)),
+                  DropdownMenuItem(value: WorkEntryType.holiday, child: Text(l10n.workEntryTypeHolidayPlain)),
                 ],
                 onChanged: (val) {
                   if (val != null) viewModel.setType(val);
@@ -64,10 +67,10 @@ class EditWorkEntryModal extends ConsumerWidget {
                   ),
                 ),
               ] else
-                const Expanded(
+                Expanded(
                   child: Center(
                     child: Text(
-                      'Ganztägiges Ereignis.\nKeine detaillierte Zeiterfassung notwendig.',
+                      l10n.allDayEventNotice,
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -78,7 +81,7 @@ class EditWorkEntryModal extends ConsumerWidget {
                   await viewModel.saveChanges();
                   if (context.mounted) Navigator.of(context).pop(true); // Return true on success
                 },
-                child: const Text('Änderungen speichern'),
+                child: Text(l10n.saveChangesAction),
               ),
             ],
           ),
@@ -126,14 +129,15 @@ class EditWorkEntryModal extends ConsumerWidget {
   }
 
   Widget _buildTimeSection(BuildContext context, EditWorkEntryState state, EditWorkEntryViewModel viewModel) {
+    final l10n = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Arbeitszeit', style: Theme.of(context).textTheme.titleMedium),
+        Text(l10n.workTimeSectionTitle, style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
         _buildTimePicker(
           context,
-          labelText: 'Startzeit',
+          labelText: l10n.startTimeLabel,
           selectedTime: state.newStartTime != null ? TimeOfDay.fromDateTime(state.newStartTime!) : null,
           onTimeSelected: (time) {
             final newDateTime = DateTime(
@@ -149,7 +153,7 @@ class EditWorkEntryModal extends ConsumerWidget {
         const SizedBox(height: 16),
         _buildTimePicker(
           context,
-          labelText: 'Endzeit',
+          labelText: l10n.endTimeLabel,
           selectedTime: state.newEndTime != null ? TimeOfDay.fromDateTime(state.newEndTime!) : null,
           onTimeSelected: (time) {
             final newDateTime = DateTime(
@@ -167,13 +171,14 @@ class EditWorkEntryModal extends ConsumerWidget {
   }
 
   Widget _buildBreaksSection(BuildContext context, EditWorkEntryState state, EditWorkEntryViewModel viewModel) {
+    final l10n = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Pausen', style: Theme.of(context).textTheme.titleMedium),
+            Text(l10n.breaksTitle, style: Theme.of(context).textTheme.titleMedium),
             IconButton(
               icon: const Icon(Icons.add),
               onPressed: viewModel.addBreak,
@@ -181,9 +186,9 @@ class EditWorkEntryModal extends ConsumerWidget {
           ],
         ),
         if (state.breaks.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16.0),
-            child: Center(child: Text('Keine Pausen hinzugefügt')),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16.0),
+            child: Center(child: Text(l10n.noBreaksAdded)),
           )
         else
           ...state.breaks.map((breakEntry) {
@@ -205,7 +210,7 @@ class EditWorkEntryModal extends ConsumerWidget {
                 children: [
                   _buildTimePicker(
                     context,
-                    labelText: 'Start',
+                    labelText: AppLocalizations.of(context).startFieldLabel,
                     dense: true,
                     selectedTime: TimeOfDay.fromDateTime(breakEntry.start),
                     onTimeSelected: (time) {
@@ -222,7 +227,7 @@ class EditWorkEntryModal extends ConsumerWidget {
                   const SizedBox(height: 8),
                   _buildTimePicker(
                     context,
-                    labelText: 'Ende',
+                    labelText: AppLocalizations.of(context).endFieldLabel,
                     dense: true,
                     selectedTime: breakEntry.end != null ? TimeOfDay.fromDateTime(breakEntry.end!) : null,
                     onTimeSelected: (time) {

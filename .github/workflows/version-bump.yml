@@ -54,6 +54,15 @@ jobs:
           character = os.environ["CHARACTER"]
           lines = open(path, encoding="utf-8").read().split("\n")
 
+          # Bereits eingetragen (z. B. erneuter Push auf denselben Branch)? Das
+          # muss VOR der "bereits vergeben"-Prüfung passieren, sonst schlägt
+          # jeder erneute Push auf denselben Release-Branch fehl, weil der
+          # eigene erste Bump-Commit den Charakter ja schon in die Tabelle
+          # eingetragen hat.
+          if any(l.startswith("|") and l.split("|")[1].strip() == version for l in lines):
+              print(f"Version {version} steht bereits in {path} — nichts zu tun.")
+              sys.exit(0)
+
           free_idx = [i for i, l in enumerate(lines) if l.strip() == f"- {character}"]
           used = [l for l in lines if l.startswith("|") and l.split("|")[2].strip() == character]
 
@@ -61,11 +70,6 @@ jobs:
               sys.exit(f"::error::Der Charakter '{character}' ist bereits vergeben. Freie Namen stehen in {path}.")
           if not free_idx:
               sys.exit(f"::error::'{character}' steht nicht in der Frei-Liste von {path}. Entweder ist der Name falsch geschrieben oder er muss dort ergänzt werden.")
-
-          # Bereits eingetragen (z. B. erneuter Push auf denselben Branch)?
-          if any(l.startswith("|") and l.split("|")[1].strip() == version for l in lines):
-              print(f"Version {version} steht bereits in {path} — nichts zu tun.")
-              sys.exit(0)
 
           today = datetime.date.today().isoformat()
           sep = next(i for i, l in enumerate(lines) if re.match(r"^\|\s*---", l))

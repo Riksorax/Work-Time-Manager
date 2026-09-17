@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timezone/timezone.dart' as tz;
 
+import '../../l10n/app_localizations.dart';
 import '../view_models/settings_view_model.dart';
 
 void showEditTimezoneModal(BuildContext context, String? currentTimezoneOverride) {
@@ -33,6 +34,7 @@ class _EditTimezoneModalState extends ConsumerState<EditTimezoneModal> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final filtered = _query.isEmpty
         ? _allTimezones
         : _allTimezones.where((z) => z.toLowerCase().contains(_query.toLowerCase())).toList();
@@ -47,13 +49,13 @@ class _EditTimezoneModalState extends ConsumerState<EditTimezoneModal> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Zeitzone', style: Theme.of(context).textTheme.headlineSmall),
+              Text(l10n.timezoneTitle, style: Theme.of(context).textTheme.headlineSmall),
               const SizedBox(height: 16),
               TextField(
-                decoration: const InputDecoration(
-                  labelText: 'Suchen',
-                  prefixIcon: Icon(Icons.search),
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.searchLabel,
+                  prefixIcon: const Icon(Icons.search),
+                  border: const OutlineInputBorder(),
                 ),
                 onChanged: (value) => setState(() => _query = value),
               ),
@@ -65,8 +67,8 @@ class _EditTimezoneModalState extends ConsumerState<EditTimezoneModal> {
                   itemBuilder: (context, index) {
                     if (index == 0) {
                       return ListTile(
-                        title: const Text('Systemstandard'),
-                        subtitle: const Text('Automatisch anhand des Geräts'),
+                        title: Text(l10n.systemDefaultTimezone),
+                        subtitle: Text(l10n.systemDefaultTimezoneDescription),
                         trailing: widget.currentTimezoneOverride == null
                             ? const Icon(Icons.check)
                             : null,
