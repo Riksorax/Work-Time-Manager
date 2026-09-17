@@ -24,7 +24,7 @@ class _AddAdjustmentModalState extends ConsumerState<AddAdjustmentModal> {
     super.dispose();
   }
 
-  void _save() {
+  Future<void> _save() async {
     // Stunden und Minuten als positive Werte parsen
     int parsedHours = int.tryParse(_hoursController.text) ?? 0;
     int parsedMinutes = int.tryParse(_minutesController.text) ?? 0;
@@ -41,8 +41,10 @@ class _AddAdjustmentModalState extends ConsumerState<AddAdjustmentModal> {
     int totalMinutes = parsedHours * 60 + parsedMinutes;
     Duration duration = Duration(minutes: _isNegative ? -totalMinutes : totalMinutes);
 
-    // Rufe die Methode im ViewModel auf
-    ref.read(settingsViewModelProvider.notifier).setOvertimeBalance(ref, duration);
+    // Rufe die Methode im ViewModel auf und warte den Abschluss ab, bevor das
+    // Modal geschlossen wird - sonst bekäme das Dashboard die Änderung nicht
+    // mehr mit (siehe #266).
+    await ref.read(settingsViewModelProvider.notifier).setOvertimeBalance(duration);
 
     // Modal schließen
     if (mounted) {
@@ -50,9 +52,9 @@ class _AddAdjustmentModalState extends ConsumerState<AddAdjustmentModal> {
     }
   }
 
-  void _reset() {
+  Future<void> _reset() async {
     // Setze die Gleitzeit-Bilanz auf 0 zurück
-    ref.read(settingsViewModelProvider.notifier).setOvertimeBalance(ref, Duration.zero);
+    await ref.read(settingsViewModelProvider.notifier).setOvertimeBalance(Duration.zero);
 
     // Modal schließen
     if (mounted) {

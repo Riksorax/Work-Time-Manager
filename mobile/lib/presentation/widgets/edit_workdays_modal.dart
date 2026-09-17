@@ -31,6 +31,16 @@ class _EditWorkdaysModalState extends ConsumerState<EditWorkdaysModal> {
     _selectedWorkdays = widget.currentWorkdays.toSet();
   }
 
+  Future<void> _save() async {
+    final sorted = _selectedWorkdays.toList()..sort();
+    // Erst awaiten, dann schließen - sonst bekäme das Dashboard die Änderung
+    // nicht mehr mit (siehe #266).
+    await ref.read(settingsViewModelProvider.notifier).updateWorkdays(sorted);
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -91,15 +101,7 @@ class _EditWorkdaysModalState extends ConsumerState<EditWorkdaysModal> {
                 ),
                 const SizedBox(width: 16),
                 FilledButton(
-                  onPressed: _selectedWorkdays.isEmpty
-                      ? null
-                      : () {
-                          final sorted = _selectedWorkdays.toList()..sort();
-                          ref
-                              .read(settingsViewModelProvider.notifier)
-                              .updateWorkdays(ref, sorted);
-                          Navigator.of(context).pop();
-                        },
+                  onPressed: _selectedWorkdays.isEmpty ? null : _save,
                   child: Text(l10n.save),
                 ),
               ],
