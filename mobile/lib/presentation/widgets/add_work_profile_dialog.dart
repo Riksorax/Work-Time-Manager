@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers/providers.dart';
 import '../../core/utils/logger.dart';
+import '../../l10n/app_localizations.dart';
 
 /// Dialog zum Anlegen eines weiteren Arbeitszeit-Profils (siehe #138).
 class AddWorkProfileDialog extends ConsumerStatefulWidget {
@@ -32,37 +33,39 @@ class _AddWorkProfileDialogState extends ConsumerState<AddWorkProfileDialog> {
     setState(() => _isSaving = true);
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
+    final l10n = AppLocalizations.of(context);
     try {
       final newProfile = await repository.addProfile(name);
       ref.invalidate(workProfilesProvider);
       ref.read(activeWorkProfileIdProvider.notifier).setActiveProfile(newProfile.id);
       navigator.pop();
-      messenger.showSnackBar(SnackBar(content: Text('Profil "${newProfile.name}" angelegt.')));
+      messenger.showSnackBar(SnackBar(content: Text(l10n.profileCreatedMessage(newProfile.name))));
     } catch (e, stackTrace) {
       logger.e('[AddWorkProfileDialog] Fehler beim Anlegen des Profils: $e', stackTrace: stackTrace);
       setState(() => _isSaving = false);
-      messenger.showSnackBar(SnackBar(content: Text('Anlegen fehlgeschlagen: $e')));
+      messenger.showSnackBar(SnackBar(content: Text(l10n.profileCreationFailed('$e'))));
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return AlertDialog(
-      title: const Text('Neues Profil'),
+      title: Text(l10n.newProfileDialogTitle),
       content: TextField(
         controller: _nameController,
         autofocus: true,
         maxLength: 40,
-        decoration: const InputDecoration(
-          labelText: 'Name (z.B. Arbeitgeber)',
-          border: OutlineInputBorder(),
+        decoration: InputDecoration(
+          labelText: l10n.profileNameFieldLabel,
+          border: const OutlineInputBorder(),
         ),
         onSubmitted: (_) => _save(),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Abbrechen'),
+          child: Text(l10n.cancel),
         ),
         FilledButton(
           onPressed: _isSaving ? null : _save,
@@ -72,7 +75,7 @@ class _AddWorkProfileDialogState extends ConsumerState<AddWorkProfileDialog> {
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Anlegen'),
+              : Text(l10n.createAction),
         ),
       ],
     );

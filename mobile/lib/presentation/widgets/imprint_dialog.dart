@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import 'common/markdown_dialog.dart';
 
 class ImprintDialog extends StatelessWidget {
@@ -7,7 +8,7 @@ class ImprintDialog extends StatelessWidget {
   static void show(BuildContext context) {
     MarkdownDialog.show(
       context,
-      title: 'Impressum',
+      title: AppLocalizations.of(context).imprintTitle,
       assetPath: 'assets/legal/imprint.md',
     );
   }

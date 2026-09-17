@@ -48,7 +48,7 @@ class SettingsPage extends ConsumerWidget {
       ),
       body: settingsValue.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Fehler: $err')),
+        error: (err, stack) => Center(child: Text(l10n.errorPrefix('$err'))),
         data: (settingsState) {
           final settings = settingsState.settings;
 
@@ -66,9 +66,9 @@ class SettingsPage extends ConsumerWidget {
             ...topSection,
             const Divider(height: 1),
             ListTile(
-              title: const Text('Soll-Arbeitsstunden'),
+              title: Text(l10n.weeklyTargetHoursTitle),
               subtitle: Text(
-                '${settings.weeklyTargetHours.toStringAsFixed(1)} h/Woche',
+                l10n.weeklyTargetHoursValue(settings.weeklyTargetHours.toStringAsFixed(1)),
               ),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
@@ -79,8 +79,8 @@ class SettingsPage extends ConsumerWidget {
               },
             ),
             ListTile(
-              title: const Text('Arbeitstage'),
-              subtitle: Text(formatWorkdays(settings.workdays)),
+              title: Text(l10n.workdaysTitle),
+              subtitle: Text(formatWorkdays(settings.workdays, Localizations.localeOf(context).toString())),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 showEditWorkdaysModal(
@@ -90,14 +90,14 @@ class SettingsPage extends ConsumerWidget {
               },
             ),
             ListTile(
-              title: const Text('Tägliche Soll-Arbeitszeit'),
+              title: Text(l10n.dailyTargetHoursTitle),
               subtitle: Text(
-                '≈ ${settings.workdays.isNotEmpty ? (settings.weeklyTargetHours / settings.workdays.length).toStringAsFixed(1) : '0.0'} h/Tag',
+                l10n.dailyTargetHoursValue(settings.workdays.isNotEmpty ? (settings.weeklyTargetHours / settings.workdays.length).toStringAsFixed(1) : '0.0'),
               ),
             ),
             ListTile(
-              title: const Text('Zeitzone'),
-              subtitle: Text(settings.timezoneOverride ?? 'Systemstandard'),
+              title: Text(l10n.timezoneTitle),
+              subtitle: Text(settings.timezoneOverride ?? l10n.systemDefaultTimezone),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 showEditTimezoneModal(context, settings.timezoneOverride);
@@ -126,7 +126,7 @@ class SettingsPage extends ConsumerWidget {
                     builder: (context) => const AddAdjustmentModal(),
                   );
                 },
-                child: const Text('Überstunden / Minusstunden anpassen'),
+                child: Text(l10n.adjustOvertimeButton),
               ),
             ),
             const SizedBox(height: 16),
@@ -137,8 +137,8 @@ class SettingsPage extends ConsumerWidget {
           final rightColumnChildren = [
             const Divider(height: 1),
             SwitchListTile(
-              title: const Text('Design'),
-              subtitle: Text(Theme.of(context).brightness == Brightness.dark ? 'Dunkel' : 'Hell'),
+              title: Text(l10n.designTitle),
+              subtitle: Text(Theme.of(context).brightness == Brightness.dark ? l10n.themeDark : l10n.themeLight),
               value: Theme.of(context).brightness == Brightness.dark,
               onChanged: (isDark) {
                 themeNotifier.setTheme(isDark ? ThemeMode.dark : ThemeMode.light);
@@ -146,10 +146,10 @@ class SettingsPage extends ConsumerWidget {
             ),
             const Divider(height: 1),
             SwitchListTile(
-              title: const Text('24-Stunden-Format'),
+              title: Text(l10n.timeFormat24Title),
               subtitle: Text(settingsState.settings.use24HourFormat
-                  ? 'z. B. 18:00'
-                  : 'z. B. 6:00 PM'),
+                  ? l10n.timeFormatExample24
+                  : l10n.timeFormatExample12),
               value: settingsState.settings.use24HourFormat,
               onChanged: (use24Hour) {
                 ref
@@ -159,10 +159,9 @@ class SettingsPage extends ConsumerWidget {
             ),
             const Divider(height: 1),
             ListTile(
-              title: const Text('Bundesland'),
+              title: Text(l10n.bundeslandTitle),
               subtitle: Text(
-                settings.bundesland?.displayName ??
-                    'Nicht ausgewählt – keine Feiertagsmarkierung im Kalender',
+                settings.bundesland?.displayName ?? l10n.bundeslandNotSelected,
               ),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
@@ -171,10 +170,10 @@ class SettingsPage extends ConsumerWidget {
             ),
             const Divider(height: 1),
             ListTile(
-              title: const Text('Benachrichtigungen'),
+              title: Text(l10n.notificationsTitle),
               subtitle: settingsState.settings.notificationsEnabled
-                  ? Text('Aktiviert um ${settingsState.settings.notificationTime} Uhr')
-                  : const Text('Deaktiviert'),
+                  ? Text(l10n.notificationsEnabledAt(settingsState.settings.notificationTime))
+                  : Text(l10n.disabledLabel),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 NotificationSettingsDialog.show(context, settingsState.settings);
@@ -186,8 +185,8 @@ class SettingsPage extends ConsumerWidget {
             ],
             const Divider(height: 1),
             ListTile(
-              title: const Text('Über die App'),
-              subtitle: const Text('Version, Impressum, Datenschutz & mehr'),
+              title: Text(l10n.aboutAppTitle),
+              subtitle: Text(l10n.aboutAppSubtitle),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 Navigator.push(
@@ -252,10 +251,11 @@ class SettingsPage extends ConsumerWidget {
   }
 
   void _showBundeslandPicker(BuildContext context, WidgetRef ref, Bundesland? current) {
+    final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (dialogContext) => SimpleDialog(
-        title: const Text('Bundesland für Feiertage'),
+        title: Text(l10n.bundeslandPickerTitle),
         children: [
           SimpleDialogOption(
             onPressed: () {
@@ -266,7 +266,7 @@ class SettingsPage extends ConsumerWidget {
               children: [
                 if (current == null) const Icon(Icons.check, size: 18) else const SizedBox(width: 18),
                 const SizedBox(width: 8),
-                const Text('Keine Auswahl'),
+                Text(l10n.noSelectionOption),
               ],
             ),
           ),
@@ -300,6 +300,7 @@ class SettingsPage extends ConsumerWidget {
     final isPremium = ref.watch(isPremiumProvider);
     if (!isPremium) return const SizedBox.shrink();
 
+    final l10n = AppLocalizations.of(context);
     final entitlement = ref.watch(activeEntitlementProvider);
     final expirationDateString = entitlement?.expirationDate;
     final expirationDate =
@@ -310,8 +311,8 @@ class SettingsPage extends ConsumerWidget {
     if (expirationDate != null) {
       final formattedDate = DateFormat('dd.MM.yyyy').format(expirationDate);
       statusText = willRenew
-          ? 'Verlängert sich automatisch am $formattedDate'
-          : 'Läuft aus am $formattedDate';
+          ? l10n.subscriptionRenewsOn(formattedDate)
+          : l10n.subscriptionExpiresOn(formattedDate);
     }
 
     return Padding(
@@ -326,7 +327,7 @@ class SettingsPage extends ConsumerWidget {
                 children: [
                   const Icon(Icons.subscriptions, color: Colors.orange),
                   const SizedBox(width: 12),
-                  Text('Dein Abo', style: Theme.of(context).textTheme.titleMedium),
+                  Text(l10n.mySubscriptionTitle, style: Theme.of(context).textTheme.titleMedium),
                 ],
               ),
               if (statusText != null) ...[
@@ -337,7 +338,7 @@ class SettingsPage extends ConsumerWidget {
               OutlinedButton.icon(
                 onPressed: () => _openSubscriptionManagement(context),
                 icon: const Icon(Icons.open_in_new),
-                label: const Text('Abo verwalten'),
+                label: Text(l10n.manageSubscriptionButton),
               ),
             ],
           ),
@@ -348,14 +349,12 @@ class SettingsPage extends ConsumerWidget {
 
   Future<void> _openSubscriptionManagement(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context);
     final urlString = await getSubscriptionManagementUrl();
     if (urlString == null) {
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Abo-Verwaltung ist auf diesem Gerät nicht verfügbar. '
-            'Bitte über den App Store bzw. Play Store verwalten.',
-          ),
+        SnackBar(
+          content: Text(l10n.subscriptionManagementUnavailable),
         ),
       );
       return;
@@ -366,13 +365,14 @@ class SettingsPage extends ConsumerWidget {
       await launchUrl(url, mode: LaunchMode.externalApplication);
     } else {
       messenger.showSnackBar(
-        const SnackBar(content: Text('Der Abo-Verwaltungslink konnte nicht geöffnet werden.')),
+        SnackBar(content: Text(l10n.subscriptionLinkFailed)),
       );
     }
   }
 
   Widget _buildDataSyncSection(BuildContext context, WidgetRef ref, AsyncValue authState) {
     final isLoggedIn = authState.asData?.value != null;
+    final l10n = AppLocalizations.of(context);
 
     if (!isLoggedIn) {
       // Zeige Hinweis, dass Daten lokal gespeichert werden
@@ -389,16 +389,15 @@ class SettingsPage extends ConsumerWidget {
                     Icon(Icons.cloud_off, color: Theme.of(context).colorScheme.primary),
                     const SizedBox(width: 12),
                     Text(
-                      'Offline-Modus',
+                      l10n.offlineModeTitle,
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'Ihre Daten werden lokal auf diesem Gerät gespeichert. '
-                  'Melden Sie sich an, um Ihre Daten in der Cloud zu sichern und geräteübergreifend zu synchronisieren.',
-                  style: TextStyle(fontSize: 14),
+                Text(
+                  l10n.offlineModeDescription,
+                  style: const TextStyle(fontSize: 14),
                 ),
               ],
             ),
@@ -413,25 +412,26 @@ class SettingsPage extends ConsumerWidget {
       child: ElevatedButton.icon(
         onPressed: () => _performSync(context, ref),
         icon: const Icon(Icons.cloud_sync),
-        label: const Text('Lokale Daten zu Cloud synchronisieren'),
+        label: Text(l10n.syncToCloudButton),
       ),
     );
   }
 
   Future<void> _performSync(BuildContext context, WidgetRef ref) async {
     final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context);
 
     // Zeige Loading-Dialog
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const AlertDialog(
+      builder: (context) => AlertDialog(
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Synchronisiere Daten...'),
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text(l10n.syncingData),
           ],
         ),
       ),
@@ -481,9 +481,7 @@ class SettingsPage extends ConsumerWidget {
         messenger.showSnackBar(
           SnackBar(
             content: Text(
-              'Synchronisierung erfolgreich!\n'
-              'Arbeitseinträge: $workEntriesSynced\n'
-              'Überstunden: ${overtimeSynced ? "Ja" : "Nein"}',
+              l10n.syncSuccessMessage(workEntriesSynced, overtimeSynced ? l10n.yesLabel : l10n.noLabel),
             ),
             backgroundColor: Colors.green,
             duration: const Duration(seconds: 4),
@@ -496,9 +494,7 @@ class SettingsPage extends ConsumerWidget {
         messenger.showSnackBar(
           SnackBar(
             content: Text(
-              'Synchronisierung mit Fehlern:\n'
-              'Arbeitseinträge: $workEntriesSynced\n'
-              'Fehler: ${errors.join(", ")}',
+              l10n.syncErrorsMessage(workEntriesSynced, errors.join(", ")),
             ),
             backgroundColor: Colors.orange,
             duration: const Duration(seconds: 5),
@@ -513,7 +509,7 @@ class SettingsPage extends ConsumerWidget {
 
       messenger.showSnackBar(
         SnackBar(
-          content: Text('Fehler bei der Synchronisierung: $e'),
+          content: Text(l10n.syncFailedMessage('$e')),
           backgroundColor: Colors.red,
           duration: const Duration(seconds: 4),
         ),
@@ -530,11 +526,12 @@ class SettingsPage extends ConsumerWidget {
     final minutes = twoDigits(absDuration.inMinutes.remainder(60));
     final sign = isNegative ? '-' : '+';
     final formattedOvertime = '$sign$hours:$minutes';
+    final l10n = AppLocalizations.of(context);
 
     return Column(
       children: [
         Text(
-          'Gleitzeit-Bilanz',
+          l10n.overtimeBalanceTitle,
           style: Theme.of(context).textTheme.titleMedium,
         ),
         const SizedBox(height: 4),
@@ -547,7 +544,7 @@ class SettingsPage extends ConsumerWidget {
         if (lastUpdate != null && lastUpdate.isAfter(DateTime(2000))) ...[
           const SizedBox(height: 4),
           Text(
-            'Letzte manuelle Änderung: ${DateFormat('dd.MM.yyyy').format(lastUpdate)}',
+            l10n.lastManualChange(DateFormat('dd.MM.yyyy').format(lastUpdate)),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Colors.grey[600],
                   fontStyle: FontStyle.italic,
@@ -562,6 +559,7 @@ class SettingsPage extends ConsumerWidget {
     final theme = Theme.of(context);
     final authState = ref.watch(authStateProvider);
     final isPremium = ref.watch(isPremiumProvider);
+    final l10n = AppLocalizations.of(context);
 
     return authState.when(
       data: (user) {
@@ -576,7 +574,7 @@ class SettingsPage extends ConsumerWidget {
                   child: Icon(Icons.person, size: 30, color: Colors.white),
                 ),
                 const SizedBox(width: 16),
-                Text('Nicht angemeldet', style: theme.textTheme.titleLarge),
+                Text(l10n.notLoggedIn, style: theme.textTheme.titleLarge),
               ],
             ),
           );
@@ -598,7 +596,7 @@ class SettingsPage extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      user.displayName ?? 'Benutzer',
+                      user.displayName ?? l10n.defaultUserName,
                       style: theme.textTheme.titleLarge,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -617,18 +615,17 @@ class SettingsPage extends ConsumerWidget {
               ),
               IconButton(
                 icon: Icon(Icons.delete_forever, color: theme.colorScheme.error),
-                tooltip: 'Account löschen',
+                tooltip: l10n.deleteAccountTooltip,
                 onPressed: () {
                   showDialog(
                     context: context,
                     builder: (dialogContext) => AlertDialog(
-                      title: const Text('Account endgültig löschen'),
-                      content: const Text(
-                          'Warnung: Diese Aktion kann nicht rückgängig gemacht werden. Alle Ihre Daten, einschließlich der Arbeitszeiterfassung, werden dauerhaft gelöscht.'),
+                      title: Text(l10n.deleteAccountTitle),
+                      content: Text(l10n.deleteAccountWarning),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.of(dialogContext).pop(),
-                          child: const Text('Abbrechen'),
+                          child: Text(l10n.cancel),
                         ),
                         FilledButton(
                           onPressed: () {
@@ -638,7 +635,7 @@ class SettingsPage extends ConsumerWidget {
                           style: FilledButton.styleFrom(
                             backgroundColor: theme.colorScheme.error,
                           ),
-                          child: const Text('Endgültig löschen'),
+                          child: Text(l10n.deleteAccountConfirm),
                         ),
                       ],
                     ),
@@ -663,7 +660,7 @@ class SettingsPage extends ConsumerWidget {
               child: Icon(Icons.error, size: 30, color: Colors.white),
             ),
             const SizedBox(width: 16),
-            Text('Fehler beim Laden', style: theme.textTheme.titleLarge),
+            Text(l10n.loadErrorGeneric, style: theme.textTheme.titleLarge),
           ],
         ),
       ),
@@ -672,6 +669,7 @@ class SettingsPage extends ConsumerWidget {
 
   Widget _buildAuthButton(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authStateProvider);
+    final l10n = AppLocalizations.of(context);
 
     return authState.when(
       data: (user) {
@@ -686,7 +684,7 @@ class SettingsPage extends ConsumerWidget {
                 );
               },
               icon: const Icon(Icons.login),
-              label: const Text('Anmelden'),
+              label: Text(l10n.loginButton),
             ),
           );
         } else {
@@ -697,12 +695,12 @@ class SettingsPage extends ConsumerWidget {
                 showDialog(
                   context: context,
                   builder: (context) => AlertDialog(
-                    title: const Text('Abmelden'),
-                    content: const Text('Möchten Sie sich wirklich abmelden?'),
+                    title: Text(l10n.logoutButton),
+                    content: Text(l10n.logoutConfirmBody),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('Abbrechen'),
+                        child: Text(l10n.cancel),
                       ),
                       FilledButton(
                         onPressed: () {
@@ -713,14 +711,14 @@ class SettingsPage extends ConsumerWidget {
                           ref.invalidate(core_providers.overtimeRepositoryProvider);
                           ref.invalidate(dashboard_vm.dashboardViewModelProvider);
                         },
-                        child: const Text('Abmelden'),
+                        child: Text(l10n.logoutButton),
                       ),
                     ],
                   ),
                 );
               },
               icon: const Icon(Icons.logout),
-              label: const Text('Abmelden'),
+              label: Text(l10n.logoutButton),
               style: OutlinedButton.styleFrom(
                 foregroundColor: Colors.red,
               ),
@@ -751,20 +749,21 @@ class _AppLockSectionState extends ConsumerState<_AppLockSection> {
   Widget build(BuildContext context) {
     final service = ref.watch(appLockServiceProvider);
     final isEnabled = service.isEnabled;
+    final l10n = AppLocalizations.of(context);
 
     return Column(
       children: [
         SwitchListTile(
-          title: const Text('PIN-/Biometrie-Sperre'),
+          title: Text(l10n.pinLockTitle),
           subtitle: Text(isEnabled
-              ? 'App wird beim Start und aus dem Hintergrund gesperrt'
-              : 'Deaktiviert'),
+              ? l10n.pinLockEnabledDescription
+              : l10n.disabledLabel),
           value: isEnabled,
           onChanged: (value) => _onToggle(context, value, service),
         ),
         if (isEnabled)
           ListTile(
-            title: const Text('PIN ändern'),
+            title: Text(l10n.changePinTitle),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => PinSetupDialog.show(context),
           ),
@@ -840,14 +839,14 @@ class _PremiumBadge extends StatelessWidget {
         color: Colors.orange,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: const Row(
+      child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.workspace_premium, size: 14, color: Colors.white),
-          SizedBox(width: 4),
+          const Icon(Icons.workspace_premium, size: 14, color: Colors.white),
+          const SizedBox(width: 4),
           Text(
-            'Premium',
-            style: TextStyle(
+            AppLocalizations.of(context).premiumBadgeLabel,
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 12,
               fontWeight: FontWeight.bold,

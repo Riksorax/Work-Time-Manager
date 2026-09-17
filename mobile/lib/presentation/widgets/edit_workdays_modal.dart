@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/utils/weekday_labels.dart';
+import '../../l10n/app_localizations.dart';
 import '../view_models/settings_view_model.dart';
 
 void showEditWorkdaysModal(BuildContext context, List<int> currentWorkdays) {
@@ -32,6 +33,8 @@ class _EditWorkdaysModalState extends ConsumerState<EditWorkdaysModal> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final locale = Localizations.localeOf(context).toString();
     return Padding(
       padding: MediaQuery.of(context).viewInsets,
       child: Container(
@@ -41,12 +44,12 @@ class _EditWorkdaysModalState extends ConsumerState<EditWorkdaysModal> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Arbeitstage',
+              l10n.workdaysTitle,
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 8),
             Text(
-              'Wähle die konkreten Wochentage aus, an denen du arbeitest.',
+              l10n.workdaysDescription,
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 24),
@@ -57,7 +60,7 @@ class _EditWorkdaysModalState extends ConsumerState<EditWorkdaysModal> {
                 final isoWeekday = index + 1;
                 final isSelected = _selectedWorkdays.contains(isoWeekday);
                 return FilterChip(
-                  label: Text(germanWeekdayShortLabels[index]),
+                  label: Text(weekdayShortLabel(isoWeekday, locale)),
                   selected: isSelected,
                   onSelected: (selected) {
                     setState(() {
@@ -74,7 +77,7 @@ class _EditWorkdaysModalState extends ConsumerState<EditWorkdaysModal> {
             if (_selectedWorkdays.isEmpty) ...[
               const SizedBox(height: 8),
               Text(
-                'Bitte mindestens einen Arbeitstag auswählen.',
+                l10n.selectAtLeastOneWorkday,
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
             ],
@@ -84,7 +87,7 @@ class _EditWorkdaysModalState extends ConsumerState<EditWorkdaysModal> {
               children: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Abbrechen'),
+                  child: Text(l10n.cancel),
                 ),
                 const SizedBox(width: 16),
                 FilledButton(
@@ -97,7 +100,7 @@ class _EditWorkdaysModalState extends ConsumerState<EditWorkdaysModal> {
                               .updateWorkdays(ref, sorted);
                           Navigator.of(context).pop();
                         },
-                  child: const Text('Speichern'),
+                  child: Text(l10n.save),
                 ),
               ],
             ),

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers/providers.dart';
 import '../../core/providers/subscription_provider.dart';
 import '../../domain/entities/work_profile_entity.dart';
+import '../../l10n/app_localizations.dart';
 import 'add_work_profile_dialog.dart';
 import 'manage_work_profiles_dialog.dart';
 
@@ -34,9 +35,10 @@ class WorkProfileSwitcher extends ConsumerWidget {
         final isPremium = ref.watch(isPremiumProvider);
         final maxProfiles = ref.watch(maxWorkProfileCountProvider);
         final canAddProfile = profiles.length < maxProfiles;
+        final l10n = AppLocalizations.of(context);
 
         return PopupMenuButton<String>(
-          tooltip: 'Profil wechseln',
+          tooltip: l10n.switchProfileTooltip,
           icon: const Icon(Icons.badge_outlined),
           onSelected: (value) {
             if (value == '__add__') {
@@ -63,18 +65,18 @@ class WorkProfileSwitcher extends ConsumerWidget {
                 children: [
                   Icon(canAddProfile ? Icons.add : Icons.lock_outline, size: 20),
                   const SizedBox(width: 8),
-                  const Flexible(child: Text('Neues Profil', overflow: TextOverflow.ellipsis)),
+                  Flexible(child: Text(l10n.newProfileAction, overflow: TextOverflow.ellipsis)),
                 ],
               ),
             ),
             if (profiles.length > 1)
-              const PopupMenuItem<String>(
+              PopupMenuItem<String>(
                 value: '__manage__',
                 child: Row(
                   children: [
-                    Icon(Icons.delete_outline, size: 20),
-                    SizedBox(width: 8),
-                    Flexible(child: Text('Profile verwalten', overflow: TextOverflow.ellipsis)),
+                    const Icon(Icons.delete_outline, size: 20),
+                    const SizedBox(width: 8),
+                    Flexible(child: Text(l10n.manageProfilesAction, overflow: TextOverflow.ellipsis)),
                   ],
                 ),
               ),
@@ -91,15 +93,16 @@ class WorkProfileSwitcher extends ConsumerWidget {
     required bool canAdd,
     required int maxProfiles,
   }) {
+    final l10n = AppLocalizations.of(context);
     if (!isPremium) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Zusätzliche Profile sind ein Premium-Feature.')),
+        SnackBar(content: Text(l10n.premiumProfilesFeature)),
       );
       return;
     }
     if (!canAdd) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Maximal $maxProfiles Profile möglich.')),
+        SnackBar(content: Text(l10n.maxProfilesReached(maxProfiles))),
       );
       return;
     }
