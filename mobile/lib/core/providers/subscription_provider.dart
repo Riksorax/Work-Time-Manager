@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_work_time/core/providers/providers.dart';
+import 'package:flutter_work_time/core/utils/logger.dart';
 
 bool _hasActivePremium(CustomerInfo info) {
   return info.entitlements.all['work_time_manager_premium']?.isActive ??
@@ -124,9 +125,21 @@ Future<String?> getSubscriptionManagementUrl() async {
   if (kIsWeb) return null;
   try {
     final info = await Purchases.getCustomerInfo();
+    if (info.managementURL == null) {
+      // Bei einem aktiven Store-Abo sollte RevenueCat immer eine
+      // managementURL liefern - falls nicht, meist ein Hinweis auf eine
+      // fehlende/fehlerhafte Play-Store-Anbindung in der RevenueCat-Konsole
+      // (Project Settings > Integrations > Google Play Store), nicht auf
+      // fehlendes Abo. Als Warning statt Error, weil isPremium hier bereits
+      // separat validiert wurde und dies kein hartes Fehlschlagen ist.
+      logger.w(
+        '[Premium] managementURL ist null trotz vorhandener CustomerInfo '
+        '(entitlements: ${info.entitlements.active.keys})',
+      );
+    }
     return info.managementURL;
-  } catch (e) {
-    debugPrint('[Premium] managementURL nicht verfügbar: $e');
+  } catch (e, stackTrace) {
+    logger.e('[Premium] managementURL nicht verfügbar', error: e, stackTrace: stackTrace);
     return null;
   }
 }
