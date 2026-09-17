@@ -203,7 +203,7 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
     }
   }
 
-  Future<void> setOvertimeBalance(WidgetRef ref, Duration overtime) async {
+  Future<void> setOvertimeBalance(Duration overtime) async {
     final setOvertime = ref.read(core_providers.setOvertimeUseCaseProvider);
     await setOvertime.call(overtime: overtime, isManual: true);
     final now = DateTime.now();
@@ -242,7 +242,7 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
     }
   }
 
-  Future<void> updateWorkdays(WidgetRef ref, List<int> days) async {
+  Future<void> updateWorkdays(List<int> days) async {
     final settingsRepository = ref.read(core_providers.settingsRepositoryProvider);
     await settingsRepository.setWorkdays(days);
     final newSettings = state.value!.settings.copyWith(workdays: days);
@@ -252,7 +252,7 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
     ref.read(dashboardViewModelProvider.notifier).recalculateOvertimeFromSettings();
   }
 
-  Future<void> updateWeeklyTargetHours(WidgetRef ref, double hours) async {
+  Future<void> updateWeeklyTargetHours(double hours) async {
     final settingsRepository = ref.read(core_providers.settingsRepositoryProvider);
     await settingsRepository.setTargetWeeklyHours(hours);
     final newSettings = state.value!.settings.copyWith(weeklyTargetHours: hours);
