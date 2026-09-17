@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import 'common/markdown_dialog.dart';
 import 'imprint_dialog.dart';
 
@@ -8,7 +9,7 @@ class PrivacyPolicyDialog extends StatelessWidget {
   static void show(BuildContext context) {
     MarkdownDialog.show(
       context,
-      title: 'Datenschutzerklärung',
+      title: AppLocalizations.of(context).privacyPolicyTitle,
       assetPath: 'assets/legal/privacy.md',
       customLinkHandlers: {
         'imprint.html': () => ImprintDialog.show(context),

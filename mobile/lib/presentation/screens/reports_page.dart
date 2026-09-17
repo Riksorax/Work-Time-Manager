@@ -13,6 +13,7 @@ import '../../core/services/pdf_report_service.dart';
 import '../../domain/entities/work_entry_extensions.dart';
 import '../../domain/utils/german_holidays.dart';
 import '../../domain/utils/weekday_labels.dart';
+import '../../l10n/app_localizations.dart';
 import '../widgets/common/responsive_center.dart';
 import '../widgets/premium_blur_gate.dart';
 import '../state/monthly_report_state.dart';
@@ -52,9 +53,9 @@ void _showPaywall(BuildContext context) {
   // Im lokalen Test ohne gültigen RC-Key kein Paywall öffnen
   if (_rcAndroidKey.isEmpty) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
+      SnackBar(
         content: Text(
-          'Paywall nicht verfügbar – App ohne RC_ANDROID_KEY gestartet.',
+          AppLocalizations.of(context).paywallUnavailable,
         ),
       ),
     );
@@ -139,20 +140,21 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
       }
     });
 
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Berichte'),
+        title: Text(l10n.navReports),
         actions: const [WorkProfileSwitcher()],
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
           tabAlignment: TabAlignment.start,
-          tabs: const [
-            Tab(text: 'Täglich'),
-            Tab(text: 'Wöchentlich'),
-            Tab(text: 'Monatlich'),
-            Tab(text: 'Jährlich'),
-            Tab(text: 'Insights'),
+          tabs: [
+            Tab(text: l10n.tabDaily),
+            Tab(text: l10n.tabWeekly),
+            Tab(text: l10n.tabMonthly),
+            Tab(text: l10n.tabYearly),
+            const Tab(text: 'Insights'),
           ],
         ),
       ),
@@ -187,22 +189,22 @@ class DailyReportView extends ConsumerWidget {
 
   Future<void> _confirmDelete(
       BuildContext context, WidgetRef ref, WorkEntryEntity entry) async {
+    final l10n = AppLocalizations.of(context);
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          title: const Text('Eintrag löschen?'),
-          content:
-              const Text('Möchten Sie diesen Arbeitseintrag wirklich löschen?'),
+          title: Text(l10n.deleteEntryTitle),
+          content: Text(l10n.deleteEntryConfirm),
           actions: <Widget>[
             TextButton(
-              child: const Text('Abbrechen'),
+              child: Text(l10n.cancel),
               onPressed: () {
                 Navigator.of(dialogContext).pop(false);
               },
             ),
             TextButton(
-              child: const Text('Löschen'),
+              child: Text(l10n.deleteAction),
               onPressed: () {
                 Navigator.of(dialogContext).pop(true);
               },
@@ -223,6 +225,8 @@ class DailyReportView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final reportsState = ref.watch(reportsViewModelProvider);
     final reportsNotifier = ref.read(reportsViewModelProvider.notifier);
+    final l10n = AppLocalizations.of(context);
+    final locale = Localizations.localeOf(context).toString();
 
     final settingsValue = ref.watch(settingsViewModelProvider);
 
@@ -320,7 +324,7 @@ class DailyReportView extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Tagesbericht für ${DateFormat.yMMMMd('de_DE').format(selectedDay)}',
+              l10n.dailyReportTitle(DateFormat.yMMMMd(locale).format(selectedDay)),
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 16),
@@ -329,7 +333,7 @@ class DailyReportView extends ConsumerWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text('Keine Daten für diesen Tag.'),
+                    Text(l10n.noDataForDay),
                     Padding(
                       padding: const EdgeInsets.only(top: 16.0),
                       child: Column(
@@ -352,7 +356,7 @@ class DailyReportView extends ConsumerWidget {
                                 onEntryTap(newEntry);
                               },
                               icon: const Icon(Icons.add),
-                              label: const Text('Eintrag hinzufügen'),
+                              label: Text(l10n.addEntryAction),
                             ),
                           ),
                           const SizedBox(height: 12),
@@ -370,9 +374,8 @@ class DailyReportView extends ConsumerWidget {
                               },
                               icon: const Icon(Icons.flash_on),
                               label: reportsState.selectedDates.isNotEmpty
-                                  ? Text(
-                                      'Schnell-Eintrag für ${reportsState.selectedDates.length} Tage')
-                                  : const Text('Schnell-Eintrag (Urlaub, Krank...)'),
+                                  ? Text(l10n.quickEntryTitleBatch(reportsState.selectedDates.length))
+                                  : Text(l10n.quickEntryButton),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Theme.of(context)
                                     .colorScheme
@@ -403,8 +406,7 @@ class DailyReportView extends ConsumerWidget {
                               context, ref, reportsState, reportsNotifier);
                         },
                         icon: const Icon(Icons.flash_on),
-                        label: Text(
-                            'Schnell-Eintrag für ${reportsState.selectedDates.length} Tage'),
+                        label: Text(l10n.quickEntryTitleBatch(reportsState.selectedDates.length)),
                         style: ElevatedButton.styleFrom(
                           backgroundColor:
                               Theme.of(context).colorScheme.secondaryContainer,
@@ -424,7 +426,7 @@ class DailyReportView extends ConsumerWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(isExtraDay ? 'Soll (Zusatztag):' : 'Soll (Tag):',
+                          Text(isExtraDay ? l10n.targetExtraDayLabel : l10n.targetDayLabel,
                               style: const TextStyle(fontWeight: FontWeight.bold)),
                           Text(
                             isExtraDay
@@ -438,7 +440,7 @@ class DailyReportView extends ConsumerWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('Ist (Tag):'),
+                          Text(l10n.actualDayLabel),
                           Text(
                             '${totalWorked.inHours.toString().padLeft(2, '0')}:${totalWorked.inMinutes.remainder(60).toString().padLeft(2, '0')}',
                           ),
@@ -448,8 +450,8 @@ class DailyReportView extends ConsumerWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('Saldo (Tag):',
-                              style: TextStyle(fontWeight: FontWeight.bold)),
+                          Text(l10n.balanceDayLabel,
+                              style: const TextStyle(fontWeight: FontWeight.bold)),
                           Text(
                             _formatDuration(dayOvertime),
                             style: TextStyle(
@@ -502,8 +504,8 @@ class DailyReportView extends ConsumerWidget {
                           children: [
                             Text(
                               isSpecialType
-                                  ? _getWorkEntryTypeLabel(displayEntry.type)
-                                  : 'Arbeitszeit: ${workedDuration.toString().split('.').first}',
+                                  ? _getWorkEntryTypeLabel(l10n, displayEntry.type)
+                                  : l10n.workTimeLabel(workedDuration.toString().split('.').first),
                               style: Theme.of(context).textTheme.titleMedium,
                             ),
                             Row(
@@ -526,24 +528,20 @@ class DailyReportView extends ConsumerWidget {
                             displayEntry.workStart != null ||
                             displayEntry.workEnd != null) ...[
                           const SizedBox(height: 8),
-                          Text(
-                              'Start: ${displayEntry.workStart != null ? formatTime(displayEntry.workStart!, use24HourFormat: settingsState.settings.use24HourFormat) : '-'}'),
-                          Text(
-                              'Ende: ${displayEntry.workEnd != null ? formatTime(displayEntry.workEnd!, use24HourFormat: settingsState.settings.use24HourFormat) : (isSpecialType ? '-' : 'läuft...')}'),
+                          Text(l10n.startValueLabel(displayEntry.workStart != null ? formatTime(displayEntry.workStart!, use24HourFormat: settingsState.settings.use24HourFormat) : '-')),
+                          Text(l10n.endValueLabel(displayEntry.workEnd != null ? formatTime(displayEntry.workEnd!, use24HourFormat: settingsState.settings.use24HourFormat) : (isSpecialType ? '-' : l10n.breakInProgress))),
                           if (!isSpecialType)
-                            Text(
-                                'Pause: ${displayEntry.totalBreakDuration.toString().split('.').first}'),
+                            Text(l10n.breakValueLabel(displayEntry.totalBreakDuration.toString().split('.').first)),
                         ],
                         if (displayEntry.manualOvertime != null)
                           Padding(
                             padding: const EdgeInsets.only(top: 8.0),
-                            child: Text(
-                                'Manuelle Anpassung: ${displayEntry.manualOvertime.toString().split('.').first}'),
+                            child: Text(l10n.manualAdjustmentLabel(displayEntry.manualOvertime.toString().split('.').first)),
                           ),
                         Padding(
                           padding: const EdgeInsets.only(top: 8.0),
                           child: Text(
-                            'Überstunden: ${_formatDuration(displayEntry.calculateOvertime(dailyTarget))}',
+                            l10n.overtimeValueLabel(_formatDuration(displayEntry.calculateOvertime(dailyTarget))),
                             style: TextStyle(
                                 color: (displayEntry
                                         .calculateOvertime(dailyTarget)
@@ -604,7 +602,7 @@ class DailyReportView extends ConsumerWidget {
       },
       loading: () => const LoadingIndicator(),
       error: (error, stackTrace) => Center(
-        child: Text('Fehler beim Laden der Einstellungen: $error'),
+        child: Text(l10n.errorLoadingSettings('$error')),
       ),
     );
   }
@@ -627,6 +625,8 @@ class WeeklyReportView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authStateProvider);
     final user = authState.asData?.value;
+    final l10n = AppLocalizations.of(context);
+    final locale = Localizations.localeOf(context).toString();
 
     // 1. Nicht eingeloggt: Nur Anmelde-Aufforderung
     if (user == null) {
@@ -634,7 +634,7 @@ class WeeklyReportView extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('Anmeldung erforderlich für Wochenberichte'),
+            Text(l10n.loginRequiredWeekly),
             const SizedBox(height: 16),
             FilledButton(
               onPressed: () {
@@ -644,7 +644,7 @@ class WeeklyReportView extends ConsumerWidget {
                       builder: (context) => const LoginPage(returnToIndex: 1)),
                 );
               },
-              child: const Text('Anmelden'),
+              child: Text(l10n.loginButton),
             ),
           ],
         ),
@@ -656,9 +656,8 @@ class WeeklyReportView extends ConsumerWidget {
 
     if (!isPremium) {
       return PremiumBlurGate(
-        featureTitle: 'Wochenberichte',
-        featureText:
-            'Behalte den vollen Überblick über deine wöchentlichen Überstunden und Arbeitsmuster.',
+        featureTitle: l10n.weeklyReportsFeatureTitle,
+        featureText: l10n.weeklyReportsFeatureText,
         onUpgrade: kIsWeb ? null : () {
           if (context.mounted) _showPaywall(context);
         },
@@ -712,24 +711,24 @@ class WeeklyReportView extends ConsumerWidget {
                       icon: const Icon(Icons.chevron_left),
                       onPressed: () => reportsNotifier.selectDate(
                           startOfWeek.subtract(const Duration(days: 7))),
-                      tooltip: 'Vorherige Woche',
+                      tooltip: l10n.previousWeekTooltip,
                     ),
                     Expanded(
                       child: Column(
                         children: [
                           Text(
-                            'Wochenbericht',
+                            l10n.weeklyReportTitle,
                             style: Theme.of(context).textTheme.titleLarge,
                             textAlign: TextAlign.center,
                           ),
                           Text(
-                            '${DateFormat.MMMd('de_DE').format(startOfWeek)} - ${DateFormat.MMMd('de_DE').format(endOfWeek)}',
+                            '${DateFormat.MMMd(locale).format(startOfWeek)} - ${DateFormat.MMMd(locale).format(endOfWeek)}',
                             style: Theme.of(context).textTheme.titleMedium,
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'KW $weekNumber',
+                            l10n.weekNumberLabel(weekNumber),
                             style: Theme.of(context).textTheme.bodyMedium,
                             textAlign: TextAlign.center,
                           ),
@@ -740,7 +739,7 @@ class WeeklyReportView extends ConsumerWidget {
                       icon: const Icon(Icons.chevron_right),
                       onPressed: () => reportsNotifier
                           .selectDate(startOfWeek.add(const Duration(days: 7))),
-                      tooltip: 'Nächste Woche',
+                      tooltip: l10n.nextWeekTooltip,
                     ),
                   ],
                 ),
@@ -756,7 +755,7 @@ class WeeklyReportView extends ConsumerWidget {
                           ),
                         ),
                         icon: const Icon(Icons.rate_review_outlined),
-                        label: const Text('Wochen-Reflexion',
+                        label: Text(l10n.weeklyReflectionButton,
                             overflow: TextOverflow.ellipsis, maxLines: 1),
                       ),
                     ),
@@ -771,7 +770,7 @@ class WeeklyReportView extends ConsumerWidget {
                           overtime: weeklyOvertimeLocal,
                         ),
                         icon: const Icon(Icons.picture_as_pdf_outlined),
-                        label: const Text('Als PDF exportieren',
+                        label: Text(l10n.exportAsPdfButton,
                             overflow: TextOverflow.ellipsis, maxLines: 1),
                       ),
                     ),
@@ -779,7 +778,7 @@ class WeeklyReportView extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 if (weeklyReport.workDays == 0)
-                  const Center(child: Text('Keine Daten für diese Woche.'))
+                  Center(child: Text(l10n.noDataForWeek))
                 else
                   Column(
                     children: [
@@ -792,8 +791,8 @@ class WeeklyReportView extends ConsumerWidget {
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  const Text('Gesamte Arbeitszeit:',
-                                      style: TextStyle(
+                                  Text(l10n.totalWorkTimeLabel,
+                                      style: const TextStyle(
                                           fontWeight: FontWeight.bold)),
                                   Text(
                                       weeklyReport.dailyWork.values
@@ -811,7 +810,7 @@ class WeeklyReportView extends ConsumerWidget {
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  const Text('Gesamte Pausen:'),
+                                  Text(l10n.totalBreaksLabel),
                                   Text(weeklyReport.totalBreakDuration
                                       .toString()
                                       .split('.')
@@ -823,7 +822,7 @@ class WeeklyReportView extends ConsumerWidget {
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  const Text('Arbeitstage:'),
+                                  Text(l10n.workdaysCountLabel),
                                   Text('${weeklyReport.workDays}'),
                                 ],
                               ),
@@ -832,7 +831,7 @@ class WeeklyReportView extends ConsumerWidget {
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  const Text('Ø Arbeitszeit pro Tag:'),
+                                  Text(l10n.avgWorkPerDayLabel),
                                   Text(weeklyReport.averageWorkDuration
                                       .toString()
                                       .split('.')
@@ -844,8 +843,8 @@ class WeeklyReportView extends ConsumerWidget {
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  const Text('Überstunden:',
-                                      style: TextStyle(
+                                  Text(l10n.overtimeColonLabel,
+                                      style: const TextStyle(
                                           fontWeight: FontWeight.bold)),
                                   Text(
                                     _formatDuration(weeklyOvertimeLocal),
@@ -862,8 +861,8 @@ class WeeklyReportView extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      const Text('Tägliche Arbeitszeiten:',
-                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      Text(l10n.dailyWorkTimesLabel,
+                          style: const TextStyle(fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
                       ...weeklyReport.dailyWork.entries.map((entry) {
                         final date = entry.key;
@@ -876,9 +875,9 @@ class WeeklyReportView extends ConsumerWidget {
                           child: Card(
                             child: ListTile(
                               title:
-                                  Text(DateFormat.EEEE('de_DE').format(date)),
+                                  Text(DateFormat.EEEE(locale).format(date)),
                               subtitle:
-                                  Text(DateFormat.yMMMd('de_DE').format(date)),
+                                  Text(DateFormat.yMMMd(locale).format(date)),
                               trailing:
                                   Text(duration.toString().split('.').first),
                             ),
@@ -893,7 +892,7 @@ class WeeklyReportView extends ConsumerWidget {
         },
         loading: () => const LoadingIndicator(),
         error: (error, stackTrace) => Center(
-              child: Text('Fehler beim Laden der Einstellungen: $error'),
+              child: Text(l10n.errorLoadingSettings('$error')),
             ));
   }
 }
@@ -974,12 +973,14 @@ Future<void> _exportWeeklyReportPdf({
     );
   } catch (e) {
     logger.e('[PDF-Export] Wochenbericht fehlgeschlagen: $e');
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text('PDF-Export fehlgeschlagen: $e'),
-        backgroundColor: Colors.red,
-      ),
-    );
+    if (context.mounted) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).pdfExportFailed('$e')),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }
 
@@ -1006,12 +1007,14 @@ Future<void> _exportMonthlyReportPdf({
     );
   } catch (e) {
     logger.e('[PDF-Export] Monatsbericht fehlgeschlagen: $e');
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text('PDF-Export fehlgeschlagen: $e'),
-        backgroundColor: Colors.red,
-      ),
-    );
+    if (context.mounted) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).pdfExportFailed('$e')),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }
 
@@ -1022,6 +1025,7 @@ Future<void> _exportYearlyReportPdf({
   required YearlyReportState yearlyReport,
 }) async {
   final messenger = ScaffoldMessenger.of(context);
+  final locale = Localizations.localeOf(context).toString();
   try {
     await _pdfReportService.exportYearlyReport(
       year: yearlyReport.year,
@@ -1034,7 +1038,7 @@ Future<void> _exportYearlyReportPdf({
       months: [
         for (final m in yearlyReport.months)
           (
-            DateFormat.MMMM('de_DE').format(DateTime(yearlyReport.year, m.month)),
+            DateFormat.MMMM(locale).format(DateTime(yearlyReport.year, m.month)),
             m.netWorkDuration,
             m.overtime,
             m.workDays,
@@ -1043,12 +1047,14 @@ Future<void> _exportYearlyReportPdf({
     );
   } catch (e) {
     logger.e('[PDF-Export] Jahresbericht fehlgeschlagen: $e');
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text('PDF-Export fehlgeschlagen: $e'),
-        backgroundColor: Colors.red,
-      ),
-    );
+    if (context.mounted) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).pdfExportFailed('$e')),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }
 
@@ -1069,6 +1075,8 @@ class MonthlyReportView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authStateProvider);
     final user = authState.asData?.value;
+    final l10n = AppLocalizations.of(context);
+    final locale = Localizations.localeOf(context).toString();
 
     // 1. Nicht eingeloggt: Nur Anmelde-Aufforderung
     if (user == null) {
@@ -1076,7 +1084,7 @@ class MonthlyReportView extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('Anmeldung erforderlich für Monatsberichte'),
+            Text(l10n.loginRequiredMonthly),
             const SizedBox(height: 16),
             FilledButton(
               onPressed: () {
@@ -1086,7 +1094,7 @@ class MonthlyReportView extends ConsumerWidget {
                       builder: (context) => const LoginPage(returnToIndex: 1)),
                 );
               },
-              child: const Text('Anmelden'),
+              child: Text(l10n.loginButton),
             ),
           ],
         ),
@@ -1098,9 +1106,8 @@ class MonthlyReportView extends ConsumerWidget {
 
     if (!isPremium) {
       return PremiumBlurGate(
-        featureTitle: 'Monatsberichte',
-        featureText:
-            'Detaillierte Monatsanalysen mit Überstunden-Tracking und Urlaubsübersicht.',
+        featureTitle: l10n.monthlyReportsFeatureTitle,
+        featureText: l10n.monthlyReportsFeatureText,
         onUpgrade: kIsWeb ? null : () {
           if (context.mounted) _showPaywall(context);
         },
@@ -1118,7 +1125,7 @@ class MonthlyReportView extends ConsumerWidget {
 
     final monthlyReport = reportsState.monthlyReportState;
     final selectedMonth = reportsState.selectedMonth ?? DateTime.now();
-    final month = DateFormat.yMMMM('de_DE')
+    final month = DateFormat.yMMMM(locale)
         .format(DateTime(selectedMonth.year, selectedMonth.month));
 
     final settingsValue = ref.watch(settingsViewModelProvider);
@@ -1146,7 +1153,7 @@ class MonthlyReportView extends ConsumerWidget {
               icon: const Icon(Icons.chevron_left),
               onPressed: () => reportsNotifier.onMonthChanged(
                   DateTime(selectedMonth.year, selectedMonth.month - 1, 1)),
-              tooltip: 'Vorheriger Monat',
+              tooltip: l10n.previousMonthTooltip,
             ),
             Expanded(
               child: Text(
@@ -1161,7 +1168,7 @@ class MonthlyReportView extends ConsumerWidget {
               icon: const Icon(Icons.chevron_right),
               onPressed: () => reportsNotifier.onMonthChanged(
                   DateTime(selectedMonth.year, selectedMonth.month + 1, 1)),
-              tooltip: 'Nächster Monat',
+              tooltip: l10n.nextMonthTooltip,
             ),
           ],
         ));
@@ -1176,14 +1183,14 @@ class MonthlyReportView extends ConsumerWidget {
               monthlyOvertime: monthlyOvertimeLocal,
             ),
             icon: const Icon(Icons.picture_as_pdf_outlined),
-            label: const Text('Als PDF exportieren'),
+            label: Text(l10n.exportAsPdfButton),
           ),
         ));
 
         monthChildren.add(const SizedBox(height: 8));
 
         if (monthlyReport.workDays == 0) {
-          monthChildren.add(const Center(child: Text('Keine Daten für diesen Monat.')));
+          monthChildren.add(Center(child: Text(l10n.noDataForMonth)));
         } else {
           // Statistikkarte
           monthChildren.add(Card(
@@ -1194,7 +1201,7 @@ class MonthlyReportView extends ConsumerWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Gesamte Arbeitszeit:', style: TextStyle(fontWeight: FontWeight.bold)),
+                      Text(l10n.totalWorkTimeLabel, style: const TextStyle(fontWeight: FontWeight.bold)),
                       Text(monthlyReport.dailyWork.values.fold(Duration.zero, (prev, d) => prev + d).toString().split('.').first,
                           style: const TextStyle(fontWeight: FontWeight.bold)),
                     ],
@@ -1203,7 +1210,7 @@ class MonthlyReportView extends ConsumerWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Gesamte Pausen:'),
+                      Text(l10n.totalBreaksLabel),
                       Text(monthlyReport.totalBreakDuration.toString().split('.').first),
                     ],
                   ),
@@ -1211,7 +1218,7 @@ class MonthlyReportView extends ConsumerWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Arbeitstage:'),
+                      Text(l10n.workdaysCountLabel),
                       Text('${monthlyReport.workDays}'),
                     ],
                   ),
@@ -1219,7 +1226,7 @@ class MonthlyReportView extends ConsumerWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Ø Arbeitszeit pro Tag:'),
+                      Text(l10n.avgWorkPerDayLabel),
                       Text(monthlyReport.averageWorkDuration.toString().split('.').first),
                     ],
                   ),
@@ -1227,7 +1234,7 @@ class MonthlyReportView extends ConsumerWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Ø Arbeitszeit pro Woche:'),
+                      Text(l10n.avgWorkPerWeekLabel),
                       Text(monthlyReport.avgWorkDurationPerWeek.toString().split('.').first),
                     ],
                   ),
@@ -1235,7 +1242,7 @@ class MonthlyReportView extends ConsumerWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Überstunden Monat:', style: TextStyle(fontWeight: FontWeight.bold)),
+                      Text(l10n.monthlyOvertimeLabel, style: const TextStyle(fontWeight: FontWeight.bold)),
                       Text(_formatDuration(monthlyOvertimeLocal),
                           style: TextStyle(color: monthlyOvertimeLocal.isNegative ? Colors.red : Colors.green, fontWeight: FontWeight.bold)),
                     ],
@@ -1244,7 +1251,7 @@ class MonthlyReportView extends ConsumerWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Gesamt-Überstunden:', style: TextStyle(fontWeight: FontWeight.bold)),
+                      Text(l10n.totalOvertimeColonLabel, style: const TextStyle(fontWeight: FontWeight.bold)),
                       Text(_formatDuration(monthlyReport.totalOvertime),
                           style: TextStyle(color: monthlyReport.totalOvertime.isNegative ? Colors.red : Colors.green, fontWeight: FontWeight.bold)),
                     ],
@@ -1255,7 +1262,7 @@ class MonthlyReportView extends ConsumerWidget {
           ));
 
           monthChildren.add(const SizedBox(height: 24));
-          monthChildren.add(const Text('Wochenübersicht:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)));
+          monthChildren.add(Text(l10n.weekOverviewTitle, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)));
           monthChildren.add(const SizedBox(height: 8));
 
           // Weekly entries
@@ -1265,7 +1272,7 @@ class MonthlyReportView extends ConsumerWidget {
             monthChildren.add(Card(
               margin: const EdgeInsets.symmetric(vertical: 4.0),
               child: ListTile(
-                title: Text('Kalenderwoche $weekNumber'),
+                title: Text(l10n.calendarWeekLabel(weekNumber)),
                 trailing: Text(duration.toString().split('.').first),
                 onTap: () => _navigateToWeek(ref,
                     month: selectedMonth, weekNumber: weekNumber),
@@ -1274,7 +1281,7 @@ class MonthlyReportView extends ConsumerWidget {
           }
 
           monthChildren.add(const SizedBox(height: 24));
-          monthChildren.add(const Text('Tagesübersicht:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)));
+          monthChildren.add(Text(l10n.dayOverviewTitle, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)));
           monthChildren.add(const SizedBox(height: 8));
 
           // Daily entries
@@ -1289,8 +1296,8 @@ class MonthlyReportView extends ConsumerWidget {
                 child: Card(
                   margin: const EdgeInsets.symmetric(vertical: 4.0),
                   child: ListTile(
-                    title: Text(DateFormat.EEEE('de_DE').format(date)),
-                    subtitle: Text(DateFormat.yMMMd('de_DE').format(date)),
+                    title: Text(DateFormat.EEEE(locale).format(date)),
+                    subtitle: Text(DateFormat.yMMMd(locale).format(date)),
                     trailing: Text(duration.toString().split('.').first),
                   ),
                 ),
@@ -1308,7 +1315,7 @@ class MonthlyReportView extends ConsumerWidget {
       },
       loading: () => const LoadingIndicator(),
       error: (error, stackTrace) => Center(
-        child: Text('Fehler beim Laden der Einstellungen: $error'),
+        child: Text(l10n.errorLoadingSettings('$error')),
       ),
     );
   }
@@ -1353,6 +1360,8 @@ class _YearlyReportViewState extends ConsumerState<YearlyReportView> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authStateProvider);
     final user = authState.asData?.value;
+    final l10n = AppLocalizations.of(context);
+    final locale = Localizations.localeOf(context).toString();
 
     // 1. Nicht eingeloggt: Nur Anmelde-Aufforderung
     if (user == null) {
@@ -1360,7 +1369,7 @@ class _YearlyReportViewState extends ConsumerState<YearlyReportView> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('Anmeldung erforderlich für Jahresberichte'),
+            Text(l10n.loginRequiredYearly),
             const SizedBox(height: 16),
             FilledButton(
               onPressed: () {
@@ -1370,7 +1379,7 @@ class _YearlyReportViewState extends ConsumerState<YearlyReportView> {
                       builder: (context) => const LoginPage(returnToIndex: 1)),
                 );
               },
-              child: const Text('Anmelden'),
+              child: Text(l10n.loginButton),
             ),
           ],
         ),
@@ -1382,9 +1391,8 @@ class _YearlyReportViewState extends ConsumerState<YearlyReportView> {
 
     if (!isPremium) {
       return PremiumBlurGate(
-        featureTitle: 'Jahresberichte',
-        featureText:
-            'Jahresübersicht mit Monatsvergleich, Gesamtüberstunden sowie Urlaubs- und Kranktagen.',
+        featureTitle: l10n.yearlyReportsFeatureTitle,
+        featureText: l10n.yearlyReportsFeatureText,
         onUpgrade: kIsWeb ? null : () {
           if (context.mounted) _showPaywall(context);
         },
@@ -1401,10 +1409,8 @@ class _YearlyReportViewState extends ConsumerState<YearlyReportView> {
       return const LoadingIndicator();
     }
 
-    const monthNames = [
-      'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
-      'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember',
-    ];
+    final monthNames = List.generate(
+        12, (i) => DateFormat.MMMM(locale).format(DateTime(2024, i + 1)));
 
     return ResponsiveCenter(
       child: ListView(
@@ -1417,7 +1423,7 @@ class _YearlyReportViewState extends ConsumerState<YearlyReportView> {
               IconButton(
                 icon: const Icon(Icons.chevron_left),
                 onPressed: () => yearlyNotifier.loadYear(yearlyState.year - 1),
-                tooltip: 'Vorheriges Jahr',
+                tooltip: l10n.previousYearTooltip,
               ),
               Expanded(
                 child: Text(
@@ -1429,7 +1435,7 @@ class _YearlyReportViewState extends ConsumerState<YearlyReportView> {
               IconButton(
                 icon: const Icon(Icons.chevron_right),
                 onPressed: () => yearlyNotifier.loadYear(yearlyState.year + 1),
-                tooltip: 'Nächstes Jahr',
+                tooltip: l10n.nextYearTooltip,
               ),
             ],
           ),
@@ -1441,14 +1447,14 @@ class _YearlyReportViewState extends ConsumerState<YearlyReportView> {
                 yearlyReport: yearlyState,
               ),
               icon: const Icon(Icons.picture_as_pdf_outlined),
-              label: const Text('Als PDF exportieren'),
+              label: Text(l10n.exportAsPdfButton),
             ),
           ),
           const SizedBox(height: 8),
           if (yearlyState.totalWorkDays == 0 &&
               yearlyState.totalVacationDays == 0 &&
               yearlyState.totalSickDays == 0)
-            const Center(child: Text('Keine Daten für dieses Jahr.'))
+            Center(child: Text(l10n.noDataForYear))
           else ...[
             // Statistikkarte
             Card(
@@ -1459,8 +1465,8 @@ class _YearlyReportViewState extends ConsumerState<YearlyReportView> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Gesamte Arbeitszeit:',
-                            style: TextStyle(fontWeight: FontWeight.bold)),
+                        Text(l10n.totalWorkTimeLabel,
+                            style: const TextStyle(fontWeight: FontWeight.bold)),
                         Text(
                             yearlyState.totalNetWorkDuration.toString().split('.').first,
                             style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -1470,7 +1476,7 @@ class _YearlyReportViewState extends ConsumerState<YearlyReportView> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Arbeitstage:'),
+                        Text(l10n.workdaysCountLabel),
                         Text('${yearlyState.totalWorkDays}'),
                       ],
                     ),
@@ -1478,7 +1484,7 @@ class _YearlyReportViewState extends ConsumerState<YearlyReportView> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Urlaubstage:'),
+                        Text(l10n.vacationDaysLabel),
                         Text('${yearlyState.totalVacationDays}'),
                       ],
                     ),
@@ -1486,7 +1492,7 @@ class _YearlyReportViewState extends ConsumerState<YearlyReportView> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Krankheitstage:'),
+                        Text(l10n.sickDaysLabel),
                         Text('${yearlyState.totalSickDays}'),
                       ],
                     ),
@@ -1494,7 +1500,7 @@ class _YearlyReportViewState extends ConsumerState<YearlyReportView> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Feiertage:'),
+                        Text(l10n.holidaysLabel),
                         Text('${yearlyState.totalHolidayDays}'),
                       ],
                     ),
@@ -1502,8 +1508,8 @@ class _YearlyReportViewState extends ConsumerState<YearlyReportView> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Gesamt-Überstunden:',
-                            style: TextStyle(fontWeight: FontWeight.bold)),
+                        Text(l10n.totalOvertimeColonLabel,
+                            style: const TextStyle(fontWeight: FontWeight.bold)),
                         Text(
                           _formatDuration(yearlyState.totalOvertime),
                           style: TextStyle(
@@ -1519,8 +1525,8 @@ class _YearlyReportViewState extends ConsumerState<YearlyReportView> {
               ),
             ),
             const SizedBox(height: 24),
-            const Text('Monatsübersicht:',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            Text(l10n.monthOverviewTitle,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
             const SizedBox(height: 8),
             for (final monthSummary in yearlyState.months)
               if (monthSummary.workDays > 0 ||
@@ -1532,7 +1538,7 @@ class _YearlyReportViewState extends ConsumerState<YearlyReportView> {
                   child: ListTile(
                     title: Text(monthNames[monthSummary.month - 1]),
                     subtitle: Text(
-                        '${monthSummary.workDays} Arbeitstage · ${monthSummary.netWorkDuration.toString().split('.').first}'),
+                        l10n.workdaysCountInline(monthSummary.workDays, monthSummary.netWorkDuration.toString().split('.').first)),
                     trailing: Text(
                       _formatDuration(monthSummary.overtime),
                       style: TextStyle(
@@ -1587,13 +1593,15 @@ class _InsightsViewState extends ConsumerState<InsightsView> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authStateProvider);
     final user = authState.asData?.value;
+    final l10n = AppLocalizations.of(context);
+    final locale = Localizations.localeOf(context).toString();
 
     if (user == null) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('Anmeldung erforderlich für Insights'),
+            Text(l10n.loginRequiredInsights),
             const SizedBox(height: 16),
             FilledButton(
               onPressed: () {
@@ -1603,7 +1611,7 @@ class _InsightsViewState extends ConsumerState<InsightsView> {
                       builder: (context) => const LoginPage(returnToIndex: 1)),
                 );
               },
-              child: const Text('Anmelden'),
+              child: Text(l10n.loginButton),
             ),
           ],
         ),
@@ -1614,9 +1622,8 @@ class _InsightsViewState extends ConsumerState<InsightsView> {
 
     if (!isPremium) {
       return PremiumBlurGate(
-        featureTitle: 'Arbeitszeit-Insights',
-        featureText:
-            'Automatisch erkannte Muster in deiner Arbeitszeit: Wochentags-Analyse, Burnout-Warnung und Produktivitäts-Heatmap.',
+        featureTitle: l10n.insightsFeatureTitle,
+        featureText: l10n.insightsFeatureText,
         onUpgrade: kIsWeb ? null : () {
           if (context.mounted) _showPaywall(context);
         },
@@ -1632,11 +1639,11 @@ class _InsightsViewState extends ConsumerState<InsightsView> {
     }
 
     if (insightsState.hasNoData) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(24.0),
+          padding: const EdgeInsets.all(24.0),
           child: Text(
-            'Noch nicht genug Daten für Insights. Trage ein paar Arbeitstage ein und schau später wieder vorbei.',
+            l10n.notEnoughDataInsights,
             textAlign: TextAlign.center,
           ),
         ),
@@ -1659,7 +1666,7 @@ class _InsightsViewState extends ConsumerState<InsightsView> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'Du liegst seit ${insightsState.burnoutStatus.currentStreak} aufeinanderfolgenden Arbeitstagen über deinem Soll. Denk an ausreichend Erholung.',
+                        l10n.burnoutWarning('${insightsState.burnoutStatus.currentStreak}'),
                         style: TextStyle(
                             color: Theme.of(context).colorScheme.onErrorContainer),
                       ),
@@ -1670,10 +1677,9 @@ class _InsightsViewState extends ConsumerState<InsightsView> {
             ),
           if (insightsState.burnoutStatus.isWarning) const SizedBox(height: 16),
           if (insightsState.weekdayAverages.isNotEmpty) ...[
-            const _InsightSectionHeader(
-              title: 'Wochentags-Analyse',
-              explanation:
-                  'Deine durchschnittliche Arbeitszeit je Wochentag. Der Wert rechts zeigt die Abweichung vom Durchschnitt über alle Wochentage - so siehst du z.B., ob du montags typischerweise länger arbeitest als sonst.',
+            _InsightSectionHeader(
+              title: l10n.weekdayAnalysisTitle,
+              explanation: l10n.weekdayAnalysisExplanation,
             ),
             const SizedBox(height: 8),
             Card(
@@ -1681,9 +1687,9 @@ class _InsightsViewState extends ConsumerState<InsightsView> {
                 children: [
                   for (final weekdayAverage in insightsState.weekdayAverages)
                     ListTile(
-                      title: Text(germanWeekdayShortLabels[weekdayAverage.weekday - 1]),
+                      title: Text(weekdayShortLabel(weekdayAverage.weekday, locale)),
                       subtitle: Text(
-                          'Ø ${weekdayAverage.averageWorkDuration.toString().split('.').first} h (${weekdayAverage.sampleCount}x)'),
+                          l10n.avgWorkTimeWithCount(weekdayAverage.averageWorkDuration.toString().split('.').first, weekdayAverage.sampleCount)),
                       trailing: Text(
                         _formatSignedDuration(weekdayAverage.deviationFromOverallAverage),
                         style: TextStyle(
@@ -1699,10 +1705,9 @@ class _InsightsViewState extends ConsumerState<InsightsView> {
             const SizedBox(height: 24),
           ],
           if (insightsState.heatmap.isNotEmpty) ...[
-            const _InsightSectionHeader(
-              title: 'Produktivitäts-Heatmap nach Startzeit',
-              explanation:
-                  'Durchschnittliche Überstunden abhängig davon, um wie viel Uhr du deinen Arbeitstag begonnen hast. Hilft zu erkennen, ob ein früherer oder späterer Start bei dir mit mehr oder weniger Überstunden einhergeht.',
+            _InsightSectionHeader(
+              title: l10n.productivityHeatmapTitle,
+              explanation: l10n.productivityHeatmapExplanation,
             ),
             const SizedBox(height: 8),
             Card(
@@ -1710,8 +1715,8 @@ class _InsightsViewState extends ConsumerState<InsightsView> {
                 children: [
                   for (final bucket in insightsState.heatmap)
                     ListTile(
-                      title: Text('Start ${bucket.startHour.toString().padLeft(2, '0')}:00 Uhr'),
-                      subtitle: Text('${bucket.sampleCount}x'),
+                      title: Text(l10n.startHourLabel(bucket.startHour.toString().padLeft(2, '0'))),
+                      subtitle: Text(l10n.sampleCountLabel(bucket.sampleCount)),
                       trailing: Text(
                         _formatSignedDuration(bucket.averageOvertime),
                         style: TextStyle(
@@ -1902,6 +1907,8 @@ class _CalendarState extends ConsumerState<_Calendar> {
     final reportsState = ref.watch(reportsViewModelProvider);
     final reportsNotifier = ref.read(reportsViewModelProvider.notifier);
     final settingsState = ref.watch(settingsViewModelProvider);
+    final l10n = AppLocalizations.of(context);
+    final locale = Localizations.localeOf(context).toString();
 
     // Hole die konfigurierten Arbeitstage aus den Settings (default Mo-Fr)
     final workdays =
@@ -1929,11 +1936,11 @@ class _CalendarState extends ConsumerState<_Calendar> {
                 IconButton(
                   icon: const Icon(Icons.chevron_left),
                   onPressed: widget.onPreviousMonthTapped,
-                  tooltip: 'Vorheriger Monat',
+                  tooltip: l10n.previousMonthTooltip,
                 ),
                 Expanded(
                   child: Text(
-                    DateFormat.yMMMM('de_DE').format(widget.selectedDate),
+                    DateFormat.yMMMM(locale).format(widget.selectedDate),
                     style: Theme.of(context).textTheme.titleMedium,
                     textAlign: TextAlign.center,
                   ),
@@ -1941,7 +1948,7 @@ class _CalendarState extends ConsumerState<_Calendar> {
                 IconButton(
                   icon: const Icon(Icons.chevron_right),
                   onPressed: widget.onNextMonthTapped,
-                  tooltip: 'Nächster Monat',
+                  tooltip: l10n.nextMonthTooltip,
                 ),
               ],
             ),
@@ -1954,7 +1961,7 @@ class _CalendarState extends ConsumerState<_Calendar> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      '${reportsState.selectedDates.length} Tage ausgewählt',
+                      l10n.selectedDaysCount(reportsState.selectedDates.length),
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.primary,
                         fontWeight: FontWeight.bold,
@@ -1962,7 +1969,7 @@ class _CalendarState extends ConsumerState<_Calendar> {
                     ),
                     TextButton(
                       onPressed: () => reportsNotifier.clearDateSelection(),
-                      child: const Text('Zurücksetzen'),
+                      child: Text(l10n.resetAction),
                     ),
                   ],
                 ),
@@ -1971,7 +1978,7 @@ class _CalendarState extends ConsumerState<_Calendar> {
               Padding(
                 padding: const EdgeInsets.only(bottom: 8.0),
                 child: Text(
-                  'Gedrückt halten und ziehen (Mobilgerät) oder klicken und ziehen (Web) zum Auswählen eines Datumsbereichs',
+                  l10n.dragSelectHint,
                   style: TextStyle(
                     color: Theme.of(context).textTheme.bodySmall?.color,
                     fontSize: 12,
@@ -1981,8 +1988,8 @@ class _CalendarState extends ConsumerState<_Calendar> {
               ),
             Row(
               children: List.generate(7, (index) {
-                final day = DateFormat.E('de_DE').format(DateTime(2023, 1, 2 + index));
-                final fullDay = DateFormat.EEEE('de_DE').format(DateTime(2023, 1, 2 + index));
+                final day = DateFormat.E(locale).format(DateTime(2023, 1, 2 + index));
+                final fullDay = DateFormat.EEEE(locale).format(DateTime(2023, 1, 2 + index));
                 return Expanded(
                   child: Semantics(
                     label: fullDay,
@@ -2102,7 +2109,7 @@ class _CalendarState extends ConsumerState<_Calendar> {
                     }
 
                     final semanticLabel =
-                        '${DateFormat('EEEE, d. MMMM yyyy', 'de_DE').format(date)}${holidayName != null ? ', Feiertag: $holidayName' : ''}';
+                        '${DateFormat('EEEE, d. MMMM yyyy', locale).format(date)}${holidayName != null ? l10n.holidaySemanticSuffix(holidayName) : ''}';
                     return Semantics(
                       label: semanticLabel,
                       button: true,
@@ -2185,16 +2192,16 @@ class _DayEntriesBottomSheetState extends ConsumerState<DayEntriesBottomSheet> {
 
   Future<void> _confirmDelete(BuildContext btmSheetItemContext, WidgetRef ref,
       WorkEntryEntity entry) async {
+    final l10n = AppLocalizations.of(btmSheetItemContext);
     final bool? confirmed = await showDialog<bool>(
       context: btmSheetItemContext,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          title: const Text('Eintrag löschen?'),
-          content:
-              const Text('Möchten Sie diesen Arbeitseintrag wirklich löschen?'),
+          title: Text(l10n.deleteEntryTitle),
+          content: Text(l10n.deleteEntryConfirm),
           actions: <Widget>[
             TextButton(
-              child: const Text('Abbrechen'),
+              child: Text(l10n.cancel),
               onPressed: () {
                 if (Navigator.of(dialogContext).canPop()) {
                   Navigator.of(dialogContext).pop(false);
@@ -2202,7 +2209,7 @@ class _DayEntriesBottomSheetState extends ConsumerState<DayEntriesBottomSheet> {
               },
             ),
             TextButton(
-              child: const Text('Löschen'),
+              child: Text(l10n.deleteAction),
               onPressed: () {
                 if (Navigator.of(dialogContext).canPop()) {
                   Navigator.of(dialogContext).pop(true);
@@ -2229,6 +2236,8 @@ class _DayEntriesBottomSheetState extends ConsumerState<DayEntriesBottomSheet> {
     final reportsState = ref.watch(reportsViewModelProvider);
     final use24HourFormat =
         ref.watch(settingsViewModelProvider).value?.settings.use24HourFormat ?? true;
+    final l10n = AppLocalizations.of(context);
+    final locale = Localizations.localeOf(context).toString();
 
     if (reportsState.isLoading &&
         (reportsState.selectedDay == null ||
@@ -2273,7 +2282,7 @@ class _DayEntriesBottomSheetState extends ConsumerState<DayEntriesBottomSheet> {
                   ),
                 ),
                 Text(
-                  'Einträge am ${DateFormat.yMMMMd('de_DE').format(widget.date)}',
+                  l10n.entriesForDayTitle(DateFormat.yMMMMd(locale).format(widget.date)),
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 12),
@@ -2283,7 +2292,7 @@ class _DayEntriesBottomSheetState extends ConsumerState<DayEntriesBottomSheet> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Text('Keine Einträge für diesen Tag.'),
+                          Text(l10n.noEntriesForDay),
                           Padding(
                             padding: const EdgeInsets.only(top: 16.0),
                             child: Column(
@@ -2306,7 +2315,7 @@ class _DayEntriesBottomSheetState extends ConsumerState<DayEntriesBottomSheet> {
                                       _openEdit(newEntry);
                                     },
                                     icon: const Icon(Icons.add),
-                                    label: const Text('Eintrag hinzufügen'),
+                                    label: Text(l10n.addEntryAction),
                                   ),
                                 ),
                                 const SizedBox(height: 12),
@@ -2316,8 +2325,7 @@ class _DayEntriesBottomSheetState extends ConsumerState<DayEntriesBottomSheet> {
                                     onPressed: () => _handleQuickEntry(
                                         context, ref, widget.date),
                                     icon: const Icon(Icons.flash_on),
-                                    label: const Text(
-                                        'Schnell-Eintrag (Urlaub, Krank...)'),
+                                    label: Text(l10n.quickEntryButton),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
                                       foregroundColor: Theme.of(context).colorScheme.onSecondaryContainer,
@@ -2371,8 +2379,8 @@ class _DayEntriesBottomSheetState extends ConsumerState<DayEntriesBottomSheet> {
                             contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 12, vertical: 8),
                             title: Text(isSpecialType
-                                ? _getWorkEntryTypeLabel(displayEntry.type)
-                                : 'Arbeitszeit: ${worked.toString().split('.').first}'),
+                                ? _getWorkEntryTypeLabel(l10n, displayEntry.type)
+                                : l10n.workTimeLabel(worked.toString().split('.').first)),
                             subtitle: (isSpecialType &&
                                     displayEntry.workStart == null &&
                                     displayEntry.workEnd == null)
@@ -2381,16 +2389,12 @@ class _DayEntriesBottomSheetState extends ConsumerState<DayEntriesBottomSheet> {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      Text(
-                                          'Start: ${start != null ? formatTime(start, use24HourFormat: use24HourFormat) : '-'}'),
-                                      Text(
-                                          'Ende: ${displayEntry.workEnd != null ? formatTime(displayEntry.workEnd!, use24HourFormat: use24HourFormat) : (isSpecialType ? '-' : 'läuft...')}'),
+                                      Text(l10n.startValueLabel(start != null ? formatTime(start, use24HourFormat: use24HourFormat) : '-')),
+                                      Text(l10n.endValueLabel(displayEntry.workEnd != null ? formatTime(displayEntry.workEnd!, use24HourFormat: use24HourFormat) : (isSpecialType ? '-' : l10n.breakInProgress))),
                                       if (!isSpecialType)
-                                        Text(
-                                            'Pause: ${displayEntry.totalBreakDuration.toString().split('.').first}'),
+                                        Text(l10n.breakValueLabel(displayEntry.totalBreakDuration.toString().split('.').first)),
                                       if (displayEntry.manualOvertime != null)
-                                        Text(
-                                            'Manuelle Anpassung: ${displayEntry.manualOvertime.toString().split('.').first}'),
+                                        Text(l10n.manualAdjustmentLabel(displayEntry.manualOvertime.toString().split('.').first)),
                                     ],
                                   ),
                             trailing: Row(
@@ -2451,16 +2455,16 @@ Future<void> _handleQuickEntry(
   }
 }
 
-String _getWorkEntryTypeLabel(WorkEntryType type) {
+String _getWorkEntryTypeLabel(AppLocalizations l10n, WorkEntryType type) {
   switch (type) {
     case WorkEntryType.vacation:
-      return 'Urlaub';
+      return l10n.workEntryTypeVacationPlain;
     case WorkEntryType.sick:
-      return 'Krankheit';
+      return l10n.workEntryTypeSickPlain;
     case WorkEntryType.holiday:
-      return 'Feiertag';
+      return l10n.workEntryTypeHolidayPlain;
     case WorkEntryType.work:
-      return 'Arbeit';
+      return l10n.workEntryTypeWorkPlain;
   }
 }
 
@@ -2502,7 +2506,7 @@ Future<void> _handleBatchQuickEntry(
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Schnell-Einträge für $count Tage erstellt'),
+          content: Text(AppLocalizations.of(context).batchEntriesCreated(count)),
         ),
       );
     }
@@ -2531,7 +2535,7 @@ class _WeeklyReportPlaceholder extends StatelessWidget {
               Column(
                 children: [
                   Text(
-                    'Wochenbericht',
+                    AppLocalizations.of(context).weeklyReportTitle,
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   Container(
@@ -2633,7 +2637,7 @@ class _MonthlyReportPlaceholder extends StatelessWidget {
               Column(
                 children: [
                   Text(
-                    'Monatsbericht',
+                    AppLocalizations.of(context).monthlyReportTitle,
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   Container(

@@ -77,7 +77,11 @@ RevenueCat (`purchases_flutter`) handles in-app purchases. `isPremiumProvider` (
 
 ### Localization
 
-The app is German-only (`de_DE`). Date formatting uses `intl` with `de_DE` locale initialized at startup. User-facing strings are written directly in German — there is no ARB/l10n system.
+The app supports German (default) and English via Flutter's ARB/l10n system (`lib/l10n/app_de.arb` / `app_en.arb`, generated `AppLocalizations` class — see #221/#262). `app_de.arb` is the template file and carries `@key` descriptions; `app_en.arb` holds only the translated values. After editing an ARB file, run `flutter gen-l10n` (or `flutter pub get`, since `generate: true` is set in `pubspec.yaml`) to regenerate `lib/l10n/app_localizations*.dart` — these generated files must not be edited manually.
+
+All user-facing strings in `lib/presentation/` go through `AppLocalizations.of(context)` (commonly aliased to a local `l10n` variable at the top of `build()`), never hardcoded literals. Locale-dependent formatting (`DateFormat`, weekday/month names) must use `Localizations.localeOf(context).toString()` instead of a hardcoded `'de_DE'` — see `domain/utils/weekday_labels.dart` for the pattern (`weekdayShortLabel`/`formatWorkdays` take an explicit `locale` parameter). Legal documents (Impressum/Datenschutz/AGB) are loaded from Markdown assets in `assets/legal/` and are **not** translated — only their dialog titles are localized; the documents themselves remain German-only.
+
+Widget tests that pump a screen using `AppLocalizations.of(context)` must configure `MaterialApp` with `localizationsDelegates: AppLocalizations.localizationsDelegates` and `supportedLocales: AppLocalizations.supportedLocales` (plus `locale: const Locale('de')` to keep existing assertions on German text working) — see `test/presentation/screens/settings_page_test.dart` for the reference pattern.
 
 ### Testing
 
@@ -99,7 +103,7 @@ Files ending in `.g.dart` are generated — do not edit them manually. Regenerat
 6. **`SharedPreferences` nur über den `main.dart`-Override — nie direkt**
 7. **Premium-Features immer hinter `isPremiumProvider` absichern**
 8. **Hybrid-Repository-Pattern nicht umgehen — immer über HybridImpl gehen**
-9. **Strings immer auf Deutsch — kein i18n-System vorhanden**
+9. **Alle User-Strings über `AppLocalizations.of(context)`** — ARB-Keys in `lib/l10n/app_de.arb` (+ Übersetzung in `app_en.arb`) ergänzen, nie deutschen Text hart codieren. Nach ARB-Änderungen `flutter gen-l10n` ausführen
 
 ## Agenten-Übersicht
 

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers/providers.dart';
 import '../../core/utils/logger.dart';
 import '../../domain/entities/work_profile_entity.dart';
+import '../../l10n/app_localizations.dart';
 
 /// Dialog zum Löschen zusätzlicher Arbeitszeit-Profile (siehe #238). Das
 /// Standard-Profil wird hier nicht aufgeführt - es kann nicht gelöscht
@@ -16,23 +17,21 @@ class ManageWorkProfilesDialog extends ConsumerWidget {
     WidgetRef ref,
     WorkProfileEntity profile,
   ) async {
+    final l10n = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Profil löschen?'),
-        content: Text(
-          'Profil "${profile.name}" und alle zugehörigen Arbeitseinträge, '
-          'Überstunden und Einstellungen werden unwiderruflich gelöscht.',
-        ),
+        title: Text(l10n.deleteProfileTitle),
+        content: Text(l10n.deleteProfileConfirm(profile.name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Abbrechen'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Löschen'),
+            child: Text(l10n.deleteAction),
           ),
         ],
       ),
@@ -50,19 +49,20 @@ class ManageWorkProfilesDialog extends ConsumerWidget {
       if (ref.read(activeWorkProfileIdProvider) == profile.id) {
         ref.read(activeWorkProfileIdProvider.notifier).setActiveProfile(null);
       }
-      messenger.showSnackBar(SnackBar(content: Text('Profil "${profile.name}" gelöscht.')));
+      messenger.showSnackBar(SnackBar(content: Text(l10n.profileDeletedMessage(profile.name))));
     } catch (e, stackTrace) {
       logger.e('[ManageWorkProfilesDialog] Fehler beim Löschen: $e', stackTrace: stackTrace);
-      messenger.showSnackBar(SnackBar(content: Text('Löschen fehlgeschlagen: $e')));
+      messenger.showSnackBar(SnackBar(content: Text(l10n.profileDeletionFailed('$e'))));
     }
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profilesAsync = ref.watch(workProfilesProvider);
+    final l10n = AppLocalizations.of(context);
 
     return AlertDialog(
-      title: const Text('Profile verwalten'),
+      title: Text(l10n.manageProfilesDialogTitle),
       content: SizedBox(
         width: double.maxFinite,
         child: profilesAsync.when(
@@ -70,12 +70,12 @@ class ManageWorkProfilesDialog extends ConsumerWidget {
             height: 80,
             child: Center(child: CircularProgressIndicator()),
           ),
-          error: (error, _) => Text('Fehler beim Laden: $error'),
+          error: (error, _) => Text(l10n.errorLoadingGeneric('$error')),
           data: (profiles) {
             final additionalProfiles =
                 profiles.where((p) => !p.isDefault).toList();
             if (additionalProfiles.isEmpty) {
-              return const Text('Keine zusätzlichen Profile vorhanden.');
+              return Text(l10n.noAdditionalProfiles);
             }
             return Column(
               mainAxisSize: MainAxisSize.min,
@@ -85,7 +85,7 @@ class ManageWorkProfilesDialog extends ConsumerWidget {
                     title: Text(profile.name),
                     trailing: IconButton(
                       icon: const Icon(Icons.delete_outline),
-                      tooltip: 'Profil löschen',
+                      tooltip: l10n.deleteProfileTooltip,
                       onPressed: () => _confirmAndDelete(context, ref, profile),
                     ),
                   ),
@@ -97,7 +97,7 @@ class ManageWorkProfilesDialog extends ConsumerWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Fertig'),
+          child: Text(l10n.doneAction),
         ),
       ],
     );

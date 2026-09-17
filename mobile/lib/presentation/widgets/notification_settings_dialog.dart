@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/services/notification_service.dart';
 import '../../domain/entities/settings_entity.dart';
+import '../../domain/utils/weekday_labels.dart';
+import '../../l10n/app_localizations.dart';
 import '../view_models/settings_view_model.dart';
 
 class NotificationSettingsDialog extends ConsumerStatefulWidget {
@@ -37,16 +39,6 @@ class _NotificationSettingsDialogState
   late final TextEditingController _overtimeThresholdController;
   late bool _warnOnUndertimeThreshold;
   late final TextEditingController _undertimeThresholdController;
-
-  final Map<int, String> _dayNames = {
-    1: 'Mo',
-    2: 'Di',
-    3: 'Mi',
-    4: 'Do',
-    5: 'Fr',
-    6: 'Sa',
-    7: 'So',
-  };
 
   @override
   void initState() {
@@ -110,8 +102,8 @@ class _NotificationSettingsDialogState
       final hasPermission = await notificationService.requestPermissions();
       if (!hasPermission && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Benachrichtigungsberechtigungen wurden nicht erteilt'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context).notificationPermissionDenied),
             backgroundColor: Colors.orange,
           ),
         );
@@ -159,10 +151,11 @@ class _NotificationSettingsDialogState
     }
 
     if (mounted) {
+      final l10n = AppLocalizations.of(context);
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Benachrichtigungseinstellungen gespeichert'),
+        SnackBar(
+          content: Text(l10n.notificationSettingsSaved),
           backgroundColor: Colors.green,
         ),
       );
@@ -173,6 +166,8 @@ class _NotificationSettingsDialogState
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final l10n = AppLocalizations.of(context);
+    final locale = Localizations.localeOf(context).toString();
 
     return Dialog(
       child: Container(
@@ -181,7 +176,7 @@ class _NotificationSettingsDialogState
           mainAxisSize: MainAxisSize.min,
           children: [
             AppBar(
-              title: const Text('Benachrichtigungen'),
+              title: Text(l10n.notificationsTitle),
               leading: IconButton(
                 icon: const Icon(Icons.close),
                 onPressed: () => Navigator.of(context).pop(),
@@ -196,9 +191,9 @@ class _NotificationSettingsDialogState
                   children: [
                     // Enable/Disable Switch
                     SwitchListTile(
-                      title: const Text('Benachrichtigungen aktivieren'),
-                      subtitle: const Text(
-                        'Erinnert Sie daran, fehlende Arbeitszeiten einzutragen',
+                      title: Text(l10n.enableNotificationsTitle),
+                      subtitle: Text(
+                        l10n.enableNotificationsDescription,
                       ),
                       value: _enabled,
                       onChanged: (value) {
@@ -213,7 +208,7 @@ class _NotificationSettingsDialogState
                     if (_enabled) ...[
                       // Time Selection
                       Text(
-                        'Uhrzeit',
+                        l10n.timeSectionTitle,
                         style: theme.textTheme.titleMedium,
                       ),
                       const SizedBox(height: 12),
@@ -244,13 +239,13 @@ class _NotificationSettingsDialogState
 
                       // Notification Types
                       Text(
-                        'Erinnerungen für',
+                        l10n.reminderForSectionTitle,
                         style: theme.textTheme.titleMedium,
                       ),
                       const SizedBox(height: 12),
                       CheckboxListTile(
-                        title: const Text('Arbeitsbeginn'),
-                        subtitle: const Text('Erinnert an fehlenden Arbeitsbeginn'),
+                        title: Text(l10n.notifyWorkStartTitle),
+                        subtitle: Text(l10n.notifyWorkStartDescription),
                         value: _notifyWorkStart,
                         onChanged: (value) {
                           setState(() {
@@ -260,8 +255,8 @@ class _NotificationSettingsDialogState
                         contentPadding: EdgeInsets.zero,
                       ),
                       CheckboxListTile(
-                        title: const Text('Arbeitsende'),
-                        subtitle: const Text('Erinnert an fehlendes Arbeitsende'),
+                        title: Text(l10n.notifyWorkEndTitle),
+                        subtitle: Text(l10n.notifyWorkEndDescription),
                         value: _notifyWorkEnd,
                         onChanged: (value) {
                           setState(() {
@@ -271,8 +266,8 @@ class _NotificationSettingsDialogState
                         contentPadding: EdgeInsets.zero,
                       ),
                       CheckboxListTile(
-                        title: const Text('Pausen'),
-                        subtitle: const Text('Erinnert an fehlende Pausen'),
+                        title: Text(l10n.breaksTitle),
+                        subtitle: Text(l10n.notifyBreaksDescription),
                         value: _notifyBreaks,
                         onChanged: (value) {
                           setState(() {
@@ -285,7 +280,7 @@ class _NotificationSettingsDialogState
 
                       // Day Selection
                       Text(
-                        'Tage',
+                        l10n.daysSectionTitle,
                         style: theme.textTheme.titleMedium,
                       ),
                       const SizedBox(height: 12),
@@ -295,7 +290,7 @@ class _NotificationSettingsDialogState
                         children: [1, 2, 3, 4, 5, 6, 7].map((day) {
                           final isSelected = _selectedDays.contains(day);
                           return FilterChip(
-                            label: Text(_dayNames[day]!),
+                            label: Text(weekdayShortLabel(day, locale)),
                             selected: isSelected,
                             onSelected: (selected) => _toggleDay(day),
                             showCheckmark: false,
@@ -314,7 +309,7 @@ class _NotificationSettingsDialogState
                         Padding(
                           padding: const EdgeInsets.only(top: 8),
                           child: Text(
-                            'Bitte wählen Sie mindestens einen Tag aus',
+                            l10n.selectAtLeastOneDay,
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: colorScheme.error,
                             ),
@@ -328,12 +323,12 @@ class _NotificationSettingsDialogState
                     const Divider(),
                     const SizedBox(height: 12),
                     Text(
-                      'Gleitzeit-Warnungen',
+                      l10n.overtimeWarningsSectionTitle,
                       style: theme.textTheme.titleMedium,
                     ),
                     SwitchListTile(
-                      title: const Text('Warnung bei Überstunden'),
-                      subtitle: const Text('Benachrichtigung ab Schwellwert'),
+                      title: Text(l10n.warnOnOvertimeTitle),
+                      subtitle: Text(l10n.warnThresholdDescription),
                       value: _warnOnOvertimeThreshold,
                       onChanged: (value) {
                         setState(() {
@@ -348,16 +343,16 @@ class _NotificationSettingsDialogState
                         child: TextField(
                           controller: _overtimeThresholdController,
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          decoration: const InputDecoration(
-                            labelText: 'Schwellwert (Stunden)',
-                            border: OutlineInputBorder(),
+                          decoration: InputDecoration(
+                            labelText: l10n.thresholdHoursLabel,
+                            border: const OutlineInputBorder(),
                             isDense: true,
                           ),
                         ),
                       ),
                     SwitchListTile(
-                      title: const Text('Warnung bei Minusstunden'),
-                      subtitle: const Text('Benachrichtigung ab Schwellwert'),
+                      title: Text(l10n.warnOnUndertimeTitle),
+                      subtitle: Text(l10n.warnThresholdDescription),
                       value: _warnOnUndertimeThreshold,
                       onChanged: (value) {
                         setState(() {
@@ -372,9 +367,9 @@ class _NotificationSettingsDialogState
                         child: TextField(
                           controller: _undertimeThresholdController,
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          decoration: const InputDecoration(
-                            labelText: 'Schwellwert (Stunden)',
-                            border: OutlineInputBorder(),
+                          decoration: InputDecoration(
+                            labelText: l10n.thresholdHoursLabel,
+                            border: const OutlineInputBorder(),
                             isDense: true,
                           ),
                         ),
@@ -388,7 +383,7 @@ class _NotificationSettingsDialogState
                         onPressed: (!_enabled || _selectedDays.isNotEmpty)
                             ? _save
                             : null,
-                        child: const Text('Speichern'),
+                        child: Text(l10n.save),
                       ),
                     ),
                   ],

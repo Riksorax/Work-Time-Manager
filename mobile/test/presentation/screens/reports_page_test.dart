@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -13,6 +12,7 @@ import 'package:flutter_work_time/domain/entities/user_entity.dart';
 import 'package:flutter_work_time/domain/entities/weekly_reflection_entity.dart';
 import 'package:flutter_work_time/domain/entities/work_entry_entity.dart';
 import 'package:flutter_work_time/domain/repositories/weekly_reflection_repository.dart';
+import 'package:flutter_work_time/l10n/app_localizations.dart';
 import 'package:flutter_work_time/presentation/screens/reports_page.dart';
 import 'package:flutter_work_time/presentation/state/reports_state.dart';
 import 'package:flutter_work_time/presentation/state/settings_state.dart';
@@ -82,12 +82,8 @@ void main() {
       ],
       child: MaterialApp(
         locale: const Locale('de'),
-        localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: const [Locale('de', 'DE')],
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: const ReportsPage(),
       ),
     );
