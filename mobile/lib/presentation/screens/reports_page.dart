@@ -6,7 +6,6 @@ import 'package:flutter_work_time/core/utils/logger.dart';
 import 'package:flutter_work_time/core/utils/time_format.dart';
 import 'package:flutter_work_time/core/utils/time_precision.dart';
 import 'package:intl/intl.dart';
-import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 import '../../core/providers/subscription_provider.dart';
 import '../../core/services/pdf_report_service.dart';
 
@@ -14,6 +13,7 @@ import '../../domain/entities/work_entry_extensions.dart';
 import '../../domain/utils/german_holidays.dart';
 import '../../domain/utils/weekday_labels.dart';
 import '../../l10n/app_localizations.dart';
+import '../widgets/common/paywall_launcher.dart';
 import '../widgets/common/responsive_center.dart';
 import '../widgets/premium_blur_gate.dart';
 import '../state/monthly_report_state.dart';
@@ -46,40 +46,6 @@ class PendingTabIndexNotifier extends Notifier<int?> {
   set state(int? value) => super.state = value;
 }
 
-/// Zeigt die RevenueCat Paywall in einem Fullscreen-Modal an.
-const _rcAndroidKey = String.fromEnvironment('RC_ANDROID_KEY');
-
-void _showPaywall(BuildContext context) {
-  // Im lokalen Test ohne gültigen RC-Key kein Paywall öffnen
-  if (_rcAndroidKey.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          AppLocalizations.of(context).paywallUnavailable,
-        ),
-      ),
-    );
-    return;
-  }
-
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    backgroundColor: Colors.transparent,
-    builder: (ctx) => Container(
-      decoration: BoxDecoration(
-        color: Theme.of(ctx).scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: PaywallView(
-        onDismiss: () {
-          if (Navigator.of(ctx).canPop()) Navigator.of(ctx).pop();
-        },
-      ),
-    ),
-  );
-}
 
 class ReportsPage extends ConsumerStatefulWidget {
   const ReportsPage({super.key});
@@ -659,7 +625,7 @@ class WeeklyReportView extends ConsumerWidget {
         featureTitle: l10n.weeklyReportsFeatureTitle,
         featureText: l10n.weeklyReportsFeatureText,
         onUpgrade: kIsWeb ? null : () {
-          if (context.mounted) _showPaywall(context);
+          if (context.mounted) showPaywall(context);
         },
         child: const _WeeklyReportPlaceholder(),
       );
@@ -1109,7 +1075,7 @@ class MonthlyReportView extends ConsumerWidget {
         featureTitle: l10n.monthlyReportsFeatureTitle,
         featureText: l10n.monthlyReportsFeatureText,
         onUpgrade: kIsWeb ? null : () {
-          if (context.mounted) _showPaywall(context);
+          if (context.mounted) showPaywall(context);
         },
         child: const _MonthlyReportPlaceholder(),
       );
@@ -1394,7 +1360,7 @@ class _YearlyReportViewState extends ConsumerState<YearlyReportView> {
         featureTitle: l10n.yearlyReportsFeatureTitle,
         featureText: l10n.yearlyReportsFeatureText,
         onUpgrade: kIsWeb ? null : () {
-          if (context.mounted) _showPaywall(context);
+          if (context.mounted) showPaywall(context);
         },
         child: const _MonthlyReportPlaceholder(),
       );
@@ -1625,7 +1591,7 @@ class _InsightsViewState extends ConsumerState<InsightsView> {
         featureTitle: l10n.insightsFeatureTitle,
         featureText: l10n.insightsFeatureText,
         onUpgrade: kIsWeb ? null : () {
-          if (context.mounted) _showPaywall(context);
+          if (context.mounted) showPaywall(context);
         },
         child: const _MonthlyReportPlaceholder(),
       );
