@@ -6,6 +6,7 @@ import '../../core/providers/subscription_provider.dart';
 import '../../domain/entities/work_profile_entity.dart';
 import '../../l10n/app_localizations.dart';
 import 'add_work_profile_dialog.dart';
+import 'common/paywall_launcher.dart';
 import 'manage_work_profiles_dialog.dart';
 
 /// Profil-Wechsler im Header (siehe #138): zeigt alle Arbeitszeit-Profile
@@ -95,9 +96,7 @@ class WorkProfileSwitcher extends ConsumerWidget {
   }) {
     final l10n = AppLocalizations.of(context);
     if (!isPremium) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.premiumProfilesFeature)),
-      );
+      showPaywall(context);
       return;
     }
     if (!canAdd) {

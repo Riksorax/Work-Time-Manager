@@ -65,7 +65,7 @@ void main() {
       expect(find.byType(PopupMenuButton<String>), findsNothing);
     });
 
-    testWidgets('zeigt Standard-Profil und Premium-Hinweis ohne Premium', (tester) async {
+    testWidgets('öffnet ohne Premium die Paywall statt eines Dialogs', (tester) async {
       await tester.pumpWidget(createSubject(isPremium: false));
       await tester.pumpAndSettle();
 
@@ -78,7 +78,11 @@ void main() {
       await tester.tap(find.text('Neues Profil'));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Premium-Feature'), findsOneWidget);
+      // In Tests läuft die App ohne RC_ANDROID_KEY (kein --dart-define) -
+      // showPaywall() fällt dann bewusst auf einen Hinweis-Snackbar statt
+      // der echten RevenueCat-Paywall zurück (siehe paywall_launcher.dart).
+      // Wichtig ist hier: kein Dialog zum Anlegen eines Profils öffnet sich.
+      expect(find.textContaining('Paywall nicht verfügbar'), findsOneWidget);
       expect(find.byType(AlertDialog), findsNothing);
     });
 
