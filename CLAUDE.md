@@ -7,8 +7,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 This is a monorepo for a German work-time tracking app:
 
 - `mobile/` — Flutter app (primary, production-ready). Has its own detailed `mobile/CLAUDE.md`.
-- `web/` — Angular web app (feature-complete on `feature/angular-web-scaffold`).
-- `server/` — .NET 10 Backend-API (`feature/backend-umbau`). Firebase-Auth + Firestore.
+- `web/` — Angular web app. Web-Regeln: `web/AGENTS.md`.
+- `server/` — .NET 10 Backend-API. Firebase-Auth + Firestore. Backend-Regeln: `server/CLAUDE.md`.
+
+**Arbeitsablauf** (Branches, Commits, PRs, Release, Deployment, Rollback): `CONTRIBUTING.md`.
+Integrationsbranch ist `develop`; PRs gehen gegen `develop`, nur Release-Branches gegen `main`.
 
 For all Flutter/mobile work, refer to `mobile/CLAUDE.md` for commands, architecture details, and workflow rules.
 
@@ -44,20 +47,22 @@ npm run build -- --configuration production
 | `flutter-production.yml` | Push to `main` oder `workflow_dispatch` | Android AAB → Google Play (Closed Testing Track `<Version> <Charakter>` aus `RELEASE_NAMES.md` oder Input) |
 | `deploy-angular.yml` | Push to `main` oder `workflow_dispatch` | 1. Angular Build → 2. Docker Image → Docker Hub → 3. Deploy → Hetzner |
 | `deploy-api.yml` | Push to `main` oder `workflow_dispatch` | 1. .NET Build & Test → 2. Docker Image → Docker Hub → 3. Deploy → Hetzner |
-| `ci.yml` | PRs / Push | Lint & Tests |
-| `version-bump.yml` | Push to `main` | Versionsnummer erhöhen |
+| `ci.yml` | PRs und Push auf alle Branches außer `main` | Flutter Analyze & Test, Angular Test & Build, .NET Build & Test |
+| `version-bump.yml` | Push auf `release/v*` | Version in `mobile/pubspec.yaml` setzen, Charakter in `RELEASE_NAMES.md` eintragen |
 
 **Web-Deployment Detail (`deploy-angular.yml`):**
 - **Build**: Angular Production Build mit injizierten Firebase-Secrets
 - **Docker**: Image `riksorax/work-time-manager-web` → Docker Hub (nur bei nicht-PR)
-- **Deploy**: SSH auf Hetzner-Server, `docker compose up` (nur bei Push auf `main`)
-- Manueller Trigger via `workflow_dispatch` baut & pusht Docker Image, deployt aber **nicht** (kein `main`-Branch)
+- **Deploy**: SSH auf Hetzner-Server, `docker compose up` (nur auf `main`), danach Smoke-Test gegen `https://work-time-manager.app/`
+- Manueller Trigger via `workflow_dispatch` auf einem anderen Branch als `main` baut & pusht das Docker Image, deployt aber **nicht**. Auf `main` gestartet, deployt er.
 
 **API-Deployment Detail (`deploy-api.yml`):**
 - **Build & Test**: `dotnet build`/`dotnet test` gegen `server/WorkTimeManager.slnx`
 - **Docker**: Image `riksorax/work-time-manager-api` → Docker Hub (nur bei nicht-PR)
-- **Deploy**: SSH auf Hetzner-Server, `docker compose up` (nur bei Push auf `main`) — Firebase-Projekt-ID und Service-Account-Credential werden als GitHub Secrets per SSH-Session-Env injiziert (`appleboy/ssh-action` `envs:`), es liegt **keine** `.env`-Datei auf dem Server
-- Manueller Trigger via `workflow_dispatch` baut & pusht Docker Image, deployt aber **nicht** (kein `main`-Branch)
+- **Deploy**: SSH auf Hetzner-Server, `docker compose up` (nur auf `main`), danach Smoke-Test gegen `https://api.work-time-manager.app/health` — Firebase-Projekt-ID und Service-Account-Credential werden als GitHub Secrets per SSH-Session-Env injiziert (`appleboy/ssh-action` `envs:`), es liegt **keine** `.env`-Datei auf dem Server
+- Manueller Trigger via `workflow_dispatch` auf einem anderen Branch als `main` baut & pusht das Docker Image, deployt aber **nicht**. Auf `main` gestartet, deployt er.
+
+**Rollback:** siehe `CONTRIBUTING.md`, Abschnitt „Rollback“.
 
 **Uptime-Monitoring (Hetzner, siehe #207):** [Uptime-Kuma](https://github.com/louislam/uptime-kuma) läuft als weiterer Service (`uptime-kuma`) in `server/docker-compose.yml`, self-hosted hinter Traefik unter `status.work-time-manager.app`. Sowohl `deploy-api.yml` als auch `deploy-angular.yml` stellen den Container per `docker compose up -d --no-deps uptime-kuma` sicher (idempotent, kein eigener CI-Build nötig — öffentliches Image). Monitore (welche URLs überwacht werden) und Alerting-Kanäle (E-Mail/Telegram/Discord/...) werden einmalig über die Uptime-Kuma-Weboberfläche eingerichtet, dafür gibt es keine Env-Var-/Config-Datei-Konfiguration. Benötigt einen DNS-Eintrag für `status.work-time-manager.app` → Hetzner-Host (außerhalb dieses Repos).
 
@@ -232,6 +237,26 @@ Endpoints/    Minimal-API-Mappings je Ressource + ClaimsPrincipalExtensions.GetU
 - **Integrationstests** laufen gegen einen Firestore-Emulator via Testcontainers (Docker). Ohne Docker überspringen sie sich (`SkippableFact`), `dotnet test` bleibt grün.
 - Credentials: `FIRESTORE_EMULATOR_HOST` (lokal/Test) bzw. `FIREBASE_SERVICE_ACCOUNT_BASE64` (Prod), sonst Application Default Credentials.
 
+## Claude-Code-Workflows
+
+Einstieg für jede Aufgabe: `/issue <nr>` — liest das Issue, bestimmt die Plattformen, legt den
+Branch an und wählt den Workflow. Agents liegen in `.claude/agents/`, Commands in `.claude/commands/`.
+
+| Command | Zweck |
+|---|---|
+| `/issue <nr>` | Issue einordnen, Branch anlegen, Workflow wählen |
+| `/mobile-analyze` … `/mobile-review <nr>` | Flutter: Analyse → Plan → Implementierung → Validierung → Review (Details `mobile/CLAUDE.md`) |
+| `/web-analyze` … `/web-review <feature>` | Web-Port, siehe unten |
+| `/server-implement <nr>` | Backend-Änderung (Details `server/CLAUDE.md`) |
+| `/release <Version> <Charakter>` | Release-Branch, Versionshinweise, Release-PR |
+
+Betrifft ein Issue mehrere Plattformen, plant der Cross-Platform-Coordinator
+(`.claude/agents/cross-platform-coordinator.md`) den gemeinsamen Vertrag und die Reihenfolge
+Backend → Web → Mobile.
+
+**Cloud-Sessions:** `.claude/hooks/session-start.sh` installiert Flutter (Version aus `ci.yml`),
+das .NET-10-SDK und die npm-Pakete. `gh` gibt es dort nicht, GitHub läuft über die MCP-Tools.
+
 ## Web-Port Workflow (5 Phasen)
 
 Für neue Feature-Portierungen:
@@ -251,7 +276,9 @@ Stitch API Key in `.claude/settings.local.json`: `{ "env": { "STITCH_API_KEY": "
 
 - `*.g.dart` / `*.mocks.dart` nicht editieren — generiert.
 - `dart run build_runner build` nach `@Riverpod`-Änderungen.
-- Alle User-Strings auf Deutsch — kein i18n-System.
+- **Texte / i18n (#221):** Deutsch ist die Referenzsprache, Englisch wird mitgepflegt. Flutter: ARB (`mobile/lib/l10n/app_de.arb` + `app_en.arb`), nie hart kodiert. Web: ngx-translate (`web/public/i18n/de.json` + `en.json`) für neue Texte; ältere Web-Texte sind teils noch hart kodiert. Rechtstexte (Impressum/Datenschutz/AGB) bleiben nur Deutsch.
 - Premium-Features hinter `isPremiumProvider` (Flutter) bzw. `ProfileService.isPremium` (Web).
 - Hybrid-Layer nie umgehen — immer über `WorkEntryService` / `OvertimeService`.
+- **Firestore Security Rules:** Neue Firestore-Pfade brauchen eine Regel in `web/firestore.rules`. Die Rules werden **nicht** automatisch deployt (`CONTRIBUTING.md`, „Deployment“).
+- **Tests** dürfen nicht von Datum, Wochentag oder Zeitzone abhängen.
 - **Branch-Hygiene**: Feature-/Fix-/Release-Branches (`claude/*`, `feature/*`, `release/*`) nach dem Mergen in `main`/`develop` löschen (Remote-Branch, GitHub-Button "Delete branch" bzw. `git push origin --delete <branch>`) — keine bereits gemergten Branches stehen lassen.

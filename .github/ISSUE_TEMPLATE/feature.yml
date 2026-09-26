@@ -1,0 +1,53 @@
+name: Funktion vorschlagen
+description: Neue Funktion oder Verbesserung.
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / Ziel
+      description: Welches Nutzerproblem wird gelöst?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Gewünschtes Verhalten
+    validations:
+      required: true
+  - type: checkboxes
+    id: platforms
+    attributes:
+      label: Betroffene Plattformen
+      options:
+        - label: Mobile (Flutter)
+        - label: Web (Angular)
+        - label: Backend (.NET API)
+  - type: dropdown
+    id: premium
+    attributes:
+      label: Premium-Funktion?
+      options:
+        - Nein
+        - Ja
+        - Noch offen
+  - type: checkboxes
+    id: impact
+    attributes:
+      label: Auswirkungen
+      options:
+        - label: Neue oder geänderte Firestore-Daten (Pfad, Feld, Security Rule)
+        - label: Neuer oder geänderter API-Endpunkt
+        - label: Betrifft Berechnung von Pausen, Überstunden oder Berichten
+        - label: Gilt pro Arbeitszeit-Profil
+        - label: Neue Texte (Deutsch und Englisch)
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Akzeptanzkriterien
+      placeholder: |
+        - [ ] …
+        - [ ] …
+    validations:
+      required: true
