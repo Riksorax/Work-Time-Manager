@@ -99,7 +99,7 @@ core/
 │   ├── profile.ts         ProfileService — isPremium Signal (Firestore-Flag)
 │   ├── theme.ts           ThemeService — isDarkMode Signal + localStorage-Persistenz
 │   ├── data-sync.ts       DataSyncService — localStorage→Firebase-Migration bei Login
-│   └── web-premium.ts     WebPremiumService — RC Billing Paywall + Kauf-Wiederherstellung
+│   └── web-premium.service.ts  WebPremiumService — RC Billing Paywall + Kauf-Wiederherstellung
 
 domain/
 ├── models/
