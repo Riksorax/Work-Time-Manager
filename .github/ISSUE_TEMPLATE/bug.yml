@@ -1,6 +1,5 @@
 name: Fehler melden
 description: Etwas funktioniert nicht wie erwartet.
-title: "fix: "
 labels: ["bug"]
 body:
   - type: checkboxes

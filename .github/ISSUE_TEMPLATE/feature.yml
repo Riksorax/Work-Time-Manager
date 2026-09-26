@@ -1,6 +1,5 @@
 name: Funktion vorschlagen
 description: Neue Funktion oder Verbesserung.
-title: "feat: "
 labels: ["enhancement"]
 body:
   - type: textarea
