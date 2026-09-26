@@ -8,7 +8,7 @@ und Feature-Parität mit der Flutter-App.
 ## Voraussetzung
 - Tests grün: `npm test -- --watch=false` — 0 Fehler
 - Build sauber: `npm run build -- --configuration production` — 0 Fehler
-- UI-Report vorhanden: `web/thoughts/[FEATURE]-ui-report.md`
+- UI-Report vorhanden: `web/thoughts/<issue>-ui-report.md`
 
 ## Code-Review-Checkliste
 
@@ -71,7 +71,9 @@ und Feature-Parität mit der Flutter-App.
 - [ ] Keine `TODO`-Kommentare ohne Feature-Referenz
 - [ ] Alle neuen Dateien in korrekten Verzeichnissen (Layer-Struktur)
 
-## Commit-Message (Konvention dieses Repos, siehe `CONTRIBUTING.md`)
+## Commit-Message
+
+Konvention wie im ganzen Repo, siehe `CONTRIBUTING.md` („Commits“):
 
 ```
 feat(web): Timer-Ansicht mit Echtzeitanzeige (#123)
@@ -79,64 +81,26 @@ feat(web): Timer-Ansicht mit Echtzeitanzeige (#123)
 Portiert den Flutter DashboardScreen nach Angular mit Signal-basiertem
 DashboardService und Hybrid-Firestore/API/localStorage-Pattern.
 
-Closes #123
+Schließt #123.
 ```
 
-Typen: `feat`, `fix`, `chore`, `docs`, `refactor`, `test`. Scope: `web`
-(bei Bedarf feiner, z. B. `web/reports`). Titel auf Deutsch, Issue-Nummer am Ende.
+## PR-Beschreibung
 
-## PR-Beschreibung Template
-
-Grundgerüst ist `.github/pull_request_template.md`. Für Web-Portierungen zusätzlich:
+Die Beschreibung folgt `.github/pull_request_template.md`, ohne eigene Zusatz-Checklisten.
+Bei einer Portierung kommen unter „Änderungen“ diese drei Blöcke hinzu:
 
 ```markdown
-## Was wurde portiert?
-[Flutter-Screen / Feature-Name]
+**Flutter-Quelle:** `mobile/lib/presentation/screens/[screen].dart`, `…/view_models/[vm].dart`
 
-## Flutter-Quelle
-- `mobile/lib/presentation/screens/[screen].dart`
-- `mobile/lib/presentation/view_models/[vm].dart`
-
-## Angular-Implementierung
-- Domain: `web/src/app/domain/models/[model].ts`
-- Service: `web/src/app/core/services/[service].ts`
-- Component: `web/src/app/features/[feature]/`
-
-## Feature-Parität
+**Feature-Parität**
 | Flutter-Feature | Web-Äquivalent | Status |
 |---|---|---|
-| Timer | setInterval + signal | ✅ |
-| Hybrid-Repo | HybridWorkEntryService | ✅ |
 | Premium-Gate | ProfileService.isPremium | ✅ |
 
-## UI-Anpassungen fürs Web
-- [Anpassung 1: z.B. Sidebar statt BottomNav auf Desktop]
-- [Anpassung 2: z.B. Grid-Layout auf Desktop]
-
-## Tests
-- Unit Tests: X neu, alle grün
-- Domain-Service: X Tests
-- Data-Service: X Tests (Firebase-Mock)
-- Component: X Tests
-- `npm run build`: ✅ keine Fehler
-
-## Screenshots
+**Screenshots**
 | State | Mobile | Desktop | Dark Mode |
 |---|---|---|---|
-| Laden | | | |
 | Daten | | | |
-| Leer | | | |
-| Fehler | | | |
-
-## Checklist
-- [ ] `npm test -- --watch=false` grün
-- [ ] `npm run build -- --configuration production` grün
-- [ ] Feature-Parität mit Flutter ✅
-- [ ] Responsive (Mobile/Tablet/Desktop)
-- [ ] Dark Mode
-- [ ] Accessibility-Check
-- [ ] Texte in de.json + en.json
-- [ ] Premium-Gate korrekt
 ```
 
 ## Prompt-Vorlage
@@ -144,14 +108,14 @@ Grundgerüst ist `.github/pull_request_template.md`. Für Web-Portierungen zusä
 Aktiviere den Web-Reviewer-Agenten (.claude/agents/web-reviewer.md).
 
 Geänderte Dateien: @web/src/
-Plan: @web/thoughts/[FEATURE]-plan.md
-UI-Report: @web/thoughts/[FEATURE]-ui-report.md
+Plan: @web/thoughts/<issue>-plan.md
+UI-Report: @web/thoughts/<issue>-ui-report.md
 Flutter-Original: @mobile/lib/presentation/screens/[screen].dart
 
 1. Code-Review nach Checkliste (kritische Issues zuerst)
 2. Feature-Parität mit Flutter prüfen
 3. Conventional Commit Message erstellen
-4. PR-Beschreibung nach Template
+4. PR-Beschreibung nach `.github/pull_request_template.md`
 
-Speichere PR unter: web/thoughts/[FEATURE]-pr.md
+Speichere PR unter: web/thoughts/<issue>-pr.md
 ```

@@ -2,7 +2,7 @@
 
 Aktiviere den Web-UI-Designer-Agenten (lies `.claude/agents/web-ui-designer.md` vollständig).
 
-Feature: $ARGUMENTS
+Issue: $ARGUMENTS
 
 ## Voraussetzung
 Prüfe ob `web/thoughts/$ARGUMENTS-research.md` existiert. Falls nicht: `/web-analyze $ARGUMENTS` zuerst ausführen.
@@ -37,5 +37,5 @@ Prüfe ob `web/thoughts/$ARGUMENTS-research.md` existiert. Falls nicht: `/web-an
 5. Prüfe Accessibility-Checkliste (aria-labels auf Deutsch, Kontrast, Tab-Reihenfolge)
 
 6. Speichere Dateien:
-   - `web/src/app/features/$ARGUMENTS/` — HTML + SCSS Dateien
+   - `web/src/app/features/<feature>/` — HTML + SCSS Dateien (Ordner laut Research-Datei)
    - `web/thoughts/$ARGUMENTS-ui-report.md` — UI-Bericht

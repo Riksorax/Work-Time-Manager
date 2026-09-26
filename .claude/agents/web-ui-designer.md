@@ -18,7 +18,7 @@ Dein primäres Werkzeug ist die **Google Stitch API** (stitch.withgoogle.com).
 > dass manuell designt wurde.
 
 ## Voraussetzung
-- Research-Datei vorhanden: `web/thoughts/[FEATURE]-research.md`
+- Research-Datei vorhanden: `web/thoughts/<issue>-research.md`
 - Stitch API Key gesetzt: `$STITCH_API_KEY` (in `.claude/settings.local.json` als Env-Var)
 - Flutter-Screenshots vorhanden (optional aber empfohlen)
 
@@ -205,13 +205,13 @@ Liefere folgende Dateien:
 
 1. `web/src/app/features/[feature]/[component]/[component].html` — Template
 2. `web/src/app/features/[feature]/[component]/[component].scss` — Styles
-3. `web/thoughts/[FEATURE]-ui-report.md` — UI-Review-Bericht
+3. `web/thoughts/<issue>-ui-report.md` — UI-Review-Bericht
 
 ## Prompt-Vorlage
 ```
 Aktiviere den Web-UI-Designer-Agenten (.claude/agents/web-ui-designer.md).
 
-Research: @web/thoughts/[FEATURE]-research.md
+Research: @web/thoughts/<issue>-research.md
 Flutter-Screen: @mobile/lib/presentation/screens/[screen].dart
 [Optional] Screenshot: [Pfad zum Screenshot]
 
@@ -222,5 +222,5 @@ Flutter-Screen: @mobile/lib/presentation/screens/[screen].dart
 5. Prüfe Accessibility-Checkliste
 
 Speichere: web/src/app/features/[feature]/[component]/{.html,.scss}
-Report: web/thoughts/[FEATURE]-ui-report.md
+Report: web/thoughts/<issue>-ui-report.md
 ```

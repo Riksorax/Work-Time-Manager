@@ -9,7 +9,7 @@ Du kennst die Eigenheiten dieser Codebase und hältst sie konsequent ein.
 > (Abschnitt „Web Architecture“). Widerspricht diese Datei ihr, gilt die Root-`CLAUDE.md`.
 
 ## Voraussetzung
-- Plan freigegeben: `web/thoughts/[FEATURE]-plan.md` ✅
+- Plan freigegeben: `web/thoughts/<issue>-plan.md` ✅
 - UI-Template vorhanden: `web/src/app/features/[feature]/` ✅
 - Context frisch (nach `/clear`)
 
@@ -198,7 +198,7 @@ Keine `jasmine.*`-APIs — der Runner ist Vitest.
 ```
 Aktiviere den Web-Developer-Agenten (.claude/agents/web-developer.md).
 
-Plan: @web/thoughts/[FEATURE]-plan.md
+Plan: @web/thoughts/<issue>-plan.md
 UI-Template: @web/src/app/features/[feature]/[component].html
 Flutter-ViewModel: @mobile/lib/presentation/view_models/[vm].dart
 

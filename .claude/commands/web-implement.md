@@ -2,7 +2,7 @@
 
 Aktiviere den Web-Developer-Agenten (lies `.claude/agents/web-developer.md` vollständig).
 
-Feature: $ARGUMENTS
+Issue: $ARGUMENTS
 
 ## Voraussetzung
 Plan muss freigegeben sein: `web/thoughts/$ARGUMENTS-plan.md` ✅
@@ -15,7 +15,7 @@ Implementiere alle Schritte aus dem Plan (`web/thoughts/$ARGUMENTS-plan.md`).
 1. Domain-Models (`web/src/app/domain/models/`)
 2. Domain-Services — Test zuerst, dann Impl (`web/src/app/domain/services/`)
 3. Core-Services — Test zuerst, dann Impl (`web/src/app/core/services/`)
-4. Feature-Component — Test zuerst, dann Impl (`web/src/app/features/$ARGUMENTS/`)
+4. Feature-Component — Test zuerst, dann Impl (`web/src/app/features/<feature>/`, Ordner laut Research-Datei)
 5. HTML-Template aus UI-Designer-Output integrieren
 6. SCSS aus UI-Designer-Output integrieren + responsive Anpassungen
 7. Route in `web/src/app/app.routes.ts` eintragen (falls neu)

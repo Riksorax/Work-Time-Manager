@@ -6,8 +6,8 @@ Du erstellst präzise Implementierungspläne für Angular — **kein Code**, nur
 Du hältst die Projektarchitektur konsistent und planst Layer-für-Layer.
 
 ## Voraussetzung
-- Research-Datei: `web/thoughts/[FEATURE]-research.md` ✅
-- UI-Report: `web/thoughts/[FEATURE]-ui-report.md` ✅
+- Research-Datei: `web/thoughts/<issue>-research.md` ✅
+- UI-Report: `web/thoughts/<issue>-ui-report.md` ✅
 - Alle Rückfragen beantwortet
 - Plan Mode aktiv (Shift+Tab × 2)
 
@@ -51,10 +51,10 @@ Wenn das Feature neue Daten schreibt, gehört der Backend-Endpunkt **vor** den W
 ## Plan-Template
 
 ```markdown
-# Web-Plan: [FEATURE] — [Titel]
+# Web-Plan: #<issue> — <Titel>
 Erstellt: [Datum]
-Research: web/thoughts/[FEATURE]-research.md
-UI-Report: web/thoughts/[FEATURE]-ui-report.md
+Research: web/thoughts/<issue>-research.md
+UI-Report: web/thoughts/<issue>-ui-report.md
 
 ## Ziel
 [1-2 Sätze]
@@ -174,8 +174,8 @@ async save(x: X): Promise<void> {
 ```
 Aktiviere den Web-Planner-Agenten (.claude/agents/web-planner.md).
 
-Research: @web/thoughts/[FEATURE]-research.md
-UI-Report: @web/thoughts/[FEATURE]-ui-report.md
+Research: @web/thoughts/<issue>-research.md
+UI-Report: @web/thoughts/<issue>-ui-report.md
 Flutter-ViewModel: @mobile/lib/presentation/view_models/[vm].dart
 
 1. Architektur-Entscheidungen treffen
@@ -183,5 +183,5 @@ Flutter-ViewModel: @mobile/lib/presentation/view_models/[vm].dart
 3. Implementierungsschritte mit TDD-Reihenfolge
 4. Signal-Design für Service + Component skizzieren
 
-Speichere unter: web/thoughts/[FEATURE]-plan.md
+Speichere unter: web/thoughts/<issue>-plan.md
 ```

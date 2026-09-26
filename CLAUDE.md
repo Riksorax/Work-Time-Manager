@@ -246,7 +246,7 @@ Branch an und wählt den Workflow. Agents liegen in `.claude/agents/`, Commands 
 |---|---|
 | `/issue <nr>` | Issue einordnen, Branch anlegen, Workflow wählen |
 | `/mobile-analyze` … `/mobile-review <nr>` | Flutter: Analyse → Plan → Implementierung → Validierung → Review (Details `mobile/CLAUDE.md`) |
-| `/web-analyze` … `/web-review <feature>` | Web-Port, siehe unten |
+| `/web-analyze` … `/web-review <nr>` | Web-Port eines Flutter-Features, siehe unten |
 | `/server-implement <nr>` | Backend-Änderung (Details `server/CLAUDE.md`) |
 | `/release <Version> <Charakter>` | Release-Branch, Versionshinweise, Release-PR |
 
@@ -259,15 +259,17 @@ das .NET-10-SDK und die npm-Pakete. `gh` gibt es dort nicht, GitHub läuft über
 
 ## Web-Port Workflow (5 Phasen)
 
-Für neue Feature-Portierungen:
+Für neue Feature-Portierungen. Das Argument ist wie bei Mobile und Backend die GitHub-Issue-Nummer.
+Arbeitsdateien: `web/thoughts/<nr>-research.md`, `-ui-report.md`, `-plan.md`, `-pr.md`
+(per `.gitignore` lokal; die älteren `dashboard-*.md` stammen noch aus der Zeit der Feature-Namen).
 
 | Command | Phase |
 |---|---|
-| `/web-analyze <feature>` | Phase 1 — Flutter-Feature analysieren |
-| `/web-design <feature>` | Phase 2 — UI entwerfen (Stitch API oder manuell) |
-| `/web-plan <feature>` | Phase 3 — Implementierungsplan |
-| `/web-implement <feature>` | Phase 4 — Code schreiben (TDD) |
-| `/web-review <feature>` | Phase 5 — Review + PR |
+| `/web-analyze <nr>` | Phase 1 — Issue lesen, Flutter-Feature analysieren, Feature-Ordner festlegen |
+| `/web-design <nr>` | Phase 2 — UI entwerfen (Stitch API oder manuell) |
+| `/web-plan <nr>` | Phase 3 — Implementierungsplan |
+| `/web-implement <nr>` | Phase 4 — Code schreiben (TDD) |
+| `/web-review <nr>` | Phase 5 — Review + PR |
 
 Stitch API Key in `.claude/settings.local.json`: `{ "env": { "STITCH_API_KEY": "..." } }`
 **Hinweis:** Stitch API ist aktuell nicht verfügbar (HTTP 405) — UI wird manuell nach Flutter-Vorlage designed.

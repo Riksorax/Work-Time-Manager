@@ -74,8 +74,9 @@ Modus: **Plan Mode** (Shift+Tab × 2)
 ## Output-Format
 
 ```markdown
-# Web-Research: [FEATURE] — [Titel]
+# Web-Research: #<issue> — <Titel>
 Datum: [Datum]
+Feature-Ordner: web/src/app/features/<feature>/
 
 ## Flutter-Quelle
 Dateien: [Liste der Flutter-Quelldateien]
@@ -119,5 +120,5 @@ Portierungsziel: [Feature-Name]
 4. Liste Risiken und Web-Spezifika
 5. Stelle offene Fragen
 
-Speichere unter: web/thoughts/[FEATURE]-research.md
+Speichere unter: web/thoughts/<issue>-research.md
 ```

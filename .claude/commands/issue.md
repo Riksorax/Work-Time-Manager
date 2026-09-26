@@ -26,7 +26,7 @@ Issue: $ARGUMENTS
 | Ergebnis | Nächster Schritt |
 |---|---|
 | nur Mobile | `/mobile-analyze $ARGUMENTS` |
-| nur Web, Portierung eines Flutter-Features | `/web-analyze <feature>` |
+| nur Web, Portierung eines Flutter-Features | `/web-analyze $ARGUMENTS` |
 | nur Web, sonst | Web-Developer-Agent (`.claude/agents/web-developer.md`) mit kurzem Plan |
 | nur Backend | `/server-implement $ARGUMENTS` |
 | mehrere Plattformen | Cross-Platform-Coordinator (`.claude/agents/cross-platform-coordinator.md`) |

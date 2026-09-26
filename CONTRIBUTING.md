@@ -79,8 +79,15 @@ Schließt #<issue>.
 | `docs` | Dokumentation, Versionshinweise |
 | `chore` | Build, Abhängigkeiten, Release-Bump |
 
-Scopes: `mobile`, `web`, `api`, `ci`, `infra`, `release`, `claude`, optional feiner
-(`web/reports`). Bei Änderungen an mehreren Plattformen den Scope weglassen.
+Scope:
+
+| Änderung | Scope | Beispiel |
+|---|---|---|
+| betrifft genau eine Plattform | `mobile`, `web`, `api` | `fix(mobile): … (#267)` |
+| betrifft mehrere Plattformen | Feature-Bereich: `reports`, `settings`, `dashboard`, `overtime`, `notifications`, `auth`, `profiles` | `feat(reports): Wochen-Reflexion (#137)` |
+| Technik ohne App-Code | `ci`, `infra`, `deps`, `release`, `claude` | `fix(ci): …` |
+
+Keine verschachtelten Scopes wie `web/reports`.
 
 ## 4. Pull Request
 

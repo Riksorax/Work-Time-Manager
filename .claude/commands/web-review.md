@@ -2,7 +2,7 @@
 
 Aktiviere den Web-Reviewer-Agenten (lies `.claude/agents/web-reviewer.md` vollständig).
 
-Feature: $ARGUMENTS
+Issue: $ARGUMENTS
 
 ## Voraussetzung
 - `npm test -- --watch=false` grün ✅

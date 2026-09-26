@@ -2,7 +2,7 @@
 
 Aktiviere den Web-Planner-Agenten (lies `.claude/agents/web-planner.md` vollständig).
 
-Feature: $ARGUMENTS
+Issue: $ARGUMENTS
 
 ## Voraussetzung
 Prüfe ob diese Dateien existieren:
