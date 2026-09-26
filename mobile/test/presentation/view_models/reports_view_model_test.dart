@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:flutter_work_time/core/providers/providers.dart';
+import 'package:flutter_work_time/data/datasources/remote/api_client.dart';
 import 'package:flutter_work_time/domain/entities/work_entry_entity.dart';
 import 'package:flutter_work_time/domain/repositories/settings_repository.dart';
 import 'package:flutter_work_time/domain/repositories/work_repository.dart';
@@ -11,15 +12,42 @@ import 'package:flutter_work_time/presentation/view_models/reports_view_model.da
 
 import 'reports_view_model_test.mocks.dart';
 
-@GenerateMocks([WorkRepository, SettingsRepository])
+/// Liefert im Test ein festes aktives Arbeitszeit-Profil, ohne den echten
+/// Aufbau über `authStateProvider`/`sharedPreferencesProvider` nachzustellen.
+class _FixedActiveWorkProfileIdNotifier extends ActiveWorkProfileIdNotifier {
+  _FixedActiveWorkProfileIdNotifier(this._value);
+  final String? _value;
+  @override
+  String? build() => _value;
+}
+
+@GenerateMocks([WorkRepository, SettingsRepository, ApiClient])
 void main() {
   late MockWorkRepository mockWorkRepository;
   late MockSettingsRepository mockSettingsRepository;
+  late MockApiClient mockApiClient;
   late ProviderContainer container;
+
+  /// Baut den Container neu mit dem übergebenen aktiven Profil auf. Wird nur
+  /// von den profileId-Tests genutzt; alle anderen Tests laufen unverändert
+  /// mit dem Standard-Profil (kein aktives Profil, `null`) aus [setUp].
+  void rebuildContainerWithActiveProfile(String? profileId) {
+    container.dispose();
+    container = ProviderContainer(
+      overrides: [
+        workRepositoryProvider.overrideWithValue(mockWorkRepository),
+        settingsRepositoryProvider.overrideWithValue(mockSettingsRepository),
+        apiClientProvider.overrideWithValue(mockApiClient),
+        activeWorkProfileIdProvider
+            .overrideWith(() => _FixedActiveWorkProfileIdNotifier(profileId)),
+      ],
+    );
+  }
 
   setUp(() {
     mockWorkRepository = MockWorkRepository();
     mockSettingsRepository = MockSettingsRepository();
+    mockApiClient = MockApiClient();
     container = ProviderContainer(
       overrides: [
         workRepositoryProvider.overrideWithValue(mockWorkRepository),
@@ -371,6 +399,48 @@ void main() {
         verify(mockWorkRepository.saveWorkEntry(any)).called(3);
         expect(viewModel.state.selectedDates, isEmpty);
         expect(viewModel.state.multiSelectMode, false);
+      });
+    });
+
+    group('Server-Reports geben das aktive Arbeitszeit-Profil weiter (siehe #291)', () {
+      test('Standard-Profil: Server-Reports werden ohne profileId angefragt', () async {
+        rebuildContainerWithActiveProfile(null);
+        final now = DateTime.now();
+        when(mockWorkRepository.getWorkEntriesForMonth(now.year, now.month))
+            .thenAnswer((_) async => []);
+        when(mockApiClient.getDailyReport(now.year, now.month, now.day, profileId: null))
+            .thenAnswer((_) async => {'overtimeMs': 0});
+        when(mockApiClient.getWeeklyReport(now.year, now.month, now.day, profileId: null))
+            .thenAnswer((_) async => {'totalWorkedMs': 0, 'totalBreaksMs': 0, 'avgPerDayMs': 0, 'overtimeMs': 0, 'workDays': 0});
+        when(mockApiClient.getMonthlyReport(now.year, now.month, profileId: null))
+            .thenAnswer((_) async => {'totalWorkedMs': 0, 'totalBreaksMs': 0, 'avgPerDayMs': 0, 'monthlyOvertimeMs': 0, 'totalOvertimeMs': 0, 'workDays': 0, 'avgPerWeekMs': 0});
+
+        container.read(reportsViewModelProvider.notifier);
+        await Future.delayed(Duration.zero);
+
+        verify(mockApiClient.getDailyReport(now.year, now.month, now.day, profileId: null)).called(1);
+        verify(mockApiClient.getWeeklyReport(now.year, now.month, now.day, profileId: null)).called(1);
+        verify(mockApiClient.getMonthlyReport(now.year, now.month, profileId: null)).called(1);
+      });
+
+      test('zusätzliches Profil: Server-Reports werden mit dessen profileId angefragt', () async {
+        rebuildContainerWithActiveProfile('p1');
+        final now = DateTime.now();
+        when(mockWorkRepository.getWorkEntriesForMonth(now.year, now.month))
+            .thenAnswer((_) async => []);
+        when(mockApiClient.getDailyReport(now.year, now.month, now.day, profileId: 'p1'))
+            .thenAnswer((_) async => {'overtimeMs': 0});
+        when(mockApiClient.getWeeklyReport(now.year, now.month, now.day, profileId: 'p1'))
+            .thenAnswer((_) async => {'totalWorkedMs': 0, 'totalBreaksMs': 0, 'avgPerDayMs': 0, 'overtimeMs': 0, 'workDays': 0});
+        when(mockApiClient.getMonthlyReport(now.year, now.month, profileId: 'p1'))
+            .thenAnswer((_) async => {'totalWorkedMs': 0, 'totalBreaksMs': 0, 'avgPerDayMs': 0, 'monthlyOvertimeMs': 0, 'totalOvertimeMs': 0, 'workDays': 0, 'avgPerWeekMs': 0});
+
+        container.read(reportsViewModelProvider.notifier);
+        await Future.delayed(Duration.zero);
+
+        verify(mockApiClient.getDailyReport(now.year, now.month, now.day, profileId: 'p1')).called(1);
+        verify(mockApiClient.getWeeklyReport(now.year, now.month, now.day, profileId: 'p1')).called(1);
+        verify(mockApiClient.getMonthlyReport(now.year, now.month, profileId: 'p1')).called(1);
       });
     });
   });
