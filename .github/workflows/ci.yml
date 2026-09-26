@@ -38,6 +38,10 @@ jobs:
       - name: Analyze
         run: flutter analyze --no-fatal-infos
 
+      # riverpod_lint über custom_lint - flutter analyze sieht diese Regeln nicht.
+      - name: Custom Lint
+        run: dart run custom_lint
+
       - name: Test
         run: flutter test
 

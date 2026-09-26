@@ -14,8 +14,8 @@ flutter test
 # Run a single test file
 flutter test test/path/to/test_file.dart
 
-# Analyze / lint
-flutter analyze
+# Analyze / lint (wie CI; custom_lint zusätzlich lokal)
+flutter analyze --no-fatal-infos
 dart run custom_lint
 
 # Regenerate Riverpod providers after changing annotated files
@@ -97,7 +97,7 @@ Files ending in `.g.dart` are generated — do not edit them manually. Regenerat
 
 1. **Niemals direkt coden ohne Phase 1 + 2 abgeschlossen** — auch bei kleinen Tasks
 2. **Context bei ~60% → `/clear` → Fortschritt aus `thoughts/`-Datei laden**
-3. **Tests vor Implementation schreiben (TDD)**
+3. **Tests vor Implementation schreiben (TDD)** — Tests dürfen nicht von Datum, Wochentag oder Zeitzone abhängen
 4. **Nach `@riverpod`-Änderungen immer `dart run build_runner build` ausführen**
 5. **Keine direkten Änderungen an `*.g.dart` oder `*.mocks.dart`**
 6. **`SharedPreferences` nur über den `main.dart`-Override — nie direkt**
@@ -107,21 +107,29 @@ Files ending in `.g.dart` are generated — do not edit them manually. Regenerat
 
 ## Agenten-Übersicht
 
+Die Agent-Dateien liegen im Repo-Root unter `.claude/agents/`. Die Commands lassen sie vollständig lesen.
+
 | Agent | Datei | Wann verwenden |
 |---|---|---|
-| Analyst | `.claude/agents/analyst.md` | Aufgabe verstehen, hinterfragen |
-| Planner | `.claude/agents/planner.md` | Implementierungsplan erstellen |
-| Developer | `.claude/agents/developer.md` | Code schreiben, TDD |
-| Tester | `.claude/agents/tester.md` | Tests + Coverage |
-| UI-Reviewer | `.claude/agents/ui-reviewer.md` | UI validieren via mcp_flutter |
-| Reviewer | `.claude/agents/reviewer.md` | Code Review + PR |
+| Analyst | `.claude/agents/mobile-analyst.md` | Aufgabe verstehen, hinterfragen |
+| Planner | `.claude/agents/mobile-planner.md` | Implementierungsplan erstellen |
+| Developer | `.claude/agents/mobile-developer.md` | Code schreiben, TDD |
+| Tester | `.claude/agents/mobile-tester.md` | Tests, Testlücken, CI-Checks lokal |
+| UI-Reviewer | `.claude/agents/mobile-ui-reviewer.md` | UI prüfen (Widget-Tests, lokal `flutter run`) |
+| Reviewer | `.claude/agents/mobile-reviewer.md` | Code Review, Commit, PR |
+
+Betrifft ein Issue mehrere Plattformen, zuerst `/issue <nr>` bzw. den Cross-Platform-Coordinator
+(`.claude/agents/cross-platform-coordinator.md`) nutzen.
 
 ## Slash Commands
 
 | Command | Phase |
 |---|---|
-| `/analyze TICKET-123` | Phase 1 — Aufgabe analysieren |
-| `/plan TICKET-123` | Phase 2 — Plan erstellen |
-| `/implement TICKET-123` | Phase 3 — Code schreiben |
-| `/validate TICKET-123` | Phase 4 — Testen + UI |
-| `/review TICKET-123` | Phase 5 — Review + PR |
+| `/issue 123` | Einstieg — Issue lesen, Plattformen bestimmen, Branch anlegen |
+| `/mobile-analyze 123` | Phase 1 — Aufgabe analysieren → `mobile/thoughts/123-research.md` |
+| `/mobile-plan 123` | Phase 2 — Plan erstellen → `mobile/thoughts/123-plan.md` |
+| `/mobile-implement 123` | Phase 3 — Code schreiben (TDD) |
+| `/mobile-validate 123` | Phase 4 — Testen + UI |
+| `/mobile-review 123` | Phase 5 — Review + PR gegen `develop` |
+
+Das Argument ist die GitHub-Issue-Nummer. Branch-, Commit- und Release-Konventionen: `CONTRIBUTING.md` im Repo-Root.

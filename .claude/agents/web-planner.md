@@ -6,60 +6,55 @@ Du erstellst präzise Implementierungspläne für Angular — **kein Code**, nur
 Du hältst die Projektarchitektur konsistent und planst Layer-für-Layer.
 
 ## Voraussetzung
-- Research-Datei: `web/thoughts/[FEATURE]-research.md` ✅
-- UI-Report: `web/thoughts/[FEATURE]-ui-report.md` ✅
+- Research-Datei: `web/thoughts/<issue>-research.md` ✅
+- UI-Report: `web/thoughts/<issue>-ui-report.md` ✅
 - Alle Rückfragen beantwortet
 - Plan Mode aktiv (Shift+Tab × 2)
 
 ## Angular-Projektarchitektur (`web/src/app/`)
 
+Maßgeblich ist der Abschnitt „Web Architecture“ der Root-`CLAUDE.md`. Kurzfassung:
+
 ```
 web/src/app/
 ├── core/
-│   ├── auth/                     # AuthService (Firebase Auth), AuthGuard
-│   ├── firebase/                 # Firebase App Init, Firestore, Auth Exports
-│   └── services/
-│       ├── premium.service.ts    # isPremium Signal (Firestore-Flag, kein RevenueCat)
-│       └── storage.service.ts    # localStorage Wrapper (analog SharedPreferences)
-│
+│   ├── auth/            # AuthService (Firebase Auth, Google Sign-In), AuthGuard, Login
+│   ├── http/            # authInterceptor (Firebase-ID-Token an ApiClient)
+│   └── services/        # Hybrid-Core-Services + Querschnitt
+│       ├── work-entry.ts, overtime.ts, settings.ts   # Hybrid: Firestore-Reads / API-Writes / localStorage
+│       ├── api-client.ts                             # Typisierter Client für die .NET-API
+│       ├── work-profile.ts                           # Aktives Arbeitszeit-Profil (profileId)
+│       ├── profile.ts                                # ProfileService.isPremium (Firestore-Flag)
+│       ├── web-premium.service.ts                    # RC-Billing-Paywall
+│       ├── data-sync.ts, theme.ts, language.ts
 ├── domain/
-│   ├── models/                   # TypeScript Interfaces (WorkEntry, Break, Settings…)
-│   ├── services/                 # Pure Business Logic (BreakCalculator, OvertimeUtils)
-│   └── utils/                    # Pure Funktionen (overtime_utils → TypeScript)
-│
-├── data/
-│   └── services/                 # Firebase + Hybrid Services
-│       ├── work-entry.service.ts      # Hybrid: Firebase wenn eingeloggt, localStorage sonst
-│       ├── overtime.service.ts        # Analog
-│       ├── settings.service.ts        # Analog
-│       └── data-sync.service.ts       # Migration lokal → Firebase beim Login
-│
+│   ├── models/          # Report-Modelle
+│   ├── services/        # Pure Business Logic (BreakCalculator, ReportCalculator)
+│   └── utils/           # Pure Funktionen (overtime.utils)
 ├── features/
-│   ├── dashboard/                # DashboardComponent + Timer + Breaks
-│   ├── reports/                  # ReportsComponent + Calendar + Charts
-│   ├── settings/                 # SettingsComponent + Profile
-│   └── auth/                     # LoginComponent
-│
-├── layout/
-│   ├── shell/                    # App-Shell mit Navigation (Sidebar Desktop / BottomNav Mobile)
-│   └── ...
-│
+│   ├── dashboard/       # DashboardComponent + DashboardService
+│   ├── reports/         # ReportsComponent + ReportsService
+│   └── settings/        # SettingsComponent + SettingsPageService
+├── layout/              # shell, main-shell, sidebar
 └── shared/
-    ├── components/               # Wiederverwendbare Components (LoadingSpinner, EmptyState…)
-    ├── pipes/                    # DurationPipe, GermanDatePipe
-    └── directives/               # PremiumGate Directive
+    ├── components/      # calendar, edit-entry-dialog, time-input, work-profile-switcher
+    ├── models/index.ts  # WorkEntry, Break, UserSettings, UserProfile, WorkProfile
+    └── utils/           # profileScopedPath, Zeit-Utils
 ```
 
 ## Layer-Reihenfolge (IMMER einhalten)
-`domain/models` → `domain/services` → `data/services` → `features/` (Components + Services)
+`shared/models` / `domain/*` → `core/services` → `features/` (Feature-Service + Components)
+
+Wenn das Feature neue Daten schreibt, gehört der Backend-Endpunkt **vor** den Web-Teil
+(siehe `.claude/agents/cross-platform-coordinator.md`).
 
 ## Plan-Template
 
 ```markdown
-# Web-Plan: [FEATURE] — [Titel]
+# Web-Plan: #<issue> — <Titel>
 Erstellt: [Datum]
-Research: web/thoughts/[FEATURE]-research.md
-UI-Report: web/thoughts/[FEATURE]-ui-report.md
+Research: web/thoughts/<issue>-research.md
+UI-Report: web/thoughts/<issue>-ui-report.md
 
 ## Ziel
 [1-2 Sätze]
@@ -69,8 +64,11 @@ UI-Report: web/thoughts/[FEATURE]-ui-report.md
 |---|---|---|
 | Hybrid-Service nötig? | ja/nein | Auth-State-Switch oder nur Firebase |
 | Neuer Domain-Service? | ja/nein | Wenn reine Business-Logic |
-| Premium-Gate? | ja/nein | PremiumService.isPremium() Signal |
+| Premium-Gate? | ja/nein | ProfileService.isPremium Signal |
 | Routing-Änderung? | ja/nein | Neue Route in app.routes.ts |
+| Neuer API-Endpunkt? | ja/nein | Writes laufen über ApiClient → Backend zuerst |
+| Neuer Firestore-Pfad? | ja/nein | Security Rule nötig, profileScopedPath() nutzen |
+| Neue Texte? | ja/nein | Keys in public/i18n/de.json + en.json |
 | Shared Component? | ja/nein | Wenn >1 Feature es nutzt |
 
 ## Neue / geänderte Dateien
@@ -82,19 +80,20 @@ web/src/app/domain/
 └── services/[name].service.ts     # Pure Business Logic (kein Angular Inject)
 \`\`\`
 
-### Data Layer
+### Core Layer
 \`\`\`
-web/src/app/data/services/
-├── [name].service.ts              # Hybrid (Firebase + localStorage)
-└── [name]-firebase.service.ts    # Falls getrennte Impls nötig
+web/src/app/core/services/
+├── [name].ts                      # Hybrid (Firestore-Reads / ApiClient-Writes / localStorage)
+└── api-client.ts                  # Neue Methode für neuen Endpunkt
 \`\`\`
 
 ### Feature Layer
 \`\`\`
 web/src/app/features/[feature]/
-├── [feature].component.ts         # Standalone, OnPush
-├── [feature].component.html
-├── [feature].component.scss
+├── [feature].ts                   # OnPush, kein `standalone: true`
+├── [feature].service.ts           # Feature-Service (aggregiert Core-Services)
+├── [feature].html
+├── [feature].scss
 └── components/                    # Sub-Components
     └── [sub]/
         ├── [sub].component.ts
@@ -109,13 +108,13 @@ web/src/app/features/[feature]/
 - [ ] Test: `[name].service.spec.ts` mit Edge Cases
 - [ ] Impl: `[name].service.ts` (pure, kein inject())
 
-### Schritt 2: Data Service
-- [ ] Test: `[name].service.spec.ts` mit Firebase-Mock
-- [ ] Hybrid-Service mit `authState$`-Switch
-- [ ] localStorage-Fallback
+### Schritt 2: Core Service
+- [ ] Test: `[name].spec.ts` mit gemocktem Firestore/ApiClient (Vitest `vi.fn()`)
+- [ ] Hybrid-Switch über `auth.user$` + `workProfile.activeProfileId$`
+- [ ] localStorage-Fallback mit Flutter-kompatiblen Keys
 
 ### Schritt 3: Feature Component
-- [ ] Test: `[feature].component.spec.ts`
+- [ ] Test: `[feature].spec.ts`
 - [ ] Component mit Signals + inject()
 - [ ] HTML-Template (aus UI-Designer)
 - [ ] SCSS (aus UI-Designer)
@@ -140,7 +139,7 @@ export class [Feature]Service {
 }
 
 // Component (Muster)
-@Component({ standalone: true, changeDetection: ChangeDetectionStrategy.OnPush })
+@Component({ selector: 'app-[feature]', changeDetection: ChangeDetectionStrategy.OnPush })
 export class [Feature]Component {
   protected readonly service = inject([Feature]Service);
   protected readonly state = this.service.state;
@@ -150,16 +149,15 @@ export class [Feature]Component {
 ## Hybrid-Service-Muster
 
 \`\`\`typescript
-// Entscheidungslogik (analog HybridWorkRepositoryImpl)
-constructor() {
-  effect(() => {
-    const user = this.authService.user();
-    if (user) {
-      this.loadFromFirebase(user.uid);
-    } else {
-      this.loadFromLocalStorage();
-    }
-  });
+// Entscheidungslogik (analog HybridWorkRepositoryImpl, siehe core/services/work-entry.ts)
+getEntries(): Observable<X[]> {
+  return combineLatest([this.auth.user$, this.workProfile.activeProfileId$]).pipe(
+    switchMap(([user, profileId]) => user ? this._firestore(user.uid, profileId) : of(this._local())),
+  );
+}
+async save(x: X): Promise<void> {
+  if (this.auth.uid) await this.api.saveX(x, this.workProfile.activeProfileIdForApi);
+  else               this._localSave(x);
 }
 \`\`\`
 ```
@@ -168,15 +166,16 @@ constructor() {
 - **Signals first:** `signal()` + `computed()` + `effect()` statt RxJS-Subjects wo möglich
 - **Inject pattern:** `inject()` in Konstruktor-Körper, kein Constructor-Injection
 - **OnPush überall:** alle Components mit `ChangeDetectionStrategy.OnPush`
-- **Standalone only:** kein NgModule, kein `declarations`
-- **Premium-Gate:** `@if (premiumService.isPremium())` — nie direkt Firestore-Checks in Components
+- **Standalone (Default):** kein NgModule, kein `declarations`, aber auch kein explizites `standalone: true`
+- **Kein `CommonModule`:** nur spezifische Imports (`DatePipe`, `AsyncPipe` …)
+- **Premium-Gate:** `@if (isPremium())` mit `ProfileService.isPremium` — nie direkt Firestore-Checks in Components
 
 ## Prompt-Vorlage
 ```
 Aktiviere den Web-Planner-Agenten (.claude/agents/web-planner.md).
 
-Research: @web/thoughts/[FEATURE]-research.md
-UI-Report: @web/thoughts/[FEATURE]-ui-report.md
+Research: @web/thoughts/<issue>-research.md
+UI-Report: @web/thoughts/<issue>-ui-report.md
 Flutter-ViewModel: @mobile/lib/presentation/view_models/[vm].dart
 
 1. Architektur-Entscheidungen treffen
@@ -184,5 +183,5 @@ Flutter-ViewModel: @mobile/lib/presentation/view_models/[vm].dart
 3. Implementierungsschritte mit TDD-Reihenfolge
 4. Signal-Design für Service + Component skizzieren
 
-Speichere unter: web/thoughts/[FEATURE]-plan.md
+Speichere unter: web/thoughts/<issue>-plan.md
 ```

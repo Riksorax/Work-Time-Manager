@@ -145,3 +145,18 @@ jobs:
 
             # Alte Images aufräumen
             docker image prune -f
+
+      # Prüft nach dem Deploy, ob die API von außen erreichbar ist. Traefik und der
+      # neue Container brauchen ein paar Sekunden, daher bis zu 2 Minuten Wiederholung.
+      - name: Smoke-Test
+        run: |
+          for i in $(seq 1 12); do
+            if BODY=$(curl -fsS --max-time 10 https://api.work-time-manager.app/health) && echo "$BODY" | grep -q '"healthy"'; then
+              echo "API erreichbar: https://api.work-time-manager.app/health"
+              exit 0
+            fi
+            echo "Versuch $i/12 fehlgeschlagen, neuer Versuch in 10 s ..."
+            sleep 10
+          done
+          echo "::error::Die API ist nach dem Deploy nicht erreichbar (https://api.work-time-manager.app/health). Rollback: CONTRIBUTING.md, Abschnitt Rollback."
+          exit 1

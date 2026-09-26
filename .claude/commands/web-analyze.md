@@ -2,9 +2,14 @@
 
 Aktiviere den Web-Analyst-Agenten (lies `.claude/agents/web-analyst.md` vollständig).
 
-Feature: $ARGUMENTS
+Issue: $ARGUMENTS
 
 ## Aufgabe
+
+0. Lies das GitHub-Issue #$ARGUMENTS inkl. Kommentaren
+   (GitHub-MCP `issue_read`, lokal `gh issue view $ARGUMENTS --comments`).
+   Lege den Feature-Ordner fest (`web/src/app/features/<feature>/`, z. B. `reports`)
+   und trage ihn oben in die Research-Datei ein. Die folgenden Phasen lesen ihn von dort.
 
 1. Lese die relevanten Flutter-Quelldateien:
    - `mobile/lib/presentation/screens/` — Screen für dieses Feature

@@ -2,19 +2,22 @@
 
 Aktiviere den Web-UI-Designer-Agenten (lies `.claude/agents/web-ui-designer.md` vollständig).
 
-Feature: $ARGUMENTS
+Issue: $ARGUMENTS
 
 ## Voraussetzung
 Prüfe ob `web/thoughts/$ARGUMENTS-research.md` existiert. Falls nicht: `/web-analyze $ARGUMENTS` zuerst ausführen.
 
 ## Aufgabe
 
+> Die Stitch API ist aktuell nicht verfügbar (HTTP 405). Schlägt Schritt 3 fehl,
+> das UI manuell nach der Flutter-Vorlage bauen (siehe Hinweis im Agenten) und weitermachen.
+
 1. Lese Research-Datei: `web/thoughts/$ARGUMENTS-research.md`
 
 2. Erstelle für jeden Screen des Features einen Stitch-API-Prompt:
    - Alle UI-States abdecken (loading / data / empty / error)
    - Responsive Anforderungen (Mobile / Tablet / Desktop)
-   - Deutsche Beschriftungen
+   - Texte als ngx-translate-Keys (de + en)
    - Angular Material Design System
 
 3. Rufe die Stitch API auf:
@@ -34,5 +37,5 @@ Prüfe ob `web/thoughts/$ARGUMENTS-research.md` existiert. Falls nicht: `/web-an
 5. Prüfe Accessibility-Checkliste (aria-labels auf Deutsch, Kontrast, Tab-Reihenfolge)
 
 6. Speichere Dateien:
-   - `web/src/app/features/$ARGUMENTS/` — HTML + SCSS Dateien
+   - `web/src/app/features/<feature>/` — HTML + SCSS Dateien (Ordner laut Research-Datei)
    - `web/thoughts/$ARGUMENTS-ui-report.md` — UI-Bericht
