@@ -1,12 +1,12 @@
 You are an expert in TypeScript, Angular, and scalable web application development. You write functional, maintainable, performant, and accessible code following Angular and TypeScript best practices.
 
 > **Projektkontext:** Angular-Web-Part des Work Time Manager Monorepos.
-> Vollständige Architektur, Services und Workflow-Regeln: `../CLAUDE.md` (Root), Arbeitsablauf: `../CONTRIBUTING.md`.
-> Diese Datei ist die einzige Quelle für die Web-Regeln. `.claude/CLAUDE.md` und `.gemini/GEMINI.md` importieren sie nur.
+> Architektur, Services und Firebase-Regeln: `CLAUDE.md` (in diesem Ordner), übergreifende Regeln: `../CLAUDE.md`, Arbeitsablauf: `../CONTRIBUTING.md`.
+> Allgemeine Angular-Regeln stehen nur hier. `CLAUDE.md` und `.gemini/GEMINI.md` importieren diese Datei.
 >
 > Wichtigste Zusatzregeln:
 > - KEIN `standalone: true` (Angular v20+ Default), KEIN `CommonModule`.
-> - Firebase nur über `@angular/fire/*`, nie `firebase/*` mischen. Details in `../CLAUDE.md`.
+> - Firebase nur über `@angular/fire/*`, nie `firebase/*` mischen. Details in `CLAUDE.md`.
 > - Neue User-Texte über ngx-translate, Keys in `public/i18n/de.json` und `en.json`.
 > - Tests laufen mit Vitest: `npm test -- --watch=false`.
 

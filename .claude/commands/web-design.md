@@ -1,41 +1,16 @@
-# /web-design — Phase 2: Web-UI mit Stitch API generieren
-
-Aktiviere den Web-UI-Designer-Agenten (lies `.claude/agents/web-ui-designer.md` vollständig).
+# /web-design — Phase 2: Web-UI entwerfen
 
 Issue: $ARGUMENTS
 
-## Voraussetzung
-Prüfe ob `web/thoughts/$ARGUMENTS-research.md` existiert. Falls nicht: `/web-analyze $ARGUMENTS` zuerst ausführen.
+Voraussetzung: `web/thoughts/$ARGUMENTS-research.md` existiert. Falls nicht: `/web-analyze $ARGUMENTS`.
 
-## Aufgabe
+Starte den Subagent `web-ui-designer` (Agent-Tool, `subagent_type: web-ui-designer`) mit diesem Auftrag:
 
-> Die Stitch API ist aktuell nicht verfügbar (HTTP 405). Schlägt Schritt 3 fehl,
-> das UI manuell nach der Flutter-Vorlage bauen (siehe Hinweis im Agenten) und weitermachen.
+> Für Issue #$ARGUMENTS das Flutter-UI laut `web/thoughts/$ARGUMENTS-research.md` nach Angular
+> portieren: alle UI-States, responsive (Mobile / Tablet / Desktop), Texte als ngx-translate-Keys
+> (de + en), Angular Material. Stitch API versuchen; sie antwortet aktuell mit HTTP 405 — dann
+> manuell nach der Flutter-Vorlage bauen. Accessibility-Checkliste prüfen.
+> Ergebnis: HTML + SCSS in `web/src/app/features/<feature>/` (Ordner laut Research-Datei) und
+> `web/thoughts/$ARGUMENTS-ui-report.md`.
 
-1. Lese Research-Datei: `web/thoughts/$ARGUMENTS-research.md`
-
-2. Erstelle für jeden Screen des Features einen Stitch-API-Prompt:
-   - Alle UI-States abdecken (loading / data / empty / error)
-   - Responsive Anforderungen (Mobile / Tablet / Desktop)
-   - Texte als ngx-translate-Keys (de + en)
-   - Angular Material Design System
-
-3. Rufe die Stitch API auf:
-   ```bash
-   curl -s -X POST "https://stitch.withgoogle.com/api/v1/generate" \
-     -H "Authorization: Bearer $STITCH_API_KEY" \
-     -H "Content-Type: application/json" \
-     -d '{"prompt": "...", "framework": "angular", "style": "material"}'
-   ```
-
-4. Passe das generierte HTML/SCSS für Angular an:
-   - Statische Daten → `{{ signal() }}` Bindings
-   - CSS-Klassen → Angular Material oder projektspezifisches SCSS
-   - Alle `*ngIf` → `@if`, alle `*ngFor` → `@for`
-   - `ChangeDetectionStrategy.OnPush` sicherstellen
-
-5. Prüfe Accessibility-Checkliste (aria-labels auf Deutsch, Kontrast, Tab-Reihenfolge)
-
-6. Speichere Dateien:
-   - `web/src/app/features/<feature>/` — HTML + SCSS Dateien (Ordner laut Research-Datei)
-   - `web/thoughts/$ARGUMENTS-ui-report.md` — UI-Bericht
+Nächster Schritt: `/web-plan $ARGUMENTS`.

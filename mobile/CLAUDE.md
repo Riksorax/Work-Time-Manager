@@ -107,9 +107,11 @@ Files ending in `.g.dart` are generated — do not edit them manually. Regenerat
 
 ## Agenten-Übersicht
 
-Die Agent-Dateien liegen im Repo-Root unter `.claude/agents/`. Die Commands lassen sie vollständig lesen.
+Die Agents liegen im Repo-Root unter `.claude/agents/` und sind Subagents: Die Commands starten sie
+über das Agent-Tool, jeder läuft in eigenem Kontext und gibt nur eine Kurzfassung zurück.
+Rückfragen und Freigaben laufen über die Hauptsession.
 
-| Agent | Datei | Wann verwenden |
+| Subagent | Datei | Wann verwenden |
 |---|---|---|
 | Analyst | `.claude/agents/mobile-analyst.md` | Aufgabe verstehen, hinterfragen |
 | Planner | `.claude/agents/mobile-planner.md` | Implementierungsplan erstellen |
@@ -118,8 +120,7 @@ Die Agent-Dateien liegen im Repo-Root unter `.claude/agents/`. Die Commands lass
 | UI-Reviewer | `.claude/agents/mobile-ui-reviewer.md` | UI prüfen (Widget-Tests, lokal `flutter run`) |
 | Reviewer | `.claude/agents/mobile-reviewer.md` | Code Review, Commit, PR |
 
-Betrifft ein Issue mehrere Plattformen, zuerst `/issue <nr>` bzw. den Cross-Platform-Coordinator
-(`.claude/agents/cross-platform-coordinator.md`) nutzen.
+Betrifft ein Issue mehrere Plattformen, zuerst `/issue <nr>` bzw. den Subagent `cross-platform-coordinator` nutzen.
 
 ## Slash Commands
 

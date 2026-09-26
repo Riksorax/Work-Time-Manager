@@ -27,9 +27,9 @@ Issue: $ARGUMENTS
 |---|---|
 | nur Mobile | `/mobile-analyze $ARGUMENTS` |
 | nur Web, Portierung eines Flutter-Features | `/web-analyze $ARGUMENTS` |
-| nur Web, sonst | Web-Developer-Agent (`.claude/agents/web-developer.md`) mit kurzem Plan |
+| nur Web, sonst | kurzen Plan mit dem Nutzer abstimmen, dann Subagent `web-developer` |
 | nur Backend | `/server-implement $ARGUMENTS` |
-| mehrere Plattformen | Cross-Platform-Coordinator (`.claude/agents/cross-platform-coordinator.md`) |
+| mehrere Plattformen | Subagent `cross-platform-coordinator`, danach die Workflows in der Reihenfolge, die er zurückgibt |
 | CI/Infra | direkt umsetzen; bei Deploy-Workflows `CONTRIBUTING.md` („Deployment“) beachten |
 
 5. **Kurzbericht an den Nutzer:** Einordnung, Branch-Name, gewählter Workflow, offene Fragen.

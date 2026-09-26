@@ -2,7 +2,7 @@
 
 Dieses Dokument beschreibt den Weg einer Änderung durch das Monorepo.
 Architektur und Code-Regeln stehen in `CLAUDE.md` (Root) sowie in `mobile/CLAUDE.md`,
-`web/AGENTS.md` und `server/CLAUDE.md`.
+`web/CLAUDE.md` und `server/CLAUDE.md`.
 
 ## Überblick
 
@@ -144,7 +144,33 @@ pusht nur das Image. Auf `main` gestartet, deployt er auch.
   firebase deploy --only firestore:rules --project worktime-56c7a
   ```
 - **Neue Secrets/Variablen** vor dem Merge in den GitHub-Einstellungen anlegen
-  (Liste in `CLAUDE.md`, Abschnitt „CI/CD“).
+  (Liste unten, „Secrets und Variablen“).
+
+### Details der Deploy-Workflows
+
+**Web-Deployment Detail (`deploy-angular.yml`):**
+- **Build**: Angular Production Build mit injizierten Firebase-Secrets
+- **Docker**: Image `riksorax/work-time-manager-web` → Docker Hub (nur bei nicht-PR)
+- **Deploy**: SSH auf Hetzner-Server, `docker compose up` (nur auf `main`), danach Smoke-Test gegen `https://work-time-manager.app/`
+
+**API-Deployment Detail (`deploy-api.yml`):**
+- **Build & Test**: `dotnet build`/`dotnet test` gegen `server/WorkTimeManager.slnx`
+- **Docker**: Image `riksorax/work-time-manager-api` → Docker Hub (nur bei nicht-PR)
+- **Deploy**: SSH auf Hetzner-Server, `docker compose up` (nur auf `main`), danach Smoke-Test gegen `https://api.work-time-manager.app/health` — Firebase-Projekt-ID und Service-Account-Credential werden als GitHub Secrets per SSH-Session-Env injiziert (`appleboy/ssh-action` `envs:`), es liegt **keine** `.env`-Datei auf dem Server
+
+**Uptime-Monitoring (Hetzner, siehe #207):** [Uptime-Kuma](https://github.com/louislam/uptime-kuma) läuft als weiterer Service (`uptime-kuma`) in `server/docker-compose.yml`, self-hosted hinter Traefik unter `status.work-time-manager.app`. Sowohl `deploy-api.yml` als auch `deploy-angular.yml` stellen den Container per `docker compose up -d --no-deps uptime-kuma` sicher (idempotent, kein eigener CI-Build nötig — öffentliches Image). Monitore (welche URLs überwacht werden) und Alerting-Kanäle (E-Mail/Telegram/Discord/...) werden einmalig über die Uptime-Kuma-Weboberfläche eingerichtet, dafür gibt es keine Env-Var-/Config-Datei-Konfiguration. Benötigt einen DNS-Eintrag für `status.work-time-manager.app` → Hetzner-Host (außerhalb dieses Repos).
+
+### Secrets und Variablen
+
+**Required Secrets (Web):** `FIREBASE_API_KEY`, `FIREBASE_AUTH_DOMAIN`, `FIREBASE_PROJECT_ID`, `FIREBASE_STORAGE_BUCKET`, `FIREBASE_MESSAGING_SENDER_ID`, `FIREBASE_APP_ID`, `FIREBASE_MEASUREMENT_ID`, `RC_WEB_KEY`, `DOCKERHUB_TOKEN`, `HETZNER_SSH_PRIVATE_KEY`
+
+**Optionales Secret (Web):** `SENTRY_DSN_WEB` — Sentry-Fehler-Tracking (#207). Leer/nicht gesetzt = Sentry bleibt deaktiviert, kein Build-Fehler.
+
+**Required Vars (Web):** `DOCKERHUB_USERNAME`, `HETZNER_HOST`, `HETZNER_USER`
+
+**Required Secrets (API, zusätzlich):** `FIREBASE_PROJECT_ID` (geteilt mit Web), `FIREBASE_SERVICE_ACCOUNT_BASE64` (Base64-kodiertes Firebase-Service-Account-JSON für `worktime-56c7a`, Quelle: Firebase Console → Projekteinstellungen → Dienstkonten → "Neuen privaten Schlüssel generieren")
+
+**Required Secrets (Flutter):** `RC_ANDROID_KEY`, `RC_IOS_KEY`, Android keystore secrets
 
 ## 7. Rollback
 
@@ -167,9 +193,9 @@ die Einführung stoppen und einen Hotfix mit höherer Version veröffentlichen.
 
 | Datei | Inhalt |
 |---|---|
-| `CLAUDE.md` | Architektur, Datenpfade, Regeln für alle Plattformen |
-| `mobile/CLAUDE.md`, `web/AGENTS.md`, `server/CLAUDE.md` | Plattformregeln |
-| `.claude/agents/` | Rollen: `mobile-*`, `web-*`, `server-developer`, `cross-platform-coordinator` |
+| `CLAUDE.md` | Überblick, Firestore-Datenpfade, übergreifende Regeln (wird immer geladen) |
+| `mobile/CLAUDE.md`, `web/CLAUDE.md` (+ `web/AGENTS.md`), `server/CLAUDE.md` | Plattformregeln, werden erst beim Arbeiten im Ordner geladen |
+| `.claude/agents/` | Subagents: `mobile-*`, `web-*`, `server-developer`, `cross-platform-coordinator` — laufen in eigenem Kontext |
 | `.claude/commands/` | `/issue`, `/release`, `/mobile-*`, `/web-*`, `/server-implement` |
 | `.claude/hooks/session-start.sh` | Installiert die Toolchains in Cloud-Sessions |
 

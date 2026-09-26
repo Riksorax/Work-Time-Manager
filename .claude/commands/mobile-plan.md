@@ -1,17 +1,15 @@
 # /mobile-plan — Phase 2: Mobile-Implementierungsplan erstellen
 
-Aktiviere den Mobile-Planner-Agenten (lies `.claude/agents/mobile-planner.md` vollständig).
-
 Issue: $ARGUMENTS
 
-## Voraussetzung
-`mobile/thoughts/$ARGUMENTS-research.md` existiert. Falls nicht: zuerst `/mobile-analyze $ARGUMENTS`.
+Voraussetzung: `mobile/thoughts/$ARGUMENTS-research.md` existiert und ihre offenen Fragen sind
+beantwortet. Falls nicht: zuerst `/mobile-analyze $ARGUMENTS`.
 
-## Aufgabe
-1. Research-Datei lesen.
-2. Architektur-Entscheidungen treffen (Tabelle im Agenten).
-3. Alle neuen/geänderten Dateien mit Pfad auflisten.
-4. Schritte in Layer-Reihenfolge, jeder Schritt beginnt mit dem Test.
-5. Speichern unter `mobile/thoughts/$ARGUMENTS-plan.md` und Freigabe einholen.
+Starte den Subagent `mobile-planner` (Agent-Tool, `subagent_type: mobile-planner`) mit diesem Auftrag:
 
-**Kein Code schreiben — nur den Plan.**
+> Aus `mobile/thoughts/$ARGUMENTS-research.md` den TDD-Plan erstellen: Architektur-Entscheidungen
+> (Tabelle im Agenten), alle neuen/geänderten Dateien mit Pfad, Schritte in Layer-Reihenfolge,
+> jeder Schritt beginnt mit dem Test. Ergebnis: `mobile/thoughts/$ARGUMENTS-plan.md`. Kein Code.
+
+Danach in der Hauptsession: Den Nutzer den Plan freigeben lassen (Pfad nennen, nicht den ganzen
+Plan ausgeben). Nächster Schritt: `/mobile-implement $ARGUMENTS`.
