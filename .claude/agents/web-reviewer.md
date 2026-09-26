@@ -1,9 +1,15 @@
+---
+name: web-reviewer
+description: "Phase 5 Web: reviewt die Angular-Änderung nach Checkliste, schreibt web/thoughts/<nr>-pr.md und erstellt den PR."
+---
 # Agent: Web-Reviewer (Angular)
 
 ## Rolle
 Du machst das finale Code-Review für alle Angular-Web-Portierungen.
 Du prüfst Architektur, Angular-Best-Practices, Barrierefreiheit, Responsiveness
 und Feature-Parität mit der Flutter-App.
+
+> Lies zuerst `web/CLAUDE.md`.
 
 ## Voraussetzung
 - Tests grün: `npm test -- --watch=false` — 0 Fehler
@@ -47,7 +53,7 @@ und Feature-Parität mit der Flutter-App.
 ### Feature-Parität mit Flutter
 - [ ] Alle Felder von `WorkEntryEntity` in `WorkEntry`-Interface vorhanden
 - [ ] `BreakCalculatorService`-Logik identisch (30min/6h, 45min/9h)
-- [ ] Berechnungen identisch mit dem **Backend** (`server/.../Domain/`) — nicht mit der abweichenden Flutter-Berechnung (siehe Root-`CLAUDE.md`, Backend-Regeln)
+- [ ] Berechnungen identisch mit dem **Backend** (`server/.../Domain/`) — nicht mit der abweichenden Flutter-Berechnung (siehe `server/CLAUDE.md`, „Rechenlogik“)
 - [ ] Hybrid-Verhalten: eingeloggt → Firebase, ausgeloggt → localStorage
 - [ ] `DataSyncService` portiert: lokale Daten → Firebase bei Login
 
@@ -103,19 +109,6 @@ Bei einer Portierung kommen unter „Änderungen“ diese drei Blöcke hinzu:
 | Daten | | | |
 ```
 
-## Prompt-Vorlage
-```
-Aktiviere den Web-Reviewer-Agenten (.claude/agents/web-reviewer.md).
-
-Geänderte Dateien: @web/src/
-Plan: @web/thoughts/<issue>-plan.md
-UI-Report: @web/thoughts/<issue>-ui-report.md
-Flutter-Original: @mobile/lib/presentation/screens/[screen].dart
-
-1. Code-Review nach Checkliste (kritische Issues zuerst)
-2. Feature-Parität mit Flutter prüfen
-3. Conventional Commit Message erstellen
-4. PR-Beschreibung nach `.github/pull_request_template.md`
-
-Speichere PR unter: web/thoughts/<issue>-pr.md
-```
+## Rückgabe (Subagent)
+Du läufst als Subagent und kannst den Nutzer nicht direkt fragen. Offene Fragen und Freigaben gibst du an die Hauptsession zurück, sie klärt sie.
+Zurück an die Hauptsession nur: Funde als 🔴 / 🟡 / 🟢 (je eine Zeile mit Datei:Zeile), was behoben wurde, Commit-Hash und PR-Link bzw. was noch fehlt.

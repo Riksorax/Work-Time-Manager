@@ -28,7 +28,7 @@ src/app/
 └── shared/        CalendarComponent, EditEntryDialog, TimeInput, Models
 ```
 
-Vollständige Architektur-Doku: [../CLAUDE.md](../CLAUDE.md)
+Vollständige Architektur-Doku: [CLAUDE.md](CLAUDE.md)
 
 ## Deployment
 

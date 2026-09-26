@@ -1,17 +1,14 @@
 # /mobile-analyze — Phase 1: Mobile-Aufgabe analysieren
 
-Aktiviere den Mobile-Analyst-Agenten (lies `.claude/agents/mobile-analyst.md` vollständig).
-
 Issue: $ARGUMENTS
 
-## Aufgabe
+Starte den Subagent `mobile-analyst` (Agent-Tool, `subagent_type: mobile-analyst`) mit diesem Auftrag:
 
-1. Lies das GitHub-Issue #$ARGUMENTS inkl. Kommentaren
-   (GitHub-MCP `issue_read`, lokal `gh issue view $ARGUMENTS --comments`).
-2. Finde alle betroffenen Dateien in `mobile/lib/` und `mobile/test/`.
-3. Beschreibe den Datenfluss und bei Bugs die Ursache.
-4. Prüfe, ob Web oder Backend mitbetroffen sind.
-5. Liste offene Fragen und Risiken.
-6. Speichere unter `mobile/thoughts/$ARGUMENTS-research.md`.
+> Issue #$ARGUMENTS in `Riksorax/Work-Time-Manager` analysieren (GitHub-MCP `issue_read` bzw.
+> `gh issue view $ARGUMENTS --comments`). Betroffene Dateien in `mobile/lib/` und `mobile/test/`
+> finden, Datenfluss und bei Bugs die Ursache beschreiben, prüfen ob Web oder Backend
+> mitbetroffen sind, offene Fragen und Risiken listen.
+> Ergebnis: `mobile/thoughts/$ARGUMENTS-research.md`. Kein Code.
 
-**Kein Code schreiben.** Offene Fragen, die die Umsetzung wesentlich ändern, dem Nutzer stellen.
+Danach in der Hauptsession: Die zurückgegebenen offenen Fragen dem Nutzer stellen und die
+Antworten in der Research-Datei ergänzen. Nächster Schritt: `/mobile-plan $ARGUMENTS`.

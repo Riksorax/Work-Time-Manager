@@ -1,4 +1,10 @@
+---
+name: mobile-reviewer
+description: "Phase 5 Flutter: reviewt den Diff gegen develop nach Checkliste, behebt 🔴-Funde, committet und erstellt den PR."
+---
 # Agent: Mobile-Reviewer (Flutter)
+
+> Lies zuerst `mobile/CLAUDE.md`.
 
 ## Rolle
 Du machst das abschließende Code-Review einer Mobile-Änderung und bereitest Commit und
@@ -46,3 +52,7 @@ PR gegen `develop`, Beschreibung nach `.github/pull_request_template.md`.
 
 Falls die Änderung Nutzer sichtbar betrifft: Vermerk für die Release-Notes
 (`mobile/whatsnew/de-DE.txt` wird erst im Release-Branch geschrieben, siehe `/release`).
+
+## Rückgabe (Subagent)
+Du läufst als Subagent und kannst den Nutzer nicht direkt fragen. Offene Fragen und Freigaben gibst du an die Hauptsession zurück, sie klärt sie.
+Zurück an die Hauptsession nur: Funde als 🔴 / 🟡 / 🟢 (je eine Zeile mit Datei:Zeile), was behoben wurde, Commit-Hash und PR-Link bzw. was noch fehlt.

@@ -1,6 +1,6 @@
 # CLAUDE.md — Backend (.NET API)
 
-Ergänzt die Root-`CLAUDE.md` (Abschnitt „Backend“: Endpunkte, Firestore-Pfade, Rechenregeln).
+Ergänzt die Root-`CLAUDE.md` (Firestore-Datenpfade, Key Rules).
 Arbeitsablauf, Branches und Commits: `CONTRIBUTING.md` im Repo-Root.
 
 ## Commands (aus `server/`)
@@ -29,6 +29,38 @@ Firestore-Integrationstests übersprungen (`SkippableFact`) — das ist erwartet
 | `Endpoints/` | Minimal-API-Gruppen je Ressource | UID nur aus dem Token (`user.GetUid()`), nie aus Route/Body |
 | `Program.cs` | Auth, CORS, Swagger, Mapping | Neue Gruppen unter `api` (erfordert Auth) registrieren |
 
+## Endpunkte (alle unter `/api`, authentifiziert; UID kommt aus dem Token)
+
+| Methode | Route | Zweck |
+|---|---|---|
+| GET | `/api/me` | UID des Tokens |
+| GET | `/api/work-entries/{year}/{month}` | Einträge eines Monats |
+| GET | `/api/work-entries/{year}/{month}/{day}` | Einzeleintrag (404 wenn fehlt) |
+| PUT | `/api/work-entries` | Eintrag speichern (merge in days-Map) |
+| DELETE | `/api/work-entries/{year}/{month}/{day}` | Tag löschen |
+| GET / PUT | `/api/overtime` | Gleitzeit-Saldo lesen/speichern (`minutes`) |
+| GET / PUT | `/api/settings` | Einstellungen lesen/speichern |
+| GET | `/api/profile` | Premium-Status |
+| GET | `/api/reports/daily/{year}/{month}/{day}` | Tagesstatistik |
+| GET | `/api/reports/weekly/{year}/{month}/{day}` | Wochenbericht |
+| GET | `/api/reports/monthly/{year}/{month}` | Monatsbericht |
+| GET | `/api/work-profiles` | Zusätzliche Arbeitszeit-Profile auflisten (ohne Standard-Profil, siehe #138/#239) |
+| POST | `/api/work-profiles` | Neues Profil anlegen (`{ name }`) |
+| DELETE | `/api/work-profiles/{profileId}` | Profil inkl. aller Daten löschen |
+
+**Multi-Profile (`profileId`, siehe #239):** `work-entries`/`overtime`/`settings`/`reports`-Endpunkte akzeptieren optional `?profileId=...` (Query-Parameter). Fehlt er oder ist er `"default"`, wird der bestehende, nicht migrierte Pfad verwendet — vollständig abwärtskompatibel für bestehende Clients ohne den Parameter.
+
+## Rechenlogik
+
+**Berechnungslogik = Port der _korrigierten_ Web-`*-calculator`-Services** (Stand nach Web-Bugfix
+`0ddd15b`, 10.06.2026). Das ist die mathematisch korrekte Variante. **Achtung:** Die Flutter-App
+rechnet aktuell noch _anders_ (doppelte Pausen-Subtraktion in Wochen-/Monatsbericht, ignoriert
+Urlaub/Krank/Feiertag, Tages-Überstunden=0, vereinfachte KW ohne Jahreswechsel-Korrektur,
+Monats-Gesamtüberstunden ohne Gleitzeit-Altsaldo). Das Backend folgt **bewusst nicht** dieser
+Flutter-Logik — Flutter soll perspektivisch auf die Backend-Logik gezogen werden, damit alle Clients
+identisch rechnen. `ReportCalculator.GetIsoWeekNumber` ist gegen `System.Globalization.ISOWeek`
+getestet.
+
 ## Regeln
 
 - **Auth:** Jeder fachliche Endpunkt liegt in der `/api`-Gruppe mit `RequireAuthorization()`.
@@ -44,7 +76,7 @@ Firestore-Integrationstests übersprungen (`SkippableFact`) — das ist erwartet
   Clients lesen aber direkt per `onSnapshot` — neue Pfade brauchen trotzdem eine Regel in
   `web/firestore.rules` (manuelles Deploy, siehe `CONTRIBUTING.md`).
 - **Keine Secrets im Repo.** Credentials kommen aus `FIREBASE_SERVICE_ACCOUNT_BASE64`
-  (Prod) bzw. `FIRESTORE_EMULATOR_HOST` (Tests).
+  (Prod) bzw. `FIRESTORE_EMULATOR_HOST` (Tests), sonst Application Default Credentials.
 
 ## Tests
 
