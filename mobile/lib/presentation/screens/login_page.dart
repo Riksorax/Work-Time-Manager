@@ -8,6 +8,7 @@ import '../../data/repositories/hybrid_work_repository_impl.dart';
 import '../../data/repositories/hybrid_overtime_repository_impl.dart';
 import '../../data/repositories/firebase_overtime_repository_impl.dart';
 import '../../domain/services/data_sync_service.dart';
+import '../../l10n/app_localizations.dart';
 import '../view_models/auth_view_model.dart';
 import '../view_models/dashboard_view_model.dart' as dashboard_vm;
 import '../view_models/settings_view_model.dart';
@@ -29,6 +30,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       body: SafeArea(
@@ -63,7 +65,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
                 // Title
                 Text(
-                  'Work Time Manager',
+                  l10n.appTitle,
                   style: theme.textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: colorScheme.onSurface,
@@ -71,7 +73,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Erfassen Sie Ihre Arbeitszeit',
+                  l10n.loginTagline,
                   style: theme.textTheme.bodyLarge?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
@@ -96,7 +98,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         // Login Button
                         FilledButton.icon(
                           icon: const Icon(Icons.login),
-                          label: const Text('Mit Google anmelden'),
+                          label: Text(l10n.googleSignInButton),
                           style: FilledButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
@@ -114,13 +116,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   showDialog(
                     context: context,
                     barrierDismissible: false,
-                    builder: (dialogContext) => const AlertDialog(
+                    builder: (dialogContext) => AlertDialog(
                       content: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          CircularProgressIndicator(),
-                          SizedBox(height: 16),
-                          Text('Anmeldung läuft...'),
+                          const CircularProgressIndicator(),
+                          const SizedBox(height: 16),
+                          Text(l10n.signingIn),
                         ],
                       ),
                     ),
@@ -141,13 +143,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     showDialog(
                       context: context,
                       barrierDismissible: false,
-                      builder: (dialogContext) => const AlertDialog(
+                      builder: (dialogContext) => AlertDialog(
                         content: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            CircularProgressIndicator(),
-                            SizedBox(height: 16),
-                            Text('Synchronisiere lokale Daten...'),
+                            const CircularProgressIndicator(),
+                            const SizedBox(height: 16),
+                            Text(l10n.syncingLocalData),
                           ],
                         ),
                       ),
@@ -197,9 +199,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
-                                'Erfolgreich synchronisiert!\n'
-                                'Arbeitseinträge: $workEntriesSynced\n'
-                                'Überstunden: ${overtimeSynced ? "Ja" : "Nein"}',
+                                l10n.syncSuccessLoginMessage(workEntriesSynced, overtimeSynced ? l10n.yesLabel : l10n.noLabel),
                               ),
                               backgroundColor: errors.isEmpty ? Colors.green : Colors.orange,
                               duration: const Duration(seconds: 3),
@@ -224,7 +224,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       Navigator.of(context).pop();
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('Synchronisierung fehlgeschlagen: $syncError'),
+                          content: Text(l10n.syncFailedLoginMessage('$syncError')),
                           backgroundColor: Colors.orange,
                           duration: const Duration(seconds: 3),
                         ),
@@ -245,7 +245,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     Navigator.of(context).pop();
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('Anmeldung fehlgeschlagen: $loginError'),
+                        content: Text(l10n.loginFailedMessage('$loginError')),
                         backgroundColor: Colors.red,
                         duration: const Duration(seconds: 3),
                       ),
@@ -264,9 +264,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                 color: colorScheme.onSurfaceVariant,
                               ),
                               children: [
-                                const TextSpan(text: 'Mit der Anmeldung akzeptieren Sie unsere '),
+                                TextSpan(text: l10n.legalNoticePrefix),
                                 TextSpan(
-                                  text: 'AGB',
+                                  text: l10n.termsShortLabel,
                                   style: TextStyle(
                                     color: colorScheme.primary,
                                     fontWeight: FontWeight.w600,
@@ -275,9 +275,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                   recognizer: TapGestureRecognizer()
                                     ..onTap = () => TermsOfServiceDialog.show(context),
                                 ),
-                                const TextSpan(text: ' und '),
+                                TextSpan(text: l10n.legalNoticeAnd),
                                 TextSpan(
-                                  text: 'Datenschutzerklärung',
+                                  text: l10n.privacyPolicyTitle,
                                   style: TextStyle(
                                     color: colorScheme.primary,
                                     fontWeight: FontWeight.w600,
@@ -298,7 +298,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 16),
                               child: Text(
-                                'oder',
+                                l10n.orDivider,
                                 style: theme.textTheme.bodySmall?.copyWith(
                                   color: colorScheme.onSurfaceVariant,
                                 ),
@@ -320,7 +320,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           style: TextButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                           ),
-                          child: const Text('Ohne Anmeldung fortfahren'),
+                          child: Text(l10n.continueWithoutLogin),
                         ),
                       ],
                     ),

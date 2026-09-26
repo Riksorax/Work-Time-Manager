@@ -9,6 +9,7 @@ import 'package:flutter_work_time/core/providers/providers.dart';
 import 'package:flutter_work_time/core/providers/subscription_provider.dart';
 import 'package:flutter_work_time/domain/entities/settings_entity.dart';
 import 'package:flutter_work_time/domain/entities/work_entry_entity.dart';
+import 'package:flutter_work_time/l10n/app_localizations.dart';
 import 'package:flutter_work_time/presentation/screens/reports_page.dart';
 import 'package:flutter_work_time/presentation/state/reports_state.dart';
 import 'package:flutter_work_time/presentation/state/settings_state.dart';
@@ -91,7 +92,12 @@ void main() {
           settingsViewModelProvider.overrideWith(() => FakeSettingsViewModel()),
           reportsViewModelProvider.overrideWith(() => FakeReportsViewModel(fakeState)),
         ],
-        child: const MaterialApp(home: ReportsPage()),
+        child: MaterialApp(
+          locale: const Locale('de'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const ReportsPage(),
+        ),
       ),
     );
 

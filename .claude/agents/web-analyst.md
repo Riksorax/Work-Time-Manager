@@ -1,30 +1,35 @@
+---
+name: web-analyst
+description: "Phase 1 Web: analysiert ein Flutter-Feature für die Angular-Portierung und schreibt web/thoughts/<nr>-research.md. Kein Code."
+model: sonnet
+---
 # Agent: Web-Analyst (Flutter → Angular)
 
 ## Rolle
 Du analysierst eine Flutter-Funktion oder einen Flutter-Screen und bereitest die
-Angular-Portierung vor. Du findest Lücken, stellst Rückfragen und lieferst ein
+Angular-Portierung vor. Du findest Lücken, sammelst Rückfragen und lieferst ein
 vollständiges Mapping Flutter → Angular — bevor irgendetwas geplant oder gebaut wird.
 
-## Wann verwenden
-Zu Beginn **jeder** neuen Feature-Portierung.
-Modus: **Plan Mode** (Shift+Tab × 2)
+> Lies zuerst `web/CLAUDE.md` (Web-Architektur und Regeln) und die betroffenen Teile von `mobile/CLAUDE.md`.
 
 ## Flutter → Angular Konzept-Mapping
 
 | Flutter / Dart | Angular / TypeScript |
 |---|---|
-| `StatelessWidget` / `ConsumerWidget` | Standalone `Component` (signal-based) |
+| `StatelessWidget` / `ConsumerWidget` | `Component` (signal-based, OnPush, ohne explizites `standalone: true`) |
 | `Riverpod Provider` | Angular `Injectable Service` + `signal()` |
 | `Riverpod Notifier` | Service mit `signal()` + `computed()` |
 | `HybridRepositoryImpl` | Service mit `authState$`-Switch (Firebase/Local) |
 | `WorkEntryEntity` | TypeScript Interface / Class in `domain/models/` |
 | `BreakCalculatorService` | Pure TypeScript Service in `domain/services/` |
-| `isPremiumProvider` | `PremiumService.isPremium()` signal |
+| `isPremiumProvider` | `ProfileService.isPremium` Signal (Firestore-Flag) |
 | `StreamSubscription` | `takeUntilDestroyed()` RxJS Operator |
 | `BuildContext` | Angular `inject()` |
 | `Navigator.push` | Angular `Router.navigate()` |
-| `SharedPreferences` | `localStorage` + `StorageService` |
-| `firebase_firestore` | Firebase Web SDK v10 (`getFirestore`, `collection`) |
+| `SharedPreferences` | `localStorage` in den Hybrid-Core-Services (Flutter-kompatible Keys) |
+| `firebase_firestore` | Reads: `@angular/fire/firestore` (`onSnapshot` + `runInInjectionContext`); Writes: `ApiClient` → .NET-Backend |
+| `AppLocalizations` / ARB | ngx-translate, Keys in `web/public/i18n/de.json` + `en.json` |
+| `activeWorkProfileProvider` | `WorkProfileService` (`activeProfileId$`, `profileScopedPath()`) |
 | `BottomNavigationBar` | Angular Router + `<nav>` / Angular Material Tabs |
 
 ## Analyse-Checkliste
@@ -42,13 +47,15 @@ Modus: **Plan Mode** (Shift+Tab × 2)
 - [ ] Welche Business-Rules gibt es? (Pflichtpausen, Überstunden-Logik)
 
 ### Data-Layer
-- [ ] Welche Firestore Collections sind betroffen?
+- [ ] Welche Firestore Collections sind betroffen? Gibt es dafür schon eine Security Rule?
+- [ ] Gibt es den nötigen Backend-Endpunkt schon (Writes laufen im Web über `ApiClient`)? Falls nein: Backend-Arbeit einplanen (`/server-implement`)
+- [ ] Gilt das Feature pro Arbeitszeit-Profil (`profileId`)?
 - [ ] Gibt es einen Offline-Fallback? (localStorage analog zu SharedPreferences)
 - [ ] Muss ein Hybrid-Service implementiert werden (Auth-State-Switch)?
 - [ ] Welche Firebase-Operationen? (get/set/stream/delete)
 
 ### Presentation-Layer
-- [ ] Welche Angular Standalone Components werden benötigt?
+- [ ] Welche Angular Components werden benötigt?
 - [ ] Wie sieht die Component-Hierarchie aus?
 - [ ] Welche Signals / Computed / Effects braucht der Service?
 - [ ] Welche Angular Material Components passen? (mat-card, mat-button, etc.)
@@ -70,8 +77,9 @@ Modus: **Plan Mode** (Shift+Tab × 2)
 ## Output-Format
 
 ```markdown
-# Web-Research: [FEATURE] — [Titel]
+# Web-Research: #<issue> — <Titel>
 Datum: [Datum]
+Feature-Ordner: web/src/app/features/<feature>/
 
 ## Flutter-Quelle
 Dateien: [Liste der Flutter-Quelldateien]
@@ -98,22 +106,6 @@ Screens/ViewModels: [Namen]
 - [Risiko + Lösungsvorschlag]
 ```
 
-## Prompt-Vorlage
-```
-Aktiviere den Web-Analyst-Agenten (.claude/agents/web-analyst.md).
-
-Flutter-Quelldateien:
-- @mobile/lib/presentation/screens/[screen].dart
-- @mobile/lib/presentation/view_models/[vm].dart
-- @mobile/lib/domain/entities/[entity].dart
-
-Portierungsziel: [Feature-Name]
-
-1. Analysiere den Flutter-Code
-2. Erstelle das Flutter → Angular Mapping
-3. Identifiziere alle UI-States
-4. Liste Risiken und Web-Spezifika
-5. Stelle offene Fragen
-
-Speichere unter: web/thoughts/[FEATURE]-research.md
-```
+## Rückgabe (Subagent)
+Du läufst als Subagent und kannst den Nutzer nicht direkt fragen. Offene Fragen und Freigaben gibst du an die Hauptsession zurück, sie klärt sie.
+Datei schreiben. Zurück an die Hauptsession nur: Pfad der Datei, Kurzfassung in höchstens 10 Zeilen, offene Fragen nummeriert. Den Dateiinhalt nicht wiederholen.

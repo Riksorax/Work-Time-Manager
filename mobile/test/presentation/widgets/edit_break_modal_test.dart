@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_work_time/domain/entities/break_entity.dart';
 import 'package:flutter_work_time/domain/entities/work_entry_entity.dart';
+import 'package:flutter_work_time/l10n/app_localizations.dart';
 import 'package:flutter_work_time/presentation/state/dashboard_state.dart';
 import 'package:flutter_work_time/presentation/view_models/dashboard_view_model.dart';
 import 'package:flutter_work_time/presentation/widgets/edit_break_modal.dart';
@@ -26,6 +27,9 @@ void main() {
           dashboardViewModelProvider.overrideWith(() => FakeDashboardViewModel()),
         ],
         child: MaterialApp(
+          locale: const Locale('de'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: Builder(
               builder: (context) => ElevatedButton(

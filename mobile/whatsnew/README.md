@@ -11,7 +11,8 @@ mit den Versionshinweisen für genau dieses Release überschreiben und
 committen.
 
 - Max. 500 Zeichen (Play-Store-Limit).
-- Nur Deutsch (`de-DE`) — die App hat kein i18n-System.
+- Nur Deutsch (`de-DE`). Die App selbst ist seit #221 zweisprachig, im Play Store
+  wird aber bisher nur der deutsche Text hinterlegt.
 - Der Inhalt gilt für den kompletten Upload-Schritt, unabhängig vom
   Track-Namen — es gibt keine Historie über mehrere Releases hinweg, die
   Datei beschreibt immer nur das *aktuell hochzuladende* Release.

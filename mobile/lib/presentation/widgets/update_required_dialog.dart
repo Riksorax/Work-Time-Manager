@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import '../../core/services/version_service.dart';
+import '../../l10n/app_localizations.dart';
 
 /// Dialog der angezeigt wird wenn ein App-Update erforderlich ist
 class UpdateRequiredDialog extends StatelessWidget {
@@ -17,6 +18,7 @@ class UpdateRequiredDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return PopScope(
       canPop: !updateInfo.forceUpdate, // Bei Force-Update nicht schließbar
       child: AlertDialog(
@@ -27,7 +29,7 @@ class UpdateRequiredDialog extends StatelessWidget {
               color: updateInfo.forceUpdate ? Colors.orange : Colors.blue,
             ),
             const SizedBox(width: 8),
-            Text(updateInfo.forceUpdate ? 'Update erforderlich' : 'Update verfügbar'),
+            Text(updateInfo.forceUpdate ? l10n.updateRequiredTitle : l10n.updateAvailableTitle),
           ],
         ),
         content: Column(
@@ -46,12 +48,12 @@ class UpdateRequiredDialog extends StatelessWidget {
           if (!updateInfo.forceUpdate)
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Später'),
+              child: Text(l10n.laterAction),
             ),
           FilledButton.icon(
             onPressed: () => _handleUpdate(context),
             icon: const Icon(Icons.download),
-            label: const Text('Jetzt updaten'),
+            label: Text(l10n.updateNowAction),
           ),
         ],
       ),
@@ -59,6 +61,7 @@ class UpdateRequiredDialog extends StatelessWidget {
   }
 
   Widget _buildVersionInfo(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -68,9 +71,9 @@ class UpdateRequiredDialog extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildVersionRow('Aktuelle Version:', updateInfo.currentVersion),
+          _buildVersionRow(l10n.currentVersionLabel, updateInfo.currentVersion),
           const SizedBox(height: 4),
-          _buildVersionRow('Erforderliche Version:', updateInfo.minVersion),
+          _buildVersionRow(l10n.requiredVersionLabel, updateInfo.minVersion),
         ],
       ),
     );

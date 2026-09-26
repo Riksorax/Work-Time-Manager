@@ -1,0 +1,63 @@
+name: Fehler melden
+description: Etwas funktioniert nicht wie erwartet.
+labels: ["bug"]
+body:
+  - type: checkboxes
+    id: platforms
+    attributes:
+      label: Betroffene Plattformen
+      options:
+        - label: Android-App
+        - label: iOS-App
+        - label: Web (work-time-manager.app)
+        - label: Backend-API
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: App-Version aus den Einstellungen bzw. Datum bei Web.
+      placeholder: "1.4.2"
+  - type: dropdown
+    id: account
+    attributes:
+      label: Anmeldung
+      options:
+        - Angemeldet (Google)
+        - Nicht angemeldet (lokale Daten)
+        - Unbekannt
+  - type: dropdown
+    id: premium
+    attributes:
+      label: Premium
+      options:
+        - Ja
+        - Nein
+        - Unbekannt
+  - type: textarea
+    id: steps
+    attributes:
+      label: Schritte zum Nachstellen
+      placeholder: |
+        1. Dashboard öffnen
+        2. Pause starten
+        3. …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Erwartetes Verhalten
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Tatsächliches Verhalten
+      description: Fehlermeldungen, Screenshots, Crashlytics-/Sentry-Links.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Weitere Hinweise
+      description: Arbeitszeit-Profil, Zeitzone, Sprache, Datum/Uhrzeit des Auftretens.

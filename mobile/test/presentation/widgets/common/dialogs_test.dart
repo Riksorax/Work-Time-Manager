@@ -104,7 +104,7 @@ class FakeSettingsViewModel extends SettingsViewModel {
   }
 
   @override
-  Future<void> updateWeeklyTargetHours(WidgetRef ref, double hours) async {
+  Future<void> updateWeeklyTargetHours(double hours) async {
     actions.updateWeeklyTargetHours(hours);
   }
 }

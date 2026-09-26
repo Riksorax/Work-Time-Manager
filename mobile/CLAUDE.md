@@ -14,8 +14,8 @@ flutter test
 # Run a single test file
 flutter test test/path/to/test_file.dart
 
-# Analyze / lint
-flutter analyze
+# Analyze / lint (wie CI; custom_lint zusätzlich lokal)
+flutter analyze --no-fatal-infos
 dart run custom_lint
 
 # Regenerate Riverpod providers after changing annotated files
@@ -77,7 +77,11 @@ RevenueCat (`purchases_flutter`) handles in-app purchases. `isPremiumProvider` (
 
 ### Localization
 
-The app is German-only (`de_DE`). Date formatting uses `intl` with `de_DE` locale initialized at startup. User-facing strings are written directly in German — there is no ARB/l10n system.
+The app supports German (default) and English via Flutter's ARB/l10n system (`lib/l10n/app_de.arb` / `app_en.arb`, generated `AppLocalizations` class — see #221/#262). `app_de.arb` is the template file and carries `@key` descriptions; `app_en.arb` holds only the translated values. After editing an ARB file, run `flutter gen-l10n` (or `flutter pub get`, since `generate: true` is set in `pubspec.yaml`) to regenerate `lib/l10n/app_localizations*.dart` — these generated files must not be edited manually.
+
+All user-facing strings in `lib/presentation/` go through `AppLocalizations.of(context)` (commonly aliased to a local `l10n` variable at the top of `build()`), never hardcoded literals. Locale-dependent formatting (`DateFormat`, weekday/month names) must use `Localizations.localeOf(context).toString()` instead of a hardcoded `'de_DE'` — see `domain/utils/weekday_labels.dart` for the pattern (`weekdayShortLabel`/`formatWorkdays` take an explicit `locale` parameter). Legal documents (Impressum/Datenschutz/AGB) are loaded from Markdown assets in `assets/legal/` and are **not** translated — only their dialog titles are localized; the documents themselves remain German-only.
+
+Widget tests that pump a screen using `AppLocalizations.of(context)` must configure `MaterialApp` with `localizationsDelegates: AppLocalizations.localizationsDelegates` and `supportedLocales: AppLocalizations.supportedLocales` (plus `locale: const Locale('de')` to keep existing assertions on German text working) — see `test/presentation/screens/settings_page_test.dart` for the reference pattern.
 
 ### Testing
 
@@ -93,31 +97,40 @@ Files ending in `.g.dart` are generated — do not edit them manually. Regenerat
 
 1. **Niemals direkt coden ohne Phase 1 + 2 abgeschlossen** — auch bei kleinen Tasks
 2. **Context bei ~60% → `/clear` → Fortschritt aus `thoughts/`-Datei laden**
-3. **Tests vor Implementation schreiben (TDD)**
+3. **Tests vor Implementation schreiben (TDD)** — Tests dürfen nicht von Datum, Wochentag oder Zeitzone abhängen
 4. **Nach `@riverpod`-Änderungen immer `dart run build_runner build` ausführen**
 5. **Keine direkten Änderungen an `*.g.dart` oder `*.mocks.dart`**
 6. **`SharedPreferences` nur über den `main.dart`-Override — nie direkt**
 7. **Premium-Features immer hinter `isPremiumProvider` absichern**
 8. **Hybrid-Repository-Pattern nicht umgehen — immer über HybridImpl gehen**
-9. **Strings immer auf Deutsch — kein i18n-System vorhanden**
+9. **Alle User-Strings über `AppLocalizations.of(context)`** — ARB-Keys in `lib/l10n/app_de.arb` (+ Übersetzung in `app_en.arb`) ergänzen, nie deutschen Text hart codieren. Nach ARB-Änderungen `flutter gen-l10n` ausführen
 
 ## Agenten-Übersicht
 
-| Agent | Datei | Wann verwenden |
+Die Agents liegen im Repo-Root unter `.claude/agents/` und sind Subagents: Die Commands starten sie
+über das Agent-Tool, jeder läuft in eigenem Kontext und gibt nur eine Kurzfassung zurück.
+Rückfragen und Freigaben laufen über die Hauptsession.
+
+| Subagent | Datei | Wann verwenden |
 |---|---|---|
-| Analyst | `.claude/agents/analyst.md` | Aufgabe verstehen, hinterfragen |
-| Planner | `.claude/agents/planner.md` | Implementierungsplan erstellen |
-| Developer | `.claude/agents/developer.md` | Code schreiben, TDD |
-| Tester | `.claude/agents/tester.md` | Tests + Coverage |
-| UI-Reviewer | `.claude/agents/ui-reviewer.md` | UI validieren via mcp_flutter |
-| Reviewer | `.claude/agents/reviewer.md` | Code Review + PR |
+| Analyst | `.claude/agents/mobile-analyst.md` | Aufgabe verstehen, hinterfragen |
+| Planner | `.claude/agents/mobile-planner.md` | Implementierungsplan erstellen |
+| Developer | `.claude/agents/mobile-developer.md` | Code schreiben, TDD |
+| Tester | `.claude/agents/mobile-tester.md` | Tests, Testlücken, CI-Checks lokal |
+| UI-Reviewer | `.claude/agents/mobile-ui-reviewer.md` | UI prüfen (Widget-Tests, lokal `flutter run`) |
+| Reviewer | `.claude/agents/mobile-reviewer.md` | Code Review, Commit, PR |
+
+Betrifft ein Issue mehrere Plattformen, zuerst `/issue <nr>` bzw. den Subagent `cross-platform-coordinator` nutzen.
 
 ## Slash Commands
 
 | Command | Phase |
 |---|---|
-| `/analyze TICKET-123` | Phase 1 — Aufgabe analysieren |
-| `/plan TICKET-123` | Phase 2 — Plan erstellen |
-| `/implement TICKET-123` | Phase 3 — Code schreiben |
-| `/validate TICKET-123` | Phase 4 — Testen + UI |
-| `/review TICKET-123` | Phase 5 — Review + PR |
+| `/issue 123` | Einstieg — Issue lesen, Plattformen bestimmen, Branch anlegen |
+| `/mobile-analyze 123` | Phase 1 — Aufgabe analysieren → `mobile/thoughts/123-research.md` |
+| `/mobile-plan 123` | Phase 2 — Plan erstellen → `mobile/thoughts/123-plan.md` |
+| `/mobile-implement 123` | Phase 3 — Code schreiben (TDD) |
+| `/mobile-validate 123` | Phase 4 — Testen + UI |
+| `/mobile-review 123` | Phase 5 — Review + PR gegen `develop` |
+
+Das Argument ist die GitHub-Issue-Nummer. Branch-, Commit- und Release-Konventionen: `CONTRIBUTING.md` im Repo-Root.

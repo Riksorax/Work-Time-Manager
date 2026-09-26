@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../l10n/app_localizations.dart';
 
 /// Ein wiederverwendbarer Dialog, der Markdown-Content aus Assets lädt und anzeigt.
 class MarkdownDialog extends StatelessWidget {
@@ -34,6 +35,7 @@ class MarkdownDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: ConstrainedBox(
@@ -68,14 +70,14 @@ class MarkdownDialog extends StatelessWidget {
                   if (snapshot.hasError) {
                     return Center(
                       child: Text(
-                        'Fehler beim Laden: ${snapshot.error}',
+                        l10n.errorLoadingContent('${snapshot.error}'),
                         style: const TextStyle(color: Colors.red),
                       ),
                     );
                   }
 
                   if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return const Center(child: Text('Kein Inhalt gefunden.'));
+                    return Center(child: Text(l10n.noContentFound));
                   }
 
                   return Markdown(
@@ -119,7 +121,7 @@ class MarkdownDialog extends StatelessWidget {
                 alignment: Alignment.centerRight,
                 child: FilledButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Schließen'),
+                  child: Text(l10n.closeAction),
                 ),
               ),
             ),

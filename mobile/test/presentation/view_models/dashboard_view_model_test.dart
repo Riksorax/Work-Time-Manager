@@ -59,9 +59,18 @@ void main() {
     container.dispose();
   });
 
+  /// Fünf Arbeitstage, die den heutigen Wochentag immer enthalten. Ohne das
+  /// hängen die expectedEndTime-Tests vom Wochentag ab: an einem Samstag oder
+  /// Sonntag wäre das Tagesziel bei Mo-Fr 0 und die Tests schlügen fehl.
+  List<int> workdaysIncludingToday() {
+    final today = DateTime.now().weekday;
+    return List.generate(5, (i) => (today - 1 + i) % 7 + 1);
+  }
+
   group('DashboardViewModel', () {
     test('expectedEndTime should be calculated correctly (8h work + 30m break)', () async {
       // Arrange
+      when(mockSettingsRepository.getWorkdays()).thenReturn(workdaysIncludingToday());
       // Start time: 8:00 AM today
       final now = DateTime.now();
       final todayStart = DateTime(now.year, now.month, now.day, 8, 0);
@@ -108,6 +117,7 @@ void main() {
       // Or just check if logic handles it.
       // Let's change target weekly hours to 47.5 (9.5 * 5)
       when(mockSettingsRepository.getTargetWeeklyHours()).thenReturn(47.5);
+      when(mockSettingsRepository.getWorkdays()).thenReturn(workdaysIncludingToday());
 
       final now = DateTime.now();
       final todayStart = DateTime(now.year, now.month, now.day, 8, 0);

@@ -9,6 +9,7 @@ import 'package:flutter_work_time/core/providers/subscription_provider.dart';
 import 'package:flutter_work_time/domain/entities/user_entity.dart';
 import 'package:flutter_work_time/domain/entities/work_profile_entity.dart';
 import 'package:flutter_work_time/domain/repositories/work_profile_repository.dart';
+import 'package:flutter_work_time/l10n/app_localizations.dart';
 import 'package:flutter_work_time/presentation/widgets/work_profile_switcher.dart';
 
 import 'work_profile_switcher_test.mocks.dart';
@@ -39,6 +40,9 @@ void main() {
         isPremiumProvider.overrideWithValue(isPremium),
       ],
       child: MaterialApp(
+        locale: const Locale('de'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(appBar: AppBar(actions: const [WorkProfileSwitcher()])),
       ),
     );
@@ -61,7 +65,7 @@ void main() {
       expect(find.byType(PopupMenuButton<String>), findsNothing);
     });
 
-    testWidgets('zeigt Standard-Profil und Premium-Hinweis ohne Premium', (tester) async {
+    testWidgets('öffnet ohne Premium die Paywall statt eines Dialogs', (tester) async {
       await tester.pumpWidget(createSubject(isPremium: false));
       await tester.pumpAndSettle();
 
@@ -74,7 +78,11 @@ void main() {
       await tester.tap(find.text('Neues Profil'));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Premium-Feature'), findsOneWidget);
+      // In Tests läuft die App ohne RC_ANDROID_KEY (kein --dart-define) -
+      // showPaywall() fällt dann bewusst auf einen Hinweis-Snackbar statt
+      // der echten RevenueCat-Paywall zurück (siehe paywall_launcher.dart).
+      // Wichtig ist hier: kein Dialog zum Anlegen eines Profils öffnet sich.
+      expect(find.textContaining('Paywall nicht verfügbar'), findsOneWidget);
       expect(find.byType(AlertDialog), findsNothing);
     });
 

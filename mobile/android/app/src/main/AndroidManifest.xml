@@ -51,10 +51,17 @@
          https://developer.android.com/reference/android/content/Intent#ACTION_PROCESS_TEXT.
 
          In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
+    <!-- Required so canLaunchUrl()/launchUrl() from url_launcher can find a
+         browser on Android 11+ (API 30+) package visibility, e.g. for die
+         Abo-Verwaltung (managementURL) in den Einstellungen, see #250. -->
     <queries>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
         </intent>
     </queries>
 </manifest>

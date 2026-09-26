@@ -43,5 +43,955 @@
   "languageEnglish": "Englisch",
   "@languageEnglish": {
     "description": "Option für die englische Sprache in der Sprachauswahl."
-  }
+  },
+  "grossAttendance": "Anwesenheit (Brutto): {duration}",
+  "@grossAttendance": {
+    "description": "Anzeige der Brutto-Anwesenheitszeit im Dashboard.",
+    "placeholders": { "duration": { "type": "String" } }
+  },
+  "overtimeTotalLabel": "Überstunden Gesamt",
+  "@overtimeTotalLabel": {
+    "description": "Label über dem Gesamt-Überstunden-Wert im Dashboard."
+  },
+  "overtimeTodayLabel": "Heutige Überstunden",
+  "@overtimeTodayLabel": {
+    "description": "Label über dem heutigen Überstunden-Wert im Dashboard."
+  },
+  "startTimeLabel": "Startzeit",
+  "@startTimeLabel": {
+    "description": "Beschriftung des Startzeit-Eingabefelds."
+  },
+  "endTimeLabel": "Endzeit",
+  "@endTimeLabel": {
+    "description": "Beschriftung des Endzeit-Eingabefelds."
+  },
+  "removeFieldTooltip": "{label} entfernen",
+  "@removeFieldTooltip": {
+    "description": "Tooltip des Lösch-Icons in einem Zeit-Eingabefeld.",
+    "placeholders": { "label": { "type": "String" } }
+  },
+  "startTimeTracking": "Zeiterfassung starten",
+  "@startTimeTracking": {
+    "description": "Beschriftung des Start-Buttons im Dashboard."
+  },
+  "stopTimeTracking": "Zeiterfassung beenden",
+  "@stopTimeTracking": {
+    "description": "Beschriftung des Stopp-Buttons im Dashboard."
+  },
+  "addBreak": "Pause hinzufügen",
+  "@addBreak": {
+    "description": "Beschriftung des Buttons zum Hinzufügen einer Pause."
+  },
+  "stopBreak": "Pause beenden",
+  "@stopBreak": {
+    "description": "Beschriftung des Buttons zum Beenden einer laufenden Pause."
+  },
+  "expectedEndTime": "Voraussichtlicher Feierabend (±0): {time}",
+  "@expectedEndTime": {
+    "description": "Voraussichtliche Feierabendzeit basierend auf der Soll-Arbeitszeit.",
+    "placeholders": { "time": { "type": "String" } }
+  },
+  "expectedEndTimeWithBalance": "Mit Gleitzeit-Bilanz auf 0: {time}",
+  "@expectedEndTimeWithBalance": {
+    "description": "Voraussichtliche Feierabendzeit unter Berücksichtigung der Gleitzeit-Bilanz.",
+    "placeholders": { "time": { "type": "String" } }
+  },
+  "breaksTitle": "Pausen",
+  "@breaksTitle": {
+    "description": "Überschrift des Pausen-Abschnitts im Dashboard."
+  },
+  "noBreaksYet": "Noch keine Pausen vorhanden.",
+  "@noBreaksYet": {
+    "description": "Hinweistext, wenn für den Tag noch keine Pausen erfasst wurden."
+  },
+  "automaticBreakTooltip": "Automatisch berechnet basierend auf der Arbeitszeit",
+  "@automaticBreakTooltip": {
+    "description": "Tooltip des \"Automatisch\"-Chips bei automatisch berechneten Pausen."
+  },
+  "automaticChipLabel": "Automatisch",
+  "@automaticChipLabel": {
+    "description": "Beschriftung des Chips bei automatisch berechneten Pausen."
+  },
+  "breakInProgress": "läuft...",
+  "@breakInProgress": {
+    "description": "Platzhalter für die Endzeit einer noch laufenden Pause."
+  },
+  "restartSessionTitle": "Neue Session starten",
+  "@restartSessionTitle": {
+    "description": "Titel des Bestätigungsdialogs zum Neustart einer bereits beendeten Zeiterfassung."
+  },
+  "restartSessionBody": "Möchten Sie eine neue Session starten?\n\n• Pausen behalten: Nur Start- und Endzeit werden zurückgesetzt\n• Komplett neu: Start, End und Pausen werden zurückgesetzt",
+  "@restartSessionBody": {
+    "description": "Erklärungstext des Neustart-Bestätigungsdialogs."
+  },
+  "keepBreaksAction": "Pausen behalten",
+  "@keepBreaksAction": {
+    "description": "Option im Neustart-Dialog: nur Start/Ende zurücksetzen, Pausen behalten."
+  },
+  "restartCompletelyAction": "Komplett neu",
+  "@restartCompletelyAction": {
+    "description": "Option im Neustart-Dialog: Start, Ende und Pausen zurücksetzen."
+  },
+  "endBeforeStartError": "Endzeit kann nicht vor der Startzeit liegen.",
+  "@endBeforeStartError": {
+    "description": "Fehlermeldung, wenn eine eingegebene Endzeit vor der Startzeit liegt."
+  },
+  "editBreakTitle": "Pause bearbeiten",
+  "@editBreakTitle": {
+    "description": "Titel des Dialogs zum Bearbeiten einer Pause."
+  },
+  "breakNameLabel": "Pausenname",
+  "@breakNameLabel": {
+    "description": "Beschriftung des Namensfelds einer Pause."
+  },
+  "quickEntryTitle": "Schnell-Eintrag",
+  "@quickEntryTitle": {
+    "description": "Titel des Schnell-Eintrag-Dialogs (Urlaub/Krankheit/Feiertag erfassen)."
+  },
+  "typeLabel": "Typ",
+  "@typeLabel": {
+    "description": "Beschriftung der Typ-Auswahl (Urlaub/Krankheit/Feiertag/Arbeit)."
+  },
+  "workEntryTypeVacation": "🏖️ Urlaub",
+  "@workEntryTypeVacation": {
+    "description": "Anzeigename für den Eintragstyp Urlaub."
+  },
+  "workEntryTypeSick": "🤒 Krankheit",
+  "@workEntryTypeSick": {
+    "description": "Anzeigename für den Eintragstyp Krankheit."
+  },
+  "workEntryTypeHoliday": "📅 Feiertag",
+  "@workEntryTypeHoliday": {
+    "description": "Anzeigename für den Eintragstyp Feiertag."
+  },
+  "workEntryTypeWork": "💼 Arbeit",
+  "@workEntryTypeWork": {
+    "description": "Anzeigename für den Eintragstyp Arbeit."
+  },
+  "quickEntryTitleBatch": "Schnell-Eintrag für {count} Tage",
+  "@quickEntryTitleBatch": {
+    "description": "Titel des Schnell-Eintrag-Dialogs bei Mehrfachauswahl von Tagen.",
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "minutesRangeError": "Minuten müssen zwischen 0 und 59 liegen",
+  "@minutesRangeError": {
+    "description": "Fehlermeldung bei ungültiger Minutenangabe in der Gleitzeit-Korrektur."
+  },
+  "adjustOvertimeTitle": "Überstunden / Minusstunden",
+  "@adjustOvertimeTitle": {
+    "description": "Titel des Dialogs zur manuellen Gleitzeit-Korrektur."
+  },
+  "adjustOvertimeDescription": "Geben Sie einen neuen Wert ein oder setzen Sie die Bilanz auf 0 zurück.",
+  "@adjustOvertimeDescription": {
+    "description": "Erklärungstext im Gleitzeit-Korrektur-Dialog."
+  },
+  "overtimePositiveChip": "Überstunden (+)",
+  "@overtimePositiveChip": {
+    "description": "Auswahl-Chip für positive Gleitzeit-Korrektur."
+  },
+  "overtimeNegativeChip": "Minusstunden (-)",
+  "@overtimeNegativeChip": {
+    "description": "Auswahl-Chip für negative Gleitzeit-Korrektur."
+  },
+  "hoursLabel": "Stunden",
+  "@hoursLabel": {
+    "description": "Beschriftung des Stunden-Eingabefelds."
+  },
+  "hoursHelperText": "Leer lassen für 0 Stunden",
+  "@hoursHelperText": {
+    "description": "Hilfetext des Stunden-Eingabefelds."
+  },
+  "minutesLabel": "Minuten (0-59)",
+  "@minutesLabel": {
+    "description": "Beschriftung des Minuten-Eingabefelds."
+  },
+  "minutesHelperText": "Leer lassen für 0 Minuten",
+  "@minutesHelperText": {
+    "description": "Hilfetext des Minuten-Eingabefelds."
+  },
+  "resetToZeroAction": "Auf 0 zurücksetzen",
+  "@resetToZeroAction": {
+    "description": "Beschriftung des Buttons zum Zurücksetzen der Gleitzeit-Bilanz auf 0."
+  },
+  "errorPrefix": "Fehler: {error}",
+  "@errorPrefix": {
+    "description": "Generisches Fehler-Präfix vor einer Fehlermeldung.",
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "weeklyTargetHoursTitle": "Soll-Arbeitsstunden",
+  "@weeklyTargetHoursTitle": {
+    "description": "Titel der Einstellungszeile für die wöchentliche Soll-Arbeitszeit."
+  },
+  "weeklyTargetHoursValue": "{hours} h/Woche",
+  "@weeklyTargetHoursValue": {
+    "description": "Wert der wöchentlichen Soll-Arbeitszeit.",
+    "placeholders": { "hours": { "type": "String" } }
+  },
+  "workdaysTitle": "Arbeitstage",
+  "@workdaysTitle": {
+    "description": "Titel der Einstellungszeile für die Arbeitstage."
+  },
+  "dailyTargetHoursTitle": "Tägliche Soll-Arbeitszeit",
+  "@dailyTargetHoursTitle": {
+    "description": "Titel der Einstellungszeile für die tägliche Soll-Arbeitszeit."
+  },
+  "dailyTargetHoursValue": "≈ {hours} h/Tag",
+  "@dailyTargetHoursValue": {
+    "description": "Wert der täglichen Soll-Arbeitszeit.",
+    "placeholders": { "hours": { "type": "String" } }
+  },
+  "timezoneTitle": "Zeitzone",
+  "@timezoneTitle": {
+    "description": "Titel der Zeitzone-Einstellungszeile."
+  },
+  "systemDefaultTimezone": "Systemstandard",
+  "@systemDefaultTimezone": {
+    "description": "Wert der Zeitzone-Einstellung, wenn keine manuelle Zeitzone gesetzt ist."
+  },
+  "adjustOvertimeButton": "Überstunden / Minusstunden anpassen",
+  "@adjustOvertimeButton": {
+    "description": "Beschriftung des Buttons, der den Gleitzeit-Korrektur-Dialog öffnet."
+  },
+  "designTitle": "Design",
+  "@designTitle": {
+    "description": "Titel der Design-Einstellungszeile (Hell/Dunkel)."
+  },
+  "themeDark": "Dunkel",
+  "@themeDark": {
+    "description": "Wert der Design-Einstellung bei aktivem Dark Mode."
+  },
+  "themeLight": "Hell",
+  "@themeLight": {
+    "description": "Wert der Design-Einstellung bei aktivem Light Mode."
+  },
+  "timeFormat24Title": "24-Stunden-Format",
+  "@timeFormat24Title": {
+    "description": "Titel der Zeitformat-Einstellungszeile."
+  },
+  "timeFormatExample24": "z. B. 18:00",
+  "@timeFormatExample24": {
+    "description": "Beispielwert für das 24-Stunden-Zeitformat."
+  },
+  "timeFormatExample12": "z. B. 6:00 PM",
+  "@timeFormatExample12": {
+    "description": "Beispielwert für das 12-Stunden-Zeitformat."
+  },
+  "bundeslandTitle": "Bundesland",
+  "@bundeslandTitle": {
+    "description": "Titel der Bundesland-Einstellungszeile."
+  },
+  "bundeslandNotSelected": "Nicht ausgewählt – keine Feiertagsmarkierung im Kalender",
+  "@bundeslandNotSelected": {
+    "description": "Wert der Bundesland-Einstellung, wenn kein Bundesland gewählt ist."
+  },
+  "notificationsTitle": "Benachrichtigungen",
+  "@notificationsTitle": {
+    "description": "Titel der Benachrichtigungs-Einstellungszeile."
+  },
+  "notificationsEnabledAt": "Aktiviert um {time} Uhr",
+  "@notificationsEnabledAt": {
+    "description": "Wert der Benachrichtigungs-Einstellung bei aktivierten Erinnerungen.",
+    "placeholders": { "time": { "type": "String" } }
+  },
+  "disabledLabel": "Deaktiviert",
+  "@disabledLabel": {
+    "description": "Genereller Wert für eine deaktivierte Einstellung."
+  },
+  "aboutAppTitle": "Über die App",
+  "@aboutAppTitle": {
+    "description": "Titel der Einstellungszeile, die zur App-Info-Seite führt."
+  },
+  "aboutAppSubtitle": "Version, Impressum, Datenschutz & mehr",
+  "@aboutAppSubtitle": {
+    "description": "Untertitel der Einstellungszeile, die zur App-Info-Seite führt."
+  },
+  "bundeslandPickerTitle": "Bundesland für Feiertage",
+  "@bundeslandPickerTitle": {
+    "description": "Titel des Bundesland-Auswahldialogs."
+  },
+  "noSelectionOption": "Keine Auswahl",
+  "@noSelectionOption": {
+    "description": "Option im Bundesland-Auswahldialog, um keine Auswahl zu treffen."
+  },
+  "mySubscriptionTitle": "Dein Abo",
+  "@mySubscriptionTitle": {
+    "description": "Titel der Abo-Übersichtskarte in den Einstellungen."
+  },
+  "subscriptionRenewsOn": "Verlängert sich automatisch am {date}",
+  "@subscriptionRenewsOn": {
+    "description": "Statustext, wenn sich das Abo automatisch verlängert.",
+    "placeholders": { "date": { "type": "String" } }
+  },
+  "subscriptionExpiresOn": "Läuft aus am {date}",
+  "@subscriptionExpiresOn": {
+    "description": "Statustext, wenn das Abo zu einem Datum ausläuft.",
+    "placeholders": { "date": { "type": "String" } }
+  },
+  "manageSubscriptionButton": "Abo verwalten",
+  "@manageSubscriptionButton": {
+    "description": "Beschriftung des Buttons zur Abo-Verwaltung im Store."
+  },
+  "subscriptionManagementUnavailable": "Abo-Verwaltung ist auf diesem Gerät nicht verfügbar. Bitte über den App Store bzw. Play Store verwalten.",
+  "@subscriptionManagementUnavailable": {
+    "description": "Fehlermeldung, wenn kein Abo-Verwaltungslink verfügbar ist."
+  },
+  "subscriptionLinkFailed": "Der Abo-Verwaltungslink konnte nicht geöffnet werden.",
+  "@subscriptionLinkFailed": {
+    "description": "Fehlermeldung, wenn der Abo-Verwaltungslink nicht geöffnet werden konnte."
+  },
+  "offlineModeTitle": "Offline-Modus",
+  "@offlineModeTitle": {
+    "description": "Titel des Hinweises für ausgeloggte Nutzer."
+  },
+  "offlineModeDescription": "Ihre Daten werden lokal auf diesem Gerät gespeichert. Melden Sie sich an, um Ihre Daten in der Cloud zu sichern und geräteübergreifend zu synchronisieren.",
+  "@offlineModeDescription": {
+    "description": "Erklärungstext des Offline-Modus-Hinweises."
+  },
+  "syncToCloudButton": "Lokale Daten zu Cloud synchronisieren",
+  "@syncToCloudButton": {
+    "description": "Beschriftung des Buttons zum manuellen Synchronisieren lokaler Daten."
+  },
+  "syncingData": "Synchronisiere Daten...",
+  "@syncingData": {
+    "description": "Ladehinweis während der Datensynchronisierung."
+  },
+  "syncSuccessMessage": "Synchronisierung erfolgreich!\nArbeitseinträge: {count}\nÜberstunden: {overtimeSynced}",
+  "@syncSuccessMessage": {
+    "description": "Erfolgsmeldung nach abgeschlossener Datensynchronisierung.",
+    "placeholders": { "count": { "type": "int" }, "overtimeSynced": { "type": "String" } }
+  },
+  "syncErrorsMessage": "Synchronisierung mit Fehlern:\nArbeitseinträge: {count}\nFehler: {errors}",
+  "@syncErrorsMessage": {
+    "description": "Meldung nach Datensynchronisierung mit Fehlern.",
+    "placeholders": { "count": { "type": "int" }, "errors": { "type": "String" } }
+  },
+  "syncFailedMessage": "Fehler bei der Synchronisierung: {error}",
+  "@syncFailedMessage": {
+    "description": "Meldung, wenn die Datensynchronisierung komplett fehlschlägt.",
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "yesLabel": "Ja",
+  "@yesLabel": {
+    "description": "Generisches Ja, z.B. in der Sync-Erfolgsmeldung."
+  },
+  "noLabel": "Nein",
+  "@noLabel": {
+    "description": "Generisches Nein, z.B. in der Sync-Erfolgsmeldung."
+  },
+  "overtimeBalanceTitle": "Gleitzeit-Bilanz",
+  "@overtimeBalanceTitle": {
+    "description": "Titel der Gleitzeit-Bilanz-Anzeige im Dashboard/Einstellungen."
+  },
+  "lastManualChange": "Letzte manuelle Änderung: {date}",
+  "@lastManualChange": {
+    "description": "Zeitpunkt der letzten manuellen Gleitzeit-Korrektur.",
+    "placeholders": { "date": { "type": "String" } }
+  },
+  "notLoggedIn": "Nicht angemeldet",
+  "@notLoggedIn": {
+    "description": "Anzeige im Profilbereich, wenn kein Nutzer angemeldet ist."
+  },
+  "defaultUserName": "Benutzer",
+  "@defaultUserName": {
+    "description": "Fallback-Name, wenn der angemeldete Nutzer keinen Anzeigenamen hat."
+  },
+  "deleteAccountTooltip": "Account löschen",
+  "@deleteAccountTooltip": {
+    "description": "Tooltip des Icons zum Löschen des Accounts."
+  },
+  "deleteAccountTitle": "Account endgültig löschen",
+  "@deleteAccountTitle": {
+    "description": "Titel des Bestätigungsdialogs zum Löschen des Accounts."
+  },
+  "deleteAccountWarning": "Warnung: Diese Aktion kann nicht rückgängig gemacht werden. Alle Ihre Daten, einschließlich der Arbeitszeiterfassung, werden dauerhaft gelöscht.",
+  "@deleteAccountWarning": {
+    "description": "Warntext im Account-Lösch-Dialog."
+  },
+  "deleteAccountConfirm": "Endgültig löschen",
+  "@deleteAccountConfirm": {
+    "description": "Beschriftung des endgültigen Lösch-Buttons."
+  },
+  "loadErrorGeneric": "Fehler beim Laden",
+  "@loadErrorGeneric": {
+    "description": "Generischer Fehlertext, wenn Profildaten nicht geladen werden konnten."
+  },
+  "loginButton": "Anmelden",
+  "@loginButton": {
+    "description": "Beschriftung des Anmelden-Buttons."
+  },
+  "logoutButton": "Abmelden",
+  "@logoutButton": {
+    "description": "Beschriftung des Abmelden-Buttons."
+  },
+  "logoutConfirmBody": "Möchten Sie sich wirklich abmelden?",
+  "@logoutConfirmBody": {
+    "description": "Bestätigungstext im Abmelden-Dialog."
+  },
+  "pinLockTitle": "PIN-/Biometrie-Sperre",
+  "@pinLockTitle": {
+    "description": "Titel der PIN-/Biometrie-Sperre-Einstellungszeile."
+  },
+  "pinLockEnabledDescription": "App wird beim Start und aus dem Hintergrund gesperrt",
+  "@pinLockEnabledDescription": {
+    "description": "Beschreibung bei aktivierter PIN-/Biometrie-Sperre."
+  },
+  "changePinTitle": "PIN ändern",
+  "@changePinTitle": {
+    "description": "Titel der Einstellungszeile zum Ändern der PIN."
+  },
+  "premiumBadgeLabel": "Premium",
+  "@premiumBadgeLabel": {
+    "description": "Beschriftung des Premium-Abzeichens im Profilbereich."
+  },
+  "editTargetHoursTitle": "Soll-Arbeitsstunden bearbeiten",
+  "@editTargetHoursTitle": {
+    "description": "Titel des Dialogs zum Bearbeiten der wöchentlichen Soll-Arbeitsstunden."
+  },
+  "weeklyTargetHoursFieldLabel": "Wöchentliche Soll-Stunden",
+  "@weeklyTargetHoursFieldLabel": {
+    "description": "Beschriftung des Eingabefelds für wöchentliche Soll-Stunden."
+  },
+  "pleaseEnterNumber": "Bitte geben Sie eine Zahl ein.",
+  "@pleaseEnterNumber": {
+    "description": "Validierungsfehler bei leerem Zahlenfeld."
+  },
+  "invalidNumber": "Ungültige Zahl.",
+  "@invalidNumber": {
+    "description": "Validierungsfehler bei nicht parsbarer Zahl."
+  },
+  "weeklyHoursRangeError": "Bitte geben Sie einen Wert zwischen 1 und 48 ein (gesetzliches Maximum nach § 3 ArbZG).",
+  "@weeklyHoursRangeError": {
+    "description": "Validierungsfehler, wenn die wöchentliche Soll-Stundenzahl außerhalb des gesetzlichen Rahmens liegt."
+  },
+  "workdaysDescription": "Wähle die konkreten Wochentage aus, an denen du arbeitest.",
+  "@workdaysDescription": {
+    "description": "Erklärungstext im Arbeitstage-Auswahl-Dialog."
+  },
+  "selectAtLeastOneWorkday": "Bitte mindestens einen Arbeitstag auswählen.",
+  "@selectAtLeastOneWorkday": {
+    "description": "Validierungsfehler, wenn kein Arbeitstag ausgewählt ist."
+  },
+  "searchLabel": "Suchen",
+  "@searchLabel": {
+    "description": "Beschriftung eines Suchfelds, z.B. in der Zeitzonen-Auswahl."
+  },
+  "systemDefaultTimezoneDescription": "Automatisch anhand des Geräts",
+  "@systemDefaultTimezoneDescription": {
+    "description": "Erklärungstext der Systemstandard-Option in der Zeitzonen-Auswahl."
+  },
+  "enableNotificationsTitle": "Benachrichtigungen aktivieren",
+  "@enableNotificationsTitle": {
+    "description": "Titel des Schalters zum Aktivieren von Benachrichtigungen."
+  },
+  "enableNotificationsDescription": "Erinnert Sie daran, fehlende Arbeitszeiten einzutragen",
+  "@enableNotificationsDescription": {
+    "description": "Beschreibung des Benachrichtigungen-Schalters."
+  },
+  "timeSectionTitle": "Uhrzeit",
+  "@timeSectionTitle": {
+    "description": "Überschrift des Uhrzeit-Abschnitts im Benachrichtigungsdialog."
+  },
+  "reminderForSectionTitle": "Erinnerungen für",
+  "@reminderForSectionTitle": {
+    "description": "Überschrift des Abschnitts zur Auswahl der Erinnerungsarten."
+  },
+  "notifyWorkStartTitle": "Arbeitsbeginn",
+  "@notifyWorkStartTitle": {
+    "description": "Titel der Erinnerung an fehlenden Arbeitsbeginn."
+  },
+  "notifyWorkStartDescription": "Erinnert an fehlenden Arbeitsbeginn",
+  "@notifyWorkStartDescription": {
+    "description": "Beschreibung der Erinnerung an fehlenden Arbeitsbeginn."
+  },
+  "notifyWorkEndTitle": "Arbeitsende",
+  "@notifyWorkEndTitle": {
+    "description": "Titel der Erinnerung an fehlendes Arbeitsende."
+  },
+  "notifyWorkEndDescription": "Erinnert an fehlendes Arbeitsende",
+  "@notifyWorkEndDescription": {
+    "description": "Beschreibung der Erinnerung an fehlendes Arbeitsende."
+  },
+  "notifyBreaksDescription": "Erinnert an fehlende Pausen",
+  "@notifyBreaksDescription": {
+    "description": "Beschreibung der Erinnerung an fehlende Pausen."
+  },
+  "daysSectionTitle": "Tage",
+  "@daysSectionTitle": {
+    "description": "Überschrift der Wochentags-Auswahl im Benachrichtigungsdialog."
+  },
+  "selectAtLeastOneDay": "Bitte wählen Sie mindestens einen Tag aus",
+  "@selectAtLeastOneDay": {
+    "description": "Validierungsfehler, wenn kein Erinnerungstag ausgewählt ist."
+  },
+  "overtimeWarningsSectionTitle": "Gleitzeit-Warnungen",
+  "@overtimeWarningsSectionTitle": {
+    "description": "Überschrift des Gleitzeit-Warnungen-Abschnitts."
+  },
+  "warnOnOvertimeTitle": "Warnung bei Überstunden",
+  "@warnOnOvertimeTitle": {
+    "description": "Titel des Schalters für die Überstunden-Warnung."
+  },
+  "warnThresholdDescription": "Benachrichtigung ab Schwellwert",
+  "@warnThresholdDescription": {
+    "description": "Beschreibung eines Schwellwert-basierten Warnschalters."
+  },
+  "warnOnUndertimeTitle": "Warnung bei Minusstunden",
+  "@warnOnUndertimeTitle": {
+    "description": "Titel des Schalters für die Minusstunden-Warnung."
+  },
+  "thresholdHoursLabel": "Schwellwert (Stunden)",
+  "@thresholdHoursLabel": {
+    "description": "Beschriftung des Schwellwert-Eingabefelds."
+  },
+  "notificationPermissionDenied": "Benachrichtigungsberechtigungen wurden nicht erteilt",
+  "@notificationPermissionDenied": {
+    "description": "Fehlermeldung, wenn die Benachrichtigungsberechtigung fehlt."
+  },
+  "notificationSettingsSaved": "Benachrichtigungseinstellungen gespeichert",
+  "@notificationSettingsSaved": {
+    "description": "Erfolgsmeldung nach dem Speichern der Benachrichtigungseinstellungen."
+  },
+  "pinTooShortError": "Die PIN muss mindestens 4 Ziffern haben",
+  "@pinTooShortError": {
+    "description": "Validierungsfehler, wenn die PIN zu kurz ist."
+  },
+  "pinMismatchError": "Die PINs stimmen nicht überein",
+  "@pinMismatchError": {
+    "description": "Validierungsfehler, wenn die PIN-Bestätigung nicht übereinstimmt."
+  },
+  "confirmPinTitle": "PIN bestätigen",
+  "@confirmPinTitle": {
+    "description": "Titel des PIN-Dialogs im Bestätigungsschritt."
+  },
+  "setPinTitle": "PIN festlegen",
+  "@setPinTitle": {
+    "description": "Titel des PIN-Dialogs im ersten Eingabeschritt."
+  },
+  "confirmPinFieldLabel": "PIN wiederholen",
+  "@confirmPinFieldLabel": {
+    "description": "Beschriftung des PIN-Bestätigungsfelds."
+  },
+  "newPinFieldLabel": "Neue PIN (mind. 4 Ziffern)",
+  "@newPinFieldLabel": {
+    "description": "Beschriftung des Felds für die neue PIN."
+  },
+  "confirmAction": "Bestätigen",
+  "@confirmAction": {
+    "description": "Beschriftung eines Bestätigen-Buttons."
+  },
+  "continueAction": "Weiter",
+  "@continueAction": {
+    "description": "Beschriftung eines Weiter-Buttons."
+  },
+  "paywallUnavailable": "Paywall nicht verfügbar – App ohne RC_ANDROID_KEY gestartet.",
+  "@paywallUnavailable": {
+    "description": "Fehlermeldung, wenn die Premium-Paywall lokal ohne RevenueCat-Key aufgerufen wird."
+  },
+  "tabDaily": "Täglich",
+  "@tabDaily": { "description": "Tab-Beschriftung für die Tagesansicht der Berichte." },
+  "tabWeekly": "Wöchentlich",
+  "@tabWeekly": { "description": "Tab-Beschriftung für die Wochenansicht der Berichte." },
+  "tabMonthly": "Monatlich",
+  "@tabMonthly": { "description": "Tab-Beschriftung für die Monatsansicht der Berichte." },
+  "tabYearly": "Jährlich",
+  "@tabYearly": { "description": "Tab-Beschriftung für die Jahresansicht der Berichte." },
+  "deleteEntryTitle": "Eintrag löschen?",
+  "@deleteEntryTitle": { "description": "Titel des Bestätigungsdialogs zum Löschen eines Arbeitseintrags." },
+  "deleteEntryConfirm": "Möchten Sie diesen Arbeitseintrag wirklich löschen?",
+  "@deleteEntryConfirm": { "description": "Bestätigungstext im Lösch-Dialog eines Arbeitseintrags." },
+  "deleteAction": "Löschen",
+  "@deleteAction": { "description": "Generische Beschriftung eines Löschen-Buttons." },
+  "dailyReportTitle": "Tagesbericht für {date}",
+  "@dailyReportTitle": {
+    "description": "Titel des Tagesberichts mit Datum.",
+    "placeholders": { "date": { "type": "String" } }
+  },
+  "noDataForDay": "Keine Daten für diesen Tag.",
+  "@noDataForDay": { "description": "Hinweis, wenn für den gewählten Tag keine Einträge existieren." },
+  "addEntryAction": "Eintrag hinzufügen",
+  "@addEntryAction": { "description": "Beschriftung des Buttons zum Hinzufügen eines Arbeitseintrags." },
+  "quickEntryButton": "Schnell-Eintrag (Urlaub, Krank...)",
+  "@quickEntryButton": { "description": "Beschriftung des Schnell-Eintrag-Buttons für einen einzelnen Tag." },
+  "targetDayLabel": "Soll (Tag):",
+  "@targetDayLabel": { "description": "Label für das Tages-Soll in der Tagesübersicht." },
+  "targetExtraDayLabel": "Soll (Zusatztag):",
+  "@targetExtraDayLabel": { "description": "Label für das Tages-Soll an einem Zusatztag (ohne Soll-Zeit)." },
+  "actualDayLabel": "Ist (Tag):",
+  "@actualDayLabel": { "description": "Label für die Ist-Arbeitszeit in der Tagesübersicht." },
+  "balanceDayLabel": "Saldo (Tag):",
+  "@balanceDayLabel": { "description": "Label für den Tages-Saldo (Über-/Unterstunden)." },
+  "workTimeLabel": "Arbeitszeit: {duration}",
+  "@workTimeLabel": {
+    "description": "Anzeige der Arbeitszeit eines Eintrags.",
+    "placeholders": { "duration": { "type": "String" } }
+  },
+  "startValueLabel": "Start: {value}",
+  "@startValueLabel": {
+    "description": "Anzeige der Startzeit eines Eintrags.",
+    "placeholders": { "value": { "type": "String" } }
+  },
+  "endValueLabel": "Ende: {value}",
+  "@endValueLabel": {
+    "description": "Anzeige der Endzeit eines Eintrags.",
+    "placeholders": { "value": { "type": "String" } }
+  },
+  "breakValueLabel": "Pause: {value}",
+  "@breakValueLabel": {
+    "description": "Anzeige der Pausendauer eines Eintrags.",
+    "placeholders": { "value": { "type": "String" } }
+  },
+  "manualAdjustmentLabel": "Manuelle Anpassung: {value}",
+  "@manualAdjustmentLabel": {
+    "description": "Anzeige einer manuellen Überstunden-Anpassung eines Eintrags.",
+    "placeholders": { "value": { "type": "String" } }
+  },
+  "overtimeValueLabel": "Überstunden: {value}",
+  "@overtimeValueLabel": {
+    "description": "Anzeige der Überstunden eines Eintrags.",
+    "placeholders": { "value": { "type": "String" } }
+  },
+  "errorLoadingSettings": "Fehler beim Laden der Einstellungen: {error}",
+  "@errorLoadingSettings": {
+    "description": "Fehlermeldung, wenn die Einstellungen für einen Bericht nicht geladen werden konnten.",
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "loginRequiredWeekly": "Anmeldung erforderlich für Wochenberichte",
+  "@loginRequiredWeekly": { "description": "Hinweis, dass Wochenberichte eine Anmeldung erfordern." },
+  "weeklyReportsFeatureTitle": "Wochenberichte",
+  "@weeklyReportsFeatureTitle": { "description": "Premium-Gate-Titel für Wochenberichte." },
+  "weeklyReportsFeatureText": "Behalte den vollen Überblick über deine wöchentlichen Überstunden und Arbeitsmuster.",
+  "@weeklyReportsFeatureText": { "description": "Premium-Gate-Erklärung für Wochenberichte." },
+  "previousWeekTooltip": "Vorherige Woche",
+  "@previousWeekTooltip": { "description": "Tooltip des Zurück-Buttons in der Wochennavigation." },
+  "weeklyReportTitle": "Wochenbericht",
+  "@weeklyReportTitle": { "description": "Titel des Wochenberichts." },
+  "weekNumberLabel": "KW {number}",
+  "@weekNumberLabel": {
+    "description": "Anzeige der Kalenderwoche.",
+    "placeholders": { "number": { "type": "int" } }
+  },
+  "nextWeekTooltip": "Nächste Woche",
+  "@nextWeekTooltip": { "description": "Tooltip des Weiter-Buttons in der Wochennavigation." },
+  "weeklyReflectionButton": "Wochen-Reflexion",
+  "@weeklyReflectionButton": { "description": "Beschriftung des Buttons zur Wochen-Reflexion." },
+  "exportAsPdfButton": "Als PDF exportieren",
+  "@exportAsPdfButton": { "description": "Beschriftung des PDF-Export-Buttons." },
+  "noDataForWeek": "Keine Daten für diese Woche.",
+  "@noDataForWeek": { "description": "Hinweis, wenn für die gewählte Woche keine Daten existieren." },
+  "totalWorkTimeLabel": "Gesamte Arbeitszeit:",
+  "@totalWorkTimeLabel": { "description": "Label für die Gesamtarbeitszeit in Berichten." },
+  "totalBreaksLabel": "Gesamte Pausen:",
+  "@totalBreaksLabel": { "description": "Label für die Gesamtpausenzeit in Berichten." },
+  "workdaysCountLabel": "Arbeitstage:",
+  "@workdaysCountLabel": { "description": "Label für die Anzahl der Arbeitstage in Berichten." },
+  "avgWorkPerDayLabel": "Ø Arbeitszeit pro Tag:",
+  "@avgWorkPerDayLabel": { "description": "Label für die durchschnittliche Arbeitszeit pro Tag." },
+  "overtimeColonLabel": "Überstunden:",
+  "@overtimeColonLabel": { "description": "Label für Überstunden in einer Statistikkarte." },
+  "dailyWorkTimesLabel": "Tägliche Arbeitszeiten:",
+  "@dailyWorkTimesLabel": { "description": "Überschrift der Liste täglicher Arbeitszeiten im Wochenbericht." },
+  "pdfExportFailed": "PDF-Export fehlgeschlagen: {error}",
+  "@pdfExportFailed": {
+    "description": "Fehlermeldung, wenn der PDF-Export fehlschlägt.",
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "loginRequiredMonthly": "Anmeldung erforderlich für Monatsberichte",
+  "@loginRequiredMonthly": { "description": "Hinweis, dass Monatsberichte eine Anmeldung erfordern." },
+  "monthlyReportsFeatureTitle": "Monatsberichte",
+  "@monthlyReportsFeatureTitle": { "description": "Premium-Gate-Titel für Monatsberichte." },
+  "monthlyReportsFeatureText": "Detaillierte Monatsanalysen mit Überstunden-Tracking und Urlaubsübersicht.",
+  "@monthlyReportsFeatureText": { "description": "Premium-Gate-Erklärung für Monatsberichte." },
+  "previousMonthTooltip": "Vorheriger Monat",
+  "@previousMonthTooltip": { "description": "Tooltip des Zurück-Buttons in der Monatsnavigation." },
+  "nextMonthTooltip": "Nächster Monat",
+  "@nextMonthTooltip": { "description": "Tooltip des Weiter-Buttons in der Monatsnavigation." },
+  "noDataForMonth": "Keine Daten für diesen Monat.",
+  "@noDataForMonth": { "description": "Hinweis, wenn für den gewählten Monat keine Daten existieren." },
+  "avgWorkPerWeekLabel": "Ø Arbeitszeit pro Woche:",
+  "@avgWorkPerWeekLabel": { "description": "Label für die durchschnittliche Arbeitszeit pro Woche." },
+  "monthlyOvertimeLabel": "Überstunden Monat:",
+  "@monthlyOvertimeLabel": { "description": "Label für die Überstunden des Monats." },
+  "totalOvertimeColonLabel": "Gesamt-Überstunden:",
+  "@totalOvertimeColonLabel": { "description": "Label für die Gesamt-Überstunden über den gesamten Zeitraum." },
+  "weekOverviewTitle": "Wochenübersicht:",
+  "@weekOverviewTitle": { "description": "Überschrift der Wochenübersicht im Monatsbericht." },
+  "calendarWeekLabel": "Kalenderwoche {number}",
+  "@calendarWeekLabel": {
+    "description": "Anzeige einer Kalenderwoche in der Wochenübersicht.",
+    "placeholders": { "number": { "type": "int" } }
+  },
+  "dayOverviewTitle": "Tagesübersicht:",
+  "@dayOverviewTitle": { "description": "Überschrift der Tagesübersicht im Monatsbericht." },
+  "loginRequiredYearly": "Anmeldung erforderlich für Jahresberichte",
+  "@loginRequiredYearly": { "description": "Hinweis, dass Jahresberichte eine Anmeldung erfordern." },
+  "yearlyReportsFeatureTitle": "Jahresberichte",
+  "@yearlyReportsFeatureTitle": { "description": "Premium-Gate-Titel für Jahresberichte." },
+  "yearlyReportsFeatureText": "Jahresübersicht mit Monatsvergleich, Gesamtüberstunden sowie Urlaubs- und Kranktagen.",
+  "@yearlyReportsFeatureText": { "description": "Premium-Gate-Erklärung für Jahresberichte." },
+  "previousYearTooltip": "Vorheriges Jahr",
+  "@previousYearTooltip": { "description": "Tooltip des Zurück-Buttons in der Jahresnavigation." },
+  "nextYearTooltip": "Nächstes Jahr",
+  "@nextYearTooltip": { "description": "Tooltip des Weiter-Buttons in der Jahresnavigation." },
+  "noDataForYear": "Keine Daten für dieses Jahr.",
+  "@noDataForYear": { "description": "Hinweis, wenn für das gewählte Jahr keine Daten existieren." },
+  "vacationDaysLabel": "Urlaubstage:",
+  "@vacationDaysLabel": { "description": "Label für die Anzahl der Urlaubstage." },
+  "sickDaysLabel": "Krankheitstage:",
+  "@sickDaysLabel": { "description": "Label für die Anzahl der Krankheitstage." },
+  "holidaysLabel": "Feiertage:",
+  "@holidaysLabel": { "description": "Label für die Anzahl der Feiertage." },
+  "monthOverviewTitle": "Monatsübersicht:",
+  "@monthOverviewTitle": { "description": "Überschrift der Monatsübersicht im Jahresbericht." },
+  "workdaysCountInline": "{count} Arbeitstage · {duration}",
+  "@workdaysCountInline": {
+    "description": "Kombinierte Anzeige von Arbeitstagen und Arbeitszeit in der Monatsübersicht.",
+    "placeholders": { "count": { "type": "int" }, "duration": { "type": "String" } }
+  },
+  "loginRequiredInsights": "Anmeldung erforderlich für Insights",
+  "@loginRequiredInsights": { "description": "Hinweis, dass Insights eine Anmeldung erfordern." },
+  "insightsFeatureTitle": "Arbeitszeit-Insights",
+  "@insightsFeatureTitle": { "description": "Premium-Gate-Titel für Insights." },
+  "insightsFeatureText": "Automatisch erkannte Muster in deiner Arbeitszeit: Wochentags-Analyse, Burnout-Warnung und Produktivitäts-Heatmap.",
+  "@insightsFeatureText": { "description": "Premium-Gate-Erklärung für Insights." },
+  "notEnoughDataInsights": "Noch nicht genug Daten für Insights. Trage ein paar Arbeitstage ein und schau später wieder vorbei.",
+  "@notEnoughDataInsights": { "description": "Hinweis, wenn noch nicht genug Daten für Insights vorhanden sind." },
+  "burnoutWarning": "Du liegst seit {days} aufeinanderfolgenden Arbeitstagen über deinem Soll. Denk an ausreichend Erholung.",
+  "@burnoutWarning": {
+    "description": "Warnmeldung bei einer zu langen Serie von Überstunden-Tagen.",
+    "placeholders": { "days": { "type": "String" } }
+  },
+  "weekdayAnalysisTitle": "Wochentags-Analyse",
+  "@weekdayAnalysisTitle": { "description": "Titel der Wochentags-Analyse in den Insights." },
+  "weekdayAnalysisExplanation": "Deine durchschnittliche Arbeitszeit je Wochentag. Der Wert rechts zeigt die Abweichung vom Durchschnitt über alle Wochentage - so siehst du z.B., ob du montags typischerweise länger arbeitest als sonst.",
+  "@weekdayAnalysisExplanation": { "description": "Erklärungstext der Wochentags-Analyse." },
+  "avgWorkTimeWithCount": "Ø {duration} h ({count}x)",
+  "@avgWorkTimeWithCount": {
+    "description": "Durchschnittliche Arbeitszeit mit Anzahl der Stichproben.",
+    "placeholders": { "duration": { "type": "String" }, "count": { "type": "int" } }
+  },
+  "productivityHeatmapTitle": "Produktivitäts-Heatmap nach Startzeit",
+  "@productivityHeatmapTitle": { "description": "Titel der Produktivitäts-Heatmap in den Insights." },
+  "productivityHeatmapExplanation": "Durchschnittliche Überstunden abhängig davon, um wie viel Uhr du deinen Arbeitstag begonnen hast. Hilft zu erkennen, ob ein früherer oder späterer Start bei dir mit mehr oder weniger Überstunden einhergeht.",
+  "@productivityHeatmapExplanation": { "description": "Erklärungstext der Produktivitäts-Heatmap." },
+  "startHourLabel": "Start {hour}:00 Uhr",
+  "@startHourLabel": {
+    "description": "Anzeige einer Start-Uhrzeit in der Produktivitäts-Heatmap.",
+    "placeholders": { "hour": { "type": "String" } }
+  },
+  "sampleCountLabel": "{count}x",
+  "@sampleCountLabel": {
+    "description": "Anzahl der Stichproben in einer Statistik.",
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "selectedDaysCount": "{count} Tage ausgewählt",
+  "@selectedDaysCount": {
+    "description": "Anzeige der Anzahl mehrfach ausgewählter Kalendertage.",
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "resetAction": "Zurücksetzen",
+  "@resetAction": { "description": "Beschriftung eines Zurücksetzen-Buttons." },
+  "dragSelectHint": "Gedrückt halten und ziehen (Mobilgerät) oder klicken und ziehen (Web) zum Auswählen eines Datumsbereichs",
+  "@dragSelectHint": { "description": "Hinweistext zur Mehrfachauswahl von Kalendertagen per Drag." },
+  "holidaySemanticSuffix": ", Feiertag: {name}",
+  "@holidaySemanticSuffix": {
+    "description": "Zusatz zur Sprachausgabe eines Kalendertags, wenn es sich um einen Feiertag handelt.",
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "entriesForDayTitle": "Einträge am {date}",
+  "@entriesForDayTitle": {
+    "description": "Titel der Tageseinträge-Übersicht (Bottom Sheet).",
+    "placeholders": { "date": { "type": "String" } }
+  },
+  "noEntriesForDay": "Keine Einträge für diesen Tag.",
+  "@noEntriesForDay": { "description": "Hinweis, wenn für den gewählten Tag keine Einträge existieren (Bottom Sheet)." },
+  "batchEntriesCreated": "Schnell-Einträge für {count} Tage erstellt",
+  "@batchEntriesCreated": {
+    "description": "Erfolgsmeldung nach dem Erstellen mehrerer Schnell-Einträge.",
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "monthlyReportTitle": "Monatsbericht",
+  "@monthlyReportTitle": { "description": "Titel des Monatsberichts (Platzhalter-Ansicht)." },
+  "workEntryTypeVacationPlain": "Urlaub",
+  "@workEntryTypeVacationPlain": { "description": "Anzeigename für den Eintragstyp Urlaub, ohne Emoji (Berichte)." },
+  "workEntryTypeSickPlain": "Krankheit",
+  "@workEntryTypeSickPlain": { "description": "Anzeigename für den Eintragstyp Krankheit, ohne Emoji (Berichte)." },
+  "workEntryTypeHolidayPlain": "Feiertag",
+  "@workEntryTypeHolidayPlain": { "description": "Anzeigename für den Eintragstyp Feiertag, ohne Emoji (Berichte)." },
+  "workEntryTypeWorkPlain": "Arbeit",
+  "@workEntryTypeWorkPlain": { "description": "Anzeigename für den Eintragstyp Arbeit, ohne Emoji (Berichte)." },
+  "imprintTitle": "Impressum",
+  "@imprintTitle": { "description": "Titel des Impressum-Dialogs. Der Rechtstext selbst bleibt auf Deutsch (assets/legal/*.md)." },
+  "privacyPolicyTitle": "Datenschutzerklärung",
+  "@privacyPolicyTitle": { "description": "Titel des Datenschutz-Dialogs. Der Rechtstext selbst bleibt auf Deutsch (assets/legal/*.md)." },
+  "termsOfServiceTitle": "Allgemeine Geschäftsbedingungen",
+  "@termsOfServiceTitle": { "description": "Titel des AGB-Dialogs. Der Rechtstext selbst bleibt auf Deutsch (assets/legal/*.md)." },
+  "errorLoadingContent": "Fehler beim Laden: {error}",
+  "@errorLoadingContent": {
+    "description": "Fehlermeldung, wenn ein Markdown-Rechtsdokument nicht geladen werden konnte.",
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "noContentFound": "Kein Inhalt gefunden.",
+  "@noContentFound": { "description": "Hinweis, wenn ein Markdown-Rechtsdokument leer ist." },
+  "closeAction": "Schließen",
+  "@closeAction": { "description": "Beschriftung eines Schließen-Buttons." },
+  "loginTagline": "Erfassen Sie Ihre Arbeitszeit",
+  "@loginTagline": { "description": "Untertitel auf der Login-Seite." },
+  "googleSignInButton": "Mit Google anmelden",
+  "@googleSignInButton": { "description": "Beschriftung des Google-Anmelde-Buttons." },
+  "signingIn": "Anmeldung läuft...",
+  "@signingIn": { "description": "Ladehinweis während der Google-Anmeldung." },
+  "syncingLocalData": "Synchronisiere lokale Daten...",
+  "@syncingLocalData": { "description": "Ladehinweis während der automatischen Synchronisierung nach dem Login." },
+  "syncSuccessLoginMessage": "Erfolgreich synchronisiert!\nArbeitseinträge: {count}\nÜberstunden: {overtimeSynced}",
+  "@syncSuccessLoginMessage": {
+    "description": "Erfolgsmeldung nach der automatischen Synchronisierung beim Login.",
+    "placeholders": { "count": { "type": "int" }, "overtimeSynced": { "type": "String" } }
+  },
+  "syncFailedLoginMessage": "Synchronisierung fehlgeschlagen: {error}",
+  "@syncFailedLoginMessage": {
+    "description": "Fehlermeldung, wenn die Synchronisierung nach dem Login fehlschlägt.",
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "loginFailedMessage": "Anmeldung fehlgeschlagen: {error}",
+  "@loginFailedMessage": {
+    "description": "Fehlermeldung, wenn die Google-Anmeldung fehlschlägt.",
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "legalNoticePrefix": "Mit der Anmeldung akzeptieren Sie unsere ",
+  "@legalNoticePrefix": { "description": "Erster Teil des rechtlichen Hinweises auf der Login-Seite, vor dem AGB-Link." },
+  "termsShortLabel": "AGB",
+  "@termsShortLabel": { "description": "Kurzform von \"Allgemeine Geschäftsbedingungen\" als Link-Text." },
+  "legalNoticeAnd": " und ",
+  "@legalNoticeAnd": { "description": "Verbindungswort zwischen AGB- und Datenschutz-Link im rechtlichen Hinweis." },
+  "orDivider": "oder",
+  "@orDivider": { "description": "Trenntext zwischen Google-Login und \"Ohne Anmeldung fortfahren\"." },
+  "continueWithoutLogin": "Ohne Anmeldung fortfahren",
+  "@continueWithoutLogin": { "description": "Beschriftung des Buttons, um die App ohne Anmeldung zu nutzen." },
+  "versionLabel": "Version {version} ({build})",
+  "@versionLabel": {
+    "description": "Anzeige der App-Version und Build-Nummer.",
+    "placeholders": { "version": { "type": "String" }, "build": { "type": "String" } }
+  },
+  "rateAppTitle": "App im Google Play Store bewerten",
+  "@rateAppTitle": { "description": "Titel der Einstellungszeile zum Bewerten der App." },
+  "rateAppSubtitle": "Unterstützen Sie uns mit einer Bewertung",
+  "@rateAppSubtitle": { "description": "Untertitel der Einstellungszeile zum Bewerten der App." },
+  "testVersionCheckTitle": "🧪 TEST: Version Check",
+  "@testVersionCheckTitle": { "description": "Titel eines Debug-only-Testeintrags zum manuellen Auslösen des Update-Dialogs." },
+  "testVersionCheckSubtitle": "Update-Dialog manuell anzeigen",
+  "@testVersionCheckSubtitle": { "description": "Untertitel des Debug-only-Testeintrags." },
+  "wrongPin": "Falsche PIN",
+  "@wrongPin": { "description": "Fehlermeldung bei falscher PIN-Eingabe in der App-Sperre." },
+  "appLockedTitle": "App gesperrt",
+  "@appLockedTitle": { "description": "Titel des App-Sperrbildschirms." },
+  "enterPinLabel": "PIN eingeben",
+  "@enterPinLabel": { "description": "Beschriftung des PIN-Eingabefelds in der App-Sperre." },
+  "unlockAction": "Entsperren",
+  "@unlockAction": { "description": "Beschriftung des Entsperren-Buttons." },
+  "unlockWithBiometrics": "Mit Biometrie entsperren",
+  "@unlockWithBiometrics": { "description": "Beschriftung des Buttons, um die App-Sperre erneut mit Biometrie zu versuchen." },
+  "switchProfileTooltip": "Profil wechseln",
+  "@switchProfileTooltip": { "description": "Tooltip des Profil-Wechsler-Icons im Header." },
+  "newProfileAction": "Neues Profil",
+  "@newProfileAction": { "description": "Beschriftung des Menüeintrags zum Anlegen eines neuen Arbeitszeit-Profils." },
+  "manageProfilesAction": "Profile verwalten",
+  "@manageProfilesAction": { "description": "Beschriftung des Menüeintrags zum Verwalten der Arbeitszeit-Profile." },
+  "premiumProfilesFeature": "Zusätzliche Profile sind ein Premium-Feature.",
+  "@premiumProfilesFeature": { "description": "Hinweis, wenn ein Nicht-Premium-Nutzer ein zusätzliches Profil anlegen möchte." },
+  "maxProfilesReached": "Maximal {maxProfiles} Profile möglich.",
+  "@maxProfilesReached": {
+    "description": "Hinweis, wenn das Profil-Limit erreicht ist.",
+    "placeholders": { "maxProfiles": { "type": "int" } }
+  },
+  "profileCreatedMessage": "Profil \"{name}\" angelegt.",
+  "@profileCreatedMessage": {
+    "description": "Erfolgsmeldung nach dem Anlegen eines Arbeitszeit-Profils.",
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "profileCreationFailed": "Anlegen fehlgeschlagen: {error}",
+  "@profileCreationFailed": {
+    "description": "Fehlermeldung, wenn das Anlegen eines Profils fehlschlägt.",
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "newProfileDialogTitle": "Neues Profil",
+  "@newProfileDialogTitle": { "description": "Titel des Dialogs zum Anlegen eines neuen Arbeitszeit-Profils." },
+  "profileNameFieldLabel": "Name (z.B. Arbeitgeber)",
+  "@profileNameFieldLabel": { "description": "Beschriftung des Namensfelds beim Anlegen eines Profils." },
+  "createAction": "Anlegen",
+  "@createAction": { "description": "Beschriftung des Buttons zum Anlegen eines neuen Profils." },
+  "deleteProfileTitle": "Profil löschen?",
+  "@deleteProfileTitle": { "description": "Titel des Bestätigungsdialogs zum Löschen eines Arbeitszeit-Profils." },
+  "deleteProfileConfirm": "Profil \"{name}\" und alle zugehörigen Arbeitseinträge, Überstunden und Einstellungen werden unwiderruflich gelöscht.",
+  "@deleteProfileConfirm": {
+    "description": "Warntext im Bestätigungsdialog zum Löschen eines Profils.",
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "profileDeletedMessage": "Profil \"{name}\" gelöscht.",
+  "@profileDeletedMessage": {
+    "description": "Erfolgsmeldung nach dem Löschen eines Arbeitszeit-Profils.",
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "profileDeletionFailed": "Löschen fehlgeschlagen: {error}",
+  "@profileDeletionFailed": {
+    "description": "Fehlermeldung, wenn das Löschen eines Profils fehlschlägt.",
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "manageProfilesDialogTitle": "Profile verwalten",
+  "@manageProfilesDialogTitle": { "description": "Titel des Dialogs zum Verwalten der Arbeitszeit-Profile." },
+  "errorLoadingGeneric": "Fehler beim Laden: {error}",
+  "@errorLoadingGeneric": {
+    "description": "Generische Fehlermeldung beim Laden von Daten.",
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "noAdditionalProfiles": "Keine zusätzlichen Profile vorhanden.",
+  "@noAdditionalProfiles": { "description": "Hinweis, wenn außer dem Standard-Profil keine weiteren Profile existieren." },
+  "deleteProfileTooltip": "Profil löschen",
+  "@deleteProfileTooltip": { "description": "Tooltip des Lösch-Icons in der Profilverwaltung." },
+  "doneAction": "Fertig",
+  "@doneAction": { "description": "Beschriftung eines Fertig-Buttons zum Schließen eines Dialogs." },
+  "updateRequiredTitle": "Update erforderlich",
+  "@updateRequiredTitle": { "description": "Titel des Update-Dialogs bei einem verpflichtenden Update." },
+  "updateAvailableTitle": "Update verfügbar",
+  "@updateAvailableTitle": { "description": "Titel des Update-Dialogs bei einem optionalen Update." },
+  "laterAction": "Später",
+  "@laterAction": { "description": "Beschriftung des Buttons, um ein optionales Update zu verschieben." },
+  "updateNowAction": "Jetzt updaten",
+  "@updateNowAction": { "description": "Beschriftung des Buttons zum Starten des App-Updates." },
+  "currentVersionLabel": "Aktuelle Version:",
+  "@currentVersionLabel": { "description": "Label der aktuell installierten App-Version im Update-Dialog." },
+  "requiredVersionLabel": "Erforderliche Version:",
+  "@requiredVersionLabel": { "description": "Label der mindestens erforderlichen App-Version im Update-Dialog." },
+  "reflectionSaved": "Reflexion gespeichert.",
+  "@reflectionSaved": { "description": "Erfolgsmeldung nach dem Speichern der Wochen-Reflexion." },
+  "saveFailed": "Speichern fehlgeschlagen: {error}",
+  "@saveFailed": {
+    "description": "Generische Fehlermeldung, wenn ein Speichervorgang fehlschlägt.",
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "weeklyReflectionDialogTitle": "Wochen-Reflexion KW {week}",
+  "@weeklyReflectionDialogTitle": {
+    "description": "Titel des Wochen-Reflexion-Dialogs mit Kalenderwoche.",
+    "placeholders": { "week": { "type": "int" } }
+  },
+  "whatWentWellLabel": "Was lief gut?",
+  "@whatWentWellLabel": { "description": "Beschriftung des Felds für positive Wochenrückblick-Notizen." },
+  "whatWasHardLabel": "Was war anstrengend?",
+  "@whatWasHardLabel": { "description": "Beschriftung des Felds für herausfordernde Wochenrückblick-Notizen." },
+  "editEntryForDate": "Eintrag für den {date} bearbeiten",
+  "@editEntryForDate": {
+    "description": "Titel des Bearbeiten-Dialogs für einen Arbeitseintrag.",
+    "placeholders": { "date": { "type": "String" } }
+  },
+  "allDayEventNotice": "Ganztägiges Ereignis.\nKeine detaillierte Zeiterfassung notwendig.",
+  "@allDayEventNotice": { "description": "Hinweis bei ganztägigen Eintragstypen (Urlaub/Krankheit/Feiertag) ohne Zeiterfassung." },
+  "saveChangesAction": "Änderungen speichern",
+  "@saveChangesAction": { "description": "Beschriftung des Buttons zum Speichern von Änderungen an einem Arbeitseintrag." },
+  "workTimeSectionTitle": "Arbeitszeit",
+  "@workTimeSectionTitle": { "description": "Überschrift des Arbeitszeit-Abschnitts im Bearbeiten-Dialog." },
+  "noBreaksAdded": "Keine Pausen hinzugefügt",
+  "@noBreaksAdded": { "description": "Hinweis, wenn einem Arbeitseintrag noch keine Pause hinzugefügt wurde." },
+  "startFieldLabel": "Start",
+  "@startFieldLabel": { "description": "Kurze Beschriftung eines Start-Zeitfelds (z.B. bei einer Pause)." },
+  "endFieldLabel": "Ende",
+  "@endFieldLabel": { "description": "Kurze Beschriftung eines Ende-Zeitfelds (z.B. bei einer Pause)." }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers/app_lock_provider.dart';
+import '../../l10n/app_localizations.dart';
 
 /// Vollflächige Sperre, die über der App angezeigt wird, solange
 /// [isAppLockedProvider] `true` ist (siehe #223). Versucht beim Anzeigen
@@ -49,7 +50,7 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
       _unlock();
     } else {
       setState(() {
-        _error = 'Falsche PIN';
+        _error = AppLocalizations.of(context).wrongPin;
         _pinController.clear();
       });
     }
@@ -57,6 +58,7 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Material(
       color: Theme.of(context).scaffoldBackgroundColor,
       child: SafeArea(
@@ -68,7 +70,7 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
               children: [
                 Icon(Icons.lock, size: 64, color: Theme.of(context).colorScheme.primary),
                 const SizedBox(height: 16),
-                Text('App gesperrt', style: Theme.of(context).textTheme.headlineSmall),
+                Text(l10n.appLockedTitle, style: Theme.of(context).textTheme.headlineSmall),
                 const SizedBox(height: 24),
                 TextField(
                   controller: _pinController,
@@ -77,7 +79,7 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
                   textAlign: TextAlign.center,
                   maxLength: 6,
                   decoration: InputDecoration(
-                    labelText: 'PIN eingeben',
+                    labelText: l10n.enterPinLabel,
                     errorText: _error,
                     counterText: '',
                   ),
@@ -86,13 +88,13 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
                 const SizedBox(height: 16),
                 FilledButton(
                   onPressed: _submitPin,
-                  child: const Text('Entsperren'),
+                  child: Text(l10n.unlockAction),
                 ),
                 const SizedBox(height: 8),
                 TextButton.icon(
                   onPressed: _tryBiometrics,
                   icon: const Icon(Icons.fingerprint),
-                  label: const Text('Mit Biometrie entsperren'),
+                  label: Text(l10n.unlockWithBiometrics),
                 ),
               ],
             ),

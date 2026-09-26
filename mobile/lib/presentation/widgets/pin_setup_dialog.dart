@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers/app_lock_provider.dart';
+import '../../l10n/app_localizations.dart';
 
 /// Dialog zum erstmaligen Festlegen oder Ändern der PIN für die App-Sperre
 /// (siehe #223). Zwei Schritte: PIN eingeben, PIN zur Bestätigung wiederholen.
@@ -39,7 +40,7 @@ class _PinSetupDialogState extends ConsumerState<PinSetupDialog> {
   void _onContinue() {
     final pin = _firstPinController.text;
     if (pin.length < 4) {
-      setState(() => _error = 'Die PIN muss mindestens 4 Ziffern haben');
+      setState(() => _error = AppLocalizations.of(context).pinTooShortError);
       return;
     }
     setState(() {
@@ -51,7 +52,7 @@ class _PinSetupDialogState extends ConsumerState<PinSetupDialog> {
   Future<void> _onConfirm() async {
     if (_confirmPinController.text != _firstPinController.text) {
       setState(() {
-        _error = 'Die PINs stimmen nicht überein';
+        _error = AppLocalizations.of(context).pinMismatchError;
         _confirmPinController.clear();
       });
       return;
@@ -63,10 +64,11 @@ class _PinSetupDialogState extends ConsumerState<PinSetupDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final activeController = _confirming ? _confirmPinController : _firstPinController;
 
     return AlertDialog(
-      title: Text(_confirming ? 'PIN bestätigen' : 'PIN festlegen'),
+      title: Text(_confirming ? l10n.confirmPinTitle : l10n.setPinTitle),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -78,7 +80,7 @@ class _PinSetupDialogState extends ConsumerState<PinSetupDialog> {
             maxLength: 6,
             autofocus: true,
             decoration: InputDecoration(
-              labelText: _confirming ? 'PIN wiederholen' : 'Neue PIN (mind. 4 Ziffern)',
+              labelText: _confirming ? l10n.confirmPinFieldLabel : l10n.newPinFieldLabel,
               errorText: _error,
               counterText: '',
             ),
@@ -88,11 +90,11 @@ class _PinSetupDialogState extends ConsumerState<PinSetupDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Abbrechen'),
+          child: Text(l10n.cancel),
         ),
         FilledButton(
           onPressed: _confirming ? _onConfirm : _onContinue,
-          child: Text(_confirming ? 'Bestätigen' : 'Weiter'),
+          child: Text(_confirming ? l10n.confirmAction : l10n.continueAction),
         ),
       ],
     );

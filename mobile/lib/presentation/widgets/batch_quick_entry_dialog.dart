@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../domain/entities/work_entry_entity.dart';
+import '../../l10n/app_localizations.dart';
 
 class BatchQuickEntryDialog extends StatefulWidget {
   final List<DateTime> dates;
@@ -40,27 +41,27 @@ class _BatchQuickEntryDialogState extends State<BatchQuickEntryDialog> {
     });
   }
 
-  String _getWorkEntryTypeLabel(WorkEntryType type) {
+  String _getWorkEntryTypeLabel(AppLocalizations l10n, WorkEntryType type) {
     switch (type) {
       case WorkEntryType.vacation:
-        return '🏖️ Urlaub';
+        return l10n.workEntryTypeVacation;
       case WorkEntryType.sick:
-        return '🤒 Krankheit';
+        return l10n.workEntryTypeSick;
       case WorkEntryType.holiday:
-        return '📅 Feiertag';
+        return l10n.workEntryTypeHoliday;
       case WorkEntryType.work:
-        return '💼 Arbeit';
+        return l10n.workEntryTypeWork;
     }
   }
 
-  String _formatDateRange() {
+  String _formatDateRange(BuildContext context) {
     if (widget.dates.isEmpty) return '';
 
     final sortedDates = List<DateTime>.from(widget.dates)..sort();
     final firstDate = sortedDates.first;
     final lastDate = sortedDates.last;
 
-    final formatter = DateFormat.yMMMMd('de_DE');
+    final formatter = DateFormat.yMMMMd(Localizations.localeOf(context).toString());
     if (firstDate.year == lastDate.year &&
         firstDate.month == lastDate.month &&
         firstDate.day == lastDate.day) {
@@ -72,14 +73,15 @@ class _BatchQuickEntryDialogState extends State<BatchQuickEntryDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return AlertDialog(
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Schnell-Eintrag für ${widget.dates.length} Tage'),
+          Text(l10n.quickEntryTitleBatch(widget.dates.length)),
           const SizedBox(height: 4),
           Text(
-            _formatDateRange(),
+            _formatDateRange(context),
             style: Theme.of(context).textTheme.bodyMedium,
           ),
         ],
@@ -89,7 +91,7 @@ class _BatchQuickEntryDialogState extends State<BatchQuickEntryDialog> {
         children: [
           DropdownButtonFormField<WorkEntryType>(
             initialValue: _selectedType,
-            decoration: const InputDecoration(labelText: 'Typ'),
+            decoration: InputDecoration(labelText: l10n.typeLabel),
             items: [
               WorkEntryType.vacation,
               WorkEntryType.sick,
@@ -97,7 +99,7 @@ class _BatchQuickEntryDialogState extends State<BatchQuickEntryDialog> {
             ].map((type) {
               return DropdownMenuItem(
                 value: type,
-                child: Text(_getWorkEntryTypeLabel(type)),
+                child: Text(_getWorkEntryTypeLabel(l10n, type)),
               );
             }).toList(),
             onChanged: (value) {
@@ -114,7 +116,7 @@ class _BatchQuickEntryDialogState extends State<BatchQuickEntryDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Abbrechen'),
+          child: Text(l10n.cancel),
         ),
         FilledButton(
           onPressed: () {
@@ -125,7 +127,7 @@ class _BatchQuickEntryDialogState extends State<BatchQuickEntryDialog> {
               'endTime': _endTime,
             });
           },
-          child: const Text('Speichern'),
+          child: Text(l10n.save),
         ),
       ],
     );

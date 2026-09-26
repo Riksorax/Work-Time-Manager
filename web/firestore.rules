@@ -30,6 +30,35 @@ service cloud.firestore {
       match /overtime/{doc} {
         allow read, write: if isOwner(userId);
       }
+
+      // Wochen-Reflexion (Premium-Feature, siehe #137): Dokument je Kalenderwoche
+      // ({yyyy}-W{ww}), Felder whatWentWell/whatWasHard. Ohne diese Regel schlägt
+      // jeder Zugriff mit PERMISSION_DENIED fehl (siehe #269) - dieselbe Ursache
+      // wie bei der profiles-Subcollection (#251): Firestore vererbt Regeln nicht
+      // rekursiv an Unter-Collections.
+      match /weekly_reflections/{docId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // Zusätzliche Arbeitszeit-Profile (Multi-Profile, siehe #138/#239).
+      // Ohne diese Regel schlägt jeder Zugriff auf die profiles-Subcollection
+      // mit PERMISSION_DENIED fehl, da Firestore Regeln nicht rekursiv an
+      // Unter-Collections vererbt (siehe #251).
+      match /profiles/{profileId} {
+        allow read, write: if isOwner(userId);
+
+        match /work_entries/{entryId} {
+          allow read, write: if isOwner(userId);
+        }
+
+        match /settings/{doc} {
+          allow read, write: if isOwner(userId);
+        }
+
+        match /overtime/{doc} {
+          allow read, write: if isOwner(userId);
+        }
+      }
     }
   }
 }

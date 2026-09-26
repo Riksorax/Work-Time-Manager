@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../domain/entities/work_entry_entity.dart';
+import '../../l10n/app_localizations.dart';
 
 class QuickEntryDialog extends StatefulWidget {
   final DateTime date;
@@ -36,29 +37,30 @@ class _QuickEntryDialogState extends State<QuickEntryDialog> {
     });
   }
 
-  String _getWorkEntryTypeLabel(WorkEntryType type) {
+  String _getWorkEntryTypeLabel(AppLocalizations l10n, WorkEntryType type) {
     switch (type) {
       case WorkEntryType.vacation:
-        return '🏖️ Urlaub';
+        return l10n.workEntryTypeVacation;
       case WorkEntryType.sick:
-        return '🤒 Krankheit';
+        return l10n.workEntryTypeSick;
       case WorkEntryType.holiday:
-        return '📅 Feiertag';
+        return l10n.workEntryTypeHoliday;
       case WorkEntryType.work:
-        return '💼 Arbeit';
+        return l10n.workEntryTypeWork;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return AlertDialog(
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Schnell-Eintrag'),
+          Text(l10n.quickEntryTitle),
           const SizedBox(height: 4),
           Text(
-            DateFormat.yMMMMd('de_DE').format(widget.date),
+            DateFormat.yMMMMd(Localizations.localeOf(context).toString()).format(widget.date),
             style: Theme.of(context).textTheme.bodyMedium,
           ),
         ],
@@ -68,7 +70,7 @@ class _QuickEntryDialogState extends State<QuickEntryDialog> {
         children: [
           DropdownButtonFormField<WorkEntryType>(
             value: _selectedType,
-            decoration: const InputDecoration(labelText: 'Typ'),
+            decoration: InputDecoration(labelText: l10n.typeLabel),
             items: [
               WorkEntryType.vacation,
               WorkEntryType.sick,
@@ -76,7 +78,7 @@ class _QuickEntryDialogState extends State<QuickEntryDialog> {
             ].map((type) {
               return DropdownMenuItem(
                 value: type,
-                child: Text(_getWorkEntryTypeLabel(type)),
+                child: Text(_getWorkEntryTypeLabel(l10n, type)),
               );
             }).toList(),
             onChanged: (value) {
@@ -93,7 +95,7 @@ class _QuickEntryDialogState extends State<QuickEntryDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Abbrechen'),
+          child: Text(l10n.cancel),
         ),
         FilledButton(
           onPressed: () {
@@ -112,7 +114,7 @@ class _QuickEntryDialogState extends State<QuickEntryDialog> {
              );
              Navigator.pop(context, entry);
           },
-          child: const Text('Speichern'),
+          child: Text(l10n.save),
         ),
       ],
     );

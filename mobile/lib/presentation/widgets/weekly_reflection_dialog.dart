@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../view_models/weekly_reflection_view_model.dart';
 
 /// Dialog für die Wochen-Reflexion (siehe #137): kurzer strukturierter
@@ -46,6 +47,7 @@ class _WeeklyReflectionDialogState extends ConsumerState<WeeklyReflectionDialog>
   Future<void> _save() async {
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
+    final l10n = AppLocalizations.of(context);
     try {
       await ref.read(weeklyReflectionViewModelProvider.notifier).saveReflection(
             whatWentWell: _whatWentWellController.text,
@@ -53,11 +55,11 @@ class _WeeklyReflectionDialogState extends ConsumerState<WeeklyReflectionDialog>
           );
       navigator.pop();
       messenger.showSnackBar(
-        const SnackBar(content: Text('Reflexion gespeichert.')),
+        SnackBar(content: Text(l10n.reflectionSaved)),
       );
     } catch (e) {
       messenger.showSnackBar(
-        SnackBar(content: Text('Speichern fehlgeschlagen: $e')),
+        SnackBar(content: Text(l10n.saveFailed('$e'))),
       );
     }
   }
@@ -65,6 +67,7 @@ class _WeeklyReflectionDialogState extends ConsumerState<WeeklyReflectionDialog>
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(weeklyReflectionViewModelProvider);
+    final l10n = AppLocalizations.of(context);
 
     if (!state.isLoading && !_controllersInitialized && state.reflection != null) {
       _whatWentWellController.text = state.reflection!.whatWentWell;
@@ -73,7 +76,7 @@ class _WeeklyReflectionDialogState extends ConsumerState<WeeklyReflectionDialog>
     }
 
     return AlertDialog(
-      title: Text('Wochen-Reflexion KW ${widget.week}'),
+      title: Text(l10n.weeklyReflectionDialogTitle(widget.week)),
       content: state.isLoading
           ? const SizedBox(
               height: 80,
@@ -87,18 +90,18 @@ class _WeeklyReflectionDialogState extends ConsumerState<WeeklyReflectionDialog>
                   TextField(
                     controller: _whatWentWellController,
                     maxLines: 3,
-                    decoration: const InputDecoration(
-                      labelText: 'Was lief gut?',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: l10n.whatWentWellLabel,
+                      border: const OutlineInputBorder(),
                     ),
                   ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: _whatWasHardController,
                     maxLines: 3,
-                    decoration: const InputDecoration(
-                      labelText: 'Was war anstrengend?',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: l10n.whatWasHardLabel,
+                      border: const OutlineInputBorder(),
                     ),
                   ),
                 ],
@@ -107,7 +110,7 @@ class _WeeklyReflectionDialogState extends ConsumerState<WeeklyReflectionDialog>
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Abbrechen'),
+          child: Text(l10n.cancel),
         ),
         FilledButton(
           onPressed: state.isLoading || state.isSaving ? null : _save,
@@ -117,7 +120,7 @@ class _WeeklyReflectionDialogState extends ConsumerState<WeeklyReflectionDialog>
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Speichern'),
+              : Text(l10n.save),
         ),
       ],
     );

@@ -48,6 +48,7 @@ class DashboardScreen extends ConsumerWidget {
     final isTimerRunning = workEntry.workStart != null && workEntry.workEnd == null;
     final isBreakRunning = workEntry.breaks.isNotEmpty && workEntry.breaks.last.end == null;
 
+    final l10n = AppLocalizations.of(context);
     final totalOvertime = dashboardState.totalOvertime ?? Duration.zero;
     final netDuration = dashboardState.actualWorkDuration ?? dashboardState.elapsedTime;
     
@@ -81,7 +82,7 @@ class DashboardScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Anwesenheit (Brutto): ${_formatDuration(grossDuration)}',
+                l10n.grossAttendance(_formatDuration(grossDuration)),
                 style: Theme.of(context).textTheme.titleMedium,
                 textAlign: TextAlign.center,
               ),
@@ -91,9 +92,9 @@ class DashboardScreen extends ConsumerWidget {
           final overtimeStats = Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildOvertime(context, totalOvertime, 'Überstunden Gesamt'),
+              _buildOvertime(context, totalOvertime, l10n.overtimeTotalLabel),
               const SizedBox(height: 16),
-              _buildOvertime(context, dashboardState.dailyOvertime, 'Heutige Überstunden'),
+              _buildOvertime(context, dashboardState.dailyOvertime, l10n.overtimeTodayLabel),
               // Voraussichtlichen Feierabend nur anzeigen, wenn Arbeit noch läuft
               if (workEntry.workEnd == null) ...[
                 _buildExpectedEndTime(context, dashboardState.expectedEndTime, use24HourFormat),
@@ -107,14 +108,14 @@ class DashboardScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _TimeInputField(
-                label: 'Startzeit',
+                label: l10n.startTimeLabel,
                 initialValue: workEntry.workStart,
                 use24HourFormat: use24HourFormat,
                 onTimeSelected: (time) => dashboardViewModel.setManualStartTime(time),
               ),
               const SizedBox(height: 16),
               _TimeInputField(
-                label: 'Endzeit',
+                label: l10n.endTimeLabel,
                 initialValue: workEntry.workEnd,
                 enabled: workEntry.workStart != null,
                 use24HourFormat: use24HourFormat,
@@ -135,8 +136,8 @@ class DashboardScreen extends ConsumerWidget {
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
                 child: Text(isTimerRunning
-                    ? 'Zeiterfassung beenden'
-                    : 'Zeiterfassung starten'),
+                    ? l10n.stopTimeTracking
+                    : l10n.startTimeTracking),
               ),
             ],
           );
@@ -150,8 +151,8 @@ class DashboardScreen extends ConsumerWidget {
               ElevatedButton(
                 onPressed: () => dashboardViewModel.startOrStopBreak(),
                 child: Text(isBreakRunning
-                        ? 'Pause beenden'
-                        : 'Pause hinzufügen'),
+                        ? l10n.stopBreak
+                        : l10n.addBreak),
               ),
             ],
           );
@@ -242,7 +243,7 @@ class DashboardScreen extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.only(top: 4.0),
       child: Text(
-        'Voraussichtlicher Feierabend (±0): $formattedTime$suffix',
+        AppLocalizations.of(context).expectedEndTime('$formattedTime$suffix'),
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
           color: Colors.grey[600],
           fontStyle: FontStyle.italic,
@@ -265,7 +266,7 @@ class DashboardScreen extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.only(top: 2.0),
       child: Text(
-        'Mit Gleitzeit-Bilanz auf 0: $formattedTimeWithBalance$suffix',
+        AppLocalizations.of(context).expectedEndTimeWithBalance('$formattedTimeWithBalance$suffix'),
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
           color: Colors.grey[500],
           fontStyle: FontStyle.italic,
@@ -279,14 +280,15 @@ class DashboardScreen extends ConsumerWidget {
   Widget _buildBreaksSection(BuildContext context, WidgetRef ref,
       List<BreakEntity> breaks, bool use24HourFormat) {
     final dashboardViewModel = ref.read(dashboardViewModelProvider.notifier);
+    final l10n = AppLocalizations.of(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Pausen', style: Theme.of(context).textTheme.headlineSmall),
+        Text(l10n.breaksTitle, style: Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height: 8),
         if (breaks.isEmpty)
-          const Center(child: Text('Noch keine Pausen vorhanden.')),
+          Center(child: Text(l10n.noBreaksYet)),
         ...breaks.map((b) => Card(
               margin: const EdgeInsets.symmetric(vertical: 4),
               child: ListTile(
@@ -303,9 +305,9 @@ class DashboardScreen extends ConsumerWidget {
                       Padding(
                         padding: const EdgeInsets.only(left: 8.0),
                         child: Tooltip(
-                          message: 'Automatisch berechnet basierend auf der Arbeitszeit',
+                          message: l10n.automaticBreakTooltip,
                           child: Chip(
-                            label: const Text('Automatisch'),
+                            label: Text(l10n.automaticChipLabel),
                             backgroundColor: Theme.of(context).colorScheme.secondary.withAlpha(77),
                             labelStyle: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.onSecondary),
                           ),
@@ -315,7 +317,7 @@ class DashboardScreen extends ConsumerWidget {
                 ),
                 subtitle: Text(
                     '${formatTime(b.start, use24HourFormat: use24HourFormat)} - '
-                    '${b.end != null ? formatTime(b.end!, use24HourFormat: use24HourFormat) : 'läuft...'}'),
+                    '${b.end != null ? formatTime(b.end!, use24HourFormat: use24HourFormat) : l10n.breakInProgress}'),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -341,33 +343,30 @@ class DashboardScreen extends ConsumerWidget {
   }
 
   void _showRestartDialog(BuildContext context, DashboardViewModel viewModel) {
+    final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Neue Session starten'),
-        content: const Text(
-          'Möchten Sie eine neue Session starten?\n\n'
-          '• Pausen behalten: Nur Start- und Endzeit werden zurückgesetzt\n'
-          '• Komplett neu: Start, End und Pausen werden zurückgesetzt',
-        ),
+        title: Text(l10n.restartSessionTitle),
+        content: Text(l10n.restartSessionBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Abbrechen'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () {
               Navigator.of(dialogContext).pop();
               viewModel.startNewSessionKeepBreaks();
             },
-            child: const Text('Pausen behalten'),
+            child: Text(l10n.keepBreaksAction),
           ),
           FilledButton(
             onPressed: () {
               Navigator.of(dialogContext).pop();
               viewModel.startNewSession();
             },
-            child: const Text('Komplett neu'),
+            child: Text(l10n.restartCompletelyAction),
           ),
         ],
       ),
@@ -460,7 +459,7 @@ class _TimeInputFieldState extends State<_TimeInputField> {
             ? IconButton(
                 icon: const Icon(Icons.clear),
                 onPressed: widget.onClear,
-                tooltip: '${widget.label} entfernen',
+                tooltip: AppLocalizations.of(context).removeFieldTooltip(widget.label),
               )
             : (widget.enabled ? const Icon(Icons.access_time) : null),
       ),
