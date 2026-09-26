@@ -11,6 +11,12 @@ Sidebar statt BottomNav), aber der visuelle Stil bleibt derselbe.
 
 Dein primäres Werkzeug ist die **Google Stitch API** (stitch.withgoogle.com).
 
+> **Stand:** Die Stitch API antwortet aktuell mit HTTP 405 und ist damit nicht nutzbar.
+> Solange das so ist: Stitch-Schritte überspringen und das UI **manuell** nach der
+> Flutter-Vorlage bauen (Flutter-Screen lesen, Farben/Abstände übernehmen, Angular
+> Material verwenden). Die Checklisten unten gelten unverändert. Im UI-Report vermerken,
+> dass manuell designt wurde.
+
 ## Voraussetzung
 - Research-Datei vorhanden: `web/thoughts/[FEATURE]-research.md`
 - Stitch API Key gesetzt: `$STITCH_API_KEY` (in `.claude/settings.local.json` als Env-Var)
@@ -169,7 +175,7 @@ DropdownButton    <mat-select>
 - [ ] Abstände (padding/margin) identisch zu Flutter `EdgeInsets`-Werten
 - [ ] Card-Radius und Elevation identisch
 - [ ] Icon-Set identisch (Material Icons)
-- [ ] Deutsche Strings wörtlich aus Flutter-Source übernommen
+- [ ] Texte inhaltlich aus der Flutter-ARB (`mobile/lib/l10n/app_de.arb` / `app_en.arb`) übernommen, im Web als ngx-translate-Keys (`web/public/i18n/de.json` + `en.json`)
 - [ ] Dark Mode: gleiche Farben wie Flutter-Dark-Theme
 
 ### Korrektheit
@@ -182,13 +188,13 @@ DropdownButton    <mat-select>
 - [ ] Desktop (>1024px): Flutter-Layout zentriert (max-width), kein anderes Design
 
 ### Accessibility
-- [ ] Alle Buttons haben `aria-label` (auf Deutsch)
+- [ ] Icon-Buttons haben ein (übersetztes) `aria-label`
 - [ ] Farbkontrast WCAG AA erfüllt
 - [ ] Fokus-Reihenfolge logisch (Tab-Reihenfolge)
 - [ ] Keine Informationen nur über Farbe vermittelt
 
 ### Angular-spezifisch
-- [ ] `OnPush` Change Detection gesetzt
+- [ ] `OnPush` Change Detection gesetzt, kein explizites `standalone: true`, kein `CommonModule`
 - [ ] Keine direkten DOM-Manipulationen
 - [ ] `@if` / `@for` statt `*ngIf` / `*ngFor` (Angular 17+ syntax)
 - [ ] Template-Variablen nur wo nötig

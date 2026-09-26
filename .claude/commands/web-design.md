@@ -9,12 +9,15 @@ Prüfe ob `web/thoughts/$ARGUMENTS-research.md` existiert. Falls nicht: `/web-an
 
 ## Aufgabe
 
+> Die Stitch API ist aktuell nicht verfügbar (HTTP 405). Schlägt Schritt 3 fehl,
+> das UI manuell nach der Flutter-Vorlage bauen (siehe Hinweis im Agenten) und weitermachen.
+
 1. Lese Research-Datei: `web/thoughts/$ARGUMENTS-research.md`
 
 2. Erstelle für jeden Screen des Features einen Stitch-API-Prompt:
    - Alle UI-States abdecken (loading / data / empty / error)
    - Responsive Anforderungen (Mobile / Tablet / Desktop)
-   - Deutsche Beschriftungen
+   - Texte als ngx-translate-Keys (de + en)
    - Angular Material Design System
 
 3. Rufe die Stitch API auf:

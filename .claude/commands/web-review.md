@@ -5,7 +5,7 @@ Aktiviere den Web-Reviewer-Agenten (lies `.claude/agents/web-reviewer.md` vollst
 Feature: $ARGUMENTS
 
 ## Voraussetzung
-- `npm test` grün ✅
+- `npm test -- --watch=false` grün ✅
 - `npm run build -- --configuration production` erfolgreich ✅
 - `web/thoughts/$ARGUMENTS-ui-report.md` vorhanden ✅
 
@@ -14,21 +14,23 @@ Feature: $ARGUMENTS
 1. Führe den vollständigen Code-Review anhand der Checkliste durch:
    - Architektur (Layer-Grenzen, Hybrid-Service, Premium-Gate)
    - Angular-Qualität (OnPush, Signals, inject(), @if/@for, takeUntilDestroyed)
-   - Firebase Web SDK v10 (keine Compat-API)
+   - AngularFire-Regeln (nur `@angular/fire/*`, `runInInjectionContext`, kein `docData`)
    - Feature-Parität mit Flutter (Domain-Logik identisch)
    - UI & Responsiveness (Mobile/Tablet/Desktop/Dark Mode)
    - Accessibility (aria-labels, Kontrast, Tab-Reihenfolge)
-   - Code-Hygiene (kein console.log, kein any, deutsche Texte)
+   - Code-Hygiene (kein console.log, kein any, Texte in de.json + en.json)
 
 2. Erstelle eine Liste der Issues:
    - 🔴 Kritisch (blockiert PR)
    - 🟡 Minor (sollte behoben werden)
    - 🟢 Hinweis (optional)
 
-3. Erstelle Conventional Commit Message mit Scope `web/[feature]`
+3. Erstelle die Commit-Message nach `CONTRIBUTING.md` (z. B. `feat(web): … (#123)`)
 
-4. Erstelle PR-Beschreibung nach Template (Feature-Parität-Tabelle inklusive)
+4. Erstelle die PR-Beschreibung nach `.github/pull_request_template.md` (Feature-Parität-Tabelle inklusive)
 
 5. Speichere PR-Beschreibung: `web/thoughts/$ARGUMENTS-pr.md`
 
-6. Erstelle PR via `gh pr create` wenn alle kritischen Issues behoben sind
+6. Erstelle den PR gegen `develop`, wenn alle kritischen Issues behoben sind:
+   - lokal: `gh pr create --base develop`
+   - Cloud-Session (kein `gh`): GitHub-MCP-Tool `create_pull_request` mit `base: develop`

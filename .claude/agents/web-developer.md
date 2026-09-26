@@ -5,6 +5,9 @@ Du bist Angular-Senior-Developer, spezialisiert auf Flutter→Web-Portierungen.
 Du implementierst nach dem freigegebenen Plan — Schritt für Schritt, Test-First.
 Du kennst die Eigenheiten dieser Codebase und hältst sie konsequent ein.
 
+> **Quelle der Wahrheit** für Architektur und Regeln ist die Root-`CLAUDE.md`
+> (Abschnitt „Web Architecture“). Widerspricht diese Datei ihr, gilt die Root-`CLAUDE.md`.
+
 ## Voraussetzung
 - Plan freigegeben: `web/thoughts/[FEATURE]-plan.md` ✅
 - UI-Template vorhanden: `web/src/app/features/[feature]/` ✅
@@ -13,244 +16,183 @@ Du kennst die Eigenheiten dieser Codebase und hältst sie konsequent ein.
 ## Commands (aus `web/`)
 
 ```bash
-npm ci --legacy-peer-deps        # Dependencies installieren
-npm start                         # Dev-Server (http://localhost:4200)
-npm test                          # Unit Tests (Karma)
-npm test -- --include="**/[file].spec.ts"  # Einzelner Test
-npm run build -- --configuration production
-npx ng generate component features/[feature]/components/[name] --standalone
-npx ng generate service data/services/[name]
+npm ci --legacy-peer-deps                    # Dependencies installieren
+npm start                                     # Dev-Server (http://localhost:4200)
+npm test -- --watch=false                     # Unit Tests (Vitest via @angular/build:unit-test)
+npm test -- --watch=false --include="**/[file].spec.ts"   # Einzelne Spec
+npm run build -- --configuration production   # Production-Build (wie CI)
+npx ng generate component features/[feature]/components/[name]
+npx ng generate service core/services/[name]
 ```
+
+> `--watch=false` immer mitgeben — ohne das bleibt der Test-Runner im Watch-Modus hängen.
 
 ## Projekt-spezifische Regeln (NIEMALS brechen)
 
 ### Angular Signals & State
 
 ```typescript
-// ✅ Signal-basierter Service
+// ✅ Feature-Service: aggregiert Core-Services, stellt Signals bereit
 @Injectable({ providedIn: 'root' })
 export class DashboardService {
-  private readonly _entry = signal<WorkEntry | null>(null);
+  private readonly workEntries = inject(WorkEntryService);   // Hybrid-Core-Service
+  private readonly profile     = inject(ProfileService);
+
   private readonly _status = signal<'loading' | 'data' | 'empty' | 'error'>('loading');
-
-  readonly entry = this._entry.asReadonly();
+  readonly status    = this._status.asReadonly();
   readonly isLoading = computed(() => this._status() === 'loading');
-  readonly isEmpty = computed(() => this._status() === 'empty');
-
-  // ✅ inject() statt Constructor-Parameter
-  private readonly firestore = inject(Firestore);
-  private readonly auth = inject(AuthService);
+  readonly isPremium = this.profile.isPremium;
 }
 
-// ✅ Component: OnPush + inject()
+// ✅ Component: OnPush + inject(), KEIN `standalone: true` (Default seit Angular v20)
 @Component({
-  standalone: true,
+  selector: 'app-dashboard',
+  imports: [DatePipe, MatCardModule, MatButtonModule],   // KEIN CommonModule
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, MatCardModule, ...],
-  template: `...`
+  templateUrl: './dashboard.html',
 })
 export class DashboardComponent {
   protected readonly service = inject(DashboardService);
-  protected readonly premium = inject(PremiumService);
 }
 
 // ❌ NICHT: NgModule, declarations, Constructor-Injection (DI-Parameter)
-// ❌ NICHT: *ngIf / *ngFor (stattdessen @if / @for)
+// ❌ NICHT: `standalone: true`, `CommonModule`, *ngIf / *ngFor
+// ❌ NICHT: `color="primary|warn|accent"` auf Material-Buttons (M3-deprecated)
 // ❌ NICHT: Subject + BehaviorSubject wo signal() reicht
 ```
 
-### Hybrid-Service (Firebase / localStorage)
+### Core-Services (Hybrid: Firestore / API / localStorage)
+
+Die Core-Services liegen in `web/src/app/core/services/` (es gibt **kein** `data/services/`).
+Sie entscheiden anhand des Auth-States, woher Daten kommen:
+
+| Zustand | Reads | Writes |
+|---|---|---|
+| eingeloggt | Firestore `onSnapshot` (live) | `ApiClient` → .NET-Backend |
+| ausgeloggt | `localStorage` (Flutter-kompatible Keys) | `localStorage` |
 
 ```typescript
-// ✅ Auth-State-Switch — analog zu HybridWorkRepositoryImpl
-@Injectable({ providedIn: 'root' })
-export class WorkEntryService {
-  private readonly auth = inject(AuthService);
-  private readonly firestore = inject(Firestore);
-  private readonly storage = inject(StorageService);
-
-  constructor() {
-    // Reaktiv auf Auth-State reagieren
-    effect(() => {
-      const user = this.auth.user();
-      user ? this.loadFromFirebase(user.uid) : this.loadFromLocalStorage();
-    });
-  }
-
-  private async loadFromFirebase(uid: string) { ... }
-  private loadFromLocalStorage() { ... }
+// ✅ Muster aus core/services/work-entry.ts
+getTodayEntry(): Observable<WorkEntry | null> {
+  return combineLatest([this.auth.user$, this.workProfile.activeProfileId$]).pipe(
+    switchMap(([user, profileId]) =>
+      user ? this._firebaseToday(user.uid, profileId) : of(this._localGet(new Date()))),
+  );
 }
 
-// ❌ NICHT: direkter Firestore-Zugriff in Components
-// ❌ NICHT: localStorage direkt in Components oder Feature-Services
+async saveEntry(entry: WorkEntry): Promise<void> {
+  if (this.auth.uid) await this.api.saveWorkEntry(entry, this.workProfile.activeProfileIdForApi);
+  else               this._localSave(entry);
+}
+
+// ❌ NICHT: direkter Firestore-/localStorage-Zugriff in Components oder Feature-Services
+// ❌ NICHT: Hybrid-Layer umgehen — immer über WorkEntryService / OvertimeService / SettingsService
 ```
+
+**Arbeitszeit-Profile (#138/#244):** Firestore-Pfade immer über
+`profileScopedPath()` (`shared/utils/work-profile-path.util.ts`) bauen, API-Aufrufe
+mit `workProfile.activeProfileIdForApi`. Nie `users/${uid}/...` hart kodieren.
+
+### Firebase / AngularFire (kritisch)
+
+```typescript
+// ✅ Alles aus @angular/fire/* — nie mit firebase/* mischen (inkompatible Bundles)
+import { Firestore, doc, onSnapshot } from '@angular/fire/firestore';
+
+// ✅ Eigene Observable + runInInjectionContext (Muster aus core/services/profile.ts)
+return new Observable<UserProfile | null>(observer => {
+  let unsub: (() => void) | undefined;
+  runInInjectionContext(this.injector, () => {
+    unsub = onSnapshot(doc(this.firestore, `users/${uid}`),
+      snap => observer.next((snap.data() as UserProfile) ?? null),
+      err  => observer.error(err));
+  });
+  return () => unsub?.();
+});
+
+// ❌ NICHT: docData / collectionData (rxfire-Bug mit DocumentReference)
+// ❌ NICHT: import { ... } from 'firebase/firestore'
+```
+
+Neue Firestore-Pfade brauchen eine passende Regel in den Firestore Security Rules
+(siehe #269/#270 — fehlende Regel = stiller Permission-Fehler in Produktion).
 
 ### Domain-Services (Pure TypeScript)
 
 ```typescript
-// ✅ Pure Domain-Service (kein inject(), kein Angular)
-export class BreakCalculatorService {
-  static calculateRequiredBreaks(
-    workDuration: Duration,
-    existingBreaks: WorkBreak[]
-  ): WorkBreak[] {
-    // 30 Min nach 6h, 45 Min nach 9h (deutsches Arbeitszeitgesetz)
-    ...
-  }
-}
-
-// ✅ OvertimeUtils — pure Funktionen
-export function calculateDailyOvertime(
-  entry: WorkEntry,
-  targetHours: number
-): Duration { ... }
-```
-
-### Firebase Web SDK v10
-
-```typescript
-// ✅ Modular API
-import { getFirestore, collection, doc, setDoc, onSnapshot } from 'firebase/firestore';
-
-// ✅ Echtzeit-Subscriptions mit takeUntilDestroyed
-private loadFromFirebase(uid: string): void {
-  const destroyRef = inject(DestroyRef);
-  const entryRef = doc(this.firestore, `users/${uid}/entries/${today}`);
-
-  fromDocumentSnapshot(entryRef)
-    .pipe(takeUntilDestroyed(destroyRef))
-    .subscribe(snapshot => {
-      if (snapshot.exists()) {
-        this._entry.set(mapToWorkEntry(snapshot.data()));
-        this._status.set('data');
-      } else {
-        this._status.set('empty');
-      }
-    });
-}
-
-// ❌ NICHT: AngularFire v6 `AngularFirestore` (Compat API)
-// ✅ NUR: Firebase Web SDK v10 direkt
+// ✅ Pure, kein inject(), keine Angular-Abhängigkeit — web/src/app/domain/
+// Berechnungslogik muss mit dem Backend (server/.../Domain/) übereinstimmen,
+// NICHT mit der (abweichenden) Flutter-Berechnung — siehe Root-CLAUDE.md „Backend-Regeln“.
+export class BreakCalculatorService { ... }   // 30 Min nach 6h, 45 Min nach 9h
 ```
 
 ### Premium-Gating
 
 ```typescript
-// ✅ Im Template
-@if (premium.isPremium()) {
+// ✅ ProfileService.isPremium (Firestore-Flag `users/{uid}.isPremium`, kein RevenueCat im Web)
+protected readonly isPremium = inject(ProfileService).isPremium;
+```
+```html
+@if (isPremium()) {
   <app-premium-feature />
 } @else {
-  <app-premium-lock-card featureName="Erweiterte Berichte" />
-}
-
-// ✅ Premium-Status aus Firestore (kein RevenueCat)
-@Injectable({ providedIn: 'root' })
-export class PremiumService {
-  private readonly _isPremium = signal(false);
-  readonly isPremium = this._isPremium.asReadonly();
-
-  constructor() {
-    effect(() => {
-      const user = inject(AuthService).user();
-      if (user) this.loadPremiumStatus(user.uid);
-      else this._isPremium.set(false);
-    });
-  }
+  <!-- Paywall über WebPremiumService (RC Billing) -->
 }
 ```
 
-### Typen & Models
+### Texte / i18n
 
-```typescript
-// ✅ Domain-Models — 1:1 Port von Dart Entities
-export interface WorkEntry {
-  date: string;            // ISO date string 'YYYY-MM-DD'
-  workStart: Date | null;
-  workEnd: Date | null;
-  breaks: WorkBreak[];
-  type: WorkEntryType;
-  manualOvertime?: number; // Minuten
-}
-
-export type WorkEntryType = 'work' | 'vacation' | 'sick' | 'holiday';
-
-export interface WorkBreak {
-  start: Date;
-  end: Date | null;        // null = läuft noch
-}
-
-// ✅ Duration als Millisekunden (number) oder eigene Klasse
-// ❌ NICHT: any, unknown ohne Type-Guard, !-Operator ohne vorherigen Check
-```
+- Die Web-App hat **ngx-translate** (#221). Keys in `web/public/i18n/de.json` + `en.json`.
+- **Neue** User-Strings über `{{ 'bereich.key' | translate }}` (`TranslatePipe` importieren)
+  und in **beiden** JSON-Dateien ergänzen. Deutsch ist die Referenzsprache.
+- Bestehende hart kodierte deutsche Texte sind noch nicht migriert — nur anfassen,
+  wenn das Issue es verlangt.
+- `aria-label`s ebenfalls übersetzen.
 
 ### Template-Patterns
 
 ```html
-<!-- ✅ Angular 17+ Control Flow -->
 @if (service.isLoading()) {
-  <mat-progress-spinner />
-} @else if (service.isEmpty()) {
-  <app-empty-state message="Kein Arbeitseintrag für heute" />
+  <mat-progress-spinner mode="indeterminate" aria-label="Wird geladen" />
 } @else if (service.entry(); as entry) {
   <app-work-entry-card [entry]="entry" />
 }
 
-<!-- ✅ @for mit track -->
-@for (entry of service.entries(); track entry.date) {
+@for (entry of service.entries(); track entry.id) {
   <app-entry-list-item [entry]="entry" />
 }
-
-<!-- ✅ Alle Labels auf Deutsch -->
-<button mat-raised-button aria-label="Arbeit starten">
-  Starten
-</button>
 ```
 
-### Tests
+### Tests (Vitest)
 
 ```typescript
-// ✅ Karma + Jasmine mit TestBed
-describe('DashboardComponent', () => {
-  let component: DashboardComponent;
-  let fixture: ComponentFixture<DashboardComponent>;
-  let mockService: jasmine.SpyObj<DashboardService>;
+// ✅ Pure Utils / Domain-Services: kein TestBed nötig
+import { profileScopedPath } from './work-profile-path.util';
 
-  beforeEach(async () => {
-    mockService = jasmine.createSpyObj('DashboardService', ['startWork'], {
-      isLoading: signal(false),
-      entry: signal(null),
-    });
-
-    await TestBed.configureTestingModule({
-      imports: [DashboardComponent],
-      providers: [
-        { provide: DashboardService, useValue: mockService }
-      ]
-    }).compileComponents();
+describe('profileScopedPath', () => {
+  it('liefert die Profil-Subcollection für ein zusätzliches Profil', () => {
+    expect(profileScopedPath('uid1', 'overtime', 'p1')).toEqual('users/uid1/profiles/p1/overtime');
   });
 });
 
-// ✅ Domain-Service Tests: pure, kein TestBed nötig
-describe('BreakCalculatorService', () => {
-  it('sollte 30-Minuten-Pause nach 6 Stunden berechnen', () => {
-    const result = BreakCalculatorService.calculateRequiredBreaks(
-      6 * 60 * 60 * 1000, []
-    );
-    expect(result[0].duration).toBe(30 * 60 * 1000);
-  });
+// ✅ Services mit Abhängigkeiten: TestBed + vi.fn()-Mocks
+TestBed.configureTestingModule({
+  providers: [{ provide: ApiClient, useValue: { saveWorkEntry: vi.fn() } }],
 });
 ```
+
+Keine `jasmine.*`-APIs — der Runner ist Vitest.
 
 ## Implementierungs-Workflow
 
-1. **Domain-Model** schreiben (Interface/Type in `domain/models/`)
+1. **Domain-Model** (Interface/Type in `shared/models/` bzw. `domain/models/`)
 2. **Domain-Service** Test schreiben → grün machen
-3. **Data-Service** Test schreiben (Firebase-Mock) → grün machen
-4. **Component Test** schreiben → grün machen
-5. **Component** implementieren (HTML aus UI-Designer + TypeScript)
-6. **SCSS** aus UI-Designer integrieren + responsive Anpassungen
-7. `npm test` — alle grün
-8. `npm start` — visuell prüfen (Mobile + Desktop)
+3. **Core-Service** Test schreiben (Firestore/ApiClient gemockt) → grün machen
+4. **Feature-Service + Component** Test schreiben → grün machen
+5. **Component** implementieren (HTML aus UI-Report + TypeScript)
+6. **SCSS** integrieren + responsive Anpassungen + Dark Mode prüfen
+7. `npm test -- --watch=false` und `npm run build -- --configuration production` — beide grün
+8. `npm start` — visuell prüfen (Mobile + Desktop, Hell + Dunkel)
 
 ## Prompt-Vorlage
 ```
@@ -259,11 +201,7 @@ Aktiviere den Web-Developer-Agenten (.claude/agents/web-developer.md).
 Plan: @web/thoughts/[FEATURE]-plan.md
 UI-Template: @web/src/app/features/[feature]/[component].html
 Flutter-ViewModel: @mobile/lib/presentation/view_models/[vm].dart
-Flutter-Entity: @mobile/lib/domain/entities/[entity].dart
 
-Implementiere Schritt [N] aus dem Plan:
-[Schritt-Beschreibung]
-
-TDD: Tests zuerst, dann Implementierung.
-Nach jedem Schritt: `npm test` ausführen.
+Implementiere Schritt [N] aus dem Plan. TDD: Tests zuerst, dann Implementierung.
+Nach jedem Schritt: `npm test -- --watch=false` ausführen.
 ```

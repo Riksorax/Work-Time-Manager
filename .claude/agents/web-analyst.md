@@ -13,18 +13,20 @@ Modus: **Plan Mode** (Shift+Tab × 2)
 
 | Flutter / Dart | Angular / TypeScript |
 |---|---|
-| `StatelessWidget` / `ConsumerWidget` | Standalone `Component` (signal-based) |
+| `StatelessWidget` / `ConsumerWidget` | `Component` (signal-based, OnPush, ohne explizites `standalone: true`) |
 | `Riverpod Provider` | Angular `Injectable Service` + `signal()` |
 | `Riverpod Notifier` | Service mit `signal()` + `computed()` |
 | `HybridRepositoryImpl` | Service mit `authState$`-Switch (Firebase/Local) |
 | `WorkEntryEntity` | TypeScript Interface / Class in `domain/models/` |
 | `BreakCalculatorService` | Pure TypeScript Service in `domain/services/` |
-| `isPremiumProvider` | `PremiumService.isPremium()` signal |
+| `isPremiumProvider` | `ProfileService.isPremium` Signal (Firestore-Flag) |
 | `StreamSubscription` | `takeUntilDestroyed()` RxJS Operator |
 | `BuildContext` | Angular `inject()` |
 | `Navigator.push` | Angular `Router.navigate()` |
-| `SharedPreferences` | `localStorage` + `StorageService` |
-| `firebase_firestore` | Firebase Web SDK v10 (`getFirestore`, `collection`) |
+| `SharedPreferences` | `localStorage` in den Hybrid-Core-Services (Flutter-kompatible Keys) |
+| `firebase_firestore` | Reads: `@angular/fire/firestore` (`onSnapshot` + `runInInjectionContext`); Writes: `ApiClient` → .NET-Backend |
+| `AppLocalizations` / ARB | ngx-translate, Keys in `web/public/i18n/de.json` + `en.json` |
+| `activeWorkProfileProvider` | `WorkProfileService` (`activeProfileId$`, `profileScopedPath()`) |
 | `BottomNavigationBar` | Angular Router + `<nav>` / Angular Material Tabs |
 
 ## Analyse-Checkliste
@@ -42,13 +44,15 @@ Modus: **Plan Mode** (Shift+Tab × 2)
 - [ ] Welche Business-Rules gibt es? (Pflichtpausen, Überstunden-Logik)
 
 ### Data-Layer
-- [ ] Welche Firestore Collections sind betroffen?
+- [ ] Welche Firestore Collections sind betroffen? Gibt es dafür schon eine Security Rule?
+- [ ] Gibt es den nötigen Backend-Endpunkt schon (Writes laufen im Web über `ApiClient`)? Falls nein: Backend-Arbeit einplanen (`/server-implement`)
+- [ ] Gilt das Feature pro Arbeitszeit-Profil (`profileId`)?
 - [ ] Gibt es einen Offline-Fallback? (localStorage analog zu SharedPreferences)
 - [ ] Muss ein Hybrid-Service implementiert werden (Auth-State-Switch)?
 - [ ] Welche Firebase-Operationen? (get/set/stream/delete)
 
 ### Presentation-Layer
-- [ ] Welche Angular Standalone Components werden benötigt?
+- [ ] Welche Angular Components werden benötigt?
 - [ ] Wie sieht die Component-Hierarchie aus?
 - [ ] Welche Signals / Computed / Effects braucht der Service?
 - [ ] Welche Angular Material Components passen? (mat-card, mat-button, etc.)
