@@ -4,6 +4,11 @@
 
 Schließt #
 
+<!-- GitHub erkennt nur englische Schlüsselwörter für das automatische Schließen beim Merge
+     ("Closes"/"Fixes"/"Resolves" + #<Nummer>) — "Schließt #<Nummer>" allein reicht nicht.
+     Nummer oben ausfüllen und hier identisch übernehmen, sonst bleibt das Issue offen. -->
+Closes #
+
 ## Plattformen
 
 - [ ] Mobile

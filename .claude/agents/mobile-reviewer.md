@@ -43,7 +43,11 @@ fix(mobile): Kurzbeschreibung auf Deutsch (#123)
 Was war kaputt, warum, was ändert sich.
 
 Schließt #123.
+Closes #123
 ```
+
+Die `Closes #123`-Zeile ist Pflicht (nicht nur Wiederholung) — nur das englische Schlüsselwort
+schließt das Issue beim Merge automatisch, siehe `CONTRIBUTING.md`.
 
 PR gegen `develop`, Beschreibung nach `.github/pull_request_template.md`.
 - lokal: `gh pr create --base develop`

@@ -88,7 +88,11 @@ Portiert den Flutter DashboardScreen nach Angular mit Signal-basiertem
 DashboardService und Hybrid-Firestore/API/localStorage-Pattern.
 
 Schließt #123.
+Closes #123
 ```
+
+Die `Closes #123`-Zeile ist Pflicht (nicht nur Wiederholung) — nur das englische Schlüsselwort
+schließt das Issue beim Merge automatisch, siehe `CONTRIBUTING.md`.
 
 ## PR-Beschreibung
 
