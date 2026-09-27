@@ -22,6 +22,9 @@ public class EndpointAuthTests : IClassFixture<WebApplicationFactory<Program>>
     [InlineData("/api/settings")]
     [InlineData("/api/profile")]
     [InlineData("/api/work-profiles")]
+    [InlineData("/api/reports/daily/2026/6/5")]
+    [InlineData("/api/reports/weekly/2026/6/5")]
+    [InlineData("/api/reports/monthly/2026/6")]
     public async Task Get_WithoutToken_ReturnsUnauthorized(string url)
     {
         var response = await _client.GetAsync(url);
@@ -40,6 +43,22 @@ public class EndpointAuthTests : IClassFixture<WebApplicationFactory<Program>>
     public async Task DeleteWorkEntry_WithoutToken_ReturnsUnauthorized()
     {
         var response = await _client.DeleteAsync("/api/work-entries/2026/6/5");
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PutOvertime_WithoutToken_ReturnsUnauthorized()
+    {
+        var overtime = new OvertimeDto { Minutes = 30 };
+        var response = await _client.PutAsJsonAsync("/api/overtime", overtime);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PutSettings_WithoutToken_ReturnsUnauthorized()
+    {
+        var settings = new SettingsDto();
+        var response = await _client.PutAsJsonAsync("/api/settings", settings);
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
