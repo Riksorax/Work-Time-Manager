@@ -5,7 +5,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Break } from '../../../../shared/models/index';
-import { TimeInputComponent } from '../../../../shared/components/time-input/time-input.component';
+import { TimeInputComponent } from '../../../../shared/components/time-input/time-input';
 
 export interface EditBreakDialogData {
   break: Break;
@@ -26,7 +26,7 @@ export interface EditBreakDialogResult {
     TimeInputComponent,
     TranslatePipe,
   ],
-  templateUrl: './edit-break-dialog.component.html',
+  templateUrl: './edit-break-dialog.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EditBreakDialogComponent {

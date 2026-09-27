@@ -9,12 +9,25 @@ You are an expert in TypeScript, Angular, and scalable web application developme
 > - Firebase nur über `@angular/fire/*`, nie `firebase/*` mischen. Details in `CLAUDE.md`.
 > - Neue User-Texte über ngx-translate, Keys in `public/i18n/de.json` und `en.json`.
 > - Tests laufen mit Vitest: `npm test -- --watch=false`.
+> - Dateinamen ohne Typ-Suffix (`dashboard.ts`, nicht `dashboard.component.ts`). Details unten.
 
 ## TypeScript Best Practices
 
 - Use strict type checking
 - Prefer type inference when the type is obvious
 - Avoid the `any` type; use `unknown` when type is uncertain
+
+## Dateinamen (#301)
+
+Dateinamen ohne Typ-Suffix, entsprechend dem aktuellen Angular-Styleguide (v20): `dashboard.ts`
+statt `dashboard.component.ts`, `work-entry.ts` statt `work-entry.service.ts`. Gilt für Components,
+Services (Core-, Feature- und Domain-Services) und deren `.html`/`.scss`/`.spec.ts`-Begleitdateien.
+
+**Ausnahme (Namenskollision):** Teilen sich eine Component und ein Service denselben Basisnamen
+im selben Ordner — etwa `features/dashboard/dashboard.ts` (Component) und der zugehörige
+Feature-Service —, behält der Service den Suffix `.service.ts` (`dashboard.service.ts`), damit
+beide Dateien nebeneinander existieren können. Diese Ausnahme betrifft aktuell nur die
+Feature-Services (`dashboard.service.ts`, `reports.service.ts`, `settings.service.ts`).
 
 ## Angular Best Practices
 

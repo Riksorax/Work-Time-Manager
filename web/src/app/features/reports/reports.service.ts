@@ -8,7 +8,7 @@ import { SettingsService } from '../../core/services/settings';
 import { WorkEntryService } from '../../core/services/work-entry';
 import { WorkProfileService } from '../../core/services/work-profile';
 import { ApiClient } from '../../core/services/api-client';
-import { ReportCalculatorService, isSameDayRc, toDateKey } from '../../domain/services/report-calculator.service';
+import { ReportCalculatorService, isSameDayRc, toDateKey } from '../../domain/services/report-calculator';
 import { DailyStat, MonthlyReport, WeeklyReport } from '../../domain/models/reports.models';
 import { WorkEntry, WorkEntryType, UserSettings } from '../../shared/models/index';
 

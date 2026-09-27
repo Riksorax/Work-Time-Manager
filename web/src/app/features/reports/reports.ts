@@ -13,15 +13,15 @@ import { EditEntryDialogComponent } from '../../shared/components/edit-entry-dia
 import {
   QuickEntryDialogComponent,
   QuickEntryDialogResult,
-} from './components/quick-entry-dialog/quick-entry-dialog.component';
+} from './components/quick-entry-dialog/quick-entry-dialog';
 import {
   BatchQuickEntryDialogComponent,
   BatchQuickEntryDialogResult,
-} from './components/batch-quick-entry-dialog/batch-quick-entry-dialog.component';
+} from './components/batch-quick-entry-dialog/batch-quick-entry-dialog';
 import { ReportsService } from './reports.service';
-import { WebPremiumService } from '../../core/services/web-premium.service';
+import { WebPremiumService } from '../../core/services/web-premium';
 import { WorkEntry, WorkEntryType } from '../../shared/models/index';
-import { toDateKey } from '../../domain/services/report-calculator.service';
+import { toDateKey } from '../../domain/services/report-calculator';
 
 @Component({
   selector: 'app-reports',

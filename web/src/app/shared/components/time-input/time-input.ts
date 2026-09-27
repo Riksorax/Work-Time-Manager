@@ -7,7 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 @Component({
   selector: 'app-time-input',
   imports: [MatFormFieldModule, MatInputModule, MatIconModule, MatButtonModule],
-  templateUrl: './time-input.component.html',
+  templateUrl: './time-input.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TimeInputComponent {

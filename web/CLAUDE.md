@@ -34,14 +34,14 @@ core/
 │   ├── profile.ts         ProfileService — isPremium Signal (Firestore-Flag)
 │   ├── theme.ts           ThemeService — isDarkMode Signal + localStorage-Persistenz
 │   ├── data-sync.ts       DataSyncService — localStorage→Firebase-Migration bei Login
-│   └── web-premium.service.ts  WebPremiumService — RC Billing Paywall + Kauf-Wiederherstellung
+│   └── web-premium.ts     WebPremiumService — RC Billing Paywall + Kauf-Wiederherstellung
 
 domain/
 ├── models/
 │   └── reports.models.ts  DailyStat, WeeklyReport, MonthlyReport
 ├── services/
-│   ├── break-calculator.service.ts   Pure — Pflichtpausen (30min/6h, 45min/9h)
-│   └── report-calculator.service.ts  Pure — ISO-8601-Wochennummer, DailyStat, Weekly/MonthlyReport
+│   ├── break-calculator.ts   Pure — Pflichtpausen (30min/6h, 45min/9h)
+│   └── report-calculator.ts  Pure — ISO-8601-Wochennummer, DailyStat, Weekly/MonthlyReport
 └── utils/
     └── overtime.utils.ts  Pure — getEffectiveDailyTarget, getWeekEntriesForDate, isSameDay
 

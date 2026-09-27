@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { ReportCalculatorService } from './report-calculator.service';
+import { ReportCalculatorService } from './report-calculator';
 import { WorkEntry, WorkEntryType, UserSettings } from '../../shared/models/index';
 
 const DEFAULT_SETTINGS: UserSettings = {
