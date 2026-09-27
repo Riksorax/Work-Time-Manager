@@ -254,5 +254,10 @@
     "save": "Speichern",
     "cancel": "Abbrechen",
     "weekdaysShort": ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
+  },
+  "notFound": {
+    "title": "Seite nicht gefunden",
+    "message": "Die aufgerufene Seite existiert nicht oder wurde verschoben.",
+    "backToDashboard": "Zurück zum Dashboard"
   }
 }
