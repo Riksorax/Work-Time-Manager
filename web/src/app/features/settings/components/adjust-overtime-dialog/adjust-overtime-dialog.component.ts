@@ -5,6 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
+import { TranslatePipe } from '@ngx-translate/core';
 
 export interface AdjustOvertimeDialogData   { currentOvertimeMs: number; }
 export type    AdjustOvertimeDialogResult   = { overtimeMs: number } | 'reset';
@@ -15,53 +16,54 @@ export type    AdjustOvertimeDialogResult   = { overtimeMs: number } | 'reset';
     ReactiveFormsModule,
     MatDialogModule, MatButtonModule,
     MatFormFieldModule, MatInputModule, MatIconModule,
+    TranslatePipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <h2 mat-dialog-title>Überstunden / Minusstunden</h2>
+    <h2 mat-dialog-title>{{ 'settings.adjustOvertimeDialogTitle' | translate }}</h2>
     <mat-dialog-content>
       <p class="hint-text">
-        Geben Sie einen neuen Wert ein oder setzen Sie die Bilanz auf 0 zurück.
+        {{ 'settings.adjustOvertimeHint' | translate }}
       </p>
 
       <!-- Vorzeichen-Auswahl -->
-      <div class="sign-row" role="group" aria-label="Vorzeichen">
+      <div class="sign-row" role="group" [attr.aria-label]="'settings.signGroupAria' | translate">
         <button mat-stroked-button
                 [class.active]="!isNegative()"
                 (click)="isNegative.set(false)"
-                aria-label="Überstunden (positiv)">
-          <mat-icon>add</mat-icon> Überstunden (+)
+                [attr.aria-label]="'settings.overtimePositiveAria' | translate">
+          <mat-icon>add</mat-icon> {{ 'settings.overtimePositiveButton' | translate }}
         </button>
         <button mat-stroked-button
                 [class.active]="isNegative()"
                 (click)="isNegative.set(true)"
-                aria-label="Minusstunden (negativ)">
-          <mat-icon>remove</mat-icon> Minusstunden (−)
+                [attr.aria-label]="'settings.overtimeNegativeAria' | translate">
+          <mat-icon>remove</mat-icon> {{ 'settings.overtimeNegativeButton' | translate }}
         </button>
       </div>
 
       <form [formGroup]="form" class="time-fields">
         <mat-form-field appearance="outline">
-          <mat-label>Stunden</mat-label>
+          <mat-label>{{ 'settings.hoursLabel' | translate }}</mat-label>
           <input matInput type="number" formControlName="hours"
-                 min="0" aria-label="Stunden" />
-          <mat-hint>Leer = 0</mat-hint>
+                 min="0" [attr.aria-label]="'settings.hoursLabel' | translate" />
+          <mat-hint>{{ 'settings.hoursHintEmpty' | translate }}</mat-hint>
         </mat-form-field>
         <mat-form-field appearance="outline">
-          <mat-label>Minuten (0–59)</mat-label>
+          <mat-label>{{ 'settings.minutesLabel' | translate }}</mat-label>
           <input matInput type="number" formControlName="minutes"
-                 min="0" max="59" aria-label="Minuten" />
+                 min="0" max="59" [attr.aria-label]="'settings.minutesAria' | translate" />
         </mat-form-field>
       </form>
     </mat-dialog-content>
     <mat-dialog-actions>
-      <button mat-button (click)="reset()" aria-label="Gleitzeit-Bilanz auf 0 zurücksetzen">
-        Auf 0 zurücksetzen
+      <button mat-button (click)="reset()" [attr.aria-label]="'settings.resetToZeroAria' | translate">
+        {{ 'settings.resetToZeroButton' | translate }}
       </button>
       <span class="spacer"></span>
-      <button mat-button mat-dialog-close>Abbrechen</button>
+      <button mat-button mat-dialog-close>{{ 'common.cancel' | translate }}</button>
       <button mat-flat-button [disabled]="form.invalid" (click)="submit()">
-        Speichern
+        {{ 'common.save' | translate }}
       </button>
     </mat-dialog-actions>
   `,

@@ -4,6 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkProfileService } from '../../../core/services/work-profile';
 import { WorkProfile } from '../../models';
 
@@ -11,20 +12,20 @@ import { WorkProfile } from '../../models';
  * Standard-Profil wird hier nicht aufgeführt - es kann nicht gelöscht werden. */
 @Component({
   selector: 'app-manage-work-profiles-dialog',
-  imports: [MatDialogModule, MatButtonModule, MatIconModule, MatListModule],
+  imports: [MatDialogModule, MatButtonModule, MatIconModule, MatListModule, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <h2 mat-dialog-title>Profile verwalten</h2>
+    <h2 mat-dialog-title>{{ 'shared.manageProfilesTitle' | translate }}</h2>
     <mat-dialog-content>
       @if (additionalProfiles().length === 0) {
-        <p>Keine zusätzlichen Profile vorhanden.</p>
+        <p>{{ 'shared.noAdditionalProfiles' | translate }}</p>
       } @else {
         <mat-nav-list>
           @for (profile of additionalProfiles(); track profile.id) {
             <mat-list-item>
               <span matListItemTitle>{{ profile.name }}</span>
               <button mat-icon-button matListItemMeta (click)="confirmDelete(profile)"
-                      aria-label="Profil löschen">
+                      [attr.aria-label]="'shared.deleteProfileAria' | translate">
                 <mat-icon>delete_outline</mat-icon>
               </button>
             </mat-list-item>
@@ -33,7 +34,7 @@ import { WorkProfile } from '../../models';
       }
     </mat-dialog-content>
     <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close>Fertig</button>
+      <button mat-button mat-dialog-close>{{ 'shared.doneButton' | translate }}</button>
     </mat-dialog-actions>
   `,
 })
@@ -41,6 +42,7 @@ export class ManageWorkProfilesDialogComponent {
   private readonly dialogRef  = inject(MatDialogRef<ManageWorkProfilesDialogComponent>);
   private readonly dialog     = inject(MatDialog);
   private readonly snackBar   = inject(MatSnackBar);
+  private readonly translate  = inject(TranslateService);
   protected readonly workProfile = inject(WorkProfileService);
 
   protected readonly additionalProfiles = () =>
@@ -52,10 +54,18 @@ export class ManageWorkProfilesDialogComponent {
       if (!confirmed) return;
       try {
         await this.workProfile.deleteProfile(profile.id);
-        this.snackBar.open(`Profil "${profile.name}" gelöscht.`, 'OK', { duration: 4000 });
+        this.snackBar.open(
+          this.translate.instant('shared.profileDeleted', { name: profile.name }),
+          'OK',
+          { duration: 4000 },
+        );
         if (this.workProfile.profiles().length === 1) this.dialogRef.close();
       } catch (e) {
-        this.snackBar.open(`Löschen fehlgeschlagen: ${e}`, 'OK', { duration: 5000 });
+        this.snackBar.open(
+          this.translate.instant('shared.profileDeleteFailed', { error: e }),
+          'OK',
+          { duration: 5000 },
+        );
       }
     });
   }
@@ -63,23 +73,20 @@ export class ManageWorkProfilesDialogComponent {
 
 @Component({
   selector: 'app-confirm-delete-profile-dialog',
-  imports: [MatDialogModule, MatButtonModule],
+  imports: [MatDialogModule, MatButtonModule, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <h2 mat-dialog-title>Profil löschen?</h2>
+    <h2 mat-dialog-title>{{ 'shared.confirmDeleteProfileTitle' | translate }}</h2>
     <mat-dialog-content>
-      <p>
-        Profil "{{ data.name }}" und alle zugehörigen Arbeitseinträge,
-        Überstunden und Einstellungen werden unwiderruflich gelöscht.
-      </p>
+      <p>{{ 'shared.confirmDeleteProfileText' | translate: { name: data.name } }}</p>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close>Abbrechen</button>
+      <button mat-button mat-dialog-close>{{ 'common.cancel' | translate }}</button>
       <button mat-flat-button
               [style.background-color]="'var(--mat-sys-error)'"
               [style.color]="'var(--mat-sys-on-error)'"
               (click)="confirm()">
-        Löschen
+        {{ 'shared.deleteButton' | translate }}
       </button>
     </mat-dialog-actions>
   `,
