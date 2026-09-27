@@ -20,7 +20,7 @@ Integrationsbranch ist `develop`; PRs gehen gegen `develop`, nur Release-Branche
 
 | Plattform | Aus | Checks (wie CI) |
 |---|---|---|
-| Mobile | `mobile/` | `flutter analyze --no-fatal-infos && dart run custom_lint && flutter test` |
+| Mobile | `mobile/` | `dart format --set-exit-if-changed lib test && flutter analyze --no-fatal-infos && dart run custom_lint && flutter test` |
 | Web | `web/` | `npm test -- --watch=false && npm run build -- --configuration production` |
 | Backend | `server/` | `dotnet build WorkTimeManager.slnx -c Release && dotnet test WorkTimeManager.slnx -c Release` |
 

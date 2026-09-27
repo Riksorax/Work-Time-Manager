@@ -25,6 +25,10 @@ dart run build_runner build --delete-conflicting-outputs   # .g.dart / .mocks.da
 flutter gen-l10n                               # nach ARB-Änderungen
 ```
 
+Formatierung läuft automatisch über den PostToolUse-Hook (`.claude/hooks/dart-format.sh`) und wird
+in der CI mit `dart format --set-exit-if-changed lib test` erzwungen (#299) — kein manuelles
+`dart format` nötig.
+
 In Cloud-Sessions installiert der SessionStart-Hook Flutter automatisch
 (`.claude/hooks/session-start.sh`).
 
@@ -44,8 +48,6 @@ In Cloud-Sessions installiert der SessionStart-Hook Flutter automatisch
   Datumsformate mit `Localizations.localeOf(context).toString()`, nie `'de_DE'` hart kodieren.
 - **Fehler** über `logger.e(...)` (geht an Crashlytics), kein `debugPrint` für Fehlerfälle.
 - **Zeiten** über `lib/core/utils/time_precision.dart` auf Minuten runden, wie im restlichen Code.
-- **Formatierung:** Nur die Zeilen formatieren, die du änderst. Kein `dart format` auf ganze
-  Dateien, die bisher unformatiert sind — das bläht den Diff auf.
 
 ## Test-Muster
 
