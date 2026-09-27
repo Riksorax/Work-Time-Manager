@@ -254,5 +254,10 @@
     "save": "Save",
     "cancel": "Cancel",
     "weekdaysShort": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+  },
+  "notFound": {
+    "title": "Page not found",
+    "message": "The page you requested does not exist or has been moved.",
+    "backToDashboard": "Back to dashboard"
   }
 }
