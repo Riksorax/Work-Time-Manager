@@ -1,5 +1,4 @@
-import 'package:flutter/material.dart' show ThemeMode;
-
+import '../entities/app_theme_mode.dart';
 import '../repositories/settings_repository.dart';
 
 /// Ein "Use Case", der die Geschäftslogik zum Abrufen des
@@ -17,7 +16,7 @@ class GetThemeMode {
   ///
   /// Diese Methode ist synchron, da das Lesen aus den bereits geladenen
   /// SharedPreferences eine synchrone Operation ist.
-  ThemeMode call() {
+  AppThemeMode call() {
     return _repository.getThemeMode();
   }
 }

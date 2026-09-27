@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/providers/providers.dart' as core_providers;
 import '../../core/utils/timezone_utils.dart';
+import '../../domain/entities/app_theme_mode.dart';
 import '../../domain/entities/bundesland.dart';
 import '../../domain/entities/settings_entity.dart';
 import '../../domain/repositories/settings_repository.dart';
@@ -14,9 +14,9 @@ import 'dashboard_view_model.dart' show dashboardViewModelProvider;
 // Temporary No-op repository - wird nur für Fallback-Fälle benötigt
 class NoOpSettingsRepository implements SettingsRepository {
   @override
-  ThemeMode getThemeMode() => ThemeMode.system;
+  AppThemeMode getThemeMode() => AppThemeMode.system;
   @override
-  Future<void> setThemeMode(ThemeMode mode) async {}
+  Future<void> setThemeMode(AppThemeMode mode) async {}
   @override
   double getTargetWeeklyHours() => 40.0;
   @override
@@ -399,6 +399,21 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
       // Wenn Benachrichtigungen deaktiviert sind, alle Benachrichtigungen abbrechen
       await notificationService.cancelAllNotifications();
     }
+  }
+
+  /// Speichert die AGB-Zustimmung. Wird beim Login-Flow aufgerufen, bevor
+  /// ein Nutzer eingeloggt ist - schreibt deshalb bewusst direkt über das
+  /// Repository, ohne den (ggf. noch nicht initialisierten) State zu ändern
+  /// (siehe #294 - `login_page.dart` griff bisher direkt auf das Repository
+  /// zu, statt über den ViewModel).
+  Future<void> updateAcceptedTermsOfService(bool accepted) async {
+    await ref.read(core_providers.settingsRepositoryProvider).setAcceptedTermsOfService(accepted);
+  }
+
+  /// Speichert die Zustimmung zur Datenschutzerklärung, siehe
+  /// [updateAcceptedTermsOfService].
+  Future<void> updateAcceptedPrivacyPolicy(bool accepted) async {
+    await ref.read(core_providers.settingsRepositoryProvider).setAcceptedPrivacyPolicy(accepted);
   }
 }
 

@@ -1,10 +1,10 @@
 import 'package:flutter_work_time/core/utils/logger.dart';
 
-import '../repositories/work_repository.dart';
-import '../repositories/overtime_repository.dart';
-import '../../data/repositories/local_work_repository_impl.dart';
-import '../../data/repositories/local_overtime_repository_impl.dart';
-import '../../data/repositories/firebase_overtime_repository_impl.dart';
+import '../../domain/repositories/work_repository.dart';
+import '../../domain/repositories/overtime_repository.dart';
+import '../repositories/local_work_repository_impl.dart';
+import '../repositories/local_overtime_repository_impl.dart';
+import '../repositories/firebase_overtime_repository_impl.dart';
 
 /// Service zum Synchronisieren lokaler Daten mit Firebase
 class DataSyncService {

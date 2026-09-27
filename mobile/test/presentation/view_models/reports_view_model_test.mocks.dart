@@ -5,10 +5,10 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i4;
 
-import 'package:flutter/material.dart' as _i6;
 import 'package:flutter_work_time/data/datasources/remote/api_client.dart'
     as _i9;
 import 'package:flutter_work_time/data/models/work_entry_model.dart' as _i10;
+import 'package:flutter_work_time/domain/entities/app_theme_mode.dart' as _i6;
 import 'package:flutter_work_time/domain/entities/bundesland.dart' as _i8;
 import 'package:flutter_work_time/domain/entities/work_entry_entity.dart'
     as _i2;
@@ -119,16 +119,16 @@ class MockSettingsRepository extends _i1.Mock
   }
 
   @override
-  _i6.ThemeMode getThemeMode() => (super.noSuchMethod(
+  _i6.AppThemeMode getThemeMode() => (super.noSuchMethod(
         Invocation.method(
           #getThemeMode,
           [],
         ),
-        returnValue: _i6.ThemeMode.system,
-      ) as _i6.ThemeMode);
+        returnValue: _i6.AppThemeMode.system,
+      ) as _i6.AppThemeMode);
 
   @override
-  _i4.Future<void> setThemeMode(_i6.ThemeMode? mode) => (super.noSuchMethod(
+  _i4.Future<void> setThemeMode(_i6.AppThemeMode? mode) => (super.noSuchMethod(
         Invocation.method(
           #setThemeMode,
           [mode],
