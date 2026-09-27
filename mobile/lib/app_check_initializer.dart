@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:flutter_work_time/core/utils/logger.dart';
 
 /// AppBootstrap stellt sicher, dass Firebase initialisiert ist
 /// und Firebase App Check aktiviert wird (Android-only).
@@ -51,10 +52,10 @@ class AppBootstrap {
             ? ReCaptchaV3Provider(webRecaptchaSiteKey)
             : null,
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
       // Häufige Ursache: Play Integrity schlägt fehl bei Side-Load/Emulator
       if (!kIsWeb && androidProvider == AndroidProvider.playIntegrity) {
-        debugPrint(
+        logger.w(
           '[AppCheck] Play Integrity Aktivierung fehlgeschlagen. Fallback auf AndroidProvider.debug. '
           'Für Release: über Play (interner Test) installieren.',
         );
@@ -67,7 +68,8 @@ class AppBootstrap {
           // Ignorieren; Fehler wird beim ersten Request sichtbar.
         }
       } else {
-        debugPrint('[AppCheck] Fehler bei der Aktivierung: $e');
+        logger.e('[AppCheck] Fehler bei der Aktivierung',
+            error: e, stackTrace: stackTrace);
       }
     }
 

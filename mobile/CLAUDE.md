@@ -45,7 +45,12 @@ The app follows **Clean Architecture** with three layers:
 
 ### Dependency Injection & State Management
 
-**Riverpod** is used throughout. Provider wiring lives in `lib/core/providers/providers.dart` and its generated counterpart `providers.g.dart`. Most providers use `@Riverpod` / `@riverpod` annotations — after changing them, run `build_runner build`. However, `DashboardViewModel` and `ReportsViewModel` are manually registered `Notifier`s in `providers.dart` (not code-generated) because they require complex setup.
+**Riverpod** is used throughout, with two registration styles depending on the layer:
+
+- **Infrastructure** (data sources, repositories, use cases) uses `@Riverpod` / `@riverpod` code generation, wired in `lib/core/providers/providers.dart` and its generated counterpart `providers.g.dart` — after changing them, run `build_runner build`.
+- **ViewModels** are manually registered `NotifierProvider`s, each declared next to its `Notifier` subclass in its own file under `lib/presentation/view_models/` (e.g. `dashboard_view_model.dart`), not in `providers.dart` and not code-generated. `EditWorkEntryViewModel` follows this rule too, via `NotifierProvider.family.autoDispose` (see #296).
+
+New ViewModels always follow the manual `NotifierProvider` pattern; new infrastructure providers use `@riverpod` codegen.
 
 `SharedPreferences` is provided via an override in `main.dart` and must not be accessed directly elsewhere.
 

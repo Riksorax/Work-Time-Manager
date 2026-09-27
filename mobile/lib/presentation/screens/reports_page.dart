@@ -964,8 +964,12 @@ Future<void> _exportWeeklyReportPdf({
   required Duration overtime,
 }) async {
   final messenger = ScaffoldMessenger.of(context);
+  final l10n = AppLocalizations.of(context);
+  final locale = Localizations.localeOf(context).toString();
   try {
     await _pdfReportService.exportWeeklyReport(
+      l10n: l10n,
+      locale: locale,
       startOfWeek: startOfWeek,
       endOfWeek: endOfWeek,
       weekNumber: weekNumber,
@@ -997,8 +1001,12 @@ Future<void> _exportMonthlyReportPdf({
   required Duration monthlyOvertime,
 }) async {
   final messenger = ScaffoldMessenger.of(context);
+  final l10n = AppLocalizations.of(context);
+  final locale = Localizations.localeOf(context).toString();
   try {
     await _pdfReportService.exportMonthlyReport(
+      l10n: l10n,
+      locale: locale,
       month: month,
       workDays: monthlyReport.workDays,
       totalWorkDuration: monthlyReport.dailyWork.values
@@ -1031,9 +1039,11 @@ Future<void> _exportYearlyReportPdf({
   required YearlyReportState yearlyReport,
 }) async {
   final messenger = ScaffoldMessenger.of(context);
+  final l10n = AppLocalizations.of(context);
   final locale = Localizations.localeOf(context).toString();
   try {
     await _pdfReportService.exportYearlyReport(
+      l10n: l10n,
       year: yearlyReport.year,
       totalWorkDays: yearlyReport.totalWorkDays,
       totalVacationDays: yearlyReport.totalVacationDays,

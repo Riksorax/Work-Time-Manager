@@ -11,6 +11,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { TranslatePipe } from '@ngx-translate/core';
 import { WorkEntryType } from '../../../../shared/models/index';
 
 export interface BatchQuickEntryDialogData {
@@ -34,13 +35,14 @@ export interface BatchQuickEntryDialogResult {
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
+    TranslatePipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <h2 mat-dialog-title>Stapeleintrag — {{ data.dates.length }} Tage</h2>
+    <h2 mat-dialog-title>{{ 'reports.batchDialogTitle' | translate: { count: data.dates.length } }}</h2>
 
     <mat-dialog-content>
-      <mat-chip-set aria-label="Ausgewählte Tage">
+      <mat-chip-set [attr.aria-label]="'reports.selectedDaysAria' | translate">
         @for (date of data.dates; track date.getTime()) {
           <mat-chip>{{ date | date:'d. MMM' }}</mat-chip>
         }
@@ -48,35 +50,35 @@ export interface BatchQuickEntryDialogResult {
 
       <form [formGroup]="form" class="form-fields">
         <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Typ</mat-label>
+          <mat-label>{{ 'reports.entryTypeFieldLabel' | translate }}</mat-label>
           <mat-select formControlName="type" required>
-            <mat-option [value]="WorkEntryType.Vacation">Urlaub</mat-option>
-            <mat-option [value]="WorkEntryType.Sick">Krank</mat-option>
-            <mat-option [value]="WorkEntryType.Holiday">Feiertag</mat-option>
-            <mat-option [value]="WorkEntryType.Work">Arbeit</mat-option>
+            <mat-option [value]="WorkEntryType.Vacation">{{ 'reports.entryTypeVacation' | translate }}</mat-option>
+            <mat-option [value]="WorkEntryType.Sick">{{ 'reports.entryTypeSick' | translate }}</mat-option>
+            <mat-option [value]="WorkEntryType.Holiday">{{ 'reports.entryTypeHoliday' | translate }}</mat-option>
+            <mat-option [value]="WorkEntryType.Work">{{ 'reports.entryTypeWork' | translate }}</mat-option>
           </mat-select>
         </mat-form-field>
 
         @if (form.value['type'] === WorkEntryType.Work) {
           <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Beginn</mat-label>
-            <input matInput type="time" formControlName="startTime" aria-label="Arbeitsbeginn" />
+            <mat-label>{{ 'reports.beginLabel' | translate }}</mat-label>
+            <input matInput type="time" formControlName="startTime" [attr.aria-label]="'reports.workStartAria' | translate" />
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Ende</mat-label>
-            <input matInput type="time" formControlName="endTime" aria-label="Arbeitsende" />
+            <mat-label>{{ 'reports.timeEnd' | translate }}</mat-label>
+            <input matInput type="time" formControlName="endTime" [attr.aria-label]="'reports.workEndAria' | translate" />
           </mat-form-field>
         }
       </form>
     </mat-dialog-content>
 
     <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close>Abbrechen</button>
+      <button mat-button mat-dialog-close>{{ 'common.cancel' | translate }}</button>
       <button mat-flat-button
               [disabled]="form.invalid"
               (click)="submit()">
-        Alle speichern
+        {{ 'reports.saveAllButton' | translate }}
       </button>
     </mat-dialog-actions>
   `,

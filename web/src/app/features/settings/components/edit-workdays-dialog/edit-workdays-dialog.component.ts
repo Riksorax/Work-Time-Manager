@@ -2,19 +2,19 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
-import { GERMAN_WEEKDAY_SHORT_LABELS } from '../../../../shared/utils/weekday-labels.util';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 export interface EditWorkdaysDialogData   { currentDays: number[]; }
 export interface EditWorkdaysDialogResult { days: number[]; }
 
 @Component({
   selector: 'app-edit-workdays-dialog',
-  imports: [MatDialogModule, MatButtonModule, MatChipsModule],
+  imports: [MatDialogModule, MatButtonModule, MatChipsModule, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <h2 mat-dialog-title>Arbeitstage</h2>
+    <h2 mat-dialog-title>{{ 'settings.workdaysLabel' | translate }}</h2>
     <mat-dialog-content>
-      <mat-chip-listbox multiple aria-label="Arbeitstage auswählen">
+      <mat-chip-listbox multiple [attr.aria-label]="'settings.selectWorkdaysAria' | translate">
         @for (label of weekdayLabels; track $index) {
           <mat-chip-option
             [selected]="isSelected($index + 1)"
@@ -25,13 +25,13 @@ export interface EditWorkdaysDialogResult { days: number[]; }
         }
       </mat-chip-listbox>
       @if (selectedDays().length === 0) {
-        <p class="error-text">Mindestens ein Arbeitstag muss ausgewählt sein.</p>
+        <p class="error-text">{{ 'settings.workdaysRequired' | translate }}</p>
       }
     </mat-dialog-content>
     <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close>Abbrechen</button>
+      <button mat-button mat-dialog-close>{{ 'common.cancel' | translate }}</button>
       <button mat-flat-button [disabled]="selectedDays().length === 0" (click)="submit()">
-        Speichern
+        {{ 'common.save' | translate }}
       </button>
     </mat-dialog-actions>
   `,
@@ -43,8 +43,9 @@ export interface EditWorkdaysDialogResult { days: number[]; }
 export class EditWorkdaysDialogComponent {
   protected readonly data      = inject<EditWorkdaysDialogData>(MAT_DIALOG_DATA);
   private  readonly dialogRef  = inject(MatDialogRef<EditWorkdaysDialogComponent>);
+  private  readonly translate  = inject(TranslateService);
 
-  protected readonly weekdayLabels = GERMAN_WEEKDAY_SHORT_LABELS;
+  protected readonly weekdayLabels: string[] = this.translate.instant('common.weekdaysShort');
   protected readonly selectedDays = signal<number[]>([...this.data.currentDays]);
 
   isSelected(day: number): boolean {

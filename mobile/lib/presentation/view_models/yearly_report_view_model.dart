@@ -65,12 +65,16 @@ class YearlyReportViewModel extends Notifier<YearlyReportState> {
 
   Future<void> _refineOvertimeFromApi(int year) async {
     final api = ref.read(core_providers.apiClientProvider);
+    // Aktives Arbeitszeit-Profil mitgeben (siehe #239) — sonst liefert das
+    // Backend die Monatsüberstunden des Standard-Profils (#291).
+    final profileId = ref.read(core_providers.activeWorkProfileIdProvider);
     final refined = List<MonthSummary?>.filled(12, null);
 
     await Future.wait(List.generate(12, (i) async {
       final month = i + 1;
       try {
-        final json = await api.getMonthlyReport(year, month);
+        final json =
+            await api.getMonthlyReport(year, month, profileId: profileId);
         final overtimeMs = (json['monthlyOvertimeMs'] as num?)?.toInt() ?? 0;
         refined[i] = state.months[i]
             .copyWith(overtime: Duration(milliseconds: overtimeMs));

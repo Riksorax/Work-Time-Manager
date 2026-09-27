@@ -36,8 +36,10 @@ In Cloud-Sessions installiert der SessionStart-Hook Flutter automatisch
 
 - **Generierte Dateien** (`*.g.dart`, `*.mocks.dart`, `lib/l10n/app_localizations*.dart`)
   nie von Hand ändern — neu generieren.
-- **Riverpod:** `@riverpod`-Provider → danach `build_runner`. `DashboardViewModel` und
-  `ReportsViewModel` sind manuell in `providers.dart` registriert.
+- **Riverpod:** Infrastruktur (Datenquellen, Repositories, Use Cases) nutzt `@riverpod`-Codegen
+  in `core/providers/providers.dart` → danach `build_runner`. ViewModels sind dagegen immer
+  manuelle `NotifierProvider`, jeweils in eigener Datei neben ihrem `Notifier` registriert
+  (nicht in `providers.dart`, kein Codegen) — Vorlage: `weekly_reflection_view_model.dart`.
 - **Hybrid-Repositories** nie umgehen. Interface-Änderungen in allen Varianten nachziehen:
   `Hybrid*`, Firebase/`WorkRepositoryImpl`, `Local*` und `ApiDataSource`.
 - **SharedPreferences** nur über den Override aus `main.dart`.

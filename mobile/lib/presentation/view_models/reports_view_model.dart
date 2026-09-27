@@ -61,11 +61,16 @@ class ReportsViewModel extends Notifier<ReportsState> {
   Future<void> _loadReportsFromApi(DateTime day) async {
     try {
       final api = ref.read(core_providers.apiClientProvider);
+      // Aktives Arbeitszeit-Profil mitgeben (siehe #239) — sonst liefert das
+      // Backend immer die Werte des Standard-Profils zurück und überschreibt
+      // damit die zuvor lokal für das aktive Profil berechneten Werte (#291).
+      final profileId = ref.read(core_providers.activeWorkProfileIdProvider);
       final monthRef = state.selectedMonth ?? DateTime(day.year, day.month);
       final results = await Future.wait([
-        api.getDailyReport(day.year, day.month, day.day),
-        api.getWeeklyReport(day.year, day.month, day.day),
-        api.getMonthlyReport(monthRef.year, monthRef.month),
+        api.getDailyReport(day.year, day.month, day.day, profileId: profileId),
+        api.getWeeklyReport(day.year, day.month, day.day, profileId: profileId),
+        api.getMonthlyReport(monthRef.year, monthRef.month,
+            profileId: profileId),
       ]);
       state = state.copyWith(
         dailyReportState: _dailyWithApiOvertime(day, results[0]),

@@ -3,18 +3,22 @@ import 'package:intl/intl.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
+import '../../l10n/app_localizations.dart';
+
 /// Exportiert Wochen- und Monatsberichte als PDF (siehe #135) und öffnet
 /// anschließend den nativen Share-Dialog (bzw. auf Web den Browser-Download).
 ///
 /// Bewusst als eigenständiger Service statt Logik im ViewModel, damit die
 /// ViewModels (`ReportsViewModel`) nicht weiter aufgebläht werden.
 ///
+/// Folgt der App-Sprache (siehe #297): Aufrufer übergeben `l10n` und `locale`
+/// aus dem umgebenden `BuildContext`, damit Überschriften, Beschriftungen und
+/// Datumsformate mit der UI übereinstimmen.
+///
 /// Bettet Open Sans als TTF-Font ein: die in `pdf` eingebauten Basis-14-Fonts
 /// (Helvetica etc.) unterstützen keine deutschen Umlaute/ß zuverlässig
 /// (siehe https://github.com/DavBfr/dart_pdf/wiki/Fonts-Management).
 class PdfReportService {
-  static final _dateFmt = DateFormat('dd.MM.yyyy', 'de_DE');
-
   pw.ThemeData? _theme;
 
   Future<pw.ThemeData> _loadTheme() async {
@@ -59,11 +63,20 @@ class PdfReportService {
     );
   }
 
-  pw.Widget _dailyTable(Map<DateTime, Duration> dailyWork) {
+  pw.Widget _dailyTable(
+    Map<DateTime, Duration> dailyWork, {
+    required AppLocalizations l10n,
+    required String locale,
+  }) {
+    final dateFmt = DateFormat('dd.MM.yyyy', locale);
     final sortedEntries = dailyWork.entries.toList()
       ..sort((a, b) => a.key.compareTo(b.key));
     return pw.TableHelper.fromTextArray(
-      headers: const ['Datum', 'Wochentag', 'Arbeitszeit'],
+      headers: [
+        l10n.pdfDateColumn,
+        l10n.pdfWeekdayColumn,
+        l10n.pdfWorkTimeColumn
+      ],
       cellAlignments: {
         0: pw.Alignment.centerLeft,
         1: pw.Alignment.centerLeft,
@@ -73,8 +86,8 @@ class PdfReportService {
       data: [
         for (final entry in sortedEntries)
           [
-            _dateFmt.format(entry.key),
-            DateFormat.EEEE('de_DE').format(entry.key),
+            dateFmt.format(entry.key),
+            DateFormat.EEEE(locale).format(entry.key),
             _fmtDuration(entry.value),
           ],
       ],
@@ -95,6 +108,8 @@ class PdfReportService {
   }
 
   Future<void> exportWeeklyReport({
+    required AppLocalizations l10n,
+    required String locale,
     required DateTime startOfWeek,
     required DateTime endOfWeek,
     required int weekNumber,
@@ -105,27 +120,28 @@ class PdfReportService {
     required Duration overtime,
     required Map<DateTime, Duration> dailyWork,
   }) async {
+    final dateFmt = DateFormat('dd.MM.yyyy', locale);
     final doc = pw.Document(theme: await _loadTheme());
     doc.addPage(
       pw.MultiPage(
         build: (context) => [
           _header(
-            'Wochenbericht',
-            'KW $weekNumber · ${_dateFmt.format(startOfWeek)} – ${_dateFmt.format(endOfWeek)}',
+            l10n.pdfWeeklyReportTitle,
+            '${l10n.weekNumberLabel(weekNumber)} · ${dateFmt.format(startOfWeek)} – ${dateFmt.format(endOfWeek)}',
           ),
           _summaryTable([
-            ('Arbeitstage', '$workDays'),
-            ('Gesamte Arbeitszeit', _fmtDuration(totalWorkDuration)),
-            ('Gesamte Pausen', _fmtDuration(totalBreakDuration)),
-            ('Ø Arbeitszeit pro Tag', _fmtDuration(averageWorkDuration)),
-            ('Überstunden', _fmtSignedDuration(overtime)),
+            (l10n.pdfWorkDaysLabel, '$workDays'),
+            (l10n.pdfTotalWorkTimeLabel, _fmtDuration(totalWorkDuration)),
+            (l10n.pdfTotalBreaksLabel, _fmtDuration(totalBreakDuration)),
+            (l10n.pdfAvgWorkPerDayLabel, _fmtDuration(averageWorkDuration)),
+            (l10n.pdfOvertimeLabel, _fmtSignedDuration(overtime)),
           ]),
           pw.SizedBox(height: 20),
-          pw.Text('Tagesdetails',
+          pw.Text(l10n.pdfDailyDetailsTitle,
               style:
                   pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
           pw.SizedBox(height: 8),
-          _dailyTable(dailyWork),
+          _dailyTable(dailyWork, l10n: l10n, locale: locale),
         ],
       ),
     );
@@ -136,21 +152,26 @@ class PdfReportService {
     );
   }
 
-  pw.Widget _weeklyTable(Map<int, Duration> weeklyWork) {
+  pw.Widget _weeklyTable(
+    Map<int, Duration> weeklyWork, {
+    required AppLocalizations l10n,
+  }) {
     final sortedEntries = weeklyWork.entries.toList()
       ..sort((a, b) => a.key.compareTo(b.key));
     return pw.TableHelper.fromTextArray(
-      headers: const ['Kalenderwoche', 'Arbeitszeit'],
+      headers: [l10n.pdfCalendarWeekColumn, l10n.pdfWorkTimeColumn],
       cellAlignments: {0: pw.Alignment.centerLeft, 1: pw.Alignment.centerRight},
       cellPadding: const pw.EdgeInsets.symmetric(vertical: 4, horizontal: 8),
       data: [
         for (final entry in sortedEntries)
-          ['KW ${entry.key}', _fmtDuration(entry.value)],
+          [l10n.weekNumberLabel(entry.key), _fmtDuration(entry.value)],
       ],
     );
   }
 
   Future<void> exportMonthlyReport({
+    required AppLocalizations l10n,
+    required String locale,
     required DateTime month,
     required int workDays,
     required Duration totalWorkDuration,
@@ -166,28 +187,29 @@ class PdfReportService {
     doc.addPage(
       pw.MultiPage(
         build: (context) => [
-          _header('Monatsbericht', DateFormat.yMMMM('de_DE').format(month)),
+          _header(l10n.pdfMonthlyReportTitle,
+              DateFormat.yMMMM(locale).format(month)),
           _summaryTable([
-            ('Arbeitstage', '$workDays'),
-            ('Gesamte Arbeitszeit', _fmtDuration(totalWorkDuration)),
-            ('Gesamte Pausen', _fmtDuration(totalBreakDuration)),
-            ('Ø Arbeitszeit pro Tag', _fmtDuration(averageWorkDuration)),
-            ('Ø Arbeitszeit pro Woche', _fmtDuration(avgWorkDurationPerWeek)),
-            ('Überstunden Monat', _fmtSignedDuration(monthlyOvertime)),
-            ('Gesamt-Überstunden', _fmtSignedDuration(totalOvertime)),
+            (l10n.pdfWorkDaysLabel, '$workDays'),
+            (l10n.pdfTotalWorkTimeLabel, _fmtDuration(totalWorkDuration)),
+            (l10n.pdfTotalBreaksLabel, _fmtDuration(totalBreakDuration)),
+            (l10n.pdfAvgWorkPerDayLabel, _fmtDuration(averageWorkDuration)),
+            (l10n.pdfAvgWorkPerWeekLabel, _fmtDuration(avgWorkDurationPerWeek)),
+            (l10n.pdfMonthlyOvertimeLabel, _fmtSignedDuration(monthlyOvertime)),
+            (l10n.pdfTotalOvertimeLabel, _fmtSignedDuration(totalOvertime)),
           ]),
           pw.SizedBox(height: 20),
-          pw.Text('Wochenübersicht',
+          pw.Text(l10n.pdfWeeklyOverviewTitle,
               style:
                   pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
           pw.SizedBox(height: 8),
-          _weeklyTable(weeklyWork),
+          _weeklyTable(weeklyWork, l10n: l10n),
           pw.SizedBox(height: 20),
-          pw.Text('Tagesdetails',
+          pw.Text(l10n.pdfDailyDetailsTitle,
               style:
                   pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
           pw.SizedBox(height: 8),
-          _dailyTable(dailyWork),
+          _dailyTable(dailyWork, l10n: l10n, locale: locale),
         ],
       ),
     );
@@ -199,10 +221,16 @@ class PdfReportService {
   }
 
   pw.Widget _monthlyTable(
-      List<(String name, Duration net, Duration overtime, int workDays)>
-          months) {
+    List<(String name, Duration net, Duration overtime, int workDays)> months, {
+    required AppLocalizations l10n,
+  }) {
     return pw.TableHelper.fromTextArray(
-      headers: const ['Monat', 'Arbeitstage', 'Arbeitszeit', 'Überstunden'],
+      headers: [
+        l10n.pdfMonthColumn,
+        l10n.pdfWorkDaysLabel,
+        l10n.pdfWorkTimeColumn,
+        l10n.pdfOvertimeLabel
+      ],
       cellAlignments: {
         0: pw.Alignment.centerLeft,
         1: pw.Alignment.centerRight,
@@ -219,6 +247,7 @@ class PdfReportService {
 
   /// Exportiert den Jahresbericht als PDF (siehe #256).
   Future<void> exportYearlyReport({
+    required AppLocalizations l10n,
     required int year,
     required int totalWorkDays,
     required int totalVacationDays,
@@ -233,21 +262,21 @@ class PdfReportService {
     doc.addPage(
       pw.MultiPage(
         build: (context) => [
-          _header('Jahresbericht', '$year'),
+          _header(l10n.pdfYearlyReportTitle, '$year'),
           _summaryTable([
-            ('Arbeitstage', '$totalWorkDays'),
-            ('Gesamte Arbeitszeit', _fmtDuration(totalNetWorkDuration)),
-            ('Urlaubstage', '$totalVacationDays'),
-            ('Krankheitstage', '$totalSickDays'),
-            ('Feiertage', '$totalHolidayDays'),
-            ('Gesamt-Überstunden', _fmtSignedDuration(totalOvertime)),
+            (l10n.pdfWorkDaysLabel, '$totalWorkDays'),
+            (l10n.pdfTotalWorkTimeLabel, _fmtDuration(totalNetWorkDuration)),
+            (l10n.pdfVacationDaysLabel, '$totalVacationDays'),
+            (l10n.pdfSickDaysLabel, '$totalSickDays'),
+            (l10n.pdfHolidaysLabel, '$totalHolidayDays'),
+            (l10n.pdfTotalOvertimeLabel, _fmtSignedDuration(totalOvertime)),
           ]),
           pw.SizedBox(height: 20),
-          pw.Text('Monatsübersicht',
+          pw.Text(l10n.pdfMonthlyOverviewTitle,
               style:
                   pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
           pw.SizedBox(height: 8),
-          _monthlyTable(months),
+          _monthlyTable(months, l10n: l10n),
         ],
       ),
     );

@@ -16,13 +16,6 @@ class ApiDataSource implements FirestoreDataSource {
 
   ApiDataSource(this._auth, this._api);
 
-  /// Das Backend kennt bislang nur das Standard-Profil (siehe #138) - für
-  /// zusätzliche Profile wird direkt gegen Firestore gearbeitet, statt die
-  /// .NET-API (die keine Profil-Dimension kennt) um einen Sonderfall zu
-  /// erweitern.
-  bool _isAdditionalProfile(String? profileId) =>
-      profileId != null && profileId != 'default';
-
   // ── Auth / Profil → an Firestore-DataSource delegiert ─────────────────────
 
   @override
@@ -41,108 +34,74 @@ class ApiDataSource implements FirestoreDataSource {
   Future<void> setUserProfile(String userId, Map<String, dynamic> data) =>
       _auth.setUserProfile(userId, data);
 
-  // ── Work Entries → API (Standard-Profil) / Firestore (zusätzliche Profile) ─
+  // ── Work Entries → immer über die Backend-API (alle Profile, siehe #239) ──
 
   @override
   Future<WorkEntryModel?> getWorkEntry(String userId, DateTime date,
-      {String? profileId}) {
-    if (_isAdditionalProfile(profileId)) {
-      return _auth.getWorkEntry(userId, date, profileId: profileId);
-    }
-    return _api.getWorkEntry(date.year, date.month, date.day);
-  }
+          {String? profileId}) =>
+      _api.getWorkEntry(date.year, date.month, date.day, profileId: profileId);
 
   @override
   Future<void> saveWorkEntry(String userId, WorkEntryModel model,
-      {String? profileId}) {
-    if (_isAdditionalProfile(profileId)) {
-      return _auth.saveWorkEntry(userId, model, profileId: profileId);
-    }
-    return _api.saveWorkEntry(model);
-  }
+          {String? profileId}) =>
+      _api.saveWorkEntry(model, profileId: profileId);
 
   @override
   Future<List<WorkEntryModel>> getWorkEntriesForMonth(
-      String userId, int year, int month,
-      {String? profileId}) {
-    if (_isAdditionalProfile(profileId)) {
-      return _auth.getWorkEntriesForMonth(userId, year, month,
-          profileId: profileId);
-    }
-    return _api.getWorkEntriesForMonth(year, month);
-  }
+          String userId, int year, int month,
+          {String? profileId}) =>
+      _api.getWorkEntriesForMonth(year, month, profileId: profileId);
 
   @override
   Future<void> deleteWorkEntry(String userId, String entryId,
       {String? profileId}) {
-    if (_isAdditionalProfile(profileId)) {
-      return _auth.deleteWorkEntry(userId, entryId, profileId: profileId);
-    }
     final parts = entryId.split('-');
     return _api.deleteWorkEntry(
-        int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2]));
+        int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2]),
+        profileId: profileId);
   }
 
-  // ── Overtime → API (Standard-Profil) / Firestore (zusätzliche Profile) ────
+  // ── Overtime → immer über die Backend-API (alle Profile, siehe #239) ─────
 
   @override
   Future<Duration> getOvertime(String userId, {String? profileId}) async {
-    if (_isAdditionalProfile(profileId)) {
-      return _auth.getOvertime(userId, profileId: profileId);
-    }
-    final result = await _api.getOvertime();
+    final result = await _api.getOvertime(profileId: profileId);
     return Duration(minutes: result.minutes);
   }
 
   @override
   Future<void> saveOvertime(String userId, Duration overtime,
-      {String? profileId}) {
-    if (_isAdditionalProfile(profileId)) {
-      return _auth.saveOvertime(userId, overtime, profileId: profileId);
-    }
-    // Kaufmännisch runden statt inMinutes (schneidet Richtung Null ab und
-    // ließe den Saldo im Minus anders driften als im Plus).
-    return _api.saveOvertime(toStoredMinutes(overtime));
-  }
+          {String? profileId}) =>
+      // Kaufmännisch runden statt inMinutes (schneidet Richtung Null ab und
+      // ließe den Saldo im Minus anders driften als im Plus).
+      _api.saveOvertime(toStoredMinutes(overtime), profileId: profileId);
 
   @override
   Future<DateTime?> getLastOvertimeUpdate(String userId,
       {String? profileId}) async {
-    if (_isAdditionalProfile(profileId)) {
-      return _auth.getLastOvertimeUpdate(userId, profileId: profileId);
-    }
-    final result = await _api.getOvertime();
+    final result = await _api.getOvertime(profileId: profileId);
     return result.lastUpdated;
   }
 
   @override
   Future<void> saveLastOvertimeUpdate(String userId, DateTime date,
       {String? profileId}) async {
-    if (_isAdditionalProfile(profileId)) {
-      return _auth.saveLastOvertimeUpdate(userId, date, profileId: profileId);
-    }
     // No-op: Das Backend setzt lastUpdated automatisch beim Speichern des Saldos.
   }
 
-  // ── Settings → API (Standard-Profil, Read-Modify-Write) / Firestore ───────
+  // ── Settings → immer über die Backend-API (Read-Modify-Write, alle Profile) ─
 
   @override
   Future<Map<String, dynamic>?> getSettings(String userId,
-      {String? profileId}) {
-    if (_isAdditionalProfile(profileId)) {
-      return _auth.getSettings(userId, profileId: profileId);
-    }
-    return _api.getSettings();
-  }
+          {String? profileId}) =>
+      _api.getSettings(profileId: profileId);
 
   @override
   Future<void> saveSettings(String userId, Map<String, dynamic> settings,
       {String? profileId}) async {
-    if (_isAdditionalProfile(profileId)) {
-      return _auth.saveSettings(userId, settings, profileId: profileId);
-    }
-    final current = await _api.getSettings() ?? <String, dynamic>{};
-    await _api.putSettings({...current, ...settings});
+    final current =
+        await _api.getSettings(profileId: profileId) ?? <String, dynamic>{};
+    await _api.putSettings({...current, ...settings}, profileId: profileId);
   }
 
   // ── Weekly Reflection → an Firestore-DataSource delegiert (kein Backend-

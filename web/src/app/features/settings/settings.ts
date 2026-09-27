@@ -9,9 +9,9 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { TranslatePipe } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SettingsPageService } from './settings.service';
-import { formatWorkdays } from '../../shared/utils/weekday-labels.util';
+import { formatWorkdays as formatWorkdaysUtil } from '../../shared/utils/weekday-labels.util';
 import {
   EditTargetHoursDialogComponent,
   EditTargetHoursDialogResult,
@@ -46,6 +46,7 @@ export class SettingsComponent {
   protected readonly svc      = inject(SettingsPageService);
   private  readonly dialog    = inject(MatDialog);
   private  readonly snackbar  = inject(MatSnackBar);
+  private  readonly translate = inject(TranslateService);
 
   // ── Template helpers ────────────────────────────────────────────────────────
 
@@ -62,7 +63,7 @@ export class SettingsComponent {
   }
 
   formatWorkdays(workdays: number[]): string {
-    return formatWorkdays(workdays);
+    return formatWorkdaysUtil(workdays, this.translate.instant('common.weekdaysShort'));
   }
 
   // ── Actions ─────────────────────────────────────────────────────────────────

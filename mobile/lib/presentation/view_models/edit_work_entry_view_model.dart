@@ -1,5 +1,5 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_work_time/core/utils/time_precision.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../domain/entities/break_entity.dart';
@@ -7,14 +7,18 @@ import '../../domain/entities/work_entry_entity.dart';
 import '../state/edit_work_entry_state.dart';
 import 'reports_view_model.dart';
 
-part 'edit_work_entry_view_model.g.dart';
+final editWorkEntryViewModelProvider = NotifierProvider.family
+    .autoDispose<EditWorkEntryViewModel, EditWorkEntryState, WorkEntryEntity>(
+        EditWorkEntryViewModel.new);
 
-@riverpod
-class EditWorkEntryViewModel extends _$EditWorkEntryViewModel {
+class EditWorkEntryViewModel extends Notifier<EditWorkEntryState> {
+  EditWorkEntryViewModel(this.entry);
+
+  final WorkEntryEntity entry;
   final Uuid _uuid = const Uuid();
 
   @override
-  EditWorkEntryState build(WorkEntryEntity entry) {
+  EditWorkEntryState build() {
     return EditWorkEntryState.fromWorkEntry(entry);
   }
 
