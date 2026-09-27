@@ -49,37 +49,46 @@ void main() {
     // wenn der Work-Repository-Check bereits fehlschlägt) - muss deshalb in
     // jedem Fall überschrieben werden, sonst würde der echte,
     // Firebase-abhängige Provider laufen.
-    test('wirft SyncNotAvailableException, wenn kein Nutzer eingeloggt ist', () async {
+    test('wirft SyncNotAvailableException, wenn kein Nutzer eingeloggt ist',
+        () async {
       final container = ProviderContainer(
         overrides: [
           firebaseAuthProvider.overrideWithValue(_FakeFirebaseAuth(null)),
-          workRepositoryProvider.overrideWithValue(MockWorkRepository()), // keine Hybrid-Instanz
-          overtimeRepositoryProvider.overrideWithValue(_FakeOvertimeRepository()),
+          workRepositoryProvider
+              .overrideWithValue(MockWorkRepository()), // keine Hybrid-Instanz
+          overtimeRepositoryProvider
+              .overrideWithValue(_FakeOvertimeRepository()),
         ],
       );
       addTearDown(container.dispose);
 
       final viewModel = container.read(dataSyncViewModelProvider);
-      expect(() => viewModel.syncAll(), throwsA(isA<SyncNotAvailableException>()));
+      expect(
+          () => viewModel.syncAll(), throwsA(isA<SyncNotAvailableException>()));
     });
 
-    test('wirft SyncNotAvailableException, wenn die Repositories nicht Hybrid sind', () async {
+    test(
+        'wirft SyncNotAvailableException, wenn die Repositories nicht Hybrid sind',
+        () async {
       final container = ProviderContainer(
         overrides: [
           firebaseAuthProvider.overrideWithValue(_FakeFirebaseAuth('uid1')),
           workRepositoryProvider.overrideWithValue(MockWorkRepository()),
-          overtimeRepositoryProvider.overrideWithValue(_FakeOvertimeRepository()),
+          overtimeRepositoryProvider
+              .overrideWithValue(_FakeOvertimeRepository()),
         ],
       );
       addTearDown(container.dispose);
 
       final viewModel = container.read(dataSyncViewModelProvider);
-      expect(() => viewModel.syncAll(), throwsA(isA<SyncNotAvailableException>()));
+      expect(
+          () => viewModel.syncAll(), throwsA(isA<SyncNotAvailableException>()));
     });
   });
 
   group('DataSyncViewModel — erfolgreicher Sync', () {
-    test('synchronisiert lokale Arbeitseinträge und übernimmt die Firestore-Überstunden',
+    test(
+        'synchronisiert lokale Arbeitseinträge und übernimmt die Firestore-Überstunden',
         () async {
       final prefs = await SharedPreferences.getInstance();
       final localWork = LocalWorkRepositoryImpl(prefs);
@@ -100,11 +109,14 @@ void main() {
 
       final mockFirestoreDataSource = MockFirestoreDataSource();
       // Firestore ist leer -> lokale Überstunden gewinnen (siehe DataSyncService).
-      when(mockFirestoreDataSource.getOvertime('uid1', profileId: anyNamed('profileId')))
+      when(mockFirestoreDataSource.getOvertime('uid1',
+              profileId: anyNamed('profileId')))
           .thenAnswer((_) async => Duration.zero);
-      when(mockFirestoreDataSource.getLastOvertimeUpdate('uid1', profileId: anyNamed('profileId')))
+      when(mockFirestoreDataSource.getLastOvertimeUpdate('uid1',
+              profileId: anyNamed('profileId')))
           .thenAnswer((_) async => null);
-      when(mockFirestoreDataSource.saveOvertime(any, any, profileId: anyNamed('profileId')))
+      when(mockFirestoreDataSource.saveOvertime(any, any,
+              profileId: anyNamed('profileId')))
           .thenAnswer((_) async {});
       when(mockFirestoreDataSource.saveLastOvertimeUpdate(any, any,
               profileId: anyNamed('profileId')))
@@ -113,13 +125,15 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           firebaseAuthProvider.overrideWithValue(_FakeFirebaseAuth('uid1')),
-          firestoreDataSourceProvider.overrideWithValue(mockFirestoreDataSource),
+          firestoreDataSourceProvider
+              .overrideWithValue(mockFirestoreDataSource),
           workRepositoryProvider.overrideWithValue(HybridWorkRepositoryImpl(
             firebaseRepository: mockFirebaseWork,
             localRepository: localWork,
             userId: 'uid1',
           )),
-          overtimeRepositoryProvider.overrideWithValue(HybridOvertimeRepositoryImpl(
+          overtimeRepositoryProvider
+              .overrideWithValue(HybridOvertimeRepositoryImpl(
             // Wird von DataSyncViewModel nicht gelesen (nur .localRepository) -
             // DataSyncViewModel baut sein eigenes frisches Firebase-Repository.
             firebaseRepository: _FakeOvertimeRepository(),
@@ -137,7 +151,8 @@ void main() {
       expect(result.errors, isEmpty);
       verify(mockFirebaseWork.saveWorkEntry(any)).called(1);
       verify(mockFirestoreDataSource.saveOvertime(
-              'uid1', const Duration(minutes: 30), profileId: anyNamed('profileId')))
+              'uid1', const Duration(minutes: 30),
+              profileId: anyNamed('profileId')))
           .called(1);
     });
   });

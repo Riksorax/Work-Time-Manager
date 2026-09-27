@@ -71,8 +71,10 @@ class AppInfoPage extends ConsumerWidget {
               title: Text(l10n.testVersionCheckTitle),
               subtitle: Text(l10n.testVersionCheckSubtitle),
               onTap: () async {
-                final versionService = ref.read(core_providers.versionServiceProvider);
-                await UpdateRequiredDialog.checkAndShow(context, versionService);
+                final versionService =
+                    ref.read(core_providers.versionServiceProvider);
+                await UpdateRequiredDialog.checkAndShow(
+                    context, versionService);
               },
             ),
           ],

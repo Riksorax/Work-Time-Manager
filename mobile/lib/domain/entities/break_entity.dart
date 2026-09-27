@@ -7,13 +7,12 @@ class BreakEntity extends Equatable {
   final DateTime? end;
   final bool isAutomatic;
 
-  const BreakEntity({
-    required this.id, 
-    required this.name, 
-    required this.start, 
-    this.end,
-    this.isAutomatic = false
-  });
+  const BreakEntity(
+      {required this.id,
+      required this.name,
+      required this.start,
+      this.end,
+      this.isAutomatic = false});
 
   /// Calculates the duration of the break.
   /// Returns [Duration.zero] if the break hasn't ended yet.

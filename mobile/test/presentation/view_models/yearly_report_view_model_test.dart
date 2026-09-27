@@ -33,8 +33,8 @@ void main() {
         workRepositoryProvider.overrideWithValue(mockWorkRepository),
         settingsRepositoryProvider.overrideWithValue(mockSettingsRepository),
         apiClientProvider.overrideWithValue(mockApiClient),
-        activeWorkProfileIdProvider
-            .overrideWith(() => _FixedActiveWorkProfileIdNotifier(activeProfileId)),
+        activeWorkProfileIdProvider.overrideWith(
+            () => _FixedActiveWorkProfileIdNotifier(activeProfileId)),
       ],
     );
   }
@@ -46,48 +46,65 @@ void main() {
 
     when(mockSettingsRepository.getWorkdays()).thenReturn([1, 2, 3, 4, 5]);
     when(mockSettingsRepository.getTargetWeeklyHours()).thenReturn(40.0);
-    when(mockWorkRepository.getWorkEntriesForMonth(any, any)).thenAnswer((_) async => []);
+    when(mockWorkRepository.getWorkEntriesForMonth(any, any))
+        .thenAnswer((_) async => []);
   });
 
   tearDown(() {
     container.dispose();
   });
 
-  group('YearlyReportViewModel — Monatsüberstunden geben das aktive Profil weiter (siehe #291)', () {
-    test('Standard-Profil: getMonthlyReport wird ohne profileId angefragt', () async {
+  group(
+      'YearlyReportViewModel — Monatsüberstunden geben das aktive Profil weiter (siehe #291)',
+      () {
+    test('Standard-Profil: getMonthlyReport wird ohne profileId angefragt',
+        () async {
       buildContainer(null);
       when(mockApiClient.getMonthlyReport(any, any, profileId: null))
           .thenAnswer((_) async => {'monthlyOvertimeMs': 0});
 
-      await container.read(yearlyReportViewModelProvider.notifier).loadYear(2026);
+      await container
+          .read(yearlyReportViewModelProvider.notifier)
+          .loadYear(2026);
       // _refineOvertimeFromApi läuft unawaited im Hintergrund weiter.
       await Future.delayed(Duration.zero);
 
-      verify(mockApiClient.getMonthlyReport(2026, 1, profileId: null)).called(1);
-      verify(mockApiClient.getMonthlyReport(2026, 12, profileId: null)).called(1);
+      verify(mockApiClient.getMonthlyReport(2026, 1, profileId: null))
+          .called(1);
+      verify(mockApiClient.getMonthlyReport(2026, 12, profileId: null))
+          .called(1);
     });
 
-    test('zusätzliches Profil: getMonthlyReport wird mit dessen profileId angefragt', () async {
+    test(
+        'zusätzliches Profil: getMonthlyReport wird mit dessen profileId angefragt',
+        () async {
       buildContainer('p1');
       when(mockApiClient.getMonthlyReport(any, any, profileId: 'p1'))
           .thenAnswer((_) async => {'monthlyOvertimeMs': 0});
 
-      await container.read(yearlyReportViewModelProvider.notifier).loadYear(2026);
+      await container
+          .read(yearlyReportViewModelProvider.notifier)
+          .loadYear(2026);
       await Future.delayed(Duration.zero);
 
-      verify(mockApiClient.getMonthlyReport(2026, 1, profileId: 'p1')).called(1);
-      verify(mockApiClient.getMonthlyReport(2026, 12, profileId: 'p1')).called(1);
+      verify(mockApiClient.getMonthlyReport(2026, 1, profileId: 'p1'))
+          .called(1);
+      verify(mockApiClient.getMonthlyReport(2026, 12, profileId: 'p1'))
+          .called(1);
       verifyNever(mockApiClient.getMonthlyReport(any, any, profileId: null));
     });
 
-    test('übernimmt die verfeinerten Überstunden aus der API-Antwort', () async {
+    test('übernimmt die verfeinerten Überstunden aus der API-Antwort',
+        () async {
       buildContainer('p1');
       when(mockApiClient.getMonthlyReport(any, any, profileId: 'p1'))
           .thenAnswer((_) async => {'monthlyOvertimeMs': 0});
       when(mockApiClient.getMonthlyReport(2026, 3, profileId: 'p1'))
           .thenAnswer((_) async => {'monthlyOvertimeMs': 120000});
 
-      await container.read(yearlyReportViewModelProvider.notifier).loadYear(2026);
+      await container
+          .read(yearlyReportViewModelProvider.notifier)
+          .loadYear(2026);
       await Future.delayed(Duration.zero);
 
       final state = container.read(yearlyReportViewModelProvider);

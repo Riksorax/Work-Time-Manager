@@ -64,7 +64,8 @@ GoogleSignIn googleSignIn(Ref ref) {
 
 @Riverpod(keepAlive: true)
 SharedPreferences sharedPreferences(Ref ref) {
-  throw UnimplementedError('SharedPreferencesProvider muss in main.dart überschrieben werden!');
+  throw UnimplementedError(
+      'SharedPreferencesProvider muss in main.dart überschrieben werden!');
 }
 
 @riverpod
@@ -91,8 +92,8 @@ ApiClient apiClient(Ref ref) =>
 /// delegiert an die Firestore-DataSource. Ersetzt die Firestore-DataSource im
 /// "remote"-Slot der Hybrid-Repositories.
 @riverpod
-ApiDataSource apiDataSource(Ref ref) =>
-    ApiDataSource(ref.watch(firestoreDataSourceProvider), ref.watch(apiClientProvider));
+ApiDataSource apiDataSource(Ref ref) => ApiDataSource(
+    ref.watch(firestoreDataSourceProvider), ref.watch(apiClientProvider));
 
 //==============================================================================
 // SERVICES
@@ -139,7 +140,8 @@ WorkRepository workRepository(Ref ref) {
   final profileId = ref.watch(activeWorkProfileIdProvider);
   final prefs = ref.watch(sharedPreferencesProvider);
 
-  logger.i('[workRepositoryProvider] Auth State geändert - userId: $userId, Profil: $profileId');
+  logger.i(
+      '[workRepositoryProvider] Auth State geändert - userId: $userId, Profil: $profileId');
 
   final localRepository = LocalWorkRepositoryImpl(prefs);
 
@@ -165,7 +167,8 @@ OvertimeRepository overtimeRepository(Ref ref) {
   final profileId = ref.watch(activeWorkProfileIdProvider);
   final prefs = ref.watch(sharedPreferencesProvider);
 
-  logger.i('[overtimeRepositoryProvider] Auth State geändert - userId: $userId, Profil: $profileId');
+  logger.i(
+      '[overtimeRepositoryProvider] Auth State geändert - userId: $userId, Profil: $profileId');
 
   final localRepository = LocalOvertimeRepositoryImpl(prefs);
 
@@ -247,7 +250,9 @@ class ActiveWorkProfileIdNotifier extends Notifier<String?> {
 
     final prefs = ref.watch(sharedPreferencesProvider);
     final stored = prefs.getString('$_prefsKeyPrefix$userId');
-    return (stored == null || stored == WorkProfileEntity.defaultProfileId) ? null : stored;
+    return (stored == null || stored == WorkProfileEntity.defaultProfileId)
+        ? null
+        : stored;
   }
 
   Future<void> setActiveProfile(String? profileId) async {

@@ -47,7 +47,8 @@ void main() {
       expect(result, OvertimeWarningType.undertime);
     });
 
-    test('gibt none zurück, solange der Minus-Schwellwert nicht erreicht ist', () {
+    test('gibt none zurück, solange der Minus-Schwellwert nicht erreicht ist',
+        () {
       final result = checkOvertimeWarning(
         totalOvertime: const Duration(hours: -9, minutes: -59),
         warnOnOvertime: false,
@@ -58,7 +59,9 @@ void main() {
       expect(result, OvertimeWarningType.none);
     });
 
-    test('overtime hat Vorrang, falls beide Schwellwerte (unrealistisch) gleichzeitig zuträfen', () {
+    test(
+        'overtime hat Vorrang, falls beide Schwellwerte (unrealistisch) gleichzeitig zuträfen',
+        () {
       final result = checkOvertimeWarning(
         totalOvertime: const Duration(hours: 20),
         warnOnOvertime: true,
@@ -69,7 +72,9 @@ void main() {
       expect(result, OvertimeWarningType.overtime);
     });
 
-    test('respektiert deaktivierte Überstunden-Warnung trotz überschrittenem Wert', () {
+    test(
+        'respektiert deaktivierte Überstunden-Warnung trotz überschrittenem Wert',
+        () {
       final result = checkOvertimeWarning(
         totalOvertime: const Duration(hours: 50),
         warnOnOvertime: false,

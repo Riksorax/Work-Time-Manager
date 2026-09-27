@@ -14,6 +14,10 @@ flutter test
 # Run a single test file
 flutter test test/path/to/test_file.dart
 
+# Format-Check (wie CI) - Formatierung selbst läuft automatisch über den
+# PostToolUse-Hook (.claude/hooks/dart-format.sh)
+dart format --output=none --set-exit-if-changed lib test
+
 # Analyze / lint (wie CI; custom_lint zusätzlich lokal)
 flutter analyze --no-fatal-infos
 dart run custom_lint

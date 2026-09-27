@@ -21,7 +21,8 @@ Future<void> applyTimezone(String? override) async {
       tz.setLocalLocation(tz.getLocation(override));
       return;
     } catch (e) {
-      logger.w('[Timezone] Unbekannte manuelle Zeitzone "$override", falle zurück: $e');
+      logger.w(
+          '[Timezone] Unbekannte manuelle Zeitzone "$override", falle zurück: $e');
     }
   }
 
@@ -29,7 +30,8 @@ Future<void> applyTimezone(String? override) async {
     final systemTimezone = await FlutterTimezone.getLocalTimezone();
     tz.setLocalLocation(tz.getLocation(systemTimezone.toString()));
   } catch (e) {
-    logger.w('[Timezone] Systemzeitzone nicht ermittelbar, falle auf Europe/Berlin/UTC zurück: $e');
+    logger.w(
+        '[Timezone] Systemzeitzone nicht ermittelbar, falle auf Europe/Berlin/UTC zurück: $e');
     try {
       tz.setLocalLocation(tz.getLocation('Europe/Berlin'));
     } catch (_) {

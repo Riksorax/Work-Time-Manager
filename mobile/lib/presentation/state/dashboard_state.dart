@@ -8,12 +8,16 @@ class DashboardState extends Equatable {
   final Duration? actualWorkDuration;
   final bool isLoading;
   final Duration? totalOvertime;
-  final Duration? initialOvertime; // Überstundenstand zu Beginn des Tages/Session
+  final Duration?
+      initialOvertime; // Überstundenstand zu Beginn des Tages/Session
   final Duration? dailyOvertime;
   final Duration? grossWorkDuration; // Brutto-Arbeitszeit (inkl. Pausen)
-  final DateTime? expectedEndTime; // Voraussichtliche Feierabendzeit für ±0 (Tagesziel)
-  final DateTime? expectedEndTotalZero; // Voraussichtlicher Feierabend für ±0 (Gesamtbilanz)
-  final bool isExtraDay; // Zusatztag (mehr Arbeitstage als konfiguriert in dieser Woche)
+  final DateTime?
+      expectedEndTime; // Voraussichtliche Feierabendzeit für ±0 (Tagesziel)
+  final DateTime?
+      expectedEndTotalZero; // Voraussichtlicher Feierabend für ±0 (Gesamtbilanz)
+  final bool
+      isExtraDay; // Zusatztag (mehr Arbeitstage als konfiguriert in dieser Woche)
 
   const DashboardState({
     required this.workEntry,

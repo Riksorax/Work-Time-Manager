@@ -23,7 +23,8 @@ class WorkProfileSwitcher extends ConsumerWidget {
     if (user == null) return const SizedBox.shrink();
 
     final profilesAsync = ref.watch(workProfilesProvider);
-    final activeProfileId = ref.watch(activeWorkProfileIdProvider) ?? WorkProfileEntity.defaultProfileId;
+    final activeProfileId = ref.watch(activeWorkProfileIdProvider) ??
+        WorkProfileEntity.defaultProfileId;
 
     return profilesAsync.when(
       loading: () => const SizedBox.shrink(),
@@ -44,9 +45,13 @@ class WorkProfileSwitcher extends ConsumerWidget {
           onSelected: (value) {
             if (value == '__add__') {
               _handleAddProfile(context, ref,
-                  isPremium: isPremium, canAdd: canAddProfile, maxProfiles: maxProfiles);
+                  isPremium: isPremium,
+                  canAdd: canAddProfile,
+                  maxProfiles: maxProfiles);
             } else if (value == '__manage__') {
-              showDialog(context: context, builder: (_) => const ManageWorkProfilesDialog());
+              showDialog(
+                  context: context,
+                  builder: (_) => const ManageWorkProfilesDialog());
             } else {
               ref.read(activeWorkProfileIdProvider.notifier).setActiveProfile(
                   value == WorkProfileEntity.defaultProfileId ? null : value);
@@ -64,9 +69,12 @@ class WorkProfileSwitcher extends ConsumerWidget {
               value: '__add__',
               child: Row(
                 children: [
-                  Icon(canAddProfile ? Icons.add : Icons.lock_outline, size: 20),
+                  Icon(canAddProfile ? Icons.add : Icons.lock_outline,
+                      size: 20),
                   const SizedBox(width: 8),
-                  Flexible(child: Text(l10n.newProfileAction, overflow: TextOverflow.ellipsis)),
+                  Flexible(
+                      child: Text(l10n.newProfileAction,
+                          overflow: TextOverflow.ellipsis)),
                 ],
               ),
             ),
@@ -77,7 +85,9 @@ class WorkProfileSwitcher extends ConsumerWidget {
                   children: [
                     const Icon(Icons.delete_outline, size: 20),
                     const SizedBox(width: 8),
-                    Flexible(child: Text(l10n.manageProfilesAction, overflow: TextOverflow.ellipsis)),
+                    Flexible(
+                        child: Text(l10n.manageProfilesAction,
+                            overflow: TextOverflow.ellipsis)),
                   ],
                 ),
               ),

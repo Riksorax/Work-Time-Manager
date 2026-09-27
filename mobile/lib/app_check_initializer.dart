@@ -48,8 +48,8 @@ class AppBootstrap {
       await FirebaseAppCheck.instance.activate(
         androidProvider: androidProvider,
         appleProvider: AppleProvider.appAttest,
-        webProvider: kIsWeb && webRecaptchaSiteKey != null 
-            ? ReCaptchaV3Provider(webRecaptchaSiteKey) 
+        webProvider: kIsWeb && webRecaptchaSiteKey != null
+            ? ReCaptchaV3Provider(webRecaptchaSiteKey)
             : null,
       );
     } catch (e, stackTrace) {
@@ -68,7 +68,8 @@ class AppBootstrap {
           // Ignorieren; Fehler wird beim ersten Request sichtbar.
         }
       } else {
-        logger.e('[AppCheck] Fehler bei der Aktivierung', error: e, stackTrace: stackTrace);
+        logger.e('[AppCheck] Fehler bei der Aktivierung',
+            error: e, stackTrace: stackTrace);
       }
     }
 
@@ -79,7 +80,8 @@ class AppBootstrap {
   }
 
   /// Bequeme Variante: in Debug App Check überspringen, in Release aktivieren.
-  static Future<void> ensureInitializedForEnv({String? webRecaptchaSiteKey}) async {
+  static Future<void> ensureInitializedForEnv(
+      {String? webRecaptchaSiteKey}) async {
     if (kReleaseMode) {
       return ensureInitialized(
         androidProvider: AndroidProvider.playIntegrity,
@@ -90,14 +92,15 @@ class AppBootstrap {
       // In Debug: App Check nicht aktivieren, um GMS/Phenotype-Rauschen zu vermeiden
       // Ausnahme: Wenn wir explizit Web debuggen wollen und einen Key haben
       if (kIsWeb && webRecaptchaSiteKey != null) {
-         debugPrint('[AppCheck] Debug-Build (Web): App Check wird aktiviert.');
-         return ensureInitialized(
-           webRecaptchaSiteKey: webRecaptchaSiteKey,
-           autoRefresh: true,
-         );
+        debugPrint('[AppCheck] Debug-Build (Web): App Check wird aktiviert.');
+        return ensureInitialized(
+          webRecaptchaSiteKey: webRecaptchaSiteKey,
+          autoRefresh: true,
+        );
       }
-      
-      debugPrint('[AppCheck] Debug-Build erkannt: App Check wird übersprungen.');
+
+      debugPrint(
+          '[AppCheck] Debug-Build erkannt: App Check wird übersprungen.');
       _initialized = true;
       return;
     }

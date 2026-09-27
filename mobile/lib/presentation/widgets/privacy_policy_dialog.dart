@@ -22,4 +22,3 @@ class PrivacyPolicyDialog extends StatelessWidget {
     return const SizedBox.shrink();
   }
 }
-

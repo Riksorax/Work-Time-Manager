@@ -17,7 +17,9 @@ class AppLockService {
   final SharedPreferences _prefs;
   final LocalAuthentication _localAuth;
 
-  AppLockService({required SharedPreferences prefs, required LocalAuthentication localAuth})
+  AppLockService(
+      {required SharedPreferences prefs,
+      required LocalAuthentication localAuth})
       : _prefs = prefs,
         _localAuth = localAuth;
 
@@ -62,7 +64,8 @@ class AppLockService {
   Future<bool> authenticateWithBiometrics() async {
     try {
       return await _localAuth.authenticate(
-        localizedReason: 'Bitte authentifizieren Sie sich, um die App zu entsperren',
+        localizedReason:
+            'Bitte authentifizieren Sie sich, um die App zu entsperren',
         biometricOnly: true,
         // Setzt die Authentifizierung nach Rückkehr aus dem Hintergrund
         // automatisch fort, statt mit einem Fehler abzubrechen.

@@ -36,7 +36,8 @@ class HybridWorkRepositoryImpl implements WorkRepository {
   }
 
   @override
-  Future<List<WorkEntryEntity>> getWorkEntriesForMonth(int year, int month) async {
+  Future<List<WorkEntryEntity>> getWorkEntriesForMonth(
+      int year, int month) async {
     return await _activeRepository.getWorkEntriesForMonth(year, month);
   }
 

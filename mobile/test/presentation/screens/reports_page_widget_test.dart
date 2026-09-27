@@ -38,7 +38,8 @@ class FakeReportsViewModel extends ReportsViewModel {
 class FakeSettingsViewModel extends SettingsViewModel {
   @override
   AsyncValue<SettingsState> build() => const AsyncValue.data(
-        SettingsState(settings: SettingsEntity(), overtimeBalance: Duration.zero),
+        SettingsState(
+            settings: SettingsEntity(), overtimeBalance: Duration.zero),
       );
 }
 
@@ -53,7 +54,8 @@ void main() {
     prefs = await SharedPreferences.getInstance();
   });
 
-  testWidgets('DailyReportView shows Zusatztag with no daily target and positive overtime',
+  testWidgets(
+      'DailyReportView shows Zusatztag with no daily target and positive overtime',
       (WidgetTester tester) async {
     final saturdayEntry = WorkEntryEntity(
       id: '6',
@@ -90,7 +92,8 @@ void main() {
           sharedPreferencesProvider.overrideWithValue(prefs),
           isPremiumProvider.overrideWithValue(false),
           settingsViewModelProvider.overrideWith(() => FakeSettingsViewModel()),
-          reportsViewModelProvider.overrideWith(() => FakeReportsViewModel(fakeState)),
+          reportsViewModelProvider
+              .overrideWith(() => FakeReportsViewModel(fakeState)),
         ],
         child: MaterialApp(
           locale: const Locale('de'),

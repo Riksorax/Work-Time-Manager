@@ -23,7 +23,8 @@ import 'package:flutter_work_time/presentation/view_models/settings_view_model.d
 
 import 'reports_page_test.mocks.dart';
 import '../view_models/reports_view_model_test.mocks.dart';
-import '../view_models/dashboard_view_model_test.mocks.dart' hide MockSettingsRepository;
+import '../view_models/dashboard_view_model_test.mocks.dart'
+    hide MockSettingsRepository;
 
 // Abstract callbacks for verification
 abstract class NavigationCallback {
@@ -56,7 +57,8 @@ void main() {
     when(mockSettingsRepository.getTargetWeeklyHours()).thenReturn(40.0);
     when(mockOvertimeRepository.getOvertime()).thenReturn(Duration.zero);
     when(mockOvertimeRepository.getLastUpdateDate()).thenReturn(null);
-    when(mockWorkRepository.getWorkEntriesForMonth(any, any)).thenAnswer((_) async => []);
+    when(mockWorkRepository.getWorkEntriesForMonth(any, any))
+        .thenAnswer((_) async => []);
     when(mockWeeklyReflectionRepository.getReflection(any, any))
         .thenAnswer((_) async => null);
     when(mockWeeklyReflectionRepository.saveReflection(any))
@@ -75,7 +77,8 @@ void main() {
         settingsRepositoryProvider.overrideWithValue(mockSettingsRepository),
         overtimeRepositoryProvider.overrideWithValue(mockOvertimeRepository),
         workRepositoryProvider.overrideWithValue(mockWorkRepository),
-        weeklyReflectionRepositoryProvider.overrideWithValue(mockWeeklyReflectionRepository),
+        weeklyReflectionRepositoryProvider
+            .overrideWithValue(mockWeeklyReflectionRepository),
         reportsViewModelProvider.overrideWith(() => reportsViewModel),
         settingsViewModelProvider.overrideWith(() => settingsViewModel),
         authStateProvider.overrideWithValue(authState),
@@ -92,7 +95,7 @@ void main() {
   group('ReportsPage', () {
     testWidgets('shows DailyReportView by default', (tester) async {
       final now = DateTime.now();
-      
+
       final reportsViewModel = FakeReportsViewModel(
         initialState: ReportsState.initial().copyWith(
           isLoading: false,
@@ -104,24 +107,24 @@ void main() {
 
       final settingsViewModel = FakeSettingsViewModel(
         initialState: const AsyncValue.data(SettingsState(
-          settings: SettingsEntity(), 
-          overtimeBalance: Duration.zero
-        )),
+            settings: SettingsEntity(), overtimeBalance: Duration.zero)),
       );
 
       await tester.pumpWidget(createSubject(
         reportsViewModel: reportsViewModel,
         settingsViewModel: settingsViewModel,
-        authState: const AsyncValue.data(UserEntity(id: '1', email: 'test@test.com')),
+        authState:
+            const AsyncValue.data(UserEntity(id: '1', email: 'test@test.com')),
       ));
 
       await tester.pumpAndSettle();
 
       if (find.byType(ErrorWidget).evaluate().isNotEmpty) {
-        final errorWidget = tester.widget<ErrorWidget>(find.byType(ErrorWidget));
+        final errorWidget =
+            tester.widget<ErrorWidget>(find.byType(ErrorWidget));
         fail('Render error: ${errorWidget.message}');
       }
-      
+
       if (find.textContaining('Fehler beim Laden').evaluate().isNotEmpty) {
         fail('AsyncValue Error state found');
       }
@@ -132,7 +135,8 @@ void main() {
       expect(find.text('Monatlich'), findsOneWidget);
 
       // Check if DailyReportView is visible by finding the Calendar navigation icon
-      expect(find.byIcon(Icons.chevron_left), findsWidgets); // Can be multiple (month nav)
+      expect(find.byIcon(Icons.chevron_left),
+          findsWidgets); // Can be multiple (month nav)
     });
 
     testWidgets('can switch tabs to Weekly and Monthly', (tester) async {
@@ -144,8 +148,8 @@ void main() {
           weeklyWork: {1: const Duration(hours: 40)},
         ),
         weeklyReportState: WeeklyReportState(
-           workDays: 5,
-           dailyWork: {DateTime.now(): const Duration(hours: 8)},
+          workDays: 5,
+          dailyWork: {DateTime.now(): const Duration(hours: 8)},
         ),
       );
 
@@ -154,13 +158,15 @@ void main() {
         callback: mockCallback,
       );
       final settingsViewModel = FakeSettingsViewModel(
-        initialState: const AsyncValue.data(SettingsState(settings: SettingsEntity(), overtimeBalance: Duration.zero)),
+        initialState: const AsyncValue.data(SettingsState(
+            settings: SettingsEntity(), overtimeBalance: Duration.zero)),
       );
 
       await tester.pumpWidget(createSubject(
         reportsViewModel: reportsViewModel,
         settingsViewModel: settingsViewModel,
-        authState: const AsyncValue.data(UserEntity(id: '1', email: 'test@test.com')),
+        authState:
+            const AsyncValue.data(UserEntity(id: '1', email: 'test@test.com')),
       ));
       await tester.pumpAndSettle();
 
@@ -172,22 +178,25 @@ void main() {
       // Switch to Monthly
       await tester.tap(find.text('Monatlich'));
       await tester.pumpAndSettle();
-      expect(find.textContaining('Wochenübersicht'), findsOneWidget); 
+      expect(find.textContaining('Wochenübersicht'), findsOneWidget);
     });
 
-    testWidgets('Wochen-Reflexion Button öffnet Dialog und speichert', (tester) async {
+    testWidgets('Wochen-Reflexion Button öffnet Dialog und speichert',
+        (tester) async {
       final reportsViewModel = FakeReportsViewModel(
         initialState: ReportsState.initial().copyWith(isLoading: false),
         callback: mockCallback,
       );
       final settingsViewModel = FakeSettingsViewModel(
-        initialState: const AsyncValue.data(SettingsState(settings: SettingsEntity(), overtimeBalance: Duration.zero)),
+        initialState: const AsyncValue.data(SettingsState(
+            settings: SettingsEntity(), overtimeBalance: Duration.zero)),
       );
 
       await tester.pumpWidget(createSubject(
         reportsViewModel: reportsViewModel,
         settingsViewModel: settingsViewModel,
-        authState: const AsyncValue.data(UserEntity(id: '1', email: 'test@test.com')),
+        authState:
+            const AsyncValue.data(UserEntity(id: '1', email: 'test@test.com')),
       ));
       await tester.pumpAndSettle();
 
@@ -206,28 +215,31 @@ void main() {
       await tester.tap(find.text('Speichern'));
       await tester.pumpAndSettle();
 
-      final captured = verify(
-              mockWeeklyReflectionRepository.saveReflection(captureAny))
-          .captured
-          .single as WeeklyReflectionEntity;
+      final captured =
+          verify(mockWeeklyReflectionRepository.saveReflection(captureAny))
+              .captured
+              .single as WeeklyReflectionEntity;
       expect(captured.whatWentWell, 'Guter Sprint');
       expect(find.text('Was lief gut?'), findsNothing); // Dialog geschlossen
       expect(find.textContaining('Reflexion gespeichert'), findsOneWidget);
     });
 
-    testWidgets('Insights-Tab zeigt Platzhalter ohne Datenbasis', (tester) async {
+    testWidgets('Insights-Tab zeigt Platzhalter ohne Datenbasis',
+        (tester) async {
       final reportsViewModel = FakeReportsViewModel(
         initialState: ReportsState.initial().copyWith(isLoading: false),
         callback: mockCallback,
       );
       final settingsViewModel = FakeSettingsViewModel(
-        initialState: const AsyncValue.data(SettingsState(settings: SettingsEntity(), overtimeBalance: Duration.zero)),
+        initialState: const AsyncValue.data(SettingsState(
+            settings: SettingsEntity(), overtimeBalance: Duration.zero)),
       );
 
       await tester.pumpWidget(createSubject(
         reportsViewModel: reportsViewModel,
         settingsViewModel: settingsViewModel,
-        authState: const AsyncValue.data(UserEntity(id: '1', email: 'test@test.com')),
+        authState:
+            const AsyncValue.data(UserEntity(id: '1', email: 'test@test.com')),
       ));
       await tester.pumpAndSettle();
 
@@ -238,7 +250,9 @@ void main() {
       expect(find.textContaining('Noch nicht genug Daten'), findsOneWidget);
     });
 
-    testWidgets('Insights-Tab zeigt Wochentags-Analyse und Heatmap mit Datenbasis', (tester) async {
+    testWidgets(
+        'Insights-Tab zeigt Wochentags-Analyse und Heatmap mit Datenbasis',
+        (tester) async {
       final now = DateTime.now();
       // Zwei Einträge am selben Wochentag + selber Startstunde, damit sowohl
       // die Wochentags-Analyse als auch die Heatmap (minSampleCount: 2)
@@ -265,13 +279,15 @@ void main() {
         callback: mockCallback,
       );
       final settingsViewModel = FakeSettingsViewModel(
-        initialState: const AsyncValue.data(SettingsState(settings: SettingsEntity(), overtimeBalance: Duration.zero)),
+        initialState: const AsyncValue.data(SettingsState(
+            settings: SettingsEntity(), overtimeBalance: Duration.zero)),
       );
 
       await tester.pumpWidget(createSubject(
         reportsViewModel: reportsViewModel,
         settingsViewModel: settingsViewModel,
-        authState: const AsyncValue.data(UserEntity(id: '1', email: 'test@test.com')),
+        authState:
+            const AsyncValue.data(UserEntity(id: '1', email: 'test@test.com')),
       ));
       await tester.pumpAndSettle();
 
@@ -280,11 +296,13 @@ void main() {
 
       expect(find.byType(ErrorWidget), findsNothing);
       expect(find.text('Wochentags-Analyse'), findsOneWidget);
-      expect(find.text('Produktivitäts-Heatmap nach Startzeit'), findsOneWidget);
+      expect(
+          find.text('Produktivitäts-Heatmap nach Startzeit'), findsOneWidget);
       expect(find.text('Start 08:00 Uhr'), findsOneWidget);
     });
 
-    testWidgets('navigating previous month calls onMonthChanged', (tester) async {
+    testWidgets('navigating previous month calls onMonthChanged',
+        (tester) async {
       final now = DateTime.now();
       final reportsViewModel = FakeReportsViewModel(
         initialState: ReportsState.initial().copyWith(
@@ -295,21 +313,24 @@ void main() {
         callback: mockCallback,
       );
       final settingsViewModel = FakeSettingsViewModel(
-        initialState: const AsyncValue.data(SettingsState(settings: SettingsEntity(), overtimeBalance: Duration.zero)),
+        initialState: const AsyncValue.data(SettingsState(
+            settings: SettingsEntity(), overtimeBalance: Duration.zero)),
       );
 
       await tester.pumpWidget(createSubject(
         reportsViewModel: reportsViewModel,
         settingsViewModel: settingsViewModel,
-        authState: const AsyncValue.data(UserEntity(id: '1', email: 'test@test.com')),
+        authState:
+            const AsyncValue.data(UserEntity(id: '1', email: 'test@test.com')),
       ));
       await tester.pumpAndSettle();
 
       // Find the "Previous Month" icon button in the Calendar widget
-      final prevMonthFinder = find.widgetWithIcon(IconButton, Icons.chevron_left).first;
-      
+      final prevMonthFinder =
+          find.widgetWithIcon(IconButton, Icons.chevron_left).first;
+
       await tester.tap(prevMonthFinder);
-      
+
       verify(mockCallback.onMonthChanged(any)).called(1);
     });
   });
@@ -335,7 +356,7 @@ class FakeReportsViewModel extends ReportsViewModel {
   void onMonthChanged(DateTime newMonth) {
     callback.onMonthChanged(newMonth);
   }
-  
+
   @override
   void selectDate(DateTime date) {
     callback.selectDate(date);

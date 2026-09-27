@@ -4,7 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers/providers.dart';
 import '../../domain/entities/app_theme_mode.dart';
 
-final themeViewModelProvider = NotifierProvider<ThemeViewModel, ThemeMode>(ThemeViewModel.new);
+final themeViewModelProvider =
+    NotifierProvider<ThemeViewModel, ThemeMode>(ThemeViewModel.new);
 
 /// Wandelt zwischen der Domain-Repräsentation [AppThemeMode] (siehe #293)
 /// und Flutters `ThemeMode`, den `MaterialApp` erwartet. Diese Umwandlung
@@ -26,7 +27,8 @@ class ThemeViewModel extends Notifier<ThemeMode> {
   ThemeMode build() {
     // Lade den initialen Theme-Modus beim Start.
     final getThemeMode = ref.watch(getThemeModeUseCaseProvider);
-    return _toFlutter(getThemeMode()); // Annahme: getThemeMode ist jetzt synchron
+    return _toFlutter(
+        getThemeMode()); // Annahme: getThemeMode ist jetzt synchron
   }
 
   /// Ändert den Theme-Modus und speichert ihn.

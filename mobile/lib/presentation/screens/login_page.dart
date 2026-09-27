@@ -21,7 +21,6 @@ class LoginPage extends ConsumerStatefulWidget {
 }
 
 class _LoginPageState extends ConsumerState<LoginPage> {
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -102,126 +101,144 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             ),
                           ),
                           onPressed: () async {
-                // Speichere die Zustimmungen
-                final settingsViewModel = ref.read(settingsViewModelProvider.notifier);
-                await settingsViewModel.updateAcceptedTermsOfService(true);
-                await settingsViewModel.updateAcceptedPrivacyPolicy(true);
+                            // Speichere die Zustimmungen
+                            final settingsViewModel =
+                                ref.read(settingsViewModelProvider.notifier);
+                            await settingsViewModel
+                                .updateAcceptedTermsOfService(true);
+                            await settingsViewModel
+                                .updateAcceptedPrivacyPolicy(true);
 
-                // Zeige Loading-Dialog
-                if (context.mounted) {
-                  showDialog(
-                    context: context,
-                    barrierDismissible: false,
-                    builder: (dialogContext) => AlertDialog(
-                      content: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const CircularProgressIndicator(),
-                          const SizedBox(height: 16),
-                          Text(l10n.signingIn),
-                        ],
-                      ),
-                    ),
-                  );
-                }
+                            // Zeige Loading-Dialog
+                            if (context.mounted) {
+                              showDialog(
+                                context: context,
+                                barrierDismissible: false,
+                                builder: (dialogContext) => AlertDialog(
+                                  content: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const CircularProgressIndicator(),
+                                      const SizedBox(height: 16),
+                                      Text(l10n.signingIn),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }
 
-                try {
-                  // Rufe den Use Case über den Provider auf.
-                  await ref.read(signInWithGoogleProvider)();
+                            try {
+                              // Rufe den Use Case über den Provider auf.
+                              await ref.read(signInWithGoogleProvider)();
 
-                  // Schließe Loading-Dialog
-                  if (context.mounted) {
-                    Navigator.of(context).pop();
-                  }
+                              // Schließe Loading-Dialog
+                              if (context.mounted) {
+                                Navigator.of(context).pop();
+                              }
 
-                  // Automatische Synchronisierung nach Login
-                  if (context.mounted) {
-                    showDialog(
-                      context: context,
-                      barrierDismissible: false,
-                      builder: (dialogContext) => AlertDialog(
-                        content: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const CircularProgressIndicator(),
-                            const SizedBox(height: 16),
-                            Text(l10n.syncingLocalData),
-                          ],
-                        ),
-                      ),
-                    );
-                  }
+                              // Automatische Synchronisierung nach Login
+                              if (context.mounted) {
+                                showDialog(
+                                  context: context,
+                                  barrierDismissible: false,
+                                  builder: (dialogContext) => AlertDialog(
+                                    content: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const CircularProgressIndicator(),
+                                        const SizedBox(height: 16),
+                                        Text(l10n.syncingLocalData),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              }
 
-                  try {
-                    final result = await ref.read(dataSyncViewModelProvider).syncAll();
+                              try {
+                                final result = await ref
+                                    .read(dataSyncViewModelProvider)
+                                    .syncAll();
 
-                    // Schließe Sync-Dialog
-                    if (context.mounted) {
-                      Navigator.of(context).pop();
-                    }
+                                // Schließe Sync-Dialog
+                                if (context.mounted) {
+                                  Navigator.of(context).pop();
+                                }
 
-                    // Zeige Ergebnis
-                    if (context.mounted) {
-                      if (result.workEntriesSynced > 0 || result.overtimeSynced) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              l10n.syncSuccessLoginMessage(result.workEntriesSynced,
-                                  result.overtimeSynced ? l10n.yesLabel : l10n.noLabel),
-                            ),
-                            backgroundColor: result.errors.isEmpty ? Colors.green : Colors.orange,
-                            duration: const Duration(seconds: 3),
-                          ),
-                        );
-                      }
-                    }
+                                // Zeige Ergebnis
+                                if (context.mounted) {
+                                  if (result.workEntriesSynced > 0 ||
+                                      result.overtimeSynced) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          l10n.syncSuccessLoginMessage(
+                                              result.workEntriesSynced,
+                                              result.overtimeSynced
+                                                  ? l10n.yesLabel
+                                                  : l10n.noLabel),
+                                        ),
+                                        backgroundColor: result.errors.isEmpty
+                                            ? Colors.green
+                                            : Colors.orange,
+                                        duration: const Duration(seconds: 3),
+                                      ),
+                                    );
+                                  }
+                                }
 
-                    // Aktualisiere Dashboard und Settings nach Sync
-                    ref.invalidate(dashboard_vm.dashboardViewModelProvider);
-                    ref.invalidate(settingsViewModelProvider);
-                  } on SyncNotAvailableException {
-                    // Nichts zu synchronisieren (kein Nutzer bzw. keine
-                    // Hybrid-Repositories) - Sync-Dialog ohne Fehlermeldung
-                    // schließen, wie bisher.
-                    if (context.mounted) {
-                      Navigator.of(context).pop();
-                    }
-                  } catch (syncError) {
-                    logger.e('[LoginPage] Fehler bei der Synchronisierung: $syncError');
-                    // Schließe Sync-Dialog bei Fehler
-                    if (context.mounted) {
-                      Navigator.of(context).pop();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(l10n.syncFailedLoginMessage('$syncError')),
-                          backgroundColor: Colors.orange,
-                          duration: const Duration(seconds: 3),
-                        ),
-                      );
-                    }
-                  }
+                                // Aktualisiere Dashboard und Settings nach Sync
+                                ref.invalidate(
+                                    dashboard_vm.dashboardViewModelProvider);
+                                ref.invalidate(settingsViewModelProvider);
+                              } on SyncNotAvailableException {
+                                // Nichts zu synchronisieren (kein Nutzer bzw. keine
+                                // Hybrid-Repositories) - Sync-Dialog ohne Fehlermeldung
+                                // schließen, wie bisher.
+                                if (context.mounted) {
+                                  Navigator.of(context).pop();
+                                }
+                              } catch (syncError) {
+                                logger.e(
+                                    '[LoginPage] Fehler bei der Synchronisierung: $syncError');
+                                // Schließe Sync-Dialog bei Fehler
+                                if (context.mounted) {
+                                  Navigator.of(context).pop();
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(l10n.syncFailedLoginMessage(
+                                          '$syncError')),
+                                      backgroundColor: Colors.orange,
+                                      duration: const Duration(seconds: 3),
+                                    ),
+                                  );
+                                }
+                              }
 
-                  if (context.mounted) {
-                    // Nach erfolgreicher Anmeldung zurück zur ursprünglichen Seite navigieren
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(builder: (context) => HomeScreen(initialIndex: widget.returnToIndex)),
-                    );
-                  }
-                } catch (loginError) {
-                  logger.e('[LoginPage] Fehler beim Login: $loginError');
-                  // Schließe Loading-Dialog bei Fehler
-                  if (context.mounted) {
-                    Navigator.of(context).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(l10n.loginFailedMessage('$loginError')),
-                        backgroundColor: Colors.red,
-                        duration: const Duration(seconds: 3),
-                      ),
-                    );
-                  }
-                }
-              },
+                              if (context.mounted) {
+                                // Nach erfolgreicher Anmeldung zurück zur ursprünglichen Seite navigieren
+                                Navigator.of(context).pushReplacement(
+                                  MaterialPageRoute(
+                                      builder: (context) => HomeScreen(
+                                          initialIndex: widget.returnToIndex)),
+                                );
+                              }
+                            } catch (loginError) {
+                              logger.e(
+                                  '[LoginPage] Fehler beim Login: $loginError');
+                              // Schließe Loading-Dialog bei Fehler
+                              if (context.mounted) {
+                                Navigator.of(context).pop();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                        l10n.loginFailedMessage('$loginError')),
+                                    backgroundColor: Colors.red,
+                                    duration: const Duration(seconds: 3),
+                                  ),
+                                );
+                              }
+                            }
+                          },
                         ),
                         const SizedBox(height: 16),
                         // Legal Notice
@@ -242,7 +259,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                     decoration: TextDecoration.underline,
                                   ),
                                   recognizer: TapGestureRecognizer()
-                                    ..onTap = () => TermsOfServiceDialog.show(context),
+                                    ..onTap = () =>
+                                        TermsOfServiceDialog.show(context),
                                 ),
                                 TextSpan(text: l10n.legalNoticeAnd),
                                 TextSpan(
@@ -253,7 +271,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                     decoration: TextDecoration.underline,
                                   ),
                                   recognizer: TapGestureRecognizer()
-                                    ..onTap = () => PrivacyPolicyDialog.show(context),
+                                    ..onTap =
+                                        () => PrivacyPolicyDialog.show(context),
                                 ),
                               ],
                             ),
@@ -263,9 +282,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         // Divider
                         Row(
                           children: [
-                            Expanded(child: Divider(color: colorScheme.outlineVariant)),
+                            Expanded(
+                                child:
+                                    Divider(color: colorScheme.outlineVariant)),
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 16),
                               child: Text(
                                 l10n.orDivider,
                                 style: theme.textTheme.bodySmall?.copyWith(
@@ -273,7 +295,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                 ),
                               ),
                             ),
-                            Expanded(child: Divider(color: colorScheme.outlineVariant)),
+                            Expanded(
+                                child:
+                                    Divider(color: colorScheme.outlineVariant)),
                           ],
                         ),
                         const SizedBox(height: 16),
@@ -281,9 +305,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         TextButton(
                           onPressed: () {
                             Navigator.of(context).pushReplacement(
-                              MaterialPageRoute(builder: (context) => HomeScreen(
-                                initialIndex: widget.returnToIndex,
-                              )),
+                              MaterialPageRoute(
+                                  builder: (context) => HomeScreen(
+                                        initialIndex: widget.returnToIndex,
+                                      )),
                             );
                           },
                           style: TextButton.styleFrom(

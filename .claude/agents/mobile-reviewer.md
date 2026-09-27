@@ -32,7 +32,6 @@ Pull Request vor.
 - [ ] Keine hart kodierten Texte; ARB de + en vollständig
 - [ ] Fehler über `logger.e` (Crashlytics), kein `print`/`debugPrint` für Fehler
 - [ ] Keine auskommentierten Blöcke, keine TODOs ohne Issue-Nummer
-- [ ] Diff enthält keine reinen Formatierungsänderungen an unbeteiligten Zeilen
 - [ ] Tests sind datums- und zeitzonenunabhängig
 
 ## Commit & PR

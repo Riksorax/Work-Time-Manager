@@ -37,22 +37,27 @@ class ApiDataSource implements FirestoreDataSource {
   // ── Work Entries → immer über die Backend-API (alle Profile, siehe #239) ──
 
   @override
-  Future<WorkEntryModel?> getWorkEntry(String userId, DateTime date, {String? profileId}) =>
+  Future<WorkEntryModel?> getWorkEntry(String userId, DateTime date,
+          {String? profileId}) =>
       _api.getWorkEntry(date.year, date.month, date.day, profileId: profileId);
 
   @override
-  Future<void> saveWorkEntry(String userId, WorkEntryModel model, {String? profileId}) =>
+  Future<void> saveWorkEntry(String userId, WorkEntryModel model,
+          {String? profileId}) =>
       _api.saveWorkEntry(model, profileId: profileId);
 
   @override
-  Future<List<WorkEntryModel>> getWorkEntriesForMonth(String userId, int year, int month,
+  Future<List<WorkEntryModel>> getWorkEntriesForMonth(
+          String userId, int year, int month,
           {String? profileId}) =>
       _api.getWorkEntriesForMonth(year, month, profileId: profileId);
 
   @override
-  Future<void> deleteWorkEntry(String userId, String entryId, {String? profileId}) {
+  Future<void> deleteWorkEntry(String userId, String entryId,
+      {String? profileId}) {
     final parts = entryId.split('-');
-    return _api.deleteWorkEntry(int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2]),
+    return _api.deleteWorkEntry(
+        int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2]),
         profileId: profileId);
   }
 
@@ -65,32 +70,37 @@ class ApiDataSource implements FirestoreDataSource {
   }
 
   @override
-  Future<void> saveOvertime(String userId, Duration overtime, {String? profileId}) =>
+  Future<void> saveOvertime(String userId, Duration overtime,
+          {String? profileId}) =>
       // Kaufmännisch runden statt inMinutes (schneidet Richtung Null ab und
       // ließe den Saldo im Minus anders driften als im Plus).
       _api.saveOvertime(toStoredMinutes(overtime), profileId: profileId);
 
   @override
-  Future<DateTime?> getLastOvertimeUpdate(String userId, {String? profileId}) async {
+  Future<DateTime?> getLastOvertimeUpdate(String userId,
+      {String? profileId}) async {
     final result = await _api.getOvertime(profileId: profileId);
     return result.lastUpdated;
   }
 
   @override
-  Future<void> saveLastOvertimeUpdate(String userId, DateTime date, {String? profileId}) async {
+  Future<void> saveLastOvertimeUpdate(String userId, DateTime date,
+      {String? profileId}) async {
     // No-op: Das Backend setzt lastUpdated automatisch beim Speichern des Saldos.
   }
 
   // ── Settings → immer über die Backend-API (Read-Modify-Write, alle Profile) ─
 
   @override
-  Future<Map<String, dynamic>?> getSettings(String userId, {String? profileId}) =>
+  Future<Map<String, dynamic>?> getSettings(String userId,
+          {String? profileId}) =>
       _api.getSettings(profileId: profileId);
 
   @override
   Future<void> saveSettings(String userId, Map<String, dynamic> settings,
       {String? profileId}) async {
-    final current = await _api.getSettings(profileId: profileId) ?? <String, dynamic>{};
+    final current =
+        await _api.getSettings(profileId: profileId) ?? <String, dynamic>{};
     await _api.putSettings({...current, ...settings}, profileId: profileId);
   }
 
@@ -98,11 +108,13 @@ class ApiDataSource implements FirestoreDataSource {
   //    Endpoint, siehe #137) ─────────────────────────────────────────────────
 
   @override
-  Future<WeeklyReflectionEntity?> getWeeklyReflection(String userId, int year, int week) =>
+  Future<WeeklyReflectionEntity?> getWeeklyReflection(
+          String userId, int year, int week) =>
       _auth.getWeeklyReflection(userId, year, week);
 
   @override
-  Future<void> saveWeeklyReflection(String userId, WeeklyReflectionEntity reflection) =>
+  Future<void> saveWeeklyReflection(
+          String userId, WeeklyReflectionEntity reflection) =>
       _auth.saveWeeklyReflection(userId, reflection);
 
   // ── Arbeitszeit-Profile → an Firestore-DataSource delegiert (kein Backend-

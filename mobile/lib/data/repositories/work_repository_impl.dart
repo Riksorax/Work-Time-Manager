@@ -21,7 +21,8 @@ class WorkRepositoryImpl implements WorkRepository {
 
   @override
   Future<WorkEntryEntity> getWorkEntry(DateTime date) async {
-    final model = await dataSource.getWorkEntry(userId, date, profileId: profileId);
+    final model =
+        await dataSource.getWorkEntry(userId, date, profileId: profileId);
     // Das Model ist bereits eine Entity, daher ist keine Konvertierung nötig.
     // Wenn das Model null ist (kein Eintrag in Firestore), wird ein leeres Model zurückgegeben.
     return model ?? WorkEntryModel.empty(date);
@@ -35,9 +36,11 @@ class WorkRepositoryImpl implements WorkRepository {
   }
 
   @override
-  Future<List<WorkEntryEntity>> getWorkEntriesForMonth(int year, int month) async {
+  Future<List<WorkEntryEntity>> getWorkEntriesForMonth(
+      int year, int month) async {
     // Die von der Datenquelle zurückgegebenen Models sind bereits Entities.
-    return await dataSource.getWorkEntriesForMonth(userId, year, month, profileId: profileId);
+    return await dataSource.getWorkEntriesForMonth(userId, year, month,
+        profileId: profileId);
   }
 
   @override

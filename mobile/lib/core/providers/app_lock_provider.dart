@@ -6,7 +6,8 @@ import 'package:local_auth/local_auth.dart';
 import '../services/app_lock_service.dart';
 import 'providers.dart';
 
-final localAuthProvider = Provider<LocalAuthentication>((ref) => LocalAuthentication());
+final localAuthProvider =
+    Provider<LocalAuthentication>((ref) => LocalAuthentication());
 
 final appLockServiceProvider = Provider<AppLockService>((ref) {
   return AppLockService(

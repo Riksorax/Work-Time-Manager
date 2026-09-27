@@ -7,8 +7,8 @@ import '../../domain/entities/work_entry_entity.dart';
 import '../state/edit_work_entry_state.dart';
 import 'reports_view_model.dart';
 
-final editWorkEntryViewModelProvider = NotifierProvider.family.autoDispose<
-    EditWorkEntryViewModel, EditWorkEntryState, WorkEntryEntity>(
+final editWorkEntryViewModelProvider = NotifierProvider.family
+    .autoDispose<EditWorkEntryViewModel, EditWorkEntryState, WorkEntryEntity>(
         EditWorkEntryViewModel.new);
 
 class EditWorkEntryViewModel extends Notifier<EditWorkEntryState> {
@@ -66,8 +66,7 @@ class EditWorkEntryViewModel extends Notifier<EditWorkEntryState> {
   }
 
   void deleteBreak(String breakId) {
-    final updatedBreaks =
-        state.breaks.where((b) => b.id != breakId).toList();
+    final updatedBreaks = state.breaks.where((b) => b.id != breakId).toList();
     state = state.copyWith(breaks: updatedBreaks);
   }
 
@@ -86,6 +85,8 @@ class EditWorkEntryViewModel extends Notifier<EditWorkEntryState> {
       isManuallyEntered: true,
     );
     // In Notifier we use ref.read directly
-    await ref.read(reportsViewModelProvider.notifier).saveWorkEntry(updatedEntry);
+    await ref
+        .read(reportsViewModelProvider.notifier)
+        .saveWorkEntry(updatedEntry);
   }
 }

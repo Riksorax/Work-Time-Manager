@@ -24,8 +24,11 @@ void main() {
     dataSource = ApiDataSource(mockAuth, mockApi);
   });
 
-  group('ApiDataSource — Work Entries laufen für alle Profile über die API (siehe #292)', () {
-    test('getWorkEntry: Standard-Profil (profileId null) geht an die API', () async {
+  group(
+      'ApiDataSource — Work Entries laufen für alle Profile über die API (siehe #292)',
+      () {
+    test('getWorkEntry: Standard-Profil (profileId null) geht an die API',
+        () async {
       when(mockApi.getWorkEntry(2026, 9, 26, profileId: null))
           .thenAnswer((_) async => null);
 
@@ -35,20 +38,27 @@ void main() {
       verifyZeroInteractions(mockAuth);
     });
 
-    test('getWorkEntry: zusätzliches Profil geht ebenfalls an die API, nicht an Firestore',
+    test(
+        'getWorkEntry: zusätzliches Profil geht ebenfalls an die API, nicht an Firestore',
         () async {
       when(mockApi.getWorkEntry(2026, 9, 26, profileId: 'p1'))
           .thenAnswer((_) async => null);
 
-      await dataSource.getWorkEntry(userId, DateTime(2026, 9, 26), profileId: 'p1');
+      await dataSource.getWorkEntry(userId, DateTime(2026, 9, 26),
+          profileId: 'p1');
 
       verify(mockApi.getWorkEntry(2026, 9, 26, profileId: 'p1')).called(1);
-      verifyNever(mockAuth.getWorkEntry(any, any, profileId: anyNamed('profileId')));
+      verifyNever(
+          mockAuth.getWorkEntry(any, any, profileId: anyNamed('profileId')));
     });
 
     test('saveWorkEntry gibt profileId an die API weiter', () async {
-      final entry = WorkEntryModel(id: '2026-9-26', date: DateTime(2026, 9, 26), type: WorkEntryType.work);
-      when(mockApi.saveWorkEntry(entry, profileId: 'p1')).thenAnswer((_) async {});
+      final entry = WorkEntryModel(
+          id: '2026-9-26',
+          date: DateTime(2026, 9, 26),
+          type: WorkEntryType.work);
+      when(mockApi.saveWorkEntry(entry, profileId: 'p1'))
+          .thenAnswer((_) async {});
 
       await dataSource.saveWorkEntry(userId, entry, profileId: 'p1');
 
@@ -62,12 +72,15 @@ void main() {
 
       await dataSource.getWorkEntriesForMonth(userId, 2026, 9, profileId: 'p1');
 
-      verify(mockApi.getWorkEntriesForMonth(2026, 9, profileId: 'p1')).called(1);
+      verify(mockApi.getWorkEntriesForMonth(2026, 9, profileId: 'p1'))
+          .called(1);
       verifyZeroInteractions(mockAuth);
     });
 
-    test('deleteWorkEntry zerlegt die ID und gibt profileId an die API weiter', () async {
-      when(mockApi.deleteWorkEntry(2026, 9, 26, profileId: 'p1')).thenAnswer((_) async {});
+    test('deleteWorkEntry zerlegt die ID und gibt profileId an die API weiter',
+        () async {
+      when(mockApi.deleteWorkEntry(2026, 9, 26, profileId: 'p1'))
+          .thenAnswer((_) async {});
 
       await dataSource.deleteWorkEntry(userId, '2026-9-26', profileId: 'p1');
 
@@ -76,7 +89,9 @@ void main() {
     });
   });
 
-  group('ApiDataSource — Overtime laufen für alle Profile über die API (siehe #292)', () {
+  group(
+      'ApiDataSource — Overtime laufen für alle Profile über die API (siehe #292)',
+      () {
     test('getOvertime gibt profileId an die API weiter', () async {
       when(mockApi.getOvertime(profileId: 'p1'))
           .thenAnswer((_) async => (minutes: 30, lastUpdated: null));
@@ -91,16 +106,20 @@ void main() {
     test('saveOvertime gibt profileId an die API weiter', () async {
       when(mockApi.saveOvertime(any, profileId: 'p1')).thenAnswer((_) async {});
 
-      await dataSource.saveOvertime(userId, const Duration(minutes: 45), profileId: 'p1');
+      await dataSource.saveOvertime(userId, const Duration(minutes: 45),
+          profileId: 'p1');
 
       verify(mockApi.saveOvertime(45, profileId: 'p1')).called(1);
       verifyZeroInteractions(mockAuth);
     });
   });
 
-  group('ApiDataSource — Settings laufen für alle Profile über die API (siehe #292)', () {
+  group(
+      'ApiDataSource — Settings laufen für alle Profile über die API (siehe #292)',
+      () {
     test('getSettings gibt profileId an die API weiter', () async {
-      when(mockApi.getSettings(profileId: 'p1')).thenAnswer((_) async => {'weeklyTargetHours': 40});
+      when(mockApi.getSettings(profileId: 'p1'))
+          .thenAnswer((_) async => {'weeklyTargetHours': 40});
 
       await dataSource.getSettings(userId, profileId: 'p1');
 
@@ -108,23 +127,39 @@ void main() {
       verifyZeroInteractions(mockAuth);
     });
 
-    test('saveSettings liest und schreibt mit derselben profileId (Read-Modify-Write)', () async {
-      when(mockApi.getSettings(profileId: 'p1')).thenAnswer((_) async => {'weeklyTargetHours': 40});
+    test(
+        'saveSettings liest und schreibt mit derselben profileId (Read-Modify-Write)',
+        () async {
+      when(mockApi.getSettings(profileId: 'p1'))
+          .thenAnswer((_) async => {'weeklyTargetHours': 40});
       when(mockApi.putSettings(any, profileId: 'p1')).thenAnswer((_) async {});
 
-      await dataSource.saveSettings(userId, {'workdays': [1, 2, 3, 4, 5]}, profileId: 'p1');
+      await dataSource.saveSettings(
+          userId,
+          {
+            'workdays': [1, 2, 3, 4, 5]
+          },
+          profileId: 'p1');
 
-      final captured =
-          verify(mockApi.putSettings(captureAny, profileId: 'p1')).captured.single as Map;
-      expect(captured, {'weeklyTargetHours': 40, 'workdays': [1, 2, 3, 4, 5]});
+      final captured = verify(mockApi.putSettings(captureAny, profileId: 'p1'))
+          .captured
+          .single as Map;
+      expect(captured, {
+        'weeklyTargetHours': 40,
+        'workdays': [1, 2, 3, 4, 5]
+      });
       verifyZeroInteractions(mockAuth);
     });
   });
 
-  group('ApiDataSource — Weekly Reflection und Arbeitszeit-Profile bleiben bei Firestore', () {
-    test('getWeeklyReflection delegiert weiterhin an Firestore (kein Backend-Endpoint, #137)',
+  group(
+      'ApiDataSource — Weekly Reflection und Arbeitszeit-Profile bleiben bei Firestore',
+      () {
+    test(
+        'getWeeklyReflection delegiert weiterhin an Firestore (kein Backend-Endpoint, #137)',
         () async {
-      when(mockAuth.getWeeklyReflection(userId, 2026, 39)).thenAnswer((_) async => null);
+      when(mockAuth.getWeeklyReflection(userId, 2026, 39))
+          .thenAnswer((_) async => null);
 
       await dataSource.getWeeklyReflection(userId, 2026, 39);
 
@@ -132,7 +167,8 @@ void main() {
       verifyZeroInteractions(mockApi);
     });
 
-    test('getWorkProfiles delegiert weiterhin an Firestore (kein Backend-Endpoint, #138)',
+    test(
+        'getWorkProfiles delegiert weiterhin an Firestore (kein Backend-Endpoint, #138)',
         () async {
       when(mockAuth.getWorkProfiles(userId)).thenAnswer((_) async => []);
 

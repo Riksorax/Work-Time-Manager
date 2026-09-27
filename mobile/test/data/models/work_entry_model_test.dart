@@ -62,11 +62,11 @@ void main() {
         'manualOvertimeMinutes': 30,
         'isManuallyEntered': true,
         'breaks': [
-           {
-             'name': 'P1',
-             'start': Timestamp.fromDate(DateTime(2023, 10, 26, 10, 0)),
-             'end': Timestamp.fromDate(DateTime(2023, 10, 26, 10, 15)),
-           }
+          {
+            'name': 'P1',
+            'start': Timestamp.fromDate(DateTime(2023, 10, 26, 10, 0)),
+            'end': Timestamp.fromDate(DateTime(2023, 10, 26, 10, 15)),
+          }
         ],
       };
 
@@ -82,7 +82,7 @@ void main() {
     test('generateId and parseId should be consistent', () {
       final id = WorkEntryModel.generateId(date);
       expect(id, '2023-10-26');
-      
+
       final parsedDate = WorkEntryModel.parseId(id);
       expect(parsedDate.year, date.year);
       expect(parsedDate.month, date.month);

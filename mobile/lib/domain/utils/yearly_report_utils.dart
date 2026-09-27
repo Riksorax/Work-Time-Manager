@@ -75,7 +75,8 @@ MonthSummary calculateMonthSummary({
   for (final entry in entriesForMonth) {
     if (entry.workStart != null) {
       final weekNum = _isoWeekNumber(entry.date);
-      final dayOnly = DateTime(entry.date.year, entry.date.month, entry.date.day);
+      final dayOnly =
+          DateTime(entry.date.year, entry.date.month, entry.date.day);
       weekToWorkDays.putIfAbsent(weekNum, () => {}).add(dayOnly);
     }
   }

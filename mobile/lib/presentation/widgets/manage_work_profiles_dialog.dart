@@ -42,10 +42,13 @@ class ManageWorkProfilesDialog extends ConsumerWidget {
     final messenger = ScaffoldMessenger.of(context);
     try {
       await ref.read(workProfileViewModelProvider).deleteProfile(profile.id);
-      messenger.showSnackBar(SnackBar(content: Text(l10n.profileDeletedMessage(profile.name))));
+      messenger.showSnackBar(
+          SnackBar(content: Text(l10n.profileDeletedMessage(profile.name))));
     } catch (e, stackTrace) {
-      logger.e('[ManageWorkProfilesDialog] Fehler beim Löschen: $e', stackTrace: stackTrace);
-      messenger.showSnackBar(SnackBar(content: Text(l10n.profileDeletionFailed('$e'))));
+      logger.e('[ManageWorkProfilesDialog] Fehler beim Löschen: $e',
+          stackTrace: stackTrace);
+      messenger.showSnackBar(
+          SnackBar(content: Text(l10n.profileDeletionFailed('$e'))));
     }
   }
 

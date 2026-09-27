@@ -37,7 +37,8 @@ DateTime nowToMinute() => roundToMinute(DateTime.now());
 /// Rundet symmetrisch: `+30s` -> `+1min`, `-30s` -> `-1min`. Damit driftet
 /// eine Gleitzeit-Bilanz im Minus nicht anders als im Plus.
 Duration roundDurationToMinute(Duration duration) => Duration(
-      minutes: (duration.inMicroseconds / Duration.microsecondsPerMinute).round(),
+      minutes:
+          (duration.inMicroseconds / Duration.microsecondsPerMinute).round(),
     );
 
 /// Eine Dauer als volle Minuten für die Persistenz (kaufmännisch gerundet).

@@ -52,8 +52,9 @@ void main() {
 
     // Setup delegations
     when(mockSignOut.call()).thenAnswer((_) => mockActions.signOut());
-    when(mockDeleteAccount.call()).thenAnswer((_) => mockActions.deleteAccount());
-    
+    when(mockDeleteAccount.call())
+        .thenAnswer((_) => mockActions.deleteAccount());
+
     // Default Stubs for actions
     when(mockActions.signOut()).thenAnswer((_) async {});
     when(mockActions.deleteAccount()).thenAnswer((_) async {});
@@ -95,10 +96,10 @@ void main() {
         weeklyTargetHours: 38.5,
         workdays: const [1, 2, 3, 4],
       );
-      
+
       final settingsViewModel = FakeSettingsViewModel(
         initialState: AsyncValue.data(SettingsState(
-          settings: settings, 
+          settings: settings,
           overtimeBalance: const Duration(hours: 5),
         )),
         actions: mockActions,
@@ -126,7 +127,8 @@ void main() {
       expect(find.text('+05:00'), findsOneWidget);
     });
 
-    testWidgets('displays English as language when locale is en', (tester) async {
+    testWidgets('displays English as language when locale is en',
+        (tester) async {
       final settings = const SettingsEntity(locale: 'en');
 
       final settingsViewModel = FakeSettingsViewModel(
@@ -177,7 +179,7 @@ void main() {
     testWidgets('shows Login button when not authenticated', (tester) async {
       final settingsViewModel = FakeSettingsViewModel(
         initialState: const AsyncValue.data(SettingsState(
-          settings: SettingsEntity(), 
+          settings: SettingsEntity(),
           overtimeBalance: Duration.zero,
         )),
         actions: mockActions,
@@ -197,7 +199,8 @@ void main() {
       expect(find.text('Nicht angemeldet'), findsOneWidget);
     });
 
-    testWidgets('zeigt Premium-Badge wenn eingeloggt und Premium aktiv', (tester) async {
+    testWidgets('zeigt Premium-Badge wenn eingeloggt und Premium aktiv',
+        (tester) async {
       final settingsViewModel = FakeSettingsViewModel(
         initialState: const AsyncValue.data(SettingsState(
           settings: SettingsEntity(),
@@ -225,7 +228,8 @@ void main() {
       expect(find.byIcon(Icons.workspace_premium), findsOneWidget);
     });
 
-    testWidgets('zeigt kein Premium-Badge wenn nicht eingeloggt', (tester) async {
+    testWidgets('zeigt kein Premium-Badge wenn nicht eingeloggt',
+        (tester) async {
       final settingsViewModel = FakeSettingsViewModel(
         initialState: const AsyncValue.data(SettingsState(
           settings: SettingsEntity(),
@@ -248,7 +252,8 @@ void main() {
       expect(find.text('Premium'), findsNothing);
     });
 
-    testWidgets('zeigt kein Premium-Badge wenn eingeloggt aber kein Premium', (tester) async {
+    testWidgets('zeigt kein Premium-Badge wenn eingeloggt aber kein Premium',
+        (tester) async {
       final settingsViewModel = FakeSettingsViewModel(
         initialState: const AsyncValue.data(SettingsState(
           settings: SettingsEntity(),
@@ -275,10 +280,11 @@ void main() {
       expect(find.text('Premium'), findsNothing);
     });
 
-    testWidgets('shows Profile and Logout button when authenticated', (tester) async {
+    testWidgets('shows Profile and Logout button when authenticated',
+        (tester) async {
       final settingsViewModel = FakeSettingsViewModel(
         initialState: const AsyncValue.data(SettingsState(
-          settings: SettingsEntity(), 
+          settings: SettingsEntity(),
           overtimeBalance: Duration.zero,
         )),
         actions: mockActions,
@@ -292,10 +298,7 @@ void main() {
         settingsViewModel: settingsViewModel,
         themeViewModel: themeViewModel,
         authState: const AsyncValue.data(UserEntity(
-          id: '1', 
-          email: 'test@example.com',
-          displayName: 'Max Mustermann'
-        )),
+            id: '1', email: 'test@example.com', displayName: 'Max Mustermann')),
       ));
 
       expect(find.text('Max Mustermann'), findsOneWidget);
@@ -318,7 +321,7 @@ void main() {
         initialState: ThemeMode.light,
         actions: mockActions,
       );
-      
+
       await tester.pumpWidget(createSubject(
         settingsViewModel: settingsViewModel,
         themeViewModel: themeViewModel,
@@ -327,15 +330,16 @@ void main() {
 
       final switchTileFinder = find.text('Design');
       await tester.scrollUntilVisible(switchTileFinder, 500.0);
-      
+
       await tester.tap(switchTileFinder);
       verify(mockActions.setTheme(ThemeMode.dark)).called(1);
     });
 
-    testWidgets('Logout flow: Open dialog and confirm calls signOut', (tester) async {
+    testWidgets('Logout flow: Open dialog and confirm calls signOut',
+        (tester) async {
       final settingsViewModel = FakeSettingsViewModel(
         initialState: const AsyncValue.data(SettingsState(
-          settings: SettingsEntity(), 
+          settings: SettingsEntity(),
           overtimeBalance: Duration.zero,
         )),
         actions: mockActions,
@@ -348,7 +352,8 @@ void main() {
       await tester.pumpWidget(createSubject(
         settingsViewModel: settingsViewModel,
         themeViewModel: themeViewModel,
-        authState: const AsyncValue.data(UserEntity(id: '1', email: 'user@test.com')),
+        authState:
+            const AsyncValue.data(UserEntity(id: '1', email: 'user@test.com')),
       ));
 
       await tester.tap(find.text('Abmelden'));
@@ -363,10 +368,12 @@ void main() {
       verify(mockSignOut.call()).called(1);
     });
 
-    testWidgets('Delete Account flow: Open dialog and confirm calls deleteAccount', (tester) async {
+    testWidgets(
+        'Delete Account flow: Open dialog and confirm calls deleteAccount',
+        (tester) async {
       final settingsViewModel = FakeSettingsViewModel(
         initialState: const AsyncValue.data(SettingsState(
-          settings: SettingsEntity(), 
+          settings: SettingsEntity(),
           overtimeBalance: Duration.zero,
         )),
         actions: mockActions,
@@ -379,7 +386,8 @@ void main() {
       await tester.pumpWidget(createSubject(
         settingsViewModel: settingsViewModel,
         themeViewModel: themeViewModel,
-        authState: const AsyncValue.data(UserEntity(id: '1', email: 'user@test.com')),
+        authState:
+            const AsyncValue.data(UserEntity(id: '1', email: 'user@test.com')),
       ));
 
       final deleteButton = find.byTooltip('Account löschen');
@@ -389,21 +397,21 @@ void main() {
 
       expect(find.text('Account endgültig löschen'), findsOneWidget);
 
-      final confirmButton = find.widgetWithText(FilledButton, 'Endgültig löschen');
+      final confirmButton =
+          find.widgetWithText(FilledButton, 'Endgültig löschen');
       await tester.tap(confirmButton);
       await tester.pumpAndSettle();
 
       verify(mockDeleteAccount.call()).called(1);
     });
 
-    testWidgets('Edit Target Hours flow: Update value and save', (tester) async {
+    testWidgets('Edit Target Hours flow: Update value and save',
+        (tester) async {
       final settings = const SettingsEntity(weeklyTargetHours: 40.0);
-      
+
       final settingsViewModel = FakeSettingsViewModel(
-        initialState: AsyncValue.data(SettingsState(
-          settings: settings, 
-          overtimeBalance: Duration.zero
-        )),
+        initialState: AsyncValue.data(
+            SettingsState(settings: settings, overtimeBalance: Duration.zero)),
         actions: mockActions,
       );
       final themeViewModel = FakeThemeViewModel(
@@ -434,10 +442,8 @@ void main() {
       final settings = const SettingsEntity(); // Standard: Mo-Fr
 
       final settingsViewModel = FakeSettingsViewModel(
-        initialState: AsyncValue.data(SettingsState(
-          settings: settings,
-          overtimeBalance: Duration.zero
-        )),
+        initialState: AsyncValue.data(
+            SettingsState(settings: settings, overtimeBalance: Duration.zero)),
         actions: mockActions,
       );
       final themeViewModel = FakeThemeViewModel(
@@ -466,7 +472,8 @@ void main() {
       await tester.tap(find.text('Speichern'));
       await tester.pumpAndSettle();
 
-      verify(mockActions.updateWorkdays(argThat(equals([1, 2, 3, 4, 6])))).called(1);
+      verify(mockActions.updateWorkdays(argThat(equals([1, 2, 3, 4, 6]))))
+          .called(1);
     });
 
     testWidgets('Edit Timezone flow: search and select a zone', (tester) async {
@@ -504,7 +511,8 @@ void main() {
       verify(mockActions.updateTimezoneOverride('Europe/Berlin')).called(1);
     });
 
-    testWidgets('Edit Timezone flow: selecting Systemstandard resets to null', (tester) async {
+    testWidgets('Edit Timezone flow: selecting Systemstandard resets to null',
+        (tester) async {
       final settings = const SettingsEntity(timezoneOverride: 'Europe/Berlin');
 
       final settingsViewModel = FakeSettingsViewModel(
@@ -534,7 +542,8 @@ void main() {
       verify(mockActions.updateTimezoneOverride(null)).called(1);
     });
 
-    testWidgets('Edit Language flow: selecting English calls updateLocale', (tester) async {
+    testWidgets('Edit Language flow: selecting English calls updateLocale',
+        (tester) async {
       final settings = const SettingsEntity(); // Standard: Deutsch
 
       final settingsViewModel = FakeSettingsViewModel(
@@ -567,9 +576,7 @@ void main() {
     testWidgets('Adjust Overtime flow: Open dialog', (tester) async {
       final settingsViewModel = FakeSettingsViewModel(
         initialState: const AsyncValue.data(SettingsState(
-          settings: SettingsEntity(), 
-          overtimeBalance: Duration.zero
-        )),
+            settings: SettingsEntity(), overtimeBalance: Duration.zero)),
         actions: mockActions,
       );
       final themeViewModel = FakeThemeViewModel(
@@ -596,7 +603,7 @@ void main() {
     testWidgets('tapping notifications opens dialog', (tester) async {
       final settingsViewModel = FakeSettingsViewModel(
         initialState: const AsyncValue.data(SettingsState(
-          settings: SettingsEntity(), 
+          settings: SettingsEntity(),
           overtimeBalance: Duration.zero,
         )),
         actions: mockActions,
@@ -622,7 +629,8 @@ void main() {
       expect(find.text('Benachrichtigungen aktivieren'), findsOneWidget);
     });
 
-    testWidgets('zeigt PIN-/Biometrie-Sperre deaktiviert, wenn noch nichts eingerichtet ist',
+    testWidgets(
+        'zeigt PIN-/Biometrie-Sperre deaktiviert, wenn noch nichts eingerichtet ist',
         (tester) async {
       final settingsViewModel = FakeSettingsViewModel(
         initialState: const AsyncValue.data(SettingsState(
@@ -657,7 +665,8 @@ void main() {
       );
     });
 
-    testWidgets('Aktivieren der Sperre ohne vorhandene PIN öffnet PIN-Einrichtung',
+    testWidgets(
+        'Aktivieren der Sperre ohne vorhandene PIN öffnet PIN-Einrichtung',
         (tester) async {
       final settingsViewModel = FakeSettingsViewModel(
         initialState: const AsyncValue.data(SettingsState(

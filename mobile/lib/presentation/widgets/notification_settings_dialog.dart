@@ -48,11 +48,11 @@ class _NotificationSettingsDialogState
     _notifyWorkEnd = widget.settings.notifyWorkEnd;
     _notifyBreaks = widget.settings.notifyBreaks;
     _warnOnOvertimeThreshold = widget.settings.warnOnOvertimeThreshold;
-    _overtimeThresholdController =
-        TextEditingController(text: widget.settings.overtimeThresholdHours.toString());
+    _overtimeThresholdController = TextEditingController(
+        text: widget.settings.overtimeThresholdHours.toString());
     _warnOnUndertimeThreshold = widget.settings.warnOnUndertimeThreshold;
-    _undertimeThresholdController =
-        TextEditingController(text: widget.settings.undertimeThresholdHours.toString());
+    _undertimeThresholdController = TextEditingController(
+        text: widget.settings.undertimeThresholdHours.toString());
 
     // Parse time
     final timeParts = widget.settings.notificationTime.split(':');
@@ -103,7 +103,8 @@ class _NotificationSettingsDialogState
       if (!hasPermission && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context).notificationPermissionDenied),
+            content:
+                Text(AppLocalizations.of(context).notificationPermissionDenied),
             backgroundColor: Colors.orange,
           ),
         );
@@ -115,7 +116,8 @@ class _NotificationSettingsDialogState
     final viewModel = ref.read(settingsViewModelProvider.notifier);
     await viewModel.updateNotificationsEnabled(_enabled);
 
-    final timeString = '${_time.hour.toString().padLeft(2, '0')}:${_time.minute.toString().padLeft(2, '0')}';
+    final timeString =
+        '${_time.hour.toString().padLeft(2, '0')}:${_time.minute.toString().padLeft(2, '0')}';
     await viewModel.updateNotificationTime(timeString);
 
     final daysList = _selectedDays.toList()..sort();
@@ -126,15 +128,15 @@ class _NotificationSettingsDialogState
     await viewModel.updateNotifyBreaks(_notifyBreaks);
 
     await viewModel.updateWarnOnOvertimeThreshold(_warnOnOvertimeThreshold);
-    final overtimeThreshold =
-        double.tryParse(_overtimeThresholdController.text.replaceAll(',', '.')) ??
-            widget.settings.overtimeThresholdHours;
+    final overtimeThreshold = double.tryParse(
+            _overtimeThresholdController.text.replaceAll(',', '.')) ??
+        widget.settings.overtimeThresholdHours;
     await viewModel.updateOvertimeThresholdHours(overtimeThreshold);
 
     await viewModel.updateWarnOnUndertimeThreshold(_warnOnUndertimeThreshold);
-    final undertimeThreshold =
-        double.tryParse(_undertimeThresholdController.text.replaceAll(',', '.')) ??
-            widget.settings.undertimeThresholdHours;
+    final undertimeThreshold = double.tryParse(
+            _undertimeThresholdController.text.replaceAll(',', '.')) ??
+        widget.settings.undertimeThresholdHours;
     await viewModel.updateUndertimeThresholdHours(undertimeThreshold);
 
     // Schedule or cancel notifications
@@ -223,7 +225,8 @@ class _NotificationSettingsDialogState
                           ),
                           child: Row(
                             children: [
-                              Icon(Icons.access_time, color: colorScheme.primary),
+                              Icon(Icons.access_time,
+                                  color: colorScheme.primary),
                               const SizedBox(width: 16),
                               Text(
                                 '${_time.hour.toString().padLeft(2, '0')}:${_time.minute.toString().padLeft(2, '0')}',
@@ -342,7 +345,8 @@ class _NotificationSettingsDialogState
                         padding: const EdgeInsets.only(left: 16, bottom: 12),
                         child: TextField(
                           controller: _overtimeThresholdController,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true),
                           decoration: InputDecoration(
                             labelText: l10n.thresholdHoursLabel,
                             border: const OutlineInputBorder(),
@@ -366,7 +370,8 @@ class _NotificationSettingsDialogState
                         padding: const EdgeInsets.only(left: 16, bottom: 12),
                         child: TextField(
                           controller: _undertimeThresholdController,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true),
                           decoration: InputDecoration(
                             labelText: l10n.thresholdHoursLabel,
                             border: const OutlineInputBorder(),

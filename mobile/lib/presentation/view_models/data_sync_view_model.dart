@@ -6,7 +6,8 @@ import '../../data/repositories/hybrid_overtime_repository_impl.dart';
 import '../../data/repositories/hybrid_work_repository_impl.dart';
 import '../../data/services/data_sync_service.dart';
 
-final dataSyncViewModelProvider = Provider<DataSyncViewModel>((ref) => DataSyncViewModel(ref));
+final dataSyncViewModelProvider =
+    Provider<DataSyncViewModel>((ref) => DataSyncViewModel(ref));
 
 /// Ergebnis einer erfolgreich durchgeführten Synchronisation.
 class DataSyncResult {
@@ -30,7 +31,8 @@ class SyncNotAvailableException implements Exception {
   const SyncNotAvailableException();
 
   @override
-  String toString() => 'Repositories sind nicht vom Typ Hybrid oder User nicht eingeloggt';
+  String toString() =>
+      'Repositories sind nicht vom Typ Hybrid oder User nicht eingeloggt';
 }
 
 /// Synchronisiert lokale Daten (SharedPreferences) mit Firebase - beim Login
@@ -46,8 +48,10 @@ class DataSyncViewModel {
   /// eigentlichen Sync werden unverändert weitergereicht.
   Future<DataSyncResult> syncAll() async {
     final workRepository = _ref.read(core_providers.workRepositoryProvider);
-    final overtimeRepository = _ref.read(core_providers.overtimeRepositoryProvider);
-    final userId = _ref.read(core_providers.firebaseAuthProvider).currentUser?.uid;
+    final overtimeRepository =
+        _ref.read(core_providers.overtimeRepositoryProvider);
+    final userId =
+        _ref.read(core_providers.firebaseAuthProvider).currentUser?.uid;
 
     if (workRepository is! HybridWorkRepositoryImpl ||
         overtimeRepository is! HybridOvertimeRepositoryImpl ||

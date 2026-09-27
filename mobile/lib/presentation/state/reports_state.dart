@@ -114,5 +114,6 @@ class DailyReportState extends Equatable {
   );
 
   @override
-  List<Object?> get props => [entries, workTime, breakTime, totalTime, overtime];
+  List<Object?> get props =>
+      [entries, workTime, breakTime, totalTime, overtime];
 }

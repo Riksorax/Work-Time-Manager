@@ -12,7 +12,8 @@ import 'package:flutter_work_time/presentation/view_models/work_profile_view_mod
 
 import 'work_profile_view_model_test.mocks.dart';
 
-const _loggedInUser = AsyncValue<UserEntity?>.data(UserEntity(id: 'uid1', email: 'test@test.com'));
+const _loggedInUser = AsyncValue<UserEntity?>.data(
+    UserEntity(id: 'uid1', email: 'test@test.com'));
 
 @GenerateMocks([WorkProfileRepository])
 void main() {
@@ -41,16 +42,20 @@ void main() {
   group('WorkProfileViewModel.addProfile', () {
     test('legt das Profil an und setzt es als aktiv', () async {
       const newProfile = WorkProfileEntity(id: 'p1', name: 'Nebenjob');
-      when(mockRepository.addProfile('Nebenjob')).thenAnswer((_) async => newProfile);
+      when(mockRepository.addProfile('Nebenjob'))
+          .thenAnswer((_) async => newProfile);
 
-      final result = await container.read(workProfileViewModelProvider).addProfile('Nebenjob');
+      final result = await container
+          .read(workProfileViewModelProvider)
+          .addProfile('Nebenjob');
 
       expect(result, newProfile);
       expect(container.read(activeWorkProfileIdProvider), 'p1');
       verify(mockRepository.addProfile('Nebenjob')).called(1);
     });
 
-    test('wirft WorkProfilesNotAvailableException ohne eingeloggten Nutzer', () async {
+    test('wirft WorkProfilesNotAvailableException ohne eingeloggten Nutzer',
+        () async {
       container.dispose();
       container = ProviderContainer(
         overrides: [
@@ -61,16 +66,20 @@ void main() {
       );
 
       expect(
-        () => container.read(workProfileViewModelProvider).addProfile('Nebenjob'),
+        () =>
+            container.read(workProfileViewModelProvider).addProfile('Nebenjob'),
         throwsA(isA<WorkProfilesNotAvailableException>()),
       );
     });
   });
 
   group('WorkProfileViewModel.deleteProfile', () {
-    test('löscht das Profil und setzt bei aktivem Profil auf Standard zurück', () async {
+    test('löscht das Profil und setzt bei aktivem Profil auf Standard zurück',
+        () async {
       when(mockRepository.deleteProfile('p1')).thenAnswer((_) async {});
-      await container.read(activeWorkProfileIdProvider.notifier).setActiveProfile('p1');
+      await container
+          .read(activeWorkProfileIdProvider.notifier)
+          .setActiveProfile('p1');
 
       await container.read(workProfileViewModelProvider).deleteProfile('p1');
 
@@ -80,7 +89,9 @@ void main() {
 
     test('lässt ein anderes aktives Profil unangetastet', () async {
       when(mockRepository.deleteProfile('p1')).thenAnswer((_) async {});
-      await container.read(activeWorkProfileIdProvider.notifier).setActiveProfile('p2');
+      await container
+          .read(activeWorkProfileIdProvider.notifier)
+          .setActiveProfile('p2');
 
       await container.read(workProfileViewModelProvider).deleteProfile('p1');
 

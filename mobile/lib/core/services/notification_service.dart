@@ -5,18 +5,20 @@ import 'package:flutter_work_time/domain/utils/overtime_warning_utils.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
-  
+
   // Allow injection for testing
-  factory NotificationService({FlutterLocalNotificationsPlugin? notificationsPlugin}) {
+  factory NotificationService(
+      {FlutterLocalNotificationsPlugin? notificationsPlugin}) {
     if (notificationsPlugin != null) {
       _instance._notifications = notificationsPlugin;
     }
     return _instance;
   }
-  
+
   NotificationService._internal();
 
-  FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
+  FlutterLocalNotificationsPlugin _notifications =
+      FlutterLocalNotificationsPlugin();
   bool _initialized = false;
   Function(String)? _onNotificationTapCallback;
 
@@ -25,7 +27,8 @@ class NotificationService {
 
     _onNotificationTapCallback = onNotificationTap;
 
-    const androidSettings = AndroidInitializationSettings('@mipmap/launcher_icon');
+    const androidSettings =
+        AndroidInitializationSettings('@mipmap/launcher_icon');
     const initSettings = InitializationSettings(
       android: androidSettings,
     );
@@ -188,7 +191,8 @@ class NotificationService {
       body = 'Haben Sie ${checkTypes.join(", ")} und $last eingetragen?';
     }
 
-    logger.i('Scheduling notification with id $id for $scheduledDate (Day: $day, Hour: $hour, Minute: $minute)');
+    logger.i(
+        'Scheduling notification with id $id for $scheduledDate (Day: $day, Hour: $hour, Minute: $minute)');
     await _notifications.zonedSchedule(
       id,
       'Arbeitszeit-Erinnerung',

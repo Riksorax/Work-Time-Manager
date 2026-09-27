@@ -29,7 +29,9 @@ class UpdateRequiredDialog extends StatelessWidget {
               color: updateInfo.forceUpdate ? Colors.orange : Colors.blue,
             ),
             const SizedBox(width: 8),
-            Text(updateInfo.forceUpdate ? l10n.updateRequiredTitle : l10n.updateAvailableTitle),
+            Text(updateInfo.forceUpdate
+                ? l10n.updateRequiredTitle
+                : l10n.updateAvailableTitle),
           ],
         ),
         content: Column(
@@ -92,12 +94,14 @@ class UpdateRequiredDialog extends StatelessWidget {
   Future<void> _handleUpdate(BuildContext context) async {
     // Versuche zuerst Android In-App-Update (falls Android)
     if (Platform.isAndroid && updateInfo.forceUpdate) {
-      final success = await versionService.startAndroidInAppUpdate(immediate: true);
+      final success =
+          await versionService.startAndroidInAppUpdate(immediate: true);
       if (success) {
         return; // In-App-Update wurde gestartet
       }
     } else if (Platform.isAndroid && !updateInfo.forceUpdate) {
-      final success = await versionService.startAndroidInAppUpdate(immediate: false);
+      final success =
+          await versionService.startAndroidInAppUpdate(immediate: false);
       if (success) {
         if (context.mounted) {
           Navigator.of(context).pop();

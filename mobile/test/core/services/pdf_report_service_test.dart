@@ -14,7 +14,8 @@ import 'package:flutter_work_time/l10n/app_localizations_en.dart';
 /// Fängt den plattformspezifischen `sharePdf`-Aufruf ab, damit die Tests
 /// ohne echten Share-Dialog laufen (siehe #297: PDF-Export folgt jetzt der
 /// App-Sprache statt fest Deutsch zu sein).
-class _FakePrintingPlatform extends PrintingPlatform with MockPlatformInterfaceMixin {
+class _FakePrintingPlatform extends PrintingPlatform
+    with MockPlatformInterfaceMixin {
   Uint8List? lastBytes;
 
   @override
@@ -53,7 +54,8 @@ class _FakePrintingPlatform extends PrintingPlatform with MockPlatformInterfaceM
   Future<Printer?> pickPrinter(Rect bounds) => throw UnimplementedError();
 
   @override
-  Future<Uint8List> convertHtml(String html, String? baseUrl, PdfPageFormat format) =>
+  Future<Uint8List> convertHtml(
+          String html, String? baseUrl, PdfPageFormat format) =>
       throw UnimplementedError();
 
   @override
@@ -131,7 +133,9 @@ void main() {
           totalHolidayDays: 10,
           totalNetWorkDuration: const Duration(hours: 1760),
           totalOvertime: const Duration(hours: 12),
-          months: [('Januar', const Duration(hours: 160), const Duration(hours: 4), 20)],
+          months: [
+            ('Januar', const Duration(hours: 160), const Duration(hours: 4), 20)
+          ],
         );
 
         expect(fakePlatform.lastBytes, isNotNull);

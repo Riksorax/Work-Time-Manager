@@ -56,7 +56,8 @@ void main() {
       expect(find.byIcon(Icons.workspace_premium), findsWidgets);
     });
 
-    testWidgets('zeigt "Premium freischalten"-Button wenn onUpgrade gesetzt', (tester) async {
+    testWidgets('zeigt "Premium freischalten"-Button wenn onUpgrade gesetzt',
+        (tester) async {
       await tester.pumpWidget(createSubject(
         featureTitle: 'Test',
         featureText: 'Text',
@@ -65,7 +66,8 @@ void main() {
 
       expect(find.text('Premium freischalten'), findsOneWidget);
       expect(
-        find.text('Abonnements können derzeit nur in der mobilen App verwaltet werden.'),
+        find.text(
+            'Abonnements können derzeit nur in der mobilen App verwaltet werden.'),
         findsNothing,
       );
     });
@@ -90,7 +92,8 @@ void main() {
       ));
 
       expect(
-        find.text('Abonnements können derzeit nur in der mobilen App verwaltet werden.'),
+        find.text(
+            'Abonnements können derzeit nur in der mobilen App verwaltet werden.'),
         findsOneWidget,
       );
       expect(find.text('Premium freischalten'), findsNothing);

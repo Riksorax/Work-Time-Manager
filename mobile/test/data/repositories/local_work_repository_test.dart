@@ -53,7 +53,8 @@ void main() {
       expect(loaded.breaks, isEmpty);
     });
 
-    test('getWorkEntriesForMonth should return all entries in a month', () async {
+    test('getWorkEntriesForMonth should return all entries in a month',
+        () async {
       final entry1 = WorkEntryEntity(
         id: '2023-10-01',
         date: DateTime(2023, 10, 1),
@@ -76,17 +77,20 @@ void main() {
     });
 
     test('deleteWorkEntry should remove entry', () async {
-      final entry = WorkEntryEntity(id: '2023-10-26', date: date, workStart: workStart);
+      final entry =
+          WorkEntryEntity(id: '2023-10-26', date: date, workStart: workStart);
       await repository.saveWorkEntry(entry);
-      
+
       await repository.deleteWorkEntry('2023-10-26');
-      
+
       final loaded = await repository.getWorkEntry(date);
       expect(loaded.workStart, isNull);
     });
 
-    test('getAllLocalEntries and clearAllLocalEntries should work for sync', () async {
-      final entry = WorkEntryEntity(id: '2023-10-26', date: date, workStart: workStart);
+    test('getAllLocalEntries and clearAllLocalEntries should work for sync',
+        () async {
+      final entry =
+          WorkEntryEntity(id: '2023-10-26', date: date, workStart: workStart);
       await repository.saveWorkEntry(entry);
 
       final all = await repository.getAllLocalEntries();

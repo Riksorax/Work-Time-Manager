@@ -19,7 +19,7 @@ extension WorkEntryCalculations on WorkEntryEntity {
     if (breaks.isEmpty) return Duration.zero;
     return breaks.fold(
       Duration.zero,
-          (total, currentBreak) => total + currentBreak.duration,
+      (total, currentBreak) => total + currentBreak.duration,
     );
   }
 
@@ -35,7 +35,9 @@ extension WorkEntryCalculations on WorkEntryEntity {
   Duration calculateOvertime(Duration targetDailyHours) {
     // Bei Sonder-Einträgen (Urlaub, Krank, Feiertag) gilt die Sollzeit als erfüllt.
     // Die Überstunden sind daher 0, es sei denn, es wurden manuelle Korrekturen vorgenommen.
-    if (type == WorkEntryType.vacation || type == WorkEntryType.sick || type == WorkEntryType.holiday) {
+    if (type == WorkEntryType.vacation ||
+        type == WorkEntryType.sick ||
+        type == WorkEntryType.holiday) {
       return manualOvertime ?? Duration.zero;
     }
 
@@ -43,7 +45,9 @@ extension WorkEntryCalculations on WorkEntryEntity {
     if (workEnd == null) return Duration.zero;
 
     // Berücksichtige auch manuell hinzugefügte Überstunden.
-    final totalOvertime = effectiveWorkDuration - targetDailyHours + (manualOvertime ?? Duration.zero);
+    final totalOvertime = effectiveWorkDuration -
+        targetDailyHours +
+        (manualOvertime ?? Duration.zero);
     return totalOvertime;
   }
 }

@@ -68,9 +68,11 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.lock, size: 64, color: Theme.of(context).colorScheme.primary),
+                Icon(Icons.lock,
+                    size: 64, color: Theme.of(context).colorScheme.primary),
                 const SizedBox(height: 16),
-                Text(l10n.appLockedTitle, style: Theme.of(context).textTheme.headlineSmall),
+                Text(l10n.appLockedTitle,
+                    style: Theme.of(context).textTheme.headlineSmall),
                 const SizedBox(height: 24),
                 TextField(
                   controller: _pinController,

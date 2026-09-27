@@ -25,8 +25,11 @@ void main() {
 
   tearDown(() => container.dispose());
 
-  group('ThemeViewModel — Umwandlung AppThemeMode <-> ThemeMode (siehe #293)', () {
-    test('build() wandelt den gespeicherten AppThemeMode.dark in ThemeMode.dark um', () {
+  group('ThemeViewModel — Umwandlung AppThemeMode <-> ThemeMode (siehe #293)',
+      () {
+    test(
+        'build() wandelt den gespeicherten AppThemeMode.dark in ThemeMode.dark um',
+        () {
       when(mockRepository.getThemeMode()).thenReturn(AppThemeMode.dark);
 
       final state = container.read(themeViewModelProvider);
@@ -40,11 +43,15 @@ void main() {
       expect(container.read(themeViewModelProvider), ThemeMode.system);
     });
 
-    test('setTheme(ThemeMode.light) speichert AppThemeMode.light in der Domain-Schicht', () async {
+    test(
+        'setTheme(ThemeMode.light) speichert AppThemeMode.light in der Domain-Schicht',
+        () async {
       when(mockRepository.getThemeMode()).thenReturn(AppThemeMode.system);
       when(mockRepository.setThemeMode(any)).thenAnswer((_) async {});
 
-      await container.read(themeViewModelProvider.notifier).setTheme(ThemeMode.light);
+      await container
+          .read(themeViewModelProvider.notifier)
+          .setTheme(ThemeMode.light);
 
       verify(mockRepository.setThemeMode(AppThemeMode.light)).called(1);
       expect(container.read(themeViewModelProvider), ThemeMode.light);
@@ -55,7 +62,9 @@ void main() {
 
       // build() liest einmalig; danach nicht mehr erneut aufrufen lassen.
       container.read(themeViewModelProvider);
-      await container.read(themeViewModelProvider.notifier).setTheme(ThemeMode.dark);
+      await container
+          .read(themeViewModelProvider.notifier)
+          .setTheme(ThemeMode.dark);
 
       verifyNever(mockRepository.setThemeMode(any));
     });

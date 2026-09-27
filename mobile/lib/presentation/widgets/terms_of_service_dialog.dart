@@ -22,4 +22,3 @@ class TermsOfServiceDialog extends StatelessWidget {
     return const SizedBox.shrink();
   }
 }
-

@@ -66,7 +66,7 @@ class MarkdownDialog extends StatelessWidget {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
                   }
-                  
+
                   if (snapshot.hasError) {
                     return Center(
                       child: Text(
@@ -82,19 +82,23 @@ class MarkdownDialog extends StatelessWidget {
 
                   return Markdown(
                     data: snapshot.data!,
-                    styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
-                      p: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.5),
+                    styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context))
+                        .copyWith(
+                      p: Theme.of(context)
+                          .textTheme
+                          .bodyMedium
+                          ?.copyWith(height: 1.5),
                       h1: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary,
-                        height: 2.0,
-                      ),
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.primary,
+                            height: 2.0,
+                          ),
                       h2: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        height: 2.0,
-                        decoration: TextDecoration.underline,
-                        decorationColor: Theme.of(context).dividerColor,
-                      ),
+                            fontWeight: FontWeight.bold,
+                            height: 2.0,
+                            decoration: TextDecoration.underline,
+                            decorationColor: Theme.of(context).dividerColor,
+                          ),
                       blockSpacing: 16.0,
                     ),
                     onTapLink: (text, href, title) async {
@@ -107,7 +111,8 @@ class MarkdownDialog extends StatelessWidget {
 
                         final uri = Uri.parse(href);
                         if (await canLaunchUrl(uri)) {
-                          await launchUrl(uri, mode: LaunchMode.externalApplication);
+                          await launchUrl(uri,
+                              mode: LaunchMode.externalApplication);
                         }
                       }
                     },

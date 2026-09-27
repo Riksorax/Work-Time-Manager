@@ -58,7 +58,7 @@ void main() {
     // Default Stubs
     when(mockSettingsRepository.getWorkdays()).thenReturn([1, 2, 3, 4, 5]);
     when(mockSettingsRepository.getTargetWeeklyHours()).thenReturn(40.0);
-    
+
     // Stub for initial load (current date)
     final now = DateTime.now();
     when(mockWorkRepository.getWorkEntriesForMonth(now.year, now.month))
@@ -79,13 +79,14 @@ void main() {
       // Act
       container.read(reportsViewModelProvider.notifier);
       // init is called in build via microtask, so we wait for pump
-      await Future.delayed(Duration.zero); 
+      await Future.delayed(Duration.zero);
 
       // Assert
       final state = container.read(reportsViewModelProvider);
       expect(state.isLoading, false);
       expect(state.selectedDay!.year, now.year);
-      verify(mockWorkRepository.getWorkEntriesForMonth(now.year, now.month)).called(1);
+      verify(mockWorkRepository.getWorkEntriesForMonth(now.year, now.month))
+          .called(1);
     });
 
     test('should calculate daily report correctly', () async {
@@ -102,17 +103,17 @@ void main() {
           .thenAnswer((_) async => [entry]);
 
       final viewModel = container.read(reportsViewModelProvider.notifier);
-      
+
       // Wait for init() to complete
       await Future.delayed(Duration.zero);
-      
+
       viewModel.selectDate(date); // This triggers load and calculation
 
       // Wait for selectDate's async part to complete
       await Future.delayed(Duration.zero);
 
       final state = container.read(reportsViewModelProvider);
-      
+
       expect(state.dailyReportState.totalTime, const Duration(hours: 9));
       expect(state.dailyReportState.entries.length, 1);
       expect(state.dailyReportState.entries.first, entry);
@@ -121,14 +122,14 @@ void main() {
     test('should calculate weekly report correctly', () async {
       // 26.10.2023 is a Thursday. Week is Mon 23 - Sun 29.
       final date = DateTime(2023, 10, 26);
-      
+
       final entry1 = WorkEntryEntity(
         id: '1',
         date: DateTime(2023, 10, 23), // Monday
         workStart: DateTime(2023, 10, 23, 8, 0),
         workEnd: DateTime(2023, 10, 23, 16, 0), // 8h
       );
-      
+
       final entry2 = WorkEntryEntity(
         id: '2',
         date: DateTime(2023, 10, 26), // Thursday
@@ -138,33 +139,36 @@ void main() {
 
       when(mockWorkRepository.getWorkEntriesForMonth(2023, 10))
           .thenAnswer((_) async => [entry1, entry2]);
-      
+
       when(mockSettingsRepository.getWorkdays()).thenReturn([1, 2, 3, 4, 5]);
       when(mockSettingsRepository.getTargetWeeklyHours()).thenReturn(40.0);
-      // Target per day = 8h. 
+      // Target per day = 8h.
       // Work days in this week = 2.
       // Target for week (based on actual days) = 16h.
       // Actual = 8 + 4 = 12h.
       // Overtime = 12 - 16 = -4h.
 
       final viewModel = container.read(reportsViewModelProvider.notifier);
-      
+
       // Wait for init()
       await Future.delayed(Duration.zero);
-      
+
       viewModel.selectDate(date);
-      
+
       // Wait for selectDate()
       await Future.delayed(Duration.zero);
 
       final state = container.read(reportsViewModelProvider);
 
-      expect(state.weeklyReportState.totalNetWorkDuration, const Duration(hours: 12));
+      expect(state.weeklyReportState.totalNetWorkDuration,
+          const Duration(hours: 12));
       expect(state.weeklyReportState.workDays, 2);
       expect(state.weeklyReportState.overtime, const Duration(hours: -4));
     });
 
-    test('weekly report should cap target at weekly hours when extra days worked', () async {
+    test(
+        'weekly report should cap target at weekly hours when extra days worked',
+        () async {
       // 5-Tage-Woche, aber 6 Tage gearbeitet
       // Woche: Mo 23.10 - So 29.10.2023
       final date = DateTime(2023, 10, 28); // Samstag
@@ -226,7 +230,8 @@ void main() {
 
       final state = container.read(reportsViewModelProvider);
 
-      expect(state.weeklyReportState.totalNetWorkDuration, const Duration(hours: 46));
+      expect(state.weeklyReportState.totalNetWorkDuration,
+          const Duration(hours: 46));
       // Wochen-Soll sollte auf 40h gedeckelt sein (nicht 48h)
       expect(state.weeklyReportState.overtime, const Duration(hours: 6));
     });
@@ -289,12 +294,14 @@ void main() {
       expect(effectiveTarget, Duration.zero);
 
       // Mo-Fr sollten reguläres Soll haben
-      final mondayTarget = viewModel.getEffectiveDailyTargetForDate(DateTime(2023, 10, 23));
+      final mondayTarget =
+          viewModel.getEffectiveDailyTargetForDate(DateTime(2023, 10, 23));
       expect(mondayTarget, const Duration(hours: 8));
     });
 
     group('Multi-Select Mode', () {
-      test('toggleMultiSelectMode should toggle the mode and clear selection', () async {
+      test('toggleMultiSelectMode should toggle the mode and clear selection',
+          () async {
         final now = DateTime.now();
         when(mockWorkRepository.getWorkEntriesForMonth(now.year, now.month))
             .thenAnswer((_) async => []);
@@ -327,7 +334,8 @@ void main() {
         expect(viewModel.state.selectedDates.length, 1);
 
         viewModel.addDateToSelection(futureDate);
-        expect(viewModel.state.selectedDates.length, 2); // Future dates are now allowed
+        expect(viewModel.state.selectedDates.length,
+            2); // Future dates are now allowed
       });
 
       test('toggleDateSelection should add/remove dates', () async {
@@ -341,7 +349,8 @@ void main() {
         final testDate = DateTime.now().subtract(const Duration(days: 3));
 
         viewModel.toggleDateSelection(testDate);
-        expect(viewModel.state.selectedDates, contains(DateTime(testDate.year, testDate.month, testDate.day)));
+        expect(viewModel.state.selectedDates,
+            contains(DateTime(testDate.year, testDate.month, testDate.day)));
 
         viewModel.toggleDateSelection(testDate);
         expect(viewModel.state.selectedDates, isEmpty);
@@ -366,13 +375,13 @@ void main() {
         expect(viewModel.state.selectedDates, isEmpty);
       });
 
-      test('saveBatchWorkEntries should create entries for all selected dates', () async {
+      test('saveBatchWorkEntries should create entries for all selected dates',
+          () async {
         final now = DateTime.now();
         when(mockWorkRepository.getWorkEntriesForMonth(now.year, now.month))
             .thenAnswer((_) async => []);
 
-        when(mockWorkRepository.saveWorkEntry(any))
-            .thenAnswer((_) async => {});
+        when(mockWorkRepository.saveWorkEntry(any)).thenAnswer((_) async => {});
 
         final viewModel = container.read(reportsViewModelProvider.notifier);
         await Future.delayed(Duration.zero);
@@ -402,45 +411,96 @@ void main() {
       });
     });
 
-    group('Server-Reports geben das aktive Arbeitszeit-Profil weiter (siehe #291)', () {
-      test('Standard-Profil: Server-Reports werden ohne profileId angefragt', () async {
+    group(
+        'Server-Reports geben das aktive Arbeitszeit-Profil weiter (siehe #291)',
+        () {
+      test('Standard-Profil: Server-Reports werden ohne profileId angefragt',
+          () async {
         rebuildContainerWithActiveProfile(null);
         final now = DateTime.now();
         when(mockWorkRepository.getWorkEntriesForMonth(now.year, now.month))
             .thenAnswer((_) async => []);
-        when(mockApiClient.getDailyReport(now.year, now.month, now.day, profileId: null))
+        when(mockApiClient.getDailyReport(now.year, now.month, now.day,
+                profileId: null))
             .thenAnswer((_) async => {'overtimeMs': 0});
-        when(mockApiClient.getWeeklyReport(now.year, now.month, now.day, profileId: null))
-            .thenAnswer((_) async => {'totalWorkedMs': 0, 'totalBreaksMs': 0, 'avgPerDayMs': 0, 'overtimeMs': 0, 'workDays': 0});
-        when(mockApiClient.getMonthlyReport(now.year, now.month, profileId: null))
-            .thenAnswer((_) async => {'totalWorkedMs': 0, 'totalBreaksMs': 0, 'avgPerDayMs': 0, 'monthlyOvertimeMs': 0, 'totalOvertimeMs': 0, 'workDays': 0, 'avgPerWeekMs': 0});
+        when(mockApiClient.getWeeklyReport(now.year, now.month, now.day,
+                profileId: null))
+            .thenAnswer((_) async => {
+                  'totalWorkedMs': 0,
+                  'totalBreaksMs': 0,
+                  'avgPerDayMs': 0,
+                  'overtimeMs': 0,
+                  'workDays': 0
+                });
+        when(mockApiClient.getMonthlyReport(now.year, now.month,
+                profileId: null))
+            .thenAnswer((_) async => {
+                  'totalWorkedMs': 0,
+                  'totalBreaksMs': 0,
+                  'avgPerDayMs': 0,
+                  'monthlyOvertimeMs': 0,
+                  'totalOvertimeMs': 0,
+                  'workDays': 0,
+                  'avgPerWeekMs': 0
+                });
 
         container.read(reportsViewModelProvider.notifier);
         await Future.delayed(Duration.zero);
 
-        verify(mockApiClient.getDailyReport(now.year, now.month, now.day, profileId: null)).called(1);
-        verify(mockApiClient.getWeeklyReport(now.year, now.month, now.day, profileId: null)).called(1);
-        verify(mockApiClient.getMonthlyReport(now.year, now.month, profileId: null)).called(1);
+        verify(mockApiClient.getDailyReport(now.year, now.month, now.day,
+                profileId: null))
+            .called(1);
+        verify(mockApiClient.getWeeklyReport(now.year, now.month, now.day,
+                profileId: null))
+            .called(1);
+        verify(mockApiClient.getMonthlyReport(now.year, now.month,
+                profileId: null))
+            .called(1);
       });
 
-      test('zusätzliches Profil: Server-Reports werden mit dessen profileId angefragt', () async {
+      test(
+          'zusätzliches Profil: Server-Reports werden mit dessen profileId angefragt',
+          () async {
         rebuildContainerWithActiveProfile('p1');
         final now = DateTime.now();
         when(mockWorkRepository.getWorkEntriesForMonth(now.year, now.month))
             .thenAnswer((_) async => []);
-        when(mockApiClient.getDailyReport(now.year, now.month, now.day, profileId: 'p1'))
+        when(mockApiClient.getDailyReport(now.year, now.month, now.day,
+                profileId: 'p1'))
             .thenAnswer((_) async => {'overtimeMs': 0});
-        when(mockApiClient.getWeeklyReport(now.year, now.month, now.day, profileId: 'p1'))
-            .thenAnswer((_) async => {'totalWorkedMs': 0, 'totalBreaksMs': 0, 'avgPerDayMs': 0, 'overtimeMs': 0, 'workDays': 0});
-        when(mockApiClient.getMonthlyReport(now.year, now.month, profileId: 'p1'))
-            .thenAnswer((_) async => {'totalWorkedMs': 0, 'totalBreaksMs': 0, 'avgPerDayMs': 0, 'monthlyOvertimeMs': 0, 'totalOvertimeMs': 0, 'workDays': 0, 'avgPerWeekMs': 0});
+        when(mockApiClient.getWeeklyReport(now.year, now.month, now.day,
+                profileId: 'p1'))
+            .thenAnswer((_) async => {
+                  'totalWorkedMs': 0,
+                  'totalBreaksMs': 0,
+                  'avgPerDayMs': 0,
+                  'overtimeMs': 0,
+                  'workDays': 0
+                });
+        when(mockApiClient.getMonthlyReport(now.year, now.month,
+                profileId: 'p1'))
+            .thenAnswer((_) async => {
+                  'totalWorkedMs': 0,
+                  'totalBreaksMs': 0,
+                  'avgPerDayMs': 0,
+                  'monthlyOvertimeMs': 0,
+                  'totalOvertimeMs': 0,
+                  'workDays': 0,
+                  'avgPerWeekMs': 0
+                });
 
         container.read(reportsViewModelProvider.notifier);
         await Future.delayed(Duration.zero);
 
-        verify(mockApiClient.getDailyReport(now.year, now.month, now.day, profileId: 'p1')).called(1);
-        verify(mockApiClient.getWeeklyReport(now.year, now.month, now.day, profileId: 'p1')).called(1);
-        verify(mockApiClient.getMonthlyReport(now.year, now.month, profileId: 'p1')).called(1);
+        verify(mockApiClient.getDailyReport(now.year, now.month, now.day,
+                profileId: 'p1'))
+            .called(1);
+        verify(mockApiClient.getWeeklyReport(now.year, now.month, now.day,
+                profileId: 'p1'))
+            .called(1);
+        verify(mockApiClient.getMonthlyReport(now.year, now.month,
+                profileId: 'p1'))
+            .called(1);
       });
     });
   });

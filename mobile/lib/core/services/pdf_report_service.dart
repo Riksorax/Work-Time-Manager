@@ -24,7 +24,8 @@ class PdfReportService {
   Future<pw.ThemeData> _loadTheme() async {
     final cached = _theme;
     if (cached != null) return cached;
-    final regularData = await rootBundle.load('assets/fonts/OpenSans-Regular.ttf');
+    final regularData =
+        await rootBundle.load('assets/fonts/OpenSans-Regular.ttf');
     final boldData = await rootBundle.load('assets/fonts/OpenSans-Bold.ttf');
     final theme = pw.ThemeData.withFont(
       base: pw.Font.ttf(regularData),
@@ -56,7 +57,9 @@ class PdfReportService {
       cellAlignments: {0: pw.Alignment.centerLeft, 1: pw.Alignment.centerRight},
       cellPadding: const pw.EdgeInsets.symmetric(vertical: 4, horizontal: 8),
       border: null,
-      data: [for (final row in rows) [row.$1, row.$2]],
+      data: [
+        for (final row in rows) [row.$1, row.$2]
+      ],
     );
   }
 
@@ -69,7 +72,11 @@ class PdfReportService {
     final sortedEntries = dailyWork.entries.toList()
       ..sort((a, b) => a.key.compareTo(b.key));
     return pw.TableHelper.fromTextArray(
-      headers: [l10n.pdfDateColumn, l10n.pdfWeekdayColumn, l10n.pdfWorkTimeColumn],
+      headers: [
+        l10n.pdfDateColumn,
+        l10n.pdfWeekdayColumn,
+        l10n.pdfWorkTimeColumn
+      ],
       cellAlignments: {
         0: pw.Alignment.centerLeft,
         1: pw.Alignment.centerLeft,
@@ -91,7 +98,8 @@ class PdfReportService {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        pw.Text(title, style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
+        pw.Text(title,
+            style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
         pw.SizedBox(height: 4),
         pw.Text(subtitle, style: const pw.TextStyle(fontSize: 12)),
         pw.SizedBox(height: 16),
@@ -129,7 +137,9 @@ class PdfReportService {
             (l10n.pdfOvertimeLabel, _fmtSignedDuration(overtime)),
           ]),
           pw.SizedBox(height: 20),
-          pw.Text(l10n.pdfDailyDetailsTitle, style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+          pw.Text(l10n.pdfDailyDetailsTitle,
+              style:
+                  pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
           pw.SizedBox(height: 8),
           _dailyTable(dailyWork, l10n: l10n, locale: locale),
         ],
@@ -177,7 +187,8 @@ class PdfReportService {
     doc.addPage(
       pw.MultiPage(
         build: (context) => [
-          _header(l10n.pdfMonthlyReportTitle, DateFormat.yMMMM(locale).format(month)),
+          _header(l10n.pdfMonthlyReportTitle,
+              DateFormat.yMMMM(locale).format(month)),
           _summaryTable([
             (l10n.pdfWorkDaysLabel, '$workDays'),
             (l10n.pdfTotalWorkTimeLabel, _fmtDuration(totalWorkDuration)),
@@ -188,11 +199,15 @@ class PdfReportService {
             (l10n.pdfTotalOvertimeLabel, _fmtSignedDuration(totalOvertime)),
           ]),
           pw.SizedBox(height: 20),
-          pw.Text(l10n.pdfWeeklyOverviewTitle, style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+          pw.Text(l10n.pdfWeeklyOverviewTitle,
+              style:
+                  pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
           pw.SizedBox(height: 8),
           _weeklyTable(weeklyWork, l10n: l10n),
           pw.SizedBox(height: 20),
-          pw.Text(l10n.pdfDailyDetailsTitle, style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+          pw.Text(l10n.pdfDailyDetailsTitle,
+              style:
+                  pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
           pw.SizedBox(height: 8),
           _dailyTable(dailyWork, l10n: l10n, locale: locale),
         ],
@@ -210,7 +225,12 @@ class PdfReportService {
     required AppLocalizations l10n,
   }) {
     return pw.TableHelper.fromTextArray(
-      headers: [l10n.pdfMonthColumn, l10n.pdfWorkDaysLabel, l10n.pdfWorkTimeColumn, l10n.pdfOvertimeLabel],
+      headers: [
+        l10n.pdfMonthColumn,
+        l10n.pdfWorkDaysLabel,
+        l10n.pdfWorkTimeColumn,
+        l10n.pdfOvertimeLabel
+      ],
       cellAlignments: {
         0: pw.Alignment.centerLeft,
         1: pw.Alignment.centerRight,
@@ -235,7 +255,8 @@ class PdfReportService {
     required int totalHolidayDays,
     required Duration totalNetWorkDuration,
     required Duration totalOvertime,
-    required List<(String name, Duration net, Duration overtime, int workDays)> months,
+    required List<(String name, Duration net, Duration overtime, int workDays)>
+        months,
   }) async {
     final doc = pw.Document(theme: await _loadTheme());
     doc.addPage(
@@ -251,7 +272,9 @@ class PdfReportService {
             (l10n.pdfTotalOvertimeLabel, _fmtSignedDuration(totalOvertime)),
           ]),
           pw.SizedBox(height: 20),
-          pw.Text(l10n.pdfMonthlyOverviewTitle, style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+          pw.Text(l10n.pdfMonthlyOverviewTitle,
+              style:
+                  pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
           pw.SizedBox(height: 8),
           _monthlyTable(months, l10n: l10n),
         ],

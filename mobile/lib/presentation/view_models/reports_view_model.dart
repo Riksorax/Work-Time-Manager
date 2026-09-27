@@ -28,7 +28,7 @@ class ReportsViewModel extends Notifier<ReportsState> {
 
     // Initial load logic
     Future.microtask(() => init());
-    
+
     return ReportsState.initial();
   }
 
@@ -69,7 +69,8 @@ class ReportsViewModel extends Notifier<ReportsState> {
       final results = await Future.wait([
         api.getDailyReport(day.year, day.month, day.day, profileId: profileId),
         api.getWeeklyReport(day.year, day.month, day.day, profileId: profileId),
-        api.getMonthlyReport(monthRef.year, monthRef.month, profileId: profileId),
+        api.getMonthlyReport(monthRef.year, monthRef.month,
+            profileId: profileId),
       ]);
       state = state.copyWith(
         dailyReportState: _dailyWithApiOvertime(day, results[0]),
@@ -77,11 +78,13 @@ class ReportsViewModel extends Notifier<ReportsState> {
         monthlyReportState: _monthlyFromApi(results[2]),
       );
     } catch (e) {
-      logger.w('[ReportsViewModel] API-Reports nicht geladen, lokaler Fallback: $e');
+      logger.w(
+          '[ReportsViewModel] API-Reports nicht geladen, lokaler Fallback: $e');
     }
   }
 
-  Duration _msDur(dynamic v) => Duration(milliseconds: (v as num?)?.toInt() ?? 0);
+  Duration _msDur(dynamic v) =>
+      Duration(milliseconds: (v as num?)?.toInt() ?? 0);
 
   DateTime _dayKey(String iso) {
     final d = DateTime.parse(iso).toLocal();
@@ -89,7 +92,8 @@ class ReportsViewModel extends Notifier<ReportsState> {
   }
 
   /// Tages-Rohsummen lokal, Überstunden aus dem Backend.
-  DailyReportState _dailyWithApiOvertime(DateTime day, Map<String, dynamic> json) {
+  DailyReportState _dailyWithApiOvertime(
+      DateTime day, Map<String, dynamic> json) {
     final local = _calculateDailyReport(day);
     return DailyReportState(
       entries: local.entries,
@@ -139,17 +143,18 @@ class ReportsViewModel extends Notifier<ReportsState> {
       },
     );
   }
-  
+
   Future<void> saveWorkEntry(WorkEntryEntity entry) async {
     state = state.copyWith(isLoading: true);
     try {
       final workRepository = ref.read(core_providers.workRepositoryProvider);
       await workRepository.saveWorkEntry(entry);
-      
+
       final selectedDate = state.selectedDay ?? DateTime.now();
       await _loadWorkEntriesForMonth(selectedDate.year, selectedDate.month);
     } catch (e, stackTrace) {
-      logger.e('Fehler beim Speichern des Arbeitseintrags: $e', stackTrace: stackTrace);
+      logger.e('Fehler beim Speichern des Arbeitseintrags: $e',
+          stackTrace: stackTrace);
       state = state.copyWith(isLoading: false);
     }
   }
@@ -159,12 +164,13 @@ class ReportsViewModel extends Notifier<ReportsState> {
     try {
       final workRepository = ref.read(core_providers.workRepositoryProvider);
       await workRepository.deleteWorkEntry(entryId);
-      
+
       // Nach dem Löschen die Einträge für den aktuellen Monat neu laden
       final selectedDate = state.selectedDay ?? DateTime.now();
       await _loadWorkEntriesForMonth(selectedDate.year, selectedDate.month);
     } catch (e, stackTrace) {
-      logger.e('Fehler beim Löschen des Arbeitseintrags: $e', stackTrace: stackTrace);
+      logger.e('Fehler beim Löschen des Arbeitseintrags: $e',
+          stackTrace: stackTrace);
       state = state.copyWith(isLoading: false);
     }
   }
@@ -193,8 +199,7 @@ class ReportsViewModel extends Notifier<ReportsState> {
 
     // Setze den ausgewählten Tag auf den ersten des neuen Monats.
     state = state.copyWith(
-        selectedMonth: normalizedMonth,
-        selectedDay: normalizedMonth);
+        selectedMonth: normalizedMonth, selectedDay: normalizedMonth);
     _loadWorkEntriesForMonth(newMonth.year, newMonth.month);
   }
 
@@ -219,11 +224,14 @@ class ReportsViewModel extends Notifier<ReportsState> {
       // Prüfe, ob es sich um einen Permission-Fehler handelt
       final errorMessage = e.toString();
       if (errorMessage.contains('permission-denied')) {
-        logger.w('[ReportsViewModel] Firebase Permission-Fehler erkannt - User wahrscheinlich nicht eingeloggt. Verwende leere Daten.');
+        logger.w(
+            '[ReportsViewModel] Firebase Permission-Fehler erkannt - User wahrscheinlich nicht eingeloggt. Verwende leere Daten.');
       } else {
-        logger.e('Fehler beim Laden der Arbeitseinträge: $e', stackTrace: stackTrace);
+        logger.e('Fehler beim Laden der Arbeitseinträge: $e',
+            stackTrace: stackTrace);
       }
-      _monthlyEntries = []; // Stelle sicher, dass die Liste bei einem Fehler leer ist
+      _monthlyEntries =
+          []; // Stelle sicher, dass die Liste bei einem Fehler leer ist
     } finally {
       // Dieser Block wird immer ausgeführt.
       // _updateCalculatedReports setzt isLoading auf false und aktualisiert alle Report-States.
@@ -281,7 +289,8 @@ class ReportsViewModel extends Notifier<ReportsState> {
   /// Gibt Duration.zero zurück, wenn der Tag ein Zusatztag ist
   /// (mehr Arbeitstage in der Woche als konfiguriert).
   Duration getEffectiveDailyTargetForDate(DateTime date) {
-    final settingsRepository = ref.read(core_providers.settingsRepositoryProvider);
+    final settingsRepository =
+        ref.read(core_providers.settingsRepositoryProvider);
     final workdays = settingsRepository.getWorkdays();
     if (workdays.isEmpty) return Duration.zero;
     final regularDailyTarget = roundDurationToMinute(Duration(
@@ -299,15 +308,18 @@ class ReportsViewModel extends Notifier<ReportsState> {
   }
 
   WeeklyReportState _calculateWeeklyReport(DateTime date) {
-    final settingsRepository = ref.read(core_providers.settingsRepositoryProvider);
+    final settingsRepository =
+        ref.read(core_providers.settingsRepositoryProvider);
     // Normalize date to midnight to avoid time-of-day issues in week calculation
     final reportDate = DateTime(date.year, date.month, date.day);
-    final startOfWeek = reportDate.subtract(Duration(days: reportDate.weekday - 1));
+    final startOfWeek =
+        reportDate.subtract(Duration(days: reportDate.weekday - 1));
     final endOfWeek = startOfWeek.add(const Duration(days: 6));
 
     final entriesForWeek = _monthlyEntries.where((entry) {
       // Normalize entry date to midnight for correct comparison.
-      final entryDate = DateTime(entry.date.year, entry.date.month, entry.date.day);
+      final entryDate =
+          DateTime(entry.date.year, entry.date.month, entry.date.day);
       // Check if the entry date is within the week range (inclusive).
       return !entryDate.isBefore(startOfWeek) && !entryDate.isAfter(endOfWeek);
     }).toList();
@@ -325,8 +337,9 @@ class ReportsViewModel extends Notifier<ReportsState> {
         .toSet();
     final uniqueWorkDays = uniqueWorkDaysSet.length;
     final averageWorkDuration = uniqueWorkDays > 0
-        ? roundDurationToMinute(
-            Duration(microseconds: totalNetWorkDuration.inMicroseconds ~/ uniqueWorkDays))
+        ? roundDurationToMinute(Duration(
+            microseconds:
+                totalNetWorkDuration.inMicroseconds ~/ uniqueWorkDays))
         : Duration.zero;
 
     final workdays = settingsRepository.getWorkdays();
@@ -339,25 +352,29 @@ class ReportsViewModel extends Notifier<ReportsState> {
     final effectiveWorkDays =
         uniqueWorkDaysSet.where((d) => workdays.contains(d.weekday)).length;
     final targetWeeklyHoursForActualWorkdaysInMicroseconds =
-        (targetDailyHoursInDouble * effectiveWorkDays * Duration.microsecondsPerHour)
+        (targetDailyHoursInDouble *
+                effectiveWorkDays *
+                Duration.microsecondsPerHour)
             .toInt();
-    final targetWeeklyHours = roundDurationToMinute(
-        Duration(microseconds: targetWeeklyHoursForActualWorkdaysInMicroseconds));
+    final targetWeeklyHours = roundDurationToMinute(Duration(
+        microseconds: targetWeeklyHoursForActualWorkdaysInMicroseconds));
     final overtime = totalNetWorkDuration - targetWeeklyHours;
 
-    final manualOvertimes = entriesForWeek.fold<Duration>(
-        Duration.zero,
+    final manualOvertimes = entriesForWeek.fold<Duration>(Duration.zero,
         (prev, entry) => prev + (entry.manualOvertime ?? Duration.zero));
     final totalWeeklyOvertime = overtime + manualOvertimes;
 
     Map<DateTime, Duration> dailyWork = {};
     for (var entry in entriesForWeek) {
       // Stelle sicher, dass nur Einträge mit gültiger Dauer berücksichtigt werden
-      if (entry.workStart != null && entry.workEnd != null && entry.effectiveWorkDuration > Duration.zero) {
-        dailyWork[entry.date] = (dailyWork[entry.date] ?? Duration.zero) + entry.effectiveWorkDuration;
+      if (entry.workStart != null &&
+          entry.workEnd != null &&
+          entry.effectiveWorkDuration > Duration.zero) {
+        dailyWork[entry.date] = (dailyWork[entry.date] ?? Duration.zero) +
+            entry.effectiveWorkDuration;
       }
     }
-    
+
     return WeeklyReportState(
       workDays: dailyWork.keys.length, // Besser: Anzahl der Tage mit Arbeit
       totalWorkDuration: totalWorkDuration,
@@ -370,7 +387,8 @@ class ReportsViewModel extends Notifier<ReportsState> {
   }
 
   MonthlyReportState _calculateMonthlyReport() {
-    final settingsRepository = ref.read(core_providers.settingsRepositoryProvider);
+    final settingsRepository =
+        ref.read(core_providers.settingsRepositoryProvider);
     // _monthlyEntries enthält bereits alle Einträge für den ausgewählten Monat
     final totalWorkDuration = _monthlyEntries.fold<Duration>(
         Duration.zero, (prev, e) => prev + e.totalWorkTime);
@@ -379,15 +397,15 @@ class ReportsViewModel extends Notifier<ReportsState> {
     final totalNetWorkDuration = totalWorkDuration - totalBreakDuration;
 
     // Eindeutige Arbeitstage im Monat zählen
-    final uniqueWorkDaysSet =
-        _monthlyEntries.map((e) => DateTime(e.date.year, e.date.month, e.date.day)).toSet();
+    final uniqueWorkDaysSet = _monthlyEntries
+        .map((e) => DateTime(e.date.year, e.date.month, e.date.day))
+        .toSet();
     final workDays = uniqueWorkDaysSet.length;
 
-    final averageWorkDuration =
-        workDays > 0
-            ? roundDurationToMinute(
-                Duration(microseconds: totalNetWorkDuration.inMicroseconds ~/ workDays))
-            : Duration.zero;
+    final averageWorkDuration = workDays > 0
+        ? roundDurationToMinute(Duration(
+            microseconds: totalNetWorkDuration.inMicroseconds ~/ workDays))
+        : Duration.zero;
 
     final workdays = settingsRepository.getWorkdays();
     final targetDailyHours = workdays.isNotEmpty
@@ -401,21 +419,25 @@ class ReportsViewModel extends Notifier<ReportsState> {
     for (var entry in _monthlyEntries) {
       if (entry.workStart != null) {
         final weekNum = _getWeekNumber(entry.date);
-        final dayOnly = DateTime(entry.date.year, entry.date.month, entry.date.day);
+        final dayOnly =
+            DateTime(entry.date.year, entry.date.month, entry.date.day);
         weekToWorkDays.putIfAbsent(weekNum, () => {}).add(dayOnly);
       }
     }
     int effectiveTotalWorkDays = 0;
     for (var weekDays in weekToWorkDays.values) {
-      effectiveTotalWorkDays += weekDays.where((d) => workdays.contains(d.weekday)).length;
+      effectiveTotalWorkDays +=
+          weekDays.where((d) => workdays.contains(d.weekday)).length;
     }
 
-    final totalTargetHoursForActualWorkDays = roundDurationToMinute(
-        Duration(microseconds: (targetDailyHours * effectiveTotalWorkDays * Duration.microsecondsPerHour).toInt()));
+    final totalTargetHoursForActualWorkDays = roundDurationToMinute(Duration(
+        microseconds: (targetDailyHours *
+                effectiveTotalWorkDays *
+                Duration.microsecondsPerHour)
+            .toInt()));
     final overtime = totalNetWorkDuration - totalTargetHoursForActualWorkDays;
 
-    final manualOvertimes = _monthlyEntries.fold<Duration>(
-        Duration.zero,
+    final manualOvertimes = _monthlyEntries.fold<Duration>(Duration.zero,
         (prev, entry) => prev + (entry.manualOvertime ?? Duration.zero));
     final calculatedMonthlyOvertime = overtime + manualOvertimes;
 
@@ -423,34 +445,40 @@ class ReportsViewModel extends Notifier<ReportsState> {
     final Map<int, Duration> weeklyWork = {};
 
     for (var entry in _monthlyEntries) {
-      if (entry.workStart != null && entry.workEnd != null && entry.effectiveWorkDuration > Duration.zero) {
-        final dayOnly = DateTime(entry.date.year, entry.date.month, entry.date.day);
-        dailyWork[dayOnly] = (dailyWork[dayOnly] ?? Duration.zero) + entry.effectiveWorkDuration;
+      if (entry.workStart != null &&
+          entry.workEnd != null &&
+          entry.effectiveWorkDuration > Duration.zero) {
+        final dayOnly =
+            DateTime(entry.date.year, entry.date.month, entry.date.day);
+        dailyWork[dayOnly] =
+            (dailyWork[dayOnly] ?? Duration.zero) + entry.effectiveWorkDuration;
 
         final weekNumber = _getWeekNumber(entry.date);
-        weeklyWork[weekNumber] =
-            (weeklyWork[weekNumber] ?? Duration.zero) + entry.effectiveWorkDuration;
+        weeklyWork[weekNumber] = (weeklyWork[weekNumber] ?? Duration.zero) +
+            entry.effectiveWorkDuration;
       }
     }
-    
+
     // Durchschnittliche Arbeitszeit pro Woche
     final numberOfWeeksWithWork = weeklyWork.keys.length;
-    final totalWorkDurationInMonth = weeklyWork.values.fold(Duration.zero, (prev, current) => prev + current);
-    final avgWorkDurationPerWeek = numberOfWeeksWithWork > 0 
+    final totalWorkDurationInMonth = weeklyWork.values
+        .fold(Duration.zero, (prev, current) => prev + current);
+    final avgWorkDurationPerWeek = numberOfWeeksWithWork > 0
         ? roundDurationToMinute(Duration(
-            microseconds: totalWorkDurationInMonth.inMicroseconds ~/ numberOfWeeksWithWork))
+            microseconds: totalWorkDurationInMonth.inMicroseconds ~/
+                numberOfWeeksWithWork))
         : Duration.zero;
-
 
     return MonthlyReportState(
       totalWorkDuration: totalWorkDuration,
       totalBreakDuration: totalBreakDuration,
       totalNetWorkDuration: totalNetWorkDuration,
       averageWorkDuration: averageWorkDuration, // Ø pro Tag
-      overtime: calculatedMonthlyOvertime, 
+      overtime: calculatedMonthlyOvertime,
       totalOvertime: calculatedMonthlyOvertime,
       workDays: workDays, // Anzahl der tatsächlichen Arbeitstage
-      dailyWork: dailyWork, // Für Kalendermarkierungen und Tagesübersicht in Monatsansicht
+      dailyWork:
+          dailyWork, // Für Kalendermarkierungen und Tagesübersicht in Monatsansicht
       weeklyWork: weeklyWork,
       avgWorkDurationPerWeek: avgWorkDurationPerWeek,
     );
@@ -508,10 +536,12 @@ class ReportsViewModel extends Notifier<ReportsState> {
           type: type,
           isManuallyEntered: true,
           workStart: startTime != null
-              ? DateTime(date.year, date.month, date.day, startTime.hour, startTime.minute)
+              ? DateTime(date.year, date.month, date.day, startTime.hour,
+                  startTime.minute)
               : null,
           workEnd: endTime != null
-              ? DateTime(date.year, date.month, date.day, endTime.hour, endTime.minute)
+              ? DateTime(
+                  date.year, date.month, date.day, endTime.hour, endTime.minute)
               : null,
         );
         await workRepository.saveWorkEntry(entry);
@@ -523,9 +553,9 @@ class ReportsViewModel extends Notifier<ReportsState> {
       state = state.copyWith(multiSelectMode: false);
       await _loadWorkEntriesForMonth(selectedDate.year, selectedDate.month);
     } catch (e, stackTrace) {
-      logger.e('Fehler beim Speichern von Batch-Einträgen: $e', stackTrace: stackTrace);
+      logger.e('Fehler beim Speichern von Batch-Einträgen: $e',
+          stackTrace: stackTrace);
       state = state.copyWith(isLoading: false);
     }
   }
 }
-

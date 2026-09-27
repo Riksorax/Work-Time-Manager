@@ -13,7 +13,8 @@ class WorkProfilesNotAvailableException implements Exception {
   const WorkProfilesNotAvailableException();
 
   @override
-  String toString() => 'Arbeitszeit-Profile erfordern einen eingeloggten Nutzer';
+  String toString() =>
+      'Arbeitszeit-Profile erfordern einen eingeloggten Nutzer';
 }
 
 /// Kapselt Anlegen und Löschen zusätzlicher Arbeitszeit-Profile (#138) inkl.
@@ -30,7 +31,9 @@ class WorkProfileViewModel {
 
     final profile = await repository.addProfile(name);
     _ref.invalidate(core_providers.workProfilesProvider);
-    _ref.read(core_providers.activeWorkProfileIdProvider.notifier).setActiveProfile(profile.id);
+    _ref
+        .read(core_providers.activeWorkProfileIdProvider.notifier)
+        .setActiveProfile(profile.id);
     return profile;
   }
 
@@ -42,7 +45,9 @@ class WorkProfileViewModel {
     _ref.invalidate(core_providers.workProfilesProvider);
     // Falls das gelöschte Profil gerade aktiv war, zurück auf Standard.
     if (_ref.read(core_providers.activeWorkProfileIdProvider) == profileId) {
-      _ref.read(core_providers.activeWorkProfileIdProvider.notifier).setActiveProfile(null);
+      _ref
+          .read(core_providers.activeWorkProfileIdProvider.notifier)
+          .setActiveProfile(null);
     }
   }
 }

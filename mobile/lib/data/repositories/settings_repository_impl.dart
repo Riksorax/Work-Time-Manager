@@ -21,9 +21,11 @@ class SettingsRepositoryImpl implements SettingsRepository {
   static const String _notifyWorkEndKey = 'notify_work_end';
   static const String _notifyBreaksKey = 'notify_breaks';
   static const String _bundeslandKey = 'bundesland';
-  static const String _warnOnOvertimeThresholdKey = 'warn_on_overtime_threshold';
+  static const String _warnOnOvertimeThresholdKey =
+      'warn_on_overtime_threshold';
   static const String _overtimeThresholdHoursKey = 'overtime_threshold_hours';
-  static const String _warnOnUndertimeThresholdKey = 'warn_on_undertime_threshold';
+  static const String _warnOnUndertimeThresholdKey =
+      'warn_on_undertime_threshold';
   static const String _undertimeThresholdHoursKey = 'undertime_threshold_hours';
   // Zeitformat ist geräteweit, nicht userId-spezifisch (wie Theme/Benachrichtigungen).
   static const String _use24HourFormatKey = 'use_24_hour_format';
@@ -40,7 +42,8 @@ class SettingsRepositoryImpl implements SettingsRepository {
   /// geräte-/kontoweit, wie schon vor #138 (siehe Kommentare unten).
   final String? _profileId;
 
-  SettingsRepositoryImpl(this._prefs, this._firestoreDataSource, this._userId, [this._profileId]);
+  SettingsRepositoryImpl(this._prefs, this._firestoreDataSource, this._userId,
+      [this._profileId]);
 
   String get _profileSuffix =>
       (_profileId == null || _profileId == 'default') ? '' : '_$_profileId';
@@ -50,7 +53,8 @@ class SettingsRepositoryImpl implements SettingsRepository {
   String get _workdaysKey => 'workdays_$_userId$_profileSuffix';
   // Alter Schlüssel (reine Anzahl statt konkreter Wochentage) - nur noch
   // zur Migration bestehender Nutzer beim ersten Lesen relevant (#217).
-  String get _legacyWorkdaysPerWeekKey => 'workdays_per_week_$_userId$_profileSuffix';
+  String get _legacyWorkdaysPerWeekKey =>
+      'workdays_per_week_$_userId$_profileSuffix';
 
   @override
   AppThemeMode getThemeMode() {
@@ -77,7 +81,8 @@ class SettingsRepositoryImpl implements SettingsRepository {
 
   @override
   Future<void> setTargetWeeklyHours(double hours) async {
-    logger.i('[SettingsRepository] setTargetWeeklyHours for user $_userId: $hours');
+    logger.i(
+        '[SettingsRepository] setTargetWeeklyHours for user $_userId: $hours');
     await _prefs.setDouble(_targetHoursKey, hours);
     _syncToFirestore({'weeklyTargetHours': hours});
   }
@@ -110,13 +115,16 @@ class SettingsRepositoryImpl implements SettingsRepository {
   Future<void> syncFromFirestore() async {
     if (_userId == 'local' || _userId.isEmpty) return;
     try {
-      final data = await _firestoreDataSource.getSettings(_userId, profileId: _profileId);
+      final data = await _firestoreDataSource.getSettings(_userId,
+          profileId: _profileId);
       if (data == null) return;
       if (data['weeklyTargetHours'] != null) {
-        await _prefs.setDouble(_targetHoursKey, (data['weeklyTargetHours'] as num).toDouble());
+        await _prefs.setDouble(
+            _targetHoursKey, (data['weeklyTargetHours'] as num).toDouble());
       }
       if (data['workdays'] != null) {
-        final days = (data['workdays'] as List).map((e) => (e as num).toInt()).toList();
+        final days =
+            (data['workdays'] as List).map((e) => (e as num).toInt()).toList();
         await _prefs.setString(_workdaysKey, days.join(','));
       } else if (data['workdaysPerWeek'] != null) {
         final legacyCount = (data['workdaysPerWeek'] as num).toInt();
@@ -135,7 +143,8 @@ class SettingsRepositoryImpl implements SettingsRepository {
     if (_userId == 'local' || _userId.isEmpty) return;
     _firestoreDataSource
         .saveSettings(_userId, data, profileId: _profileId)
-        .catchError((e) => logger.w('[SettingsRepository] Firestore-Sync fehlgeschlagen: $e'));
+        .catchError((e) =>
+            logger.w('[SettingsRepository] Firestore-Sync fehlgeschlagen: $e'));
   }
 
   @override

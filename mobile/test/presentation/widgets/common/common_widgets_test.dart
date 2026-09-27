@@ -15,7 +15,8 @@ void main() {
   }
 
   group('Common Widgets', () {
-    testWidgets('LoadingIndicator shows CircularProgressIndicator', (tester) async {
+    testWidgets('LoadingIndicator shows CircularProgressIndicator',
+        (tester) async {
       await tester.pumpWidget(wrap(const LoadingIndicator()));
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
     });
@@ -31,7 +32,8 @@ void main() {
       expect(find.byIcon(Icons.error_outline), findsOneWidget);
     });
 
-    testWidgets('ErrorDisplay shows retry button when onRetry is provided', (tester) async {
+    testWidgets('ErrorDisplay shows retry button when onRetry is provided',
+        (tester) async {
       bool retryCalled = false;
       await tester.pumpWidget(wrap(
         Scaffold(
@@ -49,14 +51,15 @@ void main() {
       expect(retryCalled, true);
     });
 
-    testWidgets('ErrorDisplay does not show retry button when onRetry is null', (tester) async {
+    testWidgets('ErrorDisplay does not show retry button when onRetry is null',
+        (tester) async {
       await tester.pumpWidget(wrap(
         const Scaffold(body: ErrorDisplay(error: 'Error')),
       ));
 
       expect(find.text('Erneut versuchen'), findsNothing);
     });
-   group('LoadingIndicator', () {
+    group('LoadingIndicator', () {
       // already tested above
     });
   });

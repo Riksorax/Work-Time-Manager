@@ -53,18 +53,22 @@ void main() {
   });
 
   group('ApiClient — profileId-Query-Parameter (siehe #239/#291/#292)', () {
-    test('getDailyReport ohne profileId hängt keinen Query-Parameter an', () async {
+    test('getDailyReport ohne profileId hängt keinen Query-Parameter an',
+        () async {
       await api.getDailyReport(2026, 9, 26);
       expect(http_.lastUri!.queryParameters, isEmpty);
       expect(http_.lastUri!.path, '/api/reports/daily/2026/9/26');
     });
 
-    test('getDailyReport mit profileId "default" hängt keinen Query-Parameter an', () async {
+    test(
+        'getDailyReport mit profileId "default" hängt keinen Query-Parameter an',
+        () async {
       await api.getDailyReport(2026, 9, 26, profileId: 'default');
       expect(http_.lastUri!.queryParameters, isEmpty);
     });
 
-    test('getDailyReport mit zusätzlichem Profil hängt ?profileId= an', () async {
+    test('getDailyReport mit zusätzlichem Profil hängt ?profileId= an',
+        () async {
       await api.getDailyReport(2026, 9, 26, profileId: 'p1');
       expect(http_.lastUri!.queryParameters, {'profileId': 'p1'});
     });
@@ -104,7 +108,8 @@ void main() {
       expect(http_.lastUri!.queryParameters, {'profileId': 'p1'});
     });
 
-    test('getOvertime ohne profileId hängt keinen Query-Parameter an', () async {
+    test('getOvertime ohne profileId hängt keinen Query-Parameter an',
+        () async {
       http_.nextResponse = http.Response('{"minutes": 0}', 200);
       await api.getOvertime();
       expect(http_.lastUri!.queryParameters, isEmpty);
