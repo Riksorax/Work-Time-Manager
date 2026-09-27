@@ -8,7 +8,7 @@ import { SettingsService } from '../../core/services/settings';
 import { WorkEntryService } from '../../core/services/work-entry';
 import { WorkProfileService } from '../../core/services/work-profile';
 import { ApiClient } from '../../core/services/api-client';
-import { ReportCalculatorService, isSameDayRc, toDateKey } from '../../domain/services/report-calculator.service';
+import { calculateDailyStat, isSameDayRc, toDateKey } from '../../domain/services/report-calculator.service';
 import { DailyStat, MonthlyReport, WeeklyReport } from '../../domain/models/reports.models';
 import { WorkEntry, WorkEntryType, UserSettings } from '../../shared/models/index';
 
@@ -62,7 +62,6 @@ export class ReportsService {
   private readonly workProfileService = inject(WorkProfileService);
   private readonly authService       = inject(AuthService);
   private readonly apiClient         = inject(ApiClient);
-  private readonly calc              = inject(ReportCalculatorService);
   private readonly router            = inject(Router);
 
   // ── Auth / Premium ────────────────────────────────────────────────────────────
@@ -182,7 +181,7 @@ export class ReportsService {
     // Eingeloggt: server-berechnet. Anonym: lokale Berechnung aus localStorage-Einträgen.
     if (this.isLoggedIn()) return this._apiDaily() ?? EMPTY_DAILY_STAT;
     if (this.isLoading()) return EMPTY_DAILY_STAT;
-    return this.calc.calculateDailyStat(
+    return calculateDailyStat(
       this._monthlyEntries(), this.selectedDate(), this._settings()
     );
   });
