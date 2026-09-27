@@ -9,7 +9,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { TranslatePipe } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SettingsPageService } from './settings.service';
 import { formatWorkdays } from '../../shared/utils/weekday-labels.util';
 import {
@@ -46,6 +46,7 @@ export class SettingsComponent {
   protected readonly svc      = inject(SettingsPageService);
   private  readonly dialog    = inject(MatDialog);
   private  readonly snackbar  = inject(MatSnackBar);
+  private  readonly translate = inject(TranslateService);
 
   // ── Template helpers ────────────────────────────────────────────────────────
 
@@ -74,7 +75,7 @@ export class SettingsComponent {
     ref.afterClosed().subscribe(async (result: EditTargetHoursDialogResult | undefined) => {
       if (!result) return;
       await this.svc.setTargetHours(result.hours);
-      this.snackbar.open('Soll-Arbeitsstunden gespeichert', 'OK', { duration: 2500 });
+      this.snackbar.open(this.translate.instant('settings.targetHoursSaved'), 'OK', { duration: 2500 });
     });
   }
 
@@ -85,7 +86,7 @@ export class SettingsComponent {
     ref.afterClosed().subscribe(async (result: EditWorkdaysDialogResult | undefined) => {
       if (!result) return;
       await this.svc.setWorkdays(result.days);
-      this.snackbar.open('Arbeitstage gespeichert', 'OK', { duration: 2500 });
+      this.snackbar.open(this.translate.instant('settings.workdaysSaved'), 'OK', { duration: 2500 });
     });
   }
 
@@ -97,7 +98,7 @@ export class SettingsComponent {
       if (!result) return;
       const ms = result === 'reset' ? 0 : result.overtimeMs;
       await this.svc.setOvertime(ms);
-      this.snackbar.open('Gleitzeit-Bilanz gespeichert', 'OK', { duration: 2500 });
+      this.snackbar.open(this.translate.instant('settings.overtimeSaved'), 'OK', { duration: 2500 });
     });
   }
 
@@ -120,8 +121,8 @@ export class SettingsComponent {
         await this.svc.deleteAccount();
       } catch (e: unknown) {
         const msg = e instanceof Error && e.message.includes('requires-recent-login')
-          ? 'Bitte erneut anmelden und dann erneut versuchen.'
-          : 'Account konnte nicht gelöscht werden.';
+          ? this.translate.instant('settings.deleteAccountReauth')
+          : this.translate.instant('settings.deleteAccountFailed');
         this.snackbar.open(msg, 'OK', { duration: 5000 });
       }
     });
@@ -131,12 +132,12 @@ export class SettingsComponent {
     try {
       const restored = await this.svc.restorePurchases();
       this.snackbar.open(
-        restored ? 'Premium erfolgreich wiederhergestellt!' : 'Kein aktiver Kauf gefunden.',
+        this.translate.instant(restored ? 'settings.restoreSuccess' : 'settings.restoreNotFound'),
         'OK',
         { duration: 4000 },
       );
     } catch {
-      this.snackbar.open('Fehler beim Wiederherstellen des Kaufs.', 'OK', { duration: 4000 });
+      this.snackbar.open(this.translate.instant('settings.restoreError'), 'OK', { duration: 4000 });
     }
   }
 
@@ -144,10 +145,10 @@ export class SettingsComponent {
     try {
       const purchased = await this.svc.presentPaywall();
       if (purchased) {
-        this.snackbar.open('Premium erfolgreich aktiviert!', 'OK', { duration: 4000 });
+        this.snackbar.open(this.translate.instant('settings.purchaseSuccess'), 'OK', { duration: 4000 });
       }
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Kauf fehlgeschlagen.';
+      const msg = e instanceof Error ? e.message : this.translate.instant('settings.purchaseError');
       this.snackbar.open(msg, 'OK', { duration: 4000 });
     }
   }
@@ -155,17 +156,19 @@ export class SettingsComponent {
   async onSync(): Promise<void> {
     const result = await this.svc.sync();
     if (result.errors.length === 0) {
-      const parts = [`${result.workEntriesSynced} Einträge`];
-      if (result.settingsSynced) parts.push('Einstellungen');
-      if (result.overtimeSynced) parts.push('Überstunden');
+      const parts = [
+        this.translate.instant('settings.syncEntriesCount', { count: result.workEntriesSynced }),
+      ];
+      if (result.settingsSynced) parts.push(this.translate.instant('settings.title'));
+      if (result.overtimeSynced) parts.push(this.translate.instant('settings.syncOvertimeLabel'));
       this.snackbar.open(
-        `Synchronisierung erfolgreich: ${parts.join(', ')}`,
+        this.translate.instant('settings.syncSuccess', { parts: parts.join(', ') }),
         'OK',
         { duration: 4000 }
       );
     } else {
       this.snackbar.open(
-        `Synchronisierung mit Fehlern: ${result.errors.join(', ')}`,
+        this.translate.instant('settings.syncErrors', { errors: result.errors.join(', ') }),
         'OK',
         { duration: 5000 }
       );
@@ -179,24 +182,21 @@ import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 
 @Component({
   selector: 'app-confirm-delete-dialog',
-  imports: [MatDialogModule, MatButtonModule],
+  imports: [MatDialogModule, MatButtonModule, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <h2 mat-dialog-title>Account endgültig löschen</h2>
+    <h2 mat-dialog-title>{{ 'settings.deleteAccountAria' | translate }}</h2>
     <mat-dialog-content>
-      <p>
-        Warnung: Diese Aktion kann nicht rückgängig gemacht werden.
-        Alle Ihre Daten werden dauerhaft gelöscht.
-      </p>
+      <p>{{ 'settings.deleteAccountWarning' | translate }}</p>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close>Abbrechen</button>
+      <button mat-button mat-dialog-close>{{ 'common.cancel' | translate }}</button>
       <button mat-flat-button
               [style.background-color]="'var(--mat-sys-error)'"
               [style.color]="'var(--mat-sys-on-error)'"
               (click)="confirm()"
-              aria-label="Account endgültig löschen">
-        Endgültig löschen
+              [attr.aria-label]="'settings.deleteAccountAria' | translate">
+        {{ 'settings.deleteAccountConfirm' | translate }}
       </button>
     </mat-dialog-actions>
   `,
