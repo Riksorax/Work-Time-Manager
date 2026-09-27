@@ -1,5 +1,4 @@
-import { TestBed } from '@angular/core/testing';
-import { ReportCalculatorService } from './report-calculator.service';
+import { getIsoWeekNumber, calculateDailyStat, calculateWeeklyReport, calculateMonthlyReport } from './report-calculator.service';
 import { WorkEntry, WorkEntryType, UserSettings } from '../../shared/models/index';
 
 const DEFAULT_SETTINGS: UserSettings = {
@@ -34,40 +33,34 @@ function d(year: number, month: number, day: number, h = 0, min = 0): Date {
 }
 
 describe('ReportCalculatorService', () => {
-  let svc: ReportCalculatorService;
-
-  beforeEach(() => {
-    TestBed.configureTestingModule({});
-    svc = TestBed.inject(ReportCalculatorService);
-  });
 
   // ─── getIsoWeekNumber ───────────────────────────────────────────────────────
 
   describe('getIsoWeekNumber', () => {
     it('returns 1 for 2024-01-01 (Monday, first week)', () => {
-      expect(svc.getIsoWeekNumber(d(2024, 1, 1))).toBe(1);
+      expect(getIsoWeekNumber(d(2024, 1, 1))).toBe(1);
     });
 
     it('returns 1 for 2024-01-07 (Sunday, still week 1)', () => {
-      expect(svc.getIsoWeekNumber(d(2024, 1, 7))).toBe(1);
+      expect(getIsoWeekNumber(d(2024, 1, 7))).toBe(1);
     });
 
     it('returns 2 for 2024-01-08 (Monday, second week)', () => {
-      expect(svc.getIsoWeekNumber(d(2024, 1, 8))).toBe(2);
+      expect(getIsoWeekNumber(d(2024, 1, 8))).toBe(2);
     });
 
     it('returns 52 for 2023-12-31 (last week of 2023)', () => {
-      expect(svc.getIsoWeekNumber(d(2023, 12, 31))).toBe(52);
+      expect(getIsoWeekNumber(d(2023, 12, 31))).toBe(52);
     });
 
     it('returns 1 for 2026-01-01 (belongs to week 1 of 2026)', () => {
       // Jan 1, 2026 is Thursday → belongs to week 1
-      expect(svc.getIsoWeekNumber(d(2026, 1, 1))).toBe(1);
+      expect(getIsoWeekNumber(d(2026, 1, 1))).toBe(1);
     });
 
     it('returns 53 for 2015-12-31 (year with week 53)', () => {
       // 2015 had 53 ISO weeks
-      expect(svc.getIsoWeekNumber(d(2015, 12, 31))).toBe(53);
+      expect(getIsoWeekNumber(d(2015, 12, 31))).toBe(53);
     });
   });
 
@@ -75,7 +68,7 @@ describe('ReportCalculatorService', () => {
 
   describe('calculateDailyStat', () => {
     it('returns zeros for empty entry list', () => {
-      const stat = svc.calculateDailyStat([], d(2026, 4, 21), DEFAULT_SETTINGS);
+      const stat = calculateDailyStat([], d(2026, 4, 21), DEFAULT_SETTINGS);
       expect(stat.target).toBe(DAILY_MS);
       expect(stat.worked).toBe(0);
       expect(stat.overtime).toBe(-DAILY_MS);
@@ -96,7 +89,7 @@ describe('ReportCalculatorService', () => {
           }],
         }),
       ];
-      const stat = svc.calculateDailyStat(entries, d(2026, 4, 21), DEFAULT_SETTINGS);
+      const stat = calculateDailyStat(entries, d(2026, 4, 21), DEFAULT_SETTINGS);
       const expected = 9 * 3600000 - 30 * 60000; // 9h − 30min Pause = 8,5h
       expect(stat.worked).toBe(expected);
     });
@@ -108,7 +101,7 @@ describe('ReportCalculatorService', () => {
           type: WorkEntryType.Vacation,
         }),
       ];
-      const stat = svc.calculateDailyStat(entries, d(2026, 4, 21), DEFAULT_SETTINGS);
+      const stat = calculateDailyStat(entries, d(2026, 4, 21), DEFAULT_SETTINGS);
       expect(stat.worked).toBe(stat.target);
       expect(stat.overtime).toBe(0);
     });
@@ -120,7 +113,7 @@ describe('ReportCalculatorService', () => {
           type: WorkEntryType.Sick,
         }),
       ];
-      const stat = svc.calculateDailyStat(entries, d(2026, 4, 21), DEFAULT_SETTINGS);
+      const stat = calculateDailyStat(entries, d(2026, 4, 21), DEFAULT_SETTINGS);
       expect(stat.worked).toBe(stat.target);
       expect(stat.overtime).toBe(0);
     });
@@ -132,7 +125,7 @@ describe('ReportCalculatorService', () => {
           type: WorkEntryType.Holiday,
         }),
       ];
-      const stat = svc.calculateDailyStat(entries, d(2026, 4, 21), DEFAULT_SETTINGS);
+      const stat = calculateDailyStat(entries, d(2026, 4, 21), DEFAULT_SETTINGS);
       expect(stat.worked).toBe(stat.target);
       expect(stat.overtime).toBe(0);
     });
@@ -146,7 +139,7 @@ describe('ReportCalculatorService', () => {
           manualOvertimeMinutes: 30,
         }),
       ];
-      const stat = svc.calculateDailyStat(entries, d(2026, 4, 21), DEFAULT_SETTINGS);
+      const stat = calculateDailyStat(entries, d(2026, 4, 21), DEFAULT_SETTINGS);
       expect(stat.overtime).toBe(30 * 60000);
     });
 
@@ -164,7 +157,7 @@ describe('ReportCalculatorService', () => {
         makeWorkEntry({ date: saturday,        workStart: d(2026, 4, 25, 8), workEnd: d(2026, 4, 25, 16) }),
       ];
       void monday;
-      const stat = svc.calculateDailyStat(entries, saturday, DEFAULT_SETTINGS);
+      const stat = calculateDailyStat(entries, saturday, DEFAULT_SETTINGS);
       expect(stat.target).toBe(0);
       expect(stat.overtime).toBeGreaterThan(0);
     });
@@ -174,10 +167,10 @@ describe('ReportCalculatorService', () => {
       const monday = d(2026, 4, 20);
       const saturday = d(2026, 4, 25);
 
-      const mondayStat = svc.calculateDailyStat([], monday, tueSatSettings);
+      const mondayStat = calculateDailyStat([], monday, tueSatSettings);
       expect(mondayStat.target).toBe(0);
 
-      const saturdayStat = svc.calculateDailyStat([], saturday, tueSatSettings);
+      const saturdayStat = calculateDailyStat([], saturday, tueSatSettings);
       expect(saturdayStat.target).toBe(8 * 3600000);
     });
   });
@@ -186,14 +179,14 @@ describe('ReportCalculatorService', () => {
 
   describe('calculateWeeklyReport', () => {
     it('returns zero report for empty entries', () => {
-      const report = svc.calculateWeeklyReport([], d(2026, 4, 21), DEFAULT_SETTINGS);
+      const report = calculateWeeklyReport([], d(2026, 4, 21), DEFAULT_SETTINGS);
       expect(report.totalWorked).toBe(0);
       expect(report.overtime).toBe(0);
       expect(report.workDays).toBe(0);
     });
 
     it('calculates correct week boundaries (Mon–Sun)', () => {
-      const report = svc.calculateWeeklyReport([], d(2026, 4, 22), DEFAULT_SETTINGS); // Wednesday
+      const report = calculateWeeklyReport([], d(2026, 4, 22), DEFAULT_SETTINGS); // Wednesday
       expect(report.start.getDay()).toBe(1); // Monday
       expect(report.end.getDay()).toBe(0);   // Sunday
     });
@@ -206,7 +199,7 @@ describe('ReportCalculatorService', () => {
           workEnd:   d(2026, 4, day + 19, 17), // 9h per day
         })
       );
-      const report = svc.calculateWeeklyReport(entries, d(2026, 4, 21), DEFAULT_SETTINGS);
+      const report = calculateWeeklyReport(entries, d(2026, 4, 21), DEFAULT_SETTINGS);
       // 5 × 9h = 45h worked, 0 breaks, target 5 × 8h = 40h → overtime = 5h
       expect(report.totalWorked).toBe(5 * 9 * 3600000);
       expect(report.overtime).toBe(5 * 3600000);
@@ -217,7 +210,7 @@ describe('ReportCalculatorService', () => {
       const entries: WorkEntry[] = [
         makeWorkEntry({ date: d(2026, 4, 21), type: WorkEntryType.Vacation }),
       ];
-      const report = svc.calculateWeeklyReport(entries, d(2026, 4, 21), DEFAULT_SETTINGS);
+      const report = calculateWeeklyReport(entries, d(2026, 4, 21), DEFAULT_SETTINGS);
       // 1 day, worked = target = 8h, overtime = 0
       expect(report.overtime).toBe(0);
       expect(report.workDays).toBe(1);
@@ -228,7 +221,7 @@ describe('ReportCalculatorService', () => {
         makeWorkEntry({ date: d(2026, 4, 21), workStart: d(2026, 4, 21, 8), workEnd: d(2026, 4, 21, 16) }),
         makeWorkEntry({ date: d(2026, 4, 22), workStart: d(2026, 4, 22, 8), workEnd: d(2026, 4, 22, 17) }),
       ];
-      const report = svc.calculateWeeklyReport(entries, d(2026, 4, 21), DEFAULT_SETTINGS);
+      const report = calculateWeeklyReport(entries, d(2026, 4, 21), DEFAULT_SETTINGS);
       // net: 8h + 9h = 17h, 2 days → avg = 8.5h
       expect(report.avgPerDay).toBeCloseTo(8.5 * 3600000, 0);
     });
@@ -238,7 +231,7 @@ describe('ReportCalculatorService', () => {
 
   describe('calculateMonthlyReport', () => {
     it('returns zero report for empty entries', () => {
-      const report = svc.calculateMonthlyReport([], d(2026, 4, 1), DEFAULT_SETTINGS, 0);
+      const report = calculateMonthlyReport([], d(2026, 4, 1), DEFAULT_SETTINGS, 0);
       expect(report.totalWorked).toBe(0);
       expect(report.monthlyOvertime).toBe(0);
       expect(report.totalOvertime).toBe(0);
@@ -246,7 +239,7 @@ describe('ReportCalculatorService', () => {
 
     it('includes stored overtime in totalOvertime', () => {
       const stored = 2 * 3600000; // 2h stored
-      const report = svc.calculateMonthlyReport([], d(2026, 4, 1), DEFAULT_SETTINGS, stored);
+      const report = calculateMonthlyReport([], d(2026, 4, 1), DEFAULT_SETTINGS, stored);
       expect(report.totalOvertime).toBe(stored);
     });
 
@@ -259,7 +252,7 @@ describe('ReportCalculatorService', () => {
           workEnd:   d(2026, 4, day + 19, 16),
         })
       );
-      const report = svc.calculateMonthlyReport(entries, d(2026, 4, 1), DEFAULT_SETTINGS, 0);
+      const report = calculateMonthlyReport(entries, d(2026, 4, 1), DEFAULT_SETTINGS, 0);
       // effectiveTotalWorkDays = 5 (Mon-Fri, Saturday excluded) → monthTarget = 5 × 8h = 40h
       const monthTarget = 5 * DAILY_MS;
       const netWork = 6 * 8 * 3600000; // 6 × 8h, no breaks
@@ -267,7 +260,7 @@ describe('ReportCalculatorService', () => {
     });
 
     it('sets month to first of month', () => {
-      const report = svc.calculateMonthlyReport([], d(2026, 4, 15), DEFAULT_SETTINGS, 0);
+      const report = calculateMonthlyReport([], d(2026, 4, 15), DEFAULT_SETTINGS, 0);
       expect(report.month.getDate()).toBe(1);
       expect(report.month.getMonth()).toBe(3); // April = index 3
     });
@@ -276,7 +269,7 @@ describe('ReportCalculatorService', () => {
       const entries: WorkEntry[] = [
         makeWorkEntry({ date: d(2026, 4, 21), workStart: d(2026, 4, 21, 8), workEnd: d(2026, 4, 21, 16) }),
       ];
-      const report = svc.calculateMonthlyReport(entries, d(2026, 4, 1), DEFAULT_SETTINGS, 0);
+      const report = calculateMonthlyReport(entries, d(2026, 4, 1), DEFAULT_SETTINGS, 0);
       expect(report.weeks.length).toBe(1);
       expect(report.weeks[0].totalWorked).toBe(8 * 3600000);
     });

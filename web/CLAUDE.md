@@ -66,7 +66,7 @@ Jedes Feature hat einen eigenen `*.service.ts` der Core-Services aggregiert:
 | Feature-Service | Aggregiert |
 |---|---|
 | `DashboardService` | WorkEntryService, OvertimeService, SettingsService |
-| `ReportsService` | WorkEntryService, SettingsService, ProfileService, AuthService, OvertimeService, ReportCalculatorService |
+| `ReportsService` | WorkEntryService, SettingsService, ProfileService, AuthService, OvertimeService |
 | `SettingsPageService` | SettingsService, AuthService, ProfileService, OvertimeService, ThemeService, DataSyncService |
 
 ### Key Angular-Regeln
