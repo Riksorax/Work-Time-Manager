@@ -6,7 +6,29 @@
     "settings": "Settings"
   },
   "dashboard": {
-    "title": "Working Time"
+    "title": "Working Time",
+    "loading": "Loading dashboard...",
+    "netWorkTime": "Net work time",
+    "grossAttendance": "Attendance (gross): {{duration}}",
+    "overtimeTodayLabel": "Today's overtime",
+    "overtimeTotalLabel": "Total overtime",
+    "adjustOvertimeAria": "Adjust overtime manually",
+    "expectedEndTime": "Expected end of day (±0): {{time}}",
+    "expectedEndTotalZero": "End of day at zero total overtime: {{time}}",
+    "startTimeLabel": "Start time",
+    "endTimeLabel": "End time",
+    "startTimeAria": "Enter start time manually",
+    "endTimeAria": "Enter end time manually",
+    "startTimeTracking": "Start time tracking",
+    "stopTimeTracking": "Stop time tracking",
+    "breaksTitle": "Breaks",
+    "startBreak": "Start break",
+    "stopBreak": "End break",
+    "noBreaksYet": "No breaks recorded yet.",
+    "automaticChipLabel": "Automatic",
+    "breakInProgress": "in progress...",
+    "editBreakAria": "Edit break {{name}}",
+    "deleteBreakAria": "Delete break {{name}}"
   },
   "settings": {
     "title": "Settings",

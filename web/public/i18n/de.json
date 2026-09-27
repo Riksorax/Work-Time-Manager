@@ -6,7 +6,29 @@
     "settings": "Einstellungen"
   },
   "dashboard": {
-    "title": "Arbeitszeit"
+    "title": "Arbeitszeit",
+    "loading": "Lade Dashboard...",
+    "netWorkTime": "Nettoarbeitszeit",
+    "grossAttendance": "Anwesenheit (Brutto): {{duration}}",
+    "overtimeTodayLabel": "Heutige Überstunden",
+    "overtimeTotalLabel": "Gesamtüberstunden",
+    "adjustOvertimeAria": "Überstunden manuell anpassen",
+    "expectedEndTime": "Voraussichtlicher Feierabend (±0 Tag): {{time}} Uhr",
+    "expectedEndTotalZero": "Feierabend bei Gesamtüberstunden ±0: {{time}} Uhr",
+    "startTimeLabel": "Startzeit",
+    "endTimeLabel": "Endzeit",
+    "startTimeAria": "Startzeit manuell eingeben",
+    "endTimeAria": "Endzeit manuell eingeben",
+    "startTimeTracking": "Zeiterfassung starten",
+    "stopTimeTracking": "Zeiterfassung beenden",
+    "breaksTitle": "Pausen",
+    "startBreak": "Pause starten",
+    "stopBreak": "Pause beenden",
+    "noBreaksYet": "Noch keine Pausen eingetragen.",
+    "automaticChipLabel": "Automatisch",
+    "breakInProgress": "läuft…",
+    "editBreakAria": "Pause {{name}} bearbeiten",
+    "deleteBreakAria": "Pause {{name}} löschen"
   },
   "settings": {
     "title": "Einstellungen",
