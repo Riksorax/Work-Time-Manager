@@ -177,6 +177,12 @@ pusht nur das Image. Auf `main` gestartet, deployt er auch.
 
 **Required Secrets (Flutter):** `RC_ANDROID_KEY`, `RC_IOS_KEY`, Android keystore secrets
 
+**Optionales Secret (API):** `SENTRY_DSN_API` — Sentry-Fehler-Tracking für das Backend (analog
+`SENTRY_DSN_WEB`). Leer/nicht gesetzt = Sentry bleibt deaktiviert, kein Build-/Start-Fehler
+(`Program.cs` übergibt einen leeren String statt `null`, damit die SDK sich selbst abschaltet
+statt beim Start eine Exception zu werfen). Wird zur Laufzeit über `docker-compose.yml`
+(`Sentry__Dsn`) injiziert, nicht beim Build wie bei Web.
+
 **Optionale Secrets (CI):** `N8N_WORK_TIME_MANAGER_REVIEW_WEBHOOK_URL` und
 `N8N_WORK_TIME_MANAGER_REVIEW_SECRET` — Discord-Benachrichtigung, wenn `/auto-bugfix` einen PR
 öffnet (`.github/workflows/notify-review-needed.yml`). Fehlen sie, wird die Benachrichtigung

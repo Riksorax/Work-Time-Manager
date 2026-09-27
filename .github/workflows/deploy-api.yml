@@ -122,11 +122,12 @@ jobs:
           API_DOCKER_TAG: ${{ steps.vars.outputs.deploy_tag }}
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
           FIREBASE_SERVICE_ACCOUNT_BASE64: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}
+          SENTRY_DSN_API: ${{ secrets.SENTRY_DSN_API }}
         with:
           host:     ${{ vars.HETZNER_HOST }}
           username: ${{ vars.HETZNER_USER }}
           key:      ${{ secrets.HETZNER_SSH_PRIVATE_KEY }}
-          envs:     API_DOCKER_TAG,FIREBASE_PROJECT_ID,FIREBASE_SERVICE_ACCOUNT_BASE64
+          envs:     API_DOCKER_TAG,FIREBASE_PROJECT_ID,FIREBASE_SERVICE_ACCOUNT_BASE64,SENTRY_DSN_API
           script: |
             set -e
             cd ~/projekte/work-time-manager
