@@ -1,0 +1,27 @@
+name: Discord — Review für auto-bugfix-PR anfordern
+
+on:
+  pull_request:
+    types: [opened, ready_for_review]
+
+jobs:
+  notify:
+    name: Discord-Benachrichtigung
+    runs-on: ubuntu-latest
+    if: "contains(github.event.pull_request.body, 'created-by: auto-bugfix')"
+    steps:
+      - name: Discord-Webhook aufrufen
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          if [ -z "$DISCORD_WEBHOOK_URL" ]; then
+            echo "::warning::DISCORD_WEBHOOK_URL ist nicht gesetzt — Benachrichtigung übersprungen."
+            exit 0
+          fi
+          escaped_title=$(printf '%s' "$PR_TITLE" | sed 's/"/\\"/g')
+          curl -sS -X POST "$DISCORD_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{\"content\": \"🤖 **Auto-Bugfix wartet auf Review** — PR #${PR_NUMBER}: ${escaped_title}\n${PR_URL}\"}"

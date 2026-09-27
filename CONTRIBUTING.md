@@ -177,6 +177,12 @@ pusht nur das Image. Auf `main` gestartet, deployt er auch.
 
 **Required Secrets (Flutter):** `RC_ANDROID_KEY`, `RC_IOS_KEY`, Android keystore secrets
 
+**Optionales Secret (CI):** `DISCORD_WEBHOOK_URL` — Discord-Benachrichtigung, wenn `/auto-bugfix`
+einen PR öffnet (`.github/workflows/notify-review-needed.yml`). Fehlt es, wird die
+Benachrichtigung übersprungen (kein Workflow-Fehler). Einrichten: In Discord unter
+Server-/Kanaleinstellungen → Integrationen → Webhooks einen Webhook anlegen, dessen URL als
+Repository-Secret `DISCORD_WEBHOOK_URL` hinterlegen.
+
 ## 7. Rollback
 
 **API oder Web:** Jeder Deploy pusht ein Image mit Zeitstempel-Tag (`YYYYMMDD-HHmmss`).
