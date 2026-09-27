@@ -30,6 +30,8 @@ menschlicher Schritt.
 6. **PR erstellen** (Konvention `CONTRIBUTING.md`, inkl. `Closes #<issue>`-Zeile) und Review durch
    den passenden Reviewer-Agenten (`mobile-reviewer`, `web-reviewer`, oder die Checkliste aus
    `server-implement.md`) durchführen; 🔴-Funde vor dem Öffnen des PRs beheben.
+   Die PR-Beschreibung muss die Zeile `<!-- created-by: auto-bugfix -->` enthalten (löst die
+   Discord-Benachrichtigung in `.github/workflows/notify-review-needed.yml` aus).
 7. **PR-Aktivität abonnieren** (`subscribe_pr_activity`), damit spätere CI-Fehler oder
    Review-Kommentare automatisch bearbeitet werden — der PR selbst bleibt aber bis zum
    menschlichen Merge offen.
