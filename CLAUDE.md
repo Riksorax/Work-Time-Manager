@@ -86,4 +86,7 @@ das .NET-10-SDK und die npm-Pakete. `gh` gibt es dort nicht, GitHub läuft über
 - Hybrid-Layer nie umgehen — immer über `WorkEntryService` / `OvertimeService`.
 - **Firestore Security Rules:** Neue Firestore-Pfade brauchen eine Regel in `web/firestore.rules`. Die Rules werden **nicht** automatisch deployt (`CONTRIBUTING.md`, „Deployment“).
 - **Tests** dürfen nicht von Datum, Wochentag oder Zeitzone abhängen.
-- **Branch-Hygiene**: Feature-/Fix-/Release-Branches (`claude/*`, `feature/*`, `release/*`) nach dem Mergen in `main`/`develop` löschen (Remote-Branch, GitHub-Button "Delete branch" bzw. `git push origin --delete <branch>`) — keine bereits gemergten Branches stehen lassen.
+- **Branch-Hygiene**: Das Repo löscht Remote-Branches nach dem Merge automatisch (GitHub-Einstellung
+  „Automatically delete head branches"). Nur falls das für einen Branch ausbleibt (z. B. bei
+  manuell zusammengeführten PRs), manuell nachziehen: GitHub-Button "Delete branch" bzw.
+  `git push origin --delete <branch>` — keine bereits gemergten `claude/*`-/`feature/*`-/`release/*`-Branches stehen lassen.
