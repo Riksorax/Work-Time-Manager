@@ -68,7 +68,12 @@ Format (Conventional Commits, Titel auf Deutsch, Issue-Nummer am Ende):
 <Was war das Problem, warum diese Lösung, was ändert sich.>
 
 Schließt #<issue>.
+Closes #<issue>
 ```
+
+Die letzte Zeile ist Pflicht, nicht nur Wiederholung: GitHub erkennt für das automatische
+Schließen beim Merge ausschließlich englische Schlüsselwörter (`Closes`/`Fixes`/`Resolves` +
+`#<Nummer>`) — `Schließt #<issue>` allein bleibt wirkungslos.
 
 | Typ | Verwendung |
 |---|---|
