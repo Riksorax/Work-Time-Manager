@@ -443,6 +443,14 @@
   "@premiumBadgeLabel": {
     "description": "Beschriftung des Premium-Abzeichens im Profilbereich."
   },
+  "unlockPremiumButton": "Premium freischalten",
+  "@unlockPremiumButton": { "description": "Beschriftung des Buttons zum Freischalten von Premium (siehe #298)." },
+  "premiumMobileOnlyManagement": "Abonnements können derzeit nur in der mobilen App verwaltet werden.",
+  "@premiumMobileOnlyManagement": { "description": "Hinweis auf Web, wenn kein Upgrade-Callback verfügbar ist (siehe #298)." },
+  "errorOccurredTitle": "Ein Fehler ist aufgetreten",
+  "@errorOccurredTitle": { "description": "Überschrift der generischen Fehleranzeige (siehe #298)." },
+  "retryButton": "Erneut versuchen",
+  "@retryButton": { "description": "Beschriftung des Wiederholen-Buttons in der generischen Fehleranzeige (siehe #298)." },
   "editTargetHoursTitle": "Soll-Arbeitsstunden bearbeiten",
   "@editTargetHoursTitle": {
     "description": "Titel des Dialogs zum Bearbeiten der wöchentlichen Soll-Arbeitsstunden."
