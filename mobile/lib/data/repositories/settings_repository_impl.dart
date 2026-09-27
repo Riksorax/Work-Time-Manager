@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
 import 'package:flutter_work_time/core/utils/timezone_utils.dart';
 
+import '../../domain/entities/app_theme_mode.dart';
 import '../../domain/entities/bundesland.dart';
 import '../../domain/repositories/settings_repository.dart';
 import '../datasources/remote/firestore_datasource.dart';
@@ -57,19 +57,19 @@ class SettingsRepositoryImpl implements SettingsRepository {
       'workdays_per_week_$_userId$_profileSuffix';
 
   @override
-  ThemeMode getThemeMode() {
+  AppThemeMode getThemeMode() {
     final themeModeString = _prefs.getString(_themeModeKey);
     if (themeModeString == 'dark') {
-      return ThemeMode.dark;
+      return AppThemeMode.dark;
     } else if (themeModeString == 'light') {
-      return ThemeMode.light;
+      return AppThemeMode.light;
     } else {
-      return ThemeMode.system;
+      return AppThemeMode.system;
     }
   }
 
   @override
-  Future<void> setThemeMode(ThemeMode mode) async {
+  Future<void> setThemeMode(AppThemeMode mode) async {
     await _prefs.setString(_themeModeKey, mode.name);
   }
 

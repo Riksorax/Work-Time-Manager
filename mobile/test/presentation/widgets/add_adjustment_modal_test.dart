@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_work_time/core/providers/providers.dart';
+import 'package:flutter_work_time/domain/entities/app_theme_mode.dart';
 import 'package:flutter_work_time/domain/entities/bundesland.dart';
 import 'package:flutter_work_time/domain/entities/work_entry_entity.dart';
 import 'package:flutter_work_time/domain/repositories/overtime_repository.dart';
@@ -76,9 +77,9 @@ class _DelayedOvertimeRepository implements OvertimeRepository {
 
 class _FakeSettingsRepository implements SettingsRepository {
   @override
-  ThemeMode getThemeMode() => ThemeMode.system;
+  AppThemeMode getThemeMode() => AppThemeMode.system;
   @override
-  Future<void> setThemeMode(ThemeMode mode) async {}
+  Future<void> setThemeMode(AppThemeMode mode) async {}
   @override
   double getTargetWeeklyHours() => 40.0;
   @override
