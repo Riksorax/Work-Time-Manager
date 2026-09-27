@@ -23,7 +23,11 @@ final customerInfoProvider = StreamProvider<CustomerInfo>((ref) {
       ref
           .read(firestoreDataSourceProvider)
           .setUserProfile(uid, {'isPremium': _hasActivePremium(info)})
-          .catchError((e) => debugPrint('[Premium] Firestore-Sync fehlgeschlagen: $e'));
+          .catchError((e, stackTrace) => logger.e(
+                '[Premium] Firestore-Sync fehlgeschlagen',
+                error: e,
+                stackTrace: stackTrace,
+              ));
     }
 
     Purchases.getCustomerInfo().then((info) {
@@ -70,8 +74,8 @@ Future<void> refreshCustomerInfo(WidgetRef ref) async {
   if (!kIsWeb) {
     try {
       await Purchases.getCustomerInfo();
-    } catch (e) {
-      debugPrint("Fehler beim Laden der CustomerInfo: $e");
+    } catch (e, stackTrace) {
+      logger.e('[Premium] Fehler beim Laden der CustomerInfo', error: e, stackTrace: stackTrace);
     }
   }
 }
