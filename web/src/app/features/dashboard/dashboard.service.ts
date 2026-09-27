@@ -6,7 +6,7 @@ import { OvertimeService }  from '../../core/services/overtime';
 import { SettingsService }  from '../../core/services/settings';
 import { AuthService }      from '../../core/auth/auth';
 import { WorkEntry, WorkEntryType, Break } from '../../shared/models';
-import { calculateAndApplyBreaks } from '../../domain/services/break-calculator.service';
+import { calculateAndApplyBreaks } from '../../domain/services/break-calculator';
 import { nowToMinute, roundToMinute, roundMsToMinute } from '../../shared/utils/time-precision.util';
 import {
   getEffectiveDailyTarget,

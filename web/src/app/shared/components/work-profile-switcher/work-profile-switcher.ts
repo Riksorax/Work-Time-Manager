@@ -10,8 +10,8 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../../core/auth/auth';
 import { ProfileService } from '../../../core/services/profile';
 import { WorkProfileService } from '../../../core/services/work-profile';
-import { AddWorkProfileDialogComponent, AddWorkProfileDialogResult } from './add-work-profile-dialog.component';
-import { ManageWorkProfilesDialogComponent } from './manage-work-profiles-dialog.component';
+import { AddWorkProfileDialogComponent, AddWorkProfileDialogResult } from './add-work-profile-dialog';
+import { ManageWorkProfilesDialogComponent } from './manage-work-profiles-dialog';
 
 /** Profil-Wechsler im Header (siehe #138/#244): zeigt alle Arbeitszeit-
  * Profile des Nutzers und erlaubt das Anlegen eines weiteren Profils,

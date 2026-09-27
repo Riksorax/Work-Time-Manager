@@ -15,15 +15,15 @@ import { formatWorkdays as formatWorkdaysUtil } from '../../shared/utils/weekday
 import {
   EditTargetHoursDialogComponent,
   EditTargetHoursDialogResult,
-} from './components/edit-target-hours-dialog/edit-target-hours-dialog.component';
+} from './components/edit-target-hours-dialog/edit-target-hours-dialog';
 import {
   EditWorkdaysDialogComponent,
   EditWorkdaysDialogResult,
-} from './components/edit-workdays-dialog/edit-workdays-dialog.component';
+} from './components/edit-workdays-dialog/edit-workdays-dialog';
 import {
   AdjustOvertimeDialogComponent,
   AdjustOvertimeDialogResult,
-} from './components/adjust-overtime-dialog/adjust-overtime-dialog.component';
+} from './components/adjust-overtime-dialog/adjust-overtime-dialog';
 
 @Component({
   selector: 'app-settings',

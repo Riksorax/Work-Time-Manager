@@ -1,4 +1,4 @@
-import { getIsoWeekNumber, calculateDailyStat, calculateWeeklyReport, calculateMonthlyReport } from './report-calculator.service';
+import { getIsoWeekNumber, calculateDailyStat, calculateWeeklyReport, calculateMonthlyReport } from './report-calculator';
 import { WorkEntry, WorkEntryType, UserSettings } from '../../shared/models/index';
 
 const DEFAULT_SETTINGS: UserSettings = {

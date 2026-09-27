@@ -8,7 +8,7 @@ import { OvertimeService } from '../../core/services/overtime';
 import { ThemeService } from '../../core/services/theme';
 import { LanguageService } from '../../core/services/language';
 import { DataSyncService, DataSyncResult } from '../../core/services/data-sync';
-import { WebPremiumService } from '../../core/services/web-premium.service';
+import { WebPremiumService } from '../../core/services/web-premium';
 import { DashboardService } from '../dashboard/dashboard.service';
 import { UserSettings } from '../../shared/models/index';
 

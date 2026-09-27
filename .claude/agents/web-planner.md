@@ -29,7 +29,7 @@ web/src/app/
 │       ├── api-client.ts                             # Typisierter Client für die .NET-API
 │       ├── work-profile.ts                           # Aktives Arbeitszeit-Profil (profileId)
 │       ├── profile.ts                                # ProfileService.isPremium (Firestore-Flag)
-│       ├── web-premium.service.ts                    # RC-Billing-Paywall
+│       ├── web-premium.ts                            # RC-Billing-Paywall
 │       ├── data-sync.ts, theme.ts, language.ts
 ├── domain/
 │   ├── models/          # Report-Modelle
@@ -45,6 +45,14 @@ web/src/app/
     ├── models/index.ts  # WorkEntry, Break, UserSettings, UserProfile, WorkProfile
     └── utils/           # profileScopedPath, Zeit-Utils
 ```
+
+## Dateinamen (#301)
+
+Keine Typ-Suffixe (`.component`/`.service`) in Dateinamen — z. B. `dashboard.ts`, `calendar.ts`,
+`break-calculator.ts`. Ausnahme: Wenn Component und Service im selben Ordner denselben Basisnamen
+hätten (z. B. `features/dashboard/dashboard.ts` und der zugehörige Feature-Service), behält der
+Service den Suffix (`dashboard.service.ts`), um die Namenskollision zu vermeiden. Details in
+`web/AGENTS.md`.
 
 ## Layer-Reihenfolge (IMMER einhalten)
 `shared/models` / `domain/*` → `core/services` → `features/` (Feature-Service + Components)
@@ -81,7 +89,7 @@ UI-Report: web/thoughts/<issue>-ui-report.md
 \`\`\`
 web/src/app/domain/
 ├── models/[name].model.ts         # Interface / Class
-└── services/[name].service.ts     # Pure Business Logic (kein Angular Inject)
+└── services/[name].ts             # Pure Business Logic (kein Angular Inject, kein Typ-Suffix)
 \`\`\`
 
 ### Core Layer
@@ -100,17 +108,17 @@ web/src/app/features/[feature]/
 ├── [feature].scss
 └── components/                    # Sub-Components
     └── [sub]/
-        ├── [sub].component.ts
-        ├── [sub].component.html
-        └── [sub].component.scss
+        ├── [sub].ts               # kein `.component`-Suffix
+        ├── [sub].html
+        └── [sub].scss
 \`\`\`
 
 ## Implementierungsschritte (TDD-First)
 
 ### Schritt 1: Domain Models & Services
 - [ ] Interface `[Name]` in `domain/models/`
-- [ ] Test: `[name].service.spec.ts` mit Edge Cases
-- [ ] Impl: `[name].service.ts` (pure, kein inject())
+- [ ] Test: `[name].spec.ts` mit Edge Cases
+- [ ] Impl: `[name].ts` (pure, kein inject(), kein Typ-Suffix)
 
 ### Schritt 2: Core Service
 - [ ] Test: `[name].spec.ts` mit gemocktem Firestore/ApiClient (Vitest `vi.fn()`)
