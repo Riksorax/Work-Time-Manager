@@ -6,22 +6,24 @@ on:
 
 jobs:
   notify:
-    name: Discord-Benachrichtigung
+    name: Benachrichtigung über n8n
     runs-on: ubuntu-latest
     if: "contains(github.event.pull_request.body, 'created-by: auto-bugfix')"
     steps:
-      - name: Discord-Webhook aufrufen
+      - name: n8n-Webhook aufrufen
         env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          N8N_WEBHOOK_URL: ${{ secrets.N8N_WORK_TIME_MANAGER_REVIEW_WEBHOOK_URL }}
+          N8N_WEBHOOK_SECRET: ${{ secrets.N8N_WORK_TIME_MANAGER_REVIEW_SECRET }}
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_URL: ${{ github.event.pull_request.html_url }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          if [ -z "$DISCORD_WEBHOOK_URL" ]; then
-            echo "::warning::DISCORD_WEBHOOK_URL ist nicht gesetzt — Benachrichtigung übersprungen."
+          if [ -z "$N8N_WEBHOOK_URL" ]; then
+            echo "::warning::N8N_WORK_TIME_MANAGER_REVIEW_WEBHOOK_URL ist nicht gesetzt — Benachrichtigung übersprungen."
             exit 0
           fi
           escaped_title=$(printf '%s' "$PR_TITLE" | sed 's/"/\\"/g')
-          curl -sS -X POST "$DISCORD_WEBHOOK_URL" \
+          curl -sS -X POST "$N8N_WEBHOOK_URL" \
             -H "Content-Type: application/json" \
-            -d "{\"content\": \"🤖 **Auto-Bugfix wartet auf Review** — PR #${PR_NUMBER}: ${escaped_title}\n${PR_URL}\"}"
+            -H "x-work-time-manager-secret: ${N8N_WEBHOOK_SECRET}" \
+            -d "{\"prNumber\": ${PR_NUMBER}, \"prTitle\": \"${escaped_title}\", \"prUrl\": \"${PR_URL}\"}"
