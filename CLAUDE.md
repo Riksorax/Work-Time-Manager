@@ -23,12 +23,13 @@ Integrationsbranch ist `develop`; PRs gehen gegen `develop`, nur Release-Branche
 | Mobile | `mobile/` | `dart format --set-exit-if-changed lib test && flutter analyze --no-fatal-infos && dart run custom_lint && flutter test` |
 | Web | `web/` | `npm test -- --watch=false && npm run build -- --configuration production` |
 | Backend | `server/` | `dotnet build WorkTimeManager.slnx -c Release && dotnet test WorkTimeManager.slnx -c Release` |
+| Cloud Functions | `web/functions/` | `npm run build && npm test` (Installation: `npm install --legacy-peer-deps` — reines npm ohne den Flag lässt Arborist bei vitest 4 abstürzen) |
 
 ## CI/CD
 
 | Workflow | Trigger | Jobs |
 |---|---|---|
-| `ci.yml` | PRs und Push auf alle Branches außer `main` | Flutter Analyze & Test, Angular Test & Build, .NET Build & Test |
+| `ci.yml` | PRs und Push auf alle Branches außer `main` | Flutter Analyze & Test, Angular Test & Build, Cloud Functions Build & Test, .NET Build & Test |
 | `flutter-production.yml` | Push auf `main` oder `workflow_dispatch` | Android AAB → Google Play (Closed Testing Track `<Version> <Charakter>`) |
 | `deploy-angular.yml` | Push auf `main` oder `workflow_dispatch` | Angular Build → Docker Hub → Hetzner |
 | `deploy-api.yml` | Push auf `main` oder `workflow_dispatch` | .NET Build & Test → Docker Hub → Hetzner |
@@ -79,12 +80,15 @@ gemeinsamen Vertrag und die Reihenfolge Backend → Web → Mobile.
 
 Crashlytics (Mobile), Sentry (Web über `SENTRY_DSN_WEB`, Backend über `SENTRY_DSN_API` — zwei
 getrennte Sentry-Projekte, gleiche Organisation) und Uptime-Kuma (`CONTRIBUTING.md`, „Deployment“)
-sind reine Beobachtung — sie legen von sich aus **kein** GitHub-Issue an. Sentry kann über seine
-eigene GitHub-Integration (einmal pro Organisation eingerichtet, gilt für alle Sentry-Projekte) so
-konfiguriert werden, dass neue Fehler automatisch ein Issue mit Label `bug` in diesem Repo anlegen
-(Konfiguration in Sentry, kein Code hier — pro Projekt eine eigene Alert-Regel). Für
-Crashlytics/Uptime-Kuma gibt es aktuell keine solche Brücke — das bräuchte eine eigene Cloud
-Function als Webhook-Empfänger (siehe #322).
+sind für sich reine Beobachtung — sie legen von sich aus **kein** GitHub-Issue an. Zwei Brücken
+schließen die Lücke:
+
+- **Sentry** über seine eigene GitHub-Integration (einmal pro Organisation eingerichtet, gilt für
+  alle Sentry-Projekte, je Projekt eine eigene Alert-Regel mit Label `bug`, Konfiguration in
+  Sentry, kein Code hier).
+- **Crashlytics und Uptime-Kuma** über eigene Firebase Cloud Functions unter `web/functions/`
+  (siehe #322, Details in `CONTRIBUTING.md`, „Crashlytics-/Uptime-Kuma-Brücke“) — legen ebenfalls
+  ein Issue mit Label `bug` an, dedupliziert über einen Marker-Kommentar im Body.
 
 Sobald ein Issue das Label `bug` trägt (egal ob manuell oder durch Sentry angelegt), greift
 `/auto-bugfix`.
