@@ -31,8 +31,8 @@ Feature-Services (`dashboard.service.ts`, `reports.service.ts`, `settings.servic
 
 ## Angular Best Practices
 
-- Always use standalone components over NgModules
-- Must NOT set `standalone: true` inside Angular decorators. It's the default in Angular v20+.
+- Standalone components only, never NgModules — but do NOT set `standalone: true` explicitly
+  inside Angular decorators, since it's the default in Angular v20+ and writing it is redundant.
 - Use signals for state management
 - Implement lazy loading for feature routes
 - Do NOT use the `@HostBinding` and `@HostListener` decorators. Put host bindings inside the `host` object of the `@Component` or `@Directive` decorator instead
