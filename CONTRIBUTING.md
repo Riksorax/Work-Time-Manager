@@ -177,11 +177,15 @@ pusht nur das Image. Auf `main` gestartet, deployt er auch.
 
 **Required Secrets (Flutter):** `RC_ANDROID_KEY`, `RC_IOS_KEY`, Android keystore secrets
 
-**Optionales Secret (CI):** `DISCORD_WEBHOOK_URL` — Discord-Benachrichtigung, wenn `/auto-bugfix`
-einen PR öffnet (`.github/workflows/notify-review-needed.yml`). Fehlt es, wird die
-Benachrichtigung übersprungen (kein Workflow-Fehler). Einrichten: In Discord unter
-Server-/Kanaleinstellungen → Integrationen → Webhooks einen Webhook anlegen, dessen URL als
-Repository-Secret `DISCORD_WEBHOOK_URL` hinterlegen.
+**Optionale Secrets (CI):** `N8N_WORK_TIME_MANAGER_REVIEW_WEBHOOK_URL` und
+`N8N_WORK_TIME_MANAGER_REVIEW_SECRET` — Discord-Benachrichtigung, wenn `/auto-bugfix` einen PR
+öffnet (`.github/workflows/notify-review-needed.yml`). Fehlen sie, wird die Benachrichtigung
+übersprungen (kein Workflow-Fehler). Postet nicht direkt an Discord, sondern an den n8n-Workflow
+`work-time-manager-review.json` im separaten Repo `Riksorax/automatisierung` — der postet über den
+dort schon vorhandenen Discord-Bot in `#work-time-manager` (kein eigener Discord-Webhook nötig,
+Details im Repo `Riksorax/automatisierung`, README „Weitere Workflows"). Einrichten: n8n-Webhook-URL der Instanz als
+`N8N_WORK_TIME_MANAGER_REVIEW_WEBHOOK_URL`, denselben Wert wie die dortige Credential
+„Work-Time-Manager – Webhook-Secret" als `N8N_WORK_TIME_MANAGER_REVIEW_SECRET` hinterlegen.
 
 ## 7. Rollback
 
