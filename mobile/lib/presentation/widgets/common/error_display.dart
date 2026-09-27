@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
+
 class ErrorDisplay extends StatelessWidget {
   final String error;
   final VoidCallback? onRetry;
@@ -10,6 +12,7 @@ class ErrorDisplay extends StatelessWidget {
   });
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -19,7 +22,7 @@ class ErrorDisplay extends StatelessWidget {
             const Icon(Icons.error_outline, color: Colors.red, size: 48),
             const SizedBox(height: 16),
             Text(
-              'Ein Fehler ist aufgetreten',
+              l10n.errorOccurredTitle,
               style: Theme.of(context).textTheme.headlineSmall,
               textAlign: TextAlign.center,
             ),
@@ -33,7 +36,7 @@ class ErrorDisplay extends StatelessWidget {
               const SizedBox(height: 24),
               ElevatedButton.icon(
                 icon: const Icon(Icons.refresh),
-                label: const Text('Erneut versuchen'),
+                label: Text(l10n.retryButton),
                 onPressed: onRetry,
               ),
             ]

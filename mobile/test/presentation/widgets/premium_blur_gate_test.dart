@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_work_time/l10n/app_localizations.dart';
 import 'package:flutter_work_time/presentation/widgets/premium_blur_gate.dart';
 
 void main() {
@@ -10,6 +11,9 @@ void main() {
     Widget child = const SizedBox.expand(),
   }) {
     return MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('de'),
       home: Scaffold(
         body: PremiumBlurGate(
           featureTitle: featureTitle,
