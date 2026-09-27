@@ -20,7 +20,15 @@ class ApiClient {
 
   ApiClient(this._auth, this._http);
 
-  Uri _uri(String path) => Uri.parse('${ApiConfig.baseUrl}/api$path');
+  /// [profileId] wird nur als Query-Parameter angehängt, wenn es ein
+  /// zusätzliches Arbeitszeit-Profil bezeichnet (siehe #239) — `null` oder
+  /// `'default'` verwenden weiterhin den bestehenden, nicht migrierten Pfad
+  /// ohne Parameter, damit sich an bestehenden Aufrufen nichts ändert.
+  Uri _uri(String path, [String? profileId]) {
+    final base = Uri.parse('${ApiConfig.baseUrl}/api$path');
+    if (profileId == null || profileId == 'default') return base;
+    return base.replace(queryParameters: {'profileId': profileId});
+  }
 
   Future<Map<String, String>> _headers() async {
     final token = await _auth.currentUser?.getIdToken();
@@ -37,39 +45,41 @@ class ApiClient {
 
   // ── Work Entries ────────────────────────────────────────────────────────
 
-  Future<List<WorkEntryModel>> getWorkEntriesForMonth(int year, int month) async {
-    final res = await _http.get(_uri('/work-entries/$year/$month'), headers: await _headers());
+  Future<List<WorkEntryModel>> getWorkEntriesForMonth(int year, int month, {String? profileId}) async {
+    final res = await _http.get(_uri('/work-entries/$year/$month', profileId), headers: await _headers());
     if (res.statusCode != 200) _fail('getWorkEntriesForMonth', res);
     final list = jsonDecode(res.body) as List<dynamic>;
     return list.map((e) => _entryFromJson(e as Map<String, dynamic>)).toList();
   }
 
-  Future<WorkEntryModel?> getWorkEntry(int year, int month, int day) async {
-    final res = await _http.get(_uri('/work-entries/$year/$month/$day'), headers: await _headers());
+  Future<WorkEntryModel?> getWorkEntry(int year, int month, int day, {String? profileId}) async {
+    final res =
+        await _http.get(_uri('/work-entries/$year/$month/$day', profileId), headers: await _headers());
     if (res.statusCode == 404) return null;
     if (res.statusCode != 200) _fail('getWorkEntry', res);
     return _entryFromJson(jsonDecode(res.body) as Map<String, dynamic>);
   }
 
-  Future<void> saveWorkEntry(WorkEntryModel model) async {
+  Future<void> saveWorkEntry(WorkEntryModel model, {String? profileId}) async {
     final res = await _http.put(
-      _uri('/work-entries'),
+      _uri('/work-entries', profileId),
       headers: await _headers(),
       body: jsonEncode(_entryToJson(model)),
     );
     if (res.statusCode != 200 && res.statusCode != 204) _fail('saveWorkEntry', res);
   }
 
-  Future<void> deleteWorkEntry(int year, int month, int day) async {
-    final res = await _http.delete(_uri('/work-entries/$year/$month/$day'), headers: await _headers());
+  Future<void> deleteWorkEntry(int year, int month, int day, {String? profileId}) async {
+    final res = await _http.delete(_uri('/work-entries/$year/$month/$day', profileId),
+        headers: await _headers());
     if (res.statusCode != 200 && res.statusCode != 204) _fail('deleteWorkEntry', res);
   }
 
   // ── Overtime ──────────────────────────────────────────────────────────────
 
   /// Liefert (Saldo, lastUpdated). Saldo in Minuten.
-  Future<({int minutes, DateTime? lastUpdated})> getOvertime() async {
-    final res = await _http.get(_uri('/overtime'), headers: await _headers());
+  Future<({int minutes, DateTime? lastUpdated})> getOvertime({String? profileId}) async {
+    final res = await _http.get(_uri('/overtime', profileId), headers: await _headers());
     if (res.statusCode != 200) _fail('getOvertime', res);
     final json = jsonDecode(res.body) as Map<String, dynamic>;
     return (
@@ -80,9 +90,9 @@ class ApiClient {
     );
   }
 
-  Future<void> saveOvertime(int minutes) async {
+  Future<void> saveOvertime(int minutes, {String? profileId}) async {
     final res = await _http.put(
-      _uri('/overtime'),
+      _uri('/overtime', profileId),
       headers: await _headers(),
       body: jsonEncode({'minutes': minutes}),
     );
@@ -91,15 +101,15 @@ class ApiClient {
 
   // ── Settings ────────────────────────────────────────────────────────────
 
-  Future<Map<String, dynamic>?> getSettings() async {
-    final res = await _http.get(_uri('/settings'), headers: await _headers());
+  Future<Map<String, dynamic>?> getSettings({String? profileId}) async {
+    final res = await _http.get(_uri('/settings', profileId), headers: await _headers());
     if (res.statusCode != 200) _fail('getSettings', res);
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
-  Future<void> putSettings(Map<String, dynamic> settings) async {
+  Future<void> putSettings(Map<String, dynamic> settings, {String? profileId}) async {
     final res = await _http.put(
-      _uri('/settings'),
+      _uri('/settings', profileId),
       headers: await _headers(),
       body: jsonEncode(settings),
     );
@@ -108,17 +118,17 @@ class ApiClient {
 
   // ── Reports (Roh-JSON; Zeiten in ms) ──────────────────────────────────────
 
-  Future<Map<String, dynamic>> getDailyReport(int year, int month, int day) =>
-      _getJson('/reports/daily/$year/$month/$day', 'getDailyReport');
+  Future<Map<String, dynamic>> getDailyReport(int year, int month, int day, {String? profileId}) =>
+      _getJson('/reports/daily/$year/$month/$day', 'getDailyReport', profileId);
 
-  Future<Map<String, dynamic>> getWeeklyReport(int year, int month, int day) =>
-      _getJson('/reports/weekly/$year/$month/$day', 'getWeeklyReport');
+  Future<Map<String, dynamic>> getWeeklyReport(int year, int month, int day, {String? profileId}) =>
+      _getJson('/reports/weekly/$year/$month/$day', 'getWeeklyReport', profileId);
 
-  Future<Map<String, dynamic>> getMonthlyReport(int year, int month) =>
-      _getJson('/reports/monthly/$year/$month', 'getMonthlyReport');
+  Future<Map<String, dynamic>> getMonthlyReport(int year, int month, {String? profileId}) =>
+      _getJson('/reports/monthly/$year/$month', 'getMonthlyReport', profileId);
 
-  Future<Map<String, dynamic>> _getJson(String path, String op) async {
-    final res = await _http.get(_uri(path), headers: await _headers());
+  Future<Map<String, dynamic>> _getJson(String path, String op, [String? profileId]) async {
+    final res = await _http.get(_uri(path, profileId), headers: await _headers());
     if (res.statusCode != 200) _fail(op, res);
     return jsonDecode(res.body) as Map<String, dynamic>;
   }

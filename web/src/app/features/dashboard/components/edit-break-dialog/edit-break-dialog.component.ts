@@ -3,6 +3,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Break } from '../../../../shared/models/index';
 import { TimeInputComponent } from '../../../../shared/components/time-input/time-input.component';
 
@@ -23,6 +24,7 @@ export interface EditBreakDialogResult {
     MatFormFieldModule,
     MatInputModule,
     TimeInputComponent,
+    TranslatePipe,
   ],
   templateUrl: './edit-break-dialog.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -30,6 +32,7 @@ export interface EditBreakDialogResult {
 export class EditBreakDialogComponent {
   private readonly dialogRef = inject(MatDialogRef<EditBreakDialogComponent, EditBreakDialogResult>);
   private readonly data: EditBreakDialogData = inject(MAT_DIALOG_DATA);
+  private readonly translate = inject(TranslateService);
 
   readonly name  = signal(this.data.break.name);
   startTime      = signal<Date | null>(this.data.break.start);
@@ -53,12 +56,12 @@ export class EditBreakDialogComponent {
   save(): void {
     const start = this.startTime();
     if (!start) {
-      this.validationError.set('Startzeit ist erforderlich.');
+      this.validationError.set(this.translate.instant('dashboard.breakStartRequired'));
       return;
     }
     const end = this.endTime();
     if (end && end <= start) {
-      this.validationError.set('Endzeit muss nach der Startzeit liegen.');
+      this.validationError.set(this.translate.instant('dashboard.breakEndAfterStart'));
       return;
     }
     this.dialogRef.close({

@@ -7,6 +7,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkEntry, WorkEntryType, Break } from '../../models/index';
 
 interface BreakFormValue {
@@ -35,37 +36,38 @@ interface EntryFormValue {
     MatIconModule,
     MatInputModule,
     MatSelectModule,
+    TranslatePipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <h2 mat-dialog-title>{{ data.entry ? 'Eintrag bearbeiten' : 'Neuer Eintrag' }}</h2>
+    <h2 mat-dialog-title>{{ (data.entry ? 'shared.editEntryTitleEdit' : 'shared.editEntryTitleNew') | translate }}</h2>
     <mat-dialog-content>
       <form [formGroup]="form" class="edit-form">
         <mat-form-field appearance="outline">
-          <mat-label>Typ</mat-label>
+          <mat-label>{{ 'shared.editEntryTypeLabel' | translate }}</mat-label>
           <mat-select formControlName="type">
-            <mat-option [value]="WorkEntryType.Work">Arbeit</mat-option>
-            <mat-option [value]="WorkEntryType.Vacation">Urlaub</mat-option>
-            <mat-option [value]="WorkEntryType.Sick">Krankheit</mat-option>
-            <mat-option [value]="WorkEntryType.Holiday">Feiertag</mat-option>
+            <mat-option [value]="WorkEntryType.Work">{{ 'shared.entryTypeWork' | translate }}</mat-option>
+            <mat-option [value]="WorkEntryType.Vacation">{{ 'shared.entryTypeVacation' | translate }}</mat-option>
+            <mat-option [value]="WorkEntryType.Sick">{{ 'shared.entryTypeSick' | translate }}</mat-option>
+            <mat-option [value]="WorkEntryType.Holiday">{{ 'shared.entryTypeHoliday' | translate }}</mat-option>
           </mat-select>
         </mat-form-field>
 
         <div class="time-row">
           <mat-form-field appearance="outline">
-            <mat-label>Arbeitsbeginn</mat-label>
+            <mat-label>{{ 'shared.workStartLabel' | translate }}</mat-label>
             <input matInput type="time" formControlName="startTime" />
           </mat-form-field>
           <mat-form-field appearance="outline">
-            <mat-label>Arbeitsende</mat-label>
+            <mat-label>{{ 'shared.workEndLabel' | translate }}</mat-label>
             <input matInput type="time" formControlName="endTime" />
           </mat-form-field>
         </div>
 
         <div class="section-header">
-          <h3>Pausen</h3>
-          <button mat-stroked-button type="button" (click)="addBreak()" aria-label="Pause hinzufügen">
-            <mat-icon>add</mat-icon> Pause
+          <h3>{{ 'dashboard.breaksTitle' | translate }}</h3>
+          <button mat-stroked-button type="button" (click)="addBreak()" [attr.aria-label]="'shared.addBreakAria' | translate">
+            <mat-icon>add</mat-icon> {{ 'shared.breakLabel' | translate }}
           </button>
         </div>
 
@@ -73,18 +75,18 @@ interface EntryFormValue {
           @for (b of breaks.controls; track $index; let i = $index) {
             <div [formGroupName]="i" class="break-row">
               <mat-form-field appearance="outline" class="flex-2">
-                <mat-label>Name</mat-label>
+                <mat-label>{{ 'shared.nameLabel' | translate }}</mat-label>
                 <input matInput formControlName="name" />
               </mat-form-field>
               <mat-form-field appearance="outline" class="flex-1">
-                <mat-label>Start</mat-label>
+                <mat-label>{{ 'reports.timeStart' | translate }}</mat-label>
                 <input matInput type="time" formControlName="start" />
               </mat-form-field>
               <mat-form-field appearance="outline" class="flex-1">
-                <mat-label>Ende</mat-label>
+                <mat-label>{{ 'reports.timeEnd' | translate }}</mat-label>
                 <input matInput type="time" formControlName="end" />
               </mat-form-field>
-              <button mat-icon-button (click)="removeBreak(i)" aria-label="Pause entfernen">
+              <button mat-icon-button (click)="removeBreak(i)" [attr.aria-label]="'shared.removeBreakAria' | translate">
                 <mat-icon>delete</mat-icon>
               </button>
             </div>
@@ -94,19 +96,19 @@ interface EntryFormValue {
         <mat-divider class="section-divider" />
 
         <div class="section-header">
-          <h3>Manuelle Zeitkorrektur</h3>
+          <h3>{{ 'shared.manualCorrectionTitle' | translate }}</h3>
         </div>
         <mat-form-field appearance="outline">
-          <mat-label>Minuten (+ Überstunden / − Minusstunden)</mat-label>
+          <mat-label>{{ 'shared.manualCorrectionLabel' | translate }}</mat-label>
           <input matInput type="number" formControlName="manualOvertimeMinutes"
-                 aria-label="Manuelle Zeitkorrektur in Minuten" />
-          <mat-hint>z.B. 30 für +30 Min, -15 für −15 Min</mat-hint>
+                 [attr.aria-label]="'shared.manualCorrectionAria' | translate" />
+          <mat-hint>{{ 'shared.manualCorrectionHint' | translate }}</mat-hint>
         </mat-form-field>
       </form>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
-      <button mat-button (click)="onCancel()">Abbrechen</button>
-      <button mat-flat-button [disabled]="form.invalid" (click)="onSave()">Speichern</button>
+      <button mat-button (click)="onCancel()">{{ 'common.cancel' | translate }}</button>
+      <button mat-flat-button [disabled]="form.invalid" (click)="onSave()">{{ 'common.save' | translate }}</button>
     </mat-dialog-actions>
   `,
   styles: [`
@@ -125,6 +127,7 @@ interface EntryFormValue {
 export class EditEntryDialogComponent {
   private readonly fb        = inject(FormBuilder);
   private readonly dialogRef = inject(MatDialogRef<EditEntryDialogComponent>);
+  private readonly translate = inject(TranslateService);
   readonly data              = inject(MAT_DIALOG_DATA) as { entry?: WorkEntry; date: Date };
 
   protected readonly WorkEntryType = WorkEntryType;
@@ -153,7 +156,7 @@ export class EditEntryDialogComponent {
   addBreak(): void {
     this.breaks.push(this.fb.group({
       id:    [crypto.randomUUID()],
-      name:  [`Pause ${this.breaks.length + 1}`, Validators.required],
+      name:  [this.translate.instant('shared.breakDefaultName', { number: this.breaks.length + 1 }), Validators.required],
       start: ['', Validators.required],
       end:   ['', Validators.required],
     }));
