@@ -77,12 +77,14 @@ gemeinsamen Vertrag und die Reihenfolge Backend → Web → Mobile.
 
 ## Fehler-Monitoring (Crashlytics/Sentry/Uptime-Kuma) → Issue → Fix
 
-Crashlytics (Mobile), Sentry (Web, optional über `SENTRY_DSN_WEB`) und Uptime-Kuma
-(`CONTRIBUTING.md`, „Deployment“) sind reine Beobachtung — sie legen von sich aus **kein**
-GitHub-Issue an. Sentry kann über seine eigene GitHub-Integration so konfiguriert werden, dass
-neue Fehler automatisch ein Issue mit Label `bug` in diesem Repo anlegen (Konfiguration in Sentry,
-kein Code hier). Für Crashlytics/Uptime-Kuma gibt es aktuell keine solche Brücke — das bräuchte
-eine eigene Cloud Function als Webhook-Empfänger.
+Crashlytics (Mobile), Sentry (Web über `SENTRY_DSN_WEB`, Backend über `SENTRY_DSN_API` — zwei
+getrennte Sentry-Projekte, gleiche Organisation) und Uptime-Kuma (`CONTRIBUTING.md`, „Deployment“)
+sind reine Beobachtung — sie legen von sich aus **kein** GitHub-Issue an. Sentry kann über seine
+eigene GitHub-Integration (einmal pro Organisation eingerichtet, gilt für alle Sentry-Projekte) so
+konfiguriert werden, dass neue Fehler automatisch ein Issue mit Label `bug` in diesem Repo anlegen
+(Konfiguration in Sentry, kein Code hier — pro Projekt eine eigene Alert-Regel). Für
+Crashlytics/Uptime-Kuma gibt es aktuell keine solche Brücke — das bräuchte eine eigene Cloud
+Function als Webhook-Empfänger (siehe #322).
 
 Sobald ein Issue das Label `bug` trägt (egal ob manuell oder durch Sentry angelegt), greift
 `/auto-bugfix`.

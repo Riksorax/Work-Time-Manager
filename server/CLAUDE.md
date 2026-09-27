@@ -91,3 +91,11 @@ getestet.
 Push auf `main` → `.github/workflows/deploy-api.yml` baut, pusht das Image
 `riksorax/work-time-manager-api` und deployt auf Hetzner. Health-Check:
 `https://api.work-time-manager.app/health`. Rollback: `CONTRIBUTING.md`.
+
+## Fehler-Tracking
+
+Sentry (`Sentry.AspNetCore`) fängt unbehandelte Exceptions im Request-Pipeline automatisch ab —
+kein Code pro Endpunkt nötig. Aktiv nur, wenn `Sentry:Dsn` konfiguriert ist (Secret `SENTRY_DSN_API`,
+siehe `CONTRIBUTING.md`); lokal/CI bleibt es aus. Neue Fehler landen über die Sentry-GitHub-Integration
+automatisch als Issue mit Label `bug` (siehe Root-`CLAUDE.md`, „Fehler-Monitoring") und werden von
+`/auto-bugfix` aufgegriffen.
