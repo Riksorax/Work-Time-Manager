@@ -3,14 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
 
-import '../../core/providers/providers.dart' as core_providers;
-import '../../data/repositories/hybrid_work_repository_impl.dart';
-import '../../data/repositories/hybrid_overtime_repository_impl.dart';
-import '../../data/repositories/firebase_overtime_repository_impl.dart';
-import '../../domain/services/data_sync_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../view_models/auth_view_model.dart';
 import '../view_models/dashboard_view_model.dart' as dashboard_vm;
+import '../view_models/data_sync_view_model.dart';
 import '../view_models/settings_view_model.dart';
 import '../widgets/privacy_policy_dialog.dart';
 import '../widgets/terms_of_service_dialog.dart';
@@ -107,9 +103,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           ),
                           onPressed: () async {
                 // Speichere die Zustimmungen
-                final settingsRepository = ref.read(core_providers.settingsRepositoryProvider);
-                await settingsRepository.setAcceptedTermsOfService(true);
-                await settingsRepository.setAcceptedPrivacyPolicy(true);
+                final settingsViewModel = ref.read(settingsViewModelProvider.notifier);
+                await settingsViewModel.updateAcceptedTermsOfService(true);
+                await settingsViewModel.updateAcceptedPrivacyPolicy(true);
 
                 // Zeige Loading-Dialog
                 if (context.mounted) {
@@ -157,65 +153,38 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   }
 
                   try {
-                    // Hole die Repositories
-                    final workRepository = ref.read(core_providers.workRepositoryProvider);
-                    final overtimeRepository = ref.read(core_providers.overtimeRepositoryProvider);
+                    final result = await ref.read(dataSyncViewModelProvider).syncAll();
 
-                    // Hole die aktuelle userId direkt von FirebaseAuth
-                    // (der Provider wurde möglicherweise noch nicht aktualisiert)
-                    final currentUser = ref.read(core_providers.firebaseAuthProvider).currentUser;
-                    final userId = currentUser?.uid;
+                    // Schließe Sync-Dialog
+                    if (context.mounted) {
+                      Navigator.of(context).pop();
+                    }
 
-                    // Prüfe ob sie Hybrid-Repositories sind und User eingeloggt ist
-                    if (workRepository is HybridWorkRepositoryImpl &&
-                        overtimeRepository is HybridOvertimeRepositoryImpl &&
-                        userId != null) {
-                      // Erstelle frisches Firebase-Repository mit korrekter userId
-                      final freshFirebaseOvertimeRepo = FirebaseOvertimeRepositoryImpl(
-                        dataSource: ref.read(core_providers.firestoreDataSourceProvider),
-                        userId: userId,
-                      );
-
-                      // Führe Sync durch
-                      final result = await DataSyncService.syncAll(
-                        localWorkRepository: workRepository.localRepository,
-                        firebaseWorkRepository: workRepository.firebaseRepository,
-                        localOvertimeRepository: overtimeRepository.localRepository,
-                        firebaseOvertimeRepository: freshFirebaseOvertimeRepo,
-                      );
-
-                      // Schließe Sync-Dialog
-                      if (context.mounted) {
-                        Navigator.of(context).pop();
-                      }
-
-                      // Zeige Ergebnis
-                      final workEntriesSynced = result['workEntriesSynced'] as int;
-                      final overtimeSynced = result['overtimeSynced'] as bool;
-                      final errors = result['errors'] as List<String>;
-
-                      if (context.mounted) {
-                        if (workEntriesSynced > 0 || overtimeSynced) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                l10n.syncSuccessLoginMessage(workEntriesSynced, overtimeSynced ? l10n.yesLabel : l10n.noLabel),
-                              ),
-                              backgroundColor: errors.isEmpty ? Colors.green : Colors.orange,
-                              duration: const Duration(seconds: 3),
+                    // Zeige Ergebnis
+                    if (context.mounted) {
+                      if (result.workEntriesSynced > 0 || result.overtimeSynced) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              l10n.syncSuccessLoginMessage(result.workEntriesSynced,
+                                  result.overtimeSynced ? l10n.yesLabel : l10n.noLabel),
                             ),
-                          );
-                        }
+                            backgroundColor: result.errors.isEmpty ? Colors.green : Colors.orange,
+                            duration: const Duration(seconds: 3),
+                          ),
+                        );
                       }
+                    }
 
-                      // Aktualisiere Dashboard und Settings nach Sync
-                      ref.invalidate(dashboard_vm.dashboardViewModelProvider);
-                      ref.invalidate(settingsViewModelProvider);
-                    } else {
-                      // Schließe Sync-Dialog
-                      if (context.mounted) {
-                        Navigator.of(context).pop();
-                      }
+                    // Aktualisiere Dashboard und Settings nach Sync
+                    ref.invalidate(dashboard_vm.dashboardViewModelProvider);
+                    ref.invalidate(settingsViewModelProvider);
+                  } on SyncNotAvailableException {
+                    // Nichts zu synchronisieren (kein Nutzer bzw. keine
+                    // Hybrid-Repositories) - Sync-Dialog ohne Fehlermeldung
+                    // schließen, wie bisher.
+                    if (context.mounted) {
+                      Navigator.of(context).pop();
                     }
                   } catch (syncError) {
                     logger.e('[LoginPage] Fehler bei der Synchronisierung: $syncError');

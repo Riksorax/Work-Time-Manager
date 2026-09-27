@@ -8,15 +8,12 @@ import '../../core/providers/app_lock_provider.dart';
 import '../../core/providers/providers.dart' as core_providers;
 import '../../core/providers/subscription_provider.dart';
 import '../../core/services/app_lock_service.dart';
-import '../../data/repositories/hybrid_work_repository_impl.dart';
-import '../../data/repositories/hybrid_overtime_repository_impl.dart';
-import '../../data/repositories/firebase_overtime_repository_impl.dart';
 import '../../domain/entities/bundesland.dart';
-import '../../domain/services/data_sync_service.dart';
 import '../../domain/utils/weekday_labels.dart';
 import '../../l10n/app_localizations.dart';
 import '../view_models/auth_view_model.dart';
 import '../view_models/dashboard_view_model.dart' as dashboard_vm;
+import '../view_models/data_sync_view_model.dart';
 import '../view_models/settings_view_model.dart';
 import '../view_models/theme_view_model.dart';
 import '../widgets/add_adjustment_modal.dart';
@@ -438,50 +435,19 @@ class SettingsPage extends ConsumerWidget {
     );
 
     try {
-      // Hole die Repositories
-      final workRepository = ref.read(core_providers.workRepositoryProvider);
-      final overtimeRepository = ref.read(core_providers.overtimeRepositoryProvider);
-
-      // Hole die aktuelle userId
-      final currentUser = ref.read(core_providers.firebaseAuthProvider).currentUser;
-      final userId = currentUser?.uid;
-
-      // Prüfe ob sie Hybrid-Repositories sind und User eingeloggt ist
-      if (workRepository is! HybridWorkRepositoryImpl ||
-          overtimeRepository is! HybridOvertimeRepositoryImpl ||
-          userId == null) {
-        throw Exception('Repositories sind nicht vom Typ Hybrid oder User nicht eingeloggt');
-      }
-
-      // Erstelle frisches Firebase-Repository mit korrekter userId
-      final freshFirebaseOvertimeRepo = FirebaseOvertimeRepositoryImpl(
-        dataSource: ref.read(core_providers.firestoreDataSourceProvider),
-        userId: userId,
-      );
-
-      // Führe Sync durch
-      final result = await DataSyncService.syncAll(
-        localWorkRepository: workRepository.localRepository,
-        firebaseWorkRepository: workRepository.firebaseRepository,
-        localOvertimeRepository: overtimeRepository.localRepository,
-        firebaseOvertimeRepository: freshFirebaseOvertimeRepo,
-      );
+      final result = await ref.read(dataSyncViewModelProvider).syncAll();
 
       // Schließe Loading-Dialog
       if (context.mounted) {
         Navigator.of(context).pop();
       }
 
-      // Zeige Ergebnis
-      final workEntriesSynced = result['workEntriesSynced'] as int;
-      final overtimeSynced = result['overtimeSynced'] as bool;
-      final errors = result['errors'] as List<String>;
-
-      if (errors.isEmpty) {
+      if (result.errors.isEmpty) {
         messenger.showSnackBar(
           SnackBar(
             content: Text(
-              l10n.syncSuccessMessage(workEntriesSynced, overtimeSynced ? l10n.yesLabel : l10n.noLabel),
+              l10n.syncSuccessMessage(
+                  result.workEntriesSynced, result.overtimeSynced ? l10n.yesLabel : l10n.noLabel),
             ),
             backgroundColor: Colors.green,
             duration: const Duration(seconds: 4),
@@ -494,7 +460,7 @@ class SettingsPage extends ConsumerWidget {
         messenger.showSnackBar(
           SnackBar(
             content: Text(
-              l10n.syncErrorsMessage(workEntriesSynced, errors.join(", ")),
+              l10n.syncErrorsMessage(result.workEntriesSynced, result.errors.join(", ")),
             ),
             backgroundColor: Colors.orange,
             duration: const Duration(seconds: 5),
