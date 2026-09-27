@@ -2,26 +2,27 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
+import { TranslatePipe } from '@ngx-translate/core';
 
 export type RestartSessionDialogResult = 'keep-breaks' | 'discard-breaks' | null;
 
 @Component({
   selector: 'app-restart-session-dialog',
-  imports: [MatButtonModule, MatDialogModule, MatIconModule],
+  imports: [MatButtonModule, MatDialogModule, MatIconModule, TranslatePipe],
   template: `
-    <h2 mat-dialog-title>Neue Session starten?</h2>
+    <h2 mat-dialog-title>{{ 'dashboard.restartSessionTitle' | translate }}</h2>
 
     <mat-dialog-content>
-      <p>Der heutige Arbeitstag wurde bereits beendet. Möchtest du eine neue Session starten?</p>
+      <p>{{ 'dashboard.restartSessionText' | translate }}</p>
     </mat-dialog-content>
 
     <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close aria-label="Abbrechen">Abbrechen</button>
-      <button mat-stroked-button (click)="confirm(false)" aria-label="Pausen verwerfen">
-        Pausen verwerfen
+      <button mat-button mat-dialog-close [attr.aria-label]="'common.cancel' | translate">{{ 'common.cancel' | translate }}</button>
+      <button mat-stroked-button (click)="confirm(false)" [attr.aria-label]="'dashboard.discardBreaksAria' | translate">
+        {{ 'dashboard.discardBreaksButton' | translate }}
       </button>
-      <button mat-flat-button (click)="confirm(true)" aria-label="Pausen behalten">
-        Pausen behalten
+      <button mat-flat-button (click)="confirm(true)" [attr.aria-label]="'dashboard.keepBreaksAria' | translate">
+        {{ 'dashboard.keepBreaksButton' | translate }}
       </button>
     </mat-dialog-actions>
   `,

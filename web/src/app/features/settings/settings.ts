@@ -11,7 +11,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SettingsPageService } from './settings.service';
-import { formatWorkdays } from '../../shared/utils/weekday-labels.util';
+import { formatWorkdays as formatWorkdaysUtil } from '../../shared/utils/weekday-labels.util';
 import {
   EditTargetHoursDialogComponent,
   EditTargetHoursDialogResult,
@@ -63,7 +63,7 @@ export class SettingsComponent {
   }
 
   formatWorkdays(workdays: number[]): string {
-    return formatWorkdays(workdays);
+    return formatWorkdaysUtil(workdays, this.translate.instant('common.weekdaysShort'));
   }
 
   // ── Actions ─────────────────────────────────────────────────────────────────

@@ -2,6 +2,8 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
+
 /// Zeigt [child] hinter einem Blur-Effekt und überlagert ihn mit einem
 /// Premium-Kaufanreiz. Wenn [onUpgrade] null ist (z.B. auf Web), wird
 /// stattdessen ein Hinweis auf die mobile App angezeigt.
@@ -21,6 +23,7 @@ class PremiumBlurGate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return ClipRect(
       child: Stack(
         fit: StackFit.expand,
@@ -65,11 +68,11 @@ class PremiumBlurGate extends StatelessWidget {
                   ),
                   const SizedBox(height: 28),
                   if (onUpgrade == null)
-                    const Card(
+                    Card(
                       child: Padding(
-                        padding: EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(16),
                         child: Text(
-                          'Abonnements können derzeit nur in der mobilen App verwaltet werden.',
+                          l10n.premiumMobileOnlyManagement,
                           textAlign: TextAlign.center,
                         ),
                       ),
@@ -81,9 +84,9 @@ class PremiumBlurGate extends StatelessWidget {
                       child: FilledButton.icon(
                         onPressed: onUpgrade,
                         icon: const Icon(Icons.workspace_premium),
-                        label: const Text(
-                          'Premium freischalten',
-                          style: TextStyle(fontSize: 16),
+                        label: Text(
+                          l10n.unlockPremiumButton,
+                          style: const TextStyle(fontSize: 16),
                         ),
                         style: FilledButton.styleFrom(
                           backgroundColor: Colors.orange,

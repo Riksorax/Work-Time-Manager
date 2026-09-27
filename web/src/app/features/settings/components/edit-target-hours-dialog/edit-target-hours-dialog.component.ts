@@ -4,31 +4,32 @@ import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/materia
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { TranslatePipe } from '@ngx-translate/core';
 
 export interface EditTargetHoursDialogData   { currentHours: number; }
 export interface EditTargetHoursDialogResult { hours: number; }
 
 @Component({
   selector: 'app-edit-target-hours-dialog',
-  imports: [ReactiveFormsModule, MatDialogModule, MatButtonModule, MatFormFieldModule, MatInputModule],
+  imports: [ReactiveFormsModule, MatDialogModule, MatButtonModule, MatFormFieldModule, MatInputModule, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <h2 mat-dialog-title>Soll-Arbeitsstunden</h2>
+    <h2 mat-dialog-title>{{ 'settings.targetHoursLabel' | translate }}</h2>
     <mat-dialog-content>
       <form [formGroup]="form">
         <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Stunden pro Woche</mat-label>
+          <mat-label>{{ 'settings.hoursPerWeekLabel' | translate }}</mat-label>
           <input matInput type="number" formControlName="hours"
                  min="1" max="48" step="0.5"
-                 aria-label="Soll-Arbeitsstunden pro Woche" />
-          <mat-hint>Zwischen 1 und 48 Stunden (gesetzliches Maximum nach § 3 ArbZG)</mat-hint>
+                 [attr.aria-label]="'settings.editTargetHoursAria' | translate" />
+          <mat-hint>{{ 'settings.hoursPerWeekHint' | translate }}</mat-hint>
         </mat-form-field>
       </form>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close>Abbrechen</button>
+      <button mat-button mat-dialog-close>{{ 'common.cancel' | translate }}</button>
       <button mat-flat-button [disabled]="form.invalid" (click)="submit()">
-        Speichern
+        {{ 'common.save' | translate }}
       </button>
     </mat-dialog-actions>
   `,
