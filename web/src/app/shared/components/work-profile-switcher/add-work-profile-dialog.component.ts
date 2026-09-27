@@ -4,29 +4,30 @@ import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { TranslatePipe } from '@ngx-translate/core';
 
 export interface AddWorkProfileDialogResult { name: string; }
 
 /** Dialog zum Anlegen eines weiteren Arbeitszeit-Profils (siehe #138/#244). */
 @Component({
   selector: 'app-add-work-profile-dialog',
-  imports: [ReactiveFormsModule, MatDialogModule, MatButtonModule, MatFormFieldModule, MatInputModule],
+  imports: [ReactiveFormsModule, MatDialogModule, MatButtonModule, MatFormFieldModule, MatInputModule, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <h2 mat-dialog-title>Neues Profil</h2>
+    <h2 mat-dialog-title>{{ 'shared.newProfileTitle' | translate }}</h2>
     <mat-dialog-content>
       <form [formGroup]="form">
         <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Name (z.B. Arbeitgeber)</mat-label>
+          <mat-label>{{ 'shared.profileNameLabel' | translate }}</mat-label>
           <input matInput formControlName="name" maxlength="40" autocomplete="off"
-                 aria-label="Profilname" />
+                 [attr.aria-label]="'shared.profileNameAria' | translate" />
         </mat-form-field>
       </form>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close>Abbrechen</button>
+      <button mat-button mat-dialog-close>{{ 'common.cancel' | translate }}</button>
       <button mat-flat-button [disabled]="form.invalid" (click)="submit()">
-        Anlegen
+        {{ 'shared.createButton' | translate }}
       </button>
     </mat-dialog-actions>
   `,

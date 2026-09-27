@@ -1,26 +1,26 @@
-<h2 mat-dialog-title>Pause bearbeiten</h2>
+<h2 mat-dialog-title>{{ 'dashboard.editBreakDialogTitle' | translate }}</h2>
 
 <mat-dialog-content>
   <div class="fields">
 
     <mat-form-field appearance="outline">
-      <mat-label>Pausenname</mat-label>
+      <mat-label>{{ 'dashboard.breakNameLabel' | translate }}</mat-label>
       <input matInput [value]="name()" (input)="onNameInput($event)"
-             aria-label="Pausenname" />
+             [attr.aria-label]="'dashboard.breakNameLabel' | translate" />
     </mat-form-field>
 
     <app-time-input
-      label="Startzeit"
+      [label]="'dashboard.startTimeLabel' | translate"
       [value]="startTime()"
       (timeSelected)="onStartTimeSelected($event)"
-      aria-label="Startzeit der Pause"
+      [attr.aria-label]="'dashboard.breakStartAria' | translate"
     />
 
     <app-time-input
-      label="Endzeit"
+      [label]="'dashboard.endTimeLabel' | translate"
       [value]="endTime()"
       (timeSelected)="onEndTimeSelected($event)"
-      aria-label="Endzeit der Pause"
+      [attr.aria-label]="'dashboard.breakEndAria' | translate"
     />
 
     @if (validationError()) {
@@ -31,10 +31,10 @@
 </mat-dialog-content>
 
 <mat-dialog-actions align="end">
-  <button mat-button mat-dialog-close aria-label="Abbrechen">Abbrechen</button>
+  <button mat-button mat-dialog-close [attr.aria-label]="'common.cancel' | translate">{{ 'common.cancel' | translate }}</button>
   <button mat-flat-button
           (click)="save()"
-          aria-label="Änderungen speichern">
-    Speichern
+          [attr.aria-label]="'dashboard.saveBreakAria' | translate">
+    {{ 'common.save' | translate }}
   </button>
 </mat-dialog-actions>

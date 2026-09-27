@@ -6,6 +6,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../../core/auth/auth';
 import { ProfileService } from '../../../core/services/profile';
 import { WorkProfileService } from '../../../core/services/work-profile';
@@ -18,11 +19,13 @@ import { ManageWorkProfilesDialogComponent } from './manage-work-profiles-dialog
  * ausgeloggte Nutzer unsichtbar, da Profile ein Login voraussetzen. */
 @Component({
   selector: 'app-work-profile-switcher',
-  imports: [MatMenuModule, MatButtonModule, MatIconModule, MatDividerModule, MatTooltipModule],
+  imports: [MatMenuModule, MatButtonModule, MatIconModule, MatDividerModule, MatTooltipModule, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (auth.user()) {
-      <button mat-icon-button [matMenuTriggerFor]="menu" aria-label="Profil wechseln" matTooltip="Profil wechseln">
+      <button mat-icon-button [matMenuTriggerFor]="menu"
+              [attr.aria-label]="'shared.switchProfileAria' | translate"
+              [matTooltip]="'shared.switchProfileAria' | translate">
         <mat-icon>badge</mat-icon>
       </button>
       <mat-menu #menu="matMenu">
@@ -35,12 +38,12 @@ import { ManageWorkProfilesDialogComponent } from './manage-work-profiles-dialog
         <mat-divider />
         <button mat-menu-item (click)="handleAdd()">
           <mat-icon>{{ canAdd() ? 'add' : 'lock_outline' }}</mat-icon>
-          <span>Neues Profil</span>
+          <span>{{ 'shared.newProfileTitle' | translate }}</span>
         </button>
         @if (workProfile.profiles().length > 1) {
           <button mat-menu-item (click)="openManage()">
             <mat-icon>delete_outline</mat-icon>
-            <span>Profile verwalten</span>
+            <span>{{ 'shared.manageProfilesTitle' | translate }}</span>
           </button>
         }
       </mat-menu>
@@ -53,6 +56,7 @@ export class WorkProfileSwitcherComponent {
   private readonly profileService = inject(ProfileService);
   private readonly dialog        = inject(MatDialog);
   private readonly snackBar      = inject(MatSnackBar);
+  private readonly translate     = inject(TranslateService);
 
   protected readonly canAdd = computed(
     () => this.workProfile.profiles().length < this.workProfile.maxProfileCount()
@@ -64,11 +68,15 @@ export class WorkProfileSwitcherComponent {
 
   handleAdd(): void {
     if (!this.profileService.isPremium()) {
-      this.snackBar.open('Zusätzliche Profile sind ein Premium-Feature.', 'OK', { duration: 4000 });
+      this.snackBar.open(this.translate.instant('shared.premiumProfilesFeature'), 'OK', { duration: 4000 });
       return;
     }
     if (!this.canAdd()) {
-      this.snackBar.open(`Maximal ${this.workProfile.maxProfileCount()} Profile möglich.`, 'OK', { duration: 4000 });
+      this.snackBar.open(
+        this.translate.instant('shared.maxProfilesReached', { count: this.workProfile.maxProfileCount() }),
+        'OK',
+        { duration: 4000 },
+      );
       return;
     }
     const ref = this.dialog.open(AddWorkProfileDialogComponent);
@@ -76,9 +84,17 @@ export class WorkProfileSwitcherComponent {
       if (!result) return;
       try {
         const created = await this.workProfile.addProfile(result.name);
-        this.snackBar.open(`Profil "${created.name}" angelegt.`, 'OK', { duration: 4000 });
+        this.snackBar.open(
+          this.translate.instant('shared.profileCreated', { name: created.name }),
+          'OK',
+          { duration: 4000 },
+        );
       } catch (e) {
-        this.snackBar.open(`Anlegen fehlgeschlagen: ${e}`, 'OK', { duration: 5000 });
+        this.snackBar.open(
+          this.translate.instant('shared.profileCreateFailed', { error: e }),
+          'OK',
+          { duration: 5000 },
+        );
       }
     });
   }
