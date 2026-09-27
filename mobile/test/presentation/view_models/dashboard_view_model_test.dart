@@ -37,7 +37,8 @@ void main() {
 
     container = ProviderContainer(
       overrides: [
-        getTodayWorkEntryUseCaseProvider.overrideWithValue(mockGetTodayWorkEntry),
+        getTodayWorkEntryUseCaseProvider
+            .overrideWithValue(mockGetTodayWorkEntry),
         getOvertimeUseCaseProvider.overrideWithValue(mockGetOvertime),
         settingsRepositoryProvider.overrideWithValue(mockSettingsRepository),
         saveWorkEntryUseCaseProvider.overrideWithValue(mockSaveWorkEntry),
@@ -50,8 +51,10 @@ void main() {
     when(mockSettingsRepository.getTargetWeeklyHours()).thenReturn(40.0);
     when(mockOvertimeRepository.getOvertime()).thenReturn(Duration.zero);
     when(mockOvertimeRepository.getLastUpdateDate()).thenReturn(null);
-    when(mockOvertimeRepository.ensureOvertimeLoaded()).thenAnswer((_) async => Duration.zero);
-    when(mockOvertimeRepository.ensureLastUpdateLoaded()).thenAnswer((_) async => null);
+    when(mockOvertimeRepository.ensureOvertimeLoaded())
+        .thenAnswer((_) async => Duration.zero);
+    when(mockOvertimeRepository.ensureLastUpdateLoaded())
+        .thenAnswer((_) async => null);
     when(mockGetOvertime()).thenReturn(Duration.zero);
   });
 
@@ -68,13 +71,15 @@ void main() {
   }
 
   group('DashboardViewModel', () {
-    test('expectedEndTime should be calculated correctly (8h work + 30m break)', () async {
+    test('expectedEndTime should be calculated correctly (8h work + 30m break)',
+        () async {
       // Arrange
-      when(mockSettingsRepository.getWorkdays()).thenReturn(workdaysIncludingToday());
+      when(mockSettingsRepository.getWorkdays())
+          .thenReturn(workdaysIncludingToday());
       // Start time: 8:00 AM today
       final now = DateTime.now();
       final todayStart = DateTime(now.year, now.month, now.day, 8, 0);
-      
+
       final entry = WorkEntryEntity(
         id: '1',
         date: now,
@@ -88,10 +93,10 @@ void main() {
       container.read(dashboardViewModelProvider.notifier);
       // Wait for init
       await Future.delayed(Duration.zero);
-      
+
       // Wait for 1 tick of timer? Recalculation happens in _init too.
       // _startTimerIfNeeded -> _recalculateOvertime
-      
+
       final state = container.read(dashboardViewModelProvider);
 
       // Assert
@@ -99,29 +104,31 @@ void main() {
       // 8:00 + 8h = 16:00.
       // Gross duration 8h >= 6h -> +30m break.
       // Expected End = 16:30.
-      
+
       expect(state.expectedEndTime, isNotNull);
-      
+
       final expected = DateTime(now.year, now.month, now.day, 16, 30);
-      // Allow slight difference if DateTime.now affects things? 
+      // Allow slight difference if DateTime.now affects things?
       // The calculation relies on 'start' and 'target', and 'currentBreaks'.
       // If 'currentBreaks' is 0 (no breaks in entry), result should be stable.
-      
+
       expect(state.expectedEndTime!.hour, expected.hour);
       expect(state.expectedEndTime!.minute, expected.minute);
     });
 
-    test('expectedEndTime should account for long day (9h work + 45m break)', () async {
+    test('expectedEndTime should account for long day (9h work + 45m break)',
+        () async {
       // Arrange
       // Set target hours to 9.5h per day?
       // Or just check if logic handles it.
       // Let's change target weekly hours to 47.5 (9.5 * 5)
       when(mockSettingsRepository.getTargetWeeklyHours()).thenReturn(47.5);
-      when(mockSettingsRepository.getWorkdays()).thenReturn(workdaysIncludingToday());
+      when(mockSettingsRepository.getWorkdays())
+          .thenReturn(workdaysIncludingToday());
 
       final now = DateTime.now();
       final todayStart = DateTime(now.year, now.month, now.day, 8, 0);
-      
+
       final entry = WorkEntryEntity(
         id: '1',
         date: now,
@@ -133,29 +140,31 @@ void main() {
 
       container.read(dashboardViewModelProvider.notifier);
       await Future.delayed(Duration.zero);
-      
+
       final state = container.read(dashboardViewModelProvider);
 
       // Target = 9.5h.
       // 8:00 + 9.5h = 17:30.
       // Gross 9.5h > 9h -> +45m break.
       // Expected End = 17:30 + 45m = 18:15.
-      
+
       expect(state.expectedEndTime!.hour, 18);
       expect(state.expectedEndTime!.minute, 15);
     });
 
-    test('expectedEndTotalZero should be clamped to start time if initial overtime exceeds daily target', () async {
+    test(
+        'expectedEndTotalZero should be clamped to start time if initial overtime exceeds daily target',
+        () async {
       // Arrange
       // Target: 8h. Initial Overtime: +10h.
       // Remaining needed: 8 - 10 = -2h -> Clamped to 0.
       // Expected End = Start + 0 = Start.
-      
+
       when(mockSettingsRepository.getTargetWeeklyHours()).thenReturn(40.0);
-      
+
       final now = DateTime.now();
       final todayStart = DateTime(now.year, now.month, now.day, 8, 0);
-      
+
       final entry = WorkEntryEntity(
         id: '1',
         date: now,
@@ -165,15 +174,19 @@ void main() {
 
       when(mockGetTodayWorkEntry()).thenAnswer((_) async => entry);
       // Mock Overtime Repository to return +10h
-      when(mockOvertimeRepository.getOvertime()).thenReturn(const Duration(hours: 10));
-      when(mockOvertimeRepository.ensureOvertimeLoaded()).thenAnswer((_) async => const Duration(hours: 10));
+      when(mockOvertimeRepository.getOvertime())
+          .thenReturn(const Duration(hours: 10));
+      when(mockOvertimeRepository.ensureOvertimeLoaded())
+          .thenAnswer((_) async => const Duration(hours: 10));
       // Last update was yesterday (so it's fully initial)
-      when(mockOvertimeRepository.getLastUpdateDate()).thenReturn(now.subtract(const Duration(days: 1)));
-      when(mockOvertimeRepository.ensureLastUpdateLoaded()).thenAnswer((_) async => now.subtract(const Duration(days: 1)));
+      when(mockOvertimeRepository.getLastUpdateDate())
+          .thenReturn(now.subtract(const Duration(days: 1)));
+      when(mockOvertimeRepository.ensureLastUpdateLoaded())
+          .thenAnswer((_) async => now.subtract(const Duration(days: 1)));
 
       container.read(dashboardViewModelProvider.notifier);
       await Future.delayed(Duration.zero);
-      
+
       final state = container.read(dashboardViewModelProvider);
 
       expect(state.expectedEndTotalZero, isNotNull);
@@ -181,9 +194,12 @@ void main() {
       expect(state.expectedEndTotalZero!.minute, 0);
     });
 
-    test('elapsedTime and grossWorkDuration track live seconds when work timer is running', () async {
+    test(
+        'elapsedTime and grossWorkDuration track live seconds when work timer is running',
+        () async {
       final now = DateTime.now();
-      final startTime = now.subtract(const Duration(hours: 1, minutes: 23, seconds: 45));
+      final startTime =
+          now.subtract(const Duration(hours: 1, minutes: 23, seconds: 45));
 
       final entry = WorkEntryEntity(
         id: '1',
@@ -199,9 +215,11 @@ void main() {
 
       final state = container.read(dashboardViewModelProvider);
 
-      expect(state.elapsedTime.inSeconds, greaterThanOrEqualTo(1 * 3600 + 23 * 60 + 44));
+      expect(state.elapsedTime.inSeconds,
+          greaterThanOrEqualTo(1 * 3600 + 23 * 60 + 44));
       expect(state.grossWorkDuration, isNotNull);
-      expect(state.grossWorkDuration!.inSeconds, greaterThanOrEqualTo(1 * 3600 + 23 * 60 + 44));
+      expect(state.grossWorkDuration!.inSeconds,
+          greaterThanOrEqualTo(1 * 3600 + 23 * 60 + 44));
     });
   });
 }

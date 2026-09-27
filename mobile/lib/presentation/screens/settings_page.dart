@@ -68,7 +68,8 @@ class SettingsPage extends ConsumerWidget {
             ListTile(
               title: Text(l10n.weeklyTargetHoursTitle),
               subtitle: Text(
-                l10n.weeklyTargetHoursValue(settings.weeklyTargetHours.toStringAsFixed(1)),
+                l10n.weeklyTargetHoursValue(
+                    settings.weeklyTargetHours.toStringAsFixed(1)),
               ),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
@@ -80,7 +81,8 @@ class SettingsPage extends ConsumerWidget {
             ),
             ListTile(
               title: Text(l10n.workdaysTitle),
-              subtitle: Text(formatWorkdays(settings.workdays, Localizations.localeOf(context).toString())),
+              subtitle: Text(formatWorkdays(settings.workdays,
+                  Localizations.localeOf(context).toString())),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 showEditWorkdaysModal(
@@ -92,12 +94,16 @@ class SettingsPage extends ConsumerWidget {
             ListTile(
               title: Text(l10n.dailyTargetHoursTitle),
               subtitle: Text(
-                l10n.dailyTargetHoursValue(settings.workdays.isNotEmpty ? (settings.weeklyTargetHours / settings.workdays.length).toStringAsFixed(1) : '0.0'),
+                l10n.dailyTargetHoursValue(settings.workdays.isNotEmpty
+                    ? (settings.weeklyTargetHours / settings.workdays.length)
+                        .toStringAsFixed(1)
+                    : '0.0'),
               ),
             ),
             ListTile(
               title: Text(l10n.timezoneTitle),
-              subtitle: Text(settings.timezoneOverride ?? l10n.systemDefaultTimezone),
+              subtitle:
+                  Text(settings.timezoneOverride ?? l10n.systemDefaultTimezone),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 showEditTimezoneModal(context, settings.timezoneOverride);
@@ -106,7 +112,9 @@ class SettingsPage extends ConsumerWidget {
             ListTile(
               title: Text(l10n.languageSettingTitle),
               subtitle: Text(
-                settings.locale == 'en' ? l10n.languageEnglish : l10n.languageGerman,
+                settings.locale == 'en'
+                    ? l10n.languageEnglish
+                    : l10n.languageGerman,
               ),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
@@ -115,7 +123,8 @@ class SettingsPage extends ConsumerWidget {
             ),
             const Divider(height: 1),
             const SizedBox(height: 16),
-            _buildOvertimeBalance(context, settingsState.overtimeBalance, settingsState.lastOvertimeUpdate),
+            _buildOvertimeBalance(context, settingsState.overtimeBalance,
+                settingsState.lastOvertimeUpdate),
             const SizedBox(height: 16),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -138,10 +147,13 @@ class SettingsPage extends ConsumerWidget {
             const Divider(height: 1),
             SwitchListTile(
               title: Text(l10n.designTitle),
-              subtitle: Text(Theme.of(context).brightness == Brightness.dark ? l10n.themeDark : l10n.themeLight),
+              subtitle: Text(Theme.of(context).brightness == Brightness.dark
+                  ? l10n.themeDark
+                  : l10n.themeLight),
               value: Theme.of(context).brightness == Brightness.dark,
               onChanged: (isDark) {
-                themeNotifier.setTheme(isDark ? ThemeMode.dark : ThemeMode.light);
+                themeNotifier
+                    .setTheme(isDark ? ThemeMode.dark : ThemeMode.light);
               },
             ),
             const Divider(height: 1),
@@ -172,11 +184,13 @@ class SettingsPage extends ConsumerWidget {
             ListTile(
               title: Text(l10n.notificationsTitle),
               subtitle: settingsState.settings.notificationsEnabled
-                  ? Text(l10n.notificationsEnabledAt(settingsState.settings.notificationTime))
+                  ? Text(l10n.notificationsEnabledAt(
+                      settingsState.settings.notificationTime))
                   : Text(l10n.disabledLabel),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
-                NotificationSettingsDialog.show(context, settingsState.settings);
+                NotificationSettingsDialog.show(
+                    context, settingsState.settings);
               },
             ),
             if (!kIsWeb) ...[
@@ -250,7 +264,8 @@ class SettingsPage extends ConsumerWidget {
     );
   }
 
-  void _showBundeslandPicker(BuildContext context, WidgetRef ref, Bundesland? current) {
+  void _showBundeslandPicker(
+      BuildContext context, WidgetRef ref, Bundesland? current) {
     final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
@@ -260,11 +275,16 @@ class SettingsPage extends ConsumerWidget {
           SimpleDialogOption(
             onPressed: () {
               Navigator.of(dialogContext).pop();
-              ref.read(settingsViewModelProvider.notifier).updateBundesland(null);
+              ref
+                  .read(settingsViewModelProvider.notifier)
+                  .updateBundesland(null);
             },
             child: Row(
               children: [
-                if (current == null) const Icon(Icons.check, size: 18) else const SizedBox(width: 18),
+                if (current == null)
+                  const Icon(Icons.check, size: 18)
+                else
+                  const SizedBox(width: 18),
                 const SizedBox(width: 8),
                 Text(l10n.noSelectionOption),
               ],
@@ -274,7 +294,9 @@ class SettingsPage extends ConsumerWidget {
             SimpleDialogOption(
               onPressed: () {
                 Navigator.of(dialogContext).pop();
-                ref.read(settingsViewModelProvider.notifier).updateBundesland(bundesland);
+                ref
+                    .read(settingsViewModelProvider.notifier)
+                    .updateBundesland(bundesland);
               },
               child: Row(
                 children: [
@@ -303,8 +325,9 @@ class SettingsPage extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final entitlement = ref.watch(activeEntitlementProvider);
     final expirationDateString = entitlement?.expirationDate;
-    final expirationDate =
-        expirationDateString != null ? DateTime.tryParse(expirationDateString) : null;
+    final expirationDate = expirationDateString != null
+        ? DateTime.tryParse(expirationDateString)
+        : null;
     final willRenew = entitlement?.willRenew ?? false;
 
     String? statusText;
@@ -327,7 +350,8 @@ class SettingsPage extends ConsumerWidget {
                 children: [
                   const Icon(Icons.subscriptions, color: Colors.orange),
                   const SizedBox(width: 12),
-                  Text(l10n.mySubscriptionTitle, style: Theme.of(context).textTheme.titleMedium),
+                  Text(l10n.mySubscriptionTitle,
+                      style: Theme.of(context).textTheme.titleMedium),
                 ],
               ),
               if (statusText != null) ...[
@@ -370,7 +394,8 @@ class SettingsPage extends ConsumerWidget {
     }
   }
 
-  Widget _buildDataSyncSection(BuildContext context, WidgetRef ref, AsyncValue authState) {
+  Widget _buildDataSyncSection(
+      BuildContext context, WidgetRef ref, AsyncValue authState) {
     final isLoggedIn = authState.asData?.value != null;
     final l10n = AppLocalizations.of(context);
 
@@ -386,7 +411,8 @@ class SettingsPage extends ConsumerWidget {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.cloud_off, color: Theme.of(context).colorScheme.primary),
+                    Icon(Icons.cloud_off,
+                        color: Theme.of(context).colorScheme.primary),
                     const SizedBox(width: 12),
                     Text(
                       l10n.offlineModeTitle,
@@ -440,17 +466,20 @@ class SettingsPage extends ConsumerWidget {
     try {
       // Hole die Repositories
       final workRepository = ref.read(core_providers.workRepositoryProvider);
-      final overtimeRepository = ref.read(core_providers.overtimeRepositoryProvider);
+      final overtimeRepository =
+          ref.read(core_providers.overtimeRepositoryProvider);
 
       // Hole die aktuelle userId
-      final currentUser = ref.read(core_providers.firebaseAuthProvider).currentUser;
+      final currentUser =
+          ref.read(core_providers.firebaseAuthProvider).currentUser;
       final userId = currentUser?.uid;
 
       // Prüfe ob sie Hybrid-Repositories sind und User eingeloggt ist
       if (workRepository is! HybridWorkRepositoryImpl ||
           overtimeRepository is! HybridOvertimeRepositoryImpl ||
           userId == null) {
-        throw Exception('Repositories sind nicht vom Typ Hybrid oder User nicht eingeloggt');
+        throw Exception(
+            'Repositories sind nicht vom Typ Hybrid oder User nicht eingeloggt');
       }
 
       // Erstelle frisches Firebase-Repository mit korrekter userId
@@ -481,7 +510,8 @@ class SettingsPage extends ConsumerWidget {
         messenger.showSnackBar(
           SnackBar(
             content: Text(
-              l10n.syncSuccessMessage(workEntriesSynced, overtimeSynced ? l10n.yesLabel : l10n.noLabel),
+              l10n.syncSuccessMessage(workEntriesSynced,
+                  overtimeSynced ? l10n.yesLabel : l10n.noLabel),
             ),
             backgroundColor: Colors.green,
             duration: const Duration(seconds: 4),
@@ -517,7 +547,8 @@ class SettingsPage extends ConsumerWidget {
     }
   }
 
-  Widget _buildOvertimeBalance(BuildContext context, Duration overtimeBalance, DateTime? lastUpdate) {
+  Widget _buildOvertimeBalance(
+      BuildContext context, Duration overtimeBalance, DateTime? lastUpdate) {
     final bool isNegative = overtimeBalance.isNegative;
     final Duration absDuration = overtimeBalance.abs();
 
@@ -614,7 +645,8 @@ class SettingsPage extends ConsumerWidget {
                 ),
               ),
               IconButton(
-                icon: Icon(Icons.delete_forever, color: theme.colorScheme.error),
+                icon:
+                    Icon(Icons.delete_forever, color: theme.colorScheme.error),
                 tooltip: l10n.deleteAccountTooltip,
                 onPressed: () {
                   showDialog(
@@ -680,7 +712,8 @@ class SettingsPage extends ConsumerWidget {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const LoginPage(returnToIndex: 2)),
+                  MaterialPageRoute(
+                      builder: (context) => const LoginPage(returnToIndex: 2)),
                 );
               },
               icon: const Icon(Icons.login),
@@ -708,8 +741,10 @@ class SettingsPage extends ConsumerWidget {
                           ref.read(signOutProvider)();
                           // Invalidiere Repositories und Dashboard nach Abmeldung
                           ref.invalidate(core_providers.workRepositoryProvider);
-                          ref.invalidate(core_providers.overtimeRepositoryProvider);
-                          ref.invalidate(dashboard_vm.dashboardViewModelProvider);
+                          ref.invalidate(
+                              core_providers.overtimeRepositoryProvider);
+                          ref.invalidate(
+                              dashboard_vm.dashboardViewModelProvider);
                         },
                         child: Text(l10n.logoutButton),
                       ),
@@ -755,9 +790,8 @@ class _AppLockSectionState extends ConsumerState<_AppLockSection> {
       children: [
         SwitchListTile(
           title: Text(l10n.pinLockTitle),
-          subtitle: Text(isEnabled
-              ? l10n.pinLockEnabledDescription
-              : l10n.disabledLabel),
+          subtitle: Text(
+              isEnabled ? l10n.pinLockEnabledDescription : l10n.disabledLabel),
           value: isEnabled,
           onChanged: (value) => _onToggle(context, value, service),
         ),
@@ -771,7 +805,8 @@ class _AppLockSectionState extends ConsumerState<_AppLockSection> {
     );
   }
 
-  Future<void> _onToggle(BuildContext context, bool value, AppLockService service) async {
+  Future<void> _onToggle(
+      BuildContext context, bool value, AppLockService service) async {
     if (value) {
       if (!service.hasPin) {
         final success = await PinSetupDialog.show(context);

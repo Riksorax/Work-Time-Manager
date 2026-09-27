@@ -19,19 +19,23 @@ class OvertimeRepositoryImpl implements OvertimeRepository {
   @override
   Duration getOvertime() {
     final minutes = _prefs.getInt(_userPrefKey) ?? 0;
-    logger.i('[OvertimeRepository] getOvertime for userId $_userId, key: $_userPrefKey, value: $minutes min');
+    logger.i(
+        '[OvertimeRepository] getOvertime for userId $_userId, key: $_userPrefKey, value: $minutes min');
     return Duration(minutes: minutes);
   }
 
   @override
   Future<void> saveOvertime(Duration overtime) async {
-    logger.i('[OvertimeRepository] saveOvertime for userId $_userId, key: $_userPrefKey, value: ${toStoredMinutes(overtime)} min');
-    final success = await _prefs.setInt(_userPrefKey, toStoredMinutes(overtime));
+    logger.i(
+        '[OvertimeRepository] saveOvertime for userId $_userId, key: $_userPrefKey, value: ${toStoredMinutes(overtime)} min');
+    final success =
+        await _prefs.setInt(_userPrefKey, toStoredMinutes(overtime));
     logger.i('[OvertimeRepository] Save success: $success');
 
     // Verifiziere, dass der Wert gespeichert wurde
     final savedValue = _prefs.getInt(_userPrefKey);
-    logger.i('[OvertimeRepository] Verification - saved value: $savedValue min');
+    logger
+        .i('[OvertimeRepository] Verification - saved value: $savedValue min');
   }
 
   @override

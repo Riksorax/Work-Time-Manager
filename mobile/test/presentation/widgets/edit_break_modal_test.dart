@@ -24,7 +24,8 @@ void main() {
     Widget createSubject(BreakEntity breakEntity) {
       return ProviderScope(
         overrides: [
-          dashboardViewModelProvider.overrideWith(() => FakeDashboardViewModel()),
+          dashboardViewModelProvider
+              .overrideWith(() => FakeDashboardViewModel()),
         ],
         child: MaterialApp(
           locale: const Locale('de'),
@@ -58,7 +59,8 @@ void main() {
       expect(find.text('12:30'), findsOneWidget);
     });
 
-    testWidgets('shows error when end time is before start time on save', (tester) async {
+    testWidgets('shows error when end time is before start time on save',
+        (tester) async {
       // Create a break with invalid times (end before start)
       final invalidBreak = BreakEntity(
         id: 'break-1',
@@ -74,7 +76,8 @@ void main() {
       await tester.tap(find.text('Speichern'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Endzeit kann nicht vor der Startzeit liegen.'), findsOneWidget);
+      expect(find.text('Endzeit kann nicht vor der Startzeit liegen.'),
+          findsOneWidget);
     });
 
     testWidgets('cancel button closes modal without saving', (tester) async {

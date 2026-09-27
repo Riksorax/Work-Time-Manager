@@ -65,7 +65,8 @@ class _PinSetupDialogState extends ConsumerState<PinSetupDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final activeController = _confirming ? _confirmPinController : _firstPinController;
+    final activeController =
+        _confirming ? _confirmPinController : _firstPinController;
 
     return AlertDialog(
       title: Text(_confirming ? l10n.confirmPinTitle : l10n.setPinTitle),
@@ -80,7 +81,9 @@ class _PinSetupDialogState extends ConsumerState<PinSetupDialog> {
             maxLength: 6,
             autofocus: true,
             decoration: InputDecoration(
-              labelText: _confirming ? l10n.confirmPinFieldLabel : l10n.newPinFieldLabel,
+              labelText: _confirming
+                  ? l10n.confirmPinFieldLabel
+                  : l10n.newPinFieldLabel,
               errorText: _error,
               counterText: '',
             ),

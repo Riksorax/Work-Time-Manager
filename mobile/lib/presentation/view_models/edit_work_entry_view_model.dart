@@ -62,8 +62,7 @@ class EditWorkEntryViewModel extends _$EditWorkEntryViewModel {
   }
 
   void deleteBreak(String breakId) {
-    final updatedBreaks =
-        state.breaks.where((b) => b.id != breakId).toList();
+    final updatedBreaks = state.breaks.where((b) => b.id != breakId).toList();
     state = state.copyWith(breaks: updatedBreaks);
   }
 
@@ -82,6 +81,8 @@ class EditWorkEntryViewModel extends _$EditWorkEntryViewModel {
       isManuallyEntered: true,
     );
     // In Notifier we use ref.read directly
-    await ref.read(reportsViewModelProvider.notifier).saveWorkEntry(updatedEntry);
+    await ref
+        .read(reportsViewModelProvider.notifier)
+        .saveWorkEntry(updatedEntry);
   }
 }

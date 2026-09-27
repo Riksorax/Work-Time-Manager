@@ -31,7 +31,9 @@ class _FakeWorkRepository implements WorkRepository {
   @override
   Future<void> saveWorkEntry(WorkEntryEntity entry) async {}
   @override
-  Future<List<WorkEntryEntity>> getWorkEntriesForMonth(int year, int month) async => [];
+  Future<List<WorkEntryEntity>> getWorkEntriesForMonth(
+          int year, int month) async =>
+      [];
   @override
   Future<void> deleteWorkEntry(String entryId) async {}
 }
@@ -186,12 +188,16 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            getTodayWorkEntryUseCaseProvider.overrideWithValue(_FakeGetTodayWorkEntry(entry)),
-            settingsRepositoryProvider.overrideWithValue(_FakeSettingsRepository()),
+            getTodayWorkEntryUseCaseProvider
+                .overrideWithValue(_FakeGetTodayWorkEntry(entry)),
+            settingsRepositoryProvider
+                .overrideWithValue(_FakeSettingsRepository()),
             overtimeRepositoryProvider.overrideWithValue(overtimeRepository),
-            setOvertimeUseCaseProvider.overrideWithValue(SetOvertime(overtimeRepository)),
+            setOvertimeUseCaseProvider
+                .overrideWithValue(SetOvertime(overtimeRepository)),
             workRepositoryProvider.overrideWithValue(_FakeWorkRepository()),
-            settingsViewModelProvider.overrideWith(_ImmediateSettingsViewModel.new),
+            settingsViewModelProvider
+                .overrideWith(_ImmediateSettingsViewModel.new),
           ],
           child: MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -212,7 +218,8 @@ void main() {
       final container = ProviderScope.containerOf(capturedContext);
       container.read(dashboardViewModelProvider.notifier);
       await tester.pumpAndSettle();
-      expect(container.read(dashboardViewModelProvider).initialOvertime, Duration.zero);
+      expect(container.read(dashboardViewModelProvider).initialOvertime,
+          Duration.zero);
 
       // Real dialog route, exactly like `showDialog` in SettingsPage - only
       // this way does `Navigator.pop()` actually dispose the dialog's
@@ -246,7 +253,8 @@ void main() {
       expect(find.byType(AddAdjustmentModal), findsNothing);
 
       // ...and the Dashboard actually received the update.
-      expect(container.read(dashboardViewModelProvider).initialOvertime, const Duration(hours: 5));
+      expect(container.read(dashboardViewModelProvider).initialOvertime,
+          const Duration(hours: 5));
     },
   );
 }

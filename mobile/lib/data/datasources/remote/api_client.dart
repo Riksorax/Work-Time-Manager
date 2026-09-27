@@ -37,15 +37,18 @@ class ApiClient {
 
   // ── Work Entries ────────────────────────────────────────────────────────
 
-  Future<List<WorkEntryModel>> getWorkEntriesForMonth(int year, int month) async {
-    final res = await _http.get(_uri('/work-entries/$year/$month'), headers: await _headers());
+  Future<List<WorkEntryModel>> getWorkEntriesForMonth(
+      int year, int month) async {
+    final res = await _http.get(_uri('/work-entries/$year/$month'),
+        headers: await _headers());
     if (res.statusCode != 200) _fail('getWorkEntriesForMonth', res);
     final list = jsonDecode(res.body) as List<dynamic>;
     return list.map((e) => _entryFromJson(e as Map<String, dynamic>)).toList();
   }
 
   Future<WorkEntryModel?> getWorkEntry(int year, int month, int day) async {
-    final res = await _http.get(_uri('/work-entries/$year/$month/$day'), headers: await _headers());
+    final res = await _http.get(_uri('/work-entries/$year/$month/$day'),
+        headers: await _headers());
     if (res.statusCode == 404) return null;
     if (res.statusCode != 200) _fail('getWorkEntry', res);
     return _entryFromJson(jsonDecode(res.body) as Map<String, dynamic>);
@@ -57,12 +60,15 @@ class ApiClient {
       headers: await _headers(),
       body: jsonEncode(_entryToJson(model)),
     );
-    if (res.statusCode != 200 && res.statusCode != 204) _fail('saveWorkEntry', res);
+    if (res.statusCode != 200 && res.statusCode != 204)
+      _fail('saveWorkEntry', res);
   }
 
   Future<void> deleteWorkEntry(int year, int month, int day) async {
-    final res = await _http.delete(_uri('/work-entries/$year/$month/$day'), headers: await _headers());
-    if (res.statusCode != 200 && res.statusCode != 204) _fail('deleteWorkEntry', res);
+    final res = await _http.delete(_uri('/work-entries/$year/$month/$day'),
+        headers: await _headers());
+    if (res.statusCode != 200 && res.statusCode != 204)
+      _fail('deleteWorkEntry', res);
   }
 
   // ── Overtime ──────────────────────────────────────────────────────────────
@@ -86,7 +92,8 @@ class ApiClient {
       headers: await _headers(),
       body: jsonEncode({'minutes': minutes}),
     );
-    if (res.statusCode != 200 && res.statusCode != 204) _fail('saveOvertime', res);
+    if (res.statusCode != 200 && res.statusCode != 204)
+      _fail('saveOvertime', res);
   }
 
   // ── Settings ────────────────────────────────────────────────────────────
@@ -103,7 +110,8 @@ class ApiClient {
       headers: await _headers(),
       body: jsonEncode(settings),
     );
-    if (res.statusCode != 200 && res.statusCode != 204) _fail('putSettings', res);
+    if (res.statusCode != 200 && res.statusCode != 204)
+      _fail('putSettings', res);
   }
 
   // ── Reports (Roh-JSON; Zeiten in ms) ──────────────────────────────────────
@@ -128,7 +136,8 @@ class ApiClient {
   Map<String, dynamic> _entryToJson(WorkEntryModel m) => {
         'id': m.id,
         // UTC-Mitternacht aus lokalen Y/M/D — analog WorkEntryModel.toMap (Flutter-kanonisch)
-        'date': DateTime.utc(m.date.year, m.date.month, m.date.day).toIso8601String(),
+        'date': DateTime.utc(m.date.year, m.date.month, m.date.day)
+            .toIso8601String(),
         'workStart': m.workStart?.toUtc().toIso8601String(),
         'workEnd': m.workEnd?.toUtc().toIso8601String(),
         'type': m.type.name,
@@ -160,9 +169,11 @@ class ApiClient {
             .map((b) => BreakEntity(
                   id: (b['id'] as String?) ?? const Uuid().v4(),
                   name: (b['name'] as String?) ?? 'Pause',
-                  start: roundToMinute(DateTime.parse(b['start'] as String).toLocal()),
+                  start: roundToMinute(
+                      DateTime.parse(b['start'] as String).toLocal()),
                   end: b['end'] != null
-                      ? roundToMinute(DateTime.parse(b['end'] as String).toLocal())
+                      ? roundToMinute(
+                          DateTime.parse(b['end'] as String).toLocal())
                       : null,
                   isAutomatic: (b['isAutomatic'] as bool?) ?? false,
                 ))

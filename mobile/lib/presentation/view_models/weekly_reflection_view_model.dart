@@ -24,7 +24,8 @@ class WeeklyReflectionViewModel extends Notifier<WeeklyReflectionState> {
   Future<void> loadReflection(int year, int week) async {
     state = state.copyWith(isLoading: true);
 
-    final repository = ref.read(core_providers.weeklyReflectionRepositoryProvider);
+    final repository =
+        ref.read(core_providers.weeklyReflectionRepositoryProvider);
     if (repository == null) {
       state = state.copyWith(
         isLoading: false,
@@ -37,10 +38,12 @@ class WeeklyReflectionViewModel extends Notifier<WeeklyReflectionState> {
       final reflection = await repository.getReflection(year, week);
       state = state.copyWith(
         isLoading: false,
-        reflection: reflection ?? WeeklyReflectionEntity(year: year, week: week),
+        reflection:
+            reflection ?? WeeklyReflectionEntity(year: year, week: week),
       );
     } catch (e, stackTrace) {
-      logger.e('[WeeklyReflectionViewModel] Fehler beim Laden: $e', stackTrace: stackTrace);
+      logger.e('[WeeklyReflectionViewModel] Fehler beim Laden: $e',
+          stackTrace: stackTrace);
       state = state.copyWith(
         isLoading: false,
         reflection: WeeklyReflectionEntity(year: year, week: week),
@@ -61,7 +64,8 @@ class WeeklyReflectionViewModel extends Notifier<WeeklyReflectionState> {
       updatedAt: DateTime.now(),
     );
 
-    final repository = ref.read(core_providers.weeklyReflectionRepositoryProvider);
+    final repository =
+        ref.read(core_providers.weeklyReflectionRepositoryProvider);
     if (repository == null) {
       state = state.copyWith(reflection: updated);
       return;
@@ -72,7 +76,8 @@ class WeeklyReflectionViewModel extends Notifier<WeeklyReflectionState> {
       await repository.saveReflection(updated);
       state = state.copyWith(isSaving: false, reflection: updated);
     } catch (e, stackTrace) {
-      logger.e('[WeeklyReflectionViewModel] Fehler beim Speichern: $e', stackTrace: stackTrace);
+      logger.e('[WeeklyReflectionViewModel] Fehler beim Speichern: $e',
+          stackTrace: stackTrace);
       state = state.copyWith(isSaving: false);
       rethrow;
     }

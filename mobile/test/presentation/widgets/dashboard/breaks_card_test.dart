@@ -38,7 +38,8 @@ void main() {
   }
 
   group('BreaksCard Widget', () {
-    testWidgets('shows "Keine Pausen erfasst" when list is empty', (tester) async {
+    testWidgets('shows "Keine Pausen erfasst" when list is empty',
+        (tester) async {
       final entry = WorkEntryEntity(
         id: '1',
         date: DateTime.now(),
@@ -73,7 +74,8 @@ void main() {
       expect(find.text('12:00 - 12:30'), findsOneWidget);
     });
 
-    testWidgets('button shows "Pause beenden" when a break is active', (tester) async {
+    testWidgets('button shows "Pause beenden" when a break is active',
+        (tester) async {
       final now = DateTime.now();
       final entry = WorkEntryEntity(
         id: '1',
@@ -108,11 +110,12 @@ void main() {
 
       expect(find.text('Pause starten'), findsOneWidget);
       await tester.tap(find.text('Pause starten'));
-      
+
       verifyNever(mockCallback.call());
     });
 
-    testWidgets('button is disabled when work is already finished', (tester) async {
+    testWidgets('button is disabled when work is already finished',
+        (tester) async {
       final now = DateTime.now();
       final entry = WorkEntryEntity(
         id: '1',
@@ -126,7 +129,7 @@ void main() {
 
       expect(find.text('Pause starten'), findsOneWidget);
       await tester.tap(find.text('Pause starten'));
-      
+
       verifyNever(mockCallback.call());
     });
 

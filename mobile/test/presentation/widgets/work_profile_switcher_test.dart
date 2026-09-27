@@ -49,7 +49,8 @@ void main() {
   }
 
   group('WorkProfileSwitcher', () {
-    testWidgets('rendert nichts, wenn kein Nutzer eingeloggt ist', (tester) async {
+    testWidgets('rendert nichts, wenn kein Nutzer eingeloggt ist',
+        (tester) async {
       await tester.pumpWidget(ProviderScope(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
@@ -57,7 +58,8 @@ void main() {
           workProfileRepositoryProvider.overrideWithValue(mockRepository),
         ],
         child: MaterialApp(
-          home: Scaffold(appBar: AppBar(actions: const [WorkProfileSwitcher()])),
+          home:
+              Scaffold(appBar: AppBar(actions: const [WorkProfileSwitcher()])),
         ),
       ));
       await tester.pumpAndSettle();
@@ -65,7 +67,8 @@ void main() {
       expect(find.byType(PopupMenuButton<String>), findsNothing);
     });
 
-    testWidgets('öffnet ohne Premium die Paywall statt eines Dialogs', (tester) async {
+    testWidgets('öffnet ohne Premium die Paywall statt eines Dialogs',
+        (tester) async {
       await tester.pumpWidget(createSubject(isPremium: false));
       await tester.pumpAndSettle();
 
@@ -87,8 +90,8 @@ void main() {
     });
 
     testWidgets('legt mit Premium ein neues Profil an', (tester) async {
-      when(mockRepository.addProfile('Zweitjob'))
-          .thenAnswer((_) async => const WorkProfileEntity(id: 'p1', name: 'Zweitjob'));
+      when(mockRepository.addProfile('Zweitjob')).thenAnswer(
+          (_) async => const WorkProfileEntity(id: 'p1', name: 'Zweitjob'));
 
       await tester.pumpWidget(createSubject(isPremium: true));
       await tester.pumpAndSettle();
@@ -109,9 +112,10 @@ void main() {
       expect(find.textContaining('angelegt'), findsOneWidget);
     });
 
-    testWidgets('löscht ein zusätzliches Profil nach Bestätigung', (tester) async {
-      when(mockRepository.getAdditionalProfiles())
-          .thenAnswer((_) async => [const WorkProfileEntity(id: 'p1', name: 'Zweitjob')]);
+    testWidgets('löscht ein zusätzliches Profil nach Bestätigung',
+        (tester) async {
+      when(mockRepository.getAdditionalProfiles()).thenAnswer(
+          (_) async => [const WorkProfileEntity(id: 'p1', name: 'Zweitjob')]);
       when(mockRepository.deleteProfile('p1')).thenAnswer((_) async {});
 
       await tester.pumpWidget(createSubject(isPremium: true));

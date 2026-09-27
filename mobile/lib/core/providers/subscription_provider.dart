@@ -6,10 +6,10 @@ import 'package:flutter_work_time/core/utils/logger.dart';
 
 bool _hasActivePremium(CustomerInfo info) {
   return info.entitlements.all['work_time_manager_premium']?.isActive ??
-         info.entitlements.all['work_time_manager_premiun']?.isActive ??
-         info.entitlements.all['premium']?.isActive ??
-         info.entitlements.all['Premium']?.isActive ??
-         false;
+      info.entitlements.all['work_time_manager_premiun']?.isActive ??
+      info.entitlements.all['premium']?.isActive ??
+      info.entitlements.all['Premium']?.isActive ??
+      false;
 }
 
 // Provider für den aktuellen CustomerInfo (Abo-Status)
@@ -20,10 +20,10 @@ final customerInfoProvider = StreamProvider<CustomerInfo>((ref) {
     void syncToFirestore(CustomerInfo info) {
       final uid = ref.read(firebaseAuthProvider).currentUser?.uid;
       if (uid == null) return;
-      ref
-          .read(firestoreDataSourceProvider)
-          .setUserProfile(uid, {'isPremium': _hasActivePremium(info)})
-          .catchError((e) => debugPrint('[Premium] Firestore-Sync fehlgeschlagen: $e'));
+      ref.read(firestoreDataSourceProvider).setUserProfile(uid, {
+        'isPremium': _hasActivePremium(info)
+      }).catchError(
+          (e) => debugPrint('[Premium] Firestore-Sync fehlgeschlagen: $e'));
     }
 
     Purchases.getCustomerInfo().then((info) {
@@ -41,7 +41,8 @@ final customerInfoProvider = StreamProvider<CustomerInfo>((ref) {
     }
 
     Purchases.addCustomerInfoUpdateListener(listener);
-    controller.onCancel = () => Purchases.removeCustomerInfoUpdateListener(listener);
+    controller.onCancel =
+        () => Purchases.removeCustomerInfoUpdateListener(listener);
   });
 });
 
@@ -52,16 +53,18 @@ final isPremiumProvider = Provider<bool>((ref) {
   return customerInfoAsync.when(
     data: (customerInfo) {
       // Prüfe auf verschiedene Schreibweisen der Entitlement ID
-      final hasPremium = customerInfo.entitlements.all['work_time_manager_premium']?.isActive ?? 
-                         customerInfo.entitlements.all['work_time_manager_premiun']?.isActive ?? // Falls Tippfehler
-                         customerInfo.entitlements.all['premium']?.isActive ?? 
-                         customerInfo.entitlements.all['Premium']?.isActive ?? 
-                         false;
-                         
+      final hasPremium = customerInfo
+              .entitlements.all['work_time_manager_premium']?.isActive ??
+          customerInfo.entitlements.all['work_time_manager_premiun']
+              ?.isActive ?? // Falls Tippfehler
+          customerInfo.entitlements.all['premium']?.isActive ??
+          customerInfo.entitlements.all['Premium']?.isActive ??
+          false;
+
       return hasPremium;
     },
     error: (_, __) => false, // Bei Fehler kein Premium
-    loading: () => false,    // Beim Laden noch kein Premium
+    loading: () => false, // Beim Laden noch kein Premium
   );
 });
 
@@ -139,7 +142,8 @@ Future<String?> getSubscriptionManagementUrl() async {
     }
     return info.managementURL;
   } catch (e, stackTrace) {
-    logger.e('[Premium] managementURL nicht verfügbar', error: e, stackTrace: stackTrace);
+    logger.e('[Premium] managementURL nicht verfügbar',
+        error: e, stackTrace: stackTrace);
     return null;
   }
 }

@@ -37,7 +37,8 @@ void main() {
   }
 
   group('TimerCard Widget', () {
-    testWidgets('shows "Arbeit starten" when work has not started', (tester) async {
+    testWidgets('shows "Arbeit starten" when work has not started',
+        (tester) async {
       final entry = WorkEntryEntity(
         id: '1',
         date: DateTime.now(),
@@ -85,10 +86,10 @@ void main() {
       expect(find.text('Arbeit starten'), findsOneWidget);
       expect(find.text('08:00'), findsOneWidget);
       expect(find.text('17:00'), findsOneWidget);
-      
+
       // Attempt to tap
       await tester.tap(find.text('Arbeit starten'));
-      
+
       // Verify no interaction occurred
       verifyNever(mockCallback.call());
     });
@@ -100,13 +101,13 @@ void main() {
         workStart: null,
         workEnd: null,
       );
-      
+
       final fakeViewModel = FakeDashboardViewModel(mockCallback);
 
       await tester.pumpWidget(createSubject(entry, fakeViewModel));
 
       await tester.tap(find.text('Arbeit starten'));
-      
+
       verify(mockCallback.call()).called(1);
     });
   });

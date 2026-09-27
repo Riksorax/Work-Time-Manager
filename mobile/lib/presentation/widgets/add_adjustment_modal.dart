@@ -8,8 +8,7 @@ class AddAdjustmentModal extends ConsumerStatefulWidget {
   const AddAdjustmentModal({super.key});
 
   @override
-  ConsumerState<AddAdjustmentModal> createState() =>
-      _AddAdjustmentModalState();
+  ConsumerState<AddAdjustmentModal> createState() => _AddAdjustmentModalState();
 }
 
 class _AddAdjustmentModalState extends ConsumerState<AddAdjustmentModal> {
@@ -39,12 +38,15 @@ class _AddAdjustmentModalState extends ConsumerState<AddAdjustmentModal> {
 
     // Erstelle die Dauer - Vorzeichen wird nur durch ChoiceChip bestimmt
     int totalMinutes = parsedHours * 60 + parsedMinutes;
-    Duration duration = Duration(minutes: _isNegative ? -totalMinutes : totalMinutes);
+    Duration duration =
+        Duration(minutes: _isNegative ? -totalMinutes : totalMinutes);
 
     // Rufe die Methode im ViewModel auf und warte den Abschluss ab, bevor das
     // Modal geschlossen wird - sonst bekäme das Dashboard die Änderung nicht
     // mehr mit (siehe #266).
-    await ref.read(settingsViewModelProvider.notifier).setOvertimeBalance(duration);
+    await ref
+        .read(settingsViewModelProvider.notifier)
+        .setOvertimeBalance(duration);
 
     // Modal schließen
     if (mounted) {
@@ -54,7 +56,9 @@ class _AddAdjustmentModalState extends ConsumerState<AddAdjustmentModal> {
 
   Future<void> _reset() async {
     // Setze die Gleitzeit-Bilanz auf 0 zurück
-    await ref.read(settingsViewModelProvider.notifier).setOvertimeBalance(Duration.zero);
+    await ref
+        .read(settingsViewModelProvider.notifier)
+        .setOvertimeBalance(Duration.zero);
 
     // Modal schließen
     if (mounted) {
@@ -68,9 +72,9 @@ class _AddAdjustmentModalState extends ConsumerState<AddAdjustmentModal> {
     return AlertDialog(
       title: Text(l10n.adjustOvertimeTitle),
       content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+          child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
           Text(
             l10n.adjustOvertimeDescription,
             textAlign: TextAlign.center,

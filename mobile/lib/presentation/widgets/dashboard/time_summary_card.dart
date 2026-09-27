@@ -63,7 +63,8 @@ class TimeSummaryCard extends ConsumerWidget {
             ),
             _SummaryTile(
               label: 'Überstunden',
-              value: _formatDuration(workEntry.calculateOvertime(targetDailyHours)),
+              value: _formatDuration(
+                  workEntry.calculateOvertime(targetDailyHours)),
               isTotal: true,
             ),
           ],
@@ -88,8 +89,8 @@ class _SummaryTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final style = isTotal
         ? Theme.of(context).textTheme.titleMedium?.copyWith(
-      fontWeight: FontWeight.bold,
-    )
+              fontWeight: FontWeight.bold,
+            )
         : Theme.of(context).textTheme.bodyLarge;
 
     return Padding(

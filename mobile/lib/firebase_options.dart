@@ -66,5 +66,4 @@ class DefaultFirebaseOptions {
     projectId: 'worktime-56c7a',
     storageBucket: 'worktime-56c7a.firebasestorage.app',
   );
-
 }

@@ -34,7 +34,8 @@ class EditWorkEntryModal extends ConsumerWidget {
           child: Column(
             children: [
               Text(
-                l10n.editEntryForDate(DateFormat.yMd(locale).format(workEntry.date)),
+                l10n.editEntryForDate(
+                    DateFormat.yMd(locale).format(workEntry.date)),
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 16),
@@ -45,10 +46,18 @@ class EditWorkEntryModal extends ConsumerWidget {
                   border: const OutlineInputBorder(),
                 ),
                 items: [
-                  DropdownMenuItem(value: WorkEntryType.work, child: Text(l10n.workEntryTypeWorkPlain)),
-                  DropdownMenuItem(value: WorkEntryType.vacation, child: Text(l10n.workEntryTypeVacationPlain)),
-                  DropdownMenuItem(value: WorkEntryType.sick, child: Text(l10n.workEntryTypeSickPlain)),
-                  DropdownMenuItem(value: WorkEntryType.holiday, child: Text(l10n.workEntryTypeHolidayPlain)),
+                  DropdownMenuItem(
+                      value: WorkEntryType.work,
+                      child: Text(l10n.workEntryTypeWorkPlain)),
+                  DropdownMenuItem(
+                      value: WorkEntryType.vacation,
+                      child: Text(l10n.workEntryTypeVacationPlain)),
+                  DropdownMenuItem(
+                      value: WorkEntryType.sick,
+                      child: Text(l10n.workEntryTypeSickPlain)),
+                  DropdownMenuItem(
+                      value: WorkEntryType.holiday,
+                      child: Text(l10n.workEntryTypeHolidayPlain)),
                 ],
                 onChanged: (val) {
                   if (val != null) viewModel.setType(val);
@@ -79,7 +88,8 @@ class EditWorkEntryModal extends ConsumerWidget {
               ElevatedButton(
                 onPressed: () async {
                   await viewModel.saveChanges();
-                  if (context.mounted) Navigator.of(context).pop(true); // Return true on success
+                  if (context.mounted)
+                    Navigator.of(context).pop(true); // Return true on success
                 },
                 child: Text(l10n.saveChangesAction),
               ),
@@ -102,7 +112,8 @@ class EditWorkEntryModal extends ConsumerWidget {
     // stehen - MediaQuery.alwaysUse24HourFormat wird in main.dart gesetzt.
     final alwaysUse24HourFormat = MediaQuery.of(context).alwaysUse24HourFormat;
     final formatted = selectedTime != null
-        ? localizations.formatTimeOfDay(selectedTime, alwaysUse24HourFormat: alwaysUse24HourFormat)
+        ? localizations.formatTimeOfDay(selectedTime,
+            alwaysUse24HourFormat: alwaysUse24HourFormat)
         : '';
     return TextFormField(
       readOnly: true,
@@ -128,17 +139,21 @@ class EditWorkEntryModal extends ConsumerWidget {
     );
   }
 
-  Widget _buildTimeSection(BuildContext context, EditWorkEntryState state, EditWorkEntryViewModel viewModel) {
+  Widget _buildTimeSection(BuildContext context, EditWorkEntryState state,
+      EditWorkEntryViewModel viewModel) {
     final l10n = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(l10n.workTimeSectionTitle, style: Theme.of(context).textTheme.titleMedium),
+        Text(l10n.workTimeSectionTitle,
+            style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
         _buildTimePicker(
           context,
           labelText: l10n.startTimeLabel,
-          selectedTime: state.newStartTime != null ? TimeOfDay.fromDateTime(state.newStartTime!) : null,
+          selectedTime: state.newStartTime != null
+              ? TimeOfDay.fromDateTime(state.newStartTime!)
+              : null,
           onTimeSelected: (time) {
             final newDateTime = DateTime(
               state.originalEntry.date.year,
@@ -154,7 +169,9 @@ class EditWorkEntryModal extends ConsumerWidget {
         _buildTimePicker(
           context,
           labelText: l10n.endTimeLabel,
-          selectedTime: state.newEndTime != null ? TimeOfDay.fromDateTime(state.newEndTime!) : null,
+          selectedTime: state.newEndTime != null
+              ? TimeOfDay.fromDateTime(state.newEndTime!)
+              : null,
           onTimeSelected: (time) {
             final newDateTime = DateTime(
               state.originalEntry.date.year,
@@ -170,7 +187,8 @@ class EditWorkEntryModal extends ConsumerWidget {
     );
   }
 
-  Widget _buildBreaksSection(BuildContext context, EditWorkEntryState state, EditWorkEntryViewModel viewModel) {
+  Widget _buildBreaksSection(BuildContext context, EditWorkEntryState state,
+      EditWorkEntryViewModel viewModel) {
     final l10n = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -178,7 +196,8 @@ class EditWorkEntryModal extends ConsumerWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(l10n.breaksTitle, style: Theme.of(context).textTheme.titleMedium),
+            Text(l10n.breaksTitle,
+                style: Theme.of(context).textTheme.titleMedium),
             IconButton(
               icon: const Icon(Icons.add),
               onPressed: viewModel.addBreak,
@@ -198,7 +217,8 @@ class EditWorkEntryModal extends ConsumerWidget {
     );
   }
 
-  Widget _buildBreakTile(BuildContext context, BreakEntity breakEntry, EditWorkEntryViewModel viewModel) {
+  Widget _buildBreakTile(BuildContext context, BreakEntity breakEntry,
+      EditWorkEntryViewModel viewModel) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4.0),
       child: Padding(
@@ -214,14 +234,21 @@ class EditWorkEntryModal extends ConsumerWidget {
                     dense: true,
                     selectedTime: TimeOfDay.fromDateTime(breakEntry.start),
                     onTimeSelected: (time) {
-                      final newStart = DateTime(workEntry.date.year, workEntry.date.month, workEntry.date.day, time.hour, time.minute);
+                      final newStart = DateTime(
+                          workEntry.date.year,
+                          workEntry.date.month,
+                          workEntry.date.day,
+                          time.hour,
+                          time.minute);
                       // Berechne die bisherige Dauer, um die Endzeit mitzuverschieben
                       DateTime? newEnd = breakEntry.end;
                       if (breakEntry.end != null) {
-                        final duration = breakEntry.end!.difference(breakEntry.start);
+                        final duration =
+                            breakEntry.end!.difference(breakEntry.start);
                         newEnd = newStart.add(duration);
                       }
-                      viewModel.updateBreak(breakEntry.id, newStart: newStart, newEnd: newEnd);
+                      viewModel.updateBreak(breakEntry.id,
+                          newStart: newStart, newEnd: newEnd);
                     },
                   ),
                   const SizedBox(height: 8),
@@ -229,10 +256,18 @@ class EditWorkEntryModal extends ConsumerWidget {
                     context,
                     labelText: AppLocalizations.of(context).endFieldLabel,
                     dense: true,
-                    selectedTime: breakEntry.end != null ? TimeOfDay.fromDateTime(breakEntry.end!) : null,
+                    selectedTime: breakEntry.end != null
+                        ? TimeOfDay.fromDateTime(breakEntry.end!)
+                        : null,
                     onTimeSelected: (time) {
-                      final newEnd = DateTime(workEntry.date.year, workEntry.date.month, workEntry.date.day, time.hour, time.minute);
-                      viewModel.updateBreak(breakEntry.id, newStart: breakEntry.start, newEnd: newEnd);
+                      final newEnd = DateTime(
+                          workEntry.date.year,
+                          workEntry.date.month,
+                          workEntry.date.day,
+                          time.hour,
+                          time.minute);
+                      viewModel.updateBreak(breakEntry.id,
+                          newStart: breakEntry.start, newEnd: newEnd);
                     },
                   ),
                 ],

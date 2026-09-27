@@ -14,13 +14,16 @@ void main() {
       expect(tz.local.name, 'Europe/London');
     });
 
-    test('fällt bei unbekannter Zeitzone auf die Systemzeitzone-Ermittlung zurück, '
-        'die im Test ohne Plattform-Kanal wiederum auf Europe/Berlin/UTC zurückfällt', () async {
+    test(
+        'fällt bei unbekannter Zeitzone auf die Systemzeitzone-Ermittlung zurück, '
+        'die im Test ohne Plattform-Kanal wiederum auf Europe/Berlin/UTC zurückfällt',
+        () async {
       await applyTimezone('Not/AZone');
       expect(['Europe/Berlin', 'UTC'], contains(tz.local.name));
     });
 
-    test('ohne Override wird die Systemzeitzone ermittelt (fällt im Test '
+    test(
+        'ohne Override wird die Systemzeitzone ermittelt (fällt im Test '
         'mangels Plattform-Kanal auf Europe/Berlin/UTC zurück)', () async {
       await applyTimezone(null);
       expect(['Europe/Berlin', 'UTC'], contains(tz.local.name));

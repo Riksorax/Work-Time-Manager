@@ -73,7 +73,8 @@ void main() {
       expect(summary.overtime, const Duration(hours: 8));
     });
 
-    test('Urlaub/Krank/Feiertag werden gezählt, aber nicht als Arbeitstage', () {
+    test('Urlaub/Krank/Feiertag werden gezählt, aber nicht als Arbeitstage',
+        () {
       final entries = [
         specialEntry(DateTime(2024, 6, 3), WorkEntryType.vacation),
         specialEntry(DateTime(2024, 6, 4), WorkEntryType.vacation),

@@ -21,21 +21,28 @@ void main() {
   setUp(() {
     mockNotificationsPlugin = MockFlutterLocalNotificationsPlugin();
     // Inject mock
-    notificationService = NotificationService(notificationsPlugin: mockNotificationsPlugin);
-    
+    notificationService =
+        NotificationService(notificationsPlugin: mockNotificationsPlugin);
+
     // Stub initialize
     when(mockNotificationsPlugin.initialize(
       any,
-      onDidReceiveNotificationResponse: anyNamed('onDidReceiveNotificationResponse'),
-      onDidReceiveBackgroundNotificationResponse: anyNamed('onDidReceiveBackgroundNotificationResponse'),
+      onDidReceiveNotificationResponse:
+          anyNamed('onDidReceiveNotificationResponse'),
+      onDidReceiveBackgroundNotificationResponse:
+          anyNamed('onDidReceiveBackgroundNotificationResponse'),
     )).thenAnswer((_) async => true);
 
     // Stub cancelAll
     when(mockNotificationsPlugin.cancelAll()).thenAnswer((_) async {});
-    
+
     // Stub zonedSchedule
     when(mockNotificationsPlugin.zonedSchedule(
-      any, any, any, any, any,
+      any,
+      any,
+      any,
+      any,
+      any,
       androidScheduleMode: anyNamed('androidScheduleMode'),
       matchDateTimeComponents: anyNamed('matchDateTimeComponents'),
       payload: anyNamed('payload'),
@@ -55,10 +62,11 @@ void main() {
       verify(mockNotificationsPlugin.cancelAll()).called(1);
     });
 
-    test('scheduleDailyReminder schedules notifications for selected days', () async {
+    test('scheduleDailyReminder schedules notifications for selected days',
+        () async {
       // Monday (1) and Wednesday (3)
       final days = [1, 3];
-      
+
       await notificationService.scheduleDailyReminder(
         time: '09:00',
         days: days,
@@ -80,7 +88,8 @@ void main() {
       )).called(2);
     });
 
-    test('scheduleDailyReminder creates correct body for single check', () async {
+    test('scheduleDailyReminder creates correct body for single check',
+        () async {
       await notificationService.scheduleDailyReminder(
         time: '09:00',
         days: [1],
@@ -103,7 +112,8 @@ void main() {
       expect(captured.single, 'Haben Sie Ihren Arbeitsbeginn eingetragen?');
     });
 
-    test('scheduleDailyReminder creates correct body for multiple checks', () async {
+    test('scheduleDailyReminder creates correct body for multiple checks',
+        () async {
       await notificationService.scheduleDailyReminder(
         time: '09:00',
         days: [1],
@@ -123,7 +133,8 @@ void main() {
         payload: anyNamed('payload'),
       )).captured;
 
-      expect(captured.single, 'Haben Sie Arbeitsbeginn und Arbeitsende eingetragen?');
+      expect(captured.single,
+          'Haben Sie Arbeitsbeginn und Arbeitsende eingetragen?');
     });
   });
 }

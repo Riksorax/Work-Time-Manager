@@ -22,7 +22,8 @@ class WeeklyReflectionDialog extends ConsumerStatefulWidget {
       _WeeklyReflectionDialogState();
 }
 
-class _WeeklyReflectionDialogState extends ConsumerState<WeeklyReflectionDialog> {
+class _WeeklyReflectionDialogState
+    extends ConsumerState<WeeklyReflectionDialog> {
   final _whatWentWellController = TextEditingController();
   final _whatWasHardController = TextEditingController();
   bool _controllersInitialized = false;
@@ -69,7 +70,9 @@ class _WeeklyReflectionDialogState extends ConsumerState<WeeklyReflectionDialog>
     final state = ref.watch(weeklyReflectionViewModelProvider);
     final l10n = AppLocalizations.of(context);
 
-    if (!state.isLoading && !_controllersInitialized && state.reflection != null) {
+    if (!state.isLoading &&
+        !_controllersInitialized &&
+        state.reflection != null) {
       _whatWentWellController.text = state.reflection!.whatWentWell;
       _whatWasHardController.text = state.reflection!.whatWasHard;
       _controllersInitialized = true;

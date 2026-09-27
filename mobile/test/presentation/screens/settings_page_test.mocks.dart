@@ -85,7 +85,8 @@ class MockSettingsActions extends _i1.Mock implements _i2.SettingsActions {
       ) as _i4.Future<void>);
 
   @override
-  _i4.Future<void> updateTimezoneOverride(String? timezone) => (super.noSuchMethod(
+  _i4.Future<void> updateTimezoneOverride(String? timezone) =>
+      (super.noSuchMethod(
         Invocation.method(
           #updateTimezoneOverride,
           [timezone],

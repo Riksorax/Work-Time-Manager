@@ -24,7 +24,8 @@ void main() {
   });
 
   group('Dialog Widgets', () {
-    testWidgets('EditSollArbeitsstundenDialog shows initial value and saves', (tester) async {
+    testWidgets('EditSollArbeitsstundenDialog shows initial value and saves',
+        (tester) async {
       final settingsViewModel = FakeSettingsViewModel(
         initialState: const AsyncValue.data(SettingsState(
           settings: SettingsEntity(weeklyTargetHours: 40.0),
@@ -47,7 +48,7 @@ void main() {
 
       // Enter new value
       await tester.enterText(find.byType(TextField), '38');
-      
+
       // Save
       await tester.tap(find.text('Speichern'));
       await tester.pumpAndSettle();
@@ -83,7 +84,8 @@ void main() {
       expect(find.text('Bitte geben Sie einen Grund an.'), findsOneWidget);
 
       // Enter invalid format
-      await tester.enterText(find.widgetWithText(TextFormField, 'Dauer (HH:mm)'), 'invalid');
+      await tester.enterText(
+          find.widgetWithText(TextFormField, 'Dauer (HH:mm)'), 'invalid');
       await tester.tap(find.text('Speichern'));
       await tester.pump();
       expect(find.text('Ungültiges Format (HH:mm).'), findsOneWidget);

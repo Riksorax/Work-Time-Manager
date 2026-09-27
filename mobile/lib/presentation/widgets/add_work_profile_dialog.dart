@@ -10,7 +10,8 @@ class AddWorkProfileDialog extends ConsumerStatefulWidget {
   const AddWorkProfileDialog({super.key});
 
   @override
-  ConsumerState<AddWorkProfileDialog> createState() => _AddWorkProfileDialogState();
+  ConsumerState<AddWorkProfileDialog> createState() =>
+      _AddWorkProfileDialogState();
 }
 
 class _AddWorkProfileDialogState extends ConsumerState<AddWorkProfileDialog> {
@@ -37,13 +38,18 @@ class _AddWorkProfileDialogState extends ConsumerState<AddWorkProfileDialog> {
     try {
       final newProfile = await repository.addProfile(name);
       ref.invalidate(workProfilesProvider);
-      ref.read(activeWorkProfileIdProvider.notifier).setActiveProfile(newProfile.id);
+      ref
+          .read(activeWorkProfileIdProvider.notifier)
+          .setActiveProfile(newProfile.id);
       navigator.pop();
-      messenger.showSnackBar(SnackBar(content: Text(l10n.profileCreatedMessage(newProfile.name))));
+      messenger.showSnackBar(
+          SnackBar(content: Text(l10n.profileCreatedMessage(newProfile.name))));
     } catch (e, stackTrace) {
-      logger.e('[AddWorkProfileDialog] Fehler beim Anlegen des Profils: $e', stackTrace: stackTrace);
+      logger.e('[AddWorkProfileDialog] Fehler beim Anlegen des Profils: $e',
+          stackTrace: stackTrace);
       setState(() => _isSaving = false);
-      messenger.showSnackBar(SnackBar(content: Text(l10n.profileCreationFailed('$e'))));
+      messenger.showSnackBar(
+          SnackBar(content: Text(l10n.profileCreationFailed('$e'))));
     }
   }
 

@@ -39,20 +39,27 @@ class DashboardScreen extends ConsumerWidget {
     final dashboardViewModel = ref.read(dashboardViewModelProvider.notifier);
     final workEntry = dashboardState.workEntry;
     final use24HourFormat =
-        ref.watch(settingsViewModelProvider).value?.settings.use24HourFormat ?? true;
+        ref.watch(settingsViewModelProvider).value?.settings.use24HourFormat ??
+            true;
 
-    final workEntryWithAutoBreaks = workEntry.workStart != null && workEntry.workEnd != null && workEntry.type == WorkEntryType.work
+    final workEntryWithAutoBreaks = workEntry.workStart != null &&
+            workEntry.workEnd != null &&
+            workEntry.type == WorkEntryType.work
         ? BreakCalculatorService.calculateAndApplyBreaks(workEntry)
         : workEntry;
 
-    final isTimerRunning = workEntry.workStart != null && workEntry.workEnd == null;
-    final isBreakRunning = workEntry.breaks.isNotEmpty && workEntry.breaks.last.end == null;
+    final isTimerRunning =
+        workEntry.workStart != null && workEntry.workEnd == null;
+    final isBreakRunning =
+        workEntry.breaks.isNotEmpty && workEntry.breaks.last.end == null;
 
     final l10n = AppLocalizations.of(context);
     final totalOvertime = dashboardState.totalOvertime ?? Duration.zero;
-    final netDuration = dashboardState.actualWorkDuration ?? dashboardState.elapsedTime;
-    
-    final totalBreakDuration = workEntryWithAutoBreaks.breaks.fold(Duration.zero, (prev, b) {
+    final netDuration =
+        dashboardState.actualWorkDuration ?? dashboardState.elapsedTime;
+
+    final totalBreakDuration =
+        workEntryWithAutoBreaks.breaks.fold(Duration.zero, (prev, b) {
       final end = b.end ?? DateTime.now();
       return prev + end.difference(b.start);
     });
@@ -94,12 +101,14 @@ class DashboardScreen extends ConsumerWidget {
             children: [
               _buildOvertime(context, totalOvertime, l10n.overtimeTotalLabel),
               const SizedBox(height: 16),
-              _buildOvertime(context, dashboardState.dailyOvertime, l10n.overtimeTodayLabel),
+              _buildOvertime(context, dashboardState.dailyOvertime,
+                  l10n.overtimeTodayLabel),
               // Voraussichtlichen Feierabend nur anzeigen, wenn Arbeit noch läuft
               if (workEntry.workEnd == null) ...[
-                _buildExpectedEndTime(context, dashboardState.expectedEndTime, use24HourFormat),
-                _buildExpectedEndTimeWithBalance(
-                    context, dashboardState.expectedEndTotalZero, use24HourFormat),
+                _buildExpectedEndTime(
+                    context, dashboardState.expectedEndTime, use24HourFormat),
+                _buildExpectedEndTimeWithBalance(context,
+                    dashboardState.expectedEndTotalZero, use24HourFormat),
               ],
             ],
           );
@@ -111,7 +120,8 @@ class DashboardScreen extends ConsumerWidget {
                 label: l10n.startTimeLabel,
                 initialValue: workEntry.workStart,
                 use24HourFormat: use24HourFormat,
-                onTimeSelected: (time) => dashboardViewModel.setManualStartTime(time),
+                onTimeSelected: (time) =>
+                    dashboardViewModel.setManualStartTime(time),
               ),
               const SizedBox(height: 16),
               _TimeInputField(
@@ -119,14 +129,18 @@ class DashboardScreen extends ConsumerWidget {
                 initialValue: workEntry.workEnd,
                 enabled: workEntry.workStart != null,
                 use24HourFormat: use24HourFormat,
-                onTimeSelected: (time) => dashboardViewModel.setManualEndTime(time),
-                onClear: workEntry.workEnd != null ? () => dashboardViewModel.clearEndTime() : null,
+                onTimeSelected: (time) =>
+                    dashboardViewModel.setManualEndTime(time),
+                onClear: workEntry.workEnd != null
+                    ? () => dashboardViewModel.clearEndTime()
+                    : null,
               ),
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: () {
                   // Wenn Arbeit bereits beendet wurde, zeige Bestätigungsdialog
-                  if (workEntry.workStart != null && workEntry.workEnd != null) {
+                  if (workEntry.workStart != null &&
+                      workEntry.workEnd != null) {
                     _showRestartDialog(context, dashboardViewModel);
                   } else {
                     dashboardViewModel.startOrStopTimer();
@@ -145,14 +159,12 @@ class DashboardScreen extends ConsumerWidget {
           final breaksSection = Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildBreaksSection(
-                  context, ref, workEntryWithAutoBreaks.breaks, use24HourFormat),
+              _buildBreaksSection(context, ref, workEntryWithAutoBreaks.breaks,
+                  use24HourFormat),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () => dashboardViewModel.startOrStopBreak(),
-                child: Text(isBreakRunning
-                        ? l10n.stopBreak
-                        : l10n.addBreak),
+                child: Text(isBreakRunning ? l10n.stopBreak : l10n.addBreak),
               ),
             ],
           );
@@ -208,7 +220,8 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildOvertime(BuildContext context, Duration? overtime, String title) {
+  Widget _buildOvertime(
+      BuildContext context, Duration? overtime, String title) {
     if (overtime == null) {
       return const SizedBox.shrink();
     }
@@ -224,7 +237,10 @@ class DashboardScreen extends ConsumerWidget {
         const SizedBox(height: 4),
         Text(
           formattedOvertime,
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: overtimeColor),
+          style: Theme.of(context)
+              .textTheme
+              .headlineMedium
+              ?.copyWith(color: overtimeColor),
         ),
       ],
     );
@@ -236,7 +252,8 @@ class DashboardScreen extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
-    final formattedTime = formatTime(expectedEndTime, use24HourFormat: use24HourFormat);
+    final formattedTime =
+        formatTime(expectedEndTime, use24HourFormat: use24HourFormat);
     // "Uhr"-Suffix passt nur zum 24h-Format - AM/PM ist im 12h-Format bereits eindeutig.
     final suffix = use24HourFormat ? ' Uhr' : '';
 
@@ -245,33 +262,34 @@ class DashboardScreen extends ConsumerWidget {
       child: Text(
         AppLocalizations.of(context).expectedEndTime('$formattedTime$suffix'),
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: Colors.grey[600],
-          fontStyle: FontStyle.italic,
-        ),
+              color: Colors.grey[600],
+              fontStyle: FontStyle.italic,
+            ),
         textAlign: TextAlign.center,
       ),
     );
   }
 
-  Widget _buildExpectedEndTimeWithBalance(
-      BuildContext context, DateTime? expectedEndTimeWithBalance, bool use24HourFormat) {
+  Widget _buildExpectedEndTimeWithBalance(BuildContext context,
+      DateTime? expectedEndTimeWithBalance, bool use24HourFormat) {
     if (expectedEndTimeWithBalance == null) {
       return const SizedBox.shrink();
     }
 
-    final formattedTimeWithBalance =
-        formatTime(expectedEndTimeWithBalance, use24HourFormat: use24HourFormat);
+    final formattedTimeWithBalance = formatTime(expectedEndTimeWithBalance,
+        use24HourFormat: use24HourFormat);
     final suffix = use24HourFormat ? ' Uhr' : '';
 
     return Padding(
       padding: const EdgeInsets.only(top: 2.0),
       child: Text(
-        AppLocalizations.of(context).expectedEndTimeWithBalance('$formattedTimeWithBalance$suffix'),
+        AppLocalizations.of(context)
+            .expectedEndTimeWithBalance('$formattedTimeWithBalance$suffix'),
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: Colors.grey[500],
-          fontStyle: FontStyle.italic,
-          fontSize: 11,
-        ),
+              color: Colors.grey[500],
+              fontStyle: FontStyle.italic,
+              fontSize: 11,
+            ),
         textAlign: TextAlign.center,
       ),
     );
@@ -285,10 +303,10 @@ class DashboardScreen extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(l10n.breaksTitle, style: Theme.of(context).textTheme.headlineSmall),
+        Text(l10n.breaksTitle,
+            style: Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height: 8),
-        if (breaks.isEmpty)
-          Center(child: Text(l10n.noBreaksYet)),
+        if (breaks.isEmpty) Center(child: Text(l10n.noBreaksYet)),
         ...breaks.map((b) => Card(
               margin: const EdgeInsets.symmetric(vertical: 4),
               child: ListTile(
@@ -308,8 +326,14 @@ class DashboardScreen extends ConsumerWidget {
                           message: l10n.automaticBreakTooltip,
                           child: Chip(
                             label: Text(l10n.automaticChipLabel),
-                            backgroundColor: Theme.of(context).colorScheme.secondary.withAlpha(77),
-                            labelStyle: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.onSecondary),
+                            backgroundColor: Theme.of(context)
+                                .colorScheme
+                                .secondary
+                                .withAlpha(77),
+                            labelStyle: TextStyle(
+                                fontSize: 10,
+                                color:
+                                    Theme.of(context).colorScheme.onSecondary),
                           ),
                         ),
                       ),
@@ -416,8 +440,8 @@ class _TimeInputFieldState extends State<_TimeInputField> {
 
   void _updateText() {
     if (widget.initialValue != null) {
-      _controller.text =
-          formatTime(widget.initialValue!, use24HourFormat: widget.use24HourFormat);
+      _controller.text = formatTime(widget.initialValue!,
+          use24HourFormat: widget.use24HourFormat);
     } else {
       _controller.text = '';
     }
@@ -459,7 +483,8 @@ class _TimeInputFieldState extends State<_TimeInputField> {
             ? IconButton(
                 icon: const Icon(Icons.clear),
                 onPressed: widget.onClear,
-                tooltip: AppLocalizations.of(context).removeFieldTooltip(widget.label),
+                tooltip: AppLocalizations.of(context)
+                    .removeFieldTooltip(widget.label),
               )
             : (widget.enabled ? const Icon(Icons.access_time) : null),
       ),

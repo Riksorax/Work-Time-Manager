@@ -60,12 +60,15 @@ class HybridOvertimeRepositoryImpl implements OvertimeRepository {
 
   @override
   Future<Duration> ensureOvertimeLoaded() async {
-    logger.i('[HybridOvertimeRepository] ensureOvertimeLoaded (Firebase: $isUsingFirebase)');
+    logger.i(
+        '[HybridOvertimeRepository] ensureOvertimeLoaded (Firebase: $isUsingFirebase)');
     final overtime = await _activeRepository.ensureOvertimeLoaded();
-    logger.i('[HybridOvertimeRepository] Überstunden geladen: ${overtime.inMinutes} Min');
+    logger.i(
+        '[HybridOvertimeRepository] Überstunden geladen: ${overtime.inMinutes} Min');
     return overtime;
   }
 
   @override
-  Future<DateTime?> ensureLastUpdateLoaded() => _activeRepository.ensureLastUpdateLoaded();
+  Future<DateTime?> ensureLastUpdateLoaded() =>
+      _activeRepository.ensureLastUpdateLoaded();
 }

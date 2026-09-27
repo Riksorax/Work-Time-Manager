@@ -21,9 +21,10 @@ class BreaksCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final use24HourFormat =
-        ref.watch(settingsViewModelProvider).value?.settings.use24HourFormat ?? true;
+        ref.watch(settingsViewModelProvider).value?.settings.use24HourFormat ??
+            true;
     final BreakEntity? activeBreak = workEntry.breaks.firstWhereOrNull(
-          (b) => b.end == null,
+      (b) => b.end == null,
     );
 
     return Card(
@@ -51,10 +52,12 @@ class BreaksCard extends ConsumerWidget {
               ),
             // Liste alle erfassten Pausen auf.
             ...workEntry.breaks.map(
-                  (b) => ListTile(
+              (b) => ListTile(
                 dense: true,
                 leading: Icon(
-                  b.end == null ? Icons.timer_outlined : Icons.check_circle_outline,
+                  b.end == null
+                      ? Icons.timer_outlined
+                      : Icons.check_circle_outline,
                   color: Theme.of(context).primaryColor,
                 ),
                 title: Text(b.name),
@@ -69,7 +72,9 @@ class BreaksCard extends ConsumerWidget {
             const SizedBox(height: 16),
             ElevatedButton.icon(
               icon: Icon(
-                activeBreak != null ? Icons.stop_circle_outlined : Icons.play_circle_outlined,
+                activeBreak != null
+                    ? Icons.stop_circle_outlined
+                    : Icons.play_circle_outlined,
               ),
               label: Text(
                 activeBreak != null ? 'Pause beenden' : 'Pause starten',
@@ -79,13 +84,16 @@ class BreaksCard extends ConsumerWidget {
                 foregroundColor: Theme.of(context).colorScheme.onSecondary,
               ),
               // Der Button ist nur aktiv, wenn die Arbeit läuft.
-              onPressed: workEntry.workStart == null || workEntry.workEnd != null
-                  ? null // Deaktiviere Button, wenn Arbeit nicht läuft
-                  : () {
-                // ====== HIER IST DIE ÄNDERUNG ======
-                // Rufe die neue ViewModel-Methode auf, die wir erstellt haben.
-                ref.read(dashboardViewModelProvider.notifier).startOrStopBreak();
-              },
+              onPressed:
+                  workEntry.workStart == null || workEntry.workEnd != null
+                      ? null // Deaktiviere Button, wenn Arbeit nicht läuft
+                      : () {
+                          // ====== HIER IST DIE ÄNDERUNG ======
+                          // Rufe die neue ViewModel-Methode auf, die wir erstellt haben.
+                          ref
+                              .read(dashboardViewModelProvider.notifier)
+                              .startOrStopBreak();
+                        },
             ),
           ],
         ),
@@ -101,10 +109,12 @@ class BreaksCard extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
-    final compliance = BreakCalculatorService.validateBreakCompliance(workEntry);
+    final compliance =
+        BreakCalculatorService.validateBreakCompliance(workEntry);
 
     // Keine Warnung nötig, wenn Pausen ausreichend sind oder keine Pause erforderlich ist
-    if (compliance.isCompliant || compliance.requiredBreakTime == Duration.zero) {
+    if (compliance.isCompliant ||
+        compliance.requiredBreakTime == Duration.zero) {
       return const SizedBox.shrink();
     }
 

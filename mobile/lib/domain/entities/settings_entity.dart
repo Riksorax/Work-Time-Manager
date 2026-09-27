@@ -108,10 +108,14 @@ class SettingsEntity extends Equatable {
       notifyWorkEnd: notifyWorkEnd ?? this.notifyWorkEnd,
       notifyBreaks: notifyBreaks ?? this.notifyBreaks,
       bundesland: bundesland,
-      warnOnOvertimeThreshold: warnOnOvertimeThreshold ?? this.warnOnOvertimeThreshold,
-      overtimeThresholdHours: overtimeThresholdHours ?? this.overtimeThresholdHours,
-      warnOnUndertimeThreshold: warnOnUndertimeThreshold ?? this.warnOnUndertimeThreshold,
-      undertimeThresholdHours: undertimeThresholdHours ?? this.undertimeThresholdHours,
+      warnOnOvertimeThreshold:
+          warnOnOvertimeThreshold ?? this.warnOnOvertimeThreshold,
+      overtimeThresholdHours:
+          overtimeThresholdHours ?? this.overtimeThresholdHours,
+      warnOnUndertimeThreshold:
+          warnOnUndertimeThreshold ?? this.warnOnUndertimeThreshold,
+      undertimeThresholdHours:
+          undertimeThresholdHours ?? this.undertimeThresholdHours,
       use24HourFormat: use24HourFormat ?? this.use24HourFormat,
       timezoneOverride: timezoneOverride,
       locale: locale ?? this.locale,

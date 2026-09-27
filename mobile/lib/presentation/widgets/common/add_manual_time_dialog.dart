@@ -5,7 +5,8 @@ class AddManualTimeDialog extends ConsumerStatefulWidget {
   const AddManualTimeDialog({super.key});
 
   @override
-  ConsumerState<AddManualTimeDialog> createState() => _AddManualTimeDialogState();
+  ConsumerState<AddManualTimeDialog> createState() =>
+      _AddManualTimeDialogState();
 }
 
 class _AddManualTimeDialogState extends ConsumerState<AddManualTimeDialog> {

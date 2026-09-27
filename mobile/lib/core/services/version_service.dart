@@ -17,10 +17,12 @@ class VersionService {
       final packageInfo = await PackageInfo.fromPlatform();
       final currentVersion = packageInfo.version;
 
-      final configDoc = await _firestore.collection('app_config').doc('version').get();
+      final configDoc =
+          await _firestore.collection('app_config').doc('version').get();
 
       if (!configDoc.exists) {
-        logger.i('Version-Check: Kein app_config/version Dokument in Firestore gefunden');
+        logger.i(
+            'Version-Check: Kein app_config/version Dokument in Firestore gefunden');
         return null;
       }
 
@@ -34,7 +36,8 @@ class VersionService {
         return null;
       }
 
-      logger.i('Version-Check: Aktuelle Version: $currentVersion, Min Version: $minVersion');
+      logger.i(
+          'Version-Check: Aktuelle Version: $currentVersion, Min Version: $minVersion');
 
       if (_isUpdateRequired(currentVersion, minVersion)) {
         logger.w('Update erforderlich: $currentVersion < $minVersion');
@@ -91,10 +94,11 @@ class VersionService {
     Uri? storeUrl;
 
     if (kIsWeb) {
-       // Web fallback: Keine Store URL oder spezifische URL
-       return; 
+      // Web fallback: Keine Store URL oder spezifische URL
+      return;
     } else if (defaultTargetPlatform == TargetPlatform.android) {
-      storeUrl = Uri.parse('https://play.google.com/store/apps/details?id=$packageName');
+      storeUrl = Uri.parse(
+          'https://play.google.com/store/apps/details?id=$packageName');
     } else if (defaultTargetPlatform == TargetPlatform.iOS) {
       storeUrl = Uri.parse('https://apps.apple.com/');
     }

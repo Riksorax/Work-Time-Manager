@@ -31,14 +31,16 @@ class YearlyReportViewModel extends Notifier<YearlyReportState> {
     state = state.copyWith(isLoading: true, year: year);
 
     final workRepository = ref.read(core_providers.workRepositoryProvider);
-    final settingsRepository = ref.read(core_providers.settingsRepositoryProvider);
+    final settingsRepository =
+        ref.read(core_providers.settingsRepositoryProvider);
     final workdays = settingsRepository.getWorkdays();
     final targetWeeklyHours = settingsRepository.getTargetWeeklyHours();
 
     List<MonthSummary> months;
     try {
       final entriesPerMonth = await Future.wait(
-        List.generate(12, (i) => workRepository.getWorkEntriesForMonth(year, i + 1)),
+        List.generate(
+            12, (i) => workRepository.getWorkEntriesForMonth(year, i + 1)),
       );
       months = List.generate(12, (i) {
         return calculateMonthSummary(
@@ -70,9 +72,11 @@ class YearlyReportViewModel extends Notifier<YearlyReportState> {
       try {
         final json = await api.getMonthlyReport(year, month);
         final overtimeMs = (json['monthlyOvertimeMs'] as num?)?.toInt() ?? 0;
-        refined[i] = state.months[i].copyWith(overtime: Duration(milliseconds: overtimeMs));
+        refined[i] = state.months[i]
+            .copyWith(overtime: Duration(milliseconds: overtimeMs));
       } catch (e) {
-        logger.d('[YearlyReportViewModel] API-Monatsbericht $year-$month nicht verfügbar: $e');
+        logger.d(
+            '[YearlyReportViewModel] API-Monatsbericht $year-$month nicht verfügbar: $e');
       }
     }));
 

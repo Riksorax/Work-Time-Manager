@@ -25,7 +25,6 @@ class LoginPage extends ConsumerStatefulWidget {
 }
 
 class _LoginPageState extends ConsumerState<LoginPage> {
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -106,153 +105,186 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             ),
                           ),
                           onPressed: () async {
-                // Speichere die Zustimmungen
-                final settingsRepository = ref.read(core_providers.settingsRepositoryProvider);
-                await settingsRepository.setAcceptedTermsOfService(true);
-                await settingsRepository.setAcceptedPrivacyPolicy(true);
+                            // Speichere die Zustimmungen
+                            final settingsRepository = ref.read(
+                                core_providers.settingsRepositoryProvider);
+                            await settingsRepository
+                                .setAcceptedTermsOfService(true);
+                            await settingsRepository
+                                .setAcceptedPrivacyPolicy(true);
 
-                // Zeige Loading-Dialog
-                if (context.mounted) {
-                  showDialog(
-                    context: context,
-                    barrierDismissible: false,
-                    builder: (dialogContext) => AlertDialog(
-                      content: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const CircularProgressIndicator(),
-                          const SizedBox(height: 16),
-                          Text(l10n.signingIn),
-                        ],
-                      ),
-                    ),
-                  );
-                }
+                            // Zeige Loading-Dialog
+                            if (context.mounted) {
+                              showDialog(
+                                context: context,
+                                barrierDismissible: false,
+                                builder: (dialogContext) => AlertDialog(
+                                  content: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const CircularProgressIndicator(),
+                                      const SizedBox(height: 16),
+                                      Text(l10n.signingIn),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }
 
-                try {
-                  // Rufe den Use Case über den Provider auf.
-                  await ref.read(signInWithGoogleProvider)();
+                            try {
+                              // Rufe den Use Case über den Provider auf.
+                              await ref.read(signInWithGoogleProvider)();
 
-                  // Schließe Loading-Dialog
-                  if (context.mounted) {
-                    Navigator.of(context).pop();
-                  }
+                              // Schließe Loading-Dialog
+                              if (context.mounted) {
+                                Navigator.of(context).pop();
+                              }
 
-                  // Automatische Synchronisierung nach Login
-                  if (context.mounted) {
-                    showDialog(
-                      context: context,
-                      barrierDismissible: false,
-                      builder: (dialogContext) => AlertDialog(
-                        content: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const CircularProgressIndicator(),
-                            const SizedBox(height: 16),
-                            Text(l10n.syncingLocalData),
-                          ],
-                        ),
-                      ),
-                    );
-                  }
+                              // Automatische Synchronisierung nach Login
+                              if (context.mounted) {
+                                showDialog(
+                                  context: context,
+                                  barrierDismissible: false,
+                                  builder: (dialogContext) => AlertDialog(
+                                    content: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const CircularProgressIndicator(),
+                                        const SizedBox(height: 16),
+                                        Text(l10n.syncingLocalData),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              }
 
-                  try {
-                    // Hole die Repositories
-                    final workRepository = ref.read(core_providers.workRepositoryProvider);
-                    final overtimeRepository = ref.read(core_providers.overtimeRepositoryProvider);
+                              try {
+                                // Hole die Repositories
+                                final workRepository = ref.read(
+                                    core_providers.workRepositoryProvider);
+                                final overtimeRepository = ref.read(
+                                    core_providers.overtimeRepositoryProvider);
 
-                    // Hole die aktuelle userId direkt von FirebaseAuth
-                    // (der Provider wurde möglicherweise noch nicht aktualisiert)
-                    final currentUser = ref.read(core_providers.firebaseAuthProvider).currentUser;
-                    final userId = currentUser?.uid;
+                                // Hole die aktuelle userId direkt von FirebaseAuth
+                                // (der Provider wurde möglicherweise noch nicht aktualisiert)
+                                final currentUser = ref
+                                    .read(core_providers.firebaseAuthProvider)
+                                    .currentUser;
+                                final userId = currentUser?.uid;
 
-                    // Prüfe ob sie Hybrid-Repositories sind und User eingeloggt ist
-                    if (workRepository is HybridWorkRepositoryImpl &&
-                        overtimeRepository is HybridOvertimeRepositoryImpl &&
-                        userId != null) {
-                      // Erstelle frisches Firebase-Repository mit korrekter userId
-                      final freshFirebaseOvertimeRepo = FirebaseOvertimeRepositoryImpl(
-                        dataSource: ref.read(core_providers.firestoreDataSourceProvider),
-                        userId: userId,
-                      );
+                                // Prüfe ob sie Hybrid-Repositories sind und User eingeloggt ist
+                                if (workRepository
+                                        is HybridWorkRepositoryImpl &&
+                                    overtimeRepository
+                                        is HybridOvertimeRepositoryImpl &&
+                                    userId != null) {
+                                  // Erstelle frisches Firebase-Repository mit korrekter userId
+                                  final freshFirebaseOvertimeRepo =
+                                      FirebaseOvertimeRepositoryImpl(
+                                    dataSource: ref.read(core_providers
+                                        .firestoreDataSourceProvider),
+                                    userId: userId,
+                                  );
 
-                      // Führe Sync durch
-                      final result = await DataSyncService.syncAll(
-                        localWorkRepository: workRepository.localRepository,
-                        firebaseWorkRepository: workRepository.firebaseRepository,
-                        localOvertimeRepository: overtimeRepository.localRepository,
-                        firebaseOvertimeRepository: freshFirebaseOvertimeRepo,
-                      );
+                                  // Führe Sync durch
+                                  final result = await DataSyncService.syncAll(
+                                    localWorkRepository:
+                                        workRepository.localRepository,
+                                    firebaseWorkRepository:
+                                        workRepository.firebaseRepository,
+                                    localOvertimeRepository:
+                                        overtimeRepository.localRepository,
+                                    firebaseOvertimeRepository:
+                                        freshFirebaseOvertimeRepo,
+                                  );
 
-                      // Schließe Sync-Dialog
-                      if (context.mounted) {
-                        Navigator.of(context).pop();
-                      }
+                                  // Schließe Sync-Dialog
+                                  if (context.mounted) {
+                                    Navigator.of(context).pop();
+                                  }
 
-                      // Zeige Ergebnis
-                      final workEntriesSynced = result['workEntriesSynced'] as int;
-                      final overtimeSynced = result['overtimeSynced'] as bool;
-                      final errors = result['errors'] as List<String>;
+                                  // Zeige Ergebnis
+                                  final workEntriesSynced =
+                                      result['workEntriesSynced'] as int;
+                                  final overtimeSynced =
+                                      result['overtimeSynced'] as bool;
+                                  final errors =
+                                      result['errors'] as List<String>;
 
-                      if (context.mounted) {
-                        if (workEntriesSynced > 0 || overtimeSynced) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                l10n.syncSuccessLoginMessage(workEntriesSynced, overtimeSynced ? l10n.yesLabel : l10n.noLabel),
-                              ),
-                              backgroundColor: errors.isEmpty ? Colors.green : Colors.orange,
-                              duration: const Duration(seconds: 3),
-                            ),
-                          );
-                        }
-                      }
+                                  if (context.mounted) {
+                                    if (workEntriesSynced > 0 ||
+                                        overtimeSynced) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            l10n.syncSuccessLoginMessage(
+                                                workEntriesSynced,
+                                                overtimeSynced
+                                                    ? l10n.yesLabel
+                                                    : l10n.noLabel),
+                                          ),
+                                          backgroundColor: errors.isEmpty
+                                              ? Colors.green
+                                              : Colors.orange,
+                                          duration: const Duration(seconds: 3),
+                                        ),
+                                      );
+                                    }
+                                  }
 
-                      // Aktualisiere Dashboard und Settings nach Sync
-                      ref.invalidate(dashboard_vm.dashboardViewModelProvider);
-                      ref.invalidate(settingsViewModelProvider);
-                    } else {
-                      // Schließe Sync-Dialog
-                      if (context.mounted) {
-                        Navigator.of(context).pop();
-                      }
-                    }
-                  } catch (syncError) {
-                    logger.e('[LoginPage] Fehler bei der Synchronisierung: $syncError');
-                    // Schließe Sync-Dialog bei Fehler
-                    if (context.mounted) {
-                      Navigator.of(context).pop();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(l10n.syncFailedLoginMessage('$syncError')),
-                          backgroundColor: Colors.orange,
-                          duration: const Duration(seconds: 3),
-                        ),
-                      );
-                    }
-                  }
+                                  // Aktualisiere Dashboard und Settings nach Sync
+                                  ref.invalidate(
+                                      dashboard_vm.dashboardViewModelProvider);
+                                  ref.invalidate(settingsViewModelProvider);
+                                } else {
+                                  // Schließe Sync-Dialog
+                                  if (context.mounted) {
+                                    Navigator.of(context).pop();
+                                  }
+                                }
+                              } catch (syncError) {
+                                logger.e(
+                                    '[LoginPage] Fehler bei der Synchronisierung: $syncError');
+                                // Schließe Sync-Dialog bei Fehler
+                                if (context.mounted) {
+                                  Navigator.of(context).pop();
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(l10n.syncFailedLoginMessage(
+                                          '$syncError')),
+                                      backgroundColor: Colors.orange,
+                                      duration: const Duration(seconds: 3),
+                                    ),
+                                  );
+                                }
+                              }
 
-                  if (context.mounted) {
-                    // Nach erfolgreicher Anmeldung zurück zur ursprünglichen Seite navigieren
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(builder: (context) => HomeScreen(initialIndex: widget.returnToIndex)),
-                    );
-                  }
-                } catch (loginError) {
-                  logger.e('[LoginPage] Fehler beim Login: $loginError');
-                  // Schließe Loading-Dialog bei Fehler
-                  if (context.mounted) {
-                    Navigator.of(context).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(l10n.loginFailedMessage('$loginError')),
-                        backgroundColor: Colors.red,
-                        duration: const Duration(seconds: 3),
-                      ),
-                    );
-                  }
-                }
-              },
+                              if (context.mounted) {
+                                // Nach erfolgreicher Anmeldung zurück zur ursprünglichen Seite navigieren
+                                Navigator.of(context).pushReplacement(
+                                  MaterialPageRoute(
+                                      builder: (context) => HomeScreen(
+                                          initialIndex: widget.returnToIndex)),
+                                );
+                              }
+                            } catch (loginError) {
+                              logger.e(
+                                  '[LoginPage] Fehler beim Login: $loginError');
+                              // Schließe Loading-Dialog bei Fehler
+                              if (context.mounted) {
+                                Navigator.of(context).pop();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                        l10n.loginFailedMessage('$loginError')),
+                                    backgroundColor: Colors.red,
+                                    duration: const Duration(seconds: 3),
+                                  ),
+                                );
+                              }
+                            }
+                          },
                         ),
                         const SizedBox(height: 16),
                         // Legal Notice
@@ -273,7 +305,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                     decoration: TextDecoration.underline,
                                   ),
                                   recognizer: TapGestureRecognizer()
-                                    ..onTap = () => TermsOfServiceDialog.show(context),
+                                    ..onTap = () =>
+                                        TermsOfServiceDialog.show(context),
                                 ),
                                 TextSpan(text: l10n.legalNoticeAnd),
                                 TextSpan(
@@ -284,7 +317,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                     decoration: TextDecoration.underline,
                                   ),
                                   recognizer: TapGestureRecognizer()
-                                    ..onTap = () => PrivacyPolicyDialog.show(context),
+                                    ..onTap =
+                                        () => PrivacyPolicyDialog.show(context),
                                 ),
                               ],
                             ),
@@ -294,9 +328,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         // Divider
                         Row(
                           children: [
-                            Expanded(child: Divider(color: colorScheme.outlineVariant)),
+                            Expanded(
+                                child:
+                                    Divider(color: colorScheme.outlineVariant)),
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 16),
                               child: Text(
                                 l10n.orDivider,
                                 style: theme.textTheme.bodySmall?.copyWith(
@@ -304,7 +341,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                 ),
                               ),
                             ),
-                            Expanded(child: Divider(color: colorScheme.outlineVariant)),
+                            Expanded(
+                                child:
+                                    Divider(color: colorScheme.outlineVariant)),
                           ],
                         ),
                         const SizedBox(height: 16),
@@ -312,9 +351,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         TextButton(
                           onPressed: () {
                             Navigator.of(context).pushReplacement(
-                              MaterialPageRoute(builder: (context) => HomeScreen(
-                                initialIndex: widget.returnToIndex,
-                              )),
+                              MaterialPageRoute(
+                                  builder: (context) => HomeScreen(
+                                        initialIndex: widget.returnToIndex,
+                                      )),
                             );
                           },
                           style: TextButton.styleFrom(

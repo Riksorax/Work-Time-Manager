@@ -3,7 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers/providers.dart';
 
-final themeViewModelProvider = NotifierProvider<ThemeViewModel, ThemeMode>(ThemeViewModel.new);
+final themeViewModelProvider =
+    NotifierProvider<ThemeViewModel, ThemeMode>(ThemeViewModel.new);
 
 class ThemeViewModel extends Notifier<ThemeMode> {
   @override

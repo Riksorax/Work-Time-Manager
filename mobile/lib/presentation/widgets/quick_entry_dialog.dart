@@ -60,7 +60,8 @@ class _QuickEntryDialogState extends State<QuickEntryDialog> {
           Text(l10n.quickEntryTitle),
           const SizedBox(height: 4),
           Text(
-            DateFormat.yMMMMd(Localizations.localeOf(context).toString()).format(widget.date),
+            DateFormat.yMMMMd(Localizations.localeOf(context).toString())
+                .format(widget.date),
             style: Theme.of(context).textTheme.bodyMedium,
           ),
         ],
@@ -99,20 +100,22 @@ class _QuickEntryDialogState extends State<QuickEntryDialog> {
         ),
         FilledButton(
           onPressed: () {
-             // Create the entry
-             final entry = WorkEntryEntity(
-               id: DateFormat('yyyy-MM-dd').format(widget.date),
-               date: widget.date,
-               type: _selectedType,
-               isManuallyEntered: true,
-               workStart: _startTime != null 
-                   ? DateTime(widget.date.year, widget.date.month, widget.date.day, _startTime!.hour, _startTime!.minute)
-                   : null,
-               workEnd: _endTime != null
-                   ? DateTime(widget.date.year, widget.date.month, widget.date.day, _endTime!.hour, _endTime!.minute)
-                   : null,
-             );
-             Navigator.pop(context, entry);
+            // Create the entry
+            final entry = WorkEntryEntity(
+              id: DateFormat('yyyy-MM-dd').format(widget.date),
+              date: widget.date,
+              type: _selectedType,
+              isManuallyEntered: true,
+              workStart: _startTime != null
+                  ? DateTime(widget.date.year, widget.date.month,
+                      widget.date.day, _startTime!.hour, _startTime!.minute)
+                  : null,
+              workEnd: _endTime != null
+                  ? DateTime(widget.date.year, widget.date.month,
+                      widget.date.day, _endTime!.hour, _endTime!.minute)
+                  : null,
+            );
+            Navigator.pop(context, entry);
           },
           child: Text(l10n.save),
         ),

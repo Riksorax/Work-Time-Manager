@@ -44,7 +44,8 @@ class ApiDataSource implements FirestoreDataSource {
   // ── Work Entries → API (Standard-Profil) / Firestore (zusätzliche Profile) ─
 
   @override
-  Future<WorkEntryModel?> getWorkEntry(String userId, DateTime date, {String? profileId}) {
+  Future<WorkEntryModel?> getWorkEntry(String userId, DateTime date,
+      {String? profileId}) {
     if (_isAdditionalProfile(profileId)) {
       return _auth.getWorkEntry(userId, date, profileId: profileId);
     }
@@ -52,7 +53,8 @@ class ApiDataSource implements FirestoreDataSource {
   }
 
   @override
-  Future<void> saveWorkEntry(String userId, WorkEntryModel model, {String? profileId}) {
+  Future<void> saveWorkEntry(String userId, WorkEntryModel model,
+      {String? profileId}) {
     if (_isAdditionalProfile(profileId)) {
       return _auth.saveWorkEntry(userId, model, profileId: profileId);
     }
@@ -60,21 +62,25 @@ class ApiDataSource implements FirestoreDataSource {
   }
 
   @override
-  Future<List<WorkEntryModel>> getWorkEntriesForMonth(String userId, int year, int month,
+  Future<List<WorkEntryModel>> getWorkEntriesForMonth(
+      String userId, int year, int month,
       {String? profileId}) {
     if (_isAdditionalProfile(profileId)) {
-      return _auth.getWorkEntriesForMonth(userId, year, month, profileId: profileId);
+      return _auth.getWorkEntriesForMonth(userId, year, month,
+          profileId: profileId);
     }
     return _api.getWorkEntriesForMonth(year, month);
   }
 
   @override
-  Future<void> deleteWorkEntry(String userId, String entryId, {String? profileId}) {
+  Future<void> deleteWorkEntry(String userId, String entryId,
+      {String? profileId}) {
     if (_isAdditionalProfile(profileId)) {
       return _auth.deleteWorkEntry(userId, entryId, profileId: profileId);
     }
     final parts = entryId.split('-');
-    return _api.deleteWorkEntry(int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2]));
+    return _api.deleteWorkEntry(
+        int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2]));
   }
 
   // ── Overtime → API (Standard-Profil) / Firestore (zusätzliche Profile) ────
@@ -89,7 +95,8 @@ class ApiDataSource implements FirestoreDataSource {
   }
 
   @override
-  Future<void> saveOvertime(String userId, Duration overtime, {String? profileId}) {
+  Future<void> saveOvertime(String userId, Duration overtime,
+      {String? profileId}) {
     if (_isAdditionalProfile(profileId)) {
       return _auth.saveOvertime(userId, overtime, profileId: profileId);
     }
@@ -99,7 +106,8 @@ class ApiDataSource implements FirestoreDataSource {
   }
 
   @override
-  Future<DateTime?> getLastOvertimeUpdate(String userId, {String? profileId}) async {
+  Future<DateTime?> getLastOvertimeUpdate(String userId,
+      {String? profileId}) async {
     if (_isAdditionalProfile(profileId)) {
       return _auth.getLastOvertimeUpdate(userId, profileId: profileId);
     }
@@ -108,7 +116,8 @@ class ApiDataSource implements FirestoreDataSource {
   }
 
   @override
-  Future<void> saveLastOvertimeUpdate(String userId, DateTime date, {String? profileId}) async {
+  Future<void> saveLastOvertimeUpdate(String userId, DateTime date,
+      {String? profileId}) async {
     if (_isAdditionalProfile(profileId)) {
       return _auth.saveLastOvertimeUpdate(userId, date, profileId: profileId);
     }
@@ -118,7 +127,8 @@ class ApiDataSource implements FirestoreDataSource {
   // ── Settings → API (Standard-Profil, Read-Modify-Write) / Firestore ───────
 
   @override
-  Future<Map<String, dynamic>?> getSettings(String userId, {String? profileId}) {
+  Future<Map<String, dynamic>?> getSettings(String userId,
+      {String? profileId}) {
     if (_isAdditionalProfile(profileId)) {
       return _auth.getSettings(userId, profileId: profileId);
     }
@@ -139,11 +149,13 @@ class ApiDataSource implements FirestoreDataSource {
   //    Endpoint, siehe #137) ─────────────────────────────────────────────────
 
   @override
-  Future<WeeklyReflectionEntity?> getWeeklyReflection(String userId, int year, int week) =>
+  Future<WeeklyReflectionEntity?> getWeeklyReflection(
+          String userId, int year, int week) =>
       _auth.getWeeklyReflection(userId, year, week);
 
   @override
-  Future<void> saveWeeklyReflection(String userId, WeeklyReflectionEntity reflection) =>
+  Future<void> saveWeeklyReflection(
+          String userId, WeeklyReflectionEntity reflection) =>
       _auth.saveWeeklyReflection(userId, reflection);
 
   // ── Arbeitszeit-Profile → an Firestore-DataSource delegiert (kein Backend-

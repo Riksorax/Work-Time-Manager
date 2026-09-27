@@ -49,10 +49,13 @@ class ManageWorkProfilesDialog extends ConsumerWidget {
       if (ref.read(activeWorkProfileIdProvider) == profile.id) {
         ref.read(activeWorkProfileIdProvider.notifier).setActiveProfile(null);
       }
-      messenger.showSnackBar(SnackBar(content: Text(l10n.profileDeletedMessage(profile.name))));
+      messenger.showSnackBar(
+          SnackBar(content: Text(l10n.profileDeletedMessage(profile.name))));
     } catch (e, stackTrace) {
-      logger.e('[ManageWorkProfilesDialog] Fehler beim Löschen: $e', stackTrace: stackTrace);
-      messenger.showSnackBar(SnackBar(content: Text(l10n.profileDeletionFailed('$e'))));
+      logger.e('[ManageWorkProfilesDialog] Fehler beim Löschen: $e',
+          stackTrace: stackTrace);
+      messenger.showSnackBar(
+          SnackBar(content: Text(l10n.profileDeletionFailed('$e'))));
     }
   }
 

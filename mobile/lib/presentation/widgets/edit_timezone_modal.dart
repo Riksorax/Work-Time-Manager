@@ -5,11 +5,13 @@ import 'package:timezone/timezone.dart' as tz;
 import '../../l10n/app_localizations.dart';
 import '../view_models/settings_view_model.dart';
 
-void showEditTimezoneModal(BuildContext context, String? currentTimezoneOverride) {
+void showEditTimezoneModal(
+    BuildContext context, String? currentTimezoneOverride) {
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
-    builder: (context) => EditTimezoneModal(currentTimezoneOverride: currentTimezoneOverride),
+    builder: (context) =>
+        EditTimezoneModal(currentTimezoneOverride: currentTimezoneOverride),
   );
 }
 
@@ -37,7 +39,9 @@ class _EditTimezoneModalState extends ConsumerState<EditTimezoneModal> {
     final l10n = AppLocalizations.of(context);
     final filtered = _query.isEmpty
         ? _allTimezones
-        : _allTimezones.where((z) => z.toLowerCase().contains(_query.toLowerCase())).toList();
+        : _allTimezones
+            .where((z) => z.toLowerCase().contains(_query.toLowerCase()))
+            .toList();
 
     return DraggableScrollableSheet(
       initialChildSize: 0.8,
@@ -49,7 +53,8 @@ class _EditTimezoneModalState extends ConsumerState<EditTimezoneModal> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(l10n.timezoneTitle, style: Theme.of(context).textTheme.headlineSmall),
+              Text(l10n.timezoneTitle,
+                  style: Theme.of(context).textTheme.headlineSmall),
               const SizedBox(height: 16),
               TextField(
                 decoration: InputDecoration(
@@ -94,7 +99,9 @@ class _EditTimezoneModalState extends ConsumerState<EditTimezoneModal> {
   }
 
   void _select(String? timezone) {
-    ref.read(settingsViewModelProvider.notifier).updateTimezoneOverride(timezone);
+    ref
+        .read(settingsViewModelProvider.notifier)
+        .updateTimezoneOverride(timezone);
     Navigator.of(context).pop();
   }
 }

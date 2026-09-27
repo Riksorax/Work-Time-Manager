@@ -17,6 +17,6 @@ class ImprintDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     // Falls das Widget direkt verwendet wird (fallback), öffnen wir einfach den Dialog.
     // Idealerweise sollte immer die statische 'show'-Methode genutzt werden.
-    return const SizedBox.shrink(); 
+    return const SizedBox.shrink();
   }
 }

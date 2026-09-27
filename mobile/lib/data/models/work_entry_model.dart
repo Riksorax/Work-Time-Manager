@@ -20,7 +20,8 @@ class WorkEntryModel extends WorkEntryEntity {
     super.type,
   });
 
-  static String generateId(DateTime date) => DateFormat('yyyy-MM-dd').format(date);
+  static String generateId(DateTime date) =>
+      DateFormat('yyyy-MM-dd').format(date);
 
   static DateTime parseId(String id) => DateFormat('yyyy-MM-dd').parse(id);
 
@@ -50,10 +51,12 @@ class WorkEntryModel extends WorkEntryEntity {
     return WorkEntryModel(
       id: '', // Die ID ist nicht Teil der Map, sie wird vom Aufrufer gesetzt.
       date: (map['date'] as Timestamp).toDate(),
-      workStart: roundToMinuteOrNull((map['workStart'] as Timestamp?)?.toDate()),
+      workStart:
+          roundToMinuteOrNull((map['workStart'] as Timestamp?)?.toDate()),
       workEnd: roundToMinuteOrNull((map['workEnd'] as Timestamp?)?.toDate()),
       breaks: (map['breaks'] as List<dynamic>?)
-              ?.map((breakData) => BreakModel.fromMap(breakData as Map<String, dynamic>))
+              ?.map((breakData) =>
+                  BreakModel.fromMap(breakData as Map<String, dynamic>))
               .toList() ??
           [],
       manualOvertime: map['manualOvertimeMinutes'] != null
@@ -70,10 +73,12 @@ class WorkEntryModel extends WorkEntryEntity {
     );
   }
 
-  factory WorkEntryModel.fromFirestore(DocumentSnapshot<Map<String, dynamic>> snapshot) {
+  factory WorkEntryModel.fromFirestore(
+      DocumentSnapshot<Map<String, dynamic>> snapshot) {
     final data = snapshot.data();
     if (data == null) {
-      throw StateError("Konnte kein WorkEntryModel aus einem leeren Snapshot erstellen!");
+      throw StateError(
+          "Konnte kein WorkEntryModel aus einem leeren Snapshot erstellen!");
     }
     return WorkEntryModel.fromMap(data).copyWith(id: snapshot.id);
   }
@@ -81,8 +86,11 @@ class WorkEntryModel extends WorkEntryEntity {
   Map<String, dynamic> toMap() {
     return {
       'date': Timestamp.fromDate(DateTime.utc(date.year, date.month, date.day)),
-      'workStart': workStart != null ? Timestamp.fromDate(roundToMinute(workStart!)) : null,
-      'workEnd': workEnd != null ? Timestamp.fromDate(roundToMinute(workEnd!)) : null,
+      'workStart': workStart != null
+          ? Timestamp.fromDate(roundToMinute(workStart!))
+          : null,
+      'workEnd':
+          workEnd != null ? Timestamp.fromDate(roundToMinute(workEnd!)) : null,
       'breaks': breaks.map((b) => BreakModel.fromEntity(b).toMap()).toList(),
       'manualOvertimeMinutes':
           manualOvertime != null ? toStoredMinutes(manualOvertime!) : null,

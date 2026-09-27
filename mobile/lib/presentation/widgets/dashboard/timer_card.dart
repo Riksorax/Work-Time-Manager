@@ -17,9 +17,12 @@ class TimerCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final use24HourFormat =
-        ref.watch(settingsViewModelProvider).value?.settings.use24HourFormat ?? true;
-    final bool isTimerRunning = workEntry.workStart != null && workEntry.workEnd == null;
-    final bool isWorkDone = workEntry.workStart != null && workEntry.workEnd != null;
+        ref.watch(settingsViewModelProvider).value?.settings.use24HourFormat ??
+            true;
+    final bool isTimerRunning =
+        workEntry.workStart != null && workEntry.workEnd == null;
+    final bool isWorkDone =
+        workEntry.workStart != null && workEntry.workEnd != null;
 
     return Card(
       elevation: 2,
@@ -38,13 +41,15 @@ class TimerCard extends ConsumerWidget {
                 _TimeDisplay(
                   label: 'Start',
                   time: workEntry.workStart != null
-                      ? formatTime(workEntry.workStart!, use24HourFormat: use24HourFormat)
+                      ? formatTime(workEntry.workStart!,
+                          use24HourFormat: use24HourFormat)
                       : '--:--',
                 ),
                 _TimeDisplay(
                   label: 'Ende',
                   time: workEntry.workEnd != null
-                      ? formatTime(workEntry.workEnd!, use24HourFormat: use24HourFormat)
+                      ? formatTime(workEntry.workEnd!,
+                          use24HourFormat: use24HourFormat)
                       : '--:--',
                 ),
               ],
@@ -52,20 +57,26 @@ class TimerCard extends ConsumerWidget {
             const SizedBox(height: 24),
             ElevatedButton.icon(
               icon: Icon(
-                isTimerRunning ? Icons.pause_circle_filled : Icons.play_circle_filled,
+                isTimerRunning
+                    ? Icons.pause_circle_filled
+                    : Icons.play_circle_filled,
               ),
               label: Text(
                 isTimerRunning ? 'Arbeit beenden' : 'Arbeit starten',
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: isTimerRunning ? Colors.orange.shade700 : Colors.green.shade600,
+                backgroundColor: isTimerRunning
+                    ? Colors.orange.shade700
+                    : Colors.green.shade600,
                 foregroundColor: Colors.white,
                 minimumSize: const Size(200, 48),
               ),
               // Der Button ist deaktiviert, wenn die Arbeit für heute bereits abgeschlossen ist.
               onPressed: isWorkDone
                   ? null
-                  : () => ref.read(dashboardViewModelProvider.notifier).startOrStopTimer(),
+                  : () => ref
+                      .read(dashboardViewModelProvider.notifier)
+                      .startOrStopTimer(),
             ),
           ],
         ),
@@ -96,8 +107,8 @@ class _TimeDisplay extends StatelessWidget {
         Text(
           time,
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+                fontWeight: FontWeight.bold,
+              ),
         ),
       ],
     );

@@ -21,9 +21,11 @@ class BreakComplianceResult {
 class BreakCalculatorService {
   static const Duration minWorkTimeForFirstBreak = Duration(hours: 6);
   static const Duration minWorkTimeForSecondBreak = Duration(hours: 9);
-  static const Duration firstBreakDuration = Duration(minutes: 30); // Gesetzlich vorgeschriebene Pausenzeit bei 6+ Stunden
+  static const Duration firstBreakDuration = Duration(
+      minutes: 30); // Gesetzlich vorgeschriebene Pausenzeit bei 6+ Stunden
   static const Duration secondBreakDuration = Duration(minutes: 15);
-  static const Duration requiredBreakTimeForLongDay = Duration(minutes: 45); // Gesetzlich vorgeschriebene Pausenzeit bei 9+ Stunden
+  static const Duration requiredBreakTimeForLongDay = Duration(
+      minutes: 45); // Gesetzlich vorgeschriebene Pausenzeit bei 9+ Stunden
 
   /// Prüft, ob die Pausen den Anforderungen des Arbeitszeitgesetzes entsprechen.
   /// Gibt ein BreakComplianceResult mit Details zur Compliance zurück.
@@ -38,7 +40,8 @@ class BreakCalculatorService {
     // Berechne die erforderliche Pausenzeit basierend auf der Netto-Arbeitszeit
     Duration requiredBreakTime = Duration.zero;
     if (effectiveWorkTime >= minWorkTimeForSecondBreak) {
-      requiredBreakTime = requiredBreakTimeForLongDay; // 45 Min bei 9+ Stunden Netto
+      requiredBreakTime =
+          requiredBreakTimeForLongDay; // 45 Min bei 9+ Stunden Netto
     } else if (effectiveWorkTime >= minWorkTimeForFirstBreak) {
       requiredBreakTime = firstBreakDuration; // 30 Min bei 6-9 Stunden Netto
     }
@@ -71,29 +74,37 @@ class BreakCalculatorService {
     final manualBreaks = existingBreaks.where((b) => !b.isAutomatic).toList();
     final automaticBreaks = existingBreaks.where((b) => b.isAutomatic).toList();
 
-    logger.i('[BreakCalculator] Bestehende Pausen: ${existingBreaks.length} (${manualBreaks.length} manuell, ${automaticBreaks.length} automatisch)');
+    logger.i(
+        '[BreakCalculator] Bestehende Pausen: ${existingBreaks.length} (${manualBreaks.length} manuell, ${automaticBreaks.length} automatisch)');
 
     // Wenn keine Pausen vorhanden sind, füge automatische Pausen hinzu
     if (existingBreaks.isEmpty) {
-      final calculatedBreaks = _calculateBreaks(entry.workStart!, entry.workEnd!, totalWorkTime);
-      logger.i('[BreakCalculator] Keine Pausen vorhanden, füge ${calculatedBreaks.length} automatische hinzu');
+      final calculatedBreaks =
+          _calculateBreaks(entry.workStart!, entry.workEnd!, totalWorkTime);
+      logger.i(
+          '[BreakCalculator] Keine Pausen vorhanden, füge ${calculatedBreaks.length} automatische hinzu');
       return entry.copyWith(breaks: calculatedBreaks);
     } else {
       // Wenn Pausen vorhanden sind, behalte manuelle und passe nur automatische an
-      final adjustedAutoBreaks = _adjustExistingBreaks(entry.workStart!, entry.workEnd!, totalWorkTime, existingBreaks);
-      logger.i('[BreakCalculator] Pausen angepasst: ${adjustedAutoBreaks.length} gesamt');
+      final adjustedAutoBreaks = _adjustExistingBreaks(
+          entry.workStart!, entry.workEnd!, totalWorkTime, existingBreaks);
+      logger.i(
+          '[BreakCalculator] Pausen angepasst: ${adjustedAutoBreaks.length} gesamt');
       return entry.copyWith(breaks: adjustedAutoBreaks);
     }
   }
 
-  static List<BreakEntity> _calculateBreaks(DateTime workStart, DateTime workEnd, Duration totalWorkTime) {
+  static List<BreakEntity> _calculateBreaks(
+      DateTime workStart, DateTime workEnd, Duration totalWorkTime) {
     final List<BreakEntity> breaks = [];
     final uuid = Uuid();
 
     // Bei einer Arbeitszeit von 9+ Stunden muss die Gesamtpausenzeit 45 Minuten betragen
     if (totalWorkTime >= minWorkTimeForSecondBreak) {
-      final breakStart = workStart.add(Duration(hours: 4)); // Hauptpause nach 4 Stunden
-      final breakEnd = breakStart.add(const Duration(minutes: 30)); // 30 Minuten Pause
+      final breakStart =
+          workStart.add(Duration(hours: 4)); // Hauptpause nach 4 Stunden
+      final breakEnd =
+          breakStart.add(const Duration(minutes: 30)); // 30 Minuten Pause
 
       // Prüfe, ob die Pause nicht nach Arbeitsende liegt
       if (breakEnd.isBefore(workEnd)) {
@@ -106,8 +117,10 @@ class BreakCalculatorService {
         ));
 
         // Zweite Pause für die restlichen 15 Minuten
-        final secondBreakStart = breakEnd.add(Duration(hours: 2)); // 2 Stunden nach der ersten Pause
-        final secondBreakEnd = secondBreakStart.add(const Duration(minutes: 15));
+        final secondBreakStart =
+            breakEnd.add(Duration(hours: 2)); // 2 Stunden nach der ersten Pause
+        final secondBreakEnd =
+            secondBreakStart.add(const Duration(minutes: 15));
 
         if (secondBreakEnd.isBefore(workEnd)) {
           breaks.add(BreakEntity(
@@ -122,7 +135,8 @@ class BreakCalculatorService {
     }
     // Füge Pause hinzu wenn Arbeitszeit zwischen 6 und 9 Stunden liegt
     else if (totalWorkTime >= minWorkTimeForFirstBreak) {
-      final breakStart = workStart.add(Duration(hours: 4)); // Pause nach 4 Stunden
+      final breakStart =
+          workStart.add(Duration(hours: 4)); // Pause nach 4 Stunden
       final breakEnd = breakStart.add(firstBreakDuration);
 
       // Prüfe, ob die Pause nicht nach Arbeitsende liegt
@@ -140,7 +154,11 @@ class BreakCalculatorService {
     return breaks;
   }
 
-  static List<BreakEntity> _adjustExistingBreaks(DateTime workStart, DateTime workEnd, Duration totalWorkTime, List<BreakEntity> existingBreaks) {
+  static List<BreakEntity> _adjustExistingBreaks(
+      DateTime workStart,
+      DateTime workEnd,
+      Duration totalWorkTime,
+      List<BreakEntity> existingBreaks) {
     // Trenne manuelle und automatische Pausen
     final manualBreaks = existingBreaks.where((b) => !b.isAutomatic).toList();
 
@@ -157,13 +175,12 @@ class BreakCalculatorService {
 
     // Berechne die tatsächliche Gesamtpausenzeit (manuell + automatisch)
     final Duration actualBreakTime = existingBreaks.fold(
-      Duration.zero,
-      (total, breakEntity) => total + breakEntity.duration
-    );
+        Duration.zero, (total, breakEntity) => total + breakEntity.duration);
 
     // Wenn die tatsächliche Pausenzeit bereits ausreicht, behalte alle Pausen
     if (actualBreakTime >= requiredBreakTime) {
-      logger.i('[BreakCalculator] Pausenzeit ausreichend (${actualBreakTime.inMinutes} Min), behalte alle Pausen');
+      logger.i(
+          '[BreakCalculator] Pausenzeit ausreichend (${actualBreakTime.inMinutes} Min), behalte alle Pausen');
       return existingBreaks;
     }
 
@@ -175,13 +192,15 @@ class BreakCalculatorService {
 
     // Wenn keine zusätzlichen Pausen nötig sind, behalte alle existierenden
     if (missingBreakTime <= Duration.zero) {
-      logger.i('[BreakCalculator] Pausenzeit ausreichend, keine zusätzlichen Pausen nötig');
+      logger.i(
+          '[BreakCalculator] Pausenzeit ausreichend, keine zusätzlichen Pausen nötig');
       return existingBreaks;
     }
 
     // Füge automatische Pause(n) hinzu, um die fehlende Zeit zu ergänzen
     final uuid = Uuid();
-    final List<BreakEntity> result = List.from(manualBreaks); // Starte mit manuellen Pausen
+    final List<BreakEntity> result =
+        List.from(manualBreaks); // Starte mit manuellen Pausen
 
     // Bestimme Position für die automatische Pause
     DateTime autoBreakStart;
@@ -203,9 +222,11 @@ class BreakCalculatorService {
         end: autoBreakStart.add(missingBreakTime),
         isAutomatic: true,
       ));
-      logger.i('[BreakCalculator] Füge ${missingBreakTime.inMinutes} Min automatische Pause hinzu (${manualBreaks.length} manuelle bleiben erhalten)');
+      logger.i(
+          '[BreakCalculator] Füge ${missingBreakTime.inMinutes} Min automatische Pause hinzu (${manualBreaks.length} manuelle bleiben erhalten)');
     } else {
-      logger.i('[BreakCalculator] Kann keine automatische Pause hinzufügen (würde nach Arbeitsende liegen)');
+      logger.i(
+          '[BreakCalculator] Kann keine automatische Pause hinzufügen (würde nach Arbeitsende liegen)');
     }
 
     return result;

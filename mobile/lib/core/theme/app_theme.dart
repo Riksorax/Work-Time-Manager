@@ -25,7 +25,8 @@ class AppTheme {
     appBarTheme: const AppBarTheme(
       elevation: 0,
       centerTitle: true,
-      backgroundColor: Colors.transparent, // Lässt die Scaffold-Farbe durchscheinen
+      backgroundColor:
+          Colors.transparent, // Lässt die Scaffold-Farbe durchscheinen
     ),
     cardTheme: CardThemeData(
       elevation: 1,

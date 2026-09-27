@@ -20,8 +20,8 @@ class _EditSollArbeitsstundenDialogState
     super.initState();
     // Safely read the initial value from the async state
     final settingsState = ref.read(settingsViewModelProvider);
-    final initialValue = settingsState.asData?.value.settings.weeklyTargetHours
-        .toString() ?? '';
+    final initialValue =
+        settingsState.asData?.value.settings.weeklyTargetHours.toString() ?? '';
     _controller = TextEditingController(text: initialValue);
   }
 
@@ -35,14 +35,16 @@ class _EditSollArbeitsstundenDialogState
     final value = double.tryParse(_controller.text.replaceAll(',', '.'));
     if (value != null && value > 0 && value <= 168) {
       // Call the correct method on the notifier
-      ref.read(settingsViewModelProvider.notifier).updateWeeklyTargetHours(value);
+      ref
+          .read(settingsViewModelProvider.notifier)
+          .updateWeeklyTargetHours(value);
       Navigator.of(context).pop();
     } else {
       // Show an error message if the input is invalid
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-              'Bitte geben Sie eine gültige Zahl zwischen 1 und 168 ein.'),
+          content:
+              Text('Bitte geben Sie eine gültige Zahl zwischen 1 und 168 ein.'),
           backgroundColor: Colors.red,
         ),
       );

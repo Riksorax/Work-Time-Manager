@@ -20,13 +20,15 @@ class InsightsState extends Equatable {
   factory InsightsState.initial() => const InsightsState(
         isLoading: true,
         weekdayAverages: [],
-        burnoutStatus: BurnoutStatus(currentStreak: 0, longestStreak: 0, isWarning: false),
+        burnoutStatus:
+            BurnoutStatus(currentStreak: 0, longestStreak: 0, isWarning: false),
         heatmap: [],
       );
 
   /// `true`, wenn nach dem Laden zu wenig Datenbasis für Insights vorhanden
   /// ist (z.B. neuer Nutzer ohne Historie).
-  bool get hasNoData => !isLoading && weekdayAverages.isEmpty && heatmap.isEmpty;
+  bool get hasNoData =>
+      !isLoading && weekdayAverages.isEmpty && heatmap.isEmpty;
 
   InsightsState copyWith({
     bool? isLoading,
@@ -43,5 +45,6 @@ class InsightsState extends Equatable {
   }
 
   @override
-  List<Object?> get props => [isLoading, weekdayAverages, burnoutStatus, heatmap];
+  List<Object?> get props =>
+      [isLoading, weekdayAverages, burnoutStatus, heatmap];
 }

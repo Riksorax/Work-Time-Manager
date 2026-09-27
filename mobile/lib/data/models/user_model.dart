@@ -26,7 +26,8 @@ class UserModel {
   });
 
   /// Creates a [UserModel] instance from a Firestore document snapshot.
-  factory UserModel.fromFirestore(DocumentSnapshot<Map<String, dynamic>> snapshot) {
+  factory UserModel.fromFirestore(
+      DocumentSnapshot<Map<String, dynamic>> snapshot) {
     final data = snapshot.data();
     if (data == null) {
       throw StateError("Missing data for UserModel ${snapshot.id}");

@@ -18,7 +18,8 @@ class DataSyncService {
     logger.i('[DataSyncService] Starte Sync der Arbeitseinträge...');
 
     if (localRepository is! LocalWorkRepositoryImpl) {
-      logger.w('[DataSyncService] Local Repository ist nicht vom Typ LocalWorkRepositoryImpl');
+      logger.w(
+          '[DataSyncService] Local Repository ist nicht vom Typ LocalWorkRepositoryImpl');
       return 0;
     }
 
@@ -27,11 +28,13 @@ class DataSyncService {
       final localEntries = await localRepository.getAllLocalEntries();
 
       if (localEntries.isEmpty) {
-        logger.i('[DataSyncService] Keine lokalen Einträge zum Synchronisieren');
+        logger
+            .i('[DataSyncService] Keine lokalen Einträge zum Synchronisieren');
         return 0;
       }
 
-      logger.i('[DataSyncService] Gefunden: ${localEntries.length} lokale Einträge');
+      logger.i(
+          '[DataSyncService] Gefunden: ${localEntries.length} lokale Einträge');
 
       // Synchronisiere jeden Eintrag zu Firebase
       int syncedCount = 0;
@@ -46,12 +49,14 @@ class DataSyncService {
         }
       }
 
-      logger.i('[DataSyncService] Erfolgreich synchronisiert: $syncedCount/${localEntries.length}');
+      logger.i(
+          '[DataSyncService] Erfolgreich synchronisiert: $syncedCount/${localEntries.length}');
 
       // Wenn alle erfolgreich, lösche lokale Daten
       if (syncedCount == localEntries.length) {
         await localRepository.clearAllLocalEntries();
-        logger.i('[DataSyncService] Lokale Einträge gelöscht nach erfolgreicher Sync');
+        logger.i(
+            '[DataSyncService] Lokale Einträge gelöscht nach erfolgreicher Sync');
       }
 
       return syncedCount;
@@ -75,7 +80,8 @@ class DataSyncService {
       final localOvertime = localRepository.getOvertime();
       final localLastUpdate = localRepository.getLastUpdateDate();
 
-      logger.i('[DataSyncService] Lokale Überstunden: ${localOvertime.inMinutes} Min');
+      logger.i(
+          '[DataSyncService] Lokale Überstunden: ${localOvertime.inMinutes} Min');
 
       // Hole Firebase Überstunden - WICHTIG: Async laden für korrekte Werte!
       Duration firebaseOvertime;
@@ -85,11 +91,13 @@ class DataSyncService {
         // Explizit von Firestore laden (nicht aus leerem Cache)
         firebaseOvertime = await firebaseRepository.loadOvertimeAsync();
         firebaseLastUpdate = await firebaseRepository.loadLastUpdateAsync();
-        logger.i('[DataSyncService] Firebase Überstunden (async geladen): ${firebaseOvertime.inMinutes} Min');
+        logger.i(
+            '[DataSyncService] Firebase Überstunden (async geladen): ${firebaseOvertime.inMinutes} Min');
       } else {
         firebaseOvertime = firebaseRepository.getOvertime();
         firebaseLastUpdate = firebaseRepository.getLastUpdateDate();
-        logger.i('[DataSyncService] Firebase Überstunden: ${firebaseOvertime.inMinutes} Min');
+        logger.i(
+            '[DataSyncService] Firebase Überstunden: ${firebaseOvertime.inMinutes} Min');
       }
 
       // Entscheide welche Daten verwendet werden sollen
@@ -101,14 +109,17 @@ class DataSyncService {
       if (firebaseOvertime == Duration.zero && localOvertime != Duration.zero) {
         // Firebase leer, lokale Daten vorhanden → lokale verwenden
         useLocalData = true;
-        logger.i('[DataSyncService] Firebase leer, verwende lokale Überstunden');
+        logger
+            .i('[DataSyncService] Firebase leer, verwende lokale Überstunden');
       } else if (localLastUpdate != null && firebaseLastUpdate != null) {
         // Beide haben Daten, vergleiche Zeitstempel
         if (localLastUpdate.isAfter(firebaseLastUpdate)) {
           useLocalData = true;
-          logger.i('[DataSyncService] Lokale Daten sind neuer, verwende lokale Überstunden');
+          logger.i(
+              '[DataSyncService] Lokale Daten sind neuer, verwende lokale Überstunden');
         }
-      } else if (localOvertime != Duration.zero && firebaseOvertime == Duration.zero) {
+      } else if (localOvertime != Duration.zero &&
+          firebaseOvertime == Duration.zero) {
         useLocalData = true;
       }
 
@@ -118,15 +129,18 @@ class DataSyncService {
         if (localLastUpdate != null) {
           await firebaseRepository.saveLastUpdateDate(localLastUpdate);
         }
-        logger.i('[DataSyncService] Überstunden zu Firebase synchronisiert: ${localOvertime.inMinutes} Min');
+        logger.i(
+            '[DataSyncService] Überstunden zu Firebase synchronisiert: ${localOvertime.inMinutes} Min');
       } else {
-        logger.i('[DataSyncService] Firebase Überstunden werden beibehalten: ${firebaseOvertime.inMinutes} Min');
+        logger.i(
+            '[DataSyncService] Firebase Überstunden werden beibehalten: ${firebaseOvertime.inMinutes} Min');
       }
 
       // Lösche lokale Überstunden nach erfolgreicher Sync
       if (localRepository is LocalOvertimeRepositoryImpl) {
         await localRepository.saveOvertime(Duration.zero);
-        await localRepository.saveLastUpdateDate(DateTime.fromMillisecondsSinceEpoch(0));
+        await localRepository
+            .saveLastUpdateDate(DateTime.fromMillisecondsSinceEpoch(0));
         logger.i('[DataSyncService] Lokale Überstunden zurückgesetzt');
       }
 
@@ -177,7 +191,8 @@ class DataSyncService {
     }
 
     logger.i('[DataSyncService] ═══ Synchronisation abgeschlossen ═══');
-    logger.i('[DataSyncService] Arbeitseinträge: ${result['workEntriesSynced']}');
+    logger
+        .i('[DataSyncService] Arbeitseinträge: ${result['workEntriesSynced']}');
     logger.i('[DataSyncService] Überstunden: ${result['overtimeSynced']}');
     if ((result['errors'] as List).isNotEmpty) {
       logger.w('[DataSyncService] Fehler: ${result['errors']}');
