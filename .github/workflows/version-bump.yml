@@ -101,5 +101,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add mobile/pubspec.yaml RELEASE_NAMES.md
-          git commit -m "chore(release): bump version to $VERSION ($CHARACTER) [skip ci]"
+          git commit -m "chore(release): bump version to $VERSION ($CHARACTER)"
           git push
