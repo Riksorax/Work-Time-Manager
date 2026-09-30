@@ -56,7 +56,7 @@ services:
   # eingerichtet - Uptime-Kuma bietet dafür keine Env-Var-/Config-Datei-
   # Konfiguration an.
   uptime-kuma:
-    image: louislam/uptime-kuma:1
+    image: louislam/uptime-kuma:2
     container_name: uptime-kuma
     restart: unless-stopped
     volumes:
