@@ -1,1 +1,1 @@
-Verbesserungen nach eurem Beta-Feedback: Zweites Arbeitszeit-Profil lässt sich jetzt korrekt anlegen, Abo-Verwaltung funktioniert zuverlässig, Feiertage zeigen ihren Namen, Jahresbericht hat jetzt PDF-Export, Kalenderwochen und Monate in den Berichten sind antippbar, Insights besser erklärt, Berichte-Tabs jetzt scrollbar statt gequetscht.
+Neu: App jetzt komplett auf Englisch nutzbar (Sprachauswahl in den Einstellungen). Bugfix: Änderungen der Gleitzeit-Bilanz erschienen nicht sofort im Dashboard – behoben. Kleinere Verbesserungen bei der Abo-Verwaltung.
