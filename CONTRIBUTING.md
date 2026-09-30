@@ -150,6 +150,12 @@ pusht nur das Image. Auf `main` gestartet, deployt er auch.
   ```
 - **Neue Secrets/Variablen** vor dem Merge in den GitHub-Einstellungen anlegen
   (Liste unten, „Secrets und Variablen“).
+- **Cloud Functions** (`web/functions/`) werden ebenfalls nicht automatisch deployt. Nach einer
+  Änderung aus `web/` ausführen:
+  ```bash
+  firebase deploy --only functions --project worktime-56c7a
+  ```
+  Details und benötigte Secrets: unten, „Crashlytics-/Uptime-Kuma-Brücke“.
 
 ### Details der Deploy-Workflows
 
@@ -163,7 +169,31 @@ pusht nur das Image. Auf `main` gestartet, deployt er auch.
 - **Docker**: Image `riksorax/work-time-manager-api` → Docker Hub (nur bei nicht-PR)
 - **Deploy**: SSH auf Hetzner-Server, `docker compose up` (nur auf `main`), danach Smoke-Test gegen `https://api.work-time-manager.app/health` — Firebase-Projekt-ID und Service-Account-Credential werden als GitHub Secrets per SSH-Session-Env injiziert (`appleboy/ssh-action` `envs:`), es liegt **keine** `.env`-Datei auf dem Server
 
-**Uptime-Monitoring (Hetzner, siehe #207):** [Uptime-Kuma](https://github.com/louislam/uptime-kuma) läuft als weiterer Service (`uptime-kuma`) in `server/docker-compose.yml`, self-hosted hinter Traefik unter `status.work-time-manager.app`. Sowohl `deploy-api.yml` als auch `deploy-angular.yml` stellen den Container per `docker compose up -d --no-deps uptime-kuma` sicher (idempotent, kein eigener CI-Build nötig — öffentliches Image). Monitore (welche URLs überwacht werden) und Alerting-Kanäle (E-Mail/Telegram/Discord/...) werden einmalig über die Uptime-Kuma-Weboberfläche eingerichtet, dafür gibt es keine Env-Var-/Config-Datei-Konfiguration. Benötigt einen DNS-Eintrag für `status.work-time-manager.app` → Hetzner-Host (außerhalb dieses Repos).
+**Uptime-Monitoring (Hetzner, siehe #207):** [Uptime-Kuma](https://github.com/louislam/uptime-kuma) läuft als weiterer Service (`uptime-kuma`) in `server/docker-compose.yml`, self-hosted hinter Traefik unter `status.work-time-manager.app`. Sowohl `deploy-api.yml` als auch `deploy-angular.yml` stellen den Container per `docker compose up -d --no-deps uptime-kuma` sicher (idempotent, kein eigener CI-Build nötig — öffentliches Image). Monitore (welche URLs überwacht werden) werden einmalig über die Uptime-Kuma-Weboberfläche eingerichtet, dafür gibt es keine Env-Var-/Config-Datei-Konfiguration. Benötigt einen DNS-Eintrag für `status.work-time-manager.app` → Hetzner-Host (außerhalb dieses Repos). Alerting-Kanäle: siehe „Crashlytics-/Uptime-Kuma-Brücke“ unten (Webhook an die eigene Cloud Function) — E-Mail/Telegram/Discord bleiben zusätzlich möglich, sind aber nicht Teil dieses Repos.
+
+**Crashlytics-/Uptime-Kuma-Brücke (Firebase Cloud Functions, siehe #322):** `web/functions/`
+enthält drei Functions, die Fehler aus Quellen ohne native GitHub-Integration als Issue mit Label
+`bug` anlegen (Sentry hat das bereits eingebaut, siehe oben) — dedupliziert über einen versteckten
+Marker-Kommentar im Issue-Body, damit wiederholte Alarme keine Duplikate erzeugen:
+
+- `onCrashlyticsFatal` / `onCrashlyticsNonFatal` — Cloud-Functions-v2-Trigger auf
+  Firebase-Alerts, feuern bei einem neuen Crashlytics-Fehlertyp.
+- `uptimeKumaWebhook` — HTTP-Endpunkt, den Uptime-Kuma als „Webhook“-Benachrichtigungskanal
+  aufruft (Uptime-Kuma-Oberfläche → Settings → Notifications → Webhook, URL der Function +
+  `?secret=<UPTIME_KUMA_SECRET>` als Query-Parameter).
+
+**Einrichten (einmalig, aus `web/`):**
+```bash
+firebase functions:secrets:set GITHUB_TOKEN --project worktime-56c7a
+firebase functions:secrets:set UPTIME_KUMA_SECRET --project worktime-56c7a
+firebase deploy --only functions --project worktime-56c7a
+```
+- `GITHUB_TOKEN`: fein granuliertes Personal Access Token nur mit `issues:write` auf dieses Repo.
+- `UPTIME_KUMA_SECRET`: selbst gewählter Wert, identisch in der Uptime-Kuma-Webhook-URL (siehe oben)
+  und im Secret hinterlegen.
+
+Beide Secrets liegen im Firebase Secret Manager (`firebase functions:secrets:set`), **nicht** als
+GitHub-Repository-Secret — die Functions laufen außerhalb von GitHub Actions.
 
 ### Secrets und Variablen
 
