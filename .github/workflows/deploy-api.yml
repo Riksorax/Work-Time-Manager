@@ -122,11 +122,12 @@ jobs:
           API_DOCKER_TAG: ${{ steps.vars.outputs.deploy_tag }}
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
           FIREBASE_SERVICE_ACCOUNT_BASE64: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}
+          SENTRY_DSN_API: ${{ secrets.SENTRY_DSN_API }}
         with:
           host:     ${{ vars.HETZNER_HOST }}
           username: ${{ vars.HETZNER_USER }}
           key:      ${{ secrets.HETZNER_SSH_PRIVATE_KEY }}
-          envs:     API_DOCKER_TAG,FIREBASE_PROJECT_ID,FIREBASE_SERVICE_ACCOUNT_BASE64
+          envs:     API_DOCKER_TAG,FIREBASE_PROJECT_ID,FIREBASE_SERVICE_ACCOUNT_BASE64,SENTRY_DSN_API
           script: |
             set -e
             cd ~/projekte/work-time-manager
@@ -145,3 +146,18 @@ jobs:
 
             # Alte Images aufräumen
             docker image prune -f
+
+      # Prüft nach dem Deploy, ob die API von außen erreichbar ist. Traefik und der
+      # neue Container brauchen ein paar Sekunden, daher bis zu 2 Minuten Wiederholung.
+      - name: Smoke-Test
+        run: |
+          for i in $(seq 1 12); do
+            if BODY=$(curl -fsS --max-time 10 https://api.work-time-manager.app/health) && echo "$BODY" | grep -q '"healthy"'; then
+              echo "API erreichbar: https://api.work-time-manager.app/health"
+              exit 0
+            fi
+            echo "Versuch $i/12 fehlgeschlagen, neuer Versuch in 10 s ..."
+            sleep 10
+          done
+          echo "::error::Die API ist nach dem Deploy nicht erreichbar (https://api.work-time-manager.app/health). Rollback: CONTRIBUTING.md, Abschnitt Rollback."
+          exit 1

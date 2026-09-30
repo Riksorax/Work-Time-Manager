@@ -15,7 +15,9 @@ void main() {
       expect(hash1, isNot(equals(hash2)));
     });
 
-    test('liefert unterschiedliche Hashes für denselben PIN mit unterschiedlichem Salt', () {
+    test(
+        'liefert unterschiedliche Hashes für denselben PIN mit unterschiedlichem Salt',
+        () {
       final hash1 = hashPin('1234', 'salt-a');
       final hash2 = hashPin('1234', 'salt-b');
       expect(hash1, isNot(equals(hash2)));

@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:flutter_work_time/core/utils/logger.dart';
 
 /// AppBootstrap stellt sicher, dass Firebase initialisiert ist
 /// und Firebase App Check aktiviert wird (Android-only).
@@ -47,14 +48,14 @@ class AppBootstrap {
       await FirebaseAppCheck.instance.activate(
         androidProvider: androidProvider,
         appleProvider: AppleProvider.appAttest,
-        webProvider: kIsWeb && webRecaptchaSiteKey != null 
-            ? ReCaptchaV3Provider(webRecaptchaSiteKey) 
+        webProvider: kIsWeb && webRecaptchaSiteKey != null
+            ? ReCaptchaV3Provider(webRecaptchaSiteKey)
             : null,
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
       // Häufige Ursache: Play Integrity schlägt fehl bei Side-Load/Emulator
       if (!kIsWeb && androidProvider == AndroidProvider.playIntegrity) {
-        debugPrint(
+        logger.w(
           '[AppCheck] Play Integrity Aktivierung fehlgeschlagen. Fallback auf AndroidProvider.debug. '
           'Für Release: über Play (interner Test) installieren.',
         );
@@ -67,7 +68,8 @@ class AppBootstrap {
           // Ignorieren; Fehler wird beim ersten Request sichtbar.
         }
       } else {
-        debugPrint('[AppCheck] Fehler bei der Aktivierung: $e');
+        logger.e('[AppCheck] Fehler bei der Aktivierung',
+            error: e, stackTrace: stackTrace);
       }
     }
 
@@ -78,7 +80,8 @@ class AppBootstrap {
   }
 
   /// Bequeme Variante: in Debug App Check überspringen, in Release aktivieren.
-  static Future<void> ensureInitializedForEnv({String? webRecaptchaSiteKey}) async {
+  static Future<void> ensureInitializedForEnv(
+      {String? webRecaptchaSiteKey}) async {
     if (kReleaseMode) {
       return ensureInitialized(
         androidProvider: AndroidProvider.playIntegrity,
@@ -89,14 +92,15 @@ class AppBootstrap {
       // In Debug: App Check nicht aktivieren, um GMS/Phenotype-Rauschen zu vermeiden
       // Ausnahme: Wenn wir explizit Web debuggen wollen und einen Key haben
       if (kIsWeb && webRecaptchaSiteKey != null) {
-         debugPrint('[AppCheck] Debug-Build (Web): App Check wird aktiviert.');
-         return ensureInitialized(
-           webRecaptchaSiteKey: webRecaptchaSiteKey,
-           autoRefresh: true,
-         );
+        debugPrint('[AppCheck] Debug-Build (Web): App Check wird aktiviert.');
+        return ensureInitialized(
+          webRecaptchaSiteKey: webRecaptchaSiteKey,
+          autoRefresh: true,
+        );
       }
-      
-      debugPrint('[AppCheck] Debug-Build erkannt: App Check wird übersprungen.');
+
+      debugPrint(
+          '[AppCheck] Debug-Build erkannt: App Check wird übersprungen.');
       _initialized = true;
       return;
     }

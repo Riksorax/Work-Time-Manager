@@ -1,0 +1,52 @@
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { TranslatePipe } from '@ngx-translate/core';
+
+export interface EditTargetHoursDialogData   { currentHours: number; }
+export interface EditTargetHoursDialogResult { hours: number; }
+
+@Component({
+  selector: 'app-edit-target-hours-dialog',
+  imports: [ReactiveFormsModule, MatDialogModule, MatButtonModule, MatFormFieldModule, MatInputModule, TranslatePipe],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <h2 mat-dialog-title>{{ 'settings.targetHoursLabel' | translate }}</h2>
+    <mat-dialog-content>
+      <form [formGroup]="form">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>{{ 'settings.hoursPerWeekLabel' | translate }}</mat-label>
+          <input matInput type="number" formControlName="hours"
+                 min="1" max="48" step="0.5"
+                 [attr.aria-label]="'settings.editTargetHoursAria' | translate" />
+          <mat-hint>{{ 'settings.hoursPerWeekHint' | translate }}</mat-hint>
+        </mat-form-field>
+      </form>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button mat-button mat-dialog-close>{{ 'common.cancel' | translate }}</button>
+      <button mat-flat-button [disabled]="form.invalid" (click)="submit()">
+        {{ 'common.save' | translate }}
+      </button>
+    </mat-dialog-actions>
+  `,
+  styles: [`.full-width { width: 100%; min-width: 260px; } mat-dialog-content { padding-top: 8px; }`],
+})
+export class EditTargetHoursDialogComponent {
+  protected readonly data      = inject<EditTargetHoursDialogData>(MAT_DIALOG_DATA);
+  private  readonly dialogRef  = inject(MatDialogRef<EditTargetHoursDialogComponent>);
+  private  readonly fb         = inject(FormBuilder);
+
+  protected readonly form = this.fb.group({
+    // Gesetzliche Obergrenze nach § 3 ArbZG: max. 48 Std./Woche.
+    hours: [this.data.currentHours, [Validators.required, Validators.min(1), Validators.max(48)]],
+  });
+
+  submit(): void {
+    if (this.form.invalid) return;
+    this.dialogRef.close({ hours: this.form.getRawValue().hours! } satisfies EditTargetHoursDialogResult);
+  }
+}

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_work_time/core/providers/providers.dart';
+import 'package:flutter_work_time/domain/entities/app_theme_mode.dart';
 import 'package:flutter_work_time/domain/entities/bundesland.dart';
 import 'package:flutter_work_time/domain/entities/work_entry_entity.dart';
 import 'package:flutter_work_time/domain/repositories/overtime_repository.dart';
@@ -31,7 +32,9 @@ class _FakeWorkRepository implements WorkRepository {
   @override
   Future<void> saveWorkEntry(WorkEntryEntity entry) async {}
   @override
-  Future<List<WorkEntryEntity>> getWorkEntriesForMonth(int year, int month) async => [];
+  Future<List<WorkEntryEntity>> getWorkEntriesForMonth(
+          int year, int month) async =>
+      [];
   @override
   Future<void> deleteWorkEntry(String entryId) async {}
 }
@@ -74,9 +77,9 @@ class _DelayedOvertimeRepository implements OvertimeRepository {
 
 class _FakeSettingsRepository implements SettingsRepository {
   @override
-  ThemeMode getThemeMode() => ThemeMode.system;
+  AppThemeMode getThemeMode() => AppThemeMode.system;
   @override
-  Future<void> setThemeMode(ThemeMode mode) async {}
+  Future<void> setThemeMode(AppThemeMode mode) async {}
   @override
   double getTargetWeeklyHours() => 40.0;
   @override
@@ -186,12 +189,16 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            getTodayWorkEntryUseCaseProvider.overrideWithValue(_FakeGetTodayWorkEntry(entry)),
-            settingsRepositoryProvider.overrideWithValue(_FakeSettingsRepository()),
+            getTodayWorkEntryUseCaseProvider
+                .overrideWithValue(_FakeGetTodayWorkEntry(entry)),
+            settingsRepositoryProvider
+                .overrideWithValue(_FakeSettingsRepository()),
             overtimeRepositoryProvider.overrideWithValue(overtimeRepository),
-            setOvertimeUseCaseProvider.overrideWithValue(SetOvertime(overtimeRepository)),
+            setOvertimeUseCaseProvider
+                .overrideWithValue(SetOvertime(overtimeRepository)),
             workRepositoryProvider.overrideWithValue(_FakeWorkRepository()),
-            settingsViewModelProvider.overrideWith(_ImmediateSettingsViewModel.new),
+            settingsViewModelProvider
+                .overrideWith(_ImmediateSettingsViewModel.new),
           ],
           child: MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -212,7 +219,8 @@ void main() {
       final container = ProviderScope.containerOf(capturedContext);
       container.read(dashboardViewModelProvider.notifier);
       await tester.pumpAndSettle();
-      expect(container.read(dashboardViewModelProvider).initialOvertime, Duration.zero);
+      expect(container.read(dashboardViewModelProvider).initialOvertime,
+          Duration.zero);
 
       // Real dialog route, exactly like `showDialog` in SettingsPage - only
       // this way does `Navigator.pop()` actually dispose the dialog's
@@ -246,7 +254,8 @@ void main() {
       expect(find.byType(AddAdjustmentModal), findsNothing);
 
       // ...and the Dashboard actually received the update.
-      expect(container.read(dashboardViewModelProvider).initialOvertime, const Duration(hours: 5));
+      expect(container.read(dashboardViewModelProvider).initialOvertime,
+          const Duration(hours: 5));
     },
   );
 }

@@ -1,5 +1,5 @@
 @if (svc.isLoading()) {
-  <div class="loading-state" aria-label="Lade Dashboard...">
+  <div class="loading-state" [attr.aria-label]="'dashboard.loading' | translate">
     <mat-spinner diameter="48" />
   </div>
 } @else {
@@ -10,16 +10,16 @@
       <div class="main-column">
 
         <section class="timer-section" aria-live="polite" aria-atomic="true">
-          <p class="timer-label">Nettoarbeitszeit</p>
+          <p class="timer-label">{{ 'dashboard.netWorkTime' | translate }}</p>
           <h1 class="display-time">{{ formatDuration(svc.netDuration()) }}</h1>
-          <p class="gross-time">Anwesenheit (Brutto): {{ formatDuration(svc.grossDuration()) }}</p>
+          <p class="gross-time">{{ 'dashboard.grossAttendance' | translate: { duration: formatDuration(svc.grossDuration()) } }}</p>
         </section>
 
         <mat-divider />
 
         <section class="overtime-stats">
           <div class="stat-row">
-            <span class="stat-label">Heutige Überstunden</span>
+            <span class="stat-label">{{ 'dashboard.overtimeTodayLabel' | translate }}</span>
             <span class="stat-value"
                   [style.color]="(svc.dailyOvertime() ?? 0) >= 0 ? 'var(--color-overtime-positive)' : 'var(--mat-sys-error)'">
               {{ formatOvertime(svc.dailyOvertime()) }}
@@ -27,7 +27,7 @@
           </div>
 
           <div class="stat-row">
-            <span class="stat-label">Gesamtüberstunden</span>
+            <span class="stat-label">{{ 'dashboard.overtimeTotalLabel' | translate }}</span>
             <span class="stat-value"
                   [style.color]="(svc.totalOvertime() ?? 0) >= 0 ? 'var(--color-overtime-positive)' : 'var(--mat-sys-error)'">
               {{ formatOvertime(svc.totalOvertime()) }}
@@ -35,22 +35,20 @@
             <button mat-icon-button
                     class="adjust-btn"
                     (click)="openAdjustOvertimeDialog()"
-                    aria-label="Überstunden manuell anpassen"
-                    matTooltip="Gleitzeit-Bilanz anpassen">
+                    [attr.aria-label]="'dashboard.adjustOvertimeAria' | translate"
+                    [matTooltip]="'dashboard.adjustOvertimeAria' | translate">
               <mat-icon>tune</mat-icon>
             </button>
           </div>
 
           @if (svc.isTimerRunning() && svc.expectedEndTime()) {
             <p class="prediction-hint">
-              Voraussichtlicher Feierabend (±0 Tag):
-              <strong>{{ svc.expectedEndTime() | date:'HH:mm' }} Uhr</strong>
+              {{ 'dashboard.expectedEndTime' | translate: { time: (svc.expectedEndTime() | date:'HH:mm') } }}
             </p>
           }
           @if (svc.isTimerRunning() && svc.expectedEndTotalZero()) {
             <p class="prediction-hint prediction-hint--total">
-              Feierabend bei Gesamtüberstunden ±0:
-              <strong>{{ svc.expectedEndTotalZero() | date:'HH:mm' }} Uhr</strong>
+              {{ 'dashboard.expectedEndTotalZero' | translate: { time: (svc.expectedEndTotalZero() | date:'HH:mm') } }}
             </p>
           }
         </section>
@@ -62,20 +60,20 @@
 
         <section class="controls-section">
           <app-time-input
-            label="Startzeit"
+            [label]="'dashboard.startTimeLabel' | translate"
             [value]="svc.workEntry().workStart"
             (timeSelected)="onStartTimeSelected($event)"
-            aria-label="Startzeit manuell eingeben"
+            [attr.aria-label]="'dashboard.startTimeAria' | translate"
           />
 
           <app-time-input
-            label="Endzeit"
+            [label]="'dashboard.endTimeLabel' | translate"
             [value]="svc.workEntry().workEnd"
             [showClear]="true"
             [disabled]="!svc.workEntry().workStart"
             (timeSelected)="onEndTimeSelected($event)"
             (cleared)="onClearEndTime()"
-            aria-label="Endzeit manuell eingeben"
+            [attr.aria-label]="'dashboard.endTimeAria' | translate"
           />
 
           <button
@@ -83,10 +81,10 @@
             class="main-action-btn"
             [class.running]="svc.isTimerRunning()"
             (click)="onMainAction()"
-            [attr.aria-label]="svc.isTimerRunning() ? 'Zeiterfassung beenden' : 'Zeiterfassung starten'"
+            [attr.aria-label]="(svc.isTimerRunning() ? 'dashboard.stopTimeTracking' : 'dashboard.startTimeTracking') | translate"
           >
             <mat-icon>{{ svc.isTimerRunning() ? 'stop_circle' : 'play_circle' }}</mat-icon>
-            {{ svc.isTimerRunning() ? 'Zeiterfassung beenden' : 'Zeiterfassung starten' }}
+            {{ (svc.isTimerRunning() ? 'dashboard.stopTimeTracking' : 'dashboard.startTimeTracking') | translate }}
           </button>
         </section>
 
@@ -94,19 +92,19 @@
 
         <section class="breaks-section">
           <div class="section-header">
-            <h3>Pausen</h3>
+            <h3>{{ 'dashboard.breaksTitle' | translate }}</h3>
             @if (svc.workEntry().workStart) {
               <button mat-stroked-button (click)="onBreakAction()"
-                      [attr.aria-label]="svc.isBreakRunning() ? 'Pause beenden' : 'Pause starten'">
+                      [attr.aria-label]="(svc.isBreakRunning() ? 'dashboard.stopBreak' : 'dashboard.startBreak') | translate">
                 <mat-icon>{{ svc.isBreakRunning() ? 'stop' : 'coffee' }}</mat-icon>
-                {{ svc.isBreakRunning() ? 'Pause beenden' : 'Pause starten' }}
+                {{ (svc.isBreakRunning() ? 'dashboard.stopBreak' : 'dashboard.startBreak') | translate }}
               </button>
             }
           </div>
 
           <div class="breaks-list">
             @if (svc.breaks().length === 0) {
-              <p class="empty-hint">Noch keine Pausen eingetragen.</p>
+              <p class="empty-hint">{{ 'dashboard.noBreaksYet' | translate }}</p>
             }
             @for (b of svc.breaks(); track b.id) {
               <div class="break-item">
@@ -116,24 +114,24 @@
                   <div class="break-title">
                     {{ b.name }}
                     @if (b.isAutomatic) {
-                      <span class="auto-badge">Automatisch</span>
+                      <span class="auto-badge">{{ 'dashboard.automaticChipLabel' | translate }}</span>
                     }
                   </div>
                   <div class="break-time">
-                    {{ b.start | date:'HH:mm' }} – {{ b.end ? (b.end | date:'HH:mm') : 'läuft…' }}
+                    {{ b.start | date:'HH:mm' }} – {{ b.end ? (b.end | date:'HH:mm') : ('dashboard.breakInProgress' | translate) }}
                   </div>
                 </div>
 
                 <div class="break-actions">
                   <button mat-icon-button
                           (click)="onEditBreak(b)"
-                          [attr.aria-label]="'Pause ' + b.name + ' bearbeiten'">
+                          [attr.aria-label]="'dashboard.editBreakAria' | translate: { name: b.name }">
                     <mat-icon>edit</mat-icon>
                   </button>
                   <button mat-icon-button
                           class="delete-btn"
                           (click)="onDeleteBreak(b.id)"
-                          [attr.aria-label]="'Pause ' + b.name + ' löschen'">
+                          [attr.aria-label]="'dashboard.deleteBreakAria' | translate: { name: b.name }">
                     <mat-icon>delete</mat-icon>
                   </button>
                 </div>

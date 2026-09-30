@@ -29,7 +29,8 @@ class InsightsViewModel extends Notifier<InsightsState> {
     state = state.copyWith(isLoading: true);
 
     final workRepository = ref.read(core_providers.workRepositoryProvider);
-    final settingsRepository = ref.read(core_providers.settingsRepositoryProvider);
+    final settingsRepository =
+        ref.read(core_providers.settingsRepositoryProvider);
     final workdays = settingsRepository.getWorkdays();
     final targetWeeklyHours = settingsRepository.getTargetWeeklyHours();
     final dailyTarget = workdays.isEmpty
@@ -44,7 +45,8 @@ class InsightsViewModel extends Notifier<InsightsState> {
 
     try {
       final entriesPerMonth = await Future.wait(
-        months.map((m) => workRepository.getWorkEntriesForMonth(m.year, m.month)),
+        months
+            .map((m) => workRepository.getWorkEntriesForMonth(m.year, m.month)),
       );
       final entries = entriesPerMonth.expand((e) => e).toList();
 
@@ -57,11 +59,14 @@ class InsightsViewModel extends Notifier<InsightsState> {
           dailyTarget: dailyTarget,
           warningThresholdDays: _burnoutWarningThresholdDays,
         ),
-        heatmap: buildStartTimeHeatmap(entries: entries, dailyTarget: dailyTarget),
+        heatmap:
+            buildStartTimeHeatmap(entries: entries, dailyTarget: dailyTarget),
       );
     } catch (e, stackTrace) {
-      logger.e('[InsightsViewModel] Fehler beim Laden der Insights: $e', stackTrace: stackTrace);
-      state = state.copyWith(isLoading: false, weekdayAverages: [], heatmap: []);
+      logger.e('[InsightsViewModel] Fehler beim Laden der Insights: $e',
+          stackTrace: stackTrace);
+      state =
+          state.copyWith(isLoading: false, weekdayAverages: [], heatmap: []);
     }
   }
 }

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart' show ThemeMode;
+import '../entities/app_theme_mode.dart';
 import '../repositories/settings_repository.dart';
 
 /// Use Case zum Setzen des Theme-Modus.
@@ -7,7 +7,7 @@ class SetThemeMode {
 
   SetThemeMode(this._repository);
 
-  Future<void> call(ThemeMode mode) async {
+  Future<void> call(AppThemeMode mode) async {
     await _repository.setThemeMode(mode);
   }
 }

@@ -1,0 +1,8 @@
+# Commits listed here are ignored by `git blame` (configure with
+# `git config blame.ignoreRevsFile .git-blame-ignore-revs`, or GitHub picks
+# this file up automatically).
+#
+# Nur reine Formatierungs-Commits eintragen - keine inhaltlichen Änderungen.
+
+# chore(mobile): dart format lib test (#299)
+a8edd249d764871d2a56c27ca7e45aa1315f35b7

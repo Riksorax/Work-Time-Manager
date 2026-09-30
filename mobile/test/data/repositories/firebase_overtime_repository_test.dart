@@ -55,7 +55,8 @@ void main() {
       test('should return cached value after loadOvertimeAsync', () async {
         const expectedOvertime = Duration(hours: 10);
 
-        when(mockDataSource.getOvertime(any)).thenAnswer((_) async => expectedOvertime);
+        when(mockDataSource.getOvertime(any))
+            .thenAnswer((_) async => expectedOvertime);
 
         // Explizit laden
         final loadedOvertime = await repository.loadOvertimeAsync();
@@ -73,17 +74,20 @@ void main() {
       test('should save last update date to Firestore', () async {
         final testDate = DateTime(2026, 1, 29, 14, 30);
 
-        when(mockDataSource.saveLastOvertimeUpdate(any, any)).thenAnswer((_) async {});
+        when(mockDataSource.saveLastOvertimeUpdate(any, any))
+            .thenAnswer((_) async {});
 
         await repository.saveLastUpdateDate(testDate);
 
-        verify(mockDataSource.saveLastOvertimeUpdate(testUserId, testDate)).called(1);
+        verify(mockDataSource.saveLastOvertimeUpdate(testUserId, testDate))
+            .called(1);
       });
 
       test('should update local cache after saving', () async {
         final testDate = DateTime(2026, 1, 29);
 
-        when(mockDataSource.saveLastOvertimeUpdate(any, any)).thenAnswer((_) async {});
+        when(mockDataSource.saveLastOvertimeUpdate(any, any))
+            .thenAnswer((_) async {});
 
         await repository.saveLastUpdateDate(testDate);
 
@@ -101,7 +105,8 @@ void main() {
       test('should return cached value after loadLastUpdateAsync', () async {
         final expectedDate = DateTime(2026, 1, 28, 10, 0);
 
-        when(mockDataSource.getLastOvertimeUpdate(any)).thenAnswer((_) async => expectedDate);
+        when(mockDataSource.getLastOvertimeUpdate(any))
+            .thenAnswer((_) async => expectedDate);
 
         final loadedDate = await repository.loadLastUpdateAsync();
         expect(loadedDate, expectedDate);
@@ -113,7 +118,8 @@ void main() {
       });
 
       test('should return null from Firestore when no date exists', () async {
-        when(mockDataSource.getLastOvertimeUpdate(any)).thenAnswer((_) async => null);
+        when(mockDataSource.getLastOvertimeUpdate(any))
+            .thenAnswer((_) async => null);
 
         final loadedDate = await repository.loadLastUpdateAsync();
         expect(loadedDate, isNull);
@@ -124,7 +130,8 @@ void main() {
       test('should load overtime from Firestore and cache it', () async {
         const expectedOvertime = Duration(hours: 7, minutes: 45);
 
-        when(mockDataSource.getOvertime(any)).thenAnswer((_) async => expectedOvertime);
+        when(mockDataSource.getOvertime(any))
+            .thenAnswer((_) async => expectedOvertime);
 
         final result = await repository.loadOvertimeAsync();
 

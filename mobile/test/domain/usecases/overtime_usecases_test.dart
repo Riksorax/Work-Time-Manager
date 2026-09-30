@@ -66,7 +66,8 @@ void main() {
   });
 
   group('SetOvertime', () {
-    test('should save exact overtime without date when isManual is false', () async {
+    test('should save exact overtime without date when isManual is false',
+        () async {
       const overtime = Duration(hours: 20);
 
       when(mockRepository.saveOvertime(any)).thenAnswer((_) async {});
@@ -88,7 +89,8 @@ void main() {
       verifyNever(mockRepository.saveLastUpdateDate(any));
     });
 
-    test('should save overtime and update date when isManual is true', () async {
+    test('should save overtime and update date when isManual is true',
+        () async {
       const overtime = Duration(hours: 15);
 
       when(mockRepository.saveOvertime(any)).thenAnswer((_) async {});

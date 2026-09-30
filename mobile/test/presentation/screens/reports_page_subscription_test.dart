@@ -10,7 +10,8 @@ import 'package:flutter_work_time/presentation/view_models/auth_view_model.dart'
 
 void main() {
   group('Reports Page Subscription Tests', () {
-    testWidgets('WeeklyReportView shows login button when user is null', (tester) async {
+    testWidgets('WeeklyReportView shows login button when user is null',
+        (tester) async {
       final controller = StreamController<UserEntity?>();
 
       await tester.pumpWidget(
@@ -26,19 +27,23 @@ void main() {
           ),
         ),
       );
-      
+
       controller.add(null);
       await tester.pump(); // Process stream event
 
-      expect(find.text('Anmeldung erforderlich für Wochenberichte'), findsOneWidget);
+      expect(find.text('Anmeldung erforderlich für Wochenberichte'),
+          findsOneWidget);
       expect(find.text('Anmelden'), findsOneWidget);
       expect(find.text('Premium-Funktion'), findsNothing);
-      
+
       await controller.close();
     });
 
-    testWidgets('WeeklyReportView shows premium blur gate when user is logged in but NO premium', (tester) async {
-      const user = UserEntity(id: '123', email: 'test@test.com', displayName: 'Test User');
+    testWidgets(
+        'WeeklyReportView shows premium blur gate when user is logged in but NO premium',
+        (tester) async {
+      const user = UserEntity(
+          id: '123', email: 'test@test.com', displayName: 'Test User');
 
       await tester.pumpWidget(
         ProviderScope(
@@ -57,7 +62,8 @@ void main() {
       await tester.pump(); // Allow Stream to emit
 
       // Login Screen sollte weg sein
-      expect(find.text('Anmelden erforderlich für Wochenberichte'), findsNothing);
+      expect(
+          find.text('Anmelden erforderlich für Wochenberichte'), findsNothing);
 
       // Blur-Gate mit Kaufanreiz sollte da sein
       expect(find.text('Wochenberichte'), findsOneWidget);
@@ -65,7 +71,8 @@ void main() {
       expect(find.byIcon(Icons.workspace_premium), findsWidgets);
     });
 
-    testWidgets('MonthlyReportView shows login button when user is null', (tester) async {
+    testWidgets('MonthlyReportView shows login button when user is null',
+        (tester) async {
       final controller = StreamController<UserEntity?>();
 
       await tester.pumpWidget(
@@ -81,18 +88,22 @@ void main() {
           ),
         ),
       );
-      
+
       controller.add(null);
       await tester.pump();
 
-      expect(find.text('Anmeldung erforderlich für Monatsberichte'), findsOneWidget);
+      expect(find.text('Anmeldung erforderlich für Monatsberichte'),
+          findsOneWidget);
       expect(find.text('Anmelden'), findsOneWidget);
-      
+
       await controller.close();
     });
 
-    testWidgets('MonthlyReportView shows premium blur gate when user is logged in but NO premium', (tester) async {
-      const user = UserEntity(id: '123', email: 'test@test.com', displayName: 'Test User');
+    testWidgets(
+        'MonthlyReportView shows premium blur gate when user is logged in but NO premium',
+        (tester) async {
+      const user = UserEntity(
+          id: '123', email: 'test@test.com', displayName: 'Test User');
 
       await tester.pumpWidget(
         ProviderScope(
@@ -111,7 +122,8 @@ void main() {
       await tester.pump(); // Allow Stream to emit
 
       // Login Screen sollte weg sein
-      expect(find.text('Anmelden erforderlich für Monatsberichte'), findsNothing);
+      expect(
+          find.text('Anmelden erforderlich für Monatsberichte'), findsNothing);
 
       // Blur-Gate mit Kaufanreiz sollte da sein
       expect(find.text('Monatsberichte'), findsOneWidget);

@@ -4,6 +4,7 @@ import {
   ElementRef,
   computed,
   effect,
+  inject,
   input,
   output,
   signal,
@@ -13,6 +14,7 @@ import {
 import { DatePipe } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 function toKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -20,7 +22,7 @@ function toKey(d: Date): string {
 
 @Component({
   selector: 'app-calendar',
-  imports: [DatePipe, MatButtonModule, MatIconModule],
+  imports: [DatePipe, MatButtonModule, MatIconModule, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="calendar-card"
@@ -31,13 +33,13 @@ function toKey(d: Date): string {
          (pointercancel)="onCardPointerUp($event)">
 
       <div class="calendar-header">
-        <button mat-icon-button (click)="changeMonth(-1)" aria-label="Vorheriger Monat">
+        <button mat-icon-button (click)="changeMonth(-1)" [attr.aria-label]="'shared.calendarPrevMonthAria' | translate">
           <mat-icon>chevron_left</mat-icon>
         </button>
         <div class="current-month" aria-live="polite">
           {{ viewDate() | date:'MMMM yyyy' }}
         </div>
-        <button mat-icon-button (click)="changeMonth(1)" aria-label="Nächster Monat">
+        <button mat-icon-button (click)="changeMonth(1)" [attr.aria-label]="'shared.calendarNextMonthAria' | translate">
           <mat-icon>chevron_right</mat-icon>
         </button>
       </div>
@@ -158,8 +160,10 @@ export class CalendarComponent {
   readonly monthChanged = output<{ year: number; month: number }>();
   readonly dragSelected = output<Date[]>();
 
+  private readonly translate = inject(TranslateService);
+
   readonly viewDate = signal(new Date());
-  readonly weekDays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+  readonly weekDays: string[] = this.translate.instant('common.weekdaysShort');
 
   private readonly _cardRef = viewChild<ElementRef<HTMLElement>>('calendarCard');
 

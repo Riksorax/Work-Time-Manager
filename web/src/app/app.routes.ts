@@ -32,5 +32,10 @@ export const routes: Routes = [
         loadComponent: () => import('./core/auth/login').then(m => m.LoginComponent)
       }
     ]
+  },
+  {
+    path: '**',
+    title: 'Seite nicht gefunden – Work Time Manager',
+    loadComponent: () => import('./features/not-found/not-found').then(m => m.NotFoundComponent)
   }
 ];

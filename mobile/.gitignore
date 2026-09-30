@@ -210,6 +210,7 @@ google-services.json
 
 # Claude Code settings (local development)
 thoughts/*
+!thoughts/README.md
 
 # Documentation files (local development guides)
 FIRESTORE_SECURITY_RULES.md

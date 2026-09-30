@@ -10,7 +10,8 @@ class ResponsiveCenter extends StatelessWidget {
   const ResponsiveCenter({
     super.key,
     required this.child,
-    this.maxContentWidth = 800.0, // Default max width for content like dashboard/forms
+    this.maxContentWidth =
+        800.0, // Default max width for content like dashboard/forms
     this.padding = const EdgeInsets.symmetric(horizontal: 16.0),
   });
 

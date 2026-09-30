@@ -32,7 +32,8 @@ void main() {
     mockCallback = MockSaveWorkEntryCallback();
     container = ProviderContainer(
       overrides: [
-        reportsViewModelProvider.overrideWith(() => FakeReportsViewModel(mockCallback)),
+        reportsViewModelProvider
+            .overrideWith(() => FakeReportsViewModel(mockCallback)),
       ],
     );
   });
@@ -43,7 +44,8 @@ void main() {
 
   group('EditWorkEntryViewModel', () {
     test('initial state should be derived from work entry', () {
-      final state = container.read(editWorkEntryViewModelProvider(initialEntry));
+      final state =
+          container.read(editWorkEntryViewModelProvider(initialEntry));
 
       expect(state.type, WorkEntryType.work);
       expect(state.newStartTime, initialEntry.workStart);
@@ -51,65 +53,88 @@ void main() {
     });
 
     test('setType should update type', () {
-      final viewModel = container.read(editWorkEntryViewModelProvider(initialEntry).notifier);
+      final viewModel =
+          container.read(editWorkEntryViewModelProvider(initialEntry).notifier);
       viewModel.setType(WorkEntryType.sick);
-      
-      final state = container.read(editWorkEntryViewModelProvider(initialEntry));
+
+      final state =
+          container.read(editWorkEntryViewModelProvider(initialEntry));
       expect(state.type, WorkEntryType.sick);
     });
 
     test('addBreak should add a new break to the list', () {
-      final viewModel = container.read(editWorkEntryViewModelProvider(initialEntry).notifier);
+      final viewModel =
+          container.read(editWorkEntryViewModelProvider(initialEntry).notifier);
       viewModel.addBreak();
-      
-      final state = container.read(editWorkEntryViewModelProvider(initialEntry));
+
+      final state =
+          container.read(editWorkEntryViewModelProvider(initialEntry));
       expect(state.breaks.length, 1);
       expect(state.breaks.first.name, contains('#1'));
     });
 
     test('updateBreak should modify existing break', () {
-      final viewModel = container.read(editWorkEntryViewModelProvider(initialEntry).notifier);
+      final viewModel =
+          container.read(editWorkEntryViewModelProvider(initialEntry).notifier);
       viewModel.addBreak();
-      final breakId = container.read(editWorkEntryViewModelProvider(initialEntry)).breaks.first.id;
-      
+      final breakId = container
+          .read(editWorkEntryViewModelProvider(initialEntry))
+          .breaks
+          .first
+          .id;
+
       final newStart = DateTime(2023, 10, 26, 12, 0);
       viewModel.updateBreak(breakId, newName: 'Lunch', newStart: newStart);
-      
-      final state = container.read(editWorkEntryViewModelProvider(initialEntry));
+
+      final state =
+          container.read(editWorkEntryViewModelProvider(initialEntry));
       expect(state.breaks.first.name, 'Lunch');
       expect(state.breaks.first.start, newStart);
     });
 
     test('deleteBreak should remove break from list', () {
-      final viewModel = container.read(editWorkEntryViewModelProvider(initialEntry).notifier);
+      final viewModel =
+          container.read(editWorkEntryViewModelProvider(initialEntry).notifier);
       viewModel.addBreak();
-      final breakId = container.read(editWorkEntryViewModelProvider(initialEntry)).breaks.first.id;
-      
+      final breakId = container
+          .read(editWorkEntryViewModelProvider(initialEntry))
+          .breaks
+          .first
+          .id;
+
       viewModel.deleteBreak(breakId);
-      
-      final state = container.read(editWorkEntryViewModelProvider(initialEntry));
+
+      final state =
+          container.read(editWorkEntryViewModelProvider(initialEntry));
       expect(state.breaks, isEmpty);
     });
 
-    test('saveChanges should call reportsViewModel.saveWorkEntry with updated data', () async {
-      final viewModel = container.read(editWorkEntryViewModelProvider(initialEntry).notifier);
-      
+    test(
+        'saveChanges should call reportsViewModel.saveWorkEntry with updated data',
+        () async {
+      final viewModel =
+          container.read(editWorkEntryViewModelProvider(initialEntry).notifier);
+
       final newStartTime = DateTime(2023, 10, 26, 7, 30);
       viewModel.setStartTime(newStartTime);
-      
+
       await viewModel.saveChanges();
-      
-      final captured = verify(mockCallback.call(captureAny)).captured.single as WorkEntryEntity;
+
+      final captured = verify(mockCallback.call(captureAny)).captured.single
+          as WorkEntryEntity;
       expect(captured.workStart, newStartTime);
       expect(captured.isManuallyEntered, true);
     });
 
-    test('saveChanges should not save if work start is missing for type work', () async {
-      final entryWithoutStart = WorkEntryEntity(id: '2', date: baseDate, workStart: null);
-      final viewModel = container.read(editWorkEntryViewModelProvider(entryWithoutStart).notifier);
-      
+    test('saveChanges should not save if work start is missing for type work',
+        () async {
+      final entryWithoutStart =
+          WorkEntryEntity(id: '2', date: baseDate, workStart: null);
+      final viewModel = container
+          .read(editWorkEntryViewModelProvider(entryWithoutStart).notifier);
+
       await viewModel.saveChanges();
-      
+
       verifyNever(mockCallback.call(any));
     });
   });

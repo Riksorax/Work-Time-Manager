@@ -44,5 +44,6 @@ class EditWorkEntryState extends Equatable {
   }
 
   @override
-  List<Object?> get props => [originalEntry, newStartTime, newEndTime, breaks, type];
+  List<Object?> get props =>
+      [originalEntry, newStartTime, newEndTime, breaks, type];
 }

@@ -39,5 +39,6 @@ class SettingsState extends Equatable {
   }
 
   @override
-  List<Object?> get props => [settings, overtimeBalance, lastOvertimeUpdate, isLoading];
+  List<Object?> get props =>
+      [settings, overtimeBalance, lastOvertimeUpdate, isLoading];
 }

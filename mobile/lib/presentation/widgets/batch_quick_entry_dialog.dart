@@ -61,7 +61,8 @@ class _BatchQuickEntryDialogState extends State<BatchQuickEntryDialog> {
     final firstDate = sortedDates.first;
     final lastDate = sortedDates.last;
 
-    final formatter = DateFormat.yMMMMd(Localizations.localeOf(context).toString());
+    final formatter =
+        DateFormat.yMMMMd(Localizations.localeOf(context).toString());
     if (firstDate.year == lastDate.year &&
         firstDate.month == lastDate.month &&
         firstDate.day == lastDate.day) {
@@ -133,4 +134,3 @@ class _BatchQuickEntryDialogState extends State<BatchQuickEntryDialog> {
     );
   }
 }
-

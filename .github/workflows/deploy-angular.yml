@@ -208,3 +208,18 @@ jobs:
 
             # Alte Images aufräumen
             docker image prune -f
+
+      # Prüft nach dem Deploy, ob die Web-App von außen erreichbar ist. Traefik und der
+      # neue Container brauchen ein paar Sekunden, daher bis zu 2 Minuten Wiederholung.
+      - name: Smoke-Test
+        run: |
+          for i in $(seq 1 12); do
+            if BODY=$(curl -fsS --max-time 10 https://work-time-manager.app/) && echo "$BODY" | grep -q '<app-root'; then
+              echo "Web-App erreichbar: https://work-time-manager.app/"
+              exit 0
+            fi
+            echo "Versuch $i/12 fehlgeschlagen, neuer Versuch in 10 s ..."
+            sleep 10
+          done
+          echo "::error::Die Web-App ist nach dem Deploy nicht erreichbar (https://work-time-manager.app/). Rollback: CONTRIBUTING.md, Abschnitt Rollback."
+          exit 1

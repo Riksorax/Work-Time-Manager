@@ -1,5 +1,5 @@
 @if (svc.isLoading()) {
-  <div class="loading-state" aria-label="Einstellungen werden geladen">
+  <div class="loading-state" [attr.aria-label]="'settings.loadingAria' | translate">
     <mat-spinner diameter="48" />
   </div>
 } @else {
@@ -10,11 +10,11 @@
       <div class="column">
 
         <!-- ── Profil-Sektion ───────────────────────────────────── -->
-        <section class="profile-section" aria-label="Profil">
+        <section class="profile-section" [attr.aria-label]="'settings.profileAria' | translate">
           <div class="profile-header">
             <div class="avatar" aria-hidden="true">
               @if (svc.user()?.photoURL) {
-                <img [src]="svc.user()!.photoURL!" alt="Profilbild" />
+                <img [src]="svc.user()!.photoURL!" [attr.alt]="'settings.profileImageAlt' | translate" />
               } @else {
                 <div class="avatar-placeholder">
                   {{ (svc.user()?.displayName || svc.user()?.email || '?')[0].toUpperCase() }}
@@ -23,24 +23,24 @@
             </div>
             <div class="profile-info">
               @if (svc.isLoggedIn()) {
-                <h3 class="profile-name">{{ svc.user()?.displayName || 'Benutzer' }}</h3>
+                <h3 class="profile-name">{{ svc.user()?.displayName || ('settings.defaultUserName' | translate) }}</h3>
                 <p class="profile-email">{{ svc.user()?.email }}</p>
                 @if (svc.isPremium()) {
-                  <span class="premium-badge" aria-label="Premium-Mitglied">
+                  <span class="premium-badge" [attr.aria-label]="'settings.premiumMemberAria' | translate">
                     <mat-icon aria-hidden="true">workspace_premium</mat-icon>
-                    Premium
+                    {{ 'settings.premiumBadge' | translate }}
                   </span>
                 }
               } @else {
-                <h3 class="profile-name">Nicht angemeldet</h3>
-                <p class="profile-email">Lokal gespeicherte Daten</p>
+                <h3 class="profile-name">{{ 'settings.notLoggedInName' | translate }}</h3>
+                <p class="profile-email">{{ 'settings.notLoggedInSub' | translate }}</p>
               }
             </div>
             @if (svc.isLoggedIn()) {
               <button mat-icon-button
                       class="delete-account-btn"
                       (click)="onDeleteAccount()"
-                      aria-label="Account endgültig löschen"
+                      [attr.aria-label]="'settings.deleteAccountAria' | translate"
                       [style.color]="'var(--mat-sys-error)'">
                 <mat-icon>delete_forever</mat-icon>
               </button>
@@ -51,30 +51,30 @@
         <mat-divider />
 
         <!-- ── Arbeitszeit-Einstellungen ────────────────────────── -->
-        <section class="config-section" aria-label="Arbeitszeit-Einstellungen">
-          <h3 class="section-title">Arbeitszeit</h3>
+        <section class="config-section" [attr.aria-label]="'settings.workTimeSectionAria' | translate">
+          <h3 class="section-title">{{ 'settings.workTimeSectionTitle' | translate }}</h3>
 
           <mat-list>
             <button mat-list-item (click)="openEditTargetHoursDialog()"
-                    aria-label="Soll-Arbeitsstunden bearbeiten">
+                    [attr.aria-label]="'settings.editTargetHoursAria' | translate">
               <mat-icon matListItemIcon aria-hidden="true">timer</mat-icon>
-              <span matListItemTitle>Soll-Arbeitsstunden</span>
-              <span matListItemLine>{{ svc.settings().weeklyTargetHours.toFixed(1) }} h/Woche</span>
+              <span matListItemTitle>{{ 'settings.targetHoursLabel' | translate }}</span>
+              <span matListItemLine>{{ 'settings.targetHoursPerWeek' | translate: { hours: svc.settings().weeklyTargetHours.toFixed(1) } }}</span>
               <mat-icon matListItemMeta aria-hidden="true">chevron_right</mat-icon>
             </button>
 
             <button mat-list-item (click)="openEditWorkdaysDialog()"
-                    aria-label="Arbeitstage bearbeiten">
+                    [attr.aria-label]="'settings.editWorkdaysAria' | translate">
               <mat-icon matListItemIcon aria-hidden="true">calendar_today</mat-icon>
-              <span matListItemTitle>Arbeitstage</span>
+              <span matListItemTitle>{{ 'settings.workdaysLabel' | translate }}</span>
               <span matListItemLine>{{ formatWorkdays(svc.settings().workdays) }}</span>
               <mat-icon matListItemMeta aria-hidden="true">chevron_right</mat-icon>
             </button>
 
             <mat-list-item>
               <mat-icon matListItemIcon aria-hidden="true">schedule</mat-icon>
-              <span matListItemTitle>Tägliche Soll-Arbeitszeit</span>
-              <span matListItemLine>≈ {{ dailyTargetHours() }} h/Tag</span>
+              <span matListItemTitle>{{ 'settings.dailyTargetLabel' | translate }}</span>
+              <span matListItemLine>{{ 'settings.dailyTargetValue' | translate: { hours: dailyTargetHours() } }}</span>
             </mat-list-item>
           </mat-list>
         </section>
@@ -82,8 +82,8 @@
         <mat-divider />
 
         <!-- ── Gleitzeit-Bilanz ─────────────────────────────────── -->
-        <section class="overtime-section" aria-label="Gleitzeit-Bilanz">
-          <h3 class="section-title">Gleitzeit-Bilanz</h3>
+        <section class="overtime-section" [attr.aria-label]="'settings.overtimeSectionAria' | translate">
+          <h3 class="section-title">{{ 'settings.overtimeSectionTitle' | translate }}</h3>
 
           <div class="overtime-display" aria-live="polite">
             <span class="overtime-value"
@@ -92,46 +92,42 @@
             </span>
             @if (svc.lastOvertimeUpdate()) {
               <span class="overtime-date">
-                Letzte Änderung: {{ svc.lastOvertimeUpdate() | date:'dd.MM.yyyy' }}
+                {{ 'settings.lastOvertimeUpdate' | translate: { date: (svc.lastOvertimeUpdate() | date:'dd.MM.yyyy') } }}
               </span>
             }
           </div>
 
           <button mat-flat-button
                   (click)="openAdjustOvertimeDialog()"
-                  aria-label="Überstunden oder Minusstunden manuell anpassen">
+                  [attr.aria-label]="'settings.adjustOvertimeAria' | translate">
             <mat-icon>tune</mat-icon>
-            Überstunden / Minusstunden anpassen
+            {{ 'settings.adjustOvertimeButton' | translate }}
           </button>
         </section>
 
         <mat-divider />
 
         <!-- ── Daten-Synchronisation ────────────────────────────── -->
-        <section class="sync-section" aria-label="Datensynchronisation">
+        <section class="sync-section" [attr.aria-label]="'settings.syncSectionAria' | translate">
           @if (!svc.isLoggedIn()) {
             <div class="offline-card">
               <mat-icon class="offline-icon" aria-hidden="true">cloud_off</mat-icon>
               <div class="offline-text">
-                <h4>Offline-Modus</h4>
-                <p>
-                  Ihre Daten werden lokal auf diesem Gerät gespeichert.
-                  Melden Sie sich an, um Ihre Daten in der Cloud zu sichern
-                  und geräteübergreifend zu synchronisieren.
-                </p>
+                <h4>{{ 'settings.offlineTitle' | translate }}</h4>
+                <p>{{ 'settings.offlineText' | translate }}</p>
               </div>
             </div>
           } @else {
             <button mat-stroked-button
                     [disabled]="svc.isSyncing()"
                     (click)="onSync()"
-                    aria-label="Lokale Daten mit der Cloud synchronisieren">
+                    [attr.aria-label]="'settings.syncAria' | translate">
               @if (svc.isSyncing()) {
                 <mat-spinner diameter="18" aria-hidden="true" />
               } @else {
                 <mat-icon aria-hidden="true">cloud_sync</mat-icon>
               }
-              Lokale Daten zu Cloud synchronisieren
+              {{ 'settings.syncButton' | translate }}
             </button>
           }
         </section>
@@ -143,15 +139,15 @@
 
         <!-- ── Premium ──────────────────────────────────────────── -->
         @if (svc.isLoggedIn()) {
-          <section class="premium-section" aria-label="Premium">
-            <h3 class="section-title">Premium</h3>
+          <section class="premium-section" [attr.aria-label]="'settings.premiumSectionAria' | translate">
+            <h3 class="section-title">{{ 'settings.premiumSectionTitle' | translate }}</h3>
 
             @if (svc.isPremium()) {
               <div class="premium-active">
                 <mat-icon aria-hidden="true">workspace_premium</mat-icon>
                 <div>
-                  <p class="premium-active-title">Premium aktiv</p>
-                  <p class="premium-active-sub">Alle Funktionen sind freigeschaltet.</p>
+                  <p class="premium-active-title">{{ 'settings.premiumActiveTitle' | translate }}</p>
+                  <p class="premium-active-sub">{{ 'settings.premiumActiveSub' | translate }}</p>
                 </div>
               </div>
             } @else {
@@ -160,34 +156,28 @@
                   <button mat-flat-button
                           [disabled]="svc.isPurchasing()"
                           (click)="onPresentPaywall()"
-                          aria-label="Premium freischalten">
+                          [attr.aria-label]="'settings.unlockPremiumAria' | translate">
                     @if (svc.isPurchasing()) {
                       <mat-spinner diameter="18" aria-hidden="true" />
                     } @else {
                       <mat-icon aria-hidden="true">workspace_premium</mat-icon>
                     }
-                    Premium freischalten
+                    {{ 'settings.unlockPremiumButton' | translate }}
                   </button>
 
                   <button mat-stroked-button
                           [disabled]="svc.isRestoring()"
                           (click)="onRestorePurchases()"
-                          aria-label="Bereits getätigten Kauf wiederherstellen">
+                          [attr.aria-label]="'settings.restorePurchaseAria' | translate">
                     @if (svc.isRestoring()) {
                       <mat-spinner diameter="18" aria-hidden="true" />
                     } @else {
                       <mat-icon aria-hidden="true">restore</mat-icon>
                     }
-                    Kauf wiederherstellen
+                    {{ 'settings.restorePurchaseButton' | translate }}
                   </button>
                 } @else {
-                  <p class="premium-info">
-                    Premium kann über die
-                    <a href="https://play.google.com/store/apps/details?id=app.work_time_manager"
-                       target="_blank" rel="noopener">Android-App</a>
-                    erworben werden. Nach dem Kauf hier auf „Kauf wiederherstellen" tippen
-                    — sobald der Web-Store verfügbar ist.
-                  </p>
+                  <p class="premium-info" [innerHTML]="'settings.premiumWebInfo' | translate"></p>
                 }
               </div>
             }
@@ -197,18 +187,18 @@
         }
 
         <!-- ── Design ───────────────────────────────────────────── -->
-        <section class="design-section" aria-label="Design">
-          <h3 class="section-title">Design</h3>
+        <section class="design-section" [attr.aria-label]="'settings.designSectionTitle' | translate">
+          <h3 class="section-title">{{ 'settings.designSectionTitle' | translate }}</h3>
 
           <mat-list>
             <mat-list-item>
               <mat-icon matListItemIcon aria-hidden="true">dark_mode</mat-icon>
-              <span matListItemTitle>Design</span>
-              <span matListItemLine>{{ svc.isDarkMode() ? 'Dunkel' : 'Hell' }}</span>
+              <span matListItemTitle>{{ 'settings.designSectionTitle' | translate }}</span>
+              <span matListItemLine>{{ (svc.isDarkMode() ? 'settings.themeDark' : 'settings.themeLight') | translate }}</span>
               <mat-slide-toggle matListItemMeta
                                 [checked]="svc.isDarkMode()"
                                 (change)="onThemeToggle($event.checked)"
-                                aria-label="Dunkelmodus umschalten"
+                                [attr.aria-label]="'settings.themeToggleAria' | translate"
                                 />
             </mat-list-item>
           </mat-list>
@@ -217,7 +207,7 @@
         <mat-divider />
 
         <!-- ── Sprache ──────────────────────────────────────────── -->
-        <section class="language-section" aria-label="Sprache">
+        <section class="language-section" [attr.aria-label]="'settings.language' | translate">
           <h3 class="section-title">{{ 'settings.language' | translate }}</h3>
 
           <mat-list>
@@ -227,7 +217,7 @@
               <mat-button-toggle-group matListItemMeta
                                         [value]="svc.locale()"
                                         (change)="onLocaleChange($event.value)"
-                                        aria-label="Sprache auswählen">
+                                        [attr.aria-label]="'settings.languageSelectAria' | translate">
                 <mat-button-toggle value="de">{{ 'settings.languageGerman' | translate }}</mat-button-toggle>
                 <mat-button-toggle value="en">{{ 'settings.languageEnglish' | translate }}</mat-button-toggle>
               </mat-button-toggle-group>
@@ -238,14 +228,14 @@
         <mat-divider />
 
         <!-- ── Benachrichtigungen ───────────────────────────────── -->
-        <section aria-label="Benachrichtigungen">
-          <h3 class="section-title">Benachrichtigungen</h3>
+        <section [attr.aria-label]="'settings.notificationsSectionTitle' | translate">
+          <h3 class="section-title">{{ 'settings.notificationsSectionTitle' | translate }}</h3>
 
           <mat-list>
             <mat-list-item class="disabled-item">
               <mat-icon matListItemIcon aria-hidden="true">notifications</mat-icon>
-              <span matListItemTitle>Benachrichtigungen</span>
-              <span matListItemLine>Nicht verfügbar im Browser</span>
+              <span matListItemTitle>{{ 'settings.notificationsSectionTitle' | translate }}</span>
+              <span matListItemLine>{{ 'settings.notificationsUnavailable' | translate }}</span>
               <mat-icon matListItemMeta aria-hidden="true" class="disabled-icon">block</mat-icon>
             </mat-list-item>
           </mat-list>
@@ -254,24 +244,24 @@
         <mat-divider />
 
         <!-- ── Über die App ─────────────────────────────────────── -->
-        <section aria-label="Über die App">
-          <h3 class="section-title">Über die App</h3>
+        <section [attr.aria-label]="'settings.aboutSectionTitle' | translate">
+          <h3 class="section-title">{{ 'settings.aboutSectionTitle' | translate }}</h3>
 
           <mat-list>
             <a mat-list-item
                href="https://play.google.com/store/apps/details?id=app.work_time_manager"
                target="_blank" rel="noopener"
-               aria-label="App im Google Play Store öffnen (neues Fenster)">
+               [attr.aria-label]="'settings.downloadAndroidAria' | translate">
               <mat-icon matListItemIcon aria-hidden="true">shop</mat-icon>
-              <span matListItemTitle>Android-App herunterladen</span>
-              <span matListItemLine>Google Play Store</span>
+              <span matListItemTitle>{{ 'settings.downloadAndroidTitle' | translate }}</span>
+              <span matListItemLine>{{ 'settings.googlePlayStore' | translate }}</span>
               <mat-icon matListItemMeta aria-hidden="true">open_in_new</mat-icon>
             </a>
 
             <mat-list-item>
               <mat-icon matListItemIcon aria-hidden="true">info</mat-icon>
-              <span matListItemTitle>Version</span>
-              <span matListItemLine>Work Time Manager · Web</span>
+              <span matListItemTitle>{{ 'settings.versionLabel' | translate }}</span>
+              <span matListItemLine>{{ 'settings.versionValue' | translate }}</span>
             </mat-list-item>
           </mat-list>
         </section>

@@ -55,7 +55,7 @@ void main() {
     });
 
     test('should handle optional end date in toMap/fromMap', () {
-       final model = BreakModel(
+      final model = BreakModel(
         name: 'Start Only',
         start: start,
         end: null,

@@ -82,15 +82,18 @@ Future<void> main() async {
     if (activeKey != null) {
       await Purchases.configure(PurchasesConfiguration(activeKey));
     } else {
-      logger.w('RevenueCat nicht initialisiert – kein API-Key via --dart-define übergeben.');
+      logger.w(
+          'RevenueCat nicht initialisiert – kein API-Key via --dart-define übergeben.');
     }
   }
 
   // Der Site Key wird sicher via --dart-define=RECAPTCHA_SITE_KEY=your_key beim Build injiziert
-  const String kWebRecaptchaSiteKey = String.fromEnvironment('RECAPTCHA_SITE_KEY');
-  
+  const String kWebRecaptchaSiteKey =
+      String.fromEnvironment('RECAPTCHA_SITE_KEY');
+
   await AppBootstrap.ensureInitializedForEnv(
-    webRecaptchaSiteKey: kWebRecaptchaSiteKey.isEmpty ? null : kWebRecaptchaSiteKey,
+    webRecaptchaSiteKey:
+        kWebRecaptchaSiteKey.isEmpty ? null : kWebRecaptchaSiteKey,
   );
 
   // Initialize notification service with deep-link callback
@@ -100,7 +103,8 @@ Future<void> main() async {
       if (payload == 'open_dashboard') {
         // Navigate to dashboard (HomeScreen with index 0)
         navigatorKey.currentState?.pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomeScreen(initialIndex: 0)),
+          MaterialPageRoute(
+              builder: (context) => const HomeScreen(initialIndex: 0)),
         );
       }
     },
@@ -120,13 +124,15 @@ Future<void> main() async {
     } else if (notificationDaysString.isEmpty) {
       notificationDays = []; // No days selected
     } else {
-      notificationDays = notificationDaysString.split(',').map((e) => int.parse(e)).toList();
+      notificationDays =
+          notificationDaysString.split(',').map((e) => int.parse(e)).toList();
     }
     final notifyWorkStart = prefs.getBool('notify_work_start') ?? true;
     final notifyWorkEnd = prefs.getBool('notify_work_end') ?? true;
     final notifyBreaks = prefs.getBool('notify_breaks') ?? true;
 
-    logger.i('Scheduling daily reminder with time: $notificationTime, days: $notificationDays, checkWorkStart: $notifyWorkStart, checkWorkEnd: $notifyWorkEnd, checkBreaks: $notifyBreaks');
+    logger.i(
+        'Scheduling daily reminder with time: $notificationTime, days: $notificationDays, checkWorkStart: $notifyWorkStart, checkWorkEnd: $notifyWorkEnd, checkBreaks: $notifyBreaks');
     await notificationService.scheduleDailyReminder(
       time: notificationTime,
       days: notificationDays,
@@ -184,9 +190,11 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     // MediaQuery.alwaysUse24HourFormat reagieren (z. B. showTimePicker,
     // MaterialLocalizations.formatTimeOfDay), 24h- oder 12h-Format nutzen.
     final use24HourFormat =
-        ref.watch(settingsViewModelProvider).value?.settings.use24HourFormat ?? true;
+        ref.watch(settingsViewModelProvider).value?.settings.use24HourFormat ??
+            true;
     // Siehe #221: steuert die Sprache der App-Oberfläche zur Laufzeit.
-    final localeCode = ref.watch(settingsViewModelProvider).value?.settings.locale ?? 'de';
+    final localeCode =
+        ref.watch(settingsViewModelProvider).value?.settings.locale ?? 'de';
     final isLocked = !kIsWeb && ref.watch(isAppLockedProvider);
 
     return MaterialApp(
@@ -206,7 +214,8 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
       supportedLocales: AppLocalizations.supportedLocales,
       builder: (context, child) {
         return MediaQuery(
-          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: use24HourFormat),
+          data: MediaQuery.of(context)
+              .copyWith(alwaysUse24HourFormat: use24HourFormat),
           child: Stack(
             children: [
               child!,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_work_time/l10n/app_localizations.dart';
 import 'package:flutter_work_time/presentation/widgets/premium_blur_gate.dart';
 
 void main() {
@@ -10,6 +11,9 @@ void main() {
     Widget child = const SizedBox.expand(),
   }) {
     return MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('de'),
       home: Scaffold(
         body: PremiumBlurGate(
           featureTitle: featureTitle,
@@ -52,7 +56,8 @@ void main() {
       expect(find.byIcon(Icons.workspace_premium), findsWidgets);
     });
 
-    testWidgets('zeigt "Premium freischalten"-Button wenn onUpgrade gesetzt', (tester) async {
+    testWidgets('zeigt "Premium freischalten"-Button wenn onUpgrade gesetzt',
+        (tester) async {
       await tester.pumpWidget(createSubject(
         featureTitle: 'Test',
         featureText: 'Text',
@@ -61,7 +66,8 @@ void main() {
 
       expect(find.text('Premium freischalten'), findsOneWidget);
       expect(
-        find.text('Abonnements können derzeit nur in der mobilen App verwaltet werden.'),
+        find.text(
+            'Abonnements können derzeit nur in der mobilen App verwaltet werden.'),
         findsNothing,
       );
     });
@@ -86,7 +92,8 @@ void main() {
       ));
 
       expect(
-        find.text('Abonnements können derzeit nur in der mobilen App verwaltet werden.'),
+        find.text(
+            'Abonnements können derzeit nur in der mobilen App verwaltet werden.'),
         findsOneWidget,
       );
       expect(find.text('Premium freischalten'), findsNothing);

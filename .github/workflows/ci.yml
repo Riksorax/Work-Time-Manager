@@ -35,8 +35,15 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Format
+        run: dart format --output=none --set-exit-if-changed lib test
+
       - name: Analyze
         run: flutter analyze --no-fatal-infos
+
+      # riverpod_lint über custom_lint - flutter analyze sieht diese Regeln nicht.
+      - name: Custom Lint
+        run: dart run custom_lint
 
       - name: Test
         run: flutter test
@@ -92,6 +99,31 @@ jobs:
         run: |
           rm -rf .angular/cache
           npm run build -- --configuration production --delete-output-path
+
+  functions:
+    name: Cloud Functions Build & Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web/functions
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: web/functions/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm test
 
   dotnet:
     name: .NET Build & Test

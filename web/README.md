@@ -22,13 +22,13 @@ npm run build -- --configuration production
 src/app/
 ├── core/          AuthService, WorkEntryService, OvertimeService,
 │                  SettingsService, ProfileService, ThemeService, DataSyncService
-├── domain/        Pure TypeScript — ReportCalculatorService, BreakCalculatorService
+├── domain/        Pure TypeScript — report-calculator, break-calculator
 ├── features/      Dashboard · Reports · Settings (je mit eigenem *PageService)
 ├── layout/        MainShell (Sidenav + Toolbar)
 └── shared/        CalendarComponent, EditEntryDialog, TimeInput, Models
 ```
 
-Vollständige Architektur-Doku: [../CLAUDE.md](../CLAUDE.md)
+Vollständige Architektur-Doku: [CLAUDE.md](CLAUDE.md)
 
 ## Deployment
 

@@ -1,7 +1,15 @@
 You are an expert in TypeScript, Angular, and scalable web application development. You write functional, maintainable, performant, and accessible code following Angular and TypeScript best practices.
 
-> **Projektkontext:** Angular-Web-Part des Work Time Manager. Architektur-Doku: `../CLAUDE.md`.
-> Wichtigste Zusatzregel: KEIN `standalone: true` (Angular v20+ Default), KEIN `CommonModule`.
+> **Projektkontext:** Angular-Web-Part des Work Time Manager Monorepos.
+> Architektur, Services und Firebase-Regeln: `CLAUDE.md` (in diesem Ordner), übergreifende Regeln: `../CLAUDE.md`, Arbeitsablauf: `../CONTRIBUTING.md`.
+> Allgemeine Angular-Regeln stehen nur hier. `CLAUDE.md` und `.gemini/GEMINI.md` importieren diese Datei.
+>
+> Wichtigste Zusatzregeln:
+> - KEIN `standalone: true` (Angular v20+ Default), KEIN `CommonModule`.
+> - Firebase nur über `@angular/fire/*`, nie `firebase/*` mischen. Details in `CLAUDE.md`.
+> - Neue User-Texte über ngx-translate, Keys in `public/i18n/de.json` und `en.json`.
+> - Tests laufen mit Vitest: `npm test -- --watch=false`.
+> - Dateinamen ohne Typ-Suffix (`dashboard.ts`, nicht `dashboard.component.ts`). Details unten.
 
 ## TypeScript Best Practices
 
@@ -9,10 +17,22 @@ You are an expert in TypeScript, Angular, and scalable web application developme
 - Prefer type inference when the type is obvious
 - Avoid the `any` type; use `unknown` when type is uncertain
 
+## Dateinamen (#301)
+
+Dateinamen ohne Typ-Suffix, entsprechend dem aktuellen Angular-Styleguide (v20): `dashboard.ts`
+statt `dashboard.component.ts`, `work-entry.ts` statt `work-entry.service.ts`. Gilt für Components,
+Services (Core-, Feature- und Domain-Services) und deren `.html`/`.scss`/`.spec.ts`-Begleitdateien.
+
+**Ausnahme (Namenskollision):** Teilen sich eine Component und ein Service denselben Basisnamen
+im selben Ordner — etwa `features/dashboard/dashboard.ts` (Component) und der zugehörige
+Feature-Service —, behält der Service den Suffix `.service.ts` (`dashboard.service.ts`), damit
+beide Dateien nebeneinander existieren können. Diese Ausnahme betrifft aktuell nur die
+Feature-Services (`dashboard.service.ts`, `reports.service.ts`, `settings.service.ts`).
+
 ## Angular Best Practices
 
-- Always use standalone components over NgModules
-- Must NOT set `standalone: true` inside Angular decorators. It's the default in Angular v20+.
+- Standalone components only, never NgModules — but do NOT set `standalone: true` explicitly
+  inside Angular decorators, since it's the default in Angular v20+ and writing it is redundant.
 - Use signals for state management
 - Implement lazy loading for feature routes
 - Do NOT use the `@HostBinding` and `@HostListener` decorators. Put host bindings inside the `host` object of the `@Component` or `@Directive` decorator instead

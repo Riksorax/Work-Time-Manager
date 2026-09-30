@@ -1,5 +1,5 @@
 @if (svc.isLoading()) {
-  <div class="loading-state" aria-label="Lade Berichte...">
+  <div class="loading-state" [attr.aria-label]="'reports.loading' | translate">
     <mat-spinner diameter="48" />
   </div>
 } @else {
@@ -9,7 +9,7 @@
                    (selectedIndexChange)="onTabChange($event)">
 
       <!-- ═══════════════════════════════════════════════════════ TAB: TÄGLICH ══ -->
-      <mat-tab label="Täglich">
+      <mat-tab [label]="'reports.tabDaily' | translate">
         <div class="daily-layout">
 
           <!-- Left panel: Calendar + Stats -->
@@ -21,22 +21,22 @@
               (dateSelected)="onCalendarDayTap($event)"
               (monthChanged)="svc.onMonthChanged($event)"
               (dragSelected)="svc.addDateRangeSelection($event)"
-              aria-label="Monatskalender"
+              [attr.aria-label]="'reports.calendarAria' | translate"
             />
 
             <!-- Day stats summary -->
             <div class="stats-card">
               <div class="stats-row">
-                <span class="stats-label">Soll</span>
+                <span class="stats-label">{{ 'reports.statTarget' | translate }}</span>
                 <span class="stats-value">{{ formatDuration(svc.dailyStat().target) }}</span>
               </div>
               <div class="stats-row">
-                <span class="stats-label">Ist</span>
+                <span class="stats-label">{{ 'reports.statActual' | translate }}</span>
                 <span class="stats-value">{{ formatDuration(svc.dailyStat().worked) }}</span>
               </div>
               <mat-divider />
               <div class="stats-row">
-                <span class="stats-label">Saldo</span>
+                <span class="stats-label">{{ 'reports.statBalance' | translate }}</span>
                 <span class="stats-value stats-value--overtime"
                       [style.color]="svc.dailyStat().overtime >= 0 ? 'var(--color-overtime-positive)' : 'var(--mat-sys-error)'">
                   {{ formatOvertime(svc.dailyStat().overtime) }}
@@ -57,16 +57,16 @@
                   @if (svc.selectedDates().size > 0) {
                     <button mat-flat-button class="batch-btn"
                             (click)="openBatchQuickEntryDialog()"
-                            aria-label="Schnell-Eintrag für alle ausgewählten Tage">
+                            [attr.aria-label]="'reports.batchEntryAria' | translate">
                       <mat-icon>edit_calendar</mat-icon>
-                      {{ svc.selectedDates().size }} Tage
+                      {{ 'reports.batchEntryButton' | translate: { count: svc.selectedDates().size } }}
                     </button>
                   }
                   <button mat-stroked-button
                           (click)="svc.toggleMultiSelect()"
-                          aria-label="Mehrfachauswahl beenden">
+                          [attr.aria-label]="'reports.cancelMultiSelectAria' | translate">
                     <mat-icon>close</mat-icon>
-                    Abbrechen
+                    {{ 'common.cancel' | translate }}
                   </button>
                 </div>
               }
@@ -76,19 +76,19 @@
               <!-- Empty state -->
               <div class="empty-state" role="status">
                 <mat-icon class="empty-icon" aria-hidden="true">event_busy</mat-icon>
-                <p class="empty-text">Keine Einträge für diesen Tag.</p>
+                <p class="empty-text">{{ 'reports.noEntriesForDay' | translate }}</p>
                 <div class="empty-actions">
                   <button mat-flat-button class="add-btn"
                           (click)="openEditDialog()"
-                          aria-label="Neuen Eintrag hinzufügen">
+                          [attr.aria-label]="'reports.addEntryAria' | translate">
                     <mat-icon>add</mat-icon>
-                    Eintrag hinzufügen
+                    {{ 'reports.addEntryButton' | translate }}
                   </button>
                   <button mat-stroked-button
                           (click)="openQuickEntryDialog()"
-                          aria-label="Schnell-Eintrag erstellen">
+                          [attr.aria-label]="'reports.quickEntryAria' | translate">
                     <mat-icon>bolt</mat-icon>
-                    Schnell-Eintrag
+                    {{ 'reports.quickEntryButton' | translate }}
                   </button>
                 </div>
               </div>
@@ -96,14 +96,14 @@
               <!-- Entry list -->
               <div class="entry-list-header">
                 <button mat-stroked-button (click)="openEditDialog()"
-                        aria-label="Weiteren Eintrag hinzufügen">
+                        [attr.aria-label]="'reports.addAnotherEntryAria' | translate">
                   <mat-icon>add</mat-icon>
-                  Weiterer Eintrag
+                  {{ 'reports.addAnotherEntryButton' | translate }}
                 </button>
                 <button mat-stroked-button (click)="openQuickEntryDialog()"
-                        aria-label="Schnell-Eintrag erstellen">
+                        [attr.aria-label]="'reports.quickEntryAria' | translate">
                   <mat-icon>bolt</mat-icon>
-                  Schnell-Eintrag
+                  {{ 'reports.quickEntryButton' | translate }}
                 </button>
               </div>
 
@@ -113,18 +113,18 @@
                     <div class="entry-top">
                       <span class="entry-type-badge"
                             [class]="'entry-type-badge--' + entry.type"
-                            [attr.aria-label]="'Eintragstyp: ' + entryTypeLabel(entry.type)">
+                            [attr.aria-label]="'reports.entryTypeAria' | translate: { type: entryTypeLabel(entry.type) }">
                         {{ entryTypeLabel(entry.type) }}
                       </span>
                       <div class="entry-actions">
                         <button mat-icon-button
                                 (click)="openEditDialog(entry)"
-                                [attr.aria-label]="'Eintrag bearbeiten'">
+                                [attr.aria-label]="'reports.editEntryAria' | translate">
                           <mat-icon>edit</mat-icon>
                         </button>
                         <button mat-icon-button class="delete-btn"
                                 (click)="onDeleteEntry(entry.id)"
-                                [attr.aria-label]="'Eintrag löschen'">
+                                [attr.aria-label]="'reports.deleteEntryAria' | translate">
                           <mat-icon>delete</mat-icon>
                         </button>
                       </div>
@@ -132,22 +132,22 @@
 
                     <div class="entry-times">
                       <div class="time-block">
-                        <span class="time-label">Start</span>
+                        <span class="time-label">{{ 'reports.timeStart' | translate }}</span>
                         <span class="time-value">{{ entry.workStart | date:'HH:mm' }}</span>
                       </div>
                       <div class="time-block">
-                        <span class="time-label">Ende</span>
+                        <span class="time-label">{{ 'reports.timeEnd' | translate }}</span>
                         <span class="time-value">
-                          {{ entry.workEnd ? (entry.workEnd | date:'HH:mm') : 'läuft…' }}
+                          {{ entry.workEnd ? (entry.workEnd | date:'HH:mm') : ('reports.timeRunning' | translate) }}
                         </span>
                       </div>
                       <div class="time-block">
-                        <span class="time-label">Netto</span>
+                        <span class="time-label">{{ 'reports.timeNet' | translate }}</span>
                         <span class="time-value">{{ formatDuration(svc.entryNetDuration(entry)) }}</span>
                       </div>
                       @if (entry.breaks.length > 0) {
                         <div class="time-block">
-                          <span class="time-label">Pausen</span>
+                          <span class="time-label">{{ 'reports.timeBreaks' | translate }}</span>
                           <span class="time-value">{{ entry.breaks.length }}×</span>
                         </div>
                       }
@@ -161,17 +161,17 @@
       </mat-tab>
 
       <!-- ════════════════════════════════════════════════════ TAB: WÖCHENTLICH ══ -->
-      <mat-tab label="Wöchentlich">
+      <mat-tab [label]="'reports.tabWeekly' | translate">
         <div class="tab-content">
           @if (!svc.isLoggedIn()) {
             <!-- Not logged in -->
             <div class="auth-gate-card">
               <mat-icon class="gate-icon" aria-hidden="true">lock_person</mat-icon>
-              <h3>Anmeldung erforderlich</h3>
-              <p>Melde dich an, um deine Wochenberichte zu sehen.</p>
+              <h3>{{ 'reports.authRequiredTitle' | translate }}</h3>
+              <p>{{ 'reports.authRequiredWeeklyText' | translate }}</p>
               <button mat-flat-button class="login-btn" (click)="onLogin()"
-                      aria-label="Zur Anmeldung">
-                Anmelden
+                      [attr.aria-label]="'reports.goToLoginAria' | translate">
+                {{ 'reports.loginButton' | translate }}
               </button>
             </div>
           } @else if (!svc.isPremium()) {
@@ -184,40 +184,40 @@
                   <button mat-icon-button disabled><mat-icon>chevron_right</mat-icon></button>
                 </div>
                 <div class="summary-card blurred">
-                  <div class="summary-row"><span>Gesamtarbeitszeit</span><span>38:24</span></div>
-                  <div class="summary-row"><span>Arbeitstage</span><span>5</span></div>
-                  <div class="summary-row"><span>Ø pro Tag</span><span>7:41</span></div>
-                  <div class="summary-row"><span>Wochenüberstunden</span><span>+00:24</span></div>
+                  <div class="summary-row"><span>{{ 'reports.totalWorkTimeLabel' | translate }}</span><span>38:24</span></div>
+                  <div class="summary-row"><span>{{ 'reports.workDaysLabel' | translate }}</span><span>5</span></div>
+                  <div class="summary-row"><span>{{ 'reports.avgPerDayLabel' | translate }}</span><span>7:41</span></div>
+                  <div class="summary-row"><span>{{ 'reports.weeklyOvertimeLabel' | translate }}</span><span>+00:24</span></div>
                 </div>
               </div>
-              <div class="premium-overlay" role="status" aria-label="Premium-Feature gesperrt">
+              <div class="premium-overlay" role="status" [attr.aria-label]="'reports.premiumLockedAria' | translate">
                 <mat-icon class="premium-icon" aria-hidden="true">workspace_premium</mat-icon>
-                <h3>Wochenberichte — Premium</h3>
-                <p>Schalte Premium frei, um deine wöchentlichen Statistiken zu sehen.</p>
+                <h3>{{ 'reports.weeklyPremiumTitle' | translate }}</h3>
+                <p>{{ 'reports.weeklyPremiumText' | translate }}</p>
                 <div class="premium-actions">
                   @if (isRcConfigured) {
                     <button mat-flat-button
                             [disabled]="isPurchasing()"
                             (click)="onPresentPaywall()"
-                            aria-label="Premium freischalten">
+                            [attr.aria-label]="'reports.unlockPremiumAria' | translate">
                       @if (isPurchasing()) {
                         <mat-spinner diameter="18" aria-hidden="true" />
                       } @else {
                         <mat-icon aria-hidden="true">workspace_premium</mat-icon>
                       }
-                      Premium freischalten
+                      {{ 'reports.unlockPremiumButton' | translate }}
                     </button>
                   }
                   <button mat-stroked-button
                           [disabled]="isRestoring()"
                           (click)="onRestorePurchases()"
-                          aria-label="Bereits getätigten Kauf wiederherstellen">
+                          [attr.aria-label]="'reports.restorePurchaseAria' | translate">
                     @if (isRestoring()) {
                       <mat-spinner diameter="18" aria-hidden="true" />
                     } @else {
                       <mat-icon aria-hidden="true">restore</mat-icon>
                     }
-                    Kauf wiederherstellen
+                    {{ 'reports.restorePurchaseButton' | translate }}
                   </button>
                 </div>
               </div>
@@ -225,9 +225,9 @@
           } @else {
             <!-- Premium content -->
             <div class="weekly-layout">
-              <div class="week-nav" role="navigation" aria-label="Wochennavigation">
+              <div class="week-nav" role="navigation" [attr.aria-label]="'reports.weekNavAria' | translate">
                 <button mat-icon-button (click)="svc.navigateWeek(-1)"
-                        aria-label="Vorherige Woche">
+                        [attr.aria-label]="'reports.prevWeekAria' | translate">
                   <mat-icon>chevron_left</mat-icon>
                 </button>
                 <div class="week-label">
@@ -238,31 +238,31 @@
                   </span>
                 </div>
                 <button mat-icon-button (click)="svc.navigateWeek(1)"
-                        aria-label="Nächste Woche">
+                        [attr.aria-label]="'reports.nextWeekAria' | translate">
                   <mat-icon>chevron_right</mat-icon>
                 </button>
               </div>
 
               <div class="summary-card">
                 <div class="summary-row">
-                  <span class="summary-label">Gesamtarbeitszeit</span>
+                  <span class="summary-label">{{ 'reports.totalWorkTimeLabel' | translate }}</span>
                   <span class="summary-value">{{ formatDuration(svc.weeklyReport().totalWorked) }}</span>
                 </div>
                 <div class="summary-row">
-                  <span class="summary-label">Gesamtpausen</span>
+                  <span class="summary-label">{{ 'reports.totalBreaksLabel' | translate }}</span>
                   <span class="summary-value">{{ formatDuration(svc.weeklyReport().totalBreaks) }}</span>
                 </div>
                 <div class="summary-row">
-                  <span class="summary-label">Arbeitstage</span>
+                  <span class="summary-label">{{ 'reports.workDaysLabel' | translate }}</span>
                   <span class="summary-value">{{ svc.weeklyReport().workDays }}</span>
                 </div>
                 <div class="summary-row">
-                  <span class="summary-label">Ø pro Tag</span>
+                  <span class="summary-label">{{ 'reports.avgPerDayLabel' | translate }}</span>
                   <span class="summary-value">{{ formatDuration(svc.weeklyReport().avgPerDay) }}</span>
                 </div>
                 <mat-divider />
                 <div class="summary-row">
-                  <span class="summary-label">Wochenüberstunden</span>
+                  <span class="summary-label">{{ 'reports.weeklyOvertimeLabel' | translate }}</span>
                   <span class="summary-value"
                         [style.color]="svc.weeklyReport().overtime >= 0 ? 'var(--color-overtime-positive)' : 'var(--mat-sys-error)'">
                     {{ formatOvertime(svc.weeklyReport().overtime) }}
@@ -270,11 +270,11 @@
                 </div>
               </div>
 
-              <div class="day-list" role="list" aria-label="Tage der Woche">
+              <div class="day-list" role="list" [attr.aria-label]="'reports.weekDayListAria' | translate">
                 @for (day of svc.weeklyReport().days; track day.date.getTime()) {
                   <button class="day-row"
                           (click)="svc.selectDate(day.date); onTabChange(0)"
-                          [attr.aria-label]="(day.date | date:'EEEE d. MMMM') + ': ' + formatDuration(day.worked)"
+                          [attr.aria-label]="'reports.dayRowAria' | translate: { weekday: (day.date | date:'EEEE d. MMMM'), duration: formatDuration(day.worked) }"
                           role="listitem">
                     <span class="day-name">{{ day.date | date:'EEE d.' }}</span>
                     <span class="day-duration">{{ day.worked > 0 ? formatDuration(day.worked) : '—' }}</span>
@@ -288,17 +288,17 @@
       </mat-tab>
 
       <!-- ═════════════════════════════════════════════════════ TAB: MONATLICH ══ -->
-      <mat-tab label="Monatlich">
+      <mat-tab [label]="'reports.tabMonthly' | translate">
         <div class="tab-content">
           @if (!svc.isLoggedIn()) {
             <!-- Not logged in -->
             <div class="auth-gate-card">
               <mat-icon class="gate-icon" aria-hidden="true">lock_person</mat-icon>
-              <h3>Anmeldung erforderlich</h3>
-              <p>Melde dich an, um deine Monatsberichte zu sehen.</p>
+              <h3>{{ 'reports.authRequiredTitle' | translate }}</h3>
+              <p>{{ 'reports.authRequiredMonthlyText' | translate }}</p>
               <button mat-flat-button class="login-btn" (click)="onLogin()"
-                      aria-label="Zur Anmeldung">
-                Anmelden
+                      [attr.aria-label]="'reports.goToLoginAria' | translate">
+                {{ 'reports.loginButton' | translate }}
               </button>
             </div>
           } @else if (!svc.isPremium()) {
@@ -311,39 +311,39 @@
                   <button mat-icon-button disabled><mat-icon>chevron_right</mat-icon></button>
                 </div>
                 <div class="summary-card blurred">
-                  <div class="summary-row"><span>Gesamtarbeitszeit</span><span>152:45</span></div>
-                  <div class="summary-row"><span>Arbeitstage</span><span>21</span></div>
-                  <div class="summary-row"><span>Monatsüberstunden</span><span>+02:45</span></div>
+                  <div class="summary-row"><span>{{ 'reports.totalWorkTimeLabel' | translate }}</span><span>152:45</span></div>
+                  <div class="summary-row"><span>{{ 'reports.workDaysLabel' | translate }}</span><span>21</span></div>
+                  <div class="summary-row"><span>{{ 'reports.monthlyOvertimeLabel' | translate }}</span><span>+02:45</span></div>
                 </div>
               </div>
-              <div class="premium-overlay" role="status" aria-label="Premium-Feature gesperrt">
+              <div class="premium-overlay" role="status" [attr.aria-label]="'reports.premiumLockedAria' | translate">
                 <mat-icon class="premium-icon" aria-hidden="true">workspace_premium</mat-icon>
-                <h3>Monatsberichte — Premium</h3>
-                <p>Schalte Premium frei, um deine monatlichen Statistiken zu sehen.</p>
+                <h3>{{ 'reports.monthlyPremiumTitle' | translate }}</h3>
+                <p>{{ 'reports.monthlyPremiumText' | translate }}</p>
                 <div class="premium-actions">
                   @if (isRcConfigured) {
                     <button mat-flat-button
                             [disabled]="isPurchasing()"
                             (click)="onPresentPaywall()"
-                            aria-label="Premium freischalten">
+                            [attr.aria-label]="'reports.unlockPremiumAria' | translate">
                       @if (isPurchasing()) {
                         <mat-spinner diameter="18" aria-hidden="true" />
                       } @else {
                         <mat-icon aria-hidden="true">workspace_premium</mat-icon>
                       }
-                      Premium freischalten
+                      {{ 'reports.unlockPremiumButton' | translate }}
                     </button>
                   }
                   <button mat-stroked-button
                           [disabled]="isRestoring()"
                           (click)="onRestorePurchases()"
-                          aria-label="Bereits getätigten Kauf wiederherstellen">
+                          [attr.aria-label]="'reports.restorePurchaseAria' | translate">
                     @if (isRestoring()) {
                       <mat-spinner diameter="18" aria-hidden="true" />
                     } @else {
                       <mat-icon aria-hidden="true">restore</mat-icon>
                     }
-                    Kauf wiederherstellen
+                    {{ 'reports.restorePurchaseButton' | translate }}
                   </button>
                 </div>
               </div>
@@ -351,49 +351,49 @@
           } @else {
             <!-- Premium content -->
             <div class="monthly-layout">
-              <div class="month-nav" role="navigation" aria-label="Monatsnavigation">
+              <div class="month-nav" role="navigation" [attr.aria-label]="'reports.monthNavAria' | translate">
                 <button mat-icon-button (click)="svc.navigateMonth(-1)"
-                        aria-label="Vorheriger Monat">
+                        [attr.aria-label]="'reports.prevMonthAria' | translate">
                   <mat-icon>chevron_left</mat-icon>
                 </button>
                 <span class="month-label">{{ svc.monthlyReport().month | date:'MMMM yyyy' }}</span>
                 <button mat-icon-button (click)="svc.navigateMonth(1)"
-                        aria-label="Nächster Monat">
+                        [attr.aria-label]="'reports.nextMonthAria' | translate">
                   <mat-icon>chevron_right</mat-icon>
                 </button>
               </div>
 
               <div class="summary-card">
                 <div class="summary-row">
-                  <span class="summary-label">Gesamtarbeitszeit</span>
+                  <span class="summary-label">{{ 'reports.totalWorkTimeLabel' | translate }}</span>
                   <span class="summary-value">{{ formatDuration(svc.monthlyReport().totalWorked) }}</span>
                 </div>
                 <div class="summary-row">
-                  <span class="summary-label">Gesamtpausen</span>
+                  <span class="summary-label">{{ 'reports.totalBreaksLabel' | translate }}</span>
                   <span class="summary-value">{{ formatDuration(svc.monthlyReport().totalBreaks) }}</span>
                 </div>
                 <div class="summary-row">
-                  <span class="summary-label">Arbeitstage</span>
+                  <span class="summary-label">{{ 'reports.workDaysLabel' | translate }}</span>
                   <span class="summary-value">{{ svc.monthlyReport().workDays }}</span>
                 </div>
                 <div class="summary-row">
-                  <span class="summary-label">Ø pro Tag</span>
+                  <span class="summary-label">{{ 'reports.avgPerDayLabel' | translate }}</span>
                   <span class="summary-value">{{ formatDuration(svc.monthlyReport().avgPerDay) }}</span>
                 </div>
                 <div class="summary-row">
-                  <span class="summary-label">Ø pro Woche</span>
+                  <span class="summary-label">{{ 'reports.avgPerWeekLabel' | translate }}</span>
                   <span class="summary-value">{{ formatDuration(svc.monthlyReport().avgPerWeek) }}</span>
                 </div>
                 <mat-divider />
                 <div class="summary-row">
-                  <span class="summary-label">Monatsüberstunden</span>
+                  <span class="summary-label">{{ 'reports.monthlyOvertimeLabel' | translate }}</span>
                   <span class="summary-value"
                         [style.color]="svc.monthlyReport().monthlyOvertime >= 0 ? 'var(--color-overtime-positive)' : 'var(--mat-sys-error)'">
                     {{ formatOvertime(svc.monthlyReport().monthlyOvertime) }}
                   </span>
                 </div>
                 <div class="summary-row">
-                  <span class="summary-label">Gesamt-Überstunden</span>
+                  <span class="summary-label">{{ 'reports.totalOvertimeLabel' | translate }}</span>
                   <span class="summary-value"
                         [style.color]="svc.monthlyReport().totalOvertime >= 0 ? 'var(--color-overtime-positive)' : 'var(--mat-sys-error)'">
                     {{ formatOvertime(svc.monthlyReport().totalOvertime) }}
@@ -402,8 +402,8 @@
               </div>
 
               <!-- Weekly overview -->
-              <h3 class="section-title">Wochenübersicht</h3>
-              <div class="week-overview" role="list" aria-label="Wochenübersicht">
+              <h3 class="section-title">{{ 'reports.weekOverviewTitle' | translate }}</h3>
+              <div class="week-overview" role="list" [attr.aria-label]="'reports.weekOverviewTitle' | translate">
                 @for (week of svc.monthlyReport().weeks; track week.weekNumber) {
                   <div class="week-overview-row" role="listitem">
                     <span class="kw-badge">KW {{ week.weekNumber }}</span>
@@ -413,12 +413,12 @@
               </div>
 
               <!-- Day list -->
-              <h3 class="section-title">Tagesübersicht</h3>
-              <div class="day-list" role="list" aria-label="Tagesübersicht">
+              <h3 class="section-title">{{ 'reports.dayOverviewTitle' | translate }}</h3>
+              <div class="day-list" role="list" [attr.aria-label]="'reports.dayOverviewTitle' | translate">
                 @for (day of svc.monthlyReport().days; track day.date.getTime()) {
                   <button class="day-row"
                           (click)="svc.selectDate(day.date); onTabChange(0)"
-                          [attr.aria-label]="(day.date | date:'EEEE d. MMMM') + ': ' + formatDuration(day.worked)"
+                          [attr.aria-label]="'reports.dayRowAria' | translate: { weekday: (day.date | date:'EEEE d. MMMM'), duration: formatDuration(day.worked) }"
                           role="listitem">
                     <span class="day-name">{{ day.date | date:'EEE d.' }}</span>
                     <span class="day-duration">{{ day.worked > 0 ? formatDuration(day.worked) : '—' }}</span>

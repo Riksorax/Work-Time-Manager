@@ -30,7 +30,8 @@ void main() {
           workdays: monFri,
           regularDailyTarget: regularTarget,
         );
-        expect(target, regularTarget, reason: '$date sollte reguläres Soll haben');
+        expect(target, regularTarget,
+            reason: '$date sollte reguläres Soll haben');
       }
     });
 
@@ -53,7 +54,9 @@ void main() {
       );
     });
 
-    test('Di-Sa-Vertrag: Montag ist Zusatztag, Samstag ist Soll-Tag (Bug-Fix #217)', () {
+    test(
+        'Di-Sa-Vertrag: Montag ist Zusatztag, Samstag ist Soll-Tag (Bug-Fix #217)',
+        () {
       const tueSat = [2, 3, 4, 5, 6];
 
       // Der ursprüngliche Bug: bei ordinaler Zählung ("erste N Tage der
@@ -87,7 +90,8 @@ void main() {
       expect(target, Duration.zero);
     });
 
-    test('gilt unabhängig davon, ob an dem Tag tatsächlich gearbeitet wurde', () {
+    test('gilt unabhängig davon, ob an dem Tag tatsächlich gearbeitet wurde',
+        () {
       // Die Funktion braucht keine Einträge mehr - nur den Wochentag.
       final target = getEffectiveDailyTarget(
         date: DateTime(2023, 10, 25), // Mi, kein Eintrag vorhanden
@@ -109,29 +113,34 @@ void main() {
         makeEntry(DateTime(2023, 10, 28)), // Sa - kein Vertragstag
       ];
 
-      final effective = getEffectiveWorkDays(entries: entries, workdays: const [1, 2, 3, 4, 5]);
+      final effective = getEffectiveWorkDays(
+          entries: entries, workdays: const [1, 2, 3, 4, 5]);
       expect(effective, 5);
     });
 
-    test('Di-Sa-Vertrag: Arbeit an einem Montag zählt nicht mit (Bug-Fix #217)', () {
+    test('Di-Sa-Vertrag: Arbeit an einem Montag zählt nicht mit (Bug-Fix #217)',
+        () {
       final entries = [
         makeEntry(DateTime(2023, 10, 23)), // Mo - kein Vertragstag
         makeEntry(DateTime(2023, 10, 24)), // Di
         makeEntry(DateTime(2023, 10, 25)), // Mi
       ];
 
-      final effective = getEffectiveWorkDays(entries: entries, workdays: const [2, 3, 4, 5, 6]);
+      final effective = getEffectiveWorkDays(
+          entries: entries, workdays: const [2, 3, 4, 5, 6]);
       expect(effective, 2);
     });
 
-    test('weniger Einträge als Vertragstage gibt tatsächliche Anzahl zurück', () {
+    test('weniger Einträge als Vertragstage gibt tatsächliche Anzahl zurück',
+        () {
       final entries = [
         makeEntry(DateTime(2023, 10, 23)),
         makeEntry(DateTime(2023, 10, 24)),
         makeEntry(DateTime(2023, 10, 25)),
       ];
 
-      final effective = getEffectiveWorkDays(entries: entries, workdays: const [1, 2, 3, 4, 5]);
+      final effective = getEffectiveWorkDays(
+          entries: entries, workdays: const [1, 2, 3, 4, 5]);
       expect(effective, 3);
     });
 
@@ -141,7 +150,8 @@ void main() {
         makeEntry(DateTime(2023, 10, 24), withWork: false),
       ];
 
-      final effective = getEffectiveWorkDays(entries: entries, workdays: const [1, 2, 3, 4, 5]);
+      final effective = getEffectiveWorkDays(
+          entries: entries, workdays: const [1, 2, 3, 4, 5]);
       expect(effective, 1);
     });
   });
@@ -156,7 +166,8 @@ void main() {
         makeEntry(DateTime(2023, 10, 30)), // Nächste Woche (Mo)
       ];
 
-      final weekEntries = getWeekEntriesForDate(DateTime(2023, 10, 25), allEntries);
+      final weekEntries =
+          getWeekEntriesForDate(DateTime(2023, 10, 25), allEntries);
       expect(weekEntries.length, 3);
       expect(weekEntries[0].date, DateTime(2023, 10, 23));
       expect(weekEntries[1].date, DateTime(2023, 10, 24));

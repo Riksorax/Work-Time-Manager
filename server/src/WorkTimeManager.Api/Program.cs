@@ -6,6 +6,14 @@ using WorkTimeManager.Api.Firestore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Fehler-Tracking (Web-Pendant siehe #207): leerer String deaktiviert die SDK
+// explizit (null wirft eine Exception) - lokal/CI ohne gesetztes Sentry:Dsn
+// bleibt Sentry damit inaktiv.
+builder.WebHost.UseSentry(options =>
+{
+    options.Dsn = builder.Configuration["Sentry:Dsn"] ?? "";
+});
+
 var firebaseProjectId = builder.Configuration["Firebase:ProjectId"]
     ?? throw new InvalidOperationException("Firebase:ProjectId is not configured.");
 

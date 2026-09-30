@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/providers/providers.dart';
+import '../../core/providers/providers.dart' show workProfilesProvider;
 import '../../core/utils/logger.dart';
 import '../../domain/entities/work_profile_entity.dart';
 import '../../l10n/app_localizations.dart';
+import '../view_models/work_profile_view_model.dart';
 
 /// Dialog zum Löschen zusätzlicher Arbeitszeit-Profile (siehe #238). Das
 /// Standard-Profil wird hier nicht aufgeführt - es kann nicht gelöscht
@@ -38,21 +39,16 @@ class ManageWorkProfilesDialog extends ConsumerWidget {
     );
     if (confirmed != true || !context.mounted) return;
 
-    final repository = ref.read(workProfileRepositoryProvider);
-    if (repository == null) return;
-
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await repository.deleteProfile(profile.id);
-      ref.invalidate(workProfilesProvider);
-      // Falls das gelöschte Profil gerade aktiv war, zurück auf Standard.
-      if (ref.read(activeWorkProfileIdProvider) == profile.id) {
-        ref.read(activeWorkProfileIdProvider.notifier).setActiveProfile(null);
-      }
-      messenger.showSnackBar(SnackBar(content: Text(l10n.profileDeletedMessage(profile.name))));
+      await ref.read(workProfileViewModelProvider).deleteProfile(profile.id);
+      messenger.showSnackBar(
+          SnackBar(content: Text(l10n.profileDeletedMessage(profile.name))));
     } catch (e, stackTrace) {
-      logger.e('[ManageWorkProfilesDialog] Fehler beim Löschen: $e', stackTrace: stackTrace);
-      messenger.showSnackBar(SnackBar(content: Text(l10n.profileDeletionFailed('$e'))));
+      logger.e('[ManageWorkProfilesDialog] Fehler beim Löschen: $e',
+          stackTrace: stackTrace);
+      messenger.showSnackBar(
+          SnackBar(content: Text(l10n.profileDeletionFailed('$e'))));
     }
   }
 

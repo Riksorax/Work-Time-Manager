@@ -1,0 +1,40 @@
+<h2 mat-dialog-title>{{ 'dashboard.editBreakDialogTitle' | translate }}</h2>
+
+<mat-dialog-content>
+  <div class="fields">
+
+    <mat-form-field appearance="outline">
+      <mat-label>{{ 'dashboard.breakNameLabel' | translate }}</mat-label>
+      <input matInput [value]="name()" (input)="onNameInput($event)"
+             [attr.aria-label]="'dashboard.breakNameLabel' | translate" />
+    </mat-form-field>
+
+    <app-time-input
+      [label]="'dashboard.startTimeLabel' | translate"
+      [value]="startTime()"
+      (timeSelected)="onStartTimeSelected($event)"
+      [attr.aria-label]="'dashboard.breakStartAria' | translate"
+    />
+
+    <app-time-input
+      [label]="'dashboard.endTimeLabel' | translate"
+      [value]="endTime()"
+      (timeSelected)="onEndTimeSelected($event)"
+      [attr.aria-label]="'dashboard.breakEndAria' | translate"
+    />
+
+    @if (validationError()) {
+      <p class="error-text" role="alert">{{ validationError() }}</p>
+    }
+
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close [attr.aria-label]="'common.cancel' | translate">{{ 'common.cancel' | translate }}</button>
+  <button mat-flat-button
+          (click)="save()"
+          [attr.aria-label]="'dashboard.saveBreakAria' | translate">
+    {{ 'common.save' | translate }}
+  </button>
+</mat-dialog-actions>

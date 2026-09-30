@@ -8,11 +8,12 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { TranslatePipe } from '@ngx-translate/core';
 import { DashboardService } from './dashboard.service';
-import { EditBreakDialogComponent, EditBreakDialogData, EditBreakDialogResult } from './components/edit-break-dialog/edit-break-dialog.component';
-import { RestartSessionDialogComponent, RestartSessionDialogResult } from './components/restart-session-dialog/restart-session-dialog.component';
-import { AdjustOvertimeDialogComponent, AdjustOvertimeDialogResult } from '../settings/components/adjust-overtime-dialog/adjust-overtime-dialog.component';
-import { TimeInputComponent } from '../../shared/components/time-input/time-input.component';
+import { EditBreakDialogComponent, EditBreakDialogData, EditBreakDialogResult } from './components/edit-break-dialog/edit-break-dialog';
+import { RestartSessionDialogComponent, RestartSessionDialogResult } from './components/restart-session-dialog/restart-session-dialog';
+import { AdjustOvertimeDialogComponent, AdjustOvertimeDialogResult } from '../settings/components/adjust-overtime-dialog/adjust-overtime-dialog';
+import { TimeInputComponent } from '../../shared/components/time-input/time-input';
 import { Break } from '../../shared/models/index';
 
 @Component({
@@ -27,6 +28,7 @@ import { Break } from '../../shared/models/index';
     MatProgressSpinnerModule,
     MatTooltipModule,
     TimeInputComponent,
+    TranslatePipe,
   ],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',

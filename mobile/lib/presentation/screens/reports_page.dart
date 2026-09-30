@@ -6,7 +6,6 @@ import 'package:flutter_work_time/core/utils/logger.dart';
 import 'package:flutter_work_time/core/utils/time_format.dart';
 import 'package:flutter_work_time/core/utils/time_precision.dart';
 import 'package:intl/intl.dart';
-import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 import '../../core/providers/subscription_provider.dart';
 import '../../core/services/pdf_report_service.dart';
 
@@ -14,6 +13,7 @@ import '../../domain/entities/work_entry_extensions.dart';
 import '../../domain/utils/german_holidays.dart';
 import '../../domain/utils/weekday_labels.dart';
 import '../../l10n/app_localizations.dart';
+import '../widgets/common/paywall_launcher.dart';
 import '../widgets/common/responsive_center.dart';
 import '../widgets/premium_blur_gate.dart';
 import '../state/monthly_report_state.dart';
@@ -44,41 +44,6 @@ class PendingTabIndexNotifier extends Notifier<int?> {
   int? build() => null;
 
   set state(int? value) => super.state = value;
-}
-
-/// Zeigt die RevenueCat Paywall in einem Fullscreen-Modal an.
-const _rcAndroidKey = String.fromEnvironment('RC_ANDROID_KEY');
-
-void _showPaywall(BuildContext context) {
-  // Im lokalen Test ohne gültigen RC-Key kein Paywall öffnen
-  if (_rcAndroidKey.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          AppLocalizations.of(context).paywallUnavailable,
-        ),
-      ),
-    );
-    return;
-  }
-
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    backgroundColor: Colors.transparent,
-    builder: (ctx) => Container(
-      decoration: BoxDecoration(
-        color: Theme.of(ctx).scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: PaywallView(
-        onDismiss: () {
-          if (Navigator.of(ctx).canPop()) Navigator.of(ctx).pop();
-        },
-      ),
-    ),
-  );
 }
 
 class ReportsPage extends ConsumerStatefulWidget {
@@ -240,8 +205,10 @@ class DailyReportView extends ConsumerWidget {
         final DateTime selectedDay = reportsState.selectedDay ?? DateTime.now();
 
         // Effektives Tages-Soll: 0 für Zusatztage (mehr Arbeitstage als konfiguriert)
-        final dailyTarget = reportsNotifier.getEffectiveDailyTargetForDate(selectedDay);
-        final isExtraDay = dailyTarget == Duration.zero && dailyReport.entries.isNotEmpty;
+        final dailyTarget =
+            reportsNotifier.getEffectiveDailyTargetForDate(selectedDay);
+        final isExtraDay =
+            dailyTarget == Duration.zero && dailyReport.entries.isNotEmpty;
         final DateTime selectedMonth =
             reportsState.selectedMonth ?? DateTime.now();
 
@@ -273,7 +240,8 @@ class DailyReportView extends ConsumerWidget {
                 final DateTime bStart = b.start;
                 // b.end is nullable, end is not
                 final DateTime bEnd = b.end ?? end;
-                final DateTime effStart = bStart.isBefore(start) ? start : bStart;
+                final DateTime effStart =
+                    bStart.isBefore(start) ? start : bStart;
                 final DateTime effEnd = bEnd.isAfter(end) ? end : bEnd;
                 if (effEnd.isAfter(effStart)) {
                   breakDur += effEnd.difference(effStart);
@@ -291,7 +259,8 @@ class DailyReportView extends ConsumerWidget {
         // Bei speziellen Tagen (Urlaub, Krankheit, Feiertag) wird das Soll als erfüllt betrachtet
         // Daher: Wenn kein normaler Arbeitseintrag vorhanden ist, aber ein spezieller,
         // zählt totalWorked als erfüllt
-        bool hasSpecialEntry = dailyReport.entries.any((e) => e.type != WorkEntryType.work);
+        bool hasSpecialEntry =
+            dailyReport.entries.any((e) => e.type != WorkEntryType.work);
         if (hasSpecialEntry && totalWorked == Duration.zero) {
           totalWorked = dailyTarget;
         }
@@ -306,12 +275,14 @@ class DailyReportView extends ConsumerWidget {
               selectedDate: selectedDay,
               onDateSelected: (date) => reportsNotifier.selectDate(date),
               onPreviousMonthTapped: () {
-                final currentMonth = reportsState.selectedMonth ?? DateTime.now();
+                final currentMonth =
+                    reportsState.selectedMonth ?? DateTime.now();
                 reportsNotifier.onMonthChanged(
                     DateTime(currentMonth.year, currentMonth.month - 1, 1));
               },
               onNextMonthTapped: () {
-                final currentMonth = reportsState.selectedMonth ?? DateTime.now();
+                final currentMonth =
+                    reportsState.selectedMonth ?? DateTime.now();
                 reportsNotifier.onMonthChanged(
                     DateTime(currentMonth.year, currentMonth.month + 1, 1));
               },
@@ -324,7 +295,8 @@ class DailyReportView extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              l10n.dailyReportTitle(DateFormat.yMMMMd(locale).format(selectedDay)),
+              l10n.dailyReportTitle(
+                  DateFormat.yMMMMd(locale).format(selectedDay)),
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 16),
@@ -365,8 +337,8 @@ class DailyReportView extends ConsumerWidget {
                             child: ElevatedButton.icon(
                               onPressed: () async {
                                 if (reportsState.selectedDates.isNotEmpty) {
-                                  await _handleBatchQuickEntry(
-                                      context, ref, reportsState, reportsNotifier);
+                                  await _handleBatchQuickEntry(context, ref,
+                                      reportsState, reportsNotifier);
                                 } else {
                                   await _handleQuickEntry(
                                       context, ref, selectedDay);
@@ -374,7 +346,8 @@ class DailyReportView extends ConsumerWidget {
                               },
                               icon: const Icon(Icons.flash_on),
                               label: reportsState.selectedDates.isNotEmpty
-                                  ? Text(l10n.quickEntryTitleBatch(reportsState.selectedDates.length))
+                                  ? Text(l10n.quickEntryTitleBatch(
+                                      reportsState.selectedDates.length))
                                   : Text(l10n.quickEntryButton),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Theme.of(context)
@@ -406,12 +379,14 @@ class DailyReportView extends ConsumerWidget {
                               context, ref, reportsState, reportsNotifier);
                         },
                         icon: const Icon(Icons.flash_on),
-                        label: Text(l10n.quickEntryTitleBatch(reportsState.selectedDates.length)),
+                        label: Text(l10n.quickEntryTitleBatch(
+                            reportsState.selectedDates.length)),
                         style: ElevatedButton.styleFrom(
                           backgroundColor:
                               Theme.of(context).colorScheme.secondaryContainer,
-                          foregroundColor:
-                              Theme.of(context).colorScheme.onSecondaryContainer,
+                          foregroundColor: Theme.of(context)
+                              .colorScheme
+                              .onSecondaryContainer,
                         ),
                       ),
                     ),
@@ -426,8 +401,12 @@ class DailyReportView extends ConsumerWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(isExtraDay ? l10n.targetExtraDayLabel : l10n.targetDayLabel,
-                              style: const TextStyle(fontWeight: FontWeight.bold)),
+                          Text(
+                              isExtraDay
+                                  ? l10n.targetExtraDayLabel
+                                  : l10n.targetDayLabel,
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold)),
                           Text(
                             isExtraDay
                                 ? '-' // Deutliche Kennzeichnung: kein Tages-Soll
@@ -451,7 +430,8 @@ class DailyReportView extends ConsumerWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(l10n.balanceDayLabel,
-                              style: const TextStyle(fontWeight: FontWeight.bold)),
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold)),
                           Text(
                             _formatDuration(dayOvertime),
                             style: TextStyle(
@@ -504,8 +484,12 @@ class DailyReportView extends ConsumerWidget {
                           children: [
                             Text(
                               isSpecialType
-                                  ? _getWorkEntryTypeLabel(l10n, displayEntry.type)
-                                  : l10n.workTimeLabel(workedDuration.toString().split('.').first),
+                                  ? _getWorkEntryTypeLabel(
+                                      l10n, displayEntry.type)
+                                  : l10n.workTimeLabel(workedDuration
+                                      .toString()
+                                      .split('.')
+                                      .first),
                               style: Theme.of(context).textTheme.titleMedium,
                             ),
                             Row(
@@ -528,20 +512,38 @@ class DailyReportView extends ConsumerWidget {
                             displayEntry.workStart != null ||
                             displayEntry.workEnd != null) ...[
                           const SizedBox(height: 8),
-                          Text(l10n.startValueLabel(displayEntry.workStart != null ? formatTime(displayEntry.workStart!, use24HourFormat: settingsState.settings.use24HourFormat) : '-')),
-                          Text(l10n.endValueLabel(displayEntry.workEnd != null ? formatTime(displayEntry.workEnd!, use24HourFormat: settingsState.settings.use24HourFormat) : (isSpecialType ? '-' : l10n.breakInProgress))),
+                          Text(l10n.startValueLabel(displayEntry.workStart !=
+                                  null
+                              ? formatTime(displayEntry.workStart!,
+                                  use24HourFormat:
+                                      settingsState.settings.use24HourFormat)
+                              : '-')),
+                          Text(l10n.endValueLabel(displayEntry.workEnd != null
+                              ? formatTime(displayEntry.workEnd!,
+                                  use24HourFormat:
+                                      settingsState.settings.use24HourFormat)
+                              : (isSpecialType ? '-' : l10n.breakInProgress))),
                           if (!isSpecialType)
-                            Text(l10n.breakValueLabel(displayEntry.totalBreakDuration.toString().split('.').first)),
+                            Text(l10n.breakValueLabel(displayEntry
+                                .totalBreakDuration
+                                .toString()
+                                .split('.')
+                                .first)),
                         ],
                         if (displayEntry.manualOvertime != null)
                           Padding(
                             padding: const EdgeInsets.only(top: 8.0),
-                            child: Text(l10n.manualAdjustmentLabel(displayEntry.manualOvertime.toString().split('.').first)),
+                            child: Text(l10n.manualAdjustmentLabel(displayEntry
+                                .manualOvertime
+                                .toString()
+                                .split('.')
+                                .first)),
                           ),
                         Padding(
                           padding: const EdgeInsets.only(top: 8.0),
                           child: Text(
-                            l10n.overtimeValueLabel(_formatDuration(displayEntry.calculateOvertime(dailyTarget))),
+                            l10n.overtimeValueLabel(_formatDuration(
+                                displayEntry.calculateOvertime(dailyTarget))),
                             style: TextStyle(
                                 color: (displayEntry
                                         .calculateOvertime(dailyTarget)
@@ -658,9 +660,11 @@ class WeeklyReportView extends ConsumerWidget {
       return PremiumBlurGate(
         featureTitle: l10n.weeklyReportsFeatureTitle,
         featureText: l10n.weeklyReportsFeatureText,
-        onUpgrade: kIsWeb ? null : () {
-          if (context.mounted) _showPaywall(context);
-        },
+        onUpgrade: kIsWeb
+            ? null
+            : () {
+                if (context.mounted) showPaywall(context);
+              },
         child: const _WeeklyReportPlaceholder(),
       );
     }
@@ -692,7 +696,8 @@ class WeeklyReportView extends ConsumerWidget {
               selectedDay.day - selectedDay.weekday + 1);
           final endOfWeek = startOfWeek.add(const Duration(days: 6));
           final weekNumber =
-              (startOfWeek.difference(DateTime(startOfWeek.year, 1, 1)).inDays / 7)
+              (startOfWeek.difference(DateTime(startOfWeek.year, 1, 1)).inDays /
+                          7)
                       .floor() +
                   1;
           final Duration weeklyOvertimeLocal = weeklyReport.dailyWork.entries
@@ -874,8 +879,7 @@ class WeeklyReportView extends ConsumerWidget {
                           },
                           child: Card(
                             child: ListTile(
-                              title:
-                                  Text(DateFormat.EEEE(locale).format(date)),
+                              title: Text(DateFormat.EEEE(locale).format(date)),
                               subtitle:
                                   Text(DateFormat.yMMMd(locale).format(date)),
                               trailing:
@@ -933,8 +937,8 @@ DateTime? _firstDateInMonthForWeek(DateTime month, int weekNumber) {
 
 /// Navigiert vom Monatsbericht zum Wochenbericht der angetippten
 /// Kalenderwoche (#258).
-void _navigateToWeek(
-    WidgetRef ref, {required DateTime month, required int weekNumber}) {
+void _navigateToWeek(WidgetRef ref,
+    {required DateTime month, required int weekNumber}) {
   final date = _firstDateInMonthForWeek(month, weekNumber) ?? month;
   ref.read(reportsViewModelProvider.notifier).selectDate(date);
   ref.read(pendingReportTabIndexProvider.notifier).state = 1;
@@ -943,7 +947,9 @@ void _navigateToWeek(
 /// Navigiert vom Jahresbericht zum Monatsbericht des angetippten Monats
 /// (#258).
 void _navigateToMonth(WidgetRef ref, {required int year, required int month}) {
-  ref.read(reportsViewModelProvider.notifier).onMonthChanged(DateTime(year, month, 1));
+  ref
+      .read(reportsViewModelProvider.notifier)
+      .onMonthChanged(DateTime(year, month, 1));
   ref.read(pendingReportTabIndexProvider.notifier).state = 2;
 }
 
@@ -958,14 +964,18 @@ Future<void> _exportWeeklyReportPdf({
   required Duration overtime,
 }) async {
   final messenger = ScaffoldMessenger.of(context);
+  final l10n = AppLocalizations.of(context);
+  final locale = Localizations.localeOf(context).toString();
   try {
     await _pdfReportService.exportWeeklyReport(
+      l10n: l10n,
+      locale: locale,
       startOfWeek: startOfWeek,
       endOfWeek: endOfWeek,
       weekNumber: weekNumber,
       workDays: weeklyReport.workDays,
-      totalWorkDuration:
-          weeklyReport.dailyWork.values.fold(Duration.zero, (prev, d) => prev + d),
+      totalWorkDuration: weeklyReport.dailyWork.values
+          .fold(Duration.zero, (prev, d) => prev + d),
       totalBreakDuration: weeklyReport.totalBreakDuration,
       averageWorkDuration: weeklyReport.averageWorkDuration,
       overtime: overtime,
@@ -991,12 +1001,16 @@ Future<void> _exportMonthlyReportPdf({
   required Duration monthlyOvertime,
 }) async {
   final messenger = ScaffoldMessenger.of(context);
+  final l10n = AppLocalizations.of(context);
+  final locale = Localizations.localeOf(context).toString();
   try {
     await _pdfReportService.exportMonthlyReport(
+      l10n: l10n,
+      locale: locale,
       month: month,
       workDays: monthlyReport.workDays,
-      totalWorkDuration:
-          monthlyReport.dailyWork.values.fold(Duration.zero, (prev, d) => prev + d),
+      totalWorkDuration: monthlyReport.dailyWork.values
+          .fold(Duration.zero, (prev, d) => prev + d),
       totalBreakDuration: monthlyReport.totalBreakDuration,
       averageWorkDuration: monthlyReport.averageWorkDuration,
       avgWorkDurationPerWeek: monthlyReport.avgWorkDurationPerWeek,
@@ -1025,9 +1039,11 @@ Future<void> _exportYearlyReportPdf({
   required YearlyReportState yearlyReport,
 }) async {
   final messenger = ScaffoldMessenger.of(context);
+  final l10n = AppLocalizations.of(context);
   final locale = Localizations.localeOf(context).toString();
   try {
     await _pdfReportService.exportYearlyReport(
+      l10n: l10n,
       year: yearlyReport.year,
       totalWorkDays: yearlyReport.totalWorkDays,
       totalVacationDays: yearlyReport.totalVacationDays,
@@ -1038,7 +1054,8 @@ Future<void> _exportYearlyReportPdf({
       months: [
         for (final m in yearlyReport.months)
           (
-            DateFormat.MMMM(locale).format(DateTime(yearlyReport.year, m.month)),
+            DateFormat.MMMM(locale)
+                .format(DateTime(yearlyReport.year, m.month)),
             m.netWorkDuration,
             m.overtime,
             m.workDays,
@@ -1108,9 +1125,11 @@ class MonthlyReportView extends ConsumerWidget {
       return PremiumBlurGate(
         featureTitle: l10n.monthlyReportsFeatureTitle,
         featureText: l10n.monthlyReportsFeatureText,
-        onUpgrade: kIsWeb ? null : () {
-          if (context.mounted) _showPaywall(context);
-        },
+        onUpgrade: kIsWeb
+            ? null
+            : () {
+                if (context.mounted) showPaywall(context);
+              },
         child: const _MonthlyReportPlaceholder(),
       );
     }
@@ -1201,8 +1220,14 @@ class MonthlyReportView extends ConsumerWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(l10n.totalWorkTimeLabel, style: const TextStyle(fontWeight: FontWeight.bold)),
-                      Text(monthlyReport.dailyWork.values.fold(Duration.zero, (prev, d) => prev + d).toString().split('.').first,
+                      Text(l10n.totalWorkTimeLabel,
+                          style: const TextStyle(fontWeight: FontWeight.bold)),
+                      Text(
+                          monthlyReport.dailyWork.values
+                              .fold(Duration.zero, (prev, d) => prev + d)
+                              .toString()
+                              .split('.')
+                              .first,
                           style: const TextStyle(fontWeight: FontWeight.bold)),
                     ],
                   ),
@@ -1211,7 +1236,10 @@ class MonthlyReportView extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(l10n.totalBreaksLabel),
-                      Text(monthlyReport.totalBreakDuration.toString().split('.').first),
+                      Text(monthlyReport.totalBreakDuration
+                          .toString()
+                          .split('.')
+                          .first),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -1227,7 +1255,10 @@ class MonthlyReportView extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(l10n.avgWorkPerDayLabel),
-                      Text(monthlyReport.averageWorkDuration.toString().split('.').first),
+                      Text(monthlyReport.averageWorkDuration
+                          .toString()
+                          .split('.')
+                          .first),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -1235,25 +1266,38 @@ class MonthlyReportView extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(l10n.avgWorkPerWeekLabel),
-                      Text(monthlyReport.avgWorkDurationPerWeek.toString().split('.').first),
+                      Text(monthlyReport.avgWorkDurationPerWeek
+                          .toString()
+                          .split('.')
+                          .first),
                     ],
                   ),
                   const SizedBox(height: 12),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(l10n.monthlyOvertimeLabel, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      Text(l10n.monthlyOvertimeLabel,
+                          style: const TextStyle(fontWeight: FontWeight.bold)),
                       Text(_formatDuration(monthlyOvertimeLocal),
-                          style: TextStyle(color: monthlyOvertimeLocal.isNegative ? Colors.red : Colors.green, fontWeight: FontWeight.bold)),
+                          style: TextStyle(
+                              color: monthlyOvertimeLocal.isNegative
+                                  ? Colors.red
+                                  : Colors.green,
+                              fontWeight: FontWeight.bold)),
                     ],
                   ),
                   const SizedBox(height: 12),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(l10n.totalOvertimeColonLabel, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      Text(l10n.totalOvertimeColonLabel,
+                          style: const TextStyle(fontWeight: FontWeight.bold)),
                       Text(_formatDuration(monthlyReport.totalOvertime),
-                          style: TextStyle(color: monthlyReport.totalOvertime.isNegative ? Colors.red : Colors.green, fontWeight: FontWeight.bold)),
+                          style: TextStyle(
+                              color: monthlyReport.totalOvertime.isNegative
+                                  ? Colors.red
+                                  : Colors.green,
+                              fontWeight: FontWeight.bold)),
                     ],
                   ),
                 ],
@@ -1262,7 +1306,9 @@ class MonthlyReportView extends ConsumerWidget {
           ));
 
           monthChildren.add(const SizedBox(height: 24));
-          monthChildren.add(Text(l10n.weekOverviewTitle, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)));
+          monthChildren.add(Text(l10n.weekOverviewTitle,
+              style:
+                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)));
           monthChildren.add(const SizedBox(height: 8));
 
           // Weekly entries
@@ -1281,7 +1327,9 @@ class MonthlyReportView extends ConsumerWidget {
           }
 
           monthChildren.add(const SizedBox(height: 24));
-          monthChildren.add(Text(l10n.dayOverviewTitle, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)));
+          monthChildren.add(Text(l10n.dayOverviewTitle,
+              style:
+                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)));
           monthChildren.add(const SizedBox(height: 8));
 
           // Daily entries
@@ -1342,7 +1390,9 @@ class _YearlyReportViewState extends ConsumerState<YearlyReportView> {
     if (_loadTriggered) return;
     _loadTriggered = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(yearlyReportViewModelProvider.notifier).loadYear(DateTime.now().year);
+      ref
+          .read(yearlyReportViewModelProvider.notifier)
+          .loadYear(DateTime.now().year);
     });
   }
 
@@ -1393,9 +1443,11 @@ class _YearlyReportViewState extends ConsumerState<YearlyReportView> {
       return PremiumBlurGate(
         featureTitle: l10n.yearlyReportsFeatureTitle,
         featureText: l10n.yearlyReportsFeatureText,
-        onUpgrade: kIsWeb ? null : () {
-          if (context.mounted) _showPaywall(context);
-        },
+        onUpgrade: kIsWeb
+            ? null
+            : () {
+                if (context.mounted) showPaywall(context);
+              },
         child: const _MonthlyReportPlaceholder(),
       );
     }
@@ -1466,10 +1518,15 @@ class _YearlyReportViewState extends ConsumerState<YearlyReportView> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(l10n.totalWorkTimeLabel,
-                            style: const TextStyle(fontWeight: FontWeight.bold)),
+                            style:
+                                const TextStyle(fontWeight: FontWeight.bold)),
                         Text(
-                            yearlyState.totalNetWorkDuration.toString().split('.').first,
-                            style: const TextStyle(fontWeight: FontWeight.bold)),
+                            yearlyState.totalNetWorkDuration
+                                .toString()
+                                .split('.')
+                                .first,
+                            style:
+                                const TextStyle(fontWeight: FontWeight.bold)),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -1509,7 +1566,8 @@ class _YearlyReportViewState extends ConsumerState<YearlyReportView> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(l10n.totalOvertimeColonLabel,
-                            style: const TextStyle(fontWeight: FontWeight.bold)),
+                            style:
+                                const TextStyle(fontWeight: FontWeight.bold)),
                         Text(
                           _formatDuration(yearlyState.totalOvertime),
                           style: TextStyle(
@@ -1526,7 +1584,8 @@ class _YearlyReportViewState extends ConsumerState<YearlyReportView> {
             ),
             const SizedBox(height: 24),
             Text(l10n.monthOverviewTitle,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
             const SizedBox(height: 8),
             for (final monthSummary in yearlyState.months)
               if (monthSummary.workDays > 0 ||
@@ -1537,8 +1596,12 @@ class _YearlyReportViewState extends ConsumerState<YearlyReportView> {
                   margin: const EdgeInsets.symmetric(vertical: 4.0),
                   child: ListTile(
                     title: Text(monthNames[monthSummary.month - 1]),
-                    subtitle: Text(
-                        l10n.workdaysCountInline(monthSummary.workDays, monthSummary.netWorkDuration.toString().split('.').first)),
+                    subtitle: Text(l10n.workdaysCountInline(
+                        monthSummary.workDays,
+                        monthSummary.netWorkDuration
+                            .toString()
+                            .split('.')
+                            .first)),
                     trailing: Text(
                       _formatDuration(monthSummary.overtime),
                       style: TextStyle(
@@ -1624,9 +1687,11 @@ class _InsightsViewState extends ConsumerState<InsightsView> {
       return PremiumBlurGate(
         featureTitle: l10n.insightsFeatureTitle,
         featureText: l10n.insightsFeatureText,
-        onUpgrade: kIsWeb ? null : () {
-          if (context.mounted) _showPaywall(context);
-        },
+        onUpgrade: kIsWeb
+            ? null
+            : () {
+                if (context.mounted) showPaywall(context);
+              },
         child: const _MonthlyReportPlaceholder(),
       );
     }
@@ -1666,9 +1731,11 @@ class _InsightsViewState extends ConsumerState<InsightsView> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        l10n.burnoutWarning('${insightsState.burnoutStatus.currentStreak}'),
+                        l10n.burnoutWarning(
+                            '${insightsState.burnoutStatus.currentStreak}'),
                         style: TextStyle(
-                            color: Theme.of(context).colorScheme.onErrorContainer),
+                            color:
+                                Theme.of(context).colorScheme.onErrorContainer),
                       ),
                     ),
                   ],
@@ -1687,13 +1754,20 @@ class _InsightsViewState extends ConsumerState<InsightsView> {
                 children: [
                   for (final weekdayAverage in insightsState.weekdayAverages)
                     ListTile(
-                      title: Text(weekdayShortLabel(weekdayAverage.weekday, locale)),
-                      subtitle: Text(
-                          l10n.avgWorkTimeWithCount(weekdayAverage.averageWorkDuration.toString().split('.').first, weekdayAverage.sampleCount)),
+                      title: Text(
+                          weekdayShortLabel(weekdayAverage.weekday, locale)),
+                      subtitle: Text(l10n.avgWorkTimeWithCount(
+                          weekdayAverage.averageWorkDuration
+                              .toString()
+                              .split('.')
+                              .first,
+                          weekdayAverage.sampleCount)),
                       trailing: Text(
-                        _formatSignedDuration(weekdayAverage.deviationFromOverallAverage),
+                        _formatSignedDuration(
+                            weekdayAverage.deviationFromOverallAverage),
                         style: TextStyle(
-                          color: weekdayAverage.deviationFromOverallAverage.isNegative
+                          color: weekdayAverage
+                                  .deviationFromOverallAverage.isNegative
                               ? Colors.blue
                               : Colors.orange,
                         ),
@@ -1715,7 +1789,8 @@ class _InsightsViewState extends ConsumerState<InsightsView> {
                 children: [
                   for (final bucket in insightsState.heatmap)
                     ListTile(
-                      title: Text(l10n.startHourLabel(bucket.startHour.toString().padLeft(2, '0'))),
+                      title: Text(l10n.startHourLabel(
+                          bucket.startHour.toString().padLeft(2, '0'))),
                       subtitle: Text(l10n.sampleCountLabel(bucket.sampleCount)),
                       trailing: Text(
                         _formatSignedDuration(bucket.averageOvertime),
@@ -1749,7 +1824,8 @@ class _InsightSectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        Text(title,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         const SizedBox(width: 4),
         Tooltip(
           message: explanation,
@@ -1784,7 +1860,7 @@ class _Calendar extends ConsumerStatefulWidget {
 
 class _CalendarState extends ConsumerState<_Calendar> {
   DateTime? _dragStartDate; // Tracks where drag started
-  DateTime? _dragEndDate;   // Tracks current drag position
+  DateTime? _dragEndDate; // Tracks current drag position
   bool _isDragging = false;
   final GlobalKey _gridKey = GlobalKey();
 
@@ -1803,7 +1879,8 @@ class _CalendarState extends ConsumerState<_Calendar> {
     return workdays.contains(date.weekday);
   }
 
-  void _selectDateRange(DateTime startDate, DateTime endDate, List<int> workdays) {
+  void _selectDateRange(
+      DateTime startDate, DateTime endDate, List<int> workdays) {
     final reportsNotifier = ref.read(reportsViewModelProvider.notifier);
 
     // Normalize dates
@@ -1911,14 +1988,15 @@ class _CalendarState extends ConsumerState<_Calendar> {
     final locale = Localizations.localeOf(context).toString();
 
     // Hole die konfigurierten Arbeitstage aus den Settings (default Mo-Fr)
-    final workdays =
-        settingsState.whenData((s) => s.settings.workdays).value ?? const [1, 2, 3, 4, 5];
+    final workdays = settingsState.whenData((s) => s.settings.workdays).value ??
+        const [1, 2, 3, 4, 5];
 
     // Feiertage des angezeigten Monats/Jahres für das gewählte Bundesland (#222).
     // Rein visuelle Markierung - es werden keine WorkEntryType.holiday-Einträge erzeugt.
     // Namen zusätzlich zur Datumsmarkierung, damit im Kalender ersichtlich ist,
     // um welchen Feiertag es sich handelt (siehe #253).
-    final bundesland = settingsState.whenData((s) => s.settings.bundesland).value;
+    final bundesland =
+        settingsState.whenData((s) => s.settings.bundesland).value;
     final Map<DateTime, String> holidayNames = bundesland != null
         ? getGermanHolidayNames(widget.selectedDate.year, bundesland)
         : const <DateTime, String>{};
@@ -1988,8 +2066,10 @@ class _CalendarState extends ConsumerState<_Calendar> {
               ),
             Row(
               children: List.generate(7, (index) {
-                final day = DateFormat.E(locale).format(DateTime(2023, 1, 2 + index));
-                final fullDay = DateFormat.EEEE(locale).format(DateTime(2023, 1, 2 + index));
+                final day =
+                    DateFormat.E(locale).format(DateTime(2023, 1, 2 + index));
+                final fullDay = DateFormat.EEEE(locale)
+                    .format(DateTime(2023, 1, 2 + index));
                 return Expanded(
                   child: Semantics(
                     label: fullDay,
@@ -2021,7 +2101,8 @@ class _CalendarState extends ConsumerState<_Calendar> {
                 behavior: HitTestBehavior.translucent,
                 onPointerDown: (event) {
                   // Nur für Maus: Drag sofort starten (kein Long-Press nötig)
-                  if (event.kind == PointerDeviceKind.mouse && event.buttons == 1) {
+                  if (event.kind == PointerDeviceKind.mouse &&
+                      event.buttons == 1) {
                     _startDragAt(event.position, workdays);
                   }
                 },
@@ -2041,26 +2122,31 @@ class _CalendarState extends ConsumerState<_Calendar> {
                   physics: const NeverScrollableScrollPhysics(),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 7),
-                  itemCount:
-                      _getDaysInMonth(widget.selectedDate.year, widget.selectedDate.month) +
-                          _getFirstDayOffset(widget.selectedDate.year, widget.selectedDate.month),
+                  itemCount: _getDaysInMonth(
+                          widget.selectedDate.year, widget.selectedDate.month) +
+                      _getFirstDayOffset(
+                          widget.selectedDate.year, widget.selectedDate.month),
                   itemBuilder: (context, index) {
-                    final firstDayOffset =
-                        _getFirstDayOffset(widget.selectedDate.year, widget.selectedDate.month);
+                    final firstDayOffset = _getFirstDayOffset(
+                        widget.selectedDate.year, widget.selectedDate.month);
                     if (index < firstDayOffset) {
                       return const SizedBox.shrink();
                     }
 
                     final day = index - firstDayOffset + 1;
-                    final date =
-                        DateTime(widget.selectedDate.year, widget.selectedDate.month, day);
-                    final isSelected = DateUtils.isSameDay(date, widget.selectedDate);
+                    final date = DateTime(widget.selectedDate.year,
+                        widget.selectedDate.month, day);
+                    final isSelected =
+                        DateUtils.isSameDay(date, widget.selectedDate);
                     final isMultiSelected = reportsState.selectedDates
                         .contains(DateTime(date.year, date.month, date.day));
-                    final hasEntry = widget.daysWithEntries?.contains(day) ?? false;
+                    final hasEntry =
+                        widget.daysWithEntries?.contains(day) ?? false;
                     final isWorkday = _isWorkday(date, workdays);
-                    final isHoliday = holidays.contains(DateTime(date.year, date.month, date.day));
-                    final holidayName = holidayNames[DateTime(date.year, date.month, date.day)];
+                    final isHoliday = holidays
+                        .contains(DateTime(date.year, date.month, date.day));
+                    final holidayName =
+                        holidayNames[DateTime(date.year, date.month, date.day)];
 
                     Widget dayWidget = Center(
                       child: Text(
@@ -2070,7 +2156,12 @@ class _CalendarState extends ConsumerState<_Calendar> {
                               ? Colors.white
                               : (isHoliday
                                   ? Colors.red
-                                  : (isWorkday ? Theme.of(context).textTheme.bodyLarge?.color : Colors.grey)),
+                                  : (isWorkday
+                                      ? Theme.of(context)
+                                          .textTheme
+                                          .bodyLarge
+                                          ?.color
+                                      : Colors.grey)),
                           fontWeight: isHoliday ? FontWeight.bold : null,
                         ),
                       ),
@@ -2128,7 +2219,8 @@ class _CalendarState extends ConsumerState<_Calendar> {
                             shape: BoxShape.circle,
                             border: isMultiSelected
                                 ? Border.all(
-                                    color: Theme.of(context).colorScheme.primary,
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
                                     width: 2,
                                   )
                                 : null,
@@ -2235,7 +2327,8 @@ class _DayEntriesBottomSheetState extends ConsumerState<DayEntriesBottomSheet> {
   Widget build(BuildContext context) {
     final reportsState = ref.watch(reportsViewModelProvider);
     final use24HourFormat =
-        ref.watch(settingsViewModelProvider).value?.settings.use24HourFormat ?? true;
+        ref.watch(settingsViewModelProvider).value?.settings.use24HourFormat ??
+            true;
     final l10n = AppLocalizations.of(context);
     final locale = Localizations.localeOf(context).toString();
 
@@ -2282,7 +2375,8 @@ class _DayEntriesBottomSheetState extends ConsumerState<DayEntriesBottomSheet> {
                   ),
                 ),
                 Text(
-                  l10n.entriesForDayTitle(DateFormat.yMMMMd(locale).format(widget.date)),
+                  l10n.entriesForDayTitle(
+                      DateFormat.yMMMMd(locale).format(widget.date)),
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 12),
@@ -2327,8 +2421,12 @@ class _DayEntriesBottomSheetState extends ConsumerState<DayEntriesBottomSheet> {
                                     icon: const Icon(Icons.flash_on),
                                     label: Text(l10n.quickEntryButton),
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
-                                      foregroundColor: Theme.of(context).colorScheme.onSecondaryContainer,
+                                      backgroundColor: Theme.of(context)
+                                          .colorScheme
+                                          .secondaryContainer,
+                                      foregroundColor: Theme.of(context)
+                                          .colorScheme
+                                          .onSecondaryContainer,
                                     ),
                                   ),
                                 ),
@@ -2365,7 +2463,8 @@ class _DayEntriesBottomSheetState extends ConsumerState<DayEntriesBottomSheet> {
                             final DateTime bEnd = b.end ?? end;
                             final DateTime effStart =
                                 bStart.isBefore(start) ? start : bStart;
-                            final DateTime effEnd = bEnd.isAfter(end) ? end : bEnd;
+                            final DateTime effEnd =
+                                bEnd.isAfter(end) ? end : bEnd;
                             if (effEnd.isAfter(effStart)) {
                               breakDur += effEnd.difference(effStart);
                             }
@@ -2379,8 +2478,10 @@ class _DayEntriesBottomSheetState extends ConsumerState<DayEntriesBottomSheet> {
                             contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 12, vertical: 8),
                             title: Text(isSpecialType
-                                ? _getWorkEntryTypeLabel(l10n, displayEntry.type)
-                                : l10n.workTimeLabel(worked.toString().split('.').first)),
+                                ? _getWorkEntryTypeLabel(
+                                    l10n, displayEntry.type)
+                                : l10n.workTimeLabel(
+                                    worked.toString().split('.').first)),
                             subtitle: (isSpecialType &&
                                     displayEntry.workStart == null &&
                                     displayEntry.workEnd == null)
@@ -2389,12 +2490,30 @@ class _DayEntriesBottomSheetState extends ConsumerState<DayEntriesBottomSheet> {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      Text(l10n.startValueLabel(start != null ? formatTime(start, use24HourFormat: use24HourFormat) : '-')),
-                                      Text(l10n.endValueLabel(displayEntry.workEnd != null ? formatTime(displayEntry.workEnd!, use24HourFormat: use24HourFormat) : (isSpecialType ? '-' : l10n.breakInProgress))),
+                                      Text(l10n.startValueLabel(start != null
+                                          ? formatTime(start,
+                                              use24HourFormat: use24HourFormat)
+                                          : '-')),
+                                      Text(l10n.endValueLabel(displayEntry
+                                                  .workEnd !=
+                                              null
+                                          ? formatTime(displayEntry.workEnd!,
+                                              use24HourFormat: use24HourFormat)
+                                          : (isSpecialType
+                                              ? '-'
+                                              : l10n.breakInProgress))),
                                       if (!isSpecialType)
-                                        Text(l10n.breakValueLabel(displayEntry.totalBreakDuration.toString().split('.').first)),
+                                        Text(l10n.breakValueLabel(displayEntry
+                                            .totalBreakDuration
+                                            .toString()
+                                            .split('.')
+                                            .first)),
                                       if (displayEntry.manualOvertime != null)
-                                        Text(l10n.manualAdjustmentLabel(displayEntry.manualOvertime.toString().split('.').first)),
+                                        Text(l10n.manualAdjustmentLabel(
+                                            displayEntry.manualOvertime
+                                                .toString()
+                                                .split('.')
+                                                .first)),
                                     ],
                                   ),
                             trailing: Row(
@@ -2506,7 +2625,8 @@ Future<void> _handleBatchQuickEntry(
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(AppLocalizations.of(context).batchEntriesCreated(count)),
+          content:
+              Text(AppLocalizations.of(context).batchEntriesCreated(count)),
         ),
       );
     }

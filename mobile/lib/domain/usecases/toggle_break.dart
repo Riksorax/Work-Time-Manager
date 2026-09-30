@@ -18,7 +18,7 @@ class ToggleBreak {
   Future<WorkEntryEntity> call(WorkEntryEntity currentEntry) async {
     // Finde eine laufende Pause (eine ohne Endzeit).
     final activeBreak = currentEntry.breaks.firstWhereOrNull(
-          (b) => b.end == null,
+      (b) => b.end == null,
     );
 
     WorkEntryEntity updatedEntry;

@@ -40,6 +40,7 @@ lädt den Inhalt beim Play-Upload automatisch als Änderungsprotokoll mit hoch.
 
 | Version | Charakter | Datum |
 | --- | --- | --- |
+| 1.5.0 | Lexaeus | 2026-09-30 |
 | 1.4.2 | Zexion | 2026-09-17 |
 | 1.4.1 | Vexen | 2026-09-16 |
 | 1.4.0 | Demyx | 2026-09-16 |
@@ -79,7 +80,6 @@ Einige Einträge sind alternative Identitäten derselben Figur (Lea/Axel,
 Isa/Saix). Ist eine Variante vergeben, sollte die andere nicht mehr
 verwendet werden, auch wenn die Prüfung sie formal durchlässt.
 
-- Lexaeus
 - Xigbar
 - Xaldin
 - Saix

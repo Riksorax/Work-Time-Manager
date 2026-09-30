@@ -30,14 +30,16 @@ class FirebaseOvertimeRepositoryImpl implements OvertimeRepository {
     // Synchroner Zugriff - gibt gecachten Wert zurück oder Duration.zero
     // Der eigentliche Wert wird beim ersten async-Zugriff geladen
     if (_cachedOvertime != null) {
-      logger.i('[FirebaseOvertimeRepository] getOvertime (cached): ${_cachedOvertime!.inMinutes} min');
+      logger.i(
+          '[FirebaseOvertimeRepository] getOvertime (cached): ${_cachedOvertime!.inMinutes} min');
       return _cachedOvertime!;
     }
 
     // Starte async Laden im Hintergrund
     _loadFromFirestore();
 
-    logger.i('[FirebaseOvertimeRepository] getOvertime: Cache leer, gebe 0 zurück (lädt async)');
+    logger.i(
+        '[FirebaseOvertimeRepository] getOvertime: Cache leer, gebe 0 zurück (lädt async)');
     return Duration.zero;
   }
 
@@ -46,7 +48,8 @@ class FirebaseOvertimeRepositoryImpl implements OvertimeRepository {
     // Minutengenau speichern — der Cache muss denselben Wert halten wie Firestore,
     // sonst driftet die Bilanz zwischen Cache und persistiertem Stand.
     final rounded = roundDurationToMinute(overtime);
-    logger.i('[FirebaseOvertimeRepository] saveOvertime: ${rounded.inMinutes} min');
+    logger.i(
+        '[FirebaseOvertimeRepository] saveOvertime: ${rounded.inMinutes} min');
     _cachedOvertime = rounded;
     await _dataSource.saveOvertime(_userId, rounded, profileId: _profileId);
   }
@@ -68,34 +71,41 @@ class FirebaseOvertimeRepositoryImpl implements OvertimeRepository {
   Future<void> saveLastUpdateDate(DateTime date) async {
     logger.i('[FirebaseOvertimeRepository] saveLastUpdateDate: $date');
     _cachedLastUpdate = date;
-    await _dataSource.saveLastOvertimeUpdate(_userId, date, profileId: _profileId);
+    await _dataSource.saveLastOvertimeUpdate(_userId, date,
+        profileId: _profileId);
   }
 
   /// Lädt Daten async von Firestore und aktualisiert den Cache
   Future<void> _loadFromFirestore() async {
     try {
-      final overtime = await _dataSource.getOvertime(_userId, profileId: _profileId);
+      final overtime =
+          await _dataSource.getOvertime(_userId, profileId: _profileId);
       _cachedOvertime = overtime;
 
-      final lastUpdate = await _dataSource.getLastOvertimeUpdate(_userId, profileId: _profileId);
+      final lastUpdate = await _dataSource.getLastOvertimeUpdate(_userId,
+          profileId: _profileId);
       _cachedLastUpdate = lastUpdate;
 
-      logger.i('[FirebaseOvertimeRepository] Daten von Firestore geladen: ${overtime.inMinutes} min, lastUpdate: $lastUpdate');
+      logger.i(
+          '[FirebaseOvertimeRepository] Daten von Firestore geladen: ${overtime.inMinutes} min, lastUpdate: $lastUpdate');
     } catch (e) {
-      logger.e('[FirebaseOvertimeRepository] Fehler beim Laden von Firestore: $e');
+      logger.e(
+          '[FirebaseOvertimeRepository] Fehler beim Laden von Firestore: $e');
     }
   }
 
   /// Lädt die Daten explizit von Firestore (für initiale Synchronisation)
   Future<Duration> loadOvertimeAsync() async {
-    final overtime = await _dataSource.getOvertime(_userId, profileId: _profileId);
+    final overtime =
+        await _dataSource.getOvertime(_userId, profileId: _profileId);
     _cachedOvertime = overtime;
     return overtime;
   }
 
   /// Lädt das Update-Datum explizit von Firestore
   Future<DateTime?> loadLastUpdateAsync() async {
-    final lastUpdate = await _dataSource.getLastOvertimeUpdate(_userId, profileId: _profileId);
+    final lastUpdate =
+        await _dataSource.getLastOvertimeUpdate(_userId, profileId: _profileId);
     _cachedLastUpdate = lastUpdate;
     return lastUpdate;
   }

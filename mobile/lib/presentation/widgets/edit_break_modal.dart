@@ -28,7 +28,8 @@ class _EditBreakModalState extends ConsumerState<EditBreakModal> {
   void initState() {
     super.initState();
     _use24HourFormat =
-        ref.read(settingsViewModelProvider).value?.settings.use24HourFormat ?? true;
+        ref.read(settingsViewModelProvider).value?.settings.use24HourFormat ??
+            true;
     _nameController = TextEditingController(text: widget.breakEntity.name);
     _startTime = widget.breakEntity.start;
     _endTime = widget.breakEntity.end;
@@ -49,8 +50,8 @@ class _EditBreakModalState extends ConsumerState<EditBreakModal> {
   }
 
   Future<void> _selectTime(BuildContext context, bool isStartTime) async {
-    final initialTime =
-        TimeOfDay.fromDateTime(isStartTime ? _startTime : _endTime ?? _startTime);
+    final initialTime = TimeOfDay.fromDateTime(
+        isStartTime ? _startTime : _endTime ?? _startTime);
     final selectedTime = await showTimePicker(
       context: context,
       initialTime: initialTime,
@@ -65,16 +66,19 @@ class _EditBreakModalState extends ConsumerState<EditBreakModal> {
           // Berechne die bisherige Dauer, um die Endzeit mitzuverschieben
           final Duration? previousDuration = _endTime?.difference(_startTime);
           _startTime = newDateTime;
-          _startController.text = formatTime(_startTime, use24HourFormat: _use24HourFormat);
+          _startController.text =
+              formatTime(_startTime, use24HourFormat: _use24HourFormat);
 
           // Verschiebe die Endzeit, um die Dauer beizubehalten
           if (previousDuration != null) {
             _endTime = _startTime.add(previousDuration);
-            _endController.text = formatTime(_endTime!, use24HourFormat: _use24HourFormat);
+            _endController.text =
+                formatTime(_endTime!, use24HourFormat: _use24HourFormat);
           }
         } else {
           _endTime = newDateTime;
-          _endController.text = formatTime(_endTime!, use24HourFormat: _use24HourFormat);
+          _endController.text =
+              formatTime(_endTime!, use24HourFormat: _use24HourFormat);
         }
       });
     }

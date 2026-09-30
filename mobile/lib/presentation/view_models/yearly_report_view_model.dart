@@ -31,14 +31,16 @@ class YearlyReportViewModel extends Notifier<YearlyReportState> {
     state = state.copyWith(isLoading: true, year: year);
 
     final workRepository = ref.read(core_providers.workRepositoryProvider);
-    final settingsRepository = ref.read(core_providers.settingsRepositoryProvider);
+    final settingsRepository =
+        ref.read(core_providers.settingsRepositoryProvider);
     final workdays = settingsRepository.getWorkdays();
     final targetWeeklyHours = settingsRepository.getTargetWeeklyHours();
 
     List<MonthSummary> months;
     try {
       final entriesPerMonth = await Future.wait(
-        List.generate(12, (i) => workRepository.getWorkEntriesForMonth(year, i + 1)),
+        List.generate(
+            12, (i) => workRepository.getWorkEntriesForMonth(year, i + 1)),
       );
       months = List.generate(12, (i) {
         return calculateMonthSummary(
@@ -63,16 +65,22 @@ class YearlyReportViewModel extends Notifier<YearlyReportState> {
 
   Future<void> _refineOvertimeFromApi(int year) async {
     final api = ref.read(core_providers.apiClientProvider);
+    // Aktives Arbeitszeit-Profil mitgeben (siehe #239) — sonst liefert das
+    // Backend die Monatsüberstunden des Standard-Profils (#291).
+    final profileId = ref.read(core_providers.activeWorkProfileIdProvider);
     final refined = List<MonthSummary?>.filled(12, null);
 
     await Future.wait(List.generate(12, (i) async {
       final month = i + 1;
       try {
-        final json = await api.getMonthlyReport(year, month);
+        final json =
+            await api.getMonthlyReport(year, month, profileId: profileId);
         final overtimeMs = (json['monthlyOvertimeMs'] as num?)?.toInt() ?? 0;
-        refined[i] = state.months[i].copyWith(overtime: Duration(milliseconds: overtimeMs));
+        refined[i] = state.months[i]
+            .copyWith(overtime: Duration(milliseconds: overtimeMs));
       } catch (e) {
-        logger.d('[YearlyReportViewModel] API-Monatsbericht $year-$month nicht verfügbar: $e');
+        logger.d(
+            '[YearlyReportViewModel] API-Monatsbericht $year-$month nicht verfügbar: $e');
       }
     }));
 

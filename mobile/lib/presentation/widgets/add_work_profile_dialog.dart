@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/providers/providers.dart';
 import '../../core/utils/logger.dart';
 import '../../l10n/app_localizations.dart';
+import '../view_models/work_profile_view_model.dart';
 
 /// Dialog zum Anlegen eines weiteren Arbeitszeit-Profils (siehe #138).
 class AddWorkProfileDialog extends ConsumerStatefulWidget {
   const AddWorkProfileDialog({super.key});
 
   @override
-  ConsumerState<AddWorkProfileDialog> createState() => _AddWorkProfileDialogState();
+  ConsumerState<AddWorkProfileDialog> createState() =>
+      _AddWorkProfileDialogState();
 }
 
 class _AddWorkProfileDialogState extends ConsumerState<AddWorkProfileDialog> {
@@ -27,23 +28,22 @@ class _AddWorkProfileDialogState extends ConsumerState<AddWorkProfileDialog> {
     final name = _nameController.text.trim();
     if (name.isEmpty) return;
 
-    final repository = ref.read(workProfileRepositoryProvider);
-    if (repository == null) return;
-
     setState(() => _isSaving = true);
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     final l10n = AppLocalizations.of(context);
     try {
-      final newProfile = await repository.addProfile(name);
-      ref.invalidate(workProfilesProvider);
-      ref.read(activeWorkProfileIdProvider.notifier).setActiveProfile(newProfile.id);
+      final newProfile =
+          await ref.read(workProfileViewModelProvider).addProfile(name);
       navigator.pop();
-      messenger.showSnackBar(SnackBar(content: Text(l10n.profileCreatedMessage(newProfile.name))));
+      messenger.showSnackBar(
+          SnackBar(content: Text(l10n.profileCreatedMessage(newProfile.name))));
     } catch (e, stackTrace) {
-      logger.e('[AddWorkProfileDialog] Fehler beim Anlegen des Profils: $e', stackTrace: stackTrace);
+      logger.e('[AddWorkProfileDialog] Fehler beim Anlegen des Profils: $e',
+          stackTrace: stackTrace);
       setState(() => _isSaving = false);
-      messenger.showSnackBar(SnackBar(content: Text(l10n.profileCreationFailed('$e'))));
+      messenger.showSnackBar(
+          SnackBar(content: Text(l10n.profileCreationFailed('$e'))));
     }
   }
 

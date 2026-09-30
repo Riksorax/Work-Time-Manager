@@ -7,20 +7,21 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTabsModule } from '@angular/material/tabs';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { CalendarComponent } from '../../shared/components/calendar/calendar';
 import { EditEntryDialogComponent } from '../../shared/components/edit-entry-dialog/edit-entry-dialog';
 import {
   QuickEntryDialogComponent,
   QuickEntryDialogResult,
-} from './components/quick-entry-dialog/quick-entry-dialog.component';
+} from './components/quick-entry-dialog/quick-entry-dialog';
 import {
   BatchQuickEntryDialogComponent,
   BatchQuickEntryDialogResult,
-} from './components/batch-quick-entry-dialog/batch-quick-entry-dialog.component';
+} from './components/batch-quick-entry-dialog/batch-quick-entry-dialog';
 import { ReportsService } from './reports.service';
-import { WebPremiumService } from '../../core/services/web-premium.service';
+import { WebPremiumService } from '../../core/services/web-premium';
 import { WorkEntry, WorkEntryType } from '../../shared/models/index';
-import { toDateKey } from '../../domain/services/report-calculator.service';
+import { toDateKey } from '../../domain/services/report-calculator';
 
 @Component({
   selector: 'app-reports',
@@ -32,6 +33,7 @@ import { toDateKey } from '../../domain/services/report-calculator.service';
     MatProgressSpinnerModule,
     MatTabsModule,
     CalendarComponent,
+    TranslatePipe,
   ],
   templateUrl: './reports.html',
   styleUrl: './reports.scss',
@@ -42,6 +44,7 @@ export class ReportsComponent {
   private  readonly premiumSvc  = inject(WebPremiumService);
   private  readonly dialog      = inject(MatDialog);
   private  readonly snackbar    = inject(MatSnackBar);
+  private  readonly translate   = inject(TranslateService);
   protected readonly activeTabIndex = signal(0);
 
   protected readonly isRestoring  = this.premiumSvc.isRestoring;
@@ -52,12 +55,12 @@ export class ReportsComponent {
     try {
       const restored = await this.premiumSvc.restorePurchases();
       this.snackbar.open(
-        restored ? 'Premium erfolgreich wiederhergestellt!' : 'Kein aktiver Kauf gefunden.',
+        this.translate.instant(restored ? 'reports.restoreSuccess' : 'reports.restoreNotFound'),
         'OK',
         { duration: 4000 },
       );
     } catch {
-      this.snackbar.open('Fehler beim Wiederherstellen.', 'OK', { duration: 4000 });
+      this.snackbar.open(this.translate.instant('reports.restoreError'), 'OK', { duration: 4000 });
     }
   }
 
@@ -65,10 +68,10 @@ export class ReportsComponent {
     try {
       const purchased = await this.premiumSvc.presentPaywall();
       if (purchased) {
-        this.snackbar.open('Premium erfolgreich aktiviert!', 'OK', { duration: 4000 });
+        this.snackbar.open(this.translate.instant('reports.purchaseSuccess'), 'OK', { duration: 4000 });
       }
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Kauf fehlgeschlagen.';
+      const msg = e instanceof Error ? e.message : this.translate.instant('reports.purchaseError');
       this.snackbar.open(msg, 'OK', { duration: 4000 });
     }
   }
@@ -94,10 +97,10 @@ export class ReportsComponent {
 
   entryTypeLabel(type: WorkEntryType): string {
     switch (type) {
-      case WorkEntryType.Work:     return 'Arbeit';
-      case WorkEntryType.Vacation: return 'Urlaub';
-      case WorkEntryType.Sick:     return 'Krank';
-      case WorkEntryType.Holiday:  return 'Feiertag';
+      case WorkEntryType.Work:     return this.translate.instant('reports.entryTypeWork');
+      case WorkEntryType.Vacation: return this.translate.instant('reports.entryTypeVacation');
+      case WorkEntryType.Sick:     return this.translate.instant('reports.entryTypeSick');
+      case WorkEntryType.Holiday:  return this.translate.instant('reports.entryTypeHoliday');
     }
   }
 
@@ -166,7 +169,7 @@ export class ReportsComponent {
 
   async onDeleteEntry(id: string): Promise<void> {
     await this.svc.deleteEntry(id);
-    this.snackbar.open('Eintrag gelöscht', 'OK', { duration: 3000 });
+    this.snackbar.open(this.translate.instant('reports.entryDeleted'), 'OK', { duration: 3000 });
   }
 
   onLogin(): void {

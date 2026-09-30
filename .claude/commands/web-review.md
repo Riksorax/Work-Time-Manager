@@ -1,34 +1,18 @@
 # /web-review — Phase 5: Angular-Code reviewen und PR erstellen
 
-Aktiviere den Web-Reviewer-Agenten (lies `.claude/agents/web-reviewer.md` vollständig).
+Issue: $ARGUMENTS
 
-Feature: $ARGUMENTS
+Voraussetzung: `npm test -- --watch=false` und `npm run build -- --configuration production`
+sind grün, `web/thoughts/$ARGUMENTS-ui-report.md` existiert.
 
-## Voraussetzung
-- `npm test` grün ✅
-- `npm run build -- --configuration production` erfolgreich ✅
-- `web/thoughts/$ARGUMENTS-ui-report.md` vorhanden ✅
+Starte den Subagent `web-reviewer` (Agent-Tool, `subagent_type: web-reviewer`) mit diesem Auftrag:
 
-## Aufgabe
+> Die Web-Änderung für Issue #$ARGUMENTS nach der Checkliste reviewen (Architektur,
+> Angular-Qualität, AngularFire, Parität mit Flutter/Backend, UI, Accessibility, Hygiene).
+> Funde als 🔴 / 🟡 / 🟢. 🔴-Funde beheben, Checks erneut ausführen. Commit nach
+> `CONTRIBUTING.md` (`feat|fix(web): … (#$ARGUMENTS)`), PR-Beschreibung nach
+> `.github/pull_request_template.md` in `web/thoughts/$ARGUMENTS-pr.md`, Branch pushen und PR
+> gegen `develop` erstellen (lokal `gh pr create --base develop`, Cloud-Session GitHub-MCP
+> `create_pull_request`).
 
-1. Führe den vollständigen Code-Review anhand der Checkliste durch:
-   - Architektur (Layer-Grenzen, Hybrid-Service, Premium-Gate)
-   - Angular-Qualität (OnPush, Signals, inject(), @if/@for, takeUntilDestroyed)
-   - Firebase Web SDK v10 (keine Compat-API)
-   - Feature-Parität mit Flutter (Domain-Logik identisch)
-   - UI & Responsiveness (Mobile/Tablet/Desktop/Dark Mode)
-   - Accessibility (aria-labels, Kontrast, Tab-Reihenfolge)
-   - Code-Hygiene (kein console.log, kein any, deutsche Texte)
-
-2. Erstelle eine Liste der Issues:
-   - 🔴 Kritisch (blockiert PR)
-   - 🟡 Minor (sollte behoben werden)
-   - 🟢 Hinweis (optional)
-
-3. Erstelle Conventional Commit Message mit Scope `web/[feature]`
-
-4. Erstelle PR-Beschreibung nach Template (Feature-Parität-Tabelle inklusive)
-
-5. Speichere PR-Beschreibung: `web/thoughts/$ARGUMENTS-pr.md`
-
-6. Erstelle PR via `gh pr create` wenn alle kritischen Issues behoben sind
+Danach in der Hauptsession: Funde und PR-Link an den Nutzer melden.

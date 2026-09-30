@@ -5,7 +5,10 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i4;
 
-import 'package:flutter/material.dart' as _i6;
+import 'package:flutter_work_time/data/datasources/remote/api_client.dart'
+    as _i9;
+import 'package:flutter_work_time/data/models/work_entry_model.dart' as _i10;
+import 'package:flutter_work_time/domain/entities/app_theme_mode.dart' as _i6;
 import 'package:flutter_work_time/domain/entities/bundesland.dart' as _i8;
 import 'package:flutter_work_time/domain/entities/work_entry_entity.dart'
     as _i2;
@@ -116,16 +119,16 @@ class MockSettingsRepository extends _i1.Mock
   }
 
   @override
-  _i6.ThemeMode getThemeMode() => (super.noSuchMethod(
+  _i6.AppThemeMode getThemeMode() => (super.noSuchMethod(
         Invocation.method(
           #getThemeMode,
           [],
         ),
-        returnValue: _i6.ThemeMode.system,
-      ) as _i6.ThemeMode);
+        returnValue: _i6.AppThemeMode.system,
+      ) as _i6.AppThemeMode);
 
   @override
-  _i4.Future<void> setThemeMode(_i6.ThemeMode? mode) => (super.noSuchMethod(
+  _i4.Future<void> setThemeMode(_i6.AppThemeMode? mode) => (super.noSuchMethod(
         Invocation.method(
           #setThemeMode,
           [mode],
@@ -334,14 +337,6 @@ class MockSettingsRepository extends _i1.Mock
       ) as _i4.Future<void>);
 
   @override
-  _i8.Bundesland? getBundesland() => (super.noSuchMethod(
-        Invocation.method(
-          #getBundesland,
-          [],
-        ),
-      ) as _i8.Bundesland?);
-
-  @override
   _i4.Future<void> setBundesland(_i8.Bundesland? bundesland) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -352,10 +347,6 @@ class MockSettingsRepository extends _i1.Mock
         returnValueForMissingStub: _i4.Future<void>.value(),
       ) as _i4.Future<void>);
 
-  // Manuell ergänzt (siehe #219 / SettingsRepository) - Flutter-SDK war in
-  // der Umgebung, in der diese Änderung entstand, nicht verfügbar, um
-  // `dart run build_runner build` auszuführen. Entspricht exakt dem Muster,
-  // das der Generator für die anderen bool-/double-Getter/-Setter erzeugt.
   @override
   bool getWarnOnOvertimeThreshold() => (super.noSuchMethod(
         Invocation.method(
@@ -436,17 +427,13 @@ class MockSettingsRepository extends _i1.Mock
         returnValueForMissingStub: _i4.Future<void>.value(),
       ) as _i4.Future<void>);
 
-  // Manuell ergänzt (siehe #218 / SettingsRepository) - Flutter-SDK war in
-  // der Umgebung, in der diese Änderung entstand, nicht verfügbar, um
-  // `dart run build_runner build` auszuführen. Entspricht exakt dem Muster,
-  // das der Generator für die anderen bool-Getter/-Setter erzeugt.
   @override
   bool getUse24HourFormat() => (super.noSuchMethod(
         Invocation.method(
           #getUse24HourFormat,
           [],
         ),
-        returnValue: true,
+        returnValue: false,
       ) as bool);
 
   @override
@@ -458,4 +445,238 @@ class MockSettingsRepository extends _i1.Mock
         returnValue: _i4.Future<void>.value(),
         returnValueForMissingStub: _i4.Future<void>.value(),
       ) as _i4.Future<void>);
+
+  @override
+  _i4.Future<void> setTimezoneOverride(String? timezone) => (super.noSuchMethod(
+        Invocation.method(
+          #setTimezoneOverride,
+          [timezone],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
+
+  @override
+  String getLocale() => (super.noSuchMethod(
+        Invocation.method(
+          #getLocale,
+          [],
+        ),
+        returnValue: _i7.dummyValue<String>(
+          this,
+          Invocation.method(
+            #getLocale,
+            [],
+          ),
+        ),
+      ) as String);
+
+  @override
+  _i4.Future<void> setLocale(String? locale) => (super.noSuchMethod(
+        Invocation.method(
+          #setLocale,
+          [locale],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
+}
+
+/// A class which mocks [ApiClient].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockApiClient extends _i1.Mock implements _i9.ApiClient {
+  MockApiClient() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  _i4.Future<List<_i10.WorkEntryModel>> getWorkEntriesForMonth(
+    int? year,
+    int? month, {
+    String? profileId,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getWorkEntriesForMonth,
+          [
+            year,
+            month,
+          ],
+          {#profileId: profileId},
+        ),
+        returnValue: _i4.Future<List<_i10.WorkEntryModel>>.value(
+            <_i10.WorkEntryModel>[]),
+      ) as _i4.Future<List<_i10.WorkEntryModel>>);
+
+  @override
+  _i4.Future<_i10.WorkEntryModel?> getWorkEntry(
+    int? year,
+    int? month,
+    int? day, {
+    String? profileId,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getWorkEntry,
+          [
+            year,
+            month,
+            day,
+          ],
+          {#profileId: profileId},
+        ),
+        returnValue: _i4.Future<_i10.WorkEntryModel?>.value(),
+      ) as _i4.Future<_i10.WorkEntryModel?>);
+
+  @override
+  _i4.Future<void> saveWorkEntry(
+    _i10.WorkEntryModel? model, {
+    String? profileId,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #saveWorkEntry,
+          [model],
+          {#profileId: profileId},
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
+
+  @override
+  _i4.Future<void> deleteWorkEntry(
+    int? year,
+    int? month,
+    int? day, {
+    String? profileId,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #deleteWorkEntry,
+          [
+            year,
+            month,
+            day,
+          ],
+          {#profileId: profileId},
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
+
+  @override
+  _i4.Future<({DateTime? lastUpdated, int minutes})> getOvertime(
+          {String? profileId}) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getOvertime,
+          [],
+          {#profileId: profileId},
+        ),
+        returnValue: _i4.Future<({DateTime? lastUpdated, int minutes})>.value(
+            (lastUpdated: null, minutes: 0)),
+      ) as _i4.Future<({DateTime? lastUpdated, int minutes})>);
+
+  @override
+  _i4.Future<void> saveOvertime(
+    int? minutes, {
+    String? profileId,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #saveOvertime,
+          [minutes],
+          {#profileId: profileId},
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
+
+  @override
+  _i4.Future<Map<String, dynamic>?> getSettings({String? profileId}) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getSettings,
+          [],
+          {#profileId: profileId},
+        ),
+        returnValue: _i4.Future<Map<String, dynamic>?>.value(),
+      ) as _i4.Future<Map<String, dynamic>?>);
+
+  @override
+  _i4.Future<void> putSettings(
+    Map<String, dynamic>? settings, {
+    String? profileId,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #putSettings,
+          [settings],
+          {#profileId: profileId},
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
+
+  @override
+  _i4.Future<Map<String, dynamic>> getDailyReport(
+    int? year,
+    int? month,
+    int? day, {
+    String? profileId,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getDailyReport,
+          [
+            year,
+            month,
+            day,
+          ],
+          {#profileId: profileId},
+        ),
+        returnValue:
+            _i4.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+      ) as _i4.Future<Map<String, dynamic>>);
+
+  @override
+  _i4.Future<Map<String, dynamic>> getWeeklyReport(
+    int? year,
+    int? month,
+    int? day, {
+    String? profileId,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getWeeklyReport,
+          [
+            year,
+            month,
+            day,
+          ],
+          {#profileId: profileId},
+        ),
+        returnValue:
+            _i4.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+      ) as _i4.Future<Map<String, dynamic>>);
+
+  @override
+  _i4.Future<Map<String, dynamic>> getMonthlyReport(
+    int? year,
+    int? month, {
+    String? profileId,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getMonthlyReport,
+          [
+            year,
+            month,
+          ],
+          {#profileId: profileId},
+        ),
+        returnValue:
+            _i4.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+      ) as _i4.Future<Map<String, dynamic>>);
 }

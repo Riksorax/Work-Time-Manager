@@ -1,171 +1,43 @@
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Sie wird in jeder Session geladen — hier nur, was für alle Plattformen gilt. Plattform-Details
+stehen in `mobile/CLAUDE.md`, `web/CLAUDE.md` und `server/CLAUDE.md` (werden erst geladen, wenn
+Claude in dem Ordner arbeitet).
 
 ## Repository Structure
 
-This is a monorepo for a German work-time tracking app:
+Monorepo einer deutschen Arbeitszeit-App:
 
-- `mobile/` — Flutter app (primary, production-ready). Has its own detailed `mobile/CLAUDE.md`.
-- `web/` — Angular web app (feature-complete on `feature/angular-web-scaffold`).
-- `server/` — .NET 10 Backend-API (`feature/backend-umbau`). Firebase-Auth + Firestore.
+- `mobile/` — Flutter-App (primär, produktiv). Clean Architecture, Riverpod, Hybrid-Repositories. → `mobile/CLAUDE.md`
+- `web/` — Angular-Port der Flutter-App, gleiches Firebase-Backend. → `web/CLAUDE.md`
+- `server/` — .NET-10-Backend-API, Firebase-Auth + Firestore, kanonische Rechenlogik. → `server/CLAUDE.md`
 
-For all Flutter/mobile work, refer to `mobile/CLAUDE.md` for commands, architecture details, and workflow rules.
+**Arbeitsablauf** (Branches, Commits, PRs, Release, Deployment inkl. Secrets, Rollback): `CONTRIBUTING.md`.
+Integrationsbranch ist `develop`; PRs gehen gegen `develop`, nur Release-Branches gegen `main`.
 
-## Mobile (Flutter) — Quick Reference
+## Checks je Plattform
 
-All commands run from inside `mobile/`:
-
-```bash
-flutter run
-flutter test
-flutter test test/path/to/file.dart
-flutter analyze && dart run custom_lint
-dart run build_runner build          # Regenerate .g.dart and .mocks.dart
-flutter build appbundle --release \
-  --dart-define=RC_ANDROID_KEY=<key> \
-  --dart-define=RC_IOS_KEY=<key>
-```
-
-## Web (Angular) — Quick Reference
-
-Commands run from inside `web/`:
-
-```bash
-npm ci --legacy-peer-deps            # Install
-npm start                            # Dev-Server http://localhost:4200
-npm run build -- --configuration production
-```
+| Plattform | Aus | Checks (wie CI) |
+|---|---|---|
+| Mobile | `mobile/` | `dart format --set-exit-if-changed lib test && flutter analyze --no-fatal-infos && dart run custom_lint && flutter test` |
+| Web | `web/` | `npm test -- --watch=false && npm run build -- --configuration production` |
+| Backend | `server/` | `dotnet build WorkTimeManager.slnx -c Release && dotnet test WorkTimeManager.slnx -c Release` |
+| Cloud Functions | `web/functions/` | `npm run build && npm test` (Installation: `npm install --legacy-peer-deps` — reines npm ohne den Flag lässt Arborist bei vitest 4 abstürzen) |
 
 ## CI/CD
 
 | Workflow | Trigger | Jobs |
 |---|---|---|
-| `flutter-production.yml` | Push to `main` oder `workflow_dispatch` | Android AAB → Google Play (Closed Testing Track `<Version> <Charakter>` aus `RELEASE_NAMES.md` oder Input) |
-| `deploy-angular.yml` | Push to `main` oder `workflow_dispatch` | 1. Angular Build → 2. Docker Image → Docker Hub → 3. Deploy → Hetzner |
-| `deploy-api.yml` | Push to `main` oder `workflow_dispatch` | 1. .NET Build & Test → 2. Docker Image → Docker Hub → 3. Deploy → Hetzner |
-| `ci.yml` | PRs / Push | Lint & Tests |
-| `version-bump.yml` | Push to `main` | Versionsnummer erhöhen |
+| `ci.yml` | PRs und Push auf alle Branches außer `main` | Flutter Analyze & Test, Angular Test & Build, Cloud Functions Build & Test, .NET Build & Test |
+| `flutter-production.yml` | Push auf `main` oder `workflow_dispatch` | Android AAB → Google Play (Closed Testing Track `<Version> <Charakter>`) |
+| `deploy-angular.yml` | Push auf `main` oder `workflow_dispatch` | Angular Build → Docker Hub → Hetzner |
+| `deploy-api.yml` | Push auf `main` oder `workflow_dispatch` | .NET Build & Test → Docker Hub → Hetzner |
+| `version-bump.yml` | Push auf `release/v*` | Version in `mobile/pubspec.yaml`, Charakter in `RELEASE_NAMES.md` |
 
-**Web-Deployment Detail (`deploy-angular.yml`):**
-- **Build**: Angular Production Build mit injizierten Firebase-Secrets
-- **Docker**: Image `riksorax/work-time-manager-web` → Docker Hub (nur bei nicht-PR)
-- **Deploy**: SSH auf Hetzner-Server, `docker compose up` (nur bei Push auf `main`)
-- Manueller Trigger via `workflow_dispatch` baut & pusht Docker Image, deployt aber **nicht** (kein `main`-Branch)
+Details der Deploy-Workflows, Uptime-Monitoring und benötigte Secrets: `CONTRIBUTING.md`, „Deployment“.
 
-**API-Deployment Detail (`deploy-api.yml`):**
-- **Build & Test**: `dotnet build`/`dotnet test` gegen `server/WorkTimeManager.slnx`
-- **Docker**: Image `riksorax/work-time-manager-api` → Docker Hub (nur bei nicht-PR)
-- **Deploy**: SSH auf Hetzner-Server, `docker compose up` (nur bei Push auf `main`) — Firebase-Projekt-ID und Service-Account-Credential werden als GitHub Secrets per SSH-Session-Env injiziert (`appleboy/ssh-action` `envs:`), es liegt **keine** `.env`-Datei auf dem Server
-- Manueller Trigger via `workflow_dispatch` baut & pusht Docker Image, deployt aber **nicht** (kein `main`-Branch)
-
-**Uptime-Monitoring (Hetzner, siehe #207):** [Uptime-Kuma](https://github.com/louislam/uptime-kuma) läuft als weiterer Service (`uptime-kuma`) in `server/docker-compose.yml`, self-hosted hinter Traefik unter `status.work-time-manager.app`. Sowohl `deploy-api.yml` als auch `deploy-angular.yml` stellen den Container per `docker compose up -d --no-deps uptime-kuma` sicher (idempotent, kein eigener CI-Build nötig — öffentliches Image). Monitore (welche URLs überwacht werden) und Alerting-Kanäle (E-Mail/Telegram/Discord/...) werden einmalig über die Uptime-Kuma-Weboberfläche eingerichtet, dafür gibt es keine Env-Var-/Config-Datei-Konfiguration. Benötigt einen DNS-Eintrag für `status.work-time-manager.app` → Hetzner-Host (außerhalb dieses Repos).
-
-**Required Secrets (Web):** `FIREBASE_API_KEY`, `FIREBASE_AUTH_DOMAIN`, `FIREBASE_PROJECT_ID`, `FIREBASE_STORAGE_BUCKET`, `FIREBASE_MESSAGING_SENDER_ID`, `FIREBASE_APP_ID`, `FIREBASE_MEASUREMENT_ID`, `RC_WEB_KEY`, `DOCKERHUB_TOKEN`, `HETZNER_SSH_PRIVATE_KEY`
-
-**Optionales Secret (Web):** `SENTRY_DSN_WEB` — Sentry-Fehler-Tracking (#207). Leer/nicht gesetzt = Sentry bleibt deaktiviert, kein Build-Fehler.
-
-**Required Vars (Web):** `DOCKERHUB_USERNAME`, `HETZNER_HOST`, `HETZNER_USER`
-
-**Required Secrets (API, zusätzlich):** `FIREBASE_PROJECT_ID` (geteilt mit Web), `FIREBASE_SERVICE_ACCOUNT_BASE64` (Base64-kodiertes Firebase-Service-Account-JSON für `worktime-56c7a`, Quelle: Firebase Console → Projekteinstellungen → Dienstkonten → "Neuen privaten Schlüssel generieren")
-
-**Required Secrets (Flutter):** `RC_ANDROID_KEY`, `RC_IOS_KEY`, Android keystore secrets
-
-## Mobile Architecture
-
-Clean Architecture with three layers (`domain/`, `data/`, `presentation/`) and Riverpod for DI and state. Firebase Firestore for authenticated users; SharedPreferences as local fallback. **Hybrid Repository** pattern switches transparently based on auth state. See `mobile/CLAUDE.md` for full details.
-
-## Web Architecture (`web/src/app/`)
-
-The Angular app is a full port of the Flutter app sharing the same Firebase backend.
-
-### Layer Structure
-
-```
-core/
-├── auth/           AuthService (Firebase Auth, Google Sign-In), AuthGuard
-│                   — deleteAccount() via Firebase deleteUser()
-├── services/
-│   ├── work-entry.ts      Hybrid — eingeloggt: Reads live via Firestore onSnapshot, Writes über ApiClient (Backend-API); ausgeloggt: localStorage. getAllLocalEntries() für DataSync
-│   ├── overtime.ts        Hybrid — eingeloggt komplett über ApiClient (Reads + Writes), sonst localStorage
-│   ├── settings.ts        Hybrid — wie work-entry.ts (Reads via Firestore onSnapshot, Writes via ApiClient)
-│   ├── api-client.ts      ApiClient — typisierter Client für die .NET-Backend-API (siehe Backend-Abschnitt), Token via authInterceptor
-│   ├── work-profile.ts    WorkProfileService — aktives/zusätzliche Arbeitszeit-Profile (siehe #138/#244), profileId für ApiClient + Firestore-Pfade
-│   ├── profile.ts         ProfileService — isPremium Signal (Firestore-Flag)
-│   ├── theme.ts           ThemeService — isDarkMode Signal + localStorage-Persistenz
-│   ├── data-sync.ts       DataSyncService — localStorage→Firebase-Migration bei Login
-│   └── web-premium.ts     WebPremiumService — RC Billing Paywall + Kauf-Wiederherstellung
-
-domain/
-├── models/
-│   └── reports.models.ts  DailyStat, WeeklyReport, MonthlyReport
-├── services/
-│   ├── break-calculator.service.ts   Pure — Pflichtpausen (30min/6h, 45min/9h)
-│   └── report-calculator.service.ts  Pure — ISO-8601-Wochennummer, DailyStat, Weekly/MonthlyReport
-└── utils/
-    └── overtime.utils.ts  Pure — getEffectiveDailyTarget, getWeekEntriesForDate, isSameDay
-
-features/
-├── dashboard/      DashboardComponent + DashboardService (Timer, Pausen, Überstunden)
-├── reports/        ReportsComponent + ReportsService (Täglich/Wöchentlich/Monatlich, Premium-Gate)
-└── settings/       SettingsComponent + SettingsPageService (Profil, Arbeitszeit, Gleitzeit, Sync, Theme)
-
-shared/
-├── components/
-│   ├── calendar/               CalendarComponent — Multi-Select + Pointer-Drag
-│   ├── edit-entry-dialog/      EditEntryDialogComponent
-│   ├── time-input/             TimeInputComponent
-│   └── work-profile-switcher/  WorkProfileSwitcherComponent + Add-/Manage-Dialoge (siehe #138/#244)
-└── models/index.ts        WorkEntry, WorkEntryType, Break, UserSettings, UserProfile, WorkProfile
-```
-
-### Feature-Services (Pattern)
-
-Jedes Feature hat einen eigenen `*.service.ts` der Core-Services aggregiert:
-
-| Feature-Service | Aggregiert |
-|---|---|
-| `DashboardService` | WorkEntryService, OvertimeService, SettingsService |
-| `ReportsService` | WorkEntryService, SettingsService, ProfileService, AuthService, OvertimeService, ReportCalculatorService |
-| `SettingsPageService` | SettingsService, AuthService, ProfileService, OvertimeService, ThemeService, DataSyncService |
-
-### Key Angular-Regeln
-
-- **Kein `standalone: true`** — Default in Angular v20+, nie explizit setzen
-- **Signals-first**: `signal()` + `computed()` + `effect()`, öffentliche Signals via `.asReadonly()`
-- **`inject()` statt Constructor-Parameter**
-- **`@if` / `@for`** statt `*ngIf` / `*ngFor`
-- **`ChangeDetectionStrategy.OnPush`** bei allen Components
-- **Kein `color="primary/warn/accent"`** auf Material-Buttons (M3-deprecated)
-- **Premium-Gate**: `ProfileService.isPremium` — kein RevenueCat (Web nutzt Firestore-Flag)
-- **Kein `CommonModule`** — nur spezifische Imports (`DatePipe`, `AsyncPipe` etc.)
-
-### Firebase / AngularFire-Regeln (kritisch)
-
-AngularFire 20 bundelt **eigenes Firebase v11** in `node_modules/@angular/fire/node_modules/`. Das Projekt hat separat Firebase v12. Die Typen sind **inkompatibel** — niemals mischen:
-
-```typescript
-// ✅ RICHTIG — alles aus @angular/fire/*
-import { Firestore, doc, onSnapshot, setDoc } from '@angular/fire/firestore';
-import { Auth, authState } from '@angular/fire/auth';
-
-// ❌ FALSCH — firebase/* und @angular/fire/* nie mischen
-import { doc } from '@angular/fire/firestore';
-import { onSnapshot } from 'firebase/firestore'; // anderes Modul-Bundle!
-```
-
-**`runInInjectionContext` für alle Firebase-Calls außerhalb des Constructors:**
-
-```typescript
-// Calls in switchMap / async-Callbacks benötigen runInInjectionContext
-runInInjectionContext(this.injector, () => {
-  unsub = onSnapshot(ref, snap => observer.next(snap.data()), err => observer.error(err));
-});
-```
-
-**Nie `docData` / `collectionData` verwenden** — rxfire-Bug mit DocumentReference. Stattdessen eigene `new Observable(observer => { runInInjectionContext(...) })`.
-
-### Firestore-Datenpfade (Flutter-kompatibel)
+## Firestore-Datenpfade (Flutter-kanonisch, gilt für alle Plattformen)
 
 | Daten | Pfad | Felder |
 |---|---|---|
@@ -177,81 +49,63 @@ runInInjectionContext(this.injector, () => {
 | Zusätzliches Arbeitszeit-Profil | `users/{uid}/profiles/{profileId}` | `name` (string), `createdAt` (Timestamp) — siehe #138/#239 |
 | Profil-Daten (Arbeitszeit-Profil) | `users/{uid}/profiles/{profileId}/{work_entries\|overtime\|settings}/...` | wie oben, nur unter dem Profil verschachtelt. Das Standard-Profil bleibt unter dem unveränderten `users/{uid}/...`-Pfad (keine Migration) |
 
-### Dark Mode
+Das Backend schreibt dieses Format ausschließlich über `FirestoreMappings`: days-Map-Schlüssel ohne
+führende Null (`"5"`), Zeiten als `Timestamp`. `work-entries`/`overtime`/`settings`/`reports`-Endpunkte
+nehmen optional `?profileId=...`; fehlt er oder ist er `"default"`, gilt der unveränderte Pfad.
 
-`ThemeService` verwaltet Hell/Dunkel. `app.ts` appliziert beim Start via `applyStoredTheme()` + `effect()` die Klasse `.dark-theme` auf `<html>`. SCSS-Override in `styles.scss` überschreibt dann das Angular Material M3-Theme.
+**Rechenlogik:** Das Backend (`server/.../Domain/`) ist kanonisch, Web rechnet identisch. Flutter
+weicht bekannt ab (Details `server/CLAUDE.md`, „Rechenlogik“) — neue Logik immer an das Backend
+angleichen, nicht umgekehrt.
 
-### Daten-Synchronisation
+## Claude-Code-Workflows
 
-`DataSyncService.syncAll()` liest alle localStorage-Einträge (via `WorkEntryService.getAllLocalEntries()` + `LS_KEYS`-Index) und schreibt sie nach Firebase. Wird manuell aus den Einstellungen getriggert.
+Einstieg für jede Aufgabe: `/issue <nr>` — liest das Issue, bestimmt die Plattformen, legt den
+Branch an und wählt den Workflow. Commands in `.claude/commands/`, Subagents in `.claude/agents/`.
+Jede Phase läuft als Subagent in eigenem Kontext und übergibt ihr Ergebnis über
+`<plattform>/thoughts/<nr>-*.md`; in die Hauptsession kommt nur eine Kurzfassung zurück.
 
-## Backend (.NET API) — `server/`
-
-.NET 10 Minimal API, Firebase-ID-Token-Auth (JWT Bearer, JWKS-validiert), Firestore als Datenspeicher. Liest/schreibt **dieselbe Firestore-Struktur** wie Flutter/Web (siehe Datenpfade oben).
-
-```bash
-cd server
-dotnet run --project src/WorkTimeManager.Api      # Swagger unter /swagger (nur Development)
-dotnet test WorkTimeManager.slnx                  # Unit- + Integrationstests
-```
-
-### Schichten (`src/WorkTimeManager.Api/`)
-
-```
-Contracts/    API-DTOs (JSON, ISO-8601-Daten) — WorkEntryDto, OvertimeDto, SettingsDto, ProfileDto, Report*Dto
-Firestore/    Documents/ (FirestoreData-POCOs) + Repositories + FirestoreMappings (POCO↔DTO)
-Domain/       Pure Berechnung — BreakCalculator (Pflichtpausen), ReportCalculator (ISO-Woche, Tages-/Wochen-/Monatsbericht)
-Endpoints/    Minimal-API-Mappings je Ressource + ClaimsPrincipalExtensions.GetUid()
-```
-
-### Endpunkte (alle unter `/api`, authentifiziert; UID kommt aus dem Token)
-
-| Methode | Route | Zweck |
-|---|---|---|
-| GET | `/api/me` | UID des Tokens |
-| GET | `/api/work-entries/{year}/{month}` | Einträge eines Monats |
-| GET | `/api/work-entries/{year}/{month}/{day}` | Einzeleintrag (404 wenn fehlt) |
-| PUT | `/api/work-entries` | Eintrag speichern (merge in days-Map) |
-| DELETE | `/api/work-entries/{year}/{month}/{day}` | Tag löschen |
-| GET / PUT | `/api/overtime` | Gleitzeit-Saldo lesen/speichern (`minutes`) |
-| GET / PUT | `/api/settings` | Einstellungen lesen/speichern |
-| GET | `/api/profile` | Premium-Status |
-| GET | `/api/reports/daily/{year}/{month}/{day}` | Tagesstatistik |
-| GET | `/api/reports/weekly/{year}/{month}/{day}` | Wochenbericht |
-| GET | `/api/reports/monthly/{year}/{month}` | Monatsbericht |
-| GET | `/api/work-profiles` | Zusätzliche Arbeitszeit-Profile auflisten (ohne Standard-Profil, siehe #138/#239) |
-| POST | `/api/work-profiles` | Neues Profil anlegen (`{ name }`) |
-| DELETE | `/api/work-profiles/{profileId}` | Profil inkl. aller Daten löschen |
-
-**Multi-Profile (`profileId`, siehe #239):** `work-entries`/`overtime`/`settings`/`reports`-Endpunkte akzeptieren optional `?profileId=...` (Query-Parameter). Fehlt er oder ist er `"default"`, wird der bestehende, nicht migrierte Pfad verwendet — vollständig abwärtskompatibel für bestehende Clients ohne den Parameter.
-
-### Backend-Regeln
-
-- **Firestore-Format ist Flutter-kanonisch**: days-Map-Schlüssel ohne führende Null (`"5"`), Zeiten als `Timestamp`. Mapping ausschließlich über `FirestoreMappings`.
-- **Berechnungslogik = Port der _korrigierten_ Web-`*-calculator`-Services** (Stand nach Web-Bugfix `0ddd15b`, 10.06.2026). Das ist die mathematisch korrekte Variante. **Achtung:** Die Flutter-App rechnet aktuell noch _anders_ (doppelte Pausen-Subtraktion in Wochen-/Monatsbericht, ignoriert Urlaub/Krank/Feiertag, Tages-Überstunden=0, vereinfachte KW ohne Jahreswechsel-Korrektur, Monats-Gesamtüberstunden ohne Gleitzeit-Altsaldo). Das Backend folgt **bewusst nicht** dieser Flutter-Logik — Flutter soll perspektivisch auf die Backend-Logik gezogen werden, damit alle Clients identisch rechnen. `ReportCalculator.GetIsoWeekNumber` ist gegen `System.Globalization.ISOWeek` getestet.
-- **Integrationstests** laufen gegen einen Firestore-Emulator via Testcontainers (Docker). Ohne Docker überspringen sie sich (`SkippableFact`), `dotnet test` bleibt grün.
-- Credentials: `FIRESTORE_EMULATOR_HOST` (lokal/Test) bzw. `FIREBASE_SERVICE_ACCOUNT_BASE64` (Prod), sonst Application Default Credentials.
-
-## Web-Port Workflow (5 Phasen)
-
-Für neue Feature-Portierungen:
-
-| Command | Phase |
+| Command | Zweck |
 |---|---|
-| `/web-analyze <feature>` | Phase 1 — Flutter-Feature analysieren |
-| `/web-design <feature>` | Phase 2 — UI entwerfen (Stitch API oder manuell) |
-| `/web-plan <feature>` | Phase 3 — Implementierungsplan |
-| `/web-implement <feature>` | Phase 4 — Code schreiben (TDD) |
-| `/web-review <feature>` | Phase 5 — Review + PR |
+| `/issue <nr>` | Issue einordnen, Branch anlegen, Workflow wählen |
+| `/mobile-analyze` … `/mobile-review <nr>` | Flutter: Analyse → Plan → Implementierung → Validierung → Review |
+| `/web-analyze` … `/web-review <nr>` | Web-Port eines Flutter-Features: Analyse → Design → Plan → Implementierung → Review |
+| `/server-implement <nr>` | Backend-Änderung |
+| `/release <Version> <Charakter>` | Release-Branch, Versionshinweise, Release-PR |
+| `/auto-bugfix` | Cron-Routine: offene `bug`-Issues automatisch analysieren, bis zum review-fertigen PR umsetzen — **mergt nicht selbst**, das bleibt ein menschlicher Schritt |
 
-Stitch API Key in `.claude/settings.local.json`: `{ "env": { "STITCH_API_KEY": "..." } }`
-**Hinweis:** Stitch API ist aktuell nicht verfügbar (HTTP 405) — UI wird manuell nach Flutter-Vorlage designed.
+Betrifft ein Issue mehrere Plattformen, plant der Subagent `cross-platform-coordinator` den
+gemeinsamen Vertrag und die Reihenfolge Backend → Web → Mobile.
+
+## Fehler-Monitoring (Crashlytics/Sentry/Uptime-Kuma) → Issue → Fix
+
+Crashlytics (Mobile), Sentry (Web über `SENTRY_DSN_WEB`, Backend über `SENTRY_DSN_API` — zwei
+getrennte Sentry-Projekte, gleiche Organisation) und Uptime-Kuma (`CONTRIBUTING.md`, „Deployment“)
+sind für sich reine Beobachtung — sie legen von sich aus **kein** GitHub-Issue an. Zwei Brücken
+schließen die Lücke:
+
+- **Sentry** über seine eigene GitHub-Integration (einmal pro Organisation eingerichtet, gilt für
+  alle Sentry-Projekte, je Projekt eine eigene Alert-Regel mit Label `bug`, Konfiguration in
+  Sentry, kein Code hier).
+- **Crashlytics und Uptime-Kuma** über eigene Firebase Cloud Functions unter `web/functions/`
+  (siehe #322, Details in `CONTRIBUTING.md`, „Crashlytics-/Uptime-Kuma-Brücke“) — legen ebenfalls
+  ein Issue mit Label `bug` an, dedupliziert über einen Marker-Kommentar im Body.
+
+Sobald ein Issue das Label `bug` trägt (egal ob manuell oder durch Sentry angelegt), greift
+`/auto-bugfix`.
+
+**Cloud-Sessions:** `.claude/hooks/session-start.sh` installiert Flutter (Version aus `ci.yml`),
+das .NET-10-SDK und die npm-Pakete. `gh` gibt es dort nicht, GitHub läuft über die MCP-Tools.
 
 ## Key Rules (Gesamt)
 
 - `*.g.dart` / `*.mocks.dart` nicht editieren — generiert.
 - `dart run build_runner build` nach `@Riverpod`-Änderungen.
-- Alle User-Strings auf Deutsch — kein i18n-System.
+- **Texte / i18n (#221):** Deutsch ist die Referenzsprache, Englisch wird mitgepflegt. Flutter: ARB (`mobile/lib/l10n/app_de.arb` + `app_en.arb`), nie hart kodiert. Web: ngx-translate (`web/public/i18n/de.json` + `en.json`) für neue Texte; ältere Web-Texte sind teils noch hart kodiert. Rechtstexte (Impressum/Datenschutz/AGB) bleiben nur Deutsch.
 - Premium-Features hinter `isPremiumProvider` (Flutter) bzw. `ProfileService.isPremium` (Web).
 - Hybrid-Layer nie umgehen — immer über `WorkEntryService` / `OvertimeService`.
-- **Branch-Hygiene**: Feature-/Fix-/Release-Branches (`claude/*`, `feature/*`, `release/*`) nach dem Mergen in `main`/`develop` löschen (Remote-Branch, GitHub-Button "Delete branch" bzw. `git push origin --delete <branch>`) — keine bereits gemergten Branches stehen lassen.
+- **Firestore Security Rules:** Neue Firestore-Pfade brauchen eine Regel in `web/firestore.rules`. Die Rules werden **nicht** automatisch deployt (`CONTRIBUTING.md`, „Deployment“).
+- **Tests** dürfen nicht von Datum, Wochentag oder Zeitzone abhängen.
+- **Branch-Hygiene**: Das Repo löscht Remote-Branches nach dem Merge automatisch (GitHub-Einstellung
+  „Automatically delete head branches"). Nur falls das für einen Branch ausbleibt (z. B. bei
+  manuell zusammengeführten PRs), manuell nachziehen: GitHub-Button "Delete branch" bzw.
+  `git push origin --delete <branch>` — keine bereits gemergten `claude/*`-/`feature/*`-/`release/*`-Branches stehen lassen.

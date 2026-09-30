@@ -63,7 +63,8 @@ class StartTimeBucket {
 /// vermeidet aber jede Mehrdeutigkeit.
 Duration _effectiveDuration(WorkEntryEntity entry) {
   if (entry.workStart == null || entry.workEnd == null) return Duration.zero;
-  final net = entry.workEnd!.difference(entry.workStart!) - entry.totalBreakTime;
+  final net =
+      entry.workEnd!.difference(entry.workStart!) - entry.totalBreakTime;
   return net.isNegative ? Duration.zero : net;
 }
 
@@ -82,10 +83,14 @@ Duration _average(Iterable<Duration> durations) {
 List<WeekdayAverage> calculateWeekdayAverages(List<WorkEntryEntity> entries) {
   final byWeekday = <int, List<Duration>>{};
   for (final entry in entries) {
-    if (entry.type != WorkEntryType.work || entry.workStart == null || entry.workEnd == null) {
+    if (entry.type != WorkEntryType.work ||
+        entry.workStart == null ||
+        entry.workEnd == null) {
       continue;
     }
-    byWeekday.putIfAbsent(entry.date.weekday, () => []).add(_effectiveDuration(entry));
+    byWeekday
+        .putIfAbsent(entry.date.weekday, () => [])
+        .add(_effectiveDuration(entry));
   }
   if (byWeekday.isEmpty) return [];
 
@@ -120,7 +125,8 @@ BurnoutStatus detectOvertimeStreak({
   int warningThresholdDays = 5,
 }) {
   if (entries.isEmpty || workdays.isEmpty) {
-    return const BurnoutStatus(currentStreak: 0, longestStreak: 0, isWarning: false);
+    return const BurnoutStatus(
+        currentStreak: 0, longestStreak: 0, isWarning: false);
   }
 
   final overTargetDays = <DateTime>{};
@@ -136,12 +142,15 @@ BurnoutStatus detectOvertimeStreak({
     }
   }
   if (minDate == null || maxDate == null) {
-    return const BurnoutStatus(currentStreak: 0, longestStreak: 0, isWarning: false);
+    return const BurnoutStatus(
+        currentStreak: 0, longestStreak: 0, isWarning: false);
   }
 
   var streak = 0;
   var longest = 0;
-  for (var day = minDate; !day.isAfter(maxDate); day = day.add(const Duration(days: 1))) {
+  for (var day = minDate;
+      !day.isAfter(maxDate);
+      day = day.add(const Duration(days: 1))) {
     if (!workdays.contains(day.weekday)) continue;
     if (overTargetDays.contains(day)) {
       streak++;

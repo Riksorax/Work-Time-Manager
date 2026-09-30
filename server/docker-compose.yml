@@ -27,6 +27,7 @@ services:
     environment:
       - Firebase__ProjectId=${FIREBASE_PROJECT_ID}
       - FIREBASE_SERVICE_ACCOUNT_BASE64=${FIREBASE_SERVICE_ACCOUNT_BASE64}
+      - Sentry__Dsn=${SENTRY_DSN_API:-}
       - Cors__AllowedOrigins__0=https://work-time-manager.app
       - ASPNETCORE_ENVIRONMENT=Production
     networks:
@@ -55,7 +56,7 @@ services:
   # eingerichtet - Uptime-Kuma bietet dafür keine Env-Var-/Config-Datei-
   # Konfiguration an.
   uptime-kuma:
-    image: louislam/uptime-kuma:1
+    image: louislam/uptime-kuma:2
     container_name: uptime-kuma
     restart: unless-stopped
     volumes:

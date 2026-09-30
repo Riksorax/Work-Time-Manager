@@ -12,7 +12,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { TranslatePipe } from '@ngx-translate/core';
 import { map } from 'rxjs';
 import { AuthService } from '../../core/auth/auth';
-import { WorkProfileSwitcherComponent } from '../../shared/components/work-profile-switcher/work-profile-switcher.component';
+import { WorkProfileSwitcherComponent } from '../../shared/components/work-profile-switcher/work-profile-switcher';
 
 @Component({
   selector: 'app-main-shell',

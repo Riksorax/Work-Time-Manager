@@ -27,8 +27,7 @@ void main() {
       workEnd: null,
     );
 
-    when(mockWorkRepository.saveWorkEntry(any))
-        .thenAnswer((_) async {});
+    when(mockWorkRepository.saveWorkEntry(any)).thenAnswer((_) async {});
 
     final result = await startOrStopTimer(entry);
 
@@ -46,8 +45,7 @@ void main() {
       workEnd: null,
     );
 
-    when(mockWorkRepository.saveWorkEntry(any))
-        .thenAnswer((_) async {});
+    when(mockWorkRepository.saveWorkEntry(any)).thenAnswer((_) async {});
 
     final result = await startOrStopTimer(entry);
 
@@ -56,7 +54,8 @@ void main() {
     verify(mockWorkRepository.saveWorkEntry(result)).called(1);
   });
 
-  test('should do nothing if timer is already stopped (workEnd is set)', () async {
+  test('should do nothing if timer is already stopped (workEnd is set)',
+      () async {
     final start = baseDate.add(const Duration(hours: 8));
     final end = baseDate.add(const Duration(hours: 16));
     final entry = WorkEntryEntity(

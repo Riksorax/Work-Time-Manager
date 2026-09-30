@@ -24,9 +24,7 @@ class TotalOvertimeDisplay extends StatelessWidget {
     return Column(
       children: [
         Text(
-          isNegative 
-            ? 'Gesamt-Minusstunden' 
-            : 'Gesamt-Überstunden',
+          isNegative ? 'Gesamt-Minusstunden' : 'Gesamt-Überstunden',
           style: Theme.of(context).textTheme.titleMedium,
         ),
         const SizedBox(height: 4),

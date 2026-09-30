@@ -1,5 +1,4 @@
-import 'package:flutter/material.dart' show ThemeMode;
-
+import '../entities/app_theme_mode.dart';
 import '../entities/bundesland.dart';
 
 /// Die Schnittstelle (der Vertrag) für den Zugriff auf lokale App-Einstellungen.
@@ -8,10 +7,10 @@ import '../entities/bundesland.dart';
 /// (z.B. in SharedPreferences oder einer lokalen Datenbank).
 abstract class SettingsRepository {
   /// Ruft den aktuell gespeicherten Theme-Modus ab.
-  ThemeMode getThemeMode();
+  AppThemeMode getThemeMode();
 
   /// Speichert den ausgewählten Theme-Modus.
-  Future<void> setThemeMode(ThemeMode mode);
+  Future<void> setThemeMode(AppThemeMode mode);
 
   /// Ruft die wöchentlichen Soll-Arbeitsstunden des Benutzers ab.
   double getTargetWeeklyHours();

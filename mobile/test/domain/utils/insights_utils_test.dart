@@ -32,13 +32,15 @@ void main() {
       final result = calculateWeekdayAverages(entries);
 
       expect(result.length, 2);
-      final wednesday = result.firstWhere((w) => w.weekday == DateTime.wednesday);
+      final wednesday =
+          result.firstWhere((w) => w.weekday == DateTime.wednesday);
       final monday = result.firstWhere((w) => w.weekday == DateTime.monday);
 
       expect(wednesday.averageWorkDuration, const Duration(hours: 9));
       expect(monday.averageWorkDuration, const Duration(hours: 8));
       // Gesamtdurchschnitt: (9+9+8+8)/4 = 8,5h -> Mi weicht um +0,5h ab, Mo um -0,5h
-      expect(wednesday.deviationFromOverallAverage, const Duration(minutes: 30));
+      expect(
+          wednesday.deviationFromOverallAverage, const Duration(minutes: 30));
       expect(monday.deviationFromOverallAverage, const Duration(minutes: -30));
     });
 
@@ -90,7 +92,8 @@ void main() {
         makeEntry(DateTime(2024, 1, 3), endHour: 17), // Mi, 9h
       ];
 
-      final status = detectOvertimeStreak(entries: entries, workdays: monFri, dailyTarget: target);
+      final status = detectOvertimeStreak(
+          entries: entries, workdays: monFri, dailyTarget: target);
 
       expect(status.currentStreak, 1);
       expect(status.longestStreak, 1);
@@ -103,7 +106,8 @@ void main() {
         makeEntry(DateTime(2024, 1, 8), endHour: 17), // Mo, 9h
       ];
 
-      final status = detectOvertimeStreak(entries: entries, workdays: monFri, dailyTarget: target);
+      final status = detectOvertimeStreak(
+          entries: entries, workdays: monFri, dailyTarget: target);
 
       expect(status.currentStreak, 2);
     });
@@ -115,14 +119,16 @@ void main() {
         makeEntry(DateTime(2024, 1, 3), endHour: 17), // Mi, 9h
       ];
 
-      final status = detectOvertimeStreak(entries: entries, workdays: monFri, dailyTarget: target);
+      final status = detectOvertimeStreak(
+          entries: entries, workdays: monFri, dailyTarget: target);
 
       expect(status.currentStreak, 1);
       expect(status.longestStreak, 1);
     });
 
     test('leere Liste liefert keine Warnung', () {
-      final status = detectOvertimeStreak(entries: [], workdays: monFri, dailyTarget: target);
+      final status = detectOvertimeStreak(
+          entries: [], workdays: monFri, dailyTarget: target);
       expect(status.currentStreak, 0);
       expect(status.isWarning, isFalse);
     });
@@ -131,21 +137,29 @@ void main() {
   group('buildStartTimeHeatmap', () {
     const target = Duration(hours: 8);
 
-    test('gruppiert nach Startstunde und berechnet die durchschnittliche Abweichung', () {
+    test(
+        'gruppiert nach Startstunde und berechnet die durchschnittliche Abweichung',
+        () {
       final entries = [
-        makeEntry(DateTime(2024, 1, 1), startHour: 7, endHour: 16), // 9h, Start 7 Uhr
-        makeEntry(DateTime(2024, 1, 2), startHour: 7, endHour: 15), // 8h, Start 7 Uhr
-        makeEntry(DateTime(2024, 1, 3), startHour: 9, endHour: 16), // 7h, Start 9 Uhr
-        makeEntry(DateTime(2024, 1, 4), startHour: 9, endHour: 16), // 7h, Start 9 Uhr
+        makeEntry(DateTime(2024, 1, 1),
+            startHour: 7, endHour: 16), // 9h, Start 7 Uhr
+        makeEntry(DateTime(2024, 1, 2),
+            startHour: 7, endHour: 15), // 8h, Start 7 Uhr
+        makeEntry(DateTime(2024, 1, 3),
+            startHour: 9, endHour: 16), // 7h, Start 9 Uhr
+        makeEntry(DateTime(2024, 1, 4),
+            startHour: 9, endHour: 16), // 7h, Start 9 Uhr
       ];
 
-      final buckets = buildStartTimeHeatmap(entries: entries, dailyTarget: target, minSampleCount: 2);
+      final buckets = buildStartTimeHeatmap(
+          entries: entries, dailyTarget: target, minSampleCount: 2);
 
       expect(buckets.length, 2);
       final sevenOClock = buckets.firstWhere((b) => b.startHour == 7);
       final nineOClock = buckets.firstWhere((b) => b.startHour == 9);
 
-      expect(sevenOClock.averageOvertime, const Duration(minutes: 30)); // (9h+8h)/2 - 8h
+      expect(sevenOClock.averageOvertime,
+          const Duration(minutes: 30)); // (9h+8h)/2 - 8h
       expect(nineOClock.averageOvertime, const Duration(hours: -1)); // 7h - 8h
       expect(sevenOClock.sampleCount, 2);
     });
@@ -155,7 +169,8 @@ void main() {
         makeEntry(DateTime(2024, 1, 1), startHour: 7, endHour: 16),
       ];
 
-      final buckets = buildStartTimeHeatmap(entries: entries, dailyTarget: target, minSampleCount: 2);
+      final buckets = buildStartTimeHeatmap(
+          entries: entries, dailyTarget: target, minSampleCount: 2);
 
       expect(buckets, isEmpty);
     });
@@ -168,7 +183,8 @@ void main() {
         makeEntry(DateTime(2024, 1, 4), startHour: 6, endHour: 14),
       ];
 
-      final buckets = buildStartTimeHeatmap(entries: entries, dailyTarget: target, minSampleCount: 2);
+      final buckets = buildStartTimeHeatmap(
+          entries: entries, dailyTarget: target, minSampleCount: 2);
 
       expect(buckets.map((b) => b.startHour).toList(), [6, 9]);
     });
