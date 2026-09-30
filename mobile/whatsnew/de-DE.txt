@@ -1,1 +1,1 @@
-Neu: App jetzt komplett auf Englisch nutzbar (Sprachauswahl in den Einstellungen). Bugfix: Änderungen der Gleitzeit-Bilanz erschienen nicht sofort im Dashboard – behoben. Kleinere Verbesserungen bei der Abo-Verwaltung.
+Neu: PDF-Export folgt jetzt der App-Sprache statt immer Deutsch zu sein. Beim Anlegen eines zusätzlichen Arbeitszeit-Profils ohne Premium erscheint jetzt der Kauf-Dialog statt einer einfachen Meldung. Bugfix: Arbeitszeit-Profile wurden in Berichten und beim Speichern nicht immer korrekt berücksichtigt. Kleinere Stabilitätsverbesserungen.
