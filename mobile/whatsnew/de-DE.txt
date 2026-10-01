@@ -1,1 +1,8 @@
-Neu: Mit englischer App-Sprache erscheinen jetzt auch Erinnerungen, Überstunden-Warnungen, der Biometrie-Dialog und der Update-Hinweis auf Englisch. Standard-Pausennamen (z. B. "Automatische Pause") werden in der App-Sprache angezeigt. Außerdem sprechen wir dich jetzt durchgehend mit "du" an und haben kleine Übersetzungsfehler korrigiert.
+Das ist neu:
+• Abstürze behoben: Benachrichtigungen, Timer speichern ohne Internet, Account löschen, Texteingaben
+• Mit englischer App-Sprache jetzt auch Erinnerungen, Warnungen und Biometrie-Dialog auf Englisch
+• Pausen-Namen in deiner App-Sprache
+• PDF-Export in der App-Sprache
+• Zusätzliches Profil ohne Premium: direkt der Kauf-Dialog
+• Arbeitszeit-Profile in Berichten korrekt
+• Übersetzungen verbessert und Texte einheitlich im Du-Stil
