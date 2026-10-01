@@ -143,15 +143,20 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
           await _googleSignIn.initialize(
               serverClientId: GoogleSignInConfig.serverClientId);
 
-          final GoogleSignInAccount? googleUser =
-              await _googleSignIn.authenticate(
-            scopeHint: ['email', 'profile'],
-          );
-          if (googleUser == null) {
-            logger.w("Re-Authentifizierung wurde abgebrochen");
-            return;
+          final GoogleSignInAccount googleUser;
+          try {
+            googleUser = await _googleSignIn.authenticate(
+              scopeHint: ['email', 'profile'],
+            );
+          } on GoogleSignInException catch (e) {
+            // Ein Fehler innerhalb eines catch-Blocks wird von den Geschwister-
+            // catch-Klauseln unten nicht gefangen, daher hier behandeln (#338).
+            if (e.code == GoogleSignInExceptionCode.canceled) {
+              logger.w("Re-Authentifizierung wurde abgebrochen");
+              return;
+            }
+            rethrow;
           }
-
           final GoogleSignInAuthentication googleAuth =
               await googleUser.authentication;
           final firebase.AuthCredential credential =
