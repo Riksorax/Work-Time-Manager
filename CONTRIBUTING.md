@@ -125,8 +125,15 @@ Mit Claude Code: `/release <Version> <Charakter>`.
    Commit `Merge branch 'main' into develop (Version <Version> zurückmergen)`.
 8. Release-Branch löschen.
 
-**Hotfix:** Dringende Korrekturen laufen genauso, nur zweigt der Release-Branch von `main`
-statt von `develop` ab (Patch-Version, neuer Charakter). Danach wie gewohnt zurückmergen.
+**Versionsregel ab 1.6:** `x.y.0` bringt neue Funktionen, jede Patch-Version (`x.y.1`, `x.y.2`, ...)
+enthält nur Bugfixes. Treten nach einem Release Fehler auf, steigt die Version auf `x.y.1`; ein
+späterer Hotfix erhöht ebenso die Patch-Version. Der Charakter bleibt der der Linie (siehe
+`RELEASE_NAMES.md`), neue Funktionen warten auf die nächste Minor-Version.
+
+**Hotfix / Bugfix-Release:** Läuft genauso, nur zweigt der Release-Branch von `main` statt von
+`develop` ab, wenn auf `develop` schon Funktionen für die nächste Minor-Version liegen, damit
+sie nicht versehentlich mitgehen. Patch-Version, ab 1.6 mit dem Charakter der Linie (davor ein
+neuer Charakter). Danach wie gewohnt zurückmergen.
 
 ## 6. Deployment
 

@@ -9,6 +9,10 @@ heißt dann `<Major>.<Minor> <Charakter>` (z. B. `1.6 Saix`) und wird nur einmal
 angelegt; der Release-Name behält die volle Version (`1.6.1 Saix`). Für `1.6.x` ist **Saix**
 vorgesehen. Bis einschließlich 1.5.x bekam jede Version einen eigenen Charakter und einen
 Track `<Version> <Charakter>`.
+
+**Versionsregel ab 1.6:** `x.y.0` bringt neue Funktionen. Jede Patch-Version (`x.y.1`, `x.y.2`, ...)
+enthält nur Bugfixes und Hotfixes; auch ein späterer Hotfix erhöht nur die Patch-Version und
+behält den Charakter der Linie. Neue Funktionen kommen erst mit der nächsten Minor-Version.
  
 ## Wie ein Name vergeben wird
  

@@ -10,6 +10,10 @@ nur ansagen, nicht selbst ausführen.
 ## Vorbedingungen prüfen
 1. `develop` ist grün (CI-Lauf des letzten Commits, GitHub-MCP `actions_list`).
 2. Version folgt SemVer und ist größer als die aktuelle in `mobile/pubspec.yaml`.
+   Ab 1.6 gilt: `x.y.0` bringt neue Funktionen, Patch-Versionen (`x.y.z`, z > 0) nur Bugfixes.
+   Zeigt `git log origin/main..origin/develop` für ein Patch-Release neue Funktionen
+   (`feat`), nicht stillschweigend weitermachen: Nutzer fragen, ob die Minor-Version erhöht
+   oder der Branch von `main` mit nur den Bugfixes abgezweigt werden soll.
 3. Der Charakter:
    - Ab 1.6: Steht in `RELEASE_NAMES.md` schon ein Eintrag für `<Major>.<Minor>.x`, gilt
      dessen Charakter (bei fehlendem Argument übernehmen, bei abweichendem nachfragen).
