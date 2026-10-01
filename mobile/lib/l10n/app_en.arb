@@ -305,6 +305,8 @@
   "updateRequiredTitle": "Update required",
   "updateAvailableTitle": "Update available",
   "laterAction": "Later",
+  "updateRequiredMessage": "An update is required. Please update the app to version {minVersion} or higher.",
+  "updateAvailableMessage": "A new version ({minVersion}) is available. We recommend updating.",
   "updateNowAction": "Update now",
   "currentVersionLabel": "Current version:",
   "requiredVersionLabel": "Required version:",

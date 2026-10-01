@@ -39,7 +39,10 @@ class UpdateRequiredDialog extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              updateInfo.message ?? updateInfo.defaultMessage,
+              updateInfo.message ??
+                  (updateInfo.forceUpdate
+                      ? l10n.updateRequiredMessage(updateInfo.minVersion)
+                      : l10n.updateAvailableMessage(updateInfo.minVersion)),
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 16),

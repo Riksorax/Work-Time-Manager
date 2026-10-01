@@ -120,7 +120,7 @@
   "@restartSessionTitle": {
     "description": "Titel des Bestätigungsdialogs zum Neustart einer bereits beendeten Zeiterfassung."
   },
-  "restartSessionBody": "Möchten Sie eine neue Session starten?\n\n• Pausen behalten: Nur Start- und Endzeit werden zurückgesetzt\n• Komplett neu: Start, End und Pausen werden zurückgesetzt",
+  "restartSessionBody": "Möchten Sie eine neue Session starten?\n\n• Pausen behalten: Nur Start- und Endzeit werden zurückgesetzt\n• Komplett neu: Start, Ende und Pausen werden zurückgesetzt",
   "@restartSessionBody": {
     "description": "Erklärungstext des Neustart-Bestätigungsdialogs."
   },
@@ -814,7 +814,7 @@
   },
   "weekdayAnalysisTitle": "Wochentags-Analyse",
   "@weekdayAnalysisTitle": { "description": "Titel der Wochentags-Analyse in den Insights." },
-  "weekdayAnalysisExplanation": "Deine durchschnittliche Arbeitszeit je Wochentag. Der Wert rechts zeigt die Abweichung vom Durchschnitt über alle Wochentage - so siehst du z.B., ob du montags typischerweise länger arbeitest als sonst.",
+  "weekdayAnalysisExplanation": "Deine durchschnittliche Arbeitszeit je Wochentag. Der Wert rechts zeigt die Abweichung vom Durchschnitt über alle Wochentage – so siehst du z. B., ob du montags typischerweise länger arbeitest als sonst.",
   "@weekdayAnalysisExplanation": { "description": "Erklärungstext der Wochentags-Analyse." },
   "avgWorkTimeWithCount": "Ø {duration} h ({count}x)",
   "@avgWorkTimeWithCount": {
@@ -967,7 +967,7 @@
   },
   "newProfileDialogTitle": "Neues Profil",
   "@newProfileDialogTitle": { "description": "Titel des Dialogs zum Anlegen eines neuen Arbeitszeit-Profils." },
-  "profileNameFieldLabel": "Name (z.B. Arbeitgeber)",
+  "profileNameFieldLabel": "Name (z. B. Arbeitgeber)",
   "@profileNameFieldLabel": { "description": "Beschriftung des Namensfelds beim Anlegen eines Profils." },
   "createAction": "Anlegen",
   "@createAction": { "description": "Beschriftung des Buttons zum Anlegen eines neuen Profils." },
@@ -1007,6 +1007,16 @@
   "@updateAvailableTitle": { "description": "Titel des Update-Dialogs bei einem optionalen Update." },
   "laterAction": "Später",
   "@laterAction": { "description": "Beschriftung des Buttons, um ein optionales Update zu verschieben." },
+  "updateRequiredMessage": "Ein Update ist erforderlich. Bitte aktualisieren Sie die App auf Version {minVersion} oder höher.",
+  "@updateRequiredMessage": {
+    "description": "Standardtext im Update-Dialog bei erzwungenem Update, falls Firestore keine eigene Nachricht liefert.",
+    "placeholders": { "minVersion": { "type": "String" } }
+  },
+  "updateAvailableMessage": "Eine neue Version ({minVersion}) ist verfügbar. Wir empfehlen ein Update.",
+  "@updateAvailableMessage": {
+    "description": "Standardtext im Update-Dialog bei optionalem Update, falls Firestore keine eigene Nachricht liefert.",
+    "placeholders": { "minVersion": { "type": "String" } }
+  },
   "updateNowAction": "Jetzt updaten",
   "@updateNowAction": { "description": "Beschriftung des Buttons zum Starten des App-Updates." },
   "currentVersionLabel": "Aktuelle Version:",
