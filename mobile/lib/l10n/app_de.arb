@@ -120,7 +120,7 @@
   "@restartSessionTitle": {
     "description": "Titel des Bestätigungsdialogs zum Neustart einer bereits beendeten Zeiterfassung."
   },
-  "restartSessionBody": "Möchten Sie eine neue Session starten?\n\n• Pausen behalten: Nur Start- und Endzeit werden zurückgesetzt\n• Komplett neu: Start, End und Pausen werden zurückgesetzt",
+  "restartSessionBody": "Möchtest du eine neue Session starten?\n\n• Pausen behalten: Nur Start- und Endzeit werden zurückgesetzt\n• Komplett neu: Start, Ende und Pausen werden zurückgesetzt",
   "@restartSessionBody": {
     "description": "Erklärungstext des Neustart-Bestätigungsdialogs."
   },
@@ -181,7 +181,7 @@
   "@adjustOvertimeTitle": {
     "description": "Titel des Dialogs zur manuellen Gleitzeit-Korrektur."
   },
-  "adjustOvertimeDescription": "Geben Sie einen neuen Wert ein oder setzen Sie die Bilanz auf 0 zurück.",
+  "adjustOvertimeDescription": "Gib einen neuen Wert ein oder setze die Bilanz auf 0 zurück.",
   "@adjustOvertimeDescription": {
     "description": "Erklärungstext im Gleitzeit-Korrektur-Dialog."
   },
@@ -343,7 +343,7 @@
   "@offlineModeTitle": {
     "description": "Titel des Hinweises für ausgeloggte Nutzer."
   },
-  "offlineModeDescription": "Ihre Daten werden lokal auf diesem Gerät gespeichert. Melden Sie sich an, um Ihre Daten in der Cloud zu sichern und geräteübergreifend zu synchronisieren.",
+  "offlineModeDescription": "Deine Daten werden lokal auf diesem Gerät gespeichert. Melde dich an, um deine Daten in der Cloud zu sichern und geräteübergreifend zu synchronisieren.",
   "@offlineModeDescription": {
     "description": "Erklärungstext des Offline-Modus-Hinweises."
   },
@@ -403,7 +403,7 @@
   "@deleteAccountTitle": {
     "description": "Titel des Bestätigungsdialogs zum Löschen des Accounts."
   },
-  "deleteAccountWarning": "Warnung: Diese Aktion kann nicht rückgängig gemacht werden. Alle Ihre Daten, einschließlich der Arbeitszeiterfassung, werden dauerhaft gelöscht.",
+  "deleteAccountWarning": "Warnung: Diese Aktion kann nicht rückgängig gemacht werden. Alle deine Daten, einschließlich der Arbeitszeiterfassung, werden dauerhaft gelöscht.",
   "@deleteAccountWarning": {
     "description": "Warntext im Account-Lösch-Dialog."
   },
@@ -423,7 +423,7 @@
   "@logoutButton": {
     "description": "Beschriftung des Abmelden-Buttons."
   },
-  "logoutConfirmBody": "Möchten Sie sich wirklich abmelden?",
+  "logoutConfirmBody": "Möchtest du dich wirklich abmelden?",
   "@logoutConfirmBody": {
     "description": "Bestätigungstext im Abmelden-Dialog."
   },
@@ -459,7 +459,7 @@
   "@weeklyTargetHoursFieldLabel": {
     "description": "Beschriftung des Eingabefelds für wöchentliche Soll-Stunden."
   },
-  "pleaseEnterNumber": "Bitte geben Sie eine Zahl ein.",
+  "pleaseEnterNumber": "Bitte gib eine Zahl ein.",
   "@pleaseEnterNumber": {
     "description": "Validierungsfehler bei leerem Zahlenfeld."
   },
@@ -467,7 +467,7 @@
   "@invalidNumber": {
     "description": "Validierungsfehler bei nicht parsbarer Zahl."
   },
-  "weeklyHoursRangeError": "Bitte geben Sie einen Wert zwischen 1 und 48 ein (gesetzliches Maximum nach § 3 ArbZG).",
+  "weeklyHoursRangeError": "Bitte gib einen Wert zwischen 1 und 48 ein (gesetzliches Maximum nach § 3 ArbZG).",
   "@weeklyHoursRangeError": {
     "description": "Validierungsfehler, wenn die wöchentliche Soll-Stundenzahl außerhalb des gesetzlichen Rahmens liegt."
   },
@@ -491,7 +491,7 @@
   "@enableNotificationsTitle": {
     "description": "Titel des Schalters zum Aktivieren von Benachrichtigungen."
   },
-  "enableNotificationsDescription": "Erinnert Sie daran, fehlende Arbeitszeiten einzutragen",
+  "enableNotificationsDescription": "Erinnert dich daran, fehlende Arbeitszeiten einzutragen",
   "@enableNotificationsDescription": {
     "description": "Beschreibung des Benachrichtigungen-Schalters."
   },
@@ -527,7 +527,7 @@
   "@daysSectionTitle": {
     "description": "Überschrift der Wochentags-Auswahl im Benachrichtigungsdialog."
   },
-  "selectAtLeastOneDay": "Bitte wählen Sie mindestens einen Tag aus",
+  "selectAtLeastOneDay": "Bitte wähle mindestens einen Tag aus",
   "@selectAtLeastOneDay": {
     "description": "Validierungsfehler, wenn kein Erinnerungstag ausgewählt ist."
   },
@@ -605,7 +605,7 @@
   "@tabYearly": { "description": "Tab-Beschriftung für die Jahresansicht der Berichte." },
   "deleteEntryTitle": "Eintrag löschen?",
   "@deleteEntryTitle": { "description": "Titel des Bestätigungsdialogs zum Löschen eines Arbeitseintrags." },
-  "deleteEntryConfirm": "Möchten Sie diesen Arbeitseintrag wirklich löschen?",
+  "deleteEntryConfirm": "Möchtest du diesen Arbeitseintrag wirklich löschen?",
   "@deleteEntryConfirm": { "description": "Bestätigungstext im Lösch-Dialog eines Arbeitseintrags." },
   "deleteAction": "Löschen",
   "@deleteAction": { "description": "Generische Beschriftung eines Löschen-Buttons." },
@@ -814,7 +814,7 @@
   },
   "weekdayAnalysisTitle": "Wochentags-Analyse",
   "@weekdayAnalysisTitle": { "description": "Titel der Wochentags-Analyse in den Insights." },
-  "weekdayAnalysisExplanation": "Deine durchschnittliche Arbeitszeit je Wochentag. Der Wert rechts zeigt die Abweichung vom Durchschnitt über alle Wochentage - so siehst du z.B., ob du montags typischerweise länger arbeitest als sonst.",
+  "weekdayAnalysisExplanation": "Deine durchschnittliche Arbeitszeit je Wochentag. Der Wert rechts zeigt die Abweichung vom Durchschnitt über alle Wochentage – so siehst du z. B., ob du montags typischerweise länger arbeitest als sonst.",
   "@weekdayAnalysisExplanation": { "description": "Erklärungstext der Wochentags-Analyse." },
   "avgWorkTimeWithCount": "Ø {duration} h ({count}x)",
   "@avgWorkTimeWithCount": {
@@ -886,7 +886,7 @@
   "@noContentFound": { "description": "Hinweis, wenn ein Markdown-Rechtsdokument leer ist." },
   "closeAction": "Schließen",
   "@closeAction": { "description": "Beschriftung eines Schließen-Buttons." },
-  "loginTagline": "Erfassen Sie Ihre Arbeitszeit",
+  "loginTagline": "Erfasse deine Arbeitszeit",
   "@loginTagline": { "description": "Untertitel auf der Login-Seite." },
   "googleSignInButton": "Mit Google anmelden",
   "@googleSignInButton": { "description": "Beschriftung des Google-Anmelde-Buttons." },
@@ -909,7 +909,7 @@
     "description": "Fehlermeldung, wenn die Google-Anmeldung fehlschlägt.",
     "placeholders": { "error": { "type": "String" } }
   },
-  "legalNoticePrefix": "Mit der Anmeldung akzeptieren Sie unsere ",
+  "legalNoticePrefix": "Mit der Anmeldung akzeptierst du unsere ",
   "@legalNoticePrefix": { "description": "Erster Teil des rechtlichen Hinweises auf der Login-Seite, vor dem AGB-Link." },
   "termsShortLabel": "AGB",
   "@termsShortLabel": { "description": "Kurzform von \"Allgemeine Geschäftsbedingungen\" als Link-Text." },
@@ -926,7 +926,7 @@
   },
   "rateAppTitle": "App im Google Play Store bewerten",
   "@rateAppTitle": { "description": "Titel der Einstellungszeile zum Bewerten der App." },
-  "rateAppSubtitle": "Unterstützen Sie uns mit einer Bewertung",
+  "rateAppSubtitle": "Unterstütze uns mit einer Bewertung",
   "@rateAppSubtitle": { "description": "Untertitel der Einstellungszeile zum Bewerten der App." },
   "testVersionCheckTitle": "🧪 TEST: Version Check",
   "@testVersionCheckTitle": { "description": "Titel eines Debug-only-Testeintrags zum manuellen Auslösen des Update-Dialogs." },
@@ -967,7 +967,7 @@
   },
   "newProfileDialogTitle": "Neues Profil",
   "@newProfileDialogTitle": { "description": "Titel des Dialogs zum Anlegen eines neuen Arbeitszeit-Profils." },
-  "profileNameFieldLabel": "Name (z.B. Arbeitgeber)",
+  "profileNameFieldLabel": "Name (z. B. Arbeitgeber)",
   "@profileNameFieldLabel": { "description": "Beschriftung des Namensfelds beim Anlegen eines Profils." },
   "createAction": "Anlegen",
   "@createAction": { "description": "Beschriftung des Buttons zum Anlegen eines neuen Profils." },
@@ -1007,6 +1007,61 @@
   "@updateAvailableTitle": { "description": "Titel des Update-Dialogs bei einem optionalen Update." },
   "laterAction": "Später",
   "@laterAction": { "description": "Beschriftung des Buttons, um ein optionales Update zu verschieben." },
+  "updateRequiredMessage": "Ein Update ist erforderlich. Bitte aktualisiere die App auf Version {minVersion} oder höher.",
+  "@updateRequiredMessage": {
+    "description": "Standardtext im Update-Dialog bei erzwungenem Update, falls Firestore keine eigene Nachricht liefert.",
+    "placeholders": { "minVersion": { "type": "String" } }
+  },
+  "updateAvailableMessage": "Eine neue Version ({minVersion}) ist verfügbar. Wir empfehlen ein Update.",
+  "@updateAvailableMessage": {
+    "description": "Standardtext im Update-Dialog bei optionalem Update, falls Firestore keine eigene Nachricht liefert.",
+    "placeholders": { "minVersion": { "type": "String" } }
+  },
+  "notificationReminderTitle": "Arbeitszeit-Erinnerung",
+  "@notificationReminderTitle": { "description": "Titel der täglichen Erinnerungs-Benachrichtigung." },
+  "notificationReminderGeneric": "Vergiss nicht, deine Arbeitszeiten zu prüfen!",
+  "@notificationReminderGeneric": { "description": "Text der Erinnerung, wenn keine einzelne Prüfung (Beginn/Ende/Pausen) aktiv ist." },
+  "notificationItemWorkStart": "Arbeitsbeginn",
+  "@notificationItemWorkStart": { "description": "Bestandteil einer Aufzählung in der Erinnerung (ohne Artikel)." },
+  "notificationItemWorkEnd": "Arbeitsende",
+  "@notificationItemWorkEnd": { "description": "Bestandteil einer Aufzählung in der Erinnerung (ohne Artikel)." },
+  "notificationItemBreaks": "Pausen",
+  "@notificationItemBreaks": { "description": "Bestandteil einer Aufzählung in der Erinnerung (ohne Artikel)." },
+  "notificationReminderSingleWorkStart": "Hast du deinen Arbeitsbeginn eingetragen?",
+  "@notificationReminderSingleWorkStart": { "description": "Erinnerungstext, wenn nur der Arbeitsbeginn geprüft wird." },
+  "notificationReminderSingleWorkEnd": "Hast du dein Arbeitsende eingetragen?",
+  "@notificationReminderSingleWorkEnd": { "description": "Erinnerungstext, wenn nur das Arbeitsende geprüft wird." },
+  "notificationReminderSingleBreaks": "Hast du deine Pausen eingetragen?",
+  "@notificationReminderSingleBreaks": { "description": "Erinnerungstext, wenn nur die Pausen geprüft werden." },
+  "notificationReminderMultiple": "Hast du {first} und {last} eingetragen?",
+  "@notificationReminderMultiple": {
+    "description": "Erinnerungstext bei mehreren Prüfungen; first ist eine kommagetrennte Aufzählung, last der letzte Punkt.",
+    "placeholders": { "first": { "type": "String" }, "last": { "type": "String" } }
+  },
+  "notificationOvertimeWarningTitle": "Überstunden-Warnung",
+  "@notificationOvertimeWarningTitle": { "description": "Titel der Benachrichtigung, wenn der Überstunden-Schwellwert erreicht ist." },
+  "notificationOvertimeWarningBody": "Dein Gleitzeitkonto hat {hours} Überstunden erreicht.",
+  "@notificationOvertimeWarningBody": {
+    "description": "Text der Überstunden-Warnung.",
+    "placeholders": { "hours": { "type": "String" } }
+  },
+  "notificationUndertimeWarningTitle": "Minusstunden-Warnung",
+  "@notificationUndertimeWarningTitle": { "description": "Titel der Benachrichtigung, wenn der Minusstunden-Schwellwert erreicht ist." },
+  "notificationUndertimeWarningBody": "Dein Gleitzeitkonto liegt bei {hours} Minusstunden.",
+  "@notificationUndertimeWarningBody": {
+    "description": "Text der Minusstunden-Warnung.",
+    "placeholders": { "hours": { "type": "String" } }
+  },
+  "notificationChannelReminderName": "Tägliche Erinnerungen",
+  "@notificationChannelReminderName": { "description": "Name des Android-Benachrichtigungskanals für tägliche Erinnerungen." },
+  "notificationChannelReminderDescription": "Erinnerungen zum Eintragen von Arbeitszeiten",
+  "@notificationChannelReminderDescription": { "description": "Beschreibung des Android-Kanals für tägliche Erinnerungen." },
+  "notificationChannelOvertimeName": "Gleitzeit-Warnungen",
+  "@notificationChannelOvertimeName": { "description": "Name des Android-Benachrichtigungskanals für Über-/Minusstunden-Warnungen." },
+  "notificationChannelOvertimeDescription": "Warnung bei Über-/Minusstunden-Schwellwert",
+  "@notificationChannelOvertimeDescription": { "description": "Beschreibung des Android-Kanals für Über-/Minusstunden-Warnungen." },
+  "biometricAuthReason": "Bitte authentifiziere dich, um die App zu entsperren",
+  "@biometricAuthReason": { "description": "Begründungstext im System-Dialog der Biometrie-Abfrage zum Entsperren der App." },
   "updateNowAction": "Jetzt updaten",
   "@updateNowAction": { "description": "Beschriftung des Buttons zum Starten des App-Updates." },
   "currentVersionLabel": "Aktuelle Version:",
