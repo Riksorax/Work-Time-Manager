@@ -1,1 +1,1 @@
-Neu: App jetzt komplett auf Englisch nutzbar (Sprachauswahl in den Einstellungen). Bugfix: Änderungen der Gleitzeit-Bilanz erschienen nicht sofort im Dashboard – behoben. Kleinere Verbesserungen bei der Abo-Verwaltung.
+Stabilitäts-Update: Vier Abstürze behoben. Die App stürzte in seltenen Fällen ab bei Benachrichtigungen, beim Starten/Stoppen des Timers ohne Internetverbindung, beim Abbrechen der erneuten Anmeldung während des Account-Löschens sowie beim schnellen Bestätigen von Texteingaben (z. B. neues Profil, PIN-Eingabe).
