@@ -8,7 +8,7 @@ Architektur und Code-Regeln stehen in `CLAUDE.md` (Root) sowie in `mobile/CLAUDE
 
 ```
 Issue ──► Branch von develop ──► PR gegen develop (Squash) ──► release/v<Version>-<Charakter>
-      ──► PR gegen main (Squash) ──► Deploy (Play Store, API, Web) ──► main zurück nach develop
+      ──► PR gegen main (Merge-Commit) ──► Deploy (Play Store, API, Web) ──► main zurück nach develop
 ```
 
 | Branch | Zweck | Ziel des PR | Merge |
@@ -17,7 +17,7 @@ Issue ──► Branch von develop ──► PR gegen develop (Squash) ──►
 | `feature/<issue>-<kurz>` | neue Funktion | `develop` | Squash |
 | `fix/<issue>-<kurz>` | Fehlerbehebung | `develop` | Squash |
 | `claude/<…>` | von Claude-Code-Cloud-Sessions vorgegeben | `develop` | Squash |
-| `release/v<Version>-<Charakter>` | Release-Vorbereitung | `main` | Squash |
+| `release/v<Version>-<Charakter>` | Release-Vorbereitung | `main` | Merge-Commit (kein Squash) |
 | `main` | Produktionsstand, jeder Push deployt | – | – |
 
 Nach dem Merge wird der Branch gelöscht (GitHub-Button „Delete branch“ bzw.
@@ -106,16 +106,20 @@ Keine verschachtelten Scopes wie `web/reports`.
 
 Mit Claude Code: `/release <Version> <Charakter>`.
 
-1. **Vorbereiten:** Den geschlossenen Test-Track `<Version> <Charakter>` in der Google Play
-   Console anlegen und mit Testern verknüpfen. Die API kann keine Tracks anlegen.
+1. **Vorbereiten:** Den geschlossenen Test-Track in der Google Play Console anlegen und mit
+   Testern verknüpfen. Die API kann keine Tracks anlegen. Bis 1.5.x heißt er
+   `<Version> <Charakter>`, ab 1.6 `<Major>.<Minor> <Charakter>` (z. B. `1.6 Saix`) und wird
+   nur beim ersten Release der Linie angelegt.
 2. **Branch:** `release/v<Version>-<Charakter>` von `develop` abzweigen und pushen,
    z. B. `release/v1.4.3-Axel` oder `release/v1.5.0-Micky-Maus`. Der Charakter muss in
-   `RELEASE_NAMES.md` unter „Noch frei“ stehen.
+   `RELEASE_NAMES.md` unter „Noch frei“ stehen. Ab 1.6 trägt eine ganze Minor-Linie denselben
+   Charakter (`release/v1.6.0-Saix`, später `release/v1.6.1-Saix`).
 3. **Automatischer Bump:** `version-bump.yml` setzt die Version in `mobile/pubspec.yaml`
    und trägt den Charakter in `RELEASE_NAMES.md` ein. Danach `git pull`.
 4. **Versionshinweise:** `mobile/whatsnew/de-DE.txt` überschreiben, höchstens 500 Zeichen,
    Commit `docs(release): Versionshinweise für <Version> (<Charakter>)`.
-5. **PR** `release/v…` → `main` mit Titel `Release <Version> (<Charakter>)`, Squash-Merge.
+5. **PR** `release/v…` → `main` mit Titel `Release <Version> (<Charakter>)`, als
+   **Merge-Commit** (nicht Squash, sonst trennt sich die Historie von `main` und `develop`).
 6. **Deploy** startet automatisch (siehe unten).
 7. **Zurückmergen:** `main` nach `develop` mergen,
    Commit `Merge branch 'main' into develop (Version <Version> zurückmergen)`.
@@ -130,7 +134,7 @@ Jeder Push auf `main` startet:
 
 | Workflow | Ergebnis | Prüfung danach |
 |---|---|---|
-| `flutter-production.yml` | Android-AAB im geschlossenen Test-Track `<Version> <Charakter>` | Play Console |
+| `flutter-production.yml` | Android-AAB im geschlossenen Test-Track (`<Version> <Charakter>`, ab 1.6 `<Major>.<Minor> <Charakter>`) | Play Console |
 | `deploy-api.yml` | Image `riksorax/work-time-manager-api`, Deploy auf Hetzner | Smoke-Test `https://api.work-time-manager.app/health` |
 | `deploy-angular.yml` | Image `riksorax/work-time-manager-web`, Deploy auf Hetzner | Smoke-Test `https://work-time-manager.app/` |
 
