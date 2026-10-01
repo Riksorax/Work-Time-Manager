@@ -112,6 +112,33 @@ void main() {
       expect(find.textContaining('angelegt'), findsOneWidget);
     });
 
+    testWidgets(
+        'legt ein Profil per Eingabetaste an und schließt dabei die Tastatur (#337)',
+        (tester) async {
+      when(mockRepository.addProfile('Zweitjob')).thenAnswer(
+          (_) async => const WorkProfileEntity(id: 'p1', name: 'Zweitjob'));
+
+      await tester.pumpWidget(createSubject(isPremium: true));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(PopupMenuButton<String>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Neues Profil'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'Zweitjob');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pumpAndSettle();
+
+      verify(mockRepository.addProfile('Zweitjob')).called(1);
+      expect(find.byType(AlertDialog), findsNothing);
+      // Die Tastatur muss schon vor dem Schließen des Dialogs geschlossen
+      // worden sein (siehe #337) - sonst verarbeitet das Framework die
+      // IME-Selection-Änderung noch, während das Overlay bereits disposed
+      // wird.
+      expect(tester.testTextInput.isVisible, isFalse);
+    });
+
     testWidgets('löscht ein zusätzliches Profil nach Bestätigung',
         (tester) async {
       when(mockRepository.getAdditionalProfiles()).thenAnswer(

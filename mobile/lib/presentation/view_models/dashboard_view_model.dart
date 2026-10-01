@@ -469,8 +469,17 @@ class DashboardViewModel extends Notifier<DashboardState> {
       logger.i(
           '[Dashboard] Speichere WorkEntry: ${updatedEntry.id}, Start: ${updatedEntry.workStart}, End: ${updatedEntry.workEnd}');
       final saveWorkEntry = ref.read(saveWorkEntryUseCaseProvider);
-      await saveWorkEntry.call(updatedEntry);
-      logger.i('[Dashboard] WorkEntry erfolgreich gespeichert');
+      try {
+        await saveWorkEntry.call(updatedEntry);
+        logger.i('[Dashboard] WorkEntry erfolgreich gespeichert');
+      } catch (e, st) {
+        // Transiente Fehler (z. B. Netzwerkabbruch beim Abruf des ID-Tokens)
+        // dürfen den Timer nicht abstürzen lassen (#336). Der State ist bereits
+        // aktualisiert, der Timer läuft weiter; der nächste Speichervorgang
+        // schreibt den vollständigen Eintrag erneut.
+        logger.e('[Dashboard] WorkEntry konnte nicht gespeichert werden: $e',
+            stackTrace: st);
+      }
     }
     _startTimerIfNeeded();
   }

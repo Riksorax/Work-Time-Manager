@@ -221,5 +221,23 @@ void main() {
       expect(state.grossWorkDuration!.inSeconds,
           greaterThanOrEqualTo(1 * 3600 + 23 * 60 + 44));
     });
+
+    test('startOrStopTimer wirft nicht, wenn das Speichern fehlschlägt (#336)',
+        () async {
+      final now = DateTime.now();
+      final entry = WorkEntryEntity(id: '1', date: now);
+      when(mockGetTodayWorkEntry()).thenAnswer((_) async => entry);
+      when(mockSaveWorkEntry.call(any))
+          .thenThrow(Exception('unexpected end of stream'));
+
+      final notifier = container.read(dashboardViewModelProvider.notifier);
+      await Future.delayed(Duration.zero);
+
+      await notifier.startOrStopTimer();
+
+      expect(container.read(dashboardViewModelProvider).workEntry.workStart,
+          isNotNull);
+      verify(mockSaveWorkEntry.call(any)).called(1);
+    });
   });
 }
