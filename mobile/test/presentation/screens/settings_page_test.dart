@@ -359,7 +359,7 @@ void main() {
       await tester.tap(find.text('Abmelden'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Möchten Sie sich wirklich abmelden?'), findsOneWidget);
+      expect(find.text('Möchtest du dich wirklich abmelden?'), findsOneWidget);
 
       final confirmButton = find.widgetWithText(FilledButton, 'Abmelden');
       await tester.tap(confirmButton);

@@ -9,6 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe } from '@ngx-translate/core';
+import { BreakNamePipe } from '../../shared/pipes/break-name.pipe';
 import { DashboardService } from './dashboard.service';
 import { EditBreakDialogComponent, EditBreakDialogData, EditBreakDialogResult } from './components/edit-break-dialog/edit-break-dialog';
 import { RestartSessionDialogComponent, RestartSessionDialogResult } from './components/restart-session-dialog/restart-session-dialog';
@@ -29,6 +30,7 @@ import { Break } from '../../shared/models/index';
     MatTooltipModule,
     TimeInputComponent,
     TranslatePipe,
+    BreakNamePipe,
   ],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',

@@ -142,8 +142,4 @@ class UpdateInfo {
     required this.forceUpdate,
     this.message,
   });
-
-  String get defaultMessage => forceUpdate
-      ? 'Ein Update ist erforderlich. Bitte aktualisieren Sie die App auf Version $minVersion oder höher.'
-      : 'Eine neue Version ($minVersion) ist verfügbar. Wir empfehlen ein Update.';
 }

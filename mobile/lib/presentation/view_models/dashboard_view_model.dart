@@ -11,6 +11,7 @@ import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/services/break_calculator_service.dart';
 import '../../domain/utils/overtime_utils.dart';
 import '../../domain/utils/overtime_warning_utils.dart';
+import '../../l10n/app_localizations.dart';
 import '../state/dashboard_state.dart';
 
 class DashboardViewModel extends Notifier<DashboardState> {
@@ -506,6 +507,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
       await notificationService.showOvertimeWarning(
         type: warningType,
         totalOvertime: totalOvertime,
+        l10n: lookupAppLocalizations(Locale(settingsRepository.getLocale())),
       );
     } catch (e) {
       logger

@@ -5,6 +5,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Break } from '../../../../shared/models/index';
+import { breakNameToStore, localizedBreakName } from '../../../../shared/utils/break-name.util';
 import { TimeInputComponent } from '../../../../shared/components/time-input/time-input';
 
 export interface EditBreakDialogData {
@@ -34,7 +35,11 @@ export class EditBreakDialogComponent {
   private readonly data: EditBreakDialogData = inject(MAT_DIALOG_DATA);
   private readonly translate = inject(TranslateService);
 
-  readonly name  = signal(this.data.break.name);
+  private readonly translateKey = (key: string, params?: Record<string, unknown>): string =>
+    this.translate.instant(key, params);
+
+  // Standardnamen werden in der App-Sprache angezeigt (siehe #346)
+  readonly name  = signal(localizedBreakName(this.data.break.name, this.translateKey));
   startTime      = signal<Date | null>(this.data.break.start);
   endTime        = signal<Date | null>(this.data.break.end ?? null);
   validationError = signal<string | null>(null);
@@ -67,7 +72,7 @@ export class EditBreakDialogComponent {
     this.dialogRef.close({
       updated: {
         ...this.data.break,
-        name: this.name,
+        name: breakNameToStore(this.name(), this.data.break.name, this.translateKey),
         start,
         end: end ?? undefined,
       },

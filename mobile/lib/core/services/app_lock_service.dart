@@ -61,11 +61,11 @@ class AppLockService {
     }
   }
 
-  Future<bool> authenticateWithBiometrics() async {
+  Future<bool> authenticateWithBiometrics(
+      {required String localizedReason}) async {
     try {
       return await _localAuth.authenticate(
-        localizedReason:
-            'Bitte authentifizieren Sie sich, um die App zu entsperren',
+        localizedReason: localizedReason,
         biometricOnly: true,
         // Setzt die Authentifizierung nach Rückkehr aus dem Hintergrund
         // automatisch fort, statt mit einem Fehler abzubrechen.

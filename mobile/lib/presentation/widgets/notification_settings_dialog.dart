@@ -147,6 +147,7 @@ class _NotificationSettingsDialogState
         checkWorkStart: _notifyWorkStart,
         checkWorkEnd: _notifyWorkEnd,
         checkBreaks: _notifyBreaks,
+        l10n: AppLocalizations.of(context),
       );
     } else {
       await notificationService.cancelAllNotifications();
