@@ -112,7 +112,7 @@
 
                 <div class="break-content">
                   <div class="break-title">
-                    {{ b.name }}
+                    {{ b.name | breakName }}
                     @if (b.isAutomatic) {
                       <span class="auto-badge">{{ 'dashboard.automaticChipLabel' | translate }}</span>
                     }
@@ -125,13 +125,13 @@
                 <div class="break-actions">
                   <button mat-icon-button
                           (click)="onEditBreak(b)"
-                          [attr.aria-label]="'dashboard.editBreakAria' | translate: { name: b.name }">
+                          [attr.aria-label]="'dashboard.editBreakAria' | translate: { name: (b.name | breakName) }">
                     <mat-icon>edit</mat-icon>
                   </button>
                   <button mat-icon-button
                           class="delete-btn"
                           (click)="onDeleteBreak(b.id)"
-                          [attr.aria-label]="'dashboard.deleteBreakAria' | translate: { name: b.name }">
+                          [attr.aria-label]="'dashboard.deleteBreakAria' | translate: { name: (b.name | breakName) }">
                     <mat-icon>delete</mat-icon>
                   </button>
                 </div>

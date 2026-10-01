@@ -9,6 +9,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkEntry, WorkEntryType, Break } from '../../models/index';
+import { breakNameToStore, localizedBreakName } from '../../utils/break-name.util';
 
 interface BreakFormValue {
   id: string;
@@ -133,6 +134,9 @@ export class EditEntryDialogComponent {
   protected readonly WorkEntryType = WorkEntryType;
   readonly form: FormGroup;
 
+  private readonly translateKey = (key: string, params?: Record<string, unknown>): string =>
+    this.translate.instant(key, params);
+
   constructor() {
     const entry = this.data.entry;
     this.form = this.fb.group({
@@ -143,7 +147,8 @@ export class EditEntryDialogComponent {
       breaks: this.fb.array(
         (entry?.breaks ?? []).map(b => this.fb.group({
           id:    [b.id],
-          name:  [b.name,                    Validators.required],
+          // Standardnamen werden in der App-Sprache angezeigt (siehe #346)
+          name:  [localizedBreakName(b.name, this.translateKey), Validators.required],
           start: [this._formatTime(b.start),  Validators.required],
           end:   [this._formatTime(b.end),    Validators.required],
         }))
@@ -170,6 +175,7 @@ export class EditEntryDialogComponent {
     if (this.form.invalid) return;
     const val  = this.form.value as EntryFormValue;
     const date = this.data.date;
+    const originalNames = new Map((this.data.entry?.breaks ?? []).map(b => [b.id, b.name]));
 
     const result: Partial<WorkEntry> = {
       id:                    this.data.entry?.id ?? date.toISOString().split('T')[0],
@@ -181,7 +187,8 @@ export class EditEntryDialogComponent {
       isManuallyEntered:     true,
       breaks: val.breaks.map((b): Break => ({
         id:          b.id,
-        name:        b.name,
+        // Unverändert gelassene Standardnamen nicht als übersetzten Freitext speichern
+        name:        breakNameToStore(b.name, originalNames.get(b.id) ?? b.name, this.translateKey),
         start:       this._parseTime(date, b.start)!,
         end:         this._parseTime(date, b.end),
         isAutomatic: false,
