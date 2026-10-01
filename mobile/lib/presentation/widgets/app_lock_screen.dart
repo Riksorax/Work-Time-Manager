@@ -33,8 +33,10 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
 
   Future<void> _tryBiometrics() async {
     final service = ref.read(appLockServiceProvider);
+    final reason = AppLocalizations.of(context).biometricAuthReason;
     if (!await service.isBiometricAvailable()) return;
-    final success = await service.authenticateWithBiometrics();
+    final success =
+        await service.authenticateWithBiometrics(localizedReason: reason);
     if (success && mounted) {
       _unlock();
     }

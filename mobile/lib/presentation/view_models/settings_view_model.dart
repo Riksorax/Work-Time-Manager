@@ -1,3 +1,5 @@
+import 'dart:ui' show Locale;
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -8,6 +10,7 @@ import '../../domain/entities/bundesland.dart';
 import '../../domain/entities/settings_entity.dart';
 import '../../domain/repositories/settings_repository.dart';
 import '../../domain/utils/overtime_warning_utils.dart';
+import '../../l10n/app_localizations.dart';
 import '../state/settings_state.dart';
 import 'dashboard_view_model.dart' show dashboardViewModelProvider;
 
@@ -247,6 +250,7 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
       await notificationService.showOvertimeWarning(
         type: warningType,
         totalOvertime: totalOvertime,
+        l10n: lookupAppLocalizations(Locale(settingsRepository.getLocale())),
       );
     } catch (_) {
       // Logging über logger würde hier selbst wieder Provider lesen können -
@@ -414,6 +418,9 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
     Intl.defaultLocale = locale == 'en' ? 'en_US' : 'de_DE';
     final newSettings = state.value!.settings.copyWith(locale: locale);
     state = state.whenData((value) => value.copyWith(settings: newSettings));
+    // Geplante Erinnerungen tragen ihren Text fest in sich - bei Sprachwechsel
+    // neu planen, damit sie in der neuen Sprache erscheinen.
+    await _rescheduleNotifications();
   }
 
   // --- Notification Rescheduling Logic ---
@@ -437,6 +444,7 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
         checkWorkStart: notifyWorkStart,
         checkWorkEnd: notifyWorkEnd,
         checkBreaks: notifyBreaks,
+        l10n: lookupAppLocalizations(Locale(settingsRepository.getLocale())),
       );
     } else {
       // Wenn Benachrichtigungen deaktiviert sind, alle Benachrichtigungen abbrechen

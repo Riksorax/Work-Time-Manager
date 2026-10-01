@@ -2,6 +2,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter_work_time/core/utils/logger.dart';
 import 'package:flutter_work_time/domain/utils/overtime_warning_utils.dart';
+import 'package:flutter_work_time/l10n/app_localizations.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -54,6 +55,7 @@ class NotificationService {
     required bool checkWorkStart,
     required bool checkWorkEnd,
     required bool checkBreaks,
+    required AppLocalizations l10n,
   }) async {
     await initialize();
 
@@ -77,6 +79,7 @@ class NotificationService {
         checkWorkStart: checkWorkStart,
         checkWorkEnd: checkWorkEnd,
         checkBreaks: checkBreaks,
+        l10n: l10n,
       );
     }
   }
@@ -85,6 +88,7 @@ class NotificationService {
   Future<void> showImmediateNotification({
     required String title,
     required String body,
+    required AppLocalizations l10n,
     String? payload,
   }) async {
     await initialize();
@@ -93,11 +97,11 @@ class NotificationService {
       0,
       title,
       body,
-      const NotificationDetails(
+      NotificationDetails(
         android: AndroidNotificationDetails(
           'daily_reminder',
-          'Tägliche Erinnerungen',
-          channelDescription: 'Erinnerungen zum Eintragen von Arbeitszeiten',
+          l10n.notificationChannelReminderName,
+          channelDescription: l10n.notificationChannelReminderDescription,
           importance: Importance.high,
           priority: Priority.high,
         ),
@@ -112,6 +116,7 @@ class NotificationService {
   Future<void> showOvertimeWarning({
     required OvertimeWarningType type,
     required Duration totalOvertime,
+    required AppLocalizations l10n,
   }) async {
     if (type == OvertimeWarningType.none) return;
 
@@ -119,21 +124,21 @@ class NotificationService {
 
     final hours = (totalOvertime.inMinutes.abs() / 60).toStringAsFixed(1);
     final title = type == OvertimeWarningType.overtime
-        ? 'Überstunden-Warnung'
-        : 'Minusstunden-Warnung';
+        ? l10n.notificationOvertimeWarningTitle
+        : l10n.notificationUndertimeWarningTitle;
     final body = type == OvertimeWarningType.overtime
-        ? 'Dein Gleitzeitkonto hat $hours Überstunden erreicht.'
-        : 'Dein Gleitzeitkonto liegt bei $hours Minusstunden.';
+        ? l10n.notificationOvertimeWarningBody(hours)
+        : l10n.notificationUndertimeWarningBody(hours);
 
     await _notifications.show(
       1000,
       title,
       body,
-      const NotificationDetails(
+      NotificationDetails(
         android: AndroidNotificationDetails(
           'overtime_warning',
-          'Gleitzeit-Warnungen',
-          channelDescription: 'Warnung bei Über-/Minusstunden-Schwellwert',
+          l10n.notificationChannelOvertimeName,
+          channelDescription: l10n.notificationChannelOvertimeDescription,
           importance: Importance.high,
           priority: Priority.high,
         ),
@@ -150,6 +155,7 @@ class NotificationService {
     required bool checkWorkStart,
     required bool checkWorkEnd,
     required bool checkBreaks,
+    required AppLocalizations l10n,
   }) async {
     if (day < 1 || day > 7) {
       logger.w('Ungültiger Tag für die Benachrichtigungsplanung: $day');
@@ -175,34 +181,47 @@ class NotificationService {
       scheduledDate = scheduledDate.add(const Duration(days: 7));
     }
 
-    // Build notification message based on what to check
-    final checkTypes = <String>[];
-    if (checkWorkStart) checkTypes.add('Arbeitsbeginn');
-    if (checkWorkEnd) checkTypes.add('Arbeitsende');
-    if (checkBreaks) checkTypes.add('Pausen');
+    final checks = <({String item, String single})>[
+      if (checkWorkStart)
+        (
+          item: l10n.notificationItemWorkStart,
+          single: l10n.notificationReminderSingleWorkStart
+        ),
+      if (checkWorkEnd)
+        (
+          item: l10n.notificationItemWorkEnd,
+          single: l10n.notificationReminderSingleWorkEnd
+        ),
+      if (checkBreaks)
+        (
+          item: l10n.notificationItemBreaks,
+          single: l10n.notificationReminderSingleBreaks
+        ),
+    ];
 
-    String body;
-    if (checkTypes.isEmpty) {
-      body = 'Vergessen Sie nicht, Ihre Arbeitszeiten zu prüfen!';
-    } else if (checkTypes.length == 1) {
-      body = 'Haben Sie Ihren ${checkTypes[0]} eingetragen?';
+    final String body;
+    if (checks.isEmpty) {
+      body = l10n.notificationReminderGeneric;
+    } else if (checks.length == 1) {
+      body = checks.single.single;
     } else {
-      final last = checkTypes.removeLast();
-      body = 'Haben Sie ${checkTypes.join(", ")} und $last eingetragen?';
+      final items = checks.map((c) => c.item).toList();
+      final last = items.removeLast();
+      body = l10n.notificationReminderMultiple(items.join(', '), last);
     }
 
     logger.i(
         'Scheduling notification with id $id for $scheduledDate (Day: $day, Hour: $hour, Minute: $minute)');
     await _notifications.zonedSchedule(
       id,
-      'Arbeitszeit-Erinnerung',
+      l10n.notificationReminderTitle,
       body,
       scheduledDate,
-      const NotificationDetails(
+      NotificationDetails(
         android: AndroidNotificationDetails(
           'daily_reminder',
-          'Tägliche Erinnerungen',
-          channelDescription: 'Erinnerungen zum Eintragen von Arbeitszeiten',
+          l10n.notificationChannelReminderName,
+          channelDescription: l10n.notificationChannelReminderDescription,
           importance: Importance.high,
           priority: Priority.high,
         ),

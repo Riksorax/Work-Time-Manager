@@ -139,6 +139,7 @@ Future<void> main() async {
       checkWorkStart: notifyWorkStart,
       checkWorkEnd: notifyWorkEnd,
       checkBreaks: notifyBreaks,
+      l10n: lookupAppLocalizations(Locale(prefs.getString('locale') ?? 'de')),
     );
   }
 
