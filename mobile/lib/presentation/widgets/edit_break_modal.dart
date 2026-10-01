@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/utils/time_format.dart';
 import '../../domain/entities/break_entity.dart';
 import '../../l10n/app_localizations.dart';
+import '../utils/break_name_localizer.dart';
 import '../view_models/dashboard_view_model.dart';
 import '../view_models/settings_view_model.dart';
 
@@ -17,7 +18,9 @@ class EditBreakModal extends ConsumerStatefulWidget {
 }
 
 class _EditBreakModalState extends ConsumerState<EditBreakModal> {
-  late TextEditingController _nameController;
+  final _nameController = TextEditingController();
+  late String _displayedOriginalName;
+  bool _nameInitialized = false;
   late TextEditingController _startController;
   late TextEditingController _endController;
   late DateTime _startTime;
@@ -30,7 +33,6 @@ class _EditBreakModalState extends ConsumerState<EditBreakModal> {
     _use24HourFormat =
         ref.read(settingsViewModelProvider).value?.settings.use24HourFormat ??
             true;
-    _nameController = TextEditingController(text: widget.breakEntity.name);
     _startTime = widget.breakEntity.start;
     _endTime = widget.breakEntity.end;
     _startController = TextEditingController(
@@ -39,6 +41,19 @@ class _EditBreakModalState extends ConsumerState<EditBreakModal> {
         text: _endTime != null
             ? formatTime(_endTime!, use24HourFormat: _use24HourFormat)
             : '');
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_nameInitialized) {
+      // Standardnamen werden in der App-Sprache angezeigt (siehe #346); die
+      // Lokalisierung braucht den BuildContext und kann nicht in initState.
+      _displayedOriginalName = localizedBreakName(
+          widget.breakEntity.name, AppLocalizations.of(context));
+      _nameController.text = _displayedOriginalName;
+      _nameInitialized = true;
+    }
   }
 
   @override
@@ -93,8 +108,14 @@ class _EditBreakModalState extends ConsumerState<EditBreakModal> {
       return;
     }
 
+    // Unverändert gelassene Anzeige nicht als neuen Namen speichern, sonst
+    // würde aus dem Standardnamen ein fest übersetzter Freitext (siehe #346).
+    final name = _nameController.text == _displayedOriginalName
+        ? widget.breakEntity.name
+        : _nameController.text;
+
     final updatedBreak = widget.breakEntity.copyWith(
-      name: _nameController.text,
+      name: name,
       start: _startTime,
       end: _endTime,
     );
