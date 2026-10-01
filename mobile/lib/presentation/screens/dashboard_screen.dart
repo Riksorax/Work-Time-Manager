@@ -6,6 +6,7 @@ import '../../domain/entities/break_entity.dart';
 import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/services/break_calculator_service.dart';
 import '../../l10n/app_localizations.dart';
+import '../utils/break_name_localizer.dart';
 import '../view_models/dashboard_view_model.dart';
 import '../view_models/settings_view_model.dart';
 import '../widgets/common/responsive_center.dart';
@@ -314,7 +315,7 @@ class DashboardScreen extends ConsumerWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        b.name,
+                        localizedBreakName(b.name, l10n),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),

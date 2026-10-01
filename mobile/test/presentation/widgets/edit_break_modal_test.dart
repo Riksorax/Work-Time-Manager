@@ -113,6 +113,79 @@ void main() {
     });
   });
 
+  group('EditBreakModal Standardnamen (#346)', () {
+    late FakeDashboardViewModel fakeViewModel;
+
+    Widget createSubject(BreakEntity breakEntity, Locale locale) {
+      fakeViewModel = FakeDashboardViewModel();
+      return ProviderScope(
+        overrides: [
+          dashboardViewModelProvider.overrideWith(() => fakeViewModel),
+        ],
+        child: MaterialApp(
+          locale: locale,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () => showDialog(
+                  context: context,
+                  builder: (_) => EditBreakModal(breakEntity: breakEntity),
+                ),
+                child: const Text('Open Modal'),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    BreakEntity breakNamed(String name) => BreakEntity(
+          id: 'b1',
+          name: name,
+          start: DateTime(2024, 1, 15, 12, 0),
+          end: DateTime(2024, 1, 15, 12, 30),
+        );
+
+    testWidgets('zeigt den Standardnamen in der App-Sprache', (tester) async {
+      await tester
+          .pumpWidget(createSubject(breakNamed('Pause 2'), const Locale('en')));
+      await tester.tap(find.text('Open Modal'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Break 2'), findsOneWidget);
+    });
+
+    testWidgets(
+        'speichert den Standardnamen unverändert, wenn er nicht '
+        'bearbeitet wurde', (tester) async {
+      await tester
+          .pumpWidget(createSubject(breakNamed('Pause 2'), const Locale('en')));
+      await tester.tap(find.text('Open Modal'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(fakeViewModel.lastUpdatedBreak!.name, 'Pause 2');
+    });
+
+    testWidgets('speichert einen vom Nutzer geänderten Namen', (tester) async {
+      await tester
+          .pumpWidget(createSubject(breakNamed('Pause 2'), const Locale('en')));
+      await tester.tap(find.text('Open Modal'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+          find.widgetWithText(TextField, 'Break name'), 'Coffee with Anna');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(fakeViewModel.lastUpdatedBreak!.name, 'Coffee with Anna');
+    });
+  });
+
   group('Break duration preservation logic', () {
     test('calculates correct new end time when start time changes', () {
       // This tests the core logic: when start time moves, end time should move by same amount
