@@ -47,6 +47,12 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
   void _submitPin() {
     final service = ref.read(appLockServiceProvider);
     if (service.verifyPin(_pinController.text)) {
+      // Siehe #337: Fokus vor dem Entsperren beenden, sonst kann das
+      // Framework noch eine IME-Selection-Änderung für das PIN-Feld
+      // verarbeiten, während der Screen durch das Umschalten von
+      // isAppLockedProvider schon entfernt wird -> Null-Check-Crash in
+      // TextSelectionOverlay.
+      FocusScope.of(context).unfocus();
       _unlock();
     } else {
       setState(() {

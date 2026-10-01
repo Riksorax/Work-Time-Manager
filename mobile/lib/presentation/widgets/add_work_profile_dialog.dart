@@ -28,6 +28,12 @@ class _AddWorkProfileDialogState extends ConsumerState<AddWorkProfileDialog> {
     final name = _nameController.text.trim();
     if (name.isEmpty) return;
 
+    // Tastatur/Fokus vor dem Schließen des Dialogs beenden (siehe #337):
+    // Schließt der Dialog, während das Framework noch eine IME-Selection-
+    // Änderung für dieses Textfeld verarbeitet, wird dessen Overlay mitten in
+    // der Verarbeitung disposed -> Null-Check-Crash in TextSelectionOverlay.
+    FocusScope.of(context).unfocus();
+
     setState(() => _isSaving = true);
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
