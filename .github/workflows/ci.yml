@@ -98,6 +98,10 @@ jobs:
       - name: Test
         run: npm test -- --watch=false
 
+      # Sommerzeit-Fehler (z. B. #355) sind unter UTC unsichtbar.
+      - name: Test (TZ=Europe/Berlin)
+        run: TZ=Europe/Berlin npm test -- --watch=false
+
       - name: Build check
         run: |
           rm -rf .angular/cache

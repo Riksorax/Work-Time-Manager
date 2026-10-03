@@ -12,6 +12,7 @@ import { LeaveBalanceService } from '../../core/services/leave-balance';
 import { calculateDailyStat, isSameDayRc, toDateKey } from '../../domain/services/report-calculator';
 import { DailyStat, MonthlyReport, WeeklyReport } from '../../domain/models/reports.models';
 import { DEFAULT_SETTINGS, WorkEntry, WorkEntryType, UserSettings } from '../../shared/models/index';
+import { addCalendarDays } from '../../shared/utils/iso-week.util';
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
@@ -204,7 +205,7 @@ export class ReportsService {
 
   navigateWeek(delta: number): void {
     const ref = this._weekRef();
-    this._weekRef.set(new Date(ref.getTime() + delta * 7 * 86400000));
+    this._weekRef.set(addCalendarDays(ref, delta * 7));
   }
 
   navigateMonth(delta: number): void {
