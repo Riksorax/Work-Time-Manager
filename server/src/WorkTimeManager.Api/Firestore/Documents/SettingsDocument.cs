@@ -35,6 +35,10 @@ public sealed class SettingsDocument
     [FirestoreProperty("vacationDaysPerYear")]
     public int? VacationDaysPerYear { get; set; }
 
+    /// <summary>Bundesland für Feiertage (#279), Dart-Enum-Name. Fehlt das Feld: nicht ausgewählt.</summary>
+    [FirestoreProperty("bundesland")]
+    public string? Bundesland { get; set; }
+
     [FirestoreProperty("notifyBreaks")]
     public bool NotifyBreaks { get; set; }
 }
