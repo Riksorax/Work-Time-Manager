@@ -73,6 +73,7 @@ internal static class FirestoreMappings
         NotifyWorkStart = doc.NotifyWorkStart,
         NotifyWorkEnd = doc.NotifyWorkEnd,
         NotifyBreaks = doc.NotifyBreaks,
+        VacationDaysPerYear = doc.VacationDaysPerYear ?? SettingsDto.DefaultVacationDaysPerYear,
     };
 
     public static SettingsDocument ToDocument(SettingsDto dto) => new()
@@ -85,7 +86,27 @@ internal static class FirestoreMappings
         NotifyWorkStart = dto.NotifyWorkStart,
         NotifyWorkEnd = dto.NotifyWorkEnd,
         NotifyBreaks = dto.NotifyBreaks,
+        VacationDaysPerYear = dto.VacationDaysPerYear,
     };
+
+    /// <summary>
+    /// Felder für den Merge-Schreibvorgang. Ist <c>vacationDaysPerYear</c> nicht gesetzt (alter
+    /// Client), wird das Feld ausgelassen, damit ein gespeicherter Wert nicht überschrieben wird
+    /// (MergeAll würde sonst <c>null</c> schreiben). Siehe #278.
+    /// </summary>
+    public static string[] SettingsMergeFields(SettingsDto dto)
+    {
+        var fields = new List<string>
+        {
+            "weeklyTargetHours", "workdays", "notificationsEnabled", "notificationTime",
+            "notificationDays", "notifyWorkStart", "notifyWorkEnd", "notifyBreaks",
+        };
+        if (dto.VacationDaysPerYear is not null) fields.Add("vacationDaysPerYear");
+        return fields.ToArray();
+    }
+
+    /// <summary>Gültiger Urlaubsanspruch: nicht gesetzt oder 0-366.</summary>
+    public static bool IsValidVacationDays(int? value) => value is null or >= 0 and <= 366;
 
     /// <summary>
     /// Migriert das alte <c>workdaysPerWeek</c>-Feld (Anzahl) in konkrete ISO-Wochentage

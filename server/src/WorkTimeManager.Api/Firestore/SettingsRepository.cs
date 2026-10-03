@@ -15,11 +15,11 @@ public sealed class SettingsRepository(FirestoreDb db)
         var snapshot = await SettingsDoc(uid, profileId).GetSnapshotAsync(ct);
         return snapshot.Exists
             ? FirestoreMappings.ToDto(snapshot.ConvertTo<SettingsDocument>())
-            : new SettingsDto();
+            : new SettingsDto { VacationDaysPerYear = SettingsDto.DefaultVacationDaysPerYear };
     }
 
     public async Task SaveAsync(string uid, SettingsDto settings, string? profileId, CancellationToken ct)
     {
-        await SettingsDoc(uid, profileId).SetAsync(FirestoreMappings.ToDocument(settings), SetOptions.MergeAll, ct);
+        await SettingsDoc(uid, profileId).SetAsync(FirestoreMappings.ToDocument(settings), SetOptions.MergeFields(FirestoreMappings.SettingsMergeFields(settings)), ct);
     }
 }

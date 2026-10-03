@@ -56,6 +56,19 @@ internal static class ReportEndpoints
         })
         .WithName("GetMonthlyReport");
 
+        reports.MapGet("/yearly/{year:int}", async (
+            int year, string? profileId, ClaimsPrincipal user,
+            WorkEntryRepository entries, SettingsRepository settingsRepo, CancellationToken ct) =>
+        {
+            if (user.GetUid() is not { } uid) return Results.Unauthorized();
+            if (year is < 2000 or > 2100) return Results.BadRequest("Ungültiges Jahr.");
+
+            var yearEntries = await entries.GetYearAsync(uid, year, profileId, ct);
+            var settings = await settingsRepo.GetAsync(uid, profileId, ct);
+            return Results.Ok(ReportCalculator.CalculateYearlyLeave(yearEntries, year, settings));
+        })
+        .WithName("GetYearlyLeaveReport");
+
         return group;
     }
 

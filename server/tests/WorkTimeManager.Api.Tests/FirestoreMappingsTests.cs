@@ -70,4 +70,58 @@ public class FirestoreMappingsTests
         Assert.Equal("2026-06-05", FirestoreMappings.EntryId(2026, 6, 5));
         Assert.Equal("2026-06", FirestoreMappings.MonthId(2026, 6));
     }
+
+    // ── Urlaubsanspruch (#278) ──────────────────────────────────────────────
+
+    [Fact]
+    public void Settings_MissingVacationField_DefaultsTo30()
+    {
+        var dto = FirestoreMappings.ToDto(new SettingsDocument());
+        Assert.Equal(30, dto.VacationDaysPerYear);
+    }
+
+    [Fact]
+    public void Settings_StoredVacationField_IsReturned()
+    {
+        var dto = FirestoreMappings.ToDto(new SettingsDocument { VacationDaysPerYear = 25 });
+        Assert.Equal(25, dto.VacationDaysPerYear);
+    }
+
+    [Fact]
+    public void Settings_ZeroVacation_IsKeptNotDefaulted()
+    {
+        var dto = FirestoreMappings.ToDto(new SettingsDocument { VacationDaysPerYear = 0 });
+        Assert.Equal(0, dto.VacationDaysPerYear);
+    }
+
+    [Fact]
+    public void Settings_PutWithoutVacationField_DoesNotMergeVacationField()
+    {
+        // Alter Client: Feld fehlt im JSON -> null -> darf den gespeicherten Wert nicht überschreiben.
+        var dto = System.Text.Json.JsonSerializer.Deserialize<SettingsDto>(
+            "{\"weeklyTargetHours\":38}",
+            new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web))!;
+
+        Assert.Null(dto.VacationDaysPerYear);
+        Assert.DoesNotContain("vacationDaysPerYear", FirestoreMappings.SettingsMergeFields(dto));
+        Assert.Contains("weeklyTargetHours", FirestoreMappings.SettingsMergeFields(dto));
+    }
+
+    [Fact]
+    public void Settings_PutWithVacationField_MergesVacationField()
+    {
+        var dto = new SettingsDto { VacationDaysPerYear = 25 };
+        Assert.Contains("vacationDaysPerYear", FirestoreMappings.SettingsMergeFields(dto));
+        Assert.Equal(25, FirestoreMappings.ToDocument(dto).VacationDaysPerYear);
+    }
+
+    [Theory]
+    [InlineData(null, true)]
+    [InlineData(0, true)]
+    [InlineData(30, true)]
+    [InlineData(366, true)]
+    [InlineData(-1, false)]
+    [InlineData(367, false)]
+    public void IsValidVacationDays_EnforcesRange(int? value, bool expected) =>
+        Assert.Equal(expected, FirestoreMappings.IsValidVacationDays(value));
 }

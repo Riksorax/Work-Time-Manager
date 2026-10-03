@@ -44,9 +44,12 @@ Firestore-Integrationstests übersprungen (`SkippableFact`) — das ist erwartet
 | GET | `/api/reports/daily/{year}/{month}/{day}` | Tagesstatistik |
 | GET | `/api/reports/weekly/{year}/{month}/{day}` | Wochenbericht |
 | GET | `/api/reports/monthly/{year}/{month}` | Monatsbericht |
+| GET | `/api/reports/yearly/{year}` | Jahresauswertung Urlaub/Krank (#278): `{year, vacationDaysPerYear, vacationDaysTaken, vacationDaysRemaining, sickDays}`; Rest kann negativ sein, `holiday` zählt nicht, Jahr 2000–2100 |
 | GET | `/api/work-profiles` | Zusätzliche Arbeitszeit-Profile auflisten (ohne Standard-Profil, siehe #138/#239) |
 | POST | `/api/work-profiles` | Neues Profil anlegen (`{ name }`) |
 | DELETE | `/api/work-profiles/{profileId}` | Profil inkl. aller Daten löschen |
+
+**Urlaubsanspruch (#278):** `SettingsDto.vacationDaysPerYear` (0–366, sonst 400; fehlt im Dokument: 30). Im `PUT /api/settings` optional: fehlt das Feld (alte Clients), bleibt der gespeicherte Wert erhalten (`SettingsMergeFields` lässt es aus dem Merge aus).
 
 **Multi-Profile (`profileId`, siehe #239):** `work-entries`/`overtime`/`settings`/`reports`-Endpunkte akzeptieren optional `?profileId=...` (Query-Parameter). Fehlt er oder ist er `"default"`, wird der bestehende, nicht migrierte Pfad verwendet — vollständig abwärtskompatibel für bestehende Clients ohne den Parameter.
 
