@@ -4,6 +4,24 @@ import 'package:flutter_work_time/core/utils/logger.dart';
 import 'package:flutter_work_time/domain/utils/overtime_warning_utils.dart';
 import 'package:flutter_work_time/l10n/app_localizations.dart';
 
+/// Nächster Zeitpunkt ab [now] (Wochentag [day], 1 = Montag ... 7 = Sonntag,
+/// Uhrzeit [hour]:[minute]) in der Zeitzone von [now].
+///
+/// Kalenderarithmetik statt `add(Duration(days: n))`: bleibt über
+/// Zeitumstellungen hinweg auf der gewünschten Wandzeit (#362).
+tz.TZDateTime nextWeeklyOccurrence(
+    tz.TZDateTime now, int day, int hour, int minute) {
+  final delta = (day - now.weekday + 7) % 7;
+  var scheduled = tz.TZDateTime(
+      now.location, now.year, now.month, now.day + delta, hour, minute);
+  // Zeit heute schon vorbei: nächste Woche (7 Kalendertage).
+  if (scheduled.isBefore(now)) {
+    scheduled = tz.TZDateTime(
+        now.location, now.year, now.month, now.day + delta + 7, hour, minute);
+  }
+  return scheduled;
+}
+
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
 
@@ -162,24 +180,7 @@ class NotificationService {
       return;
     }
     final now = tz.TZDateTime.now(tz.local);
-    var scheduledDate = tz.TZDateTime(
-      tz.local,
-      now.year,
-      now.month,
-      now.day,
-      hour,
-      minute,
-    );
-
-    // Adjust to the correct weekday
-    while (scheduledDate.weekday != day) {
-      scheduledDate = scheduledDate.add(const Duration(days: 1));
-    }
-
-    // If the time has already passed today, schedule for next week
-    if (scheduledDate.isBefore(now)) {
-      scheduledDate = scheduledDate.add(const Duration(days: 7));
-    }
+    final scheduledDate = nextWeeklyOccurrence(now, day, hour, minute);
 
     final checks = <({String item, String single})>[
       if (checkWorkStart)

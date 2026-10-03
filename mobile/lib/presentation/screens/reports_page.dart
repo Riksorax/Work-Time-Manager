@@ -10,6 +10,7 @@ import '../../core/providers/subscription_provider.dart';
 import '../../core/services/pdf_report_service.dart';
 
 import '../../domain/entities/work_entry_extensions.dart';
+import '../../domain/utils/date_utils.dart';
 import '../../domain/utils/german_holidays.dart';
 import '../../domain/utils/iso_week.dart';
 import '../../domain/utils/weekday_labels.dart';
@@ -696,7 +697,7 @@ class WeeklyReportView extends ConsumerWidget {
           final selectedDay = reportsState.selectedDay ?? DateTime.now();
           final startOfWeek = DateTime(selectedDay.year, selectedDay.month,
               selectedDay.day - selectedDay.weekday + 1);
-          final endOfWeek = startOfWeek.add(const Duration(days: 6));
+          final endOfWeek = addCalendarDays(startOfWeek, 6);
           final weekNumber = isoWeekNumber(startOfWeek);
           final Duration weeklyOvertimeLocal = weeklyReport.dailyWork.entries
               .fold(Duration.zero, (sum, e) => sum + (e.value - dailyTarget));
@@ -712,8 +713,8 @@ class WeeklyReportView extends ConsumerWidget {
                   children: [
                     IconButton(
                       icon: const Icon(Icons.chevron_left),
-                      onPressed: () => reportsNotifier.selectDate(
-                          startOfWeek.subtract(const Duration(days: 7))),
+                      onPressed: () => reportsNotifier
+                          .selectDate(shiftWeekStart(startOfWeek, -1)),
                       tooltip: l10n.previousWeekTooltip,
                     ),
                     Expanded(
@@ -741,7 +742,7 @@ class WeeklyReportView extends ConsumerWidget {
                     IconButton(
                       icon: const Icon(Icons.chevron_right),
                       onPressed: () => reportsNotifier
-                          .selectDate(startOfWeek.add(const Duration(days: 7))),
+                          .selectDate(shiftWeekStart(startOfWeek, 1)),
                       tooltip: l10n.nextWeekTooltip,
                     ),
                   ],
@@ -1870,23 +1871,13 @@ class _CalendarState extends ConsumerState<_Calendar> {
       DateTime startDate, DateTime endDate, List<int> workdays) {
     final reportsNotifier = ref.read(reportsViewModelProvider.notifier);
 
-    // Normalize dates
-    final start = DateTime(startDate.year, startDate.month, startDate.day);
-    final end = DateTime(endDate.year, endDate.month, endDate.day);
-
-    // Ensure start is before end
-    final minDate = start.isBefore(end) ? start : end;
-    final maxDate = start.isBefore(end) ? end : start;
-
-    // Clear previous selection and select all dates in range
+    // Clear previous selection and select all workdays in range
     reportsNotifier.clearDateSelection();
 
-    DateTime currentDate = minDate;
-    while (!currentDate.isAfter(maxDate)) {
-      if (_isWorkday(currentDate, workdays)) {
-        reportsNotifier.addDateToSelection(currentDate);
+    for (final day in datesInRange(startDate, endDate)) {
+      if (_isWorkday(day, workdays)) {
+        reportsNotifier.addDateToSelection(day);
       }
-      currentDate = currentDate.add(const Duration(days: 1));
     }
   }
 

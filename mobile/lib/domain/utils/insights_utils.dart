@@ -1,4 +1,5 @@
 import '../entities/work_entry_entity.dart';
+import 'date_utils.dart';
 
 /// Durchschnittliche effektive Arbeitszeit an einem Wochentag sowie die
 /// Abweichung vom Durchschnitt aller Wochentage. Siehe #134.
@@ -150,7 +151,7 @@ BurnoutStatus detectOvertimeStreak({
   var longest = 0;
   for (var day = minDate;
       !day.isAfter(maxDate);
-      day = day.add(const Duration(days: 1))) {
+      day = addCalendarDays(day, 1)) {
     if (!workdays.contains(day.weekday)) continue;
     if (overTargetDays.contains(day)) {
       streak++;

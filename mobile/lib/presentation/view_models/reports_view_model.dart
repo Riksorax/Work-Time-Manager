@@ -9,6 +9,7 @@ import 'package:flutter_work_time/core/utils/time_precision.dart';
 import '../../core/providers/providers.dart' as core_providers;
 import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/services/break_calculator_service.dart';
+import '../../domain/utils/date_utils.dart';
 import '../../domain/utils/iso_week.dart';
 import '../../domain/utils/overtime_utils.dart';
 import '../state/monthly_report_state.dart';
@@ -179,7 +180,9 @@ class ReportsViewModel extends Notifier<ReportsState> {
     }
   }
 
-  void selectDate(DateTime date) {
+  void selectDate(DateTime selected) {
+    // Auf lokale Mitternacht normalisieren (#362).
+    final date = DateTime(selected.year, selected.month, selected.day);
     final oldSelectedDay = state.selectedDay;
     state = state.copyWith(selectedDay: date); // Update selectedDay sofort
 
@@ -307,9 +310,8 @@ class ReportsViewModel extends Notifier<ReportsState> {
         ref.read(core_providers.settingsRepositoryProvider);
     // Normalize date to midnight to avoid time-of-day issues in week calculation
     final reportDate = DateTime(date.year, date.month, date.day);
-    final startOfWeek =
-        reportDate.subtract(Duration(days: reportDate.weekday - 1));
-    final endOfWeek = startOfWeek.add(const Duration(days: 6));
+    final startOfWeek = addCalendarDays(reportDate, -(reportDate.weekday - 1));
+    final endOfWeek = addCalendarDays(startOfWeek, 6);
 
     final entriesForWeek = _monthlyEntries.where((entry) {
       // Normalize entry date to midnight for correct comparison.

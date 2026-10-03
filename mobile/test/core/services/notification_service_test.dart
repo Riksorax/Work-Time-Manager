@@ -233,4 +233,53 @@ void main() {
       ]);
     });
   });
+
+  group('nextWeeklyOccurrence (#362)', () {
+    late tz.Location berlin;
+    setUpAll(() => berlin = tz.getLocation('Europe/Berlin'));
+
+    tz.TZDateTime at(int y, int m, int d, [int h = 10, int min = 0]) =>
+        tz.TZDateTime(berlin, y, m, d, h, min);
+
+    void expectAt(tz.TZDateTime r, int y, int m, int d, int offsetHours) {
+      expect([r.year, r.month, r.day, r.hour, r.minute], [y, m, d, 8, 0]);
+      expect(r.timeZoneOffset, Duration(hours: offsetHours));
+    }
+
+    test('Fr 28.03.2025 -> So 30.03.2025 08:00 (Sommerzeit)', () {
+      expectAt(nextWeeklyOccurrence(at(2025, 3, 28), 7, 8, 0), 2025, 3, 30, 2);
+    });
+
+    test('Sa 29.03.2025 -> Mo 31.03.2025 08:00', () {
+      expectAt(nextWeeklyOccurrence(at(2025, 3, 29), 1, 8, 0), 2025, 3, 31, 2);
+    });
+
+    test('Mo 24.03.2025 nach 08:00 -> Mo 31.03.2025 08:00', () {
+      expectAt(nextWeeklyOccurrence(at(2025, 3, 24), 1, 8, 0), 2025, 3, 31, 2);
+    });
+
+    test('Fr 24.10.2025 -> Di 28.10.2025 08:00 (Winterzeit)', () {
+      expectAt(
+          nextWeeklyOccurrence(at(2025, 10, 24), 2, 8, 0), 2025, 10, 28, 1);
+    });
+
+    test('Mo 20.10.2025 nach 08:00 -> Mo 27.10.2025 08:00', () {
+      expectAt(
+          nextWeeklyOccurrence(at(2025, 10, 20), 1, 8, 0), 2025, 10, 27, 1);
+    });
+
+    test('gleicher Wochentag, Zeit noch offen -> heute', () {
+      expectAt(
+          nextWeeklyOccurrence(at(2025, 6, 2, 7, 0), 1, 8, 0), 2025, 6, 2, 2);
+    });
+
+    test('gleicher Wochentag, Zeit vorbei -> +7 Tage', () {
+      expectAt(
+          nextWeeklyOccurrence(at(2025, 6, 2, 9, 0), 1, 8, 0), 2025, 6, 9, 2);
+    });
+
+    test('Jahreswechsel: Mi 31.12.2025 -> Do 01.01.2026', () {
+      expectAt(nextWeeklyOccurrence(at(2025, 12, 31), 4, 8, 0), 2026, 1, 1, 1);
+    });
+  });
 }

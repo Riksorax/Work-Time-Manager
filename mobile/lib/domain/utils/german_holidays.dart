@@ -1,4 +1,5 @@
 import '../entities/bundesland.dart';
+import 'date_utils.dart';
 
 /// Berechnet die gesetzlichen Feiertage eines Bundeslands für ein
 /// Kalenderjahr (siehe #222).
@@ -25,18 +26,18 @@ Map<DateTime, String> getGermanHolidayNames(int year, Bundesland bundesland) {
 
   final holidays = <DateTime, String>{
     DateTime(year, 1, 1): 'Neujahr',
-    _addDays(easter, -2): 'Karfreitag',
-    _addDays(easter, 1): 'Ostermontag',
+    addCalendarDays(easter, -2): 'Karfreitag',
+    addCalendarDays(easter, 1): 'Ostermontag',
     DateTime(year, 5, 1): 'Tag der Arbeit',
-    _addDays(easter, 39): 'Christi Himmelfahrt',
-    _addDays(easter, 50): 'Pfingstmontag',
+    addCalendarDays(easter, 39): 'Christi Himmelfahrt',
+    addCalendarDays(easter, 50): 'Pfingstmontag',
     DateTime(year, 10, 3): 'Tag der Deutschen Einheit',
     DateTime(year, 12, 25): '1. Weihnachtsfeiertag',
     DateTime(year, 12, 26): '2. Weihnachtsfeiertag',
   };
 
   final heiligeDreiKoenige = DateTime(year, 1, 6);
-  final fronleichnam = _addDays(easter, 60);
+  final fronleichnam = addCalendarDays(easter, 60);
   final mariaeHimmelfahrt = DateTime(year, 8, 15);
   final reformationstag = DateTime(year, 10, 31);
   final allerheiligen = DateTime(year, 11, 1);
@@ -108,10 +109,6 @@ Map<DateTime, String> getGermanHolidayNames(int year, Bundesland bundesland) {
   return holidays;
 }
 
-/// Kalenderarithmetik statt Duration-Addition: bleibt auch über
-/// Zeitumstellungen hinweg exakt auf lokaler Mitternacht.
-DateTime _addDays(DateTime d, int n) => DateTime(d.year, d.month, d.day + n);
-
 /// Berechnet den Ostersonntag nach dem gaußschen Osteralgorithmus
 /// (Meeus/Jones/Butcher, gregorianischer Kalender).
 DateTime _calculateEasterSunday(int year) {
@@ -137,7 +134,7 @@ DateTime _calculateEasterSunday(int year) {
 DateTime _bussUndBettag(int year) {
   var date = DateTime(year, 11, 22);
   while (date.weekday != DateTime.wednesday) {
-    date = _addDays(date, -1);
+    date = addCalendarDays(date, -1);
   }
   return date;
 }

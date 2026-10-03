@@ -9,6 +9,7 @@ import '../../core/providers/providers.dart';
 import '../../domain/entities/break_entity.dart';
 import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/services/break_calculator_service.dart';
+import '../../domain/utils/date_utils.dart';
 import '../../domain/utils/overtime_utils.dart';
 import '../../domain/utils/overtime_warning_utils.dart';
 import '../../l10n/app_localizations.dart';
@@ -118,7 +119,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
       final workRepository = ref.read(workRepositoryProvider);
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
-      final startOfWeek = today.subtract(Duration(days: today.weekday - 1));
+      final startOfWeek = addCalendarDays(today, -(today.weekday - 1));
 
       // Einträge des aktuellen Monats laden
       var entries =

@@ -126,6 +126,46 @@ void main() {
       expect(status.longestStreak, 1);
     });
 
+    /// Mo-Fr (bzw. alle Tage) im Bereich, jeweils 9h.
+    List<WorkEntryEntity> overtimeDays(DateTime from, DateTime to,
+        {bool allDays = false}) {
+      final list = <WorkEntryEntity>[];
+      for (var d = from;
+          !d.isAfter(to);
+          d = DateTime(d.year, d.month, d.day + 1)) {
+        if (allDays || d.weekday <= 5) list.add(makeEntry(d, endHour: 17));
+      }
+      return list;
+    }
+
+    test('Serie über die Frühjahrs-Zeitumstellung (24.03.-04.04.2025)', () {
+      final status = detectOvertimeStreak(
+          entries: overtimeDays(DateTime(2025, 3, 24), DateTime(2025, 4, 4)),
+          workdays: monFri,
+          dailyTarget: target);
+      expect(status.currentStreak, 10);
+      expect(status.longestStreak, 10);
+    });
+
+    test('Serie über die Herbst-Zeitumstellung (20.10.-31.10.2025)', () {
+      final status = detectOvertimeStreak(
+          entries: overtimeDays(DateTime(2025, 10, 20), DateTime(2025, 10, 31)),
+          workdays: monFri,
+          dailyTarget: target);
+      expect(status.currentStreak, 10);
+      expect(status.longestStreak, 10);
+    });
+
+    test('Umstellungssonntag wird mit 7 Arbeitstagen nur einmal gezählt', () {
+      final status = detectOvertimeStreak(
+          entries: overtimeDays(DateTime(2025, 10, 22), DateTime(2025, 10, 30),
+              allDays: true),
+          workdays: const [1, 2, 3, 4, 5, 6, 7],
+          dailyTarget: target);
+      expect(status.currentStreak, 9);
+      expect(status.longestStreak, 9);
+    });
+
     test('leere Liste liefert keine Warnung', () {
       final status = detectOvertimeStreak(
           entries: [], workdays: monFri, dailyTarget: target);
