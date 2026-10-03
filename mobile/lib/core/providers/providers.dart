@@ -30,6 +30,7 @@ import '../../domain/repositories/weekly_reflection_repository.dart';
 import '../../domain/repositories/work_profile_repository.dart';
 import '../../domain/repositories/work_repository.dart';
 import '../../domain/usecases/delete_account.dart';
+import '../../domain/usecases/reauthenticate.dart';
 import '../../domain/usecases/get_auth_state_changes.dart';
 import '../../domain/usecases/get_theme_mode.dart';
 import '../../domain/usecases/get_today_work_entry.dart';
@@ -298,6 +299,11 @@ SignOut signOutUseCase(Ref ref) {
 @riverpod
 DeleteAccount deleteAccountUseCase(Ref ref) {
   return DeleteAccount(ref.watch(authRepositoryProvider));
+}
+
+@riverpod
+Reauthenticate reauthenticateUseCase(Ref ref) {
+  return Reauthenticate(ref.watch(authRepositoryProvider));
 }
 
 // --- Settings ---

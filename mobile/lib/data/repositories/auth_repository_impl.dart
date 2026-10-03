@@ -67,6 +67,9 @@ class AuthRepositoryImpl implements AuthRepository {
     await _dataSource.deleteAccount();
   }
 
+  @override
+  Future<bool> reauthenticate() => _dataSource.reauthenticate();
+
   /// Eine private Hilfsmethode, um das Mapping an einer zentralen Stelle zu halten.
   UserEntity _mapFirebaseUserToEntity(firebase.User firebaseUser) {
     return UserEntity(

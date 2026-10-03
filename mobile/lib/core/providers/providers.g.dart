@@ -967,6 +967,48 @@ final class DeleteAccountUseCaseProvider
 String _$deleteAccountUseCaseHash() =>
     r'5747087227f34cde6bc13863f0b2071d4c66c123';
 
+@ProviderFor(reauthenticateUseCase)
+const reauthenticateUseCaseProvider = ReauthenticateUseCaseProvider._();
+
+final class ReauthenticateUseCaseProvider
+    extends $FunctionalProvider<Reauthenticate, Reauthenticate, Reauthenticate>
+    with $Provider<Reauthenticate> {
+  const ReauthenticateUseCaseProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'reauthenticateUseCaseProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$reauthenticateUseCaseHash();
+
+  @$internal
+  @override
+  $ProviderElement<Reauthenticate> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  Reauthenticate create(Ref ref) {
+    return reauthenticateUseCase(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(Reauthenticate value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<Reauthenticate>(value),
+    );
+  }
+}
+
+String _$reauthenticateUseCaseHash() =>
+    r'b950bc62e28ee4f659e8d58c5334ec4e82d87689';
+
 @ProviderFor(getThemeModeUseCase)
 const getThemeModeUseCaseProvider = GetThemeModeUseCaseProvider._();
 
