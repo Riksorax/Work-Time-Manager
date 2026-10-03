@@ -181,6 +181,45 @@ void main() {
       expect(find.textContaining('Wochenübersicht'), findsOneWidget);
     });
 
+    for (final (day, expectedKw) in [
+      (DateTime(2026, 8, 31), 36), // Sommerzeit-Montag (#352)
+      (DateTime(2026, 9, 3), 36),
+      (DateTime(2025, 12, 31), 1), // Jahreswechsel
+      (DateTime(2027, 1, 1), 53),
+    ]) {
+      testWidgets('Wochenbericht zeigt KW $expectedKw fuer $day',
+          (tester) async {
+        final reportsViewModel = FakeReportsViewModel(
+          initialState: ReportsState.initial().copyWith(
+            isLoading: false,
+            selectedDay: day,
+            selectedMonth: day,
+          ),
+          callback: mockCallback,
+        );
+        final settingsViewModel = FakeSettingsViewModel(
+          initialState: const AsyncValue.data(SettingsState(
+              settings: SettingsEntity(), overtimeBalance: Duration.zero)),
+        );
+
+        await tester.pumpWidget(createSubject(
+          reportsViewModel: reportsViewModel,
+          settingsViewModel: settingsViewModel,
+          authState: const AsyncValue.data(
+              UserEntity(id: '1', email: 'test@test.com')),
+        ));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Wöchentlich'));
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('KW $expectedKw'), findsWidgets);
+        if (expectedKw == 36) {
+          expect(find.textContaining('KW 35'), findsNothing);
+        }
+      });
+    }
+
     testWidgets('Wochen-Reflexion Button öffnet Dialog und speichert',
         (tester) async {
       final reportsViewModel = FakeReportsViewModel(

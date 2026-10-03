@@ -89,6 +89,53 @@ void main() {
           .called(1);
     });
 
+    group('ISO-Kalenderwoche in monthlyReportState.weeklyWork (#352)', () {
+      WorkEntryEntity entryOn(int y, int m, int d) => WorkEntryEntity(
+            id: '$y-$m-$d',
+            date: DateTime(y, m, d),
+            workStart: DateTime(y, m, d, 8),
+            workEnd: DateTime(y, m, d, 16),
+          );
+
+      Future<Map<int, Duration>> weeklyWorkFor(
+          int year, int month, List<WorkEntryEntity> entries) async {
+        when(mockWorkRepository.getWorkEntriesForMonth(year, month))
+            .thenAnswer((_) async => entries);
+        final viewModel = container.read(reportsViewModelProvider.notifier);
+        await Future.delayed(Duration.zero);
+        viewModel.selectDate(DateTime(year, month, 15));
+        await Future.delayed(Duration.zero);
+        return container
+            .read(reportsViewModelProvider)
+            .monthlyReportState
+            .weeklyWork;
+      }
+
+      test('Montag 31.08.2026 (Sommerzeit) liegt in KW 36', () async {
+        final weekly = await weeklyWorkFor(2026, 8, [
+          entryOn(2026, 8, 28),
+          entryOn(2026, 8, 31),
+        ]);
+        expect(weekly.keys.toSet(), {35, 36});
+      });
+
+      test('Dezember 2025: 29.12. gehoert zu KW 1', () async {
+        final weekly = await weeklyWorkFor(2025, 12, [
+          entryOn(2025, 12, 22),
+          entryOn(2025, 12, 29),
+        ]);
+        expect(weekly.keys.toSet(), {52, 1});
+      });
+
+      test('Januar 2027: 01.01. gehoert zu KW 53, keine Woche 0', () async {
+        final weekly = await weeklyWorkFor(2027, 1, [
+          entryOn(2027, 1, 1),
+          entryOn(2027, 1, 4),
+        ]);
+        expect(weekly.keys.toSet(), {53, 1});
+      });
+    });
+
     test('should calculate daily report correctly', () async {
       final date = DateTime(2023, 10, 26);
       final entry = WorkEntryEntity(

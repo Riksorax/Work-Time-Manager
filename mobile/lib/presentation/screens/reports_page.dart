@@ -11,6 +11,7 @@ import '../../core/services/pdf_report_service.dart';
 
 import '../../domain/entities/work_entry_extensions.dart';
 import '../../domain/utils/german_holidays.dart';
+import '../../domain/utils/iso_week.dart';
 import '../../domain/utils/weekday_labels.dart';
 import '../../l10n/app_localizations.dart';
 import '../widgets/common/paywall_launcher.dart';
@@ -695,11 +696,7 @@ class WeeklyReportView extends ConsumerWidget {
           final startOfWeek = DateTime(selectedDay.year, selectedDay.month,
               selectedDay.day - selectedDay.weekday + 1);
           final endOfWeek = startOfWeek.add(const Duration(days: 6));
-          final weekNumber =
-              (startOfWeek.difference(DateTime(startOfWeek.year, 1, 1)).inDays /
-                          7)
-                      .floor() +
-                  1;
+          final weekNumber = isoWeekNumber(startOfWeek);
           final Duration weeklyOvertimeLocal = weeklyReport.dailyWork.entries
               .fold(Duration.zero, (sum, e) => sum + (e.value - dailyTarget));
 
@@ -911,18 +908,6 @@ void _showDayEntriesBottomSheet(
   );
 }
 
-/// Entspricht exakt `_getWeekNumber` in [ReportsViewModel] - dort werden die
-/// Schlüssel für `monthlyReport.weeklyWork` berechnet. Muss identisch bleiben,
-/// damit ein Tap auf eine Kalenderwoche im Monatsbericht (#258) auf die
-/// richtige Woche navigiert.
-int _isoWeekNumber(DateTime date) {
-  final firstWeek = DateTime(date.year, 1, 4);
-  final dayOfWeek = firstWeek.weekday;
-  final firstDayOfFirstWeek = firstWeek.subtract(Duration(days: dayOfWeek - 1));
-  final diff = date.difference(firstDayOfFirstWeek).inDays;
-  return (diff / 7).floor() + 1;
-}
-
 /// Sucht innerhalb von [month] den ersten Tag, dessen Kalenderwoche
 /// [weekNumber] entspricht (siehe #258 - Klick auf Kalenderwoche im
 /// Monatsbericht → Wochenbericht).
@@ -930,7 +915,7 @@ DateTime? _firstDateInMonthForWeek(DateTime month, int weekNumber) {
   final daysInMonth = DateTime(month.year, month.month + 1, 0).day;
   for (var day = 1; day <= daysInMonth; day++) {
     final date = DateTime(month.year, month.month, day);
-    if (_isoWeekNumber(date) == weekNumber) return date;
+    if (isoWeekNumber(date) == weekNumber) return date;
   }
   return null;
 }
