@@ -46,6 +46,7 @@ Details der Deploy-Workflows, Uptime-Monitoring und benötigte Secrets: `CONTRIB
 | Gleitzeit | `users/{uid}/overtime/balance` | `minutes` (int), `lastUpdated` (Timestamp) |
 | Einstellungen | `users/{uid}/settings/current` | nur Web — Flutter nutzt SharedPreferences |
 | Profil/Premium | `users/{uid}` | `isPremium` (bool) |
+| Wochen-Reflexion | `users/{uid}/weekly_reflections/{yyyy-Www}` | `whatWentWell`, `whatWasHard`, `updatedAt` — nur Mobile, nicht profilgebunden; Schlüssel = ISO-Wochenjahr + KW (Mo 29.12.2025 → `2026-W01`) |
 | Zusätzliches Arbeitszeit-Profil | `users/{uid}/profiles/{profileId}` | `name` (string), `createdAt` (Timestamp) — siehe #138/#239 |
 | Profil-Daten (Arbeitszeit-Profil) | `users/{uid}/profiles/{profileId}/{work_entries\|overtime\|settings}/...` | wie oben, nur unter dem Profil verschachtelt. Das Standard-Profil bleibt unter dem unveränderten `users/{uid}/...`-Pfad (keine Migration) |
 

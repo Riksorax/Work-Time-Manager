@@ -17,6 +17,7 @@ import 'package:flutter_work_time/l10n/app_localizations_en.dart';
 class _FakePrintingPlatform extends PrintingPlatform
     with MockPlatformInterfaceMixin {
   Uint8List? lastBytes;
+  String? lastFilename;
 
   @override
   Future<bool> sharePdf(
@@ -28,6 +29,7 @@ class _FakePrintingPlatform extends PrintingPlatform
     List<String>? emails,
   ) async {
     lastBytes = bytes;
+    lastFilename = filename;
     return true;
   }
 
@@ -78,6 +80,32 @@ void main() {
     fakePlatform = _FakePrintingPlatform();
     PrintingPlatform.instance = fakePlatform;
     service = PdfReportService();
+  });
+
+  group('Wochenbericht-Dateiname nutzt das ISO-Wochenjahr (#354)', () {
+    for (final (monday, week, expected) in [
+      (DateTime(2025, 12, 29), 1, 'Wochenbericht_KW1_2026.pdf'),
+      (DateTime(2024, 12, 30), 1, 'Wochenbericht_KW1_2025.pdf'),
+      (DateTime(2026, 1, 5), 2, 'Wochenbericht_KW2_2026.pdf'),
+    ]) {
+      test('Montag $monday -> $expected', () async {
+        await service.exportWeeklyReport(
+          l10n: AppLocalizationsDe(),
+          locale: 'de',
+          startOfWeek: monday,
+          endOfWeek: DateTime(monday.year, monday.month, monday.day + 6),
+          weekNumber: week,
+          workDays: 5,
+          totalWorkDuration: const Duration(hours: 40),
+          totalBreakDuration: const Duration(hours: 2),
+          averageWorkDuration: const Duration(hours: 8),
+          overtime: Duration.zero,
+          dailyWork: {monday: const Duration(hours: 8)},
+        );
+
+        expect(fakePlatform.lastFilename, expected);
+      });
+    }
   });
 
   group('PdfReportService folgt der App-Sprache (#297)', () {

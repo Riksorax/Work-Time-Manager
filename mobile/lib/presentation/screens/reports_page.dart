@@ -753,10 +753,8 @@ class WeeklyReportView extends ConsumerWidget {
                       child: TextButton.icon(
                         onPressed: () => showDialog(
                           context: context,
-                          builder: (_) => WeeklyReflectionDialog(
-                            year: startOfWeek.year,
-                            week: weekNumber,
-                          ),
+                          builder: (_) =>
+                              WeeklyReflectionDialog(startOfWeek: startOfWeek),
                         ),
                         icon: const Icon(Icons.rate_review_outlined),
                         label: Text(l10n.weeklyReflectionButton,

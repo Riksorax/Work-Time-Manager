@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
+import '../../domain/utils/iso_week.dart';
 import '../../l10n/app_localizations.dart';
 
 /// Exportiert Wochen- und Monatsberichte als PDF (siehe #135) und öffnet
@@ -148,7 +149,7 @@ class PdfReportService {
 
     await Printing.sharePdf(
       bytes: await doc.save(),
-      filename: 'Wochenbericht_KW${weekNumber}_${startOfWeek.year}.pdf',
+      filename: 'Wochenbericht_KW${weekNumber}_${isoWeekYear(startOfWeek)}.pdf',
     );
   }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../domain/utils/iso_week.dart';
 import '../../l10n/app_localizations.dart';
 import '../view_models/weekly_reflection_view_model.dart';
 
@@ -8,13 +9,11 @@ import '../view_models/weekly_reflection_view_model.dart';
 /// Rückblick auf eine Kalenderwoche, manuell aus dem Wochenbericht heraus
 /// geöffnet.
 class WeeklyReflectionDialog extends ConsumerStatefulWidget {
-  final int year;
-  final int week;
+  final DateTime startOfWeek;
 
   const WeeklyReflectionDialog({
     super.key,
-    required this.year,
-    required this.week,
+    required this.startOfWeek,
   });
 
   @override
@@ -34,7 +33,7 @@ class _WeeklyReflectionDialogState
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref
           .read(weeklyReflectionViewModelProvider.notifier)
-          .loadReflection(widget.year, widget.week);
+          .loadReflection(widget.startOfWeek);
     });
   }
 
@@ -79,7 +78,8 @@ class _WeeklyReflectionDialogState
     }
 
     return AlertDialog(
-      title: Text(l10n.weeklyReflectionDialogTitle(widget.week)),
+      title: Text(
+          l10n.weeklyReflectionDialogTitle(isoWeekNumber(widget.startOfWeek))),
       content: state.isLoading
           ? const SizedBox(
               height: 80,
