@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/services/version_service.dart';
+import 'settings_sync_provider.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/utils/logger.dart';
 import '../../data/datasources/remote/api_client.dart';
@@ -130,7 +131,16 @@ SettingsRepository settingsRepository(Ref ref) {
     profileId,
   );
   // Beim Login Firestore-Einstellungen in SharedPrefs übernehmen
-  if (userId != null) repo.syncFromFirestore();
+  if (userId != null) {
+    var disposed = false;
+    ref.onDispose(() => disposed = true);
+    repo.syncFromFirestore().then((changed) {
+      // Nur das SettingsViewModel neu laden lassen (nicht dieses Repo).
+      if (changed && !disposed) {
+        ref.read(settingsSyncTickProvider.notifier).bump();
+      }
+    });
+  }
   return repo;
 }
 

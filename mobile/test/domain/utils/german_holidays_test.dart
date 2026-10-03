@@ -2,6 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_work_time/domain/entities/bundesland.dart';
 import 'package:flutter_work_time/domain/utils/german_holidays.dart';
 
+import 'german_holidays_fixture.dart';
+
 void main() {
   group('getGermanHolidays - bundesweite Feiertage', () {
     test('enthält alle 9 bundesweiten Feiertage 2024', () {
@@ -167,5 +169,42 @@ void main() {
       expect(holidays, contains(DateTime(2024, 10, 31)));
       expect(holidays.length, 9 + 2);
     });
+  });
+
+  group('getGermanHolidayIds', () {
+    String fmt(DateTime d) =>
+        '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+    test('Enum hat genau 17 Werte, Mapping deckt alle ab', () {
+      expect(GermanHoliday.values.length, 17);
+      expect(
+          germanHolidayGermanNames.keys.toSet(), GermanHoliday.values.toSet());
+    });
+
+    for (final year in holidayDatesByYear.keys) {
+      for (final land in Bundesland.values) {
+        test('Fixture $year ${land.name}', () {
+          final result = getGermanHolidayIds(year, land);
+          final expected = expectedHolidays(year, land);
+          expect(result.length, expected.length);
+          for (final entry in result.entries) {
+            // Schluessel sind lokale Mitternacht.
+            expect(entry.key,
+                DateTime(entry.key.year, entry.key.month, entry.key.day));
+            expect(expected[fmt(entry.key)], entry.value,
+                reason: '${fmt(entry.key)} ${entry.value}');
+          }
+        });
+
+        test('Paritaet mit getGermanHolidayNames $year ${land.name}', () {
+          final ids = getGermanHolidayIds(year, land);
+          final names = getGermanHolidayNames(year, land);
+          expect(ids.keys.toSet(), names.keys.toSet());
+          for (final entry in ids.entries) {
+            expect(germanHolidayGermanNames[entry.value], names[entry.key]);
+          }
+        });
+      }
+    }
   });
 }

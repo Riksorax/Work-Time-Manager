@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/providers/providers.dart' as core_providers;
+import '../../core/providers/settings_sync_provider.dart';
 import '../../core/utils/timezone_utils.dart';
 import '../../domain/entities/app_theme_mode.dart';
 import '../../domain/entities/bundesland.dart';
@@ -145,6 +146,11 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
     // _init() unten fängt denselben Fehler zwar auch ab, aber erst
     // asynchron, also zu spät für diesen synchronen build()-Aufruf.
     try {
+      // Nach einem Firestore-Sync mit geänderten Einstellungen still neu laden
+      // (#279): listen statt watch, damit build() nicht erneut `loading`
+      // liefert - sonst ersetzt der Settings-Screen seinen Inhalt kurz durch
+      // einen Spinner und verwirft flüchtigen UI-State (Scroll, Eingaben).
+      ref.listen(settingsSyncTickProvider, (_, __) => _init());
       ref.watch(core_providers.getOvertimeUseCaseProvider);
       ref.watch(core_providers.settingsRepositoryProvider);
     } catch (_) {

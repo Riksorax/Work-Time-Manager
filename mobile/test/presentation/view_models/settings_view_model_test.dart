@@ -2,7 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
+import 'package:flutter_work_time/core/providers/clock_provider.dart';
 import 'package:flutter_work_time/core/providers/providers.dart';
+import 'package:flutter_work_time/core/providers/settings_sync_provider.dart';
 import 'package:flutter_work_time/domain/entities/bundesland.dart';
 import 'package:flutter_work_time/domain/repositories/overtime_repository.dart';
 import 'package:flutter_work_time/domain/repositories/settings_repository.dart';
@@ -128,5 +130,69 @@ void main() {
             .settings
             .vacationDaysPerYear,
         28);
+  });
+
+  test('Sync-Tick laedt das Bundesland neu, ohne das Repo neu zu bauen',
+      () async {
+    var repoBuilds = 0;
+    when(settings.getBundesland()).thenReturn(Bundesland.bayern);
+    final c = ProviderContainer(overrides: [
+      settingsRepositoryProvider.overrideWith((ref) {
+        repoBuilds++;
+        return settings;
+      }),
+      overtimeRepositoryProvider.overrideWithValue(overtime),
+    ]);
+    addTearDown(c.dispose);
+    c.listen(settingsViewModelProvider, (_, __) {});
+    await Future<void>.delayed(Duration.zero);
+    expect(c.read(settingsViewModelProvider).value!.settings.bundesland,
+        Bundesland.bayern);
+
+    when(settings.getBundesland()).thenReturn(Bundesland.sachsen);
+    c.read(settingsSyncTickProvider.notifier).bump();
+    await Future<void>.delayed(Duration.zero);
+    await Future<void>.delayed(Duration.zero);
+
+    expect(c.read(settingsViewModelProvider).value!.settings.bundesland,
+        Bundesland.sachsen);
+    expect(repoBuilds, 1);
+  });
+
+  test('Sync-Tick laedt still nach: State wird nie wieder loading', () async {
+    when(settings.getBundesland()).thenReturn(Bundesland.bayern);
+    final c = ProviderContainer(overrides: [
+      settingsRepositoryProvider.overrideWithValue(settings),
+      overtimeRepositoryProvider.overrideWithValue(overtime),
+    ]);
+    addTearDown(c.dispose);
+    final states = <bool>[];
+    c.listen(settingsViewModelProvider, (_, next) => states.add(next.isLoading),
+        fireImmediately: true);
+    await Future<void>.delayed(Duration.zero);
+    await Future<void>.delayed(Duration.zero);
+    states.clear();
+
+    when(settings.getBundesland()).thenReturn(Bundesland.sachsen);
+    c.read(settingsSyncTickProvider.notifier).bump();
+    await Future<void>.delayed(Duration.zero);
+    await Future<void>.delayed(Duration.zero);
+
+    // Kein Spinner-Zwischenzustand: sonst verwirft der Settings-Screen
+    // fluechtigen UI-State.
+    expect(states, isNotEmpty);
+    expect(states.every((loading) => !loading), isTrue);
+    expect(c.read(settingsViewModelProvider).value!.settings.bundesland,
+        Bundesland.sachsen);
+  });
+
+  test('clockProvider: Default liefert DateTime, Override greift', () {
+    final now = container.read(clockProvider)();
+    expect(now, isA<DateTime>());
+    final c = ProviderContainer(overrides: [
+      clockProvider.overrideWithValue(() => DateTime(2026, 10, 3, 12)),
+    ]);
+    addTearDown(c.dispose);
+    expect(c.read(clockProvider)(), DateTime(2026, 10, 3, 12));
   });
 }

@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:flutter_work_time/data/datasources/remote/firestore_datasource.dart';
 import 'package:flutter_work_time/data/repositories/settings_repository_impl.dart';
+import 'package:flutter_work_time/domain/entities/bundesland.dart';
 
 import 'settings_repository_impl_test.mocks.dart';
 
@@ -120,6 +121,178 @@ void main() {
         await r.syncFromFirestore();
         expect(r.getVacationDaysPerYear(), 21, reason: '$bad');
       }
+    });
+  });
+
+  group('Bundesland', () {
+    test('setBundesland schreibt Key mit uid und synchronisiert', () async {
+      final r = await repo();
+      await r.setBundesland(Bundesland.sachsen);
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString('bundesland_u1'), 'sachsen');
+      expect(r.getBundesland(), Bundesland.sachsen);
+      verify(mockDs.saveSettings('u1', {'bundesland': 'sachsen'},
+              profileId: null))
+          .called(1);
+    });
+
+    test('Profil-Suffix und Profile getrennt', () async {
+      final a = await repo(profile: 'p1');
+      await a.setBundesland(Bundesland.bayern);
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString('bundesland_u1_p1'), 'bayern');
+      verify(mockDs.saveSettings('u1', {'bundesland': 'bayern'},
+              profileId: 'p1'))
+          .called(1);
+      final b = SettingsRepositoryImpl(prefs, mockDs, 'u1', 'p2');
+      expect(b.getBundesland(), isNull);
+      await b.setBundesland(Bundesland.berlin);
+      expect(a.getBundesland(), Bundesland.bayern);
+      expect(b.getBundesland(), Bundesland.berlin);
+    });
+
+    test('setBundesland(null) schreibt leer, loescht globalen Key, sendet ""',
+        () async {
+      final r = await repo(initial: {'bundesland': 'bayern'});
+      expect(r.getBundesland(), Bundesland.bayern);
+      await r.setBundesland(null);
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString('bundesland_u1'), '');
+      expect(prefs.containsKey('bundesland'), isFalse);
+      expect(r.getBundesland(), isNull);
+      verify(mockDs.saveSettings('u1', {'bundesland': ''}, profileId: null))
+          .called(1);
+    });
+
+    test('leerer neuer Key liefert null ohne Fallback', () async {
+      final r = await repo(initial: {
+        'bundesland_u1': '',
+        'bundesland_local': 'bayern',
+        'bundesland': 'berlin',
+      });
+      expect(r.getBundesland(), isNull);
+    });
+
+    test('Fallback auf bundesland_local mit gleichem Suffix, dann global',
+        () async {
+      final r = await repo(profile: 'p1', initial: {
+        'bundesland_local_p1': 'hessen',
+        'bundesland': 'berlin',
+      });
+      expect(r.getBundesland(), Bundesland.hessen);
+      final g = await repo(initial: {'bundesland': 'berlin'});
+      expect(g.getBundesland(), Bundesland.berlin);
+    });
+
+    test('neuer Key hat Vorrang', () async {
+      final r = await repo(initial: {
+        'bundesland_u1': 'sachsen',
+        'bundesland_local': 'hessen',
+        'bundesland': 'berlin',
+      });
+      expect(r.getBundesland(), Bundesland.sachsen);
+    });
+
+    test('ungueltiger Name und Fremdtyp liefern null', () async {
+      expect(
+          (await repo(initial: {'bundesland_u1': 'atlantis'})).getBundesland(),
+          isNull);
+      expect(
+          (await repo(initial: {'bundesland_u1': 5})).getBundesland(), isNull);
+    });
+
+    test('ausgeloggt: kein saveSettings', () async {
+      final r = await repo(uid: 'local');
+      await r.setBundesland(Bundesland.bayern);
+      expect(r.getBundesland(), Bundesland.bayern);
+      verifyNever(
+          mockDs.saveSettings(any, any, profileId: anyNamed('profileId')));
+    });
+
+    test('API-Fehler: lokaler Wert bleibt, keine Exception', () async {
+      when(mockDs.saveSettings(any, any, profileId: anyNamed('profileId')))
+          .thenAnswer((_) async => throw Exception('boom'));
+      final r = await repo();
+      await r.setBundesland(Bundesland.bayern);
+      await Future<void>.delayed(Duration.zero);
+      expect(r.getBundesland(), Bundesland.bayern);
+    });
+
+    group('syncFromFirestore', () {
+      void remote(Map<String, dynamic>? data) {
+        when(mockDs.getSettings(any, profileId: anyNamed('profileId')))
+            .thenAnswer((_) async => data);
+      }
+
+      test('remote gueltig -> schreibt neuen Key, true', () async {
+        remote({'bundesland': 'sachsen'});
+        final r = await repo();
+        expect(await r.syncFromFirestore(), isTrue);
+        final prefs = await SharedPreferences.getInstance();
+        expect(prefs.getString('bundesland_u1'), 'sachsen');
+        expect(r.getBundesland(), Bundesland.sachsen);
+      });
+
+      test('gleicher Wert -> false', () async {
+        remote({'bundesland': 'sachsen'});
+        final r = await repo(initial: {'bundesland_u1': 'sachsen'});
+        expect(await r.syncFromFirestore(), isFalse);
+      });
+
+      test('remote null + Legacy-Wert -> Upload und neuer Key', () async {
+        remote({'weeklyTargetHours': 40});
+        final r = await repo(initial: {'bundesland': 'bayern'});
+        expect(await r.syncFromFirestore(), isFalse);
+        final prefs = await SharedPreferences.getInstance();
+        expect(prefs.getString('bundesland_u1'), 'bayern');
+        verify(mockDs.saveSettings('u1', {'bundesland': 'bayern'},
+                profileId: null))
+            .called(1);
+      });
+
+      test('remote leer + neuer Key vorhanden -> Key leer, kein Upload',
+          () async {
+        remote({'bundesland': ''});
+        final r = await repo(initial: {'bundesland_u1': 'bayern'});
+        expect(await r.syncFromFirestore(), isTrue);
+        final prefs = await SharedPreferences.getInstance();
+        expect(prefs.getString('bundesland_u1'), '');
+        expect(r.getBundesland(), isNull);
+        verifyNever(
+            mockDs.saveSettings(any, any, profileId: anyNamed('profileId')));
+      });
+
+      test('remote null + neuer Key vorhanden -> Key leer', () async {
+        remote({'weeklyTargetHours': 40});
+        final r = await repo(initial: {'bundesland_u1': 'bayern'});
+        expect(await r.syncFromFirestore(), isTrue);
+        expect(r.getBundesland(), isNull);
+      });
+
+      test('remote ungueltig -> ignoriert', () async {
+        remote({'bundesland': 'atlantis'});
+        final r = await repo(initial: {'bundesland_u1': 'bayern'});
+        expect(await r.syncFromFirestore(), isFalse);
+        expect(r.getBundesland(), Bundesland.bayern);
+        remote({'bundesland': 7});
+        expect(await r.syncFromFirestore(), isFalse);
+        expect(r.getBundesland(), Bundesland.bayern);
+        verifyNever(
+            mockDs.saveSettings(any, any, profileId: anyNamed('profileId')));
+      });
+
+      test('Datasource-Fehler -> false', () async {
+        when(mockDs.getSettings(any, profileId: anyNamed('profileId')))
+            .thenAnswer((_) async => throw Exception('boom'));
+        final r = await repo();
+        expect(await r.syncFromFirestore(), isFalse);
+      });
+
+      test('ausgeloggt -> false, kein Aufruf', () async {
+        final r = await repo(uid: 'local');
+        expect(await r.syncFromFirestore(), isFalse);
+        verifyNever(mockDs.getSettings(any, profileId: anyNamed('profileId')));
+      });
     });
   });
 }
