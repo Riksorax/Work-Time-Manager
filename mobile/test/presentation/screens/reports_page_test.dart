@@ -220,48 +220,63 @@ void main() {
       });
     }
 
-    testWidgets('Wochen-Reflexion Button öffnet Dialog und speichert',
-        (tester) async {
-      final reportsViewModel = FakeReportsViewModel(
-        initialState: ReportsState.initial().copyWith(isLoading: false),
-        callback: mockCallback,
-      );
-      final settingsViewModel = FakeSettingsViewModel(
-        initialState: const AsyncValue.data(SettingsState(
-            settings: SettingsEntity(), overtimeBalance: Duration.zero)),
-      );
+    for (final (day, year, week) in [
+      (DateTime(2025, 12, 31), 2026, 1), // Montag 2025-12-29
+      (DateTime(2024, 12, 31), 2025, 1), // Montag 2024-12-30
+      (DateTime(2024, 1, 2), 2024, 1), // Montag 2024-01-01
+    ]) {
+      testWidgets(
+          'Wochen-Reflexion Button öffnet Dialog und speichert ($year-W$week, $day)',
+          (tester) async {
+        final reportsViewModel = FakeReportsViewModel(
+          initialState: ReportsState.initial().copyWith(
+            isLoading: false,
+            selectedDay: day,
+            selectedMonth: day,
+          ),
+          callback: mockCallback,
+        );
+        final settingsViewModel = FakeSettingsViewModel(
+          initialState: const AsyncValue.data(SettingsState(
+              settings: SettingsEntity(), overtimeBalance: Duration.zero)),
+        );
 
-      await tester.pumpWidget(createSubject(
-        reportsViewModel: reportsViewModel,
-        settingsViewModel: settingsViewModel,
-        authState:
-            const AsyncValue.data(UserEntity(id: '1', email: 'test@test.com')),
-      ));
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(createSubject(
+          reportsViewModel: reportsViewModel,
+          settingsViewModel: settingsViewModel,
+          authState: const AsyncValue.data(
+              UserEntity(id: '1', email: 'test@test.com')),
+        ));
+        await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Wöchentlich'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Wöchentlich'));
+        await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Wochen-Reflexion'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Wochen-Reflexion'));
+        await tester.pumpAndSettle();
 
-      verify(mockWeeklyReflectionRepository.getReflection(any, any)).called(1);
-      expect(find.text('Was lief gut?'), findsOneWidget);
-      expect(find.text('Was war anstrengend?'), findsOneWidget);
+        verify(mockWeeklyReflectionRepository.getReflection(year, week))
+            .called(1);
+        expect(find.text('Was lief gut?'), findsOneWidget);
+        expect(find.text('Was war anstrengend?'), findsOneWidget);
 
-      await tester.enterText(
-          find.widgetWithText(TextField, 'Was lief gut?'), 'Guter Sprint');
-      await tester.tap(find.text('Speichern'));
-      await tester.pumpAndSettle();
+        await tester.enterText(
+            find.widgetWithText(TextField, 'Was lief gut?'), 'Guter Sprint');
+        await tester.tap(find.text('Speichern'));
+        await tester.pumpAndSettle();
 
-      final captured =
-          verify(mockWeeklyReflectionRepository.saveReflection(captureAny))
-              .captured
-              .single as WeeklyReflectionEntity;
-      expect(captured.whatWentWell, 'Guter Sprint');
-      expect(find.text('Was lief gut?'), findsNothing); // Dialog geschlossen
-      expect(find.textContaining('Reflexion gespeichert'), findsOneWidget);
-    });
+        final captured =
+            verify(mockWeeklyReflectionRepository.saveReflection(captureAny))
+                .captured
+                .single as WeeklyReflectionEntity;
+        expect(captured.whatWentWell, 'Guter Sprint');
+        expect(captured.year, year);
+        expect(captured.week, week);
+        expect(captured.id, '$year-W0$week');
+        expect(find.text('Was lief gut?'), findsNothing); // Dialog geschlossen
+        expect(find.textContaining('Reflexion gespeichert'), findsOneWidget);
+      });
+    }
 
     testWidgets('Insights-Tab zeigt Platzhalter ohne Datenbasis',
         (tester) async {

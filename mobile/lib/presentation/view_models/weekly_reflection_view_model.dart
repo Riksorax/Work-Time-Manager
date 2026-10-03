@@ -3,6 +3,7 @@ import 'package:flutter_work_time/core/utils/logger.dart';
 
 import '../../core/providers/providers.dart' as core_providers;
 import '../../domain/entities/weekly_reflection_entity.dart';
+import '../../domain/utils/iso_week.dart';
 import '../state/weekly_reflection_state.dart';
 
 final weeklyReflectionViewModelProvider =
@@ -21,7 +22,12 @@ class WeeklyReflectionViewModel extends Notifier<WeeklyReflectionState> {
     return WeeklyReflectionState.initial();
   }
 
-  Future<void> loadReflection(int year, int week) async {
+  /// Lädt die Reflexion der Woche, die mit [startOfWeek] beginnt. Jahr und
+  /// Wochenzahl des Schlüssels stammen beide aus diesem Datum (ISO-Wochenjahr,
+  /// siehe #354).
+  Future<void> loadReflection(DateTime startOfWeek) async {
+    final year = isoWeekYear(startOfWeek);
+    final week = isoWeekNumber(startOfWeek);
     state = state.copyWith(isLoading: true);
 
     final repository =
