@@ -8,6 +8,8 @@ import 'package:flutter_work_time/data/datasources/remote/api_client.dart';
 import 'package:flutter_work_time/domain/entities/work_entry_entity.dart';
 import 'package:flutter_work_time/domain/repositories/settings_repository.dart';
 import 'package:flutter_work_time/domain/repositories/work_repository.dart';
+import 'package:flutter_work_time/presentation/state/leave_balance_state.dart';
+import 'package:flutter_work_time/presentation/view_models/leave_balance_view_model.dart';
 import 'package:flutter_work_time/presentation/view_models/reports_view_model.dart';
 
 import 'reports_view_model_test.mocks.dart';
@@ -19,6 +21,15 @@ class _FixedActiveWorkProfileIdNotifier extends ActiveWorkProfileIdNotifier {
   final String? _value;
   @override
   String? build() => _value;
+}
+
+class _CountingLeaveViewModel extends LeaveBalanceViewModel {
+  static int builds = 0;
+  @override
+  LeaveBalanceState build() {
+    builds++;
+    return const LeaveBalanceState();
+  }
 }
 
 @GenerateMocks([WorkRepository, SettingsRepository, ApiClient])
@@ -549,6 +560,59 @@ void main() {
                 profileId: 'p1'))
             .called(1);
       });
+    });
+  });
+
+  group('Resturlaub-Invalidierung (#278)', () {
+    late ProviderContainer leaveContainer;
+    late ReportsViewModel vm;
+
+    setUp(() async {
+      _CountingLeaveViewModel.builds = 0;
+      when(mockWorkRepository.saveWorkEntry(any)).thenAnswer((_) async {});
+      when(mockWorkRepository.deleteWorkEntry(any)).thenAnswer((_) async {});
+      when(mockWorkRepository.getWorkEntriesForMonth(any, any))
+          .thenAnswer((_) async => []);
+      leaveContainer = ProviderContainer(overrides: [
+        workRepositoryProvider.overrideWithValue(mockWorkRepository),
+        settingsRepositoryProvider.overrideWithValue(mockSettingsRepository),
+        leaveBalanceViewModelProvider.overrideWith(_CountingLeaveViewModel.new),
+      ]);
+      leaveContainer.listen(leaveBalanceViewModelProvider, (_, __) {});
+      vm = leaveContainer.read(reportsViewModelProvider.notifier);
+      await Future.delayed(Duration.zero);
+    });
+
+    tearDown(() => leaveContainer.dispose());
+
+    final entry = WorkEntryEntity(
+        id: '2026-03-02',
+        date: DateTime(2026, 3, 2),
+        type: WorkEntryType.vacation);
+
+    test('saveWorkEntry invalidiert', () async {
+      final before = _CountingLeaveViewModel.builds;
+      await vm.saveWorkEntry(entry);
+      await Future.delayed(Duration.zero);
+      expect(_CountingLeaveViewModel.builds, before + 1);
+    });
+
+    test('deleteWorkEntry invalidiert', () async {
+      final before = _CountingLeaveViewModel.builds;
+      await vm.deleteWorkEntry(entry.id);
+      await Future.delayed(Duration.zero);
+      expect(_CountingLeaveViewModel.builds, before + 1);
+    });
+
+    test('saveBatchWorkEntries invalidiert', () async {
+      final before = _CountingLeaveViewModel.builds;
+      await vm.saveBatchWorkEntries(
+          [DateTime(2026, 3, 2), DateTime(2026, 3, 3)],
+          WorkEntryType.vacation,
+          null,
+          null);
+      await Future.delayed(Duration.zero);
+      expect(_CountingLeaveViewModel.builds, before + 1);
     });
   });
 }

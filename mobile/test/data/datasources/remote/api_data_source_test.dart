@@ -150,6 +150,24 @@ void main() {
       });
       verifyZeroInteractions(mockAuth);
     });
+
+    test('saveSettings reicht vacationDaysPerYear durch und erhält es (#278)',
+        () async {
+      when(mockApi.getSettings(profileId: 'p1')).thenAnswer(
+          (_) async => {'weeklyTargetHours': 40, 'vacationDaysPerYear': 28});
+      when(mockApi.putSettings(any, profileId: 'p1')).thenAnswer((_) async {});
+
+      await dataSource.saveSettings(userId, {'weeklyTargetHours': 35},
+          profileId: 'p1');
+      await dataSource.saveSettings(userId, {'vacationDaysPerYear': 25},
+          profileId: 'p1');
+
+      final captured = verify(mockApi.putSettings(captureAny, profileId: 'p1'))
+          .captured
+          .cast<Map>();
+      expect(captured[0], {'weeklyTargetHours': 35, 'vacationDaysPerYear': 28});
+      expect(captured[1], {'weeklyTargetHours': 40, 'vacationDaysPerYear': 25});
+    });
   });
 
   group(

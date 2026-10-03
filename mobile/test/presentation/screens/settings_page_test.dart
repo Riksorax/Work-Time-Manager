@@ -10,6 +10,9 @@ import 'package:flutter_work_time/domain/entities/user_entity.dart';
 import 'package:flutter_work_time/presentation/screens/settings_page.dart';
 import 'package:flutter_work_time/presentation/state/settings_state.dart';
 import 'package:flutter_work_time/presentation/view_models/auth_view_model.dart';
+import 'package:flutter_work_time/domain/utils/leave_balance_utils.dart';
+import 'package:flutter_work_time/presentation/state/leave_balance_state.dart';
+import 'package:flutter_work_time/presentation/view_models/leave_balance_view_model.dart';
 import 'package:flutter_work_time/presentation/view_models/settings_view_model.dart';
 import 'package:flutter_work_time/presentation/view_models/theme_view_model.dart';
 import 'package:flutter_work_time/presentation/widgets/add_adjustment_modal.dart';
@@ -30,6 +33,15 @@ abstract class SettingsActions {
   Future<void> updateWorkdays(List<int> days);
   Future<void> updateTimezoneOverride(String? timezone);
   Future<void> updateLocale(String locale);
+  Future<void> updateVacationDays(int days);
+}
+
+class _FakeLeaveViewModel extends LeaveBalanceViewModel {
+  @override
+  LeaveBalanceState build() => const LeaveBalanceState(
+        balance: LeaveBalance(
+            year: 2026, entitlement: 30, taken: 12, remaining: 18, sickDays: 0),
+      );
 }
 
 @GenerateMocks([SettingsActions, SignOut, DeleteAccount])
@@ -46,6 +58,16 @@ void main() {
   });
 
   setUp(() {
+    // Hohes Fenster: die Liste baut lazy, die Urlaubs-Zeile/-Karte (#278)
+    // schiebt sonst weiter unten liegende Einträge aus dem Viewport.
+    final view = TestWidgetsFlutterBinding.ensureInitialized()
+        .platformDispatcher
+        .implicitView!;
+    view.physicalSize = const Size(800, 2400);
+    view.devicePixelRatio = 1.0;
+    addTearDown(view.resetPhysicalSize);
+    addTearDown(view.resetDevicePixelRatio);
+
     mockActions = MockSettingsActions();
     mockSignOut = MockSignOut();
     mockDeleteAccount = MockDeleteAccount();
@@ -71,6 +93,7 @@ void main() {
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
         settingsViewModelProvider.overrideWith(() => settingsViewModel),
+        leaveBalanceViewModelProvider.overrideWith(_FakeLeaveViewModel.new),
         themeViewModelProvider.overrideWith(() => themeViewModel),
         authStateProvider.overrideWithValue(authState),
         signOutProvider.overrideWithValue(mockSignOut),
@@ -89,6 +112,42 @@ void main() {
       ),
     );
   }
+
+  group('SettingsPage Urlaub (#278)', () {
+    testWidgets(
+        'zeigt Anspruch, Resturlaub-Karte (ohne Premium), Modal speichert',
+        (tester) async {
+      when(mockActions.updateVacationDays(any)).thenAnswer((_) async {});
+      final settingsViewModel = FakeSettingsViewModel(
+        initialState: const AsyncValue.data(SettingsState(
+          settings: SettingsEntity(vacationDaysPerYear: 28),
+          overtimeBalance: Duration.zero,
+        )),
+        actions: mockActions,
+      );
+      final themeViewModel = FakeThemeViewModel(
+          initialState: ThemeMode.system, actions: mockActions);
+
+      await tester.pumpWidget(createSubject(
+        settingsViewModel: settingsViewModel,
+        themeViewModel: themeViewModel,
+        authState: const AsyncValue.data(null),
+        isPremium: false,
+      ));
+
+      expect(find.text('Urlaubsanspruch pro Jahr'), findsOneWidget);
+      expect(find.text('28 Tage'), findsOneWidget);
+      expect(find.text('18 von 30 Tagen'), findsOneWidget);
+
+      await tester.tap(find.text('Urlaubsanspruch pro Jahr'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextFormField), '25');
+      await tester.tap(find.text('Speichern'));
+      await tester.pumpAndSettle();
+
+      verify(mockActions.updateVacationDays(25)).called(1);
+    });
+  });
 
   group('SettingsPage Display', () {
     testWidgets('displays current settings correctly', (tester) async {
@@ -736,6 +795,11 @@ class FakeSettingsViewModel extends SettingsViewModel {
   @override
   Future<void> updateLocale(String locale) async {
     await actions.updateLocale(locale);
+  }
+
+  @override
+  Future<void> updateVacationDaysPerYear(int days) async {
+    await actions.updateVacationDays(days);
   }
 }
 

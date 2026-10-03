@@ -152,6 +152,10 @@ class _FakeSettingsRepository implements SettingsRepository {
   String getLocale() => 'de';
   @override
   Future<void> setLocale(String locale) async {}
+  @override
+  int getVacationDaysPerYear() => 30;
+  @override
+  Future<void> setVacationDaysPerYear(int days) async {}
 }
 
 class _FakeGetTodayWorkEntry implements GetTodayWorkEntry {
