@@ -9,6 +9,7 @@ import 'package:flutter_work_time/core/utils/time_precision.dart';
 import '../../core/providers/providers.dart' as core_providers;
 import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/services/break_calculator_service.dart';
+import '../../domain/utils/iso_week.dart';
 import '../../domain/utils/overtime_utils.dart';
 import '../state/monthly_report_state.dart';
 import '../state/reports_state.dart';
@@ -264,15 +265,6 @@ class ReportsViewModel extends Notifier<ReportsState> {
     );
   }
 
-  int _getWeekNumber(DateTime date) {
-    final firstWeek = DateTime(date.year, 1, 4);
-    final dayOfWeek = firstWeek.weekday;
-    final firstDayOfFirstWeek =
-        firstWeek.subtract(Duration(days: dayOfWeek - 1));
-    final diff = date.difference(firstDayOfFirstWeek).inDays;
-    return (diff / 7).floor() + 1;
-  }
-
   WorkEntryEntity applyBreakCalculation(WorkEntryEntity entry) {
     // Keine Pausenberechnung für Urlaub, Krank oder Feiertag —
     // diese Eintragstypen erfüllen das Soll automatisch ohne Pausenabzug.
@@ -418,7 +410,7 @@ class ReportsViewModel extends Notifier<ReportsState> {
     final Map<int, Set<DateTime>> weekToWorkDays = {};
     for (var entry in _monthlyEntries) {
       if (entry.workStart != null) {
-        final weekNum = _getWeekNumber(entry.date);
+        final weekNum = isoWeekNumber(entry.date);
         final dayOnly =
             DateTime(entry.date.year, entry.date.month, entry.date.day);
         weekToWorkDays.putIfAbsent(weekNum, () => {}).add(dayOnly);
@@ -453,7 +445,7 @@ class ReportsViewModel extends Notifier<ReportsState> {
         dailyWork[dayOnly] =
             (dailyWork[dayOnly] ?? Duration.zero) + entry.effectiveWorkDuration;
 
-        final weekNumber = _getWeekNumber(entry.date);
+        final weekNumber = isoWeekNumber(entry.date);
         weeklyWork[weekNumber] = (weeklyWork[weekNumber] ?? Duration.zero) +
             entry.effectiveWorkDuration;
       }
