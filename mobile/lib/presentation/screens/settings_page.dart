@@ -20,7 +20,9 @@ import '../widgets/add_adjustment_modal.dart';
 import '../widgets/edit_language_dialog.dart';
 import '../widgets/edit_target_hours_modal.dart';
 import '../widgets/edit_timezone_modal.dart';
+import '../widgets/edit_vacation_days_modal.dart';
 import '../widgets/edit_workdays_modal.dart';
+import '../widgets/leave_balance_card.dart';
 import '../widgets/notification_settings_dialog.dart';
 import '../widgets/pin_setup_dialog.dart';
 import '../widgets/common/responsive_center.dart';
@@ -88,6 +90,17 @@ class SettingsPage extends ConsumerWidget {
                 );
               },
             ),
+            ListTile(
+              title: Text(l10n.vacationEntitlementTitle),
+              subtitle: Text(
+                  l10n.vacationEntitlementValue(settings.vacationDaysPerYear)),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                showEditVacationDaysModal(
+                    context, settings.vacationDaysPerYear);
+              },
+            ),
+            const LeaveBalanceCard(),
             ListTile(
               title: Text(l10n.dailyTargetHoursTitle),
               subtitle: Text(

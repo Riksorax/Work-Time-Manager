@@ -497,6 +497,25 @@ class MockSettingsRepository extends _i1.Mock
         returnValue: _i5.Future<void>.value(),
         returnValueForMissingStub: _i5.Future<void>.value(),
       ) as _i5.Future<void>);
+
+  @override
+  int getVacationDaysPerYear() => (super.noSuchMethod(
+        Invocation.method(
+          #getVacationDaysPerYear,
+          [],
+        ),
+        returnValue: 0,
+      ) as int);
+
+  @override
+  _i5.Future<void> setVacationDaysPerYear(int? days) => (super.noSuchMethod(
+        Invocation.method(
+          #setVacationDaysPerYear,
+          [days],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 }
 
 /// A class which mocks [SaveWorkEntry].

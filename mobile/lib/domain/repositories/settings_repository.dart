@@ -129,4 +129,11 @@ abstract class SettingsRepository {
 
   /// Speichert die Sprache der App-Oberfläche.
   Future<void> setLocale(String locale);
+
+  /// Ruft den Jahres-Urlaubsanspruch (ganze Tage, 0-366) des aktiven
+  /// Arbeitszeit-Profils ab. Default 30. Siehe #278.
+  int getVacationDaysPerYear();
+
+  /// Speichert den Jahres-Urlaubsanspruch des aktiven Arbeitszeit-Profils.
+  Future<void> setVacationDaysPerYear(int days);
 }

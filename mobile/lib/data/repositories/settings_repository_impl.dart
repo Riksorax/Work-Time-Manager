@@ -5,6 +5,7 @@ import 'package:flutter_work_time/core/utils/timezone_utils.dart';
 import '../../domain/entities/app_theme_mode.dart';
 import '../../domain/entities/bundesland.dart';
 import '../../domain/repositories/settings_repository.dart';
+import '../../domain/utils/leave_balance_utils.dart';
 import '../datasources/remote/firestore_datasource.dart';
 
 class SettingsRepositoryImpl implements SettingsRepository {
@@ -51,6 +52,9 @@ class SettingsRepositoryImpl implements SettingsRepository {
   // Generiere userId- (und profil-)spezifische Keys für Einstellungen
   String get _targetHoursKey => 'target_weekly_hours_$_userId$_profileSuffix';
   String get _workdaysKey => 'workdays_$_userId$_profileSuffix';
+  // Urlaubsanspruch ist profil-spezifisch (siehe #278).
+  String get _vacationDaysKey =>
+      'vacation_days_per_year_$_userId$_profileSuffix';
   // Alter Schlüssel (reine Anzahl statt konkreter Wochentage) - nur noch
   // zur Migration bestehender Nutzer beim ersten Lesen relevant (#217).
   String get _legacyWorkdaysPerWeekKey =>
@@ -109,8 +113,29 @@ class SettingsRepositoryImpl implements SettingsRepository {
     _syncToFirestore({'workdays': days});
   }
 
+  @override
+  int getVacationDaysPerYear() {
+    try {
+      final value = _prefs.getInt(_vacationDaysKey);
+      if (value != null && value >= 0 && value <= maxVacationDaysPerYear) {
+        return value;
+      }
+    } catch (_) {
+      // Fremdtyp unter dem Key - auf Default zurückfallen.
+    }
+    return defaultVacationDaysPerYear;
+  }
+
+  @override
+  Future<void> setVacationDaysPerYear(int days) async {
+    logger.i(
+        '[SettingsRepository] setVacationDaysPerYear for user $_userId: $days');
+    await _prefs.setInt(_vacationDaysKey, days);
+    _syncToFirestore({'vacationDaysPerYear': days});
+  }
+
   /// Beim Login: Firestore-Einstellungen in SharedPreferences übernehmen.
-  /// Nur weeklyTargetHours und workdays werden synchronisiert —
+  /// Nur weeklyTargetHours, workdays und vacationDaysPerYear werden synchronisiert —
   /// Benachrichtigungen sind gerätespezifisch.
   Future<void> syncFromFirestore() async {
     if (_userId == 'local' || _userId.isEmpty) return;
@@ -132,6 +157,13 @@ class SettingsRepositoryImpl implements SettingsRepository {
           _workdaysKey,
           List.generate(legacyCount.clamp(0, 7), (i) => i + 1).join(','),
         );
+      }
+      final vacation = data['vacationDaysPerYear'];
+      if (vacation is num &&
+          vacation == vacation.toInt() &&
+          vacation >= 0 &&
+          vacation <= maxVacationDaysPerYear) {
+        await _prefs.setInt(_vacationDaysKey, vacation.toInt());
       }
       logger.i('[SettingsRepository] Einstellungen von Firestore geladen.');
     } catch (e) {

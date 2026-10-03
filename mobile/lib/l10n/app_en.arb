@@ -358,5 +358,21 @@
   "recoveryCodeCopyAction": "Copy code",
   "recoveryCodeSavedConfirm": "I have saved the code",
   "recoveryCodeRegeneratedHint": "Your previous recovery code will become invalid.",
-  "resetPinAction": "Reset PIN"
+  "resetPinAction": "Reset PIN",
+  "vacationEntitlementTitle": "Vacation entitlement per year",
+  "vacationEntitlementValue": "{days} days",
+  "editVacationEntitlementTitle": "Set vacation entitlement",
+  "vacationEntitlementFieldLabel": "Vacation days per year",
+  "vacationEntitlementHint": "Whole days from 0 to 366. Applies to the current work profile.",
+  "vacationEntitlementInvalid": "Please enter a whole number from 0 to 366.",
+  "remainingVacationTitle": "Remaining vacation",
+  "remainingVacationOf": "{remaining} of {total} days",
+  "vacationTakenLabel": "Taken",
+  "vacationEntitlementLabel": "Entitlement",
+  "vacationOverEntitlement": "{days, plural, =1{1 day over entitlement} other{{days} days over entitlement}}",
+  "sickDaysYearLabel": "Sick days {year}",
+  "leaveLoadError": "Could not load vacation data.",
+  "leaveRetry": "Retry",
+  "vacationEntitlementZero": "You have not set a vacation entitlement.",
+  "leavePastYearNote": "Remaining vacation is only shown for the current year."
 }

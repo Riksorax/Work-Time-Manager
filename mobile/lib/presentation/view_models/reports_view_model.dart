@@ -14,6 +14,7 @@ import '../../domain/utils/overtime_utils.dart';
 import '../state/monthly_report_state.dart';
 import '../state/reports_state.dart';
 import '../state/weekly_report_state.dart';
+import 'leave_balance_view_model.dart' show leaveBalanceViewModelProvider;
 
 final reportsViewModelProvider =
     NotifierProvider<ReportsViewModel, ReportsState>(ReportsViewModel.new);
@@ -150,6 +151,7 @@ class ReportsViewModel extends Notifier<ReportsState> {
     try {
       final workRepository = ref.read(core_providers.workRepositoryProvider);
       await workRepository.saveWorkEntry(entry);
+      ref.invalidate(leaveBalanceViewModelProvider);
 
       final selectedDate = state.selectedDay ?? DateTime.now();
       await _loadWorkEntriesForMonth(selectedDate.year, selectedDate.month);
@@ -165,6 +167,7 @@ class ReportsViewModel extends Notifier<ReportsState> {
     try {
       final workRepository = ref.read(core_providers.workRepositoryProvider);
       await workRepository.deleteWorkEntry(entryId);
+      ref.invalidate(leaveBalanceViewModelProvider);
 
       // Nach dem Löschen die Einträge für den aktuellen Monat neu laden
       final selectedDate = state.selectedDay ?? DateTime.now();
@@ -539,6 +542,8 @@ class ReportsViewModel extends Notifier<ReportsState> {
         await workRepository.saveWorkEntry(entry);
       }
 
+      ref.invalidate(leaveBalanceViewModelProvider);
+
       // Clear selection, reset multi-select mode and reload data
       final selectedDate = state.selectedDay ?? DateTime.now();
       clearDateSelection();
@@ -547,6 +552,8 @@ class ReportsViewModel extends Notifier<ReportsState> {
     } catch (e, stackTrace) {
       logger.e('Fehler beim Speichern von Batch-Einträgen: $e',
           stackTrace: stackTrace);
+      // Teilweise gespeicherte Einträge können den Resturlaub ändern.
+      ref.invalidate(leaveBalanceViewModelProvider);
       state = state.copyWith(isLoading: false);
     }
   }

@@ -22,6 +22,7 @@ import '../state/reports_state.dart';
 import '../state/weekly_report_state.dart';
 import '../state/yearly_report_state.dart';
 import '../view_models/insights_view_model.dart';
+import '../view_models/leave_balance_view_model.dart';
 import '../view_models/reports_view_model.dart';
 import '../view_models/settings_view_model.dart';
 import '../view_models/yearly_report_view_model.dart';
@@ -1530,6 +1531,7 @@ class _YearlyReportViewState extends ConsumerState<YearlyReportView> {
                         Text('${yearlyState.totalVacationDays}'),
                       ],
                     ),
+                    YearlyLeaveRows(year: yearlyState.year),
                     const SizedBox(height: 12),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -2822,6 +2824,47 @@ class _MonthlyReportPlaceholder extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Zeilen "Urlaubsanspruch"/"Resturlaub" im Jahresreport (siehe #278).
+/// Der Resturlaub wird nur für das laufende Jahr berechnet; für andere Jahre
+/// erscheint ein Hinweis.
+class YearlyLeaveRows extends ConsumerWidget {
+  final int year;
+
+  const YearlyLeaveRows({super.key, required this.year});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final currentYear = ref.watch(leaveBalanceNowProvider)().year;
+
+    if (year != currentYear) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 12),
+        child: Text(l10n.leavePastYearNote,
+            style: Theme.of(context).textTheme.bodySmall),
+      );
+    }
+
+    final balance = ref.watch(leaveBalanceViewModelProvider).balance;
+    if (balance == null) return const SizedBox.shrink();
+
+    Widget row(String label, String value) => Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [Text(label), Text(value)],
+          ),
+        );
+
+    return Column(
+      children: [
+        row(l10n.vacationEntitlementLabel, '${balance.entitlement}'),
+        row(l10n.remainingVacationTitle, '${balance.remaining}'),
+      ],
     );
   }
 }
