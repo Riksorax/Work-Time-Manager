@@ -8,6 +8,7 @@ import {
   WeeklyReport,
   WeeklyReportDay,
 } from '../models/reports.models';
+import { getIsoWeekBounds, getIsoWeekNumber } from '../../shared/utils/iso-week.util';
 import { roundMsToMinute } from '../../shared/utils/time-precision.util';
 
 // ─── Module-level helpers (no Angular DI) ─────────────────────────────────────
@@ -45,11 +46,7 @@ function netWorkMs(entry: WorkEntry): number {
 }
 
 function weekBounds(date: Date): { start: Date; end: Date } {
-  const d = startOfDay(date);
-  const dow = d.getDay() === 0 ? 7 : d.getDay(); // ISO: Mon=1, Sun=7
-  const start = new Date(d.getTime() - (dow - 1) * 86400000);
-  const end   = new Date(start.getTime() + 6 * 86400000);
-  return { start, end };
+  return getIsoWeekBounds(date);
 }
 
 function isoWeekday(d: Date): number {
@@ -65,28 +62,8 @@ function dailyTargetMs(settings: UserSettings): number {
 
 // ─── Pure functions ─────────────────────────────────────────────────────────────
 
-export function getIsoWeekNumber(date: Date): number {
-  const year = date.getFullYear();
-  const jan4 = new Date(year, 0, 4);
-  const dow4 = jan4.getDay() === 0 ? 7 : jan4.getDay();
-  const firstMonday = new Date(jan4.getTime() - (dow4 - 1) * 86400000);
-  const d = startOfDay(date);
-  const diff = d.getTime() - firstMonday.getTime();
-  const week = Math.floor(diff / (7 * 86400000)) + 1;
-
-  if (week < 1) {
-    // Falls in letzte Woche des Vorjahres
-    return getIsoWeekNumber(new Date(year - 1, 11, 28));
-  }
-
-  // Falls in erste Woche des Folgejahres
-  const jan4Next = new Date(year + 1, 0, 4);
-  const dow4Next = jan4Next.getDay() === 0 ? 7 : jan4Next.getDay();
-  const firstMondayNext = new Date(jan4Next.getTime() - (dow4Next - 1) * 86400000);
-  if (d >= firstMondayNext) return 1;
-
-  return week;
-}
+// Re-Export: gemeinsame DST-sichere Util (shared/utils/iso-week.util.ts)
+export { getIsoWeekNumber };
 
 export function calculateDailyStat(
   monthEntries: WorkEntry[],
