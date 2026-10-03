@@ -31,6 +31,90 @@ void main() {
     });
   });
 
+  group('getGermanHolidays - Zeitumstellung (DST)', () {
+    void expectBeweglicheFeiertage(
+      int year, {
+      required DateTime karfreitag,
+      required DateTime ostermontag,
+      required DateTime himmelfahrt,
+      required DateTime pfingstmontag,
+      required DateTime fronleichnam,
+    }) {
+      final holidays = getGermanHolidays(year, Bundesland.bayern);
+      expect(holidays, contains(karfreitag));
+      expect(holidays, contains(ostermontag));
+      expect(holidays, contains(himmelfahrt));
+      expect(holidays, contains(pfingstmontag));
+      expect(holidays, contains(fronleichnam));
+    }
+
+    test('2024 (Ostern am Umstellungstag)', () {
+      expectBeweglicheFeiertage(
+        2024,
+        karfreitag: DateTime(2024, 3, 29),
+        ostermontag: DateTime(2024, 4, 1),
+        himmelfahrt: DateTime(2024, 5, 9),
+        pfingstmontag: DateTime(2024, 5, 20),
+        fronleichnam: DateTime(2024, 5, 30),
+      );
+    });
+
+    test('2027 (Ostern 28.3.)', () {
+      expectBeweglicheFeiertage(
+        2027,
+        karfreitag: DateTime(2027, 3, 26),
+        ostermontag: DateTime(2027, 3, 29),
+        himmelfahrt: DateTime(2027, 5, 6),
+        pfingstmontag: DateTime(2027, 5, 17),
+        fronleichnam: DateTime(2027, 5, 27),
+      );
+    });
+
+    test('2008 (Ostern 23.3.)', () {
+      expectBeweglicheFeiertage(
+        2008,
+        karfreitag: DateTime(2008, 3, 21),
+        ostermontag: DateTime(2008, 3, 24),
+        himmelfahrt: DateTime(2008, 5, 1),
+        pfingstmontag: DateTime(2008, 5, 12),
+        fronleichnam: DateTime(2008, 5, 22),
+      );
+    });
+
+    test('alle Rückgabe-DateTimes sind lokale Mitternacht', () {
+      for (final year in [2008, 2013, 2016, 2024, 2025, 2027, 2035]) {
+        for (final land in [Bundesland.bayern, Bundesland.sachsen]) {
+          for (final d in getGermanHolidays(year, land)) {
+            final reason = '$year $land $d';
+            expect(d.hour, 0, reason: reason);
+            expect(d.minute, 0, reason: reason);
+            expect(d.second, 0, reason: reason);
+            expect(d.millisecond, 0, reason: reason);
+            expect(d.isUtc, isFalse, reason: reason);
+          }
+        }
+      }
+    });
+
+    test('getGermanHolidayNames: Schlüssel sind reine Datumswerte', () {
+      for (final year in [2024, 2027]) {
+        final names = getGermanHolidayNames(year, Bundesland.bayern);
+        final easterMonday =
+            year == 2024 ? DateTime(2024, 4, 1) : DateTime(2027, 3, 29);
+        final himmelfahrt =
+            year == 2024 ? DateTime(2024, 5, 9) : DateTime(2027, 5, 6);
+        final pfingstmontag =
+            year == 2024 ? DateTime(2024, 5, 20) : DateTime(2027, 5, 17);
+        final fronleichnam =
+            year == 2024 ? DateTime(2024, 5, 30) : DateTime(2027, 5, 27);
+        expect(names[easterMonday], 'Ostermontag');
+        expect(names[himmelfahrt], 'Christi Himmelfahrt');
+        expect(names[pfingstmontag], 'Pfingstmontag');
+        expect(names[fronleichnam], 'Fronleichnam');
+      }
+    });
+  });
+
   group('getGermanHolidays - landesspezifische Feiertage', () {
     test(
         'Bayern hat Heilige Drei Könige, Fronleichnam, Mariä Himmelfahrt, Allerheiligen',

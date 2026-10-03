@@ -48,6 +48,9 @@ jobs:
       - name: Test
         run: flutter test
 
+      - name: Test (TZ=Europe/Berlin, Domain-Utils)
+        run: TZ=Europe/Berlin flutter test test/domain/utils
+
   web:
     name: Angular Build Check
     runs-on: ubuntu-latest
