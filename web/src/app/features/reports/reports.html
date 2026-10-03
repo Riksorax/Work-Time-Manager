@@ -431,6 +431,37 @@
         </div>
       </mat-tab>
 
+      <!-- ════════════════════════════════════════════════════════ TAB: JAHR ══ -->
+      <!-- Frei (kein Premium-/Auth-Gate): anonyme Nutzer sehen lokal berechnete Werte. -->
+      <mat-tab [label]="'reports.tabYearly' | translate">
+        <div class="tab-content">
+          <div class="yearly-layout">
+            <div class="month-nav" role="navigation" [attr.aria-label]="'reports.yearNavAria' | translate">
+              <button mat-icon-button (click)="leave.navigateYear(-1)"
+                      [disabled]="!leave.canGoPrevYear()"
+                      [attr.aria-label]="'reports.prevYearAria' | translate">
+                <mat-icon>chevron_left</mat-icon>
+              </button>
+              <span class="month-label" aria-live="polite">{{ leave.year() }}</span>
+              <button mat-icon-button (click)="leave.navigateYear(1)"
+                      [disabled]="!leave.canGoNextYear()"
+                      [attr.aria-label]="'reports.nextYearAria' | translate">
+                <mat-icon>chevron_right</mat-icon>
+              </button>
+            </div>
+
+            <app-leave-balance-card [report]="leave.report()"
+                                    [state]="leave.state()"
+                                    [showRemaining]="leave.isCurrentYear()"
+                                    [showEmptyHint]="true"
+                                    [editable]="true"
+                                    [localOnly]="!svc.isLoggedIn()"
+                                    (retry)="leave.refresh()"
+                                    (editEntitlement)="goToSettings()" />
+          </div>
+        </div>
+      </mat-tab>
+
     </mat-tab-group>
   </div>
 }

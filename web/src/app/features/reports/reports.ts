@@ -22,6 +22,9 @@ import { ReportsService } from './reports.service';
 import { WebPremiumService } from '../../core/services/web-premium';
 import { WorkEntry, WorkEntryType } from '../../shared/models/index';
 import { toDateKey } from '../../domain/services/report-calculator';
+import { Router } from '@angular/router';
+import { LeaveBalanceService } from '../../core/services/leave-balance';
+import { LeaveBalanceCardComponent } from '../../shared/components/leave-balance-card/leave-balance-card';
 
 @Component({
   selector: 'app-reports',
@@ -33,6 +36,7 @@ import { toDateKey } from '../../domain/services/report-calculator';
     MatProgressSpinnerModule,
     MatTabsModule,
     CalendarComponent,
+    LeaveBalanceCardComponent,
     TranslatePipe,
   ],
   templateUrl: './reports.html',
@@ -41,6 +45,8 @@ import { toDateKey } from '../../domain/services/report-calculator';
 })
 export class ReportsComponent {
   protected readonly svc        = inject(ReportsService);
+  protected readonly leave      = inject(LeaveBalanceService);
+  private  readonly router      = inject(Router);
   private  readonly premiumSvc  = inject(WebPremiumService);
   private  readonly dialog      = inject(MatDialog);
   private  readonly snackbar    = inject(MatSnackBar);
@@ -50,6 +56,10 @@ export class ReportsComponent {
   protected readonly isRestoring  = this.premiumSvc.isRestoring;
   protected readonly isPurchasing = this.premiumSvc.isPurchasing;
   protected readonly isRcConfigured = this.premiumSvc.isConfigured;
+
+  goToSettings(): void {
+    void this.router.navigate(['/settings']);
+  }
 
   async onRestorePurchases(): Promise<void> {
     try {

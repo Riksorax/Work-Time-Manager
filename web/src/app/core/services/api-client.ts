@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, firstValueFrom, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Break, UserSettings, WorkEntry, WorkEntryType, WorkProfile } from '../../shared/models';
+import { YearlyLeaveReport } from '../../domain/models/leave.models';
 import { DailyStat, MonthlyReport, WeeklyReport } from '../../domain/models/reports.models';
 import {
   roundToMinute,
@@ -180,6 +181,10 @@ export class ApiClient {
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
+
+  getYearlyLeave(year: number, profileId?: string): Observable<YearlyLeaveReport> {
+    return this.http.get<YearlyLeaveReport>(`${this.base}/reports/yearly/${year}`, { params: this._params(profileId) });
+  }
 
   private _params(profileId?: string): HttpParams | undefined {
     return profileId ? new HttpParams().set('profileId', profileId) : undefined;

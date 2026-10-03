@@ -33,15 +33,18 @@ core/
 │   ├── work-profile.ts    WorkProfileService — aktives/zusätzliche Arbeitszeit-Profile (siehe #138/#244), profileId für ApiClient + Firestore-Pfade
 │   ├── profile.ts         ProfileService — isPremium Signal (Firestore-Flag)
 │   ├── theme.ts           ThemeService — isDarkMode Signal + localStorage-Persistenz
+│   ├── leave-balance.ts   Hybrid — LeaveBalanceService: Jahres-Urlaubsübersicht (eingeloggt `ApiClient.getYearlyLeave`, anonym lokal via `calculateYearlyLeave`), `refresh()` nach Änderungen (#278)
 │   ├── data-sync.ts       DataSyncService — localStorage→Firebase-Migration bei Login
 │   └── web-premium.ts     WebPremiumService — RC Billing Paywall + Kauf-Wiederherstellung
 
 domain/
 ├── models/
-│   └── reports.models.ts  DailyStat, WeeklyReport, MonthlyReport
+│   ├── reports.models.ts  DailyStat, WeeklyReport, MonthlyReport
+│   └── leave.models.ts    YearlyLeaveReport (1:1 Backend-DTO)
 ├── services/
 │   ├── break-calculator.ts   Pure — Pflichtpausen (30min/6h, 45min/9h)
-│   └── report-calculator.ts  Pure — ISO-8601-Wochennummer, DailyStat, Weekly/MonthlyReport
+│   ├── report-calculator.ts  Pure — ISO-8601-Wochennummer, DailyStat, Weekly/MonthlyReport
+│   └── leave-calculator.ts   Pure — calculateYearlyLeave (Urlaubs-/Kranktage je Jahr, anonyme Nutzer)
 └── utils/
     └── overtime.utils.ts  Pure — getEffectiveDailyTarget, getWeekEntriesForDate, isSameDay
 
@@ -54,6 +57,7 @@ shared/
 ├── components/
 │   ├── calendar/               CalendarComponent — Multi-Select + Pointer-Drag
 │   ├── edit-entry-dialog/      EditEntryDialogComponent
+│   ├── leave-balance-card/     LeaveBalanceCardComponent — reine Darstellung der Urlaubsübersicht (Dashboard, Settings, Reports)
 │   ├── time-input/             TimeInputComponent
 │   └── work-profile-switcher/  WorkProfileSwitcherComponent + Add-/Manage-Dialoge (siehe #138/#244)
 └── models/index.ts        WorkEntry, WorkEntryType, Break, UserSettings, UserProfile, WorkProfile
@@ -66,8 +70,8 @@ Jedes Feature hat einen eigenen `*.service.ts` der Core-Services aggregiert:
 | Feature-Service | Aggregiert |
 |---|---|
 | `DashboardService` | WorkEntryService, OvertimeService, SettingsService |
-| `ReportsService` | WorkEntryService, SettingsService, ProfileService, AuthService, OvertimeService |
-| `SettingsPageService` | SettingsService, AuthService, ProfileService, OvertimeService, ThemeService, DataSyncService |
+| `ReportsService` | WorkEntryService, SettingsService, ProfileService, AuthService, OvertimeService, LeaveBalanceService |
+| `SettingsPageService` | SettingsService, AuthService, ProfileService, OvertimeService, ThemeService, DataSyncService, LeaveBalanceService |
 
 ### Key Angular-Regeln
 

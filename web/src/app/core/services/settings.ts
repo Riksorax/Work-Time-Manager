@@ -4,7 +4,8 @@ import { BehaviorSubject, Observable, combineLatest, switchMap } from 'rxjs';
 import { AuthService } from '../auth/auth';
 import { ApiClient } from './api-client';
 import { WorkProfileService } from './work-profile';
-import { UserSettings } from '../../shared/models';
+import { DEFAULT_SETTINGS, UserSettings } from '../../shared/models';
+import { normalizeVacationDays } from '../../shared/utils/vacation-days.util';
 import { profileScopedPath } from '../../shared/utils/work-profile-path.util';
 
 const LS_KEY = 'user_settings';
@@ -22,6 +23,15 @@ function migrateWorkdays(raw: Partial<UserSettings> & { workdaysPerWeek?: number
   return raw;
 }
 
+/** Merged Rohdaten (Firestore/localStorage) mit Defaults und normalisiert den Urlaubsanspruch. */
+function mergeSettings(raw: Partial<UserSettings> & { workdaysPerWeek?: number }): UserSettings {
+  return {
+    ...DEFAULT_SETTINGS,
+    ...migrateWorkdays(raw),
+    vacationDaysPerYear: normalizeVacationDays(raw.vacationDaysPerYear),
+  };
+}
+
 @Injectable({ providedIn: 'root' })
 export class SettingsService {
   private readonly firestore   = inject(Firestore);
@@ -29,17 +39,6 @@ export class SettingsService {
   private readonly injector    = inject(Injector);
   private readonly api         = inject(ApiClient);
   private readonly workProfile = inject(WorkProfileService);
-
-  private readonly defaultSettings: UserSettings = {
-    weeklyTargetHours: 40,
-    workdays: [1, 2, 3, 4, 5],
-    notificationsEnabled: false,
-    notificationTime: '08:00',
-    notificationDays: [1, 2, 3, 4, 5],
-    notifyWorkStart: false,
-    notifyWorkEnd: false,
-    notifyBreaks: false,
-  };
 
   private readonly _local$ = new BehaviorSubject<UserSettings>(this._localGet());
 
@@ -53,10 +52,7 @@ export class SettingsService {
           runInInjectionContext(this.injector, () => {
             const ref = doc(this.firestore, `${profileScopedPath(user.uid, 'settings', profileId)}/current`);
             unsub = onSnapshot(ref,
-              snap => observer.next({
-                ...this.defaultSettings,
-                ...migrateWorkdays((snap.data() ?? {}) as Partial<UserSettings>),
-              }),
+              snap => observer.next(mergeSettings((snap.data() ?? {}) as Partial<UserSettings>)),
               err  => observer.error(err),
             );
           });
@@ -76,10 +72,10 @@ export class SettingsService {
 
   private _localGet(): UserSettings {
     const raw = localStorage.getItem(LS_KEY);
-    if (!raw) return { ...this.defaultSettings };
+    if (!raw) return { ...DEFAULT_SETTINGS };
     try {
-      return { ...this.defaultSettings, ...migrateWorkdays(JSON.parse(raw) as Partial<UserSettings>) };
-    } catch { return { ...this.defaultSettings }; }
+      return mergeSettings(JSON.parse(raw) as Partial<UserSettings>);
+    } catch { return { ...DEFAULT_SETTINGS }; }
   }
 
   private _localSave(settings: UserSettings): void {

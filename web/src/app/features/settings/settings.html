@@ -81,6 +81,29 @@
 
         <mat-divider />
 
+        <!-- ── Urlaub (#278) ────────────────────────────────────── -->
+        <section class="vacation-section" [attr.aria-label]="'settings.vacationSectionAria' | translate">
+          <h3 class="section-title">{{ 'settings.vacationSectionTitle' | translate }}</h3>
+
+          <mat-list>
+            <button mat-list-item (click)="openEditVacationDaysDialog()"
+                    [attr.aria-label]="'settings.editVacationDaysAria' | translate">
+              <mat-icon matListItemIcon aria-hidden="true">beach_access</mat-icon>
+              <span matListItemTitle>{{ 'settings.vacationDaysLabel' | translate }}</span>
+              <span matListItemLine>{{ 'settings.vacationDaysValue' | translate: { days: svc.settings().vacationDaysPerYear } }}</span>
+              <mat-icon matListItemMeta aria-hidden="true">chevron_right</mat-icon>
+            </button>
+          </mat-list>
+
+          <app-leave-balance-card class="vacation-card"
+                                  [report]="leave.currentYearReport()"
+                                  [state]="leave.currentYearState()"
+                                  [localOnly]="!svc.isLoggedIn()"
+                                  (retry)="leave.refresh()" />
+        </section>
+
+        <mat-divider />
+
         <!-- ── Gleitzeit-Bilanz ─────────────────────────────────── -->
         <section class="overtime-section" [attr.aria-label]="'settings.overtimeSectionAria' | translate">
           <h3 class="section-title">{{ 'settings.overtimeSectionTitle' | translate }}</h3>

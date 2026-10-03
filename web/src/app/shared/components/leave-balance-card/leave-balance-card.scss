@@ -1,0 +1,127 @@
+// Optik analog zur Statistikkarte der Flutter-Jahresübersicht / .summary-card der Reports.
+:host { display: block; }
+
+.leave-card {
+  background: var(--mat-sys-surface-container-low);
+  border-radius: 16px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-sizing: border-box;
+  min-height: 72px;
+
+  @media (min-width: 768px) { padding: 20px 24px; }
+}
+
+.leave-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.leave-icon { color: var(--mat-sys-primary); }
+
+.leave-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.leave-main {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+
+  &--over .leave-remaining { color: var(--mat-sys-error); }
+}
+
+.leave-remaining {
+  font-size: 2.25rem;
+  font-weight: 300;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.leave-of {
+  font-size: 0.9375rem;
+  opacity: 0.75;
+}
+
+// Überschreitung nicht nur über Farbe: Icon + Text
+.leave-over {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--mat-sys-error);
+
+  mat-icon { font-size: 18px; width: 18px; height: 18px; }
+}
+
+.leave-progress {
+  border-radius: 4px;
+  --mdc-linear-progress-active-indicator-color: var(--mat-sys-primary);
+  --mat-progress-bar-active-indicator-color: var(--mat-sys-primary);
+
+  &--over {
+    --mdc-linear-progress-active-indicator-color: var(--mat-sys-error);
+    --mat-progress-bar-active-indicator-color: var(--mat-sys-error);
+  }
+}
+
+.leave-zero {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+  font-size: 0.875rem;
+  opacity: 0.8;
+}
+
+.leave-rows {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.leave-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  dt { font-size: 0.9375rem; opacity: 0.75; }
+  dd { margin: 0; font-size: 1.125rem; font-weight: 500; font-variant-numeric: tabular-nums; }
+}
+
+.leave-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 0.8125rem;
+  opacity: 0.7;
+
+  mat-icon { font-size: 16px; width: 16px; height: 16px; }
+}
+
+.leave-loading {
+  display: flex;
+  justify-content: center;
+  padding: 16px 0;
+}
+
+.leave-error {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+
+  mat-icon { color: var(--mat-sys-error); }
+  .leave-error-text { flex: 1 1 200px; font-size: 0.9375rem; }
+}
