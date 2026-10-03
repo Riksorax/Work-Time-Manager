@@ -11,6 +11,7 @@ import '../view_models/dashboard_view_model.dart';
 import '../view_models/settings_view_model.dart';
 import '../widgets/common/responsive_center.dart';
 import '../widgets/edit_break_modal.dart';
+import '../widgets/holiday_banner.dart';
 import '../widgets/leave_balance_card.dart';
 import '../widgets/work_profile_switcher.dart';
 
@@ -178,35 +179,42 @@ class DashboardScreen extends ConsumerWidget {
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
               child: isWide
-                  ? Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              timerDisplay,
-                              const SizedBox(height: 32),
-                              overtimeStats,
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 32),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              timerControls,
-                              const SizedBox(height: 32),
-                              breaksSection,
-                            ],
-                          ),
+                        const HolidayBanner(),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  timerDisplay,
+                                  const SizedBox(height: 32),
+                                  overtimeStats,
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 32),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  timerControls,
+                                  const SizedBox(height: 32),
+                                  breaksSection,
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     )
                   : Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        const HolidayBanner(),
                         timerDisplay,
                         const SizedBox(height: 24),
                         overtimeStats,

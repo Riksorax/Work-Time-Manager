@@ -109,6 +109,114 @@ Map<DateTime, String> getGermanHolidayNames(int year, Bundesland bundesland) {
   return holidays;
 }
 
+/// Sprachneutrale ID eines gesetzlichen Feiertags (siehe #279). Die
+/// Anzeigenamen werden in der Presentation-Schicht lokalisiert.
+enum GermanHoliday {
+  newYear,
+  goodFriday,
+  easterMonday,
+  labourDay,
+  ascension,
+  whitMonday,
+  germanUnityDay,
+  christmasDay1,
+  christmasDay2,
+  epiphany,
+  corpusChristi,
+  assumption,
+  reformationDay,
+  allSaints,
+  womensDay,
+  worldChildrensDay,
+  repentanceDay,
+}
+
+/// Wie [getGermanHolidayNames], liefert aber sprachneutrale IDs statt
+/// deutscher Namen (siehe #279).
+///
+/// Paritaet: Berechnung und Laenderzuordnung muessen mit
+/// [getGermanHolidayNames] uebereinstimmen. Abgesichert durch den
+/// Paritaetstest in `german_holidays_test.dart`.
+///
+/// Die Schluessel sind reine Datums-DateTimes (lokale Mitternacht, nicht UTC).
+Map<DateTime, GermanHoliday> getGermanHolidayIds(
+    int year, Bundesland bundesland) {
+  final easter = _calculateEasterSunday(year);
+
+  final holidays = <DateTime, GermanHoliday>{
+    DateTime(year, 1, 1): GermanHoliday.newYear,
+    addCalendarDays(easter, -2): GermanHoliday.goodFriday,
+    addCalendarDays(easter, 1): GermanHoliday.easterMonday,
+    DateTime(year, 5, 1): GermanHoliday.labourDay,
+    addCalendarDays(easter, 39): GermanHoliday.ascension,
+    addCalendarDays(easter, 50): GermanHoliday.whitMonday,
+    DateTime(year, 10, 3): GermanHoliday.germanUnityDay,
+    DateTime(year, 12, 25): GermanHoliday.christmasDay1,
+    DateTime(year, 12, 26): GermanHoliday.christmasDay2,
+  };
+
+  final epiphany = DateTime(year, 1, 6);
+  final corpusChristi = addCalendarDays(easter, 60);
+  final assumption = DateTime(year, 8, 15);
+  final reformationDay = DateTime(year, 10, 31);
+  final allSaints = DateTime(year, 11, 1);
+
+  switch (bundesland) {
+    case Bundesland.badenWuerttemberg:
+      holidays[epiphany] = GermanHoliday.epiphany;
+      holidays[corpusChristi] = GermanHoliday.corpusChristi;
+      holidays[allSaints] = GermanHoliday.allSaints;
+      break;
+    case Bundesland.bayern:
+      holidays[epiphany] = GermanHoliday.epiphany;
+      holidays[corpusChristi] = GermanHoliday.corpusChristi;
+      holidays[assumption] = GermanHoliday.assumption;
+      holidays[allSaints] = GermanHoliday.allSaints;
+      break;
+    case Bundesland.berlin:
+      holidays[DateTime(year, 3, 8)] = GermanHoliday.womensDay;
+      break;
+    case Bundesland.brandenburg:
+    case Bundesland.bremen:
+    case Bundesland.hamburg:
+    case Bundesland.niedersachsen:
+    case Bundesland.schleswigHolstein:
+      holidays[reformationDay] = GermanHoliday.reformationDay;
+      break;
+    case Bundesland.hessen:
+      holidays[corpusChristi] = GermanHoliday.corpusChristi;
+      break;
+    case Bundesland.mecklenburgVorpommern:
+      holidays[DateTime(year, 3, 8)] = GermanHoliday.womensDay;
+      holidays[reformationDay] = GermanHoliday.reformationDay;
+      break;
+    case Bundesland.nordrheinWestfalen:
+    case Bundesland.rheinlandPfalz:
+      holidays[corpusChristi] = GermanHoliday.corpusChristi;
+      holidays[allSaints] = GermanHoliday.allSaints;
+      break;
+    case Bundesland.saarland:
+      holidays[corpusChristi] = GermanHoliday.corpusChristi;
+      holidays[assumption] = GermanHoliday.assumption;
+      holidays[allSaints] = GermanHoliday.allSaints;
+      break;
+    case Bundesland.sachsen:
+      holidays[reformationDay] = GermanHoliday.reformationDay;
+      holidays[_bussUndBettag(year)] = GermanHoliday.repentanceDay;
+      break;
+    case Bundesland.sachsenAnhalt:
+      holidays[epiphany] = GermanHoliday.epiphany;
+      holidays[reformationDay] = GermanHoliday.reformationDay;
+      break;
+    case Bundesland.thueringen:
+      holidays[DateTime(year, 9, 20)] = GermanHoliday.worldChildrensDay;
+      holidays[reformationDay] = GermanHoliday.reformationDay;
+      break;
+  }
+
+  return holidays;
+}
+
 /// Berechnet den Ostersonntag nach dem gaußschen Osteralgorithmus
 /// (Meeus/Jones/Butcher, gregorianischer Kalender).
 DateTime _calculateEasterSunday(int year) {
