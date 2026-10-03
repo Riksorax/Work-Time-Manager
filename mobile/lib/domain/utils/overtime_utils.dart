@@ -1,4 +1,5 @@
 import '../entities/work_entry_entity.dart';
+import 'date_utils.dart';
 
 /// Bestimmt das effektive Tages-Soll für einen bestimmten Tag.
 ///
@@ -41,8 +42,8 @@ List<WorkEntryEntity> getWeekEntriesForDate(
 ) {
   final normalizedDate = DateTime(date.year, date.month, date.day);
   final startOfWeek =
-      normalizedDate.subtract(Duration(days: normalizedDate.weekday - 1));
-  final endOfWeek = startOfWeek.add(const Duration(days: 6));
+      addCalendarDays(normalizedDate, -(normalizedDate.weekday - 1));
+  final endOfWeek = addCalendarDays(startOfWeek, 6);
 
   return monthlyEntries.where((entry) {
     final entryDate =

@@ -48,8 +48,9 @@ jobs:
       - name: Test
         run: flutter test
 
-      - name: Test (TZ=Europe/Berlin, Domain-Utils)
-        run: TZ=Europe/Berlin flutter test test/domain/utils
+      # Ganze Suite unter Zeitzone mit Zeitumstellung (#362)
+      - name: Test (TZ=Europe/Berlin)
+        run: TZ=Europe/Berlin flutter test
 
   web:
     name: Angular Build Check

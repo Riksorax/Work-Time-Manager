@@ -100,6 +100,24 @@ void main() {
           .called(1);
     });
 
+    group('selectDate normalisiert auf lokale Mitternacht (#362)', () {
+      for (final date in [
+        DateTime(2025, 10, 26, 23),
+        DateTime(2025, 3, 23, 23),
+      ]) {
+        test('$date', () async {
+          when(mockWorkRepository.getWorkEntriesForMonth(date.year, date.month))
+              .thenAnswer((_) async => []);
+          final viewModel = container.read(reportsViewModelProvider.notifier);
+          await Future.delayed(Duration.zero);
+          viewModel.selectDate(date);
+          await Future.delayed(Duration.zero);
+          expect(container.read(reportsViewModelProvider).selectedDay,
+              DateTime(date.year, date.month, date.day));
+        });
+      }
+    });
+
     group('ISO-Kalenderwoche in monthlyReportState.weeklyWork (#352)', () {
       WorkEntryEntity entryOn(int y, int m, int d) => WorkEntryEntity(
             id: '$y-$m-$d',
