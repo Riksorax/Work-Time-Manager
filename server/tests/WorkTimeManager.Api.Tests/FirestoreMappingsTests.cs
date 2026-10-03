@@ -124,4 +124,82 @@ public class FirestoreMappingsTests
     [InlineData(367, false)]
     public void IsValidVacationDays_EnforcesRange(int? value, bool expected) =>
         Assert.Equal(expected, FirestoreMappings.IsValidVacationDays(value));
+
+    // ── Bundesland (#279) ───────────────────────────────────────────────────
+
+    private static readonly string[] AllBundeslaender =
+    [
+        "badenWuerttemberg", "bayern", "berlin", "brandenburg", "bremen", "hamburg", "hessen",
+        "mecklenburgVorpommern", "niedersachsen", "nordrheinWestfalen", "rheinlandPfalz",
+        "saarland", "sachsen", "sachsenAnhalt", "schleswigHolstein", "thueringen",
+    ];
+
+    [Fact]
+    public void Settings_MissingBundesland_IsNull()
+    {
+        Assert.Null(FirestoreMappings.ToDto(new SettingsDocument()).Bundesland);
+    }
+
+    [Fact]
+    public void Settings_StoredBundesland_IsReturned()
+    {
+        var dto = FirestoreMappings.ToDto(new SettingsDocument { Bundesland = "nordrheinWestfalen" });
+        Assert.Equal("nordrheinWestfalen", dto.Bundesland);
+    }
+
+    [Fact]
+    public void Settings_StoredInvalidBundesland_IsReturnedAsNull()
+    {
+        Assert.Null(FirestoreMappings.ToDto(new SettingsDocument { Bundesland = "atlantis" }).Bundesland);
+    }
+
+    [Fact]
+    public void Settings_PutWithoutBundeslandField_DoesNotMergeBundesland()
+    {
+        var dto = System.Text.Json.JsonSerializer.Deserialize<SettingsDto>(
+            "{\"weeklyTargetHours\":38}",
+            new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web))!;
+
+        Assert.Null(dto.Bundesland);
+        Assert.DoesNotContain("bundesland", FirestoreMappings.SettingsMergeFields(dto));
+    }
+
+    [Fact]
+    public void Settings_PutWithBundesland_MergesBundesland()
+    {
+        var dto = new SettingsDto { Bundesland = "bayern" };
+        Assert.Contains("bundesland", FirestoreMappings.SettingsMergeFields(dto));
+        Assert.Equal("bayern", FirestoreMappings.ToDocument(dto).Bundesland);
+    }
+
+    [Fact]
+    public void Settings_PutWithEmptyBundesland_MergesFieldButStoresNoValue()
+    {
+        // "" = Feld löschen: Merge-Feld ist enthalten, das Dokument trägt aber keinen Text.
+        var dto = new SettingsDto { Bundesland = "" };
+        Assert.Contains("bundesland", FirestoreMappings.SettingsMergeFields(dto));
+        Assert.Null(FirestoreMappings.ToDocument(dto).Bundesland);
+        Assert.True(FirestoreMappings.IsBundeslandDelete(dto));
+        Assert.False(FirestoreMappings.IsBundeslandDelete(new SettingsDto { Bundesland = "bayern" }));
+        Assert.False(FirestoreMappings.IsBundeslandDelete(new SettingsDto()));
+    }
+
+    [Fact]
+    public void IsValidBundesland_AcceptsAll16Names()
+    {
+        Assert.Equal(16, AllBundeslaender.Length);
+        foreach (var name in AllBundeslaender)
+            Assert.True(FirestoreMappings.IsValidBundesland(name), name);
+    }
+
+    [Theory]
+    [InlineData(null, true)]
+    [InlineData("", true)]
+    [InlineData("Bayern", false)]
+    [InlineData("BAYERN", false)]
+    [InlineData(" bayern", false)]
+    [InlineData("nordrhein-westfalen", false)]
+    [InlineData("atlantis", false)]
+    public void IsValidBundesland_NullEmptyOrWhitelist(string? value, bool expected) =>
+        Assert.Equal(expected, FirestoreMappings.IsValidBundesland(value));
 }

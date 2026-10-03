@@ -20,6 +20,20 @@ public sealed class SettingsRepository(FirestoreDb db)
 
     public async Task SaveAsync(string uid, SettingsDto settings, string? profileId, CancellationToken ct)
     {
-        await SettingsDoc(uid, profileId).SetAsync(FirestoreMappings.ToDocument(settings), SetOptions.MergeFields(FirestoreMappings.SettingsMergeFields(settings)), ct);
+        var doc = SettingsDoc(uid, profileId);
+        var document = FirestoreMappings.ToDocument(settings);
+        var options = SetOptions.MergeFields(FirestoreMappings.SettingsMergeFields(settings));
+
+        if (!FirestoreMappings.IsBundeslandDelete(settings))
+        {
+            await doc.SetAsync(document, options, ct);
+            return;
+        }
+
+        // bundesland "" = Feld entfernen (#279): MergeFields würde sonst null schreiben.
+        var batch = db.StartBatch();
+        batch.Set(doc, document, options);
+        batch.Update(doc, new Dictionary<string, object> { ["bundesland"] = FieldValue.Delete });
+        await batch.CommitAsync(ct);
     }
 }

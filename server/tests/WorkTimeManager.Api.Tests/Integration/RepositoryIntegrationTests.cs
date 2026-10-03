@@ -185,6 +185,45 @@ public class RepositoryIntegrationTests(FirestoreEmulatorFixture fixture)
     }
 
     [SkippableFact]
+    public async Task Settings_Bundesland_RoundTripsKeepsOnAbsentAndDeletesOnEmpty()
+    {
+        RequireEmulator();
+        var repo = new SettingsRepository(fixture.Db!);
+        var uid = NewUid();
+
+        Assert.Null((await repo.GetAsync(uid, null, Ct)).Bundesland);
+
+        await repo.SaveAsync(uid, new SettingsDto { Bundesland = "bayern" }, null, Ct);
+        Assert.Equal("bayern", (await repo.GetAsync(uid, null, Ct)).Bundesland);
+
+        await repo.SaveAsync(uid, new SettingsDto { WeeklyTargetHours = 36 }, null, Ct); // alter Client
+        var kept = await repo.GetAsync(uid, null, Ct);
+        Assert.Equal("bayern", kept.Bundesland);
+        Assert.Equal(36, kept.WeeklyTargetHours);
+
+        await repo.SaveAsync(uid, new SettingsDto { Bundesland = "" }, null, Ct);
+        Assert.Null((await repo.GetAsync(uid, null, Ct)).Bundesland);
+    }
+
+    [SkippableFact]
+    public async Task Settings_Bundesland_IsIsolatedPerProfile()
+    {
+        RequireEmulator();
+        var repo = new SettingsRepository(fixture.Db!);
+        var uid = NewUid();
+
+        await repo.SaveAsync(uid, new SettingsDto { Bundesland = "bayern" }, null, Ct);
+        await repo.SaveAsync(uid, new SettingsDto { Bundesland = "berlin" }, "second", Ct);
+
+        Assert.Equal("bayern", (await repo.GetAsync(uid, null, Ct)).Bundesland);
+        Assert.Equal("berlin", (await repo.GetAsync(uid, "second", Ct)).Bundesland);
+
+        await repo.SaveAsync(uid, new SettingsDto { Bundesland = "" }, "second", Ct);
+        Assert.Null((await repo.GetAsync(uid, "second", Ct)).Bundesland);
+        Assert.Equal("bayern", (await repo.GetAsync(uid, null, Ct)).Bundesland);
+    }
+
+    [SkippableFact]
     public async Task WorkEntry_GetYear_SpansMonthsAndIsolatesProfile()
     {
         RequireEmulator();

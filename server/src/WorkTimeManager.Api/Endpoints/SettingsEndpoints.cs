@@ -25,6 +25,8 @@ internal static class SettingsEndpoints
             if (user.GetUid() is not { } uid) return Results.Unauthorized();
             if (!FirestoreMappings.IsValidVacationDays(dto.VacationDaysPerYear))
                 return Results.BadRequest("vacationDaysPerYear muss zwischen 0 und 366 liegen.");
+            if (!FirestoreMappings.IsValidBundesland(dto.Bundesland))
+                return Results.BadRequest("bundesland muss einer der 16 Bundesland-Werte, leer oder nicht gesetzt sein.");
             await repo.SaveAsync(uid, dto, profileId, ct);
             return Results.Ok(await repo.GetAsync(uid, profileId, ct));
         })

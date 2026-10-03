@@ -23,4 +23,11 @@ public sealed record SettingsDto
     /// Wert unangetastet.
     /// </summary>
     public int? VacationDaysPerYear { get; init; }
+
+    /// <summary>
+    /// Bundesland für Feiertage (#279), Dart-Enum-Name (z. B. <c>nordrheinWestfalen</c>). Im GET der
+    /// Wert oder <c>null</c> (nicht ausgewählt). Im PUT: <c>null</c>/fehlend lässt den gespeicherten
+    /// Wert unangetastet, <c>""</c> löscht das Feld, ein ungültiger Wert ergibt 400.
+    /// </summary>
+    public string? Bundesland { get; init; }
 }

@@ -51,6 +51,8 @@ Firestore-Integrationstests übersprungen (`SkippableFact`) — das ist erwartet
 
 **Urlaubsanspruch (#278):** `SettingsDto.vacationDaysPerYear` (0–366, sonst 400; fehlt im Dokument: 30). Im `PUT /api/settings` optional: fehlt das Feld (alte Clients), bleibt der gespeicherte Wert erhalten (`SettingsMergeFields` lässt es aus dem Merge aus).
 
+**Bundesland (#279):** `SettingsDto.bundesland` (`string?`, Dart-Enum-Name der 16 Bundesländer, z. B. `nordrheinWestfalen`; Whitelist in `FirestoreMappings.Bundeslaender`, exakte Schreibweise). Gilt je Profil in `settings/current`, kein neuer Pfad. GET: Wert oder `null` (nicht ausgewählt). PUT: `null`/fehlend lässt den gespeicherten Wert unangetastet (alte Clients), `""` löscht das Feld (`FieldValue.Delete`), ungültiger Wert ergibt 400. Das Backend kennt keine Feiertagslogik.
+
 **Multi-Profile (`profileId`, siehe #239):** `work-entries`/`overtime`/`settings`/`reports`-Endpunkte akzeptieren optional `?profileId=...` (Query-Parameter). Fehlt er oder ist er `"default"`, wird der bestehende, nicht migrierte Pfad verwendet — vollständig abwärtskompatibel für bestehende Clients ohne den Parameter.
 
 ## Rechenlogik
