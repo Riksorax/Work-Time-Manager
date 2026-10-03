@@ -158,6 +158,55 @@ public class RepositoryIntegrationTests(FirestoreEmulatorFixture fixture)
     }
 
     [SkippableFact]
+    public async Task Settings_PutWithoutVacationField_KeepsStoredValue()
+    {
+        RequireEmulator();
+        var repo = new SettingsRepository(fixture.Db!);
+        var uid = NewUid();
+
+        await repo.SaveAsync(uid, new SettingsDto { VacationDaysPerYear = 25 }, null, Ct);
+        await repo.SaveAsync(uid, new SettingsDto { WeeklyTargetHours = 36 }, null, Ct); // alter Client
+
+        var loaded = await repo.GetAsync(uid, null, Ct);
+        Assert.Equal(25, loaded.VacationDaysPerYear);
+        Assert.Equal(36, loaded.WeeklyTargetHours);
+    }
+
+    [SkippableFact]
+    public async Task Settings_NeverSetVacation_DefaultsTo30()
+    {
+        RequireEmulator();
+        var repo = new SettingsRepository(fixture.Db!);
+        var uid = NewUid();
+
+        Assert.Equal(30, (await repo.GetAsync(uid, null, Ct)).VacationDaysPerYear);
+        await repo.SaveAsync(uid, new SettingsDto { WeeklyTargetHours = 36 }, null, Ct);
+        Assert.Equal(30, (await repo.GetAsync(uid, null, Ct)).VacationDaysPerYear);
+    }
+
+    [SkippableFact]
+    public async Task WorkEntry_GetYear_SpansMonthsAndIsolatesProfile()
+    {
+        RequireEmulator();
+        var repo = new WorkEntryRepository(fixture.Db!);
+        var uid = NewUid();
+        WorkEntryDto Vac(int y, int m, int d) => new()
+        {
+            Id = $"{y:D4}-{m:D2}-{d:D2}",
+            Date = new DateTimeOffset(y, m, d, 0, 0, 0, TimeSpan.Zero),
+            Type = "vacation",
+        };
+
+        await repo.SaveAsync(uid, Vac(2026, 1, 2), null, Ct);
+        await repo.SaveAsync(uid, Vac(2026, 12, 31), null, Ct);
+        await repo.SaveAsync(uid, Vac(2025, 12, 31), null, Ct);
+        await repo.SaveAsync(uid, Vac(2026, 5, 4), "p1", Ct);
+
+        Assert.Equal(2, (await repo.GetYearAsync(uid, 2026, null, Ct)).Count);
+        Assert.Single(await repo.GetYearAsync(uid, 2026, "p1", Ct));
+    }
+
+    [SkippableFact]
     public async Task Profile_DefaultsToNonPremium_WhenMissing()
     {
         RequireEmulator();

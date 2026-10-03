@@ -103,4 +103,81 @@ public class ReportCalculatorTests
         var saturdayStat = ReportCalculator.CalculateDailyStat(Array.Empty<WorkEntryDto>(), new DateOnly(2026, 6, 6), tueSat);
         Assert.Equal(EightHoursMs, saturdayStat.TargetMs);
     }
+
+    // ── Jahresauswertung Urlaub/Krank (#278) ────────────────────────────────
+
+    private static WorkEntryDto Leave(int year, int month, int day, string type) => new()
+    {
+        Id = $"{year:D4}-{month:D2}-{day:D2}",
+        Date = new DateTimeOffset(year, month, day, 0, 0, 0, TimeSpan.Zero),
+        Type = type,
+    };
+
+    [Fact]
+    public void YearlyLeave_CountsVacationAndSick_HolidayNotCounted()
+    {
+        var entries = new[]
+        {
+            Leave(2026, 1, 5, "vacation"), Leave(2026, 7, 6, "vacation"),
+            Leave(2026, 3, 2, "sick"), Leave(2026, 12, 24, "holiday"),
+            Leave(2026, 6, 1, "work"),
+        };
+        var r = ReportCalculator.CalculateYearlyLeave(entries, 2026, new SettingsDto { VacationDaysPerYear = 30 });
+
+        Assert.Equal(2026, r.Year);
+        Assert.Equal(30, r.VacationDaysPerYear);
+        Assert.Equal(2, r.VacationDaysTaken);
+        Assert.Equal(28, r.VacationDaysRemaining);
+        Assert.Equal(1, r.SickDays);
+    }
+
+    [Fact]
+    public void YearlyLeave_YearBoundary_OnlyCountsRequestedYear()
+    {
+        var entries = new[]
+        {
+            Leave(2025, 12, 31, "vacation"), Leave(2026, 1, 1, "vacation"),
+            Leave(2026, 12, 31, "sick"), Leave(2027, 1, 1, "sick"),
+        };
+        var r = ReportCalculator.CalculateYearlyLeave(entries, 2026, new SettingsDto { VacationDaysPerYear = 30 });
+
+        Assert.Equal(1, r.VacationDaysTaken);
+        Assert.Equal(1, r.SickDays);
+    }
+
+    [Fact]
+    public void YearlyLeave_Weekend_StillCounts()
+    {
+        // 2026-06-06 ist ein Samstag.
+        var r = ReportCalculator.CalculateYearlyLeave(
+            new[] { Leave(2026, 6, 6, "vacation") }, 2026, new SettingsDto { VacationDaysPerYear = 30 });
+        Assert.Equal(1, r.VacationDaysTaken);
+    }
+
+    [Fact]
+    public void YearlyLeave_Remaining_CanBeNegative()
+    {
+        var entries = Enumerable.Range(1, 5).Select(d => Leave(2026, 2, d, "vacation")).ToArray();
+        var r = ReportCalculator.CalculateYearlyLeave(entries, 2026, new SettingsDto { VacationDaysPerYear = 3 });
+        Assert.Equal(-2, r.VacationDaysRemaining);
+    }
+
+    [Fact]
+    public void YearlyLeave_MissingEntitlement_DefaultsTo30()
+    {
+        var r = ReportCalculator.CalculateYearlyLeave(
+            new[] { Leave(2026, 2, 2, "vacation") }, 2026, new SettingsDto());
+        Assert.Equal(30, r.VacationDaysPerYear);
+        Assert.Equal(29, r.VacationDaysRemaining);
+    }
+
+    [Fact]
+    public void YearlyLeave_NoEntries_AllZero()
+    {
+        var r = ReportCalculator.CalculateYearlyLeave(
+            Array.Empty<WorkEntryDto>(), 2026, new SettingsDto { VacationDaysPerYear = 0 });
+        Assert.Equal(0, r.VacationDaysTaken);
+        Assert.Equal(0, r.VacationDaysRemaining);
+        Assert.Equal(0, r.SickDays);
+    }
 }

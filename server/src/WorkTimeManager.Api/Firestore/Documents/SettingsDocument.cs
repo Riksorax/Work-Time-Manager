@@ -31,6 +31,10 @@ public sealed class SettingsDocument
     [FirestoreProperty("notifyWorkEnd")]
     public bool NotifyWorkEnd { get; set; }
 
+    /// <summary>Urlaubsanspruch pro Jahr (#278). Nullable: "nie gesetzt" bleibt erkennbar, effektiv 30.</summary>
+    [FirestoreProperty("vacationDaysPerYear")]
+    public int? VacationDaysPerYear { get; set; }
+
     [FirestoreProperty("notifyBreaks")]
     public bool NotifyBreaks { get; set; }
 }

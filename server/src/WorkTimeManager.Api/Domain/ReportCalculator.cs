@@ -28,6 +28,28 @@ public static class ReportCalculator
         return date >= firstMondayNext ? 1 : week;
     }
 
+    /// <summary>
+    /// Jahresauswertung Urlaub/Krank (#278): zählt <c>vacation</c>- und <c>sick</c>-Einträge mit
+    /// Datum im Kalenderjahr. Ein Eintrag = ein Tag, unabhängig vom Arbeitstag-Setting; Rest wird
+    /// nicht geklemmt; <c>holiday</c> zählt nicht.
+    /// </summary>
+    public static YearlyLeaveReportDto CalculateYearlyLeave(
+        IReadOnlyList<WorkEntryDto> yearEntries, int year, SettingsDto settings)
+    {
+        var inYear = yearEntries.Where(e => e.Date.Year == year).ToList();
+        var taken = inYear.Count(e => e.Type == "vacation");
+        var sick = inYear.Count(e => e.Type == "sick");
+        var entitlement = settings.VacationDaysPerYear ?? SettingsDto.DefaultVacationDaysPerYear;
+        return new YearlyLeaveReportDto
+        {
+            Year = year,
+            VacationDaysPerYear = entitlement,
+            VacationDaysTaken = taken,
+            VacationDaysRemaining = entitlement - taken,
+            SickDays = sick,
+        };
+    }
+
     public static DailyStatDto CalculateDailyStat(
         IReadOnlyList<WorkEntryDto> monthEntries, DateOnly date, SettingsDto settings)
     {

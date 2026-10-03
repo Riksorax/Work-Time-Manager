@@ -34,6 +34,18 @@ public sealed class WorkEntryRepository(FirestoreDb db)
             .ToList();
     }
 
+    /// <summary>Alle Einträge eines Kalenderjahres (12 Monatsdokumente). Für die Jahresauswertung (#278).</summary>
+    public async Task<IReadOnlyList<WorkEntryDto>> GetYearAsync(
+        string uid, int year, string? profileId, CancellationToken ct)
+    {
+        var all = new List<WorkEntryDto>();
+        for (var month = 1; month <= 12; month++)
+        {
+            all.AddRange(await GetMonthAsync(uid, year, month, profileId, ct));
+        }
+        return all;
+    }
+
     /// <summary>
     /// Lädt alle Einträge der Woche (Mo–So), die <paramref name="date"/> enthält — über
     /// Monatsgrenzen hinweg (1–2 Monatsdokumente). Für den Wochenbericht.

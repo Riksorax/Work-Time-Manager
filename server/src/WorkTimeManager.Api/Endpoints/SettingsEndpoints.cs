@@ -23,6 +23,8 @@ internal static class SettingsEndpoints
             ClaimsPrincipal user, SettingsRepository repo, CancellationToken ct) =>
         {
             if (user.GetUid() is not { } uid) return Results.Unauthorized();
+            if (!FirestoreMappings.IsValidVacationDays(dto.VacationDaysPerYear))
+                return Results.BadRequest("vacationDaysPerYear muss zwischen 0 und 366 liegen.");
             await repo.SaveAsync(uid, dto, profileId, ct);
             return Results.Ok(await repo.GetAsync(uid, profileId, ct));
         })
