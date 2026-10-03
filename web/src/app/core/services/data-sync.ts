@@ -4,6 +4,9 @@ import { WorkEntryService } from './work-entry';
 import { OvertimeService } from './overtime';
 import { SettingsService } from './settings';
 import { AuthService } from '../auth/auth';
+import { LeaveBalanceService } from './leave-balance';
+import { DEFAULT_VACATION_DAYS_PER_YEAR } from '../../shared/models';
+import { isValidVacationDays } from '../../shared/utils/vacation-days.util';
 
 export interface DataSyncResult {
   workEntriesSynced: number;
@@ -20,6 +23,7 @@ export class DataSyncService {
   private readonly overtimeService  = inject(OvertimeService);
   private readonly settingsService  = inject(SettingsService);
   private readonly authService      = inject(AuthService);
+  private readonly leave            = inject(LeaveBalanceService);
 
   private readonly _isSyncing = signal(false);
   readonly isSyncing = this._isSyncing.asReadonly();
@@ -67,7 +71,7 @@ export class DataSyncService {
       }
 
       // ── Einstellungen ─────────────────────────────────────────────────────
-      // Nur weeklyTargetHours und workdays — Benachrichtigungen sind gerätespezifisch
+      // Nur weeklyTargetHours, workdays und vacationDaysPerYear — Benachrichtigungen sind gerätespezifisch
       const localSettingsRaw = localStorage.getItem(LS_SETTINGS);
       if (localSettingsRaw) {
         try {
@@ -80,6 +84,12 @@ export class DataSyncService {
             // Legacy-Feld: erste N Wochentage ab Montag, um bisheriges Verhalten zu erhalten (#217)
             const count = Math.min(Math.max(local['workdaysPerWeek'], 0), 7);
             patch['workdays'] = Array.from({ length: count }, (_, i) => i + 1);
+          }
+          // Nur gültige, vom Default abweichende Werte migrieren: der lokale Speicher schreibt immer
+          // das komplette Objekt (inkl. 30) und würde sonst einen Cloud-Wert überschreiben.
+          const localVacation = local['vacationDaysPerYear'];
+          if (isValidVacationDays(localVacation) && localVacation !== DEFAULT_VACATION_DAYS_PER_YEAR) {
+            patch['vacationDaysPerYear'] = localVacation;
           }
           if (Object.keys(patch).length > 0) {
             const current = await firstValueFrom(this.settingsService.getSettings());
@@ -94,6 +104,7 @@ export class DataSyncService {
       }
     } finally {
       this._isSyncing.set(false);
+      this.leave.refresh();
     }
 
     return result;

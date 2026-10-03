@@ -8,22 +8,12 @@ import { SettingsService } from '../../core/services/settings';
 import { WorkEntryService } from '../../core/services/work-entry';
 import { WorkProfileService } from '../../core/services/work-profile';
 import { ApiClient } from '../../core/services/api-client';
+import { LeaveBalanceService } from '../../core/services/leave-balance';
 import { calculateDailyStat, isSameDayRc, toDateKey } from '../../domain/services/report-calculator';
 import { DailyStat, MonthlyReport, WeeklyReport } from '../../domain/models/reports.models';
-import { WorkEntry, WorkEntryType, UserSettings } from '../../shared/models/index';
+import { DEFAULT_SETTINGS, WorkEntry, WorkEntryType, UserSettings } from '../../shared/models/index';
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
-
-const DEFAULT_SETTINGS: UserSettings = {
-  weeklyTargetHours: 40,
-  workdays: [1, 2, 3, 4, 5],
-  notificationsEnabled: false,
-  notificationTime: '08:00',
-  notificationDays: [1, 2, 3, 4, 5],
-  notifyWorkStart: false,
-  notifyWorkEnd: false,
-  notifyBreaks: false,
-};
 
 const EMPTY_DAILY_STAT: DailyStat = { target: 0, worked: 0, overtime: 0 };
 
@@ -63,6 +53,7 @@ export class ReportsService {
   private readonly authService       = inject(AuthService);
   private readonly apiClient         = inject(ApiClient);
   private readonly router            = inject(Router);
+  private readonly leave             = inject(LeaveBalanceService);
 
   // ── Auth / Premium ────────────────────────────────────────────────────────────
   readonly isLoggedIn = computed(() => !!this.authService.user());
@@ -304,6 +295,8 @@ export class ReportsService {
     const vm = this._viewMonth();
     // Trigger erneuten Load durch neues Objekt
     this._viewMonth.set({ ...vm });
+    // Urlaubs-/Kranktage können sich geändert haben (#278)
+    this.leave.refresh();
   }
 
   private _dateId(date: Date): string {

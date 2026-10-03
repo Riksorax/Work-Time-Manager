@@ -53,6 +53,17 @@
           }
         </section>
 
+        <mat-divider />
+
+        <section class="leave-section">
+          <app-leave-balance-card [report]="leave.currentYearReport()"
+                                  [state]="leave.currentYearState()"
+                                  [editable]="true"
+                                  [localOnly]="!svc.isLoggedIn()"
+                                  (retry)="leave.refresh()"
+                                  (editEntitlement)="goToSettings()" />
+        </section>
+
       </div>
 
       <!-- Rechte Spalte / Unterer Teil: Controls & Pausen -->

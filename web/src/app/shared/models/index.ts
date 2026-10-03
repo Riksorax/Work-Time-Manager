@@ -35,7 +35,24 @@ export interface UserSettings {
   notifyWorkStart: boolean;
   notifyWorkEnd: boolean;
   notifyBreaks: boolean;
+  /** Jahres-Urlaubsanspruch in Tagen (ganze Zahl 0-366, Default 30). Siehe #278. */
+  vacationDaysPerYear: number;
 }
+
+export const DEFAULT_VACATION_DAYS_PER_YEAR = 30;
+export const MAX_VACATION_DAYS = 366;
+
+export const DEFAULT_SETTINGS: UserSettings = {
+  weeklyTargetHours: 40,
+  workdays: [1, 2, 3, 4, 5],
+  notificationsEnabled: false,
+  notificationTime: '08:00',
+  notificationDays: [1, 2, 3, 4, 5],
+  notifyWorkStart: false,
+  notifyWorkEnd: false,
+  notifyBreaks: false,
+  vacationDaysPerYear: DEFAULT_VACATION_DAYS_PER_YEAR,
+};
 
 export interface UserProfile {
   uid: string;

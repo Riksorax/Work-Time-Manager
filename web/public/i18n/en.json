@@ -119,7 +119,11 @@
     "quickEntryDialogTitle": "Quick entry — {{date}}",
     "batchDialogTitle": "Batch entry — {{count}} days",
     "selectedDaysAria": "Selected days",
-    "saveAllButton": "Save all"
+    "saveAllButton": "Save all",
+    "tabYearly": "Year",
+    "yearNavAria": "Year navigation",
+    "prevYearAria": "Previous year",
+    "nextYearAria": "Next year"
   },
   "settings": {
     "title": "Settings",
@@ -208,7 +212,17 @@
     "hoursPerWeekLabel": "Hours per week",
     "hoursPerWeekHint": "Between 1 and 48 hours (statutory maximum under § 3 ArbZG)",
     "selectWorkdaysAria": "Select workdays",
-    "workdaysRequired": "At least one workday must be selected."
+    "workdaysRequired": "At least one workday must be selected.",
+    "vacationSectionTitle": "Vacation",
+    "vacationSectionAria": "Vacation",
+    "vacationDaysLabel": "Vacation days per year",
+    "vacationDaysValue": "{{days}} days",
+    "editVacationDaysAria": "Edit vacation entitlement",
+    "vacationDaysFieldLabel": "Days per year",
+    "vacationDaysHint": "In whole days (0–366)",
+    "vacationDaysInvalid": "Enter a whole number from 0 to 366.",
+    "vacationDaysSaved": "Vacation entitlement saved",
+    "vacationDaysSaveError": "Could not save vacation entitlement."
   },
   "shared": {
     "editEntryTitleEdit": "Edit entry",
@@ -253,6 +267,26 @@
     "maxProfilesReached": "A maximum of {{count}} profiles is allowed.",
     "profileCreated": "Profile \"{{name}}\" created.",
     "profileCreateFailed": "Failed to create: {{error}}"
+  },
+  "leave": {
+    "cardAria": "Vacation overview",
+    "loadingAria": "Loading vacation data",
+    "remainingTitle": "Remaining vacation",
+    "vacationTitle": "Vacation {{year}}",
+    "ofTotal": "of {{total}} days",
+    "progressAria": "{{taken}} of {{total}} vacation days taken",
+    "taken": "Taken",
+    "entitlement": "Entitlement",
+    "sickDays": "Sick days {{year}}",
+    "overEntitlementOne": "{{days}} day over entitlement",
+    "overEntitlementOther": "{{days}} days over entitlement",
+    "entitlementZero": "You have not set a vacation entitlement.",
+    "setEntitlement": "Set entitlement",
+    "pastYearNote": "Remaining vacation is only shown for the current year.",
+    "empty": "No vacation or sick days in {{year}} yet.",
+    "localHint": "Stored on this device only. Sign in to sync your data.",
+    "loadError": "Could not load vacation data.",
+    "retry": "Retry"
   },
   "common": {
     "save": "Save",

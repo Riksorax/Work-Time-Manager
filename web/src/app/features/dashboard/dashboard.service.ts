@@ -64,6 +64,7 @@ export class DashboardService {
   private readonly overtimeSvc   = inject(OvertimeService);
   private readonly settingsSvc   = inject(SettingsService);
   private readonly authSvc       = inject(AuthService);
+  readonly isLoggedIn = computed(() => !!this.authSvc.user());
   private readonly destroyRef    = inject(DestroyRef);
 
   // ─── Public Signals ────────────────────────────────────────────────────────

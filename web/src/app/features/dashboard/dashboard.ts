@@ -16,6 +16,9 @@ import { RestartSessionDialogComponent, RestartSessionDialogResult } from './com
 import { AdjustOvertimeDialogComponent, AdjustOvertimeDialogResult } from '../settings/components/adjust-overtime-dialog/adjust-overtime-dialog';
 import { TimeInputComponent } from '../../shared/components/time-input/time-input';
 import { Break } from '../../shared/models/index';
+import { Router } from '@angular/router';
+import { LeaveBalanceService } from '../../core/services/leave-balance';
+import { LeaveBalanceCardComponent } from '../../shared/components/leave-balance-card/leave-balance-card';
 
 @Component({
   selector: 'app-dashboard',
@@ -29,6 +32,7 @@ import { Break } from '../../shared/models/index';
     MatProgressSpinnerModule,
     MatTooltipModule,
     TimeInputComponent,
+    LeaveBalanceCardComponent,
     TranslatePipe,
     BreakNamePipe,
   ],
@@ -38,7 +42,13 @@ import { Break } from '../../shared/models/index';
 })
 export class DashboardComponent {
   protected readonly svc    = inject(DashboardService);
+  protected readonly leave  = inject(LeaveBalanceService);
   private  readonly dialog  = inject(MatDialog);
+  private  readonly router  = inject(Router);
+
+  goToSettings(): void {
+    void this.router.navigate(['/settings']);
+  }
 
   // ─── Template helpers ────────────────────────────────────────────────────────
 

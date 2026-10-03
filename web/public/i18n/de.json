@@ -119,7 +119,11 @@
     "quickEntryDialogTitle": "Schnelleintrag — {{date}}",
     "batchDialogTitle": "Stapeleintrag — {{count}} Tage",
     "selectedDaysAria": "Ausgewählte Tage",
-    "saveAllButton": "Alle speichern"
+    "saveAllButton": "Alle speichern",
+    "tabYearly": "Jahr",
+    "yearNavAria": "Jahresnavigation",
+    "prevYearAria": "Vorheriges Jahr",
+    "nextYearAria": "Nächstes Jahr"
   },
   "settings": {
     "title": "Einstellungen",
@@ -208,7 +212,17 @@
     "hoursPerWeekLabel": "Stunden pro Woche",
     "hoursPerWeekHint": "Zwischen 1 und 48 Stunden (gesetzliches Maximum nach § 3 ArbZG)",
     "selectWorkdaysAria": "Arbeitstage auswählen",
-    "workdaysRequired": "Mindestens ein Arbeitstag muss ausgewählt sein."
+    "workdaysRequired": "Mindestens ein Arbeitstag muss ausgewählt sein.",
+    "vacationSectionTitle": "Urlaub",
+    "vacationSectionAria": "Urlaub",
+    "vacationDaysLabel": "Urlaubsanspruch pro Jahr",
+    "vacationDaysValue": "{{days}} Tage",
+    "editVacationDaysAria": "Urlaubsanspruch bearbeiten",
+    "vacationDaysFieldLabel": "Tage pro Jahr",
+    "vacationDaysHint": "In ganzen Tagen (0–366)",
+    "vacationDaysInvalid": "Bitte gib eine ganze Zahl von 0 bis 366 ein.",
+    "vacationDaysSaved": "Urlaubsanspruch gespeichert",
+    "vacationDaysSaveError": "Urlaubsanspruch konnte nicht gespeichert werden."
   },
   "shared": {
     "editEntryTitleEdit": "Eintrag bearbeiten",
@@ -253,6 +267,26 @@
     "maxProfilesReached": "Maximal {{count}} Profile möglich.",
     "profileCreated": "Profil \"{{name}}\" angelegt.",
     "profileCreateFailed": "Anlegen fehlgeschlagen: {{error}}"
+  },
+  "leave": {
+    "cardAria": "Urlaubsübersicht",
+    "loadingAria": "Urlaubsdaten werden geladen",
+    "remainingTitle": "Resturlaub",
+    "vacationTitle": "Urlaub {{year}}",
+    "ofTotal": "von {{total}} Tagen",
+    "progressAria": "{{taken}} von {{total}} Urlaubstagen genommen",
+    "taken": "Genommen",
+    "entitlement": "Anspruch",
+    "sickDays": "Kranktage {{year}}",
+    "overEntitlementOne": "{{days}} Tag über dem Anspruch",
+    "overEntitlementOther": "{{days}} Tage über dem Anspruch",
+    "entitlementZero": "Du hast keinen Urlaubsanspruch hinterlegt.",
+    "setEntitlement": "Anspruch festlegen",
+    "pastYearNote": "Der Resturlaub wird nur für das laufende Jahr angezeigt.",
+    "empty": "Noch keine Urlaubs- oder Kranktage in {{year}}.",
+    "localHint": "Nur auf diesem Gerät gespeichert. Melde dich an, um deine Daten zu synchronisieren.",
+    "loadError": "Urlaubsdaten konnten nicht geladen werden.",
+    "retry": "Erneut versuchen"
   },
   "common": {
     "save": "Speichern",

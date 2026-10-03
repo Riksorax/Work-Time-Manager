@@ -324,3 +324,8 @@ button[mat-list-item] {
 :host {
   --color-overtime-positive: #4CAF50;
 }
+
+// ── Urlaub (#278) ──────────────────────────────────────────────────────────────
+.vacation-section .vacation-card {
+  margin-top: 12px;
+}

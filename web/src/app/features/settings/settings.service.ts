@@ -9,23 +9,14 @@ import { ThemeService } from '../../core/services/theme';
 import { LanguageService } from '../../core/services/language';
 import { DataSyncService, DataSyncResult } from '../../core/services/data-sync';
 import { WebPremiumService } from '../../core/services/web-premium';
+import { LeaveBalanceService } from '../../core/services/leave-balance';
 import { DashboardService } from '../dashboard/dashboard.service';
-import { UserSettings } from '../../shared/models/index';
-
-const DEFAULT_SETTINGS: UserSettings = {
-  weeklyTargetHours: 40,
-  workdays: [1, 2, 3, 4, 5],
-  notificationsEnabled: false,
-  notificationTime: '08:00',
-  notificationDays: [1, 2, 3, 4, 5],
-  notifyWorkStart: false,
-  notifyWorkEnd: false,
-  notifyBreaks: false,
-};
+import { DEFAULT_SETTINGS, UserSettings } from '../../shared/models/index';
 
 @Injectable({ providedIn: 'root' })
 export class SettingsPageService {
   private readonly coreSettings   = inject(SettingsService);
+  private readonly leave          = inject(LeaveBalanceService);
   private readonly authService    = inject(AuthService);
   private readonly profileService = inject(ProfileService);
   private readonly overtimeSvc    = inject(OvertimeService);
@@ -99,6 +90,12 @@ export class SettingsPageService {
   async setTargetHours(hours: number): Promise<void> {
     const current = this.settings();
     await this.coreSettings.saveSettings({ ...current, weeklyTargetHours: hours });
+  }
+
+  async setVacationDays(days: number): Promise<void> {
+    const current = this.settings();
+    await this.coreSettings.saveSettings({ ...current, vacationDaysPerYear: days });
+    this.leave.refresh();
   }
 
   async setWorkdays(days: number[]): Promise<void> {
