@@ -31,6 +31,9 @@ class ApiDataSource implements FirestoreDataSource {
   Future<void> deleteAccount() => _auth.deleteAccount();
 
   @override
+  Future<bool> reauthenticate() => _auth.reauthenticate();
+
+  @override
   Future<void> setUserProfile(String userId, Map<String, dynamic> data) =>
       _auth.setUserProfile(userId, data);
 

@@ -7,3 +7,4 @@ export '../../core/providers/providers.dart' show authStateProvider;
 final signInWithGoogleProvider = signInWithGoogleUseCaseProvider;
 final signOutProvider = signOutUseCaseProvider;
 final deleteAccountProvider = deleteAccountUseCaseProvider;
+final reauthenticateProvider = reauthenticateUseCaseProvider;

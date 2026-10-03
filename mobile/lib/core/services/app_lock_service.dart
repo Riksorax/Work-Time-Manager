@@ -13,6 +13,7 @@ class AppLockService {
   static const _appLockEnabledKey = 'app_lock_enabled';
   static const _pinHashKey = 'app_lock_pin_hash';
   static const _pinSaltKey = 'app_lock_pin_salt';
+  static const _recoveryHashKey = 'app_lock_recovery_code_hash';
 
   final SharedPreferences _prefs;
   final LocalAuthentication _localAuth;
@@ -33,17 +34,48 @@ class AppLockService {
   /// Ob bereits eine PIN als Fallback hinterlegt ist.
   bool get hasPin => _prefs.getString(_pinHashKey) != null;
 
+  /// Salt und Hash stehen in EINEM Wert (`salt:hash`), damit ein Abbruch
+  /// (z. B. Prozess-Kill) nie einen unpassenden Salt/Hash-Mix hinterlässt.
+  /// Ältere Installationen haben den Salt noch in [_pinSaltKey] (Hash ohne `:`).
   Future<void> setPin(String pin) async {
     final salt = generateSalt();
-    await _prefs.setString(_pinSaltKey, salt);
-    await _prefs.setString(_pinHashKey, hashPin(pin, salt));
+    await _prefs.setString(_pinHashKey, '$salt:${hashPin(pin, salt)}');
+    await _prefs.remove(_pinSaltKey);
   }
 
   bool verifyPin(String pin) {
-    final storedHash = _prefs.getString(_pinHashKey);
+    final stored = _prefs.getString(_pinHashKey);
+    if (stored == null) return false;
+    final parts = stored.split(':');
+    if (parts.length == 2) return hashPin(pin, parts[0]) == parts[1];
     final salt = _prefs.getString(_pinSaltKey);
-    if (storedHash == null || salt == null) return false;
-    return hashPin(pin, salt) == storedHash;
+    if (salt == null) return false;
+    return hashPin(pin, salt) == stored;
+  }
+
+  /// Ob ein Wiederherstellungscode gespeichert ist (siehe #288).
+  bool get hasRecoveryCode => _prefs.getString(_recoveryHashKey) != null;
+
+  /// Setzt PIN und Wiederherstellungscode gemeinsam (ersetzt beides). Der
+  /// Code wird nur als gesalzener Hash gespeichert und nie geloggt.
+  ///
+  /// Reihenfolge: erst der Code (neuer Wert, einzelner Schreibvorgang), dann
+  /// die PIN. Bei einem Abbruch dazwischen gilt weiter die alte PIN; ein
+  /// Salt/Hash-Mismatch (Aussperrung) ist ausgeschlossen.
+  Future<void> setPinWithRecoveryCode(String pin, String recoveryCode) async {
+    final codeSalt = generateSalt();
+    final code = normalizeRecoveryCode(recoveryCode);
+    await _prefs.setString(
+        _recoveryHashKey, '$codeSalt:${hashPin(code, codeSalt)}');
+    await setPin(pin);
+  }
+
+  bool verifyRecoveryCode(String input) {
+    final stored = _prefs.getString(_recoveryHashKey);
+    if (stored == null) return false;
+    final parts = stored.split(':');
+    if (parts.length != 2) return false;
+    return hashPin(normalizeRecoveryCode(input), parts[0]) == parts[1];
   }
 
   Future<void> clearPin() async {

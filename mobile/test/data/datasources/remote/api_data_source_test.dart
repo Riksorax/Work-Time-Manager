@@ -178,4 +178,10 @@ void main() {
       verifyZeroInteractions(mockApi);
     });
   });
+
+  test('reauthenticate delegiert an das Auth-DataSource', () async {
+    when(mockAuth.reauthenticate()).thenAnswer((_) async => true);
+    expect(await dataSource.reauthenticate(), isTrue);
+    verify(mockAuth.reauthenticate()).called(1);
+  });
 }

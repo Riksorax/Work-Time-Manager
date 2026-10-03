@@ -164,6 +164,15 @@ class MockFirestoreDataSource extends _i1.Mock
       ) as _i4.Future<void>);
 
   @override
+  _i4.Future<bool> reauthenticate() => (super.noSuchMethod(
+        Invocation.method(
+          #reauthenticate,
+          [],
+        ),
+        returnValue: _i4.Future<bool>.value(false),
+      ) as _i4.Future<bool>);
+
+  @override
   _i4.Future<_i7.WorkEntryModel?> getWorkEntry(
     String? userId,
     DateTime? date, {

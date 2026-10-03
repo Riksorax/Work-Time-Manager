@@ -16,6 +16,10 @@ abstract class FirestoreDataSource {
   Future<void> signOut();
   Future<void> deleteAccount();
 
+  /// Re-Authentifizierung des aktuellen Users (siehe #288). `false` bei
+  /// Abbruch, Fehler, anderem Konto oder fehlendem Google-Login.
+  Future<bool> reauthenticate();
+
   // Work Entries (optionales profileId siehe #138 - null/'default' = bestehender,
   // nicht migrierter Pfad; jedes andere Profil lebt in einer Subcollection)
   Future<WorkEntryModel?> getWorkEntry(String userId, DateTime date,
@@ -64,6 +68,16 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
   FirestoreDataSourceImpl(
       this._firebaseAuth, this._firestore, this._googleSignIn);
 
+  bool _googleInitialized = false;
+
+  /// google_sign_in darf nur einmal initialisiert werden.
+  Future<void> _ensureGoogleInitialized() async {
+    if (_googleInitialized) return;
+    await _googleSignIn.initialize(
+        serverClientId: GoogleSignInConfig.serverClientId);
+    _googleInitialized = true;
+  }
+
   @override
   Stream<firebase.User?> get authStateChanges =>
       _firebaseAuth.authStateChanges();
@@ -80,8 +94,7 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
         // WICHTIG: initialize() muss vor authenticate() aufgerufen werden (seit google_sign_in 7.0)
         // und benötigt auf Android zwingend die serverClientId, sonst wirft
         // authenticate() eine clientConfigurationError-Exception.
-        await _googleSignIn.initialize(
-            serverClientId: GoogleSignInConfig.serverClientId);
+        await _ensureGoogleInitialized();
 
         final GoogleSignInAccount? googleUser =
             await _googleSignIn.authenticate(
@@ -140,8 +153,7 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
           await userCredential.user?.delete();
         } else {
           // Auf Mobile: authenticate()
-          await _googleSignIn.initialize(
-              serverClientId: GoogleSignInConfig.serverClientId);
+          await _ensureGoogleInitialized();
 
           final GoogleSignInAccount googleUser;
           try {
@@ -208,6 +220,43 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
     }
 
     await _googleSignIn.signOut();
+  }
+
+  @override
+  Future<bool> reauthenticate() async {
+    final user = _firebaseAuth.currentUser;
+    if (user == null) return false;
+    final usesGoogle =
+        user.providerData.any((info) => info.providerId == 'google.com');
+    if (!usesGoogle) return false;
+    try {
+      if (kIsWeb) {
+        final result =
+            await user.reauthenticateWithPopup(firebase.GoogleAuthProvider());
+        return result.user?.uid == user.uid;
+      }
+      await _ensureGoogleInitialized();
+      final googleUser = await _googleSignIn.authenticate(
+        scopeHint: ['email', 'profile'],
+      );
+      final googleAuth = googleUser.authentication;
+      final credential = firebase.GoogleAuthProvider.credential(
+        idToken: googleAuth.idToken,
+      );
+      final result = await user.reauthenticateWithCredential(credential);
+      return result.user?.uid == user.uid;
+    } on GoogleSignInException catch (e) {
+      if (e.code != GoogleSignInExceptionCode.canceled) {
+        logger.e("Re-Auth: Google Sign-In Exception: code=${e.code.name}");
+      }
+      return false;
+    } on firebase.FirebaseAuthException catch (e) {
+      logger.w("Re-Auth fehlgeschlagen: code=${e.code}");
+      return false;
+    } catch (e) {
+      logger.e("Re-Auth: unerwarteter Fehler: $e");
+      return false;
+    }
   }
 
   String _getMonthDocId(DateTime date) {

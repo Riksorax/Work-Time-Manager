@@ -344,5 +344,19 @@
   "workTimeSectionTitle": "Work time",
   "noBreaksAdded": "No breaks added",
   "startFieldLabel": "Start",
-  "endFieldLabel": "End"
+  "endFieldLabel": "End",
+  "forgotPinAction": "Forgot PIN?",
+  "forgotPinTitle": "Reset PIN",
+  "reauthRequiredHint": "Confirm your identity with your Google account to set a new PIN.",
+  "reauthConfirmAction": "Confirm with Google",
+  "reauthFailedError": "Confirmation failed or was cancelled. Check your internet connection and try again.",
+  "enterRecoveryCodeLabel": "Recovery code",
+  "wrongRecoveryCodeError": "Wrong recovery code",
+  "noRecoveryCodeHint": "You are not signed in and have no recovery code saved. The only option left is to clear the app data in the system settings. Warning: all local data will be lost.",
+  "recoveryCodeTitle": "Recovery code",
+  "recoveryCodeSaveHint": "This code is shown only once. Write it down or take a photo and keep it safe. You can use it to reset your PIN.",
+  "recoveryCodeCopyAction": "Copy code",
+  "recoveryCodeSavedConfirm": "I have saved the code",
+  "recoveryCodeRegeneratedHint": "Your previous recovery code will become invalid.",
+  "resetPinAction": "Reset PIN"
 }
