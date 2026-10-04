@@ -28,13 +28,13 @@ core/
 ├── services/
 │   ├── work-entry.ts      Hybrid — eingeloggt: Reads live via Firestore onSnapshot, Writes über ApiClient (Backend-API); ausgeloggt: localStorage. getAllLocalEntries() für DataSync
 │   ├── overtime.ts        Hybrid — eingeloggt komplett über ApiClient (Reads + Writes), sonst localStorage
-│   ├── settings.ts        Hybrid — wie work-entry.ts (Reads via Firestore onSnapshot, Writes via ApiClient)
+│   ├── settings.ts        Hybrid — wie work-entry.ts (Reads via Firestore onSnapshot, Writes via ApiClient). Feld `bundesland` (#279): Rohwert über `normalizeBundesland`; `""` ans Backend nur über `saveSettings(s, { clearBundesland: true })` (explizite Abwahl), sonst `null` = unangetastet
 │   ├── api-client.ts      ApiClient — typisierter Client für die .NET-Backend-API (Endpunkte: `server/CLAUDE.md`), Token via authInterceptor
 │   ├── work-profile.ts    WorkProfileService — aktives/zusätzliche Arbeitszeit-Profile (siehe #138/#244), profileId für ApiClient + Firestore-Pfade
 │   ├── profile.ts         ProfileService — isPremium Signal (Firestore-Flag)
 │   ├── theme.ts           ThemeService — isDarkMode Signal + localStorage-Persistenz
 │   ├── leave-balance.ts   Hybrid — LeaveBalanceService: Jahres-Urlaubsübersicht (eingeloggt `ApiClient.getYearlyLeave`, anonym lokal via `calculateYearlyLeave`), `refresh()` nach Änderungen (#278)
-│   ├── data-sync.ts       DataSyncService — localStorage→Firebase-Migration bei Login
+│   ├── data-sync.ts       DataSyncService — localStorage→Firebase-Migration bei Login (Settings inkl. Bundesland: Cloud gewinnt, nie `""`)
 │   └── web-premium.ts     WebPremiumService — RC Billing Paywall + Kauf-Wiederherstellung
 
 domain/
@@ -58,8 +58,12 @@ shared/
 │   ├── calendar/               CalendarComponent — Multi-Select + Pointer-Drag
 │   ├── edit-entry-dialog/      EditEntryDialogComponent
 │   ├── leave-balance-card/     LeaveBalanceCardComponent — reine Darstellung der Urlaubsübersicht (Dashboard, Settings, Reports)
+│   ├── holiday-banner/         HolidayBannerComponent — „Heute ist Feiertag: …“ (#279), rein informativ
 │   ├── time-input/             TimeInputComponent
 │   └── work-profile-switcher/  WorkProfileSwitcherComponent + Add-/Manage-Dialoge (siehe #138/#244)
+├── utils/
+│   ├── german-holidays.util.ts  Pure — gesetzliche Feiertage je Bundesland (#279), Port von Mobile `german_holidays.dart`
+│   └── bundesland.util.ts       Pure — isBundesland / normalizeBundesland
 └── models/index.ts        WorkEntry, WorkEntryType, Break, UserSettings, UserProfile, WorkProfile
 ```
 
@@ -108,6 +112,13 @@ runInInjectionContext(this.injector, () => {
 ```
 
 **Nie `docData` / `collectionData` verwenden** — rxfire-Bug mit DocumentReference. Stattdessen eigene `new Observable(observer => { runInInjectionContext(...) })`.
+
+### Feiertage (#279)
+
+`getGermanHolidayIds(year, bundesland)` liefert `Map<'YYYY-MM-DD', GermanHoliday>`. Berechnung ausschließlich über UTC-Felder
+(Ostern, Buß- und Bettag), „heute“ über lokale Felder (`toDateKey`), nie `toISOString()` — TZ/DST-sicher. Parität mit der
+Mobile-Fixture (`mobile/test/domain/utils/german_holidays_fixture.dart`, im Spec 1:1 übernommen, bei Änderungen dort manuell nachziehen).
+`DashboardService.holidayToday` ist reiner Hinweis (Soll/Überstunden unberührt) und wechselt um lokale Mitternacht bzw. bei `visibilitychange`.
 
 ### Dark Mode
 

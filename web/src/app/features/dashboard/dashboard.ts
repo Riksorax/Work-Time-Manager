@@ -18,6 +18,7 @@ import { TimeInputComponent } from '../../shared/components/time-input/time-inpu
 import { Break } from '../../shared/models/index';
 import { Router } from '@angular/router';
 import { LeaveBalanceService } from '../../core/services/leave-balance';
+import { HolidayBannerComponent } from '../../shared/components/holiday-banner/holiday-banner';
 import { LeaveBalanceCardComponent } from '../../shared/components/leave-balance-card/leave-balance-card';
 
 @Component({
@@ -33,6 +34,7 @@ import { LeaveBalanceCardComponent } from '../../shared/components/leave-balance
     MatTooltipModule,
     TimeInputComponent,
     LeaveBalanceCardComponent,
+    HolidayBannerComponent,
     TranslatePipe,
     BreakNamePipe,
   ],

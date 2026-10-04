@@ -6,10 +6,10 @@ import { OvertimeService } from './overtime';
 import { SettingsService } from './settings';
 import { LeaveBalanceService } from './leave-balance';
 import { AuthService } from '../auth/auth';
-import { DEFAULT_SETTINGS } from '../../shared/models/index';
+import { DEFAULT_SETTINGS, UserSettings } from '../../shared/models/index';
 
 describe('DataSyncService - Einstellungen', () => {
-  const current = { ...DEFAULT_SETTINGS, vacationDaysPerYear: 25 };
+  let current: UserSettings = { ...DEFAULT_SETTINGS, vacationDaysPerYear: 25 };
   let saveSettings: ReturnType<typeof vi.fn>;
   let refresh: ReturnType<typeof vi.fn>;
   let uid: string | null;
@@ -32,6 +32,7 @@ describe('DataSyncService - Einstellungen', () => {
     saveSettings = vi.fn().mockResolvedValue(undefined);
     refresh = vi.fn();
     uid = 'u1';
+    current = { ...DEFAULT_SETTINGS, vacationDaysPerYear: 25 };
   });
   afterEach(() => localStorage.clear());
 
@@ -71,5 +72,64 @@ describe('DataSyncService - Einstellungen', () => {
     uid = null;
     await create().syncAll();
     expect(refresh).not.toHaveBeenCalled();
+  });
+
+  describe('bundesland (#279)', () => {
+    it('übernimmt ein lokales Bundesland, wenn die Cloud keines hat', async () => {
+      localStorage.setItem('user_settings', JSON.stringify({ bundesland: 'bayern' }));
+      const result = await create().syncAll();
+      expect(saveSettings).toHaveBeenCalledTimes(1);
+      expect(saveSettings).toHaveBeenCalledWith({ ...current, bundesland: 'bayern' });
+      expect(result.settingsSynced).toBe(true);
+    });
+
+    it('überschreibt kein Cloud-Bundesland (kein Save ohne weitere Felder)', async () => {
+      current = { ...current, bundesland: 'hessen' };
+      localStorage.setItem('user_settings', JSON.stringify({ bundesland: 'bayern' }));
+      await create().syncAll();
+      expect(saveSettings).not.toHaveBeenCalled();
+    });
+
+    it('behält das Cloud-Bundesland, wenn andere Felder migriert werden', async () => {
+      current = { ...current, bundesland: 'hessen' };
+      localStorage.setItem('user_settings', JSON.stringify({ bundesland: 'bayern', weeklyTargetHours: 35 }));
+      await create().syncAll();
+      expect(saveSettings).toHaveBeenCalledTimes(1);
+      expect(saveSettings).toHaveBeenCalledWith({ ...current, weeklyTargetHours: 35, bundesland: 'hessen' });
+    });
+
+    it.each(['"xyz"', '""', 'null', '5'])('ignoriert ungültiges lokales Bundesland %s', async raw => {
+      localStorage.setItem('user_settings', `{"bundesland":${raw}}`);
+      await create().syncAll();
+      expect(saveSettings).not.toHaveBeenCalled();
+    });
+
+    it('sendet bei ungültigem Bundesland + anderen Feldern nie "" als Bundesland', async () => {
+      localStorage.setItem('user_settings', JSON.stringify({ bundesland: '', weeklyTargetHours: 35 }));
+      await create().syncAll();
+      expect(saveSettings).toHaveBeenCalledTimes(1);
+      const [arg, opts] = saveSettings.mock.calls[0];
+      expect(arg.bundesland).toBeNull();
+      expect(opts).toBeUndefined();
+    });
+
+    it('kombiniert alle Patches in einem Aufruf', async () => {
+      localStorage.setItem('user_settings', JSON.stringify({
+        bundesland: 'sachsen', weeklyTargetHours: 30, workdays: [1, 2], vacationDaysPerYear: 20,
+      }));
+      await create().syncAll();
+      expect(saveSettings).toHaveBeenCalledTimes(1);
+      expect(saveSettings).toHaveBeenCalledWith({
+        ...current, bundesland: 'sachsen', weeklyTargetHours: 30, workdays: [1, 2], vacationDaysPerYear: 20,
+      });
+    });
+
+    it('meldet Cloud-Fehler beim Speichern', async () => {
+      saveSettings.mockRejectedValue(new Error('x'));
+      localStorage.setItem('user_settings', JSON.stringify({ bundesland: 'bayern' }));
+      const result = await create().syncAll();
+      expect(result.errors.length).toBe(1);
+      expect(result.settingsSynced).toBe(false);
+    });
   });
 });

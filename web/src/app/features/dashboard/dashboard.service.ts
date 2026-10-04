@@ -1,11 +1,12 @@
 import { Injectable, inject, signal, computed, effect, DestroyRef } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { firstValueFrom, interval } from 'rxjs';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { catchError, firstValueFrom, interval, of } from 'rxjs';
 import { WorkEntryService } from '../../core/services/work-entry';
 import { OvertimeService }  from '../../core/services/overtime';
 import { SettingsService }  from '../../core/services/settings';
 import { AuthService }      from '../../core/auth/auth';
-import { WorkEntry, WorkEntryType, Break } from '../../shared/models';
+import { GermanHoliday, getGermanHolidayIds, toDateKey } from '../../shared/utils/german-holidays.util';
+import { DEFAULT_SETTINGS, WorkEntry, WorkEntryType, Break } from '../../shared/models';
 import { calculateAndApplyBreaks } from '../../domain/services/break-calculator';
 import { nowToMinute, roundToMinute, roundMsToMinute } from '../../shared/utils/time-precision.util';
 import {
@@ -64,6 +65,24 @@ export class DashboardService {
   private readonly overtimeSvc   = inject(OvertimeService);
   private readonly settingsSvc   = inject(SettingsService);
   private readonly authSvc       = inject(AuthService);
+
+  // ─── Feiertag heute (#279) ──────────────────────────────────────────────────
+  // Nur der Chip wechselt um Mitternacht; das restliche Dashboard bleibt (Folge-Issue).
+  private readonly _holidaySettings = toSignal(
+    this.settingsSvc.getSettings().pipe(catchError(() => of(DEFAULT_SETTINGS))),
+    { initialValue: DEFAULT_SETTINGS },
+  );
+  /** Lokales Datum als `YYYY-MM-DD`. */
+  private readonly _today = signal<string>(toDateKey(new Date()));
+  private _midnightHandle: ReturnType<typeof setTimeout> | null = null;
+
+  /** Feiertag des lokalen Datums laut gewähltem Bundesland, sonst `null` (rein informativ). */
+  readonly holidayToday = computed<GermanHoliday | null>(() => {
+    const land = this._holidaySettings().bundesland;
+    if (!land) return null;
+    const key = this._today();
+    return getGermanHolidayIds(Number(key.slice(0, 4)), land).get(key) ?? null;
+  });
   readonly isLoggedIn = computed(() => !!this.authSvc.user());
   private readonly destroyRef    = inject(DestroyRef);
 
@@ -108,12 +127,42 @@ export class DashboardService {
         }
       });
 
+    // Tageswechsel für den Feiertags-Chip (#279)
+    const onVisible = (): void => {
+      if (document.visibilityState === 'visible') {
+        this._refreshToday();
+        this._scheduleMidnight();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    this._scheduleMidnight();
+    this.destroyRef.onDestroy(() => {
+      document.removeEventListener('visibilitychange', onVisible);
+      if (this._midnightHandle !== null) clearTimeout(this._midnightHandle);
+      this._midnightHandle = null;
+    });
+
     // Page Visibility API — re-sync elapsed on tab focus (Flow 4)
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible' && this.isTimerRunning()) {
         this._recalculateOvertime();
       }
     });
+  }
+
+  private _refreshToday(): void {
+    this._today.set(toDateKey(new Date()));
+  }
+
+  private _scheduleMidnight(): void {
+    if (this._midnightHandle !== null) clearTimeout(this._midnightHandle);
+    const now = new Date();
+    const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime();
+    const delay = Math.max(1000, nextMidnight - now.getTime());
+    this._midnightHandle = setTimeout(() => {
+      this._refreshToday();
+      this._scheduleMidnight();
+    }, delay);
   }
 
   // ─── Flow 1: Initialisierung ────────────────────────────────────────────────

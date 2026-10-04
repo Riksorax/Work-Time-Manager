@@ -5,6 +5,7 @@ import { AuthService } from '../auth/auth';
 import { ApiClient } from './api-client';
 import { WorkProfileService } from './work-profile';
 import { DEFAULT_SETTINGS, UserSettings } from '../../shared/models';
+import { normalizeBundesland } from '../../shared/utils/bundesland.util';
 import { normalizeVacationDays } from '../../shared/utils/vacation-days.util';
 import { profileScopedPath } from '../../shared/utils/work-profile-path.util';
 
@@ -29,6 +30,7 @@ function mergeSettings(raw: Partial<UserSettings> & { workdaysPerWeek?: number }
     ...DEFAULT_SETTINGS,
     ...migrateWorkdays(raw),
     vacationDaysPerYear: normalizeVacationDays(raw.vacationDaysPerYear),
+    bundesland: normalizeBundesland(raw.bundesland),
   };
 }
 
@@ -62,9 +64,10 @@ export class SettingsService {
     );
   }
 
-  async saveSettings(settings: UserSettings): Promise<void> {
+  /** `opts.clearBundesland`: nur bei expliziter Abwahl, sendet `""` ans Backend (Details `ApiClient.saveSettings`). */
+  async saveSettings(settings: UserSettings, opts?: { clearBundesland?: boolean }): Promise<void> {
     // Eingeloggt: Schreibvorgang über die API; getSettings bleibt onSnapshot (Hybrid).
-    if (this.auth.uid) await this.api.saveSettings(settings, this.workProfile.activeProfileIdForApi);
+    if (this.auth.uid) await this.api.saveSettings(settings, this.workProfile.activeProfileIdForApi, opts);
     else               this._localSave(settings);
   }
 

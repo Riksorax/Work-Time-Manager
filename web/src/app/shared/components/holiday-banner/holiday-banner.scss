@@ -1,0 +1,30 @@
+// Flutter: Container(padding h16/v12, tertiaryContainer, radius 12), Icon + 12px + titleSmall, margin-bottom 16
+:host {
+  display: block;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto 16px;
+}
+
+.holiday-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--mat-sys-tertiary-container);
+  color: var(--mat-sys-on-tertiary-container);
+}
+
+.holiday-icon {
+  flex: none;
+}
+
+.holiday-text {
+  min-width: 0;
+  font-size: 0.875rem; // titleSmall
+  font-weight: 500;
+  line-height: 1.25rem;
+  letter-spacing: 0.1px;
+  overflow-wrap: anywhere; // lange Namen (z. B. "Boxing Day (St. Stephen's Day)") brechen um
+}
