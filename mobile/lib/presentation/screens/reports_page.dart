@@ -1380,9 +1380,10 @@ class _YearlyReportViewState extends ConsumerState<YearlyReportView> {
     if (_loadTriggered) return;
     _loadTriggered = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       ref
           .read(yearlyReportViewModelProvider.notifier)
-          .loadYear(DateTime.now().year);
+          .loadYear(ref.read(todayProvider).year);
     });
   }
 
@@ -2834,7 +2835,7 @@ class YearlyLeaveRows extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final currentYear = ref.watch(leaveBalanceNowProvider)().year;
+    final currentYear = ref.watch(todayProvider.select((d) => d.year));
 
     if (year != currentYear) {
       return Padding(

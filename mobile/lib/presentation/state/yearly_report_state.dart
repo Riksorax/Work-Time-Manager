@@ -15,12 +15,12 @@ class YearlyReportState extends Equatable {
     required this.months,
   });
 
-  factory YearlyReportState.initial() => YearlyReportState(
+  factory YearlyReportState.initial(int year) => YearlyReportState(
         // isLoading startet auf true: der erste Frame würde sonst kurz
         // "keine Daten" zeigen, bevor der Ladevorgang (ausgelöst per
         // postFrameCallback) überhaupt gestartet ist.
         isLoading: true,
-        year: DateTime.now().year,
+        year: year,
         months: List.generate(12, (i) => MonthSummary.empty(i + 1)),
       );
 

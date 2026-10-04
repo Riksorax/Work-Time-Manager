@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_work_time/core/providers/clock_provider.dart';
 import 'package:flutter_work_time/core/providers/providers.dart';
 import 'package:flutter_work_time/core/providers/subscription_provider.dart';
 import 'package:flutter_work_time/domain/entities/settings_entity.dart';
@@ -69,9 +71,13 @@ void main() {
     required ReportsViewModel reportsViewModel,
     required SettingsViewModel settingsViewModel,
     required AsyncValue<UserEntity?> authState,
+    DateTime? clock,
+    List<Override> extraOverrides = const [],
   }) {
     return ProviderScope(
       overrides: [
+        clockProvider
+            .overrideWithValue(() => clock ?? DateTime(2026, 10, 2, 12)),
         sharedPreferencesProvider.overrideWithValue(prefs),
         isPremiumProvider.overrideWithValue(true),
         settingsRepositoryProvider.overrideWithValue(mockSettingsRepository),
@@ -82,6 +88,7 @@ void main() {
         reportsViewModelProvider.overrideWith(() => reportsViewModel),
         settingsViewModelProvider.overrideWith(() => settingsViewModel),
         authStateProvider.overrideWithValue(authState),
+        ...extraOverrides,
       ],
       child: MaterialApp(
         locale: const Locale('de'),
@@ -278,6 +285,38 @@ void main() {
       });
     }
 
+    testWidgets(
+        'Jahres-Tab laedt das Jahr aus der Uhr, nicht aus DateTime.now()',
+        (tester) async {
+      final api = MockApiClient();
+      when(api.getMonthlyReport(any, any, profileId: anyNamed('profileId')))
+          .thenAnswer((_) async => {'monthlyOvertimeMs': 0});
+      final reportsViewModel = FakeReportsViewModel(
+        initialState: ReportsState.initial(DateTime(2026, 10, 2))
+            .copyWith(isLoading: false),
+        callback: mockCallback,
+      );
+      final settingsViewModel = FakeSettingsViewModel(
+        initialState: const AsyncValue.data(SettingsState(
+            settings: SettingsEntity(), overtimeBalance: Duration.zero)),
+      );
+
+      await tester.pumpWidget(createSubject(
+        reportsViewModel: reportsViewModel,
+        settingsViewModel: settingsViewModel,
+        authState:
+            const AsyncValue.data(UserEntity(id: '1', email: 'test@test.com')),
+        clock: DateTime(2027, 1, 4, 12),
+        extraOverrides: [apiClientProvider.overrideWithValue(api)],
+      ));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Jährlich'));
+      await tester.pumpAndSettle();
+
+      verify(mockWorkRepository.getWorkEntriesForMonth(2027, 1)).called(1);
+      verifyNever(mockWorkRepository.getWorkEntriesForMonth(2026, 12));
+    });
+
     testWidgets('Insights-Tab zeigt Platzhalter ohne Datenbasis',
         (tester) async {
       final reportsViewModel = FakeReportsViewModel(
@@ -308,8 +347,8 @@ void main() {
     testWidgets(
         'Insights-Tab zeigt Wochentags-Analyse und Heatmap mit Datenbasis',
         (tester) async {
-      final now = DateTime
-          .now(); // bleibt: InsightsViewModel liest noch DateTime.now() (Teil B)
+      // Feste Uhr (clockProvider-Override in createSubject), kein DateTime.now().
+      final now = DateTime(2026, 10, 2);
       // Zwei Einträge am selben Wochentag + selber Startstunde, damit sowohl
       // die Wochentags-Analyse als auch die Heatmap (minSampleCount: 2)
       // Ergebnisse liefern.
