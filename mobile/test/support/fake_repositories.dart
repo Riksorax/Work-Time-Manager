@@ -164,6 +164,12 @@ class FakeSettingsRepository implements SettingsRepository {
   List<int> workdays = [1, 2, 3, 4, 5];
   double weeklyHours = 40;
 
+  /// Schwellwert-Warnungen (#219), Default: aus.
+  bool warnOnOvertime = false;
+  double overtimeThresholdHours = 0;
+  bool warnOnUndertime = false;
+  double undertimeThresholdHours = 0;
+
   @override
   List<int> getWorkdays() => workdays;
 
@@ -171,16 +177,16 @@ class FakeSettingsRepository implements SettingsRepository {
   double getTargetWeeklyHours() => weeklyHours;
 
   @override
-  bool getWarnOnOvertimeThreshold() => false;
+  bool getWarnOnOvertimeThreshold() => warnOnOvertime;
 
   @override
-  bool getWarnOnUndertimeThreshold() => false;
+  bool getWarnOnUndertimeThreshold() => warnOnUndertime;
 
   @override
-  double getOvertimeThresholdHours() => 0;
+  double getOvertimeThresholdHours() => overtimeThresholdHours;
 
   @override
-  double getUndertimeThresholdHours() => 0;
+  double getUndertimeThresholdHours() => undertimeThresholdHours;
 
   @override
   String getLocale() => 'de';

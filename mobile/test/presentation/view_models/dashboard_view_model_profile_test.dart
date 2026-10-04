@@ -5,8 +5,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_work_time/core/providers/clock_provider.dart';
 import 'package:flutter_work_time/core/providers/providers.dart';
 import 'package:flutter_work_time/domain/entities/break_entity.dart';
+import 'package:flutter_work_time/l10n/app_localizations.dart';
 import 'package:flutter_work_time/domain/entities/work_entry_entity.dart';
+import 'package:flutter_work_time/core/services/notification_service.dart';
 import 'package:flutter_work_time/domain/usecases/toggle_break.dart';
+import 'package:flutter_work_time/domain/utils/overtime_warning_utils.dart';
 
 import 'package:mockito/mockito.dart';
 import 'package:flutter_work_time/domain/entities/work_profile_entity.dart';
@@ -149,6 +152,10 @@ void main() {
 
     // `toggleBreak.call` ist im Betrieb nur ein Microtask-Sprung; hier haelt
     // ein Test-UseCase ihn offen, damit der Wechsel in dieses Fenster faellt.
+    // Geprueft wird nur, in welches Profil geschrieben wird: den Saldo-Wert
+    // nicht, denn Basis und Soll liest `_recalculateStateAndSave` nach dem
+    // `await` aus dem Zustand/den Settings von B. Im Betrieb ist das Fenster
+    // unerreichbar (ein Profilwechsel braucht einen eigenen Scheduler-Task).
     final gates = <Completer<void>>[];
     scenario(
         'T2 startOrStopBreak: Wechsel waehrend toggleBreak, Saldo bleibt in A',
@@ -334,6 +341,25 @@ void main() {
   });
 
   group('O1 Dispose mitten in der Aktion', () {
+    // Nur eine ueberholte Aktion schluckt Fehler; sonst geht er wie vor #388
+    // an den Aufrufer (hier setManualEndTime, nicht der Stop-Pfad, dessen
+    // Fehlerbehandlung ein eigenes Thema ist).
+    scenario(
+        'ohne Ueberholung: Saldo-Fehler wird weitergereicht, nichts geschrieben',
+        at(17), (h) {
+      h.boot();
+      h.overtime.failSaveOvertime = true;
+      Object? error;
+      unawaited(h.vm
+          .setManualEndTime(const TimeOfDay(hour: 16, minute: 30))
+          .then<void>((_) {}, onError: (Object e) => error = e));
+      h.async.flushMicrotasks();
+
+      expect(error, isA<Exception>());
+      expect(h.writeLog, isEmpty);
+      expect(h.work.saved, isEmpty);
+    }, setUp: prep(a: finishedA), profiles: true);
+
     scenario('Logout/Dispose: begonnene Aktion schreibt zu Ende', at(17), (h) {
       h.boot();
       h.overtime.holdSaveOvertime = true;
@@ -362,6 +388,64 @@ void main() {
       expect(h.writeLog, isEmpty);
       expect(h.work.saved, isEmpty);
     }, setUp: prep(), profiles: true);
+  });
+
+  // O4: die Ueberstunden-Warnung nutzt Flags und Schwellen des Profils der
+  // Aktion (festgehaltenes Settings-Repo), nicht die des neuen Profils.
+  group('O4 Ueberstunden-Warnung je Profil', () {
+    final warnings = <OvertimeWarningType>[];
+    final overrides = [
+      notificationServiceProvider
+          .overrideWithValue(_FakeNotifications(warnings))
+    ];
+
+    // Stop in A ergibt Saldo 135 min (2,25 h); Wechsel auf B im Saldo-Fenster.
+    void stopWithSwitch(Harness h) {
+      warnings.clear();
+      h.boot();
+      h.overtime.holdSaveOvertime = true;
+      h.act(h.vm.startOrStopTimer);
+      h.switchProfile('B');
+      releaseSaldo(h);
+      expect(h.writeLog, contains('A:overtime:135'));
+    }
+
+    scenario(
+        'A warnt (2 h), B nicht: Warnung kommt trotz Wechsel auf B', at(17),
+        (h) {
+      stopWithSwitch(h);
+      expect(warnings, [OvertimeWarningType.overtime]);
+    }, setUp: (h) {
+      prep()(h);
+      h.settings
+        ..warnOnOvertime = true
+        ..overtimeThresholdHours = 2;
+    }, profiles: true, overrides: overrides);
+
+    scenario('A warnt nicht, B wuerde warnen: keine Warnung nach dem Wechsel',
+        at(17), (h) {
+      stopWithSwitch(h);
+      expect(warnings, isEmpty);
+    }, setUp: (h) {
+      prep()(h);
+      h.settingsB
+        ..warnOnOvertime = true
+        ..overtimeThresholdHours = 1;
+    }, profiles: true, overrides: overrides);
+
+    scenario('Schwelle aus A (3 h, nicht erreicht) gilt, nicht die aus B (1 h)',
+        at(17), (h) {
+      stopWithSwitch(h);
+      expect(warnings, isEmpty);
+    }, setUp: (h) {
+      prep()(h);
+      h.settings
+        ..warnOnOvertime = true
+        ..overtimeThresholdHours = 3;
+      h.settingsB
+        ..warnOnOvertime = true
+        ..overtimeThresholdHours = 1;
+    }, profiles: true, overrides: overrides);
   });
 
   group('T10 WorkProfileViewModel x laufendes Dashboard', () {
@@ -428,4 +512,23 @@ class _HeldToggleBreak extends ToggleBreak {
     await gate.future;
     return super.call(currentEntry);
   }
+}
+
+class _FakeNotifications implements NotificationService {
+  _FakeNotifications(this.warnings);
+
+  final List<OvertimeWarningType> warnings;
+
+  @override
+  Future<void> showOvertimeWarning({
+    required OvertimeWarningType type,
+    required Duration totalOvertime,
+    required AppLocalizations l10n,
+  }) async {
+    warnings.add(type);
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw UnimplementedError('${invocation.memberName}');
 }
