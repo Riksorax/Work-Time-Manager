@@ -414,5 +414,7 @@
   "openEntryEndLongWarning": "That is more than 16 hours. Is that correct?",
   "openEntryEndDialogConfirm": "End entry",
   "openEntrySaveError": "Could not end the entry.",
-  "dashboardSaveError": "Saving failed. Please check your connection and try again."
+  "dashboardSaveError": "Saving failed. Please check your connection and try again.",
+  "reportsEntryIncompleteTitle": "Incomplete",
+  "reportsEntryIncompleteHint": "No end recorded – this entry is not counted in the reports."
 }

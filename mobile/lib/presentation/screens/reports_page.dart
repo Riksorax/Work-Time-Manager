@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
 import 'package:flutter_work_time/core/utils/time_format.dart';
-import 'package:flutter_work_time/core/utils/time_precision.dart';
 import 'package:intl/intl.dart';
+import '../../core/providers/clock_provider.dart';
 import '../../core/providers/subscription_provider.dart';
 import '../../core/providers/today_provider.dart';
 import '../../core/services/pdf_report_service.dart';
@@ -14,6 +14,7 @@ import '../../domain/entities/work_entry_extensions.dart';
 import '../../domain/utils/date_utils.dart';
 import '../../domain/utils/german_holidays.dart';
 import '../../domain/utils/iso_week.dart';
+import '../../domain/utils/open_entry_report_utils.dart';
 import '../../domain/utils/weekday_labels.dart';
 import '../../l10n/app_localizations.dart';
 import '../utils/holiday_name_localizer.dart';
@@ -226,6 +227,8 @@ class DailyReportView extends ConsumerWidget {
             .map((date) => date.day)
             .toSet();
 
+        // Offene Einträge zählen nur am heutigen Tag live (#404), sonst 0.
+        final DateTime now = ref.read(clockProvider)();
         Duration totalWorked = Duration.zero;
         Duration totalManualAdjustment = Duration.zero;
         for (final e in dailyReport.entries) {
@@ -236,25 +239,7 @@ class DailyReportView extends ConsumerWidget {
           // Nur Arbeitseinträge zählen zur Arbeitszeit
           // Urlaub, Krankheit und Feiertage erfüllen das Soll automatisch
           if (dE.type == WorkEntryType.work) {
-            final DateTime? start = dE.workStart;
-            // FIX: DateTime type, not DateTime? to ensure non-null usage later
-            final DateTime end = dE.workEnd ?? nowToMinute();
-            if (start != null) {
-              // end is always not null due to ??
-              Duration breakDur = Duration.zero;
-              for (final b in dE.breaks) {
-                final DateTime bStart = b.start;
-                // b.end is nullable, end is not
-                final DateTime bEnd = b.end ?? end;
-                final DateTime effStart =
-                    bStart.isBefore(start) ? start : bStart;
-                final DateTime effEnd = bEnd.isAfter(end) ? end : bEnd;
-                if (effEnd.isAfter(effStart)) {
-                  breakDur += effEnd.difference(effStart);
-                }
-              }
-              totalWorked += end.difference(start) - breakDur;
-            }
+            totalWorked += reportNetDuration(dE, now: now);
           }
 
           if (dE.manualOvertime != null) {
@@ -457,24 +442,9 @@ class DailyReportView extends ConsumerWidget {
                 final displayEntry = ref
                     .read(reportsViewModelProvider.notifier)
                     .applyBreakCalculation(entry);
-                final DateTime? start = displayEntry.workStart;
-                final DateTime end = displayEntry.workEnd ?? nowToMinute();
-                Duration breakDuration = Duration.zero;
-                if (start != null) {
-                  for (final b in displayEntry.breaks) {
-                    final DateTime bStart = b.start;
-                    final DateTime bEnd = b.end ?? end;
-                    final DateTime effStart =
-                        bStart.isBefore(start) ? start : bStart;
-                    final DateTime effEnd = bEnd.isAfter(end) ? end : bEnd;
-                    if (effEnd.isAfter(effStart)) {
-                      breakDuration += effEnd.difference(effStart);
-                    }
-                  }
-                }
-                final Duration workedDuration = (start != null)
-                    ? end.difference(start) - breakDuration
-                    : Duration.zero;
+                final Duration workedDuration =
+                    reportNetDuration(displayEntry, now: now);
+                final bool isIncomplete = isOpenBeforeToday(displayEntry, now);
 
                 final isSpecialType = displayEntry.type != WorkEntryType.work;
 
@@ -492,10 +462,12 @@ class DailyReportView extends ConsumerWidget {
                               isSpecialType
                                   ? _getWorkEntryTypeLabel(
                                       l10n, displayEntry.type)
-                                  : l10n.workTimeLabel(workedDuration
-                                      .toString()
-                                      .split('.')
-                                      .first),
+                                  : isIncomplete
+                                      ? l10n.reportsEntryIncompleteTitle
+                                      : l10n.workTimeLabel(workedDuration
+                                          .toString()
+                                          .split('.')
+                                          .first),
                               style: Theme.of(context).textTheme.titleMedium,
                             ),
                             Row(
@@ -545,20 +517,26 @@ class DailyReportView extends ConsumerWidget {
                                 .split('.')
                                 .first)),
                           ),
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8.0),
-                          child: Text(
-                            l10n.overtimeValueLabel(_formatDuration(
-                                displayEntry.calculateOvertime(dailyTarget))),
-                            style: TextStyle(
-                                color: (displayEntry
-                                        .calculateOvertime(dailyTarget)
-                                        .isNegative
-                                    ? Colors.red
-                                    : Colors.green),
-                                fontWeight: FontWeight.bold),
+                        if (isIncomplete)
+                          const Padding(
+                            padding: EdgeInsets.only(top: 8.0),
+                            child: _IncompleteEntryHint(),
+                          )
+                        else
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: Text(
+                              l10n.overtimeValueLabel(_formatDuration(
+                                  displayEntry.calculateOvertime(dailyTarget))),
+                              style: TextStyle(
+                                  color: (displayEntry
+                                          .calculateOvertime(dailyTarget)
+                                          .isNegative
+                                      ? Colors.red
+                                      : Colors.green),
+                                  fontWeight: FontWeight.bold),
+                            ),
                           ),
-                        ),
                       ],
                     ),
                   ),
@@ -2435,25 +2413,11 @@ class _DayEntriesBottomSheetState extends ConsumerState<DayEntriesBottomSheet> {
                             displayEntry.type != WorkEntryType.work;
 
                         final DateTime? start = displayEntry.workStart;
-                        final DateTime? end =
-                            displayEntry.workEnd ?? nowToMinute();
-                        Duration worked = Duration.zero;
-
-                        if (start != null && end != null) {
-                          Duration breakDur = Duration.zero;
-                          for (final b in displayEntry.breaks) {
-                            final DateTime bStart = b.start;
-                            final DateTime bEnd = b.end ?? end;
-                            final DateTime effStart =
-                                bStart.isBefore(start) ? start : bStart;
-                            final DateTime effEnd =
-                                bEnd.isAfter(end) ? end : bEnd;
-                            if (effEnd.isAfter(effStart)) {
-                              breakDur += effEnd.difference(effStart);
-                            }
-                          }
-                          worked = end.difference(start) - breakDur;
-                        }
+                        final DateTime now = ref.read(clockProvider)();
+                        final Duration worked =
+                            reportNetDuration(displayEntry, now: now);
+                        final bool isIncomplete =
+                            isOpenBeforeToday(displayEntry, now);
 
                         return Card(
                           margin: const EdgeInsets.symmetric(vertical: 6),
@@ -2463,8 +2427,10 @@ class _DayEntriesBottomSheetState extends ConsumerState<DayEntriesBottomSheet> {
                             title: Text(isSpecialType
                                 ? _getWorkEntryTypeLabel(
                                     l10n, displayEntry.type)
-                                : l10n.workTimeLabel(
-                                    worked.toString().split('.').first)),
+                                : isIncomplete
+                                    ? l10n.reportsEntryIncompleteTitle
+                                    : l10n.workTimeLabel(
+                                        worked.toString().split('.').first)),
                             subtitle: (isSpecialType &&
                                     displayEntry.workStart == null &&
                                     displayEntry.workEnd == null)
@@ -2497,6 +2463,8 @@ class _DayEntriesBottomSheetState extends ConsumerState<DayEntriesBottomSheet> {
                                                 .toString()
                                                 .split('.')
                                                 .first)),
+                                      if (isIncomplete)
+                                        const _IncompleteEntryHint(),
                                     ],
                                   ),
                             trailing: Row(
@@ -2619,6 +2587,38 @@ Future<void> _handleBatchQuickEntry(
 // ---------------------------------------------------------------------------
 // Platzhalter-Widgets für den Blur-Effekt (nicht-Premium-Nutzer)
 // ---------------------------------------------------------------------------
+
+/// Hinweis auf einer Eintragskarte: offener Eintrag vor heute, zählt nicht in
+/// die Auswertung (#404). Das Icon ist rein dekorativ (kein Semantics-Label),
+/// der Text trägt die Aussage für TalkBack; er bricht bei großer Schrift um.
+class _IncompleteEntryHint extends StatelessWidget {
+  const _IncompleteEntryHint();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final color = Theme.of(context).colorScheme.onSurfaceVariant;
+    return Padding(
+      padding: const EdgeInsets.only(top: 4.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.info_outline, size: 18, color: color),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              l10n.reportsEntryIncompleteHint,
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(color: color),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _WeeklyReportPlaceholder extends StatelessWidget {
   const _WeeklyReportPlaceholder();
