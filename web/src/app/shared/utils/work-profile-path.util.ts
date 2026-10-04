@@ -17,3 +17,12 @@ export function profileScopedPath(
   }
   return `users/${uid}/profiles/${profileId}/${collection}`;
 }
+
+/**
+ * Wandelt eine Profil-ID in die API-Form um (#380): das Standard-Profil ist `undefined` (Query-Parameter bleibt
+ * weg), jede andere ID wird unverändert durchgereicht. Gegenstück zu `WorkProfileService.activeProfileIdForApi`
+ * für ein explizit übergebenes Profil.
+ */
+export function profileIdForApi(profileId: string): string | undefined {
+  return profileId === DEFAULT_WORK_PROFILE_ID ? undefined : profileId;
+}

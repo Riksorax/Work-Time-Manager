@@ -81,8 +81,17 @@ export class WorkProfileService {
   }
 
   async deleteProfile(id: string): Promise<void> {
-    await this.api.deleteWorkProfile(id);
-    if (this._activeProfileId() === id) this.setActiveProfile(DEFAULT_WORK_PROFILE_ID);
+    // Ein aktives Profil wird VOR dem API-Aufruf verlassen (#380): so läuft währenddessen kein Autosave mehr in das
+    // gerade zu löschende Profil (das Backend würde dort verwaiste Dokumente neu anlegen). Schlägt das Löschen fehl,
+    // geht es zurück ins unveränderte Profil.
+    const wasActive = this._activeProfileId() === id;
+    if (wasActive) this.setActiveProfile(DEFAULT_WORK_PROFILE_ID);
+    try {
+      await this.api.deleteWorkProfile(id);
+    } catch (e) {
+      if (wasActive && this._activeProfileId() === DEFAULT_WORK_PROFILE_ID) this.setActiveProfile(id);
+      throw e;
+    }
     await this.refreshProfiles();
   }
 

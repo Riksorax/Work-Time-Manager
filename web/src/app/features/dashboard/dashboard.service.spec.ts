@@ -6,6 +6,8 @@ import { WorkEntryService } from '../../core/services/work-entry';
 import { OvertimeService } from '../../core/services/overtime';
 import { SettingsService } from '../../core/services/settings';
 import { AuthService } from '../../core/auth/auth';
+import { WorkProfileService } from '../../core/services/work-profile';
+import { createFakeWorkProfile } from '../../shared/testing/work-profile-fake';
 import { toDateKey } from '../../shared/utils/german-holidays.util';
 import { Bundesland, DEFAULT_SETTINGS, UserSettings, WorkEntry, WorkEntryType } from '../../shared/models/index';
 
@@ -36,6 +38,7 @@ describe('DashboardService.holidayToday (#279)', () => {
         } },
         { provide: SettingsService, useValue: { getSettings: () => settings$.asObservable(), saveSettings: vi.fn() } },
         { provide: AuthService, useValue: { user: signal(null), uid: null } },
+        { provide: WorkProfileService, useValue: createFakeWorkProfile() },
       ],
     });
     return TestBed.inject(DashboardService);
@@ -243,6 +246,7 @@ function setup(opts: SetupOptions = {}): Harness {
       { provide: OvertimeService, useValue: { getOvertime, getLastUpdateDate, saveOvertime, saveLastUpdateDate } },
       { provide: SettingsService, useValue: { getSettings: () => settings$.asObservable(), saveSettings: vi.fn() } },
       { provide: AuthService, useValue: { user, get uid() { return user()?.uid ?? null; } } },
+      { provide: WorkProfileService, useValue: createFakeWorkProfile() },
     ],
   });
   const svc = TestBed.inject(DashboardService);
@@ -356,7 +360,7 @@ fakeClockSuite('DashboardService Eintragsdatum-Kopplung (#372)', () => {
     expect(toDateKey(saved.date)).toBe('2026-10-02');
     const breakMs = saved.breaks.reduce((sum, b) => sum + (b.end!.getTime() - b.start.getTime()), 0);
     const net = saved.workEnd!.getTime() - start.getTime() - breakMs;
-    expect(h.saveOvertime).toHaveBeenCalledWith(net - 8 * H);
+    expect(h.saveOvertime).toHaveBeenCalledWith(net - 8 * H, 'default');
   });
 
   // Samstage vor Zeitumstellungen (Berlin 28.3./24.10., LA 7.3./31.10., Auckland 4.4./26.9.)
