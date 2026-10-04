@@ -1137,6 +1137,95 @@ final class GetTodayWorkEntryUseCaseProvider extends $FunctionalProvider<
 String _$getTodayWorkEntryUseCaseHash() =>
     r'dde53bb0a8325b8881666a6679c270f95af3e460';
 
+@ProviderFor(getOpenPastWorkEntriesUseCase)
+const getOpenPastWorkEntriesUseCaseProvider =
+    GetOpenPastWorkEntriesUseCaseProvider._();
+
+final class GetOpenPastWorkEntriesUseCaseProvider extends $FunctionalProvider<
+    GetOpenPastWorkEntries,
+    GetOpenPastWorkEntries,
+    GetOpenPastWorkEntries> with $Provider<GetOpenPastWorkEntries> {
+  const GetOpenPastWorkEntriesUseCaseProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'getOpenPastWorkEntriesUseCaseProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$getOpenPastWorkEntriesUseCaseHash();
+
+  @$internal
+  @override
+  $ProviderElement<GetOpenPastWorkEntries> $createElement(
+          $ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  GetOpenPastWorkEntries create(Ref ref) {
+    return getOpenPastWorkEntriesUseCase(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(GetOpenPastWorkEntries value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<GetOpenPastWorkEntries>(value),
+    );
+  }
+}
+
+String _$getOpenPastWorkEntriesUseCaseHash() =>
+    r'23c13854e854b6a7312507252b2c911653d0dcd2';
+
+@ProviderFor(closeOpenWorkEntryUseCase)
+const closeOpenWorkEntryUseCaseProvider = CloseOpenWorkEntryUseCaseProvider._();
+
+final class CloseOpenWorkEntryUseCaseProvider extends $FunctionalProvider<
+    CloseOpenWorkEntry,
+    CloseOpenWorkEntry,
+    CloseOpenWorkEntry> with $Provider<CloseOpenWorkEntry> {
+  const CloseOpenWorkEntryUseCaseProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'closeOpenWorkEntryUseCaseProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$closeOpenWorkEntryUseCaseHash();
+
+  @$internal
+  @override
+  $ProviderElement<CloseOpenWorkEntry> $createElement(
+          $ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  CloseOpenWorkEntry create(Ref ref) {
+    return closeOpenWorkEntryUseCase(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(CloseOpenWorkEntry value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<CloseOpenWorkEntry>(value),
+    );
+  }
+}
+
+String _$closeOpenWorkEntryUseCaseHash() =>
+    r'f1e6519c3dc9599c8a3d82695cad502a39fcf28a';
+
 @ProviderFor(saveWorkEntryUseCase)
 const saveWorkEntryUseCaseProvider = SaveWorkEntryUseCaseProvider._();
 

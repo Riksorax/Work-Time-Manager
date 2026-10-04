@@ -31,9 +31,11 @@ import '../../domain/repositories/settings_repository.dart';
 import '../../domain/repositories/weekly_reflection_repository.dart';
 import '../../domain/repositories/work_profile_repository.dart';
 import '../../domain/repositories/work_repository.dart';
+import '../../domain/usecases/close_open_work_entry.dart';
 import '../../domain/usecases/delete_account.dart';
 import '../../domain/usecases/reauthenticate.dart';
 import '../../domain/usecases/get_auth_state_changes.dart';
+import '../../domain/usecases/get_open_past_work_entries.dart';
 import '../../domain/usecases/get_theme_mode.dart';
 import '../../domain/usecases/get_today_work_entry.dart';
 import '../../domain/usecases/get_work_entries_for_month.dart';
@@ -332,6 +334,19 @@ SetThemeMode setThemeModeUseCase(Ref ref) {
 @riverpod
 GetTodayWorkEntry getTodayWorkEntryUseCase(Ref ref) {
   return GetTodayWorkEntry(ref.watch(workRepositoryProvider),
+      clock: ref.watch(clockProvider));
+}
+
+@riverpod
+GetOpenPastWorkEntries getOpenPastWorkEntriesUseCase(Ref ref) {
+  return GetOpenPastWorkEntries(ref.watch(workRepositoryProvider),
+      clock: ref.watch(clockProvider));
+}
+
+@riverpod
+CloseOpenWorkEntry closeOpenWorkEntryUseCase(Ref ref) {
+  return CloseOpenWorkEntry(
+      ref.watch(workRepositoryProvider), ref.watch(overtimeRepositoryProvider),
       clock: ref.watch(clockProvider));
 }
 

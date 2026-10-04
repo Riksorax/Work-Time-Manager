@@ -396,5 +396,22 @@
   "leaveLoadError": "Could not load vacation data.",
   "leaveRetry": "Retry",
   "vacationEntitlementZero": "You have not set a vacation entitlement.",
-  "leavePastYearNote": "Remaining vacation is only shown for the current year."
+  "leavePastYearNote": "Remaining vacation is only shown for the current year.",
+  "openEntryBannerTitle": "Your entry from {date} has been running since {time}.",
+  "openEntryBannerMore": "{count, plural, =1{1 more open entry} other{{count} more open entries}}",
+  "openEntryEnd": "End",
+  "openEntryLater": "Later",
+  "openEntryEndSemantics": "End entry from {date}",
+  "openEntryLaterSemantics": "Handle entry from {date} later",
+  "openEntryEndDialogTitle": "Set the end of the entry",
+  "openEntryEndDialogBody": "When did you stop on {date}?",
+  "openEntryEndSuggestionExpected": "Target end ({time})",
+  "openEntryEndSuggestionNow": "Now",
+  "openEntryEndDateLabel": "Date",
+  "openEntryEndTimeLabel": "Time",
+  "openEntryEndPickTime": "Choose time",
+  "openEntryEndInvalid": "The end must be after the start and before now.",
+  "openEntryEndLongWarning": "That is more than 16 hours. Is that correct?",
+  "openEntryEndDialogConfirm": "End entry",
+  "openEntrySaveError": "Could not end the entry."
 }

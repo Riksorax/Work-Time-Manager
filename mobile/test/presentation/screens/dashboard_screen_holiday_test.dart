@@ -14,6 +14,7 @@ import 'package:flutter_work_time/presentation/state/settings_state.dart';
 import 'package:flutter_work_time/presentation/view_models/auth_view_model.dart';
 import 'package:flutter_work_time/presentation/view_models/dashboard_view_model.dart';
 import 'package:flutter_work_time/presentation/view_models/leave_balance_view_model.dart';
+import 'package:flutter_work_time/presentation/view_models/open_entry_view_model.dart';
 import 'package:flutter_work_time/presentation/view_models/settings_view_model.dart';
 
 const _bannerText = 'Heute ist Feiertag: Tag der Deutschen Einheit';
@@ -62,6 +63,12 @@ class _FakeLeaveViewModel extends LeaveBalanceViewModel {
   LeaveBalanceState build() => const LeaveBalanceState();
 }
 
+/// Der Banner für offene Einträge (#385) ist hier nicht Thema.
+class _NoOpenEntriesViewModel extends OpenEntryViewModel {
+  @override
+  OpenEntryState build() => const OpenEntryState();
+}
+
 void main() {
   setUp(() {
     _land = Bundesland.bayern;
@@ -81,6 +88,7 @@ void main() {
             .overrideWith(() => _FakeDashboardViewModel(type)),
         settingsViewModelProvider.overrideWith(_FakeSettingsViewModel.new),
         leaveBalanceViewModelProvider.overrideWith(_FakeLeaveViewModel.new),
+        openEntryViewModelProvider.overrideWith(_NoOpenEntriesViewModel.new),
         authStateProvider
             .overrideWithValue(const AsyncValue<UserEntity?>.data(null)),
         clockProvider.overrideWithValue(() => clockNow),
