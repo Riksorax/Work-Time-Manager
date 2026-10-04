@@ -17,7 +17,8 @@ describe('ProfileSwitchConfirmService (#380)', () => {
   let overlay: HTMLElement;
 
   const flush = async (): Promise<void> => {
-    for (let i = 0; i < 5; i++) { await Promise.resolve(); TestBed.tick(); await new Promise(r => setTimeout(r, 0)); }
+    // Nur Microtasks, kein `setTimeout`: im Vollauf steht dort teils ein fremder Fake-Timer (Ursache offen, #392).
+    for (let i = 0; i < 20; i++) { await Promise.resolve(); TestBed.tick(); }
   };
   const buttons = (): HTMLButtonElement[] => Array.from(overlay.querySelectorAll('button'));
   const button = (text: string): HTMLButtonElement =>
