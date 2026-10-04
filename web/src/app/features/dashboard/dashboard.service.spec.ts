@@ -778,3 +778,79 @@ fakeClockSuite('DashboardService Cleanup (#372)', () => {
     expect(h.saveEntry).not.toHaveBeenCalled();
   });
 });
+
+fakeClockSuite('DashboardService Neuberechnung gestoppter Eintrag (#390)', () => {
+  const MONDAY = (h: number, min = 0): Date => new Date(2026, 9, 5, h, min);
+
+  it('A: gestoppter Eintrag behält Daily/Total nach Settings-Emission, egal wie spät es ist', async () => {
+    vi.setSystemTime(MONDAY(12));
+    const h = setup({ entries: [mkEntry(2026, 9, 5, { workStart: MONDAY(8), workEnd: MONDAY(11) })] });
+    h.settings$.next({ ...DEFAULT_SETTINGS, bundesland: null, weeklyTargetHours: 30 }); // 6 h Soll
+    await vi.advanceTimersByTimeAsync(0);
+    expect(h.svc.isTimerRunning()).toBe(false);
+    expect(h.svc.dailyOvertime()).toBe(-3 * H);
+
+    h.settings$.next({ ...DEFAULT_SETTINGS, bundesland: null, weeklyTargetHours: 30 });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(h.svc.dailyOvertime()).toBe(-3 * H);
+    expect(h.svc.totalOvertime()).toBe(-3 * H);
+
+    vi.setSystemTime(MONDAY(15));
+    h.settings$.next({ ...DEFAULT_SETTINGS, bundesland: null, weeklyTargetHours: 30 });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(h.svc.dailyOvertime()).toBe(-3 * H);
+    expect(h.svc.totalOvertime()).toBe(-3 * H);
+  });
+
+  it('B: laufender Eintrag rechnet weiter mit der Uhr (Gegenprobe)', async () => {
+    vi.setSystemTime(MONDAY(12));
+    const h = setup({ entries: [mkEntry(2026, 9, 5, { workStart: MONDAY(8) })] });
+    h.settings$.next({ ...DEFAULT_SETTINGS, bundesland: null, weeklyTargetHours: 30 });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(h.svc.isTimerRunning()).toBe(true);
+    h.settings$.next({ ...DEFAULT_SETTINGS, bundesland: null, weeklyTargetHours: 30 });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(h.svc.dailyOvertime()).toBe(4 * H - 6 * H);
+
+    vi.setSystemTime(MONDAY(13));
+    h.settings$.next({ ...DEFAULT_SETTINGS, bundesland: null, weeklyTargetHours: 30 });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(h.svc.dailyOvertime()).toBe(5 * H - 6 * H);
+  });
+
+  it('D: nach Stop um 11:00 bleibt der Wert bei späterer Settings-Emission', async () => {
+    vi.setSystemTime(MONDAY(11));
+    const h = setup({ entries: [mkEntry(2026, 9, 5, { workStart: MONDAY(8) })] });
+    h.settings$.next({ ...DEFAULT_SETTINGS, bundesland: null, weeklyTargetHours: 30 });
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(h.svc.isTimerRunning()).toBe(true);
+    await h.svc.startOrStopTimer();
+    expect(h.svc.isTimerRunning()).toBe(false);
+    const stopped = h.svc.dailyOvertime();
+    expect(stopped).toBe(-3 * H);
+
+    vi.setSystemTime(MONDAY(12));
+    h.settings$.next({ ...DEFAULT_SETTINGS, bundesland: null, weeklyTargetHours: 30 });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(h.svc.dailyOvertime()).toBe(stopped);
+  });
+
+  it('C: offene Pause zählt bis workEnd (nicht bis „jetzt“), Netto und erwartetes Ende bleiben stabil', async () => {
+    vi.setSystemTime(MONDAY(12));
+    const h = setup({
+      entries: [mkEntry(2026, 9, 5, {
+        workStart: MONDAY(8), workEnd: MONDAY(11),
+        breaks: [{ id: 'b1', name: 'Pause', start: MONDAY(10), isAutomatic: false }],
+      })],
+    });
+    h.settings$.next({ ...DEFAULT_SETTINGS, bundesland: null, weeklyTargetHours: 30 });
+    await vi.advanceTimersByTimeAsync(0);
+    h.settings$.next({ ...DEFAULT_SETTINGS, bundesland: null, weeklyTargetHours: 30 });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(h.svc.isTimerRunning()).toBe(false);
+    // 3 h brutto − 1 h Pause (10:00-11:00) − 6 h Soll
+    expect(h.svc.dailyOvertime()).toBe(-4 * H);
+    // 08:00 + 6 h Soll + 1 h Pause
+    expect(h.svc.expectedEndTime()?.getTime()).toBe(MONDAY(15).getTime());
+  });
+});
