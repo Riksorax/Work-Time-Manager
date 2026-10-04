@@ -98,3 +98,47 @@ describe('ReportsService - Urlaubsübersicht neu laden', () => {
     expect(refresh).not.toHaveBeenCalled();
   });
 });
+
+describe('ReportsService - Tageswechsel (#382)', () => {
+  afterEach(() => vi.useRealTimers());
+
+  function create(): ReportsService {
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: AuthService, useValue: { user$: of(null), user: signal(null) } },
+        { provide: WorkProfileService, useValue: { activeProfileId$: of('default'), activeProfileIdForApi: undefined } },
+        { provide: WorkEntryService, useValue: { getEntriesForMonth: () => of([]) } },
+        { provide: SettingsService, useValue: { getSettings: () => of(DEFAULT_SETTINGS) } },
+        { provide: ProfileService, useValue: { isPremium: signal(false) } },
+        { provide: ApiClient, useValue: {} },
+        { provide: Router, useValue: { navigate: vi.fn() } },
+        { provide: LeaveBalanceService, useValue: { refresh: vi.fn() } },
+      ],
+    });
+    return TestBed.inject(ReportsService);
+  }
+
+  it('Vorauswahl folgt dem neuen Tag um Mitternacht', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 9, 31, 23, 59, 30));
+    const svc = create();
+    TestBed.tick();
+    expect(svc.selectedDate().getDate()).toBe(31);
+
+    vi.advanceTimersByTime(60_000);
+    TestBed.tick();
+    expect(svc.selectedDate().getMonth()).toBe(10);
+    expect(svc.selectedDate().getDate()).toBe(1);
+  });
+
+  it('eine manuell gewählte Auswahl bleibt erhalten', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 9, 31, 23, 59, 30));
+    const svc = create();
+    TestBed.tick();
+    svc.selectDate(new Date(2026, 9, 5));
+    vi.advanceTimersByTime(60_000);
+    TestBed.tick();
+    expect(svc.selectedDate().getDate()).toBe(5);
+  });
+});
