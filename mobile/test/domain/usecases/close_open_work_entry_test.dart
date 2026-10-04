@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_work_time/core/utils/logger.dart';
 import 'package:logger/logger.dart';
 import 'package:flutter_work_time/domain/entities/break_entity.dart';
 import 'package:flutter_work_time/domain/entities/work_entry_entity.dart';
@@ -188,6 +187,17 @@ void main() {
             end: DateTime(2026, 10, 2, 12, 30)),
       ]);
       await expectInvalid(e, DateTime(2026, 10, 2, 11));
+    });
+
+    test('Ende innerhalb einer geschlossenen Pause', () async {
+      final e = openEntry(friday, breaks: [
+        BreakEntity(
+            id: 'c',
+            name: 'P',
+            start: DateTime(2026, 10, 2, 12),
+            end: DateTime(2026, 10, 2, 12, 30)),
+      ]);
+      await expectInvalid(e, DateTime(2026, 10, 2, 12, 29));
     });
   });
 
