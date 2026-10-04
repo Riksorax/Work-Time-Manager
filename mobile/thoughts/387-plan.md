@@ -118,38 +118,38 @@ Voraussetzung: PR A gemergt, Branch von `develop` aktualisiert.
 ## Schritte (TDD)
 
 ### Schritt B0: Bestandsaufnahme
-- [ ] `grep leaveBalanceNowProvider` über `lib` und `test` (erwartet: `leave_balance_view_model.dart`, `reports_page.dart` `YearlyLeaveRows`, plus Tests `leave_balance_view_model_test`, `yearly_leave_rows_test`, evtl. `dashboard_screen_leave_test`, `leave_balance_card_test`). `DateTime.now()` in den Teil-B-Tests prüfen. Insights-Test-Bestand klären (kein `insights_view_model_test.dart` in der Glob-Liste, nur `insights_utils_test.dart`).
-- [ ] `leave_balance_view_model.dart` lesen: `_last`, `reload()`, `_load()`-Jahr, Zusammenspiel mit `ref.invalidate`.
+- [x] `grep leaveBalanceNowProvider` über `lib` und `test` (erwartet: `leave_balance_view_model.dart`, `reports_page.dart` `YearlyLeaveRows`, plus Tests `leave_balance_view_model_test`, `yearly_leave_rows_test`, evtl. `dashboard_screen_leave_test`, `leave_balance_card_test`). `DateTime.now()` in den Teil-B-Tests prüfen. Insights-Test-Bestand klären (kein `insights_view_model_test.dart` in der Glob-Liste, nur `insights_utils_test.dart`).
+- [x] `leave_balance_view_model.dart` lesen: `_last`, `reload()`, `_load()`-Jahr, Zusammenspiel mit `ref.invalidate`.
 
 ### Schritt B1: Urlaub — `LeaveBalanceViewModel`
 Tests zuerst (rot), `fakeAsync` + Fake-Uhr, `TestWidgetsFlutterBinding`:
-- [ ] U1 Jahr aus Uhr: Fake-Uhr 2026-12-31 23:59:30 -> Laden ruft `getWorkEntriesForMonth(2026, 1..12)`; Balance-Jahr 2026.
-- [ ] U2 Jahreswechsel: Elapse auf 2027-01-01 00:00 -> `getWorkEntriesForMonth(2027, 1..12)` aufgerufen; Zwischenzustand: `balance == null`/`isLoading: true` (Vorjahreswerte werden nicht weitergezeigt, Entscheidung 8; `LeaveBalance.year` ist verfügbar, also direkte Umsetzung ohne Ausnahmebegründung); nach Abschluss `balance.year == 2027`.
-- [ ] U3 Tageswechsel innerhalb des Jahres (2026-10-02 -> 10-03): **kein** Reload (Aufrufzähler unverändert).
-- [ ] U4 Resume-Pfad: `jumpTo(2027-01-01 00:00:05)` + `refresh()` -> Reload wie U2.
-- [ ] U5 Dispose: keine pending Timer; `ref.mounted`-Guard: Dispose während des Reloads schreibt keinen State.
-- [ ] Bestehende Tests: Override `leaveBalanceNowProvider` -> `clockProvider.overrideWithValue(clock.call)` mit fester Uhr.
+- [x] U1 Jahr aus Uhr: Fake-Uhr 2026-12-31 23:59:30 -> Laden ruft `getWorkEntriesForMonth(2026, 1..12)`; Balance-Jahr 2026.
+- [x] U2 Jahreswechsel: Elapse auf 2027-01-01 00:00 -> `getWorkEntriesForMonth(2027, 1..12)` aufgerufen; Zwischenzustand: `balance == null`/`isLoading: true` (Vorjahreswerte werden nicht weitergezeigt, Entscheidung 8; `LeaveBalance.year` ist verfügbar, also direkte Umsetzung ohne Ausnahmebegründung); nach Abschluss `balance.year == 2027`.
+- [x] U3 Tageswechsel innerhalb des Jahres (2026-10-02 -> 10-03): **kein** Reload (Aufrufzähler unverändert).
+- [x] U4 Resume-Pfad: `jumpTo(2027-01-01 00:00:05)` + `refresh()` -> Reload wie U2.
+- [x] U5 Dispose: keine pending Timer; `ref.mounted`-Guard: Dispose während des Reloads schreibt keinen State.
+- [x] Bestehende Tests: Override `leaveBalanceNowProvider` -> `clockProvider.overrideWithValue(clock.call)` mit fester Uhr.
 - Impl: `leaveBalanceNowProvider` löschen; Jahr über `ref.read(todayProvider).year`; in `build()` `ref.listen(todayProvider, (p, n) { if (p.year != n.year) { _last = null; reload(); } })`. **Kein** `ref.watch(todayProvider)` in `build()` (12 Abfragen pro Tag, Zustandsverlust).
 
 ### Schritt B2: Urlaub — `YearlyLeaveRows` und Dashboard
-- [ ] Test (rot): `yearly_leave_rows_test.dart`: Fake-Uhr 2026-12-31 23:59:30, Widget zeigt für `year == 2026` die Resturlaubszeilen; nach Pump über Mitternacht (2027-01-01) für `year == 2026` den Vorjahr-Hinweis. Widget-Setup mit `AppLocalizations`-Delegates, `locale: Locale('de')`.
-- [ ] Test: `dashboard_screen_leave_test.dart` und ggf. `leave_balance_card_test.dart` auf `clockProvider` umgestellt, bleiben grün; zusätzlich Dashboard-Karte nach Jahreswechsel zeigt keinen Vorjahres-Resturlaub (nur falls im bestehenden Testaufbau leicht möglich).
-- [ ] Impl: `YearlyLeaveRows` nutzt `ref.watch(todayProvider.select((d) => d.year))` statt `leaveBalanceNowProvider`. Es bleibt keine Referenz auf `leaveBalanceNowProvider` (grep leer).
+- [x] Test (rot): `yearly_leave_rows_test.dart`: Fake-Uhr 2026-12-31 23:59:30, Widget zeigt für `year == 2026` die Resturlaubszeilen; nach Pump über Mitternacht (2027-01-01) für `year == 2026` den Vorjahr-Hinweis. Widget-Setup mit `AppLocalizations`-Delegates, `locale: Locale('de')`.
+- [x] Test: `dashboard_screen_leave_test.dart` und ggf. `leave_balance_card_test.dart` auf `clockProvider` umgestellt, bleiben grün; zusätzlich Dashboard-Karte nach Jahreswechsel zeigt keinen Vorjahres-Resturlaub (nur falls im bestehenden Testaufbau leicht möglich).
+- [x] Impl: `YearlyLeaveRows` nutzt `ref.watch(todayProvider.select((d) => d.year))` statt `leaveBalanceNowProvider`. Es bleibt keine Referenz auf `leaveBalanceNowProvider` (grep leer).
 
 ### Schritt B3: Insights
-- [ ] Test (rot): Fake-Uhr 2026-11-01 -> `loadInsights()` ruft `getWorkEntriesForMonth` für (2026,11), (2026,10), (2026,9) auf; Fake-Uhr 2027-01-01 -> (2027,1), (2026,12), (2026,11). Uhr wird per `clockProvider` injiziert (keine Annahme über heutiges Datum).
-- [ ] Test (Schutz, Entscheidung 5): kein Repository-Zugriff beim bloßen Lesen des Providers und beim Tageswechsel (`verifyNever`), kein Auto-Reload nach Monatswechsel.
-- [ ] Impl: `now = ref.read(todayProvider)`; **kein** Listener. `insights_utils.dart` unverändert.
+- [x] Test (rot): Fake-Uhr 2026-11-01 -> `loadInsights()` ruft `getWorkEntriesForMonth` für (2026,11), (2026,10), (2026,9) auf; Fake-Uhr 2027-01-01 -> (2027,1), (2026,12), (2026,11). Uhr wird per `clockProvider` injiziert (keine Annahme über heutiges Datum).
+- [x] Test (Schutz, Entscheidung 5): kein Repository-Zugriff beim bloßen Lesen des Providers und beim Tageswechsel (`verifyNever`), kein Auto-Reload nach Monatswechsel.
+- [x] Impl: `now = ref.read(todayProvider)`; **kein** Listener. `insights_utils.dart` unverändert.
 
 ### Schritt B4: Jahres-Tab
-- [ ] Test (rot): `yearly_report_view_model_test.dart`: Startjahr des States kommt aus Fake-Uhr (2026-12-31 -> 2026; 2027-01-01 -> 2027); `loadYear` bekommt das Jahr aus `todayProvider` (Aufruf mit `2027`, wenn Uhr 2027-01-04).
-- [ ] Test (Schutz, Entscheidung 5): vom Nutzer gewähltes Jahr (`year - 1`) bleibt nach Jahreswechsel bestehen, kein Auto-Reload.
-- [ ] Impl: `YearlyReportState.initial(year)` ohne `DateTime.now()`; `_loadIfNeeded` nutzt `ref.read(todayProvider).year`. `reports_page_subscription_test.dart` grün halten (Nicht-Premium löst nichts aus).
+- [x] Test (rot): `yearly_report_view_model_test.dart`: Startjahr des States kommt aus Fake-Uhr (2026-12-31 -> 2026; 2027-01-01 -> 2027); `loadYear` bekommt das Jahr aus `todayProvider` (Aufruf mit `2027`, wenn Uhr 2027-01-04).
+- [x] Test (Schutz, Entscheidung 5): vom Nutzer gewähltes Jahr (`year - 1`) bleibt nach Jahreswechsel bestehen, kein Auto-Reload.
+- [x] Impl: `YearlyReportState.initial(year)` ohne `DateTime.now()`; `_loadIfNeeded` nutzt `ref.read(todayProvider).year`. `reports_page_subscription_test.dart` grün halten (Nicht-Premium löst nichts aus).
 
 ### Schritt B5: Doku und Abschluss
-- [ ] `mobile/CLAUDE.md`, "Tageswechsel (#379)": Absatz zu Reports/Urlaub/Insights ergänzen (`ref.listen` statt `ref.watch` in Notifier-`build()`; Reports-Auswahl folgt nur, wenn sie auf dem bisherigen heute stand; Urlaub reloadet nur beim Jahreswechsel; `leaveBalanceNowProvider` entfällt; Insights/Jahres-Tab ohne Auto-Reload).
-- [ ] Gesamt-Checks wie Teil A (`dart format ...`, `analyze`, `custom_lint`, `flutter test`, `TZ=Europe/Berlin flutter test`, zusätzlich lokal `TZ=UTC`/`America/Los_Angeles`). `build_runner` nur, falls wider Erwarten Annotationen geändert wurden.
-- [ ] Abschlusskontrolle: `grep -rn "DateTime.now()"` in den berührten Dateien: nur noch erlaubte Fälle (Zeitstempel/Dauer: `weekly_reflection_view_model:70`, `settings_view_model:235`, `nowToMinute()` u. ä., sowie `edit_break_modal:76` bewusst unberührt).
+- [x] `mobile/CLAUDE.md`, "Tageswechsel (#379)": Absatz zu Reports/Urlaub/Insights ergänzen (`ref.listen` statt `ref.watch` in Notifier-`build()`; Reports-Auswahl folgt nur, wenn sie auf dem bisherigen heute stand; Urlaub reloadet nur beim Jahreswechsel; `leaveBalanceNowProvider` entfällt; Insights/Jahres-Tab ohne Auto-Reload).
+- [x] Gesamt-Checks wie Teil A (`dart format ...`, `analyze`, `custom_lint`, `flutter test`, `TZ=Europe/Berlin flutter test`, zusätzlich lokal `TZ=UTC`/`America/Los_Angeles`). `build_runner` nur, falls wider Erwarten Annotationen geändert wurden.
+- [x] Abschlusskontrolle: `grep -rn "DateTime.now()"` in den berührten Dateien: nur noch erlaubte Fälle (Zeitstempel/Dauer: `weekly_reflection_view_model:70`, `settings_view_model:235`, `nowToMinute()` u. ä., sowie `edit_break_modal:76` bewusst unberührt).
 
 ## Validierung (beide PRs)
 - `dart format --set-exit-if-changed lib test`, `flutter analyze --no-fatal-infos`, `dart run custom_lint`, `flutter test`, zusätzlich `TZ=Europe/Berlin flutter test`.
