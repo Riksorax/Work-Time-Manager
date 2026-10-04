@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, computed, effect, untracked, DestroyRef } from '@angular/core';
+import { Injectable, Injector, inject, signal, computed, effect, untracked, DestroyRef } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { catchError, distinctUntilChanged, firstValueFrom, interval, of } from 'rxjs';
 import { WorkEntryService } from '../../core/services/work-entry';
@@ -6,7 +6,8 @@ import { OvertimeService }  from '../../core/services/overtime';
 import { SettingsService }  from '../../core/services/settings';
 import { AuthService }      from '../../core/auth/auth';
 import { TodayService }     from '../../core/services/today';
-import { WorkProfileService } from '../../core/services/work-profile';
+import { ProfileSwitchRequest, WorkProfileService } from '../../core/services/work-profile';
+import { ProfileSwitchConfirmService } from '../../shared/components/work-profile-switcher/profile-switch-confirm';
 import { GermanHoliday, getGermanHolidayIds, toDateKey } from '../../shared/utils/german-holidays.util';
 import { DEFAULT_SETTINGS, WorkEntry, WorkEntryType, Break } from '../../shared/models';
 import { calculateAndApplyBreaks } from '../../domain/services/break-calculator';
@@ -91,6 +92,8 @@ export class DashboardService {
   });
   readonly isLoggedIn = computed(() => !!this.authSvc.user());
   private readonly destroyRef    = inject(DestroyRef);
+  /** Nur lazy genutzt (Dialog-Service wird erst bei laufendem Timer aufgelöst, #380). */
+  private readonly injector      = inject(Injector);
 
   // ─── Public Signals ────────────────────────────────────────────────────────
   readonly isLoading       = computed(() => this._s().status === 'loading');
@@ -129,6 +132,11 @@ export class DashboardService {
     // Vites SSR-Transform hebt eine nackte importierte Referenz als Schnappschuss vor die Klasse; im gebündelten Vollauf
     // der Tests ist sie dann (nicht deterministisch) `undefined`. Siehe web/CLAUDE.md, „Test-Falle“.
     this._loadedProfileId = this.workProfile.activeProfileId();
+
+    // Interaktive Profilwechsel (#380, Stufe 2): bei laufendem Timer erst bestätigen lassen, stoppen und speichern.
+    // Hier und nicht in der Component: der Timer läuft auch, wenn das Dashboard nie gerendert wurde (Start auf /settings).
+    const unregisterGuard = this.workProfile.registerSwitchGuard(req => this._confirmSwitch(req));
+    this.destroyRef.onDestroy(unregisterGuard);
 
     // Re-init on auth state change (Flow 11)
     effect(() => {
@@ -324,24 +332,75 @@ export class DashboardService {
       if (this._isCurrent(ctx)) this._startTimerIfNeeded();
     } else if (!e.workEnd) {
       // STOP
-      this._stopTimer();
-      let updated: WorkEntry = { ...e, workEnd: nowToMinute() };
-      const hasRunningBreak = updated.breaks.some(b => !b.end);
-      if (!hasRunningBreak && updated.type === WorkEntryType.Work) {
-        updated = calculateAndApplyBreaks(updated);
-      }
-      const totalMs = await this._recalculateState(updated, true, ctx);
-      // Saldo mit dem VOR dem ersten await eingefrorenen Wert und dem festgehaltenen Profil (auch nach Überholung).
-      await this._saveOvertime(ctx.pid, totalMs);
-      if (!this._isCurrent(ctx)) return;
-      // Über Mitternacht gelaufen: der Eintrag gehört zum Starttag, die Anzeige wechselt auf den neuen Tag.
-      this.todayService.refresh();
-      if (toDateKey(updated.date) !== this.todayService.today()) {
-        await this._init(this._uid(), { dayChange: true });
-      }
+      await this._stopRunning(e, ctx, { reinitAfterMidnight: true });
     } else {
       // Bereits gestoppt → Restart-Dialog nötig (Flow 5)
       return 'restart-dialog';
+    }
+  }
+
+  // ─── Stop-Logik (Stop-Button und Profilwechsel, #380) ──────────────────────────────────────────────────
+  /**
+   * Beendet den laufenden Timer: Pflichtpausen, Eintrag und Saldo werden in das festgehaltene Profil geschrieben.
+   * Wirft bei Speicherfehlern (der Zustand ist dann schon gesetzt, Rollback macht der Aufrufer).
+   * `reinitAfterMidnight`: nach einem Lauf über Mitternacht auf den neuen Tag umschalten (Stop-Button); der Profilwechsel
+   * lädt ohnehin neu und braucht das nicht.
+   */
+  private async _stopRunning(e: WorkEntry, ctx: ActionCtx, opts: { reinitAfterMidnight: boolean }): Promise<void> {
+    this._stopTimer();
+    let updated: WorkEntry = { ...e, workEnd: nowToMinute() };
+    const hasRunningBreak = updated.breaks.some(b => !b.end);
+    if (!hasRunningBreak && updated.type === WorkEntryType.Work) {
+      updated = calculateAndApplyBreaks(updated);
+    }
+    const totalMs = await this._recalculateState(updated, true, ctx);
+    // Saldo mit dem VOR dem ersten await eingefrorenen Wert und dem festgehaltenen Profil (auch nach Überholung).
+    await this._saveOvertime(ctx.pid, totalMs);
+    if (!opts.reinitAfterMidnight || !this._isCurrent(ctx)) return;
+    // Über Mitternacht gelaufen: der Eintrag gehört zum Starttag, die Anzeige wechselt auf den neuen Tag.
+    this.todayService.refresh();
+    if (toDateKey(updated.date) !== this.todayService.today()) {
+      await this._init(this._uid(), { dayChange: true });
+    }
+  }
+
+  /**
+   * Guard für interaktive Profilwechsel: ohne laufenden Timer sofort `true`; sonst Bestätigung, dann Stoppen und
+   * Speichern im alten Profil. `false` = Wechsel nicht durchführen.
+   */
+  private async _confirmSwitch(req: ProfileSwitchRequest): Promise<boolean> {
+    if (!this.isTimerRunning()) return true;
+    const confirm = this.injector.get(ProfileSwitchConfirmService);
+    if (!(await confirm.confirmStopAndSwitch(req))) return false;
+    const ok = await this.stopRunningTimerForSwitch(req.from);
+    if (!ok) confirm.notifySaveFailed();
+    return ok;
+  }
+
+  /**
+   * Stoppt und speichert den laufenden Timer des Profils `from` vor einem Profilwechsel. `true` = es läuft nichts
+   * (mehr) oder der Stop wurde gespeichert; `false` = Speichern fehlgeschlagen oder das Profil ist nicht mehr `from`.
+   * Bei einem Fehler wird der Zustand zurückgesetzt und der Timer läuft weiter.
+   */
+  async stopRunningTimerForSwitch(from: string): Promise<boolean> {
+    // Lädt gerade (Reload-Wechsel): erst abwarten, nie auf dem Lade-Platzhalter arbeiten.
+    while (this._s().status === 'loading' && this._initRun !== null) await this._initRun;
+    // Der Dialog war offen: das Profil kann sich nicht-interaktiv geändert haben.
+    if (this._loadedProfileId !== from || this.workProfile.activeProfileId() !== from) return false;
+    // Der Timer kann in der Zwischenzeit manuell gestoppt worden sein.
+    if (!this.isTimerRunning()) return true;
+    const e = this._s().workEntry;
+    const ctx = this._ctx();
+    const snapshot = this._s();
+    try {
+      await this._stopRunning(e, ctx, { reinitAfterMidnight: false });
+      return true;
+    } catch {
+      if (this._isCurrent(ctx)) {
+        this._s.set(snapshot);
+        this._startTimerIfNeeded();
+      }
+      return false;
     }
   }
 

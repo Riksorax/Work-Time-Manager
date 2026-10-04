@@ -318,7 +318,11 @@
     "premiumProfilesFeature": "Additional profiles are a Premium feature.",
     "maxProfilesReached": "A maximum of {{count}} profiles is allowed.",
     "profileCreated": "Profile \"{{name}}\" created.",
-    "profileCreateFailed": "Failed to create: {{error}}"
+    "profileCreateFailed": "Failed to create: {{error}}",
+    "switchWhileRunningTitle": "Time tracking is running",
+    "switchWhileRunningText": "A time entry is still running in profile \"{{from}}\". It will be stopped and saved before you switch to profile \"{{to}}\".",
+    "stopAndSwitchButton": "Stop and switch",
+    "switchSaveFailed": "Switch cancelled: the time entry could not be saved."
   },
   "leave": {
     "cardAria": "Vacation overview",

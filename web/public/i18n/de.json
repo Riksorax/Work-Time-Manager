@@ -318,7 +318,11 @@
     "premiumProfilesFeature": "Zusätzliche Profile sind ein Premium-Feature.",
     "maxProfilesReached": "Maximal {{count}} Profile möglich.",
     "profileCreated": "Profil \"{{name}}\" angelegt.",
-    "profileCreateFailed": "Anlegen fehlgeschlagen: {{error}}"
+    "profileCreateFailed": "Anlegen fehlgeschlagen: {{error}}",
+    "switchWhileRunningTitle": "Zeiterfassung läuft",
+    "switchWhileRunningText": "Im Profil \"{{from}}\" läuft noch eine Zeiterfassung. Sie wird beendet und gespeichert, bevor du in das Profil \"{{to}}\" wechselst.",
+    "stopAndSwitchButton": "Beenden und wechseln",
+    "switchSaveFailed": "Wechsel abgebrochen: Die Zeiterfassung konnte nicht gespeichert werden."
   },
   "leave": {
     "cardAria": "Urlaubsübersicht",
