@@ -37,7 +37,17 @@ export interface UserSettings {
   notifyBreaks: boolean;
   /** Jahres-Urlaubsanspruch in Tagen (ganze Zahl 0-366, Default 30). Siehe #278. */
   vacationDaysPerYear: number;
+  /** Bundesland für Feiertage im Dashboard (null = nicht gewählt). Siehe #279. */
+  bundesland: Bundesland | null;
 }
+
+/** Die 16 Bundesländer (Werte = Flutter-Enum-Namen, i18n-Key `settings.bundesland.state.<wert>`). Siehe #279. */
+export const BUNDESLAND_VALUES = [
+  'badenWuerttemberg', 'bayern', 'berlin', 'brandenburg', 'bremen', 'hamburg', 'hessen',
+  'mecklenburgVorpommern', 'niedersachsen', 'nordrheinWestfalen', 'rheinlandPfalz', 'saarland',
+  'sachsen', 'sachsenAnhalt', 'schleswigHolstein', 'thueringen',
+] as const;
+export type Bundesland = (typeof BUNDESLAND_VALUES)[number];
 
 export const DEFAULT_VACATION_DAYS_PER_YEAR = 30;
 export const MAX_VACATION_DAYS = 366;
@@ -52,6 +62,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   notifyWorkEnd: false,
   notifyBreaks: false,
   vacationDaysPerYear: DEFAULT_VACATION_DAYS_PER_YEAR,
+  bundesland: null,
 };
 
 export interface UserProfile {

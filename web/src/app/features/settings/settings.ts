@@ -29,6 +29,10 @@ import {
   EditVacationDaysDialogComponent,
   EditVacationDaysDialogResult,
 } from './components/edit-vacation-days-dialog/edit-vacation-days-dialog';
+import {
+  EditBundeslandDialogComponent,
+  EditBundeslandDialogResult,
+} from './components/edit-bundesland-dialog/edit-bundesland-dialog';
 import { LeaveBalanceService } from '../../core/services/leave-balance';
 import { DEFAULT_VACATION_DAYS_PER_YEAR } from '../../shared/models/index';
 import { LeaveBalanceCardComponent } from '../../shared/components/leave-balance-card/leave-balance-card';
@@ -111,6 +115,20 @@ export class SettingsComponent {
       this.snackbar.open(this.translate.instant('settings.vacationDaysSaved'), 'OK', { duration: 2500 });
     } catch {
       this.snackbar.open(this.translate.instant('settings.vacationDaysSaveError'), 'OK', { duration: 4000 });
+    }
+  }
+
+  async openEditBundeslandDialog(): Promise<void> {
+    const ref = this.dialog.open(EditBundeslandDialogComponent, {
+      data: { current: this.svc.settings()?.bundesland ?? null },
+    });
+    const result: EditBundeslandDialogResult | undefined = await firstValueFrom(ref.afterClosed());
+    if (!result) return;
+    try {
+      await this.svc.setBundesland(result.bundesland);
+      this.snackbar.open(this.translate.instant('settings.bundesland.saved'), 'OK', { duration: 2500 });
+    } catch {
+      this.snackbar.open(this.translate.instant('settings.bundesland.saveError'), 'OK', { duration: 4000 });
     }
   }
 

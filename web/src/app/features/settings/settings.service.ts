@@ -11,7 +11,7 @@ import { DataSyncService, DataSyncResult } from '../../core/services/data-sync';
 import { WebPremiumService } from '../../core/services/web-premium';
 import { LeaveBalanceService } from '../../core/services/leave-balance';
 import { DashboardService } from '../dashboard/dashboard.service';
-import { DEFAULT_SETTINGS, UserSettings } from '../../shared/models/index';
+import { Bundesland, DEFAULT_SETTINGS, UserSettings } from '../../shared/models/index';
 
 @Injectable({ providedIn: 'root' })
 export class SettingsPageService {
@@ -90,6 +90,13 @@ export class SettingsPageService {
   async setTargetHours(hours: number): Promise<void> {
     const current = this.settings();
     await this.coreSettings.saveSettings({ ...current, weeklyTargetHours: hours });
+  }
+
+  /** Setzt das Bundesland (#279). Nur die explizite Abwahl (`null`) sendet über `clearBundesland` ein `""` ans Backend. */
+  async setBundesland(bundesland: Bundesland | null): Promise<void> {
+    const current = this.settings();
+    if (bundesland === null) await this.coreSettings.saveSettings({ ...current, bundesland: null }, { clearBundesland: true });
+    else                     await this.coreSettings.saveSettings({ ...current, bundesland });
   }
 
   async setVacationDays(days: number): Promise<void> {

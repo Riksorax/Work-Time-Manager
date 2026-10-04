@@ -4,6 +4,9 @@
   </div>
 } @else {
   <div class="dashboard-wrapper">
+    @if (svc.holidayToday(); as holiday) {
+      <app-holiday-banner [holiday]="holiday" />
+    }
     <div class="dashboard-content">
 
       <!-- Linke Spalte / Oberer Teil: Timer & Statistiken -->

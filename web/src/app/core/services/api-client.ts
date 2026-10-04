@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, firstValueFrom, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { Break, UserSettings, WorkEntry, WorkEntryType, WorkProfile } from '../../shared/models';
+import { Break, Bundesland, UserSettings, WorkEntry, WorkEntryType, WorkProfile } from '../../shared/models';
 import { YearlyLeaveReport } from '../../domain/models/leave.models';
 import { DailyStat, MonthlyReport, WeeklyReport } from '../../domain/models/reports.models';
 import {
@@ -10,6 +10,9 @@ import {
   roundToMinuteOrUndefined,
   toStoredMinutes,
 } from '../../shared/utils/time-precision.util';
+
+/** PUT-/settings-Body: wie `UserSettings`, `bundesland` zusätzlich `""` (= löschen). */
+export type SettingsPayload = Omit<UserSettings, 'bundesland'> & { bundesland: Bundesland | '' | null };
 
 // ─── Backend-DTO-Formen (JSON, camelCase, ISO-8601-Daten, Zeiten in ms) ──────
 
@@ -112,9 +115,17 @@ export class ApiClient {
     );
   }
 
-  saveSettings(settings: UserSettings, profileId?: string): Promise<void> {
+  /**
+   * `bundesland`: `null` = Backend lässt den Wert unangetastet, `""` = löschen.
+   * `""` wird ausschließlich mit `opts.clearBundesland` (explizite Abwahl) gesendet, nie automatisch.
+   */
+  saveSettings(settings: UserSettings, profileId?: string, opts?: { clearBundesland?: boolean }): Promise<void> {
+    const payload: SettingsPayload = {
+      ...settings,
+      bundesland: opts?.clearBundesland && settings.bundesland === null ? '' : settings.bundesland,
+    };
     return firstValueFrom(
-      this.http.put<UserSettings>(`${this.base}/settings`, settings, { params: this._params(profileId) })
+      this.http.put<UserSettings>(`${this.base}/settings`, payload, { params: this._params(profileId) })
         .pipe(map(() => void 0))
     );
   }

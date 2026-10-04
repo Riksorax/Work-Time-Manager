@@ -13,7 +13,8 @@
 .dashboard-wrapper {
   padding: 24px;
   display: flex;
-  justify-content: center;
+  flex-direction: column; // Feiertags-Banner (#279) liegt ueber dem Grid
+  align-items: center;
 
   @media (max-width: 600px) {
     padding: 16px 12px;

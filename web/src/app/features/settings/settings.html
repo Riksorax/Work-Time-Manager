@@ -104,6 +104,32 @@
 
         <mat-divider />
 
+        <!-- ── Bundesland / Feiertage (#279) ───────────────────── -->
+        <section class="bundesland-section" [attr.aria-label]="'settings.bundesland.sectionAria' | translate">
+          <h3 class="section-title">{{ 'settings.bundesland.sectionTitle' | translate }}</h3>
+
+          <mat-list>
+            <button mat-list-item (click)="openEditBundeslandDialog()"
+                    [attr.aria-label]="'settings.bundesland.editAria' | translate">
+              <mat-icon matListItemIcon aria-hidden="true">location_on</mat-icon>
+              <span matListItemTitle>{{ 'settings.bundesland.label' | translate }}</span>
+              <span matListItemLine class="bundesland-value">
+                @if (svc.settings().bundesland; as b) {
+                  {{ 'settings.bundesland.state.' + b | translate }}
+                } @else {
+                  {{ 'settings.bundesland.notSelected' | translate }}
+                }
+              </span>
+              <mat-icon matListItemMeta aria-hidden="true">chevron_right</mat-icon>
+            </button>
+          </mat-list>
+          <p class="bundesland-hint">
+            {{ (svc.settings().bundesland ? 'settings.bundesland.hint' : 'settings.bundesland.notSelectedHint') | translate }}
+          </p>
+        </section>
+
+        <mat-divider />
+
         <!-- ── Gleitzeit-Bilanz ─────────────────────────────────── -->
         <section class="overtime-section" [attr.aria-label]="'settings.overtimeSectionAria' | translate">
           <h3 class="section-title">{{ 'settings.overtimeSectionTitle' | translate }}</h3>
