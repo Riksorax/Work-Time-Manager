@@ -540,6 +540,35 @@ void main() {
       expect(h.work.store.keys, [dayKey(fr)]);
     }, setUp: (h) => h.seed(entryOf(fr, start: DateTime(2026, 10, 2, 22))));
 
+    scenario(
+        'laufender Vortags-Eintrag: updateBreak nach Mitternacht behaelt Datum '
+        'der Pause und Eintrag am Starttag (#397)',
+        DateTime(2026, 10, 2, 23), (h) {
+      h.boot();
+      h.clock.jumpTo(DateTime(2026, 10, 3, 0, 20));
+      // So baut EditBreakModal die Pause: Datum der Pause, nicht "jetzt".
+      h.act(() => h.vm.updateBreak(BreakEntity(
+            id: 'b1',
+            name: 'Pause',
+            start: DateTime(2026, 10, 2, 23, 40),
+            end: DateTime(2026, 10, 2, 23, 50),
+          )));
+      final saved = h.work.saved.last;
+      expect(saved.date, fr);
+      expect(saved.breaks.single.start, DateTime(2026, 10, 2, 23, 40));
+      expect(saved.breaks.single.end, DateTime(2026, 10, 2, 23, 50));
+      expect(h.work.store.keys, [dayKey(fr)]);
+    },
+        setUp: (h) =>
+            h.seed(entryOf(fr, start: DateTime(2026, 10, 2, 22), breaks: [
+              BreakEntity(
+                id: 'b1',
+                name: 'Pause',
+                start: DateTime(2026, 10, 2, 23, 30),
+                end: DateTime(2026, 10, 2, 23, 45),
+              )
+            ])));
+
     scenario('Stop eines ueber 24 h laufenden Vortags rechnet ohne Fehler',
         DateTime(2026, 10, 2, 9), (h) {
       h.boot();

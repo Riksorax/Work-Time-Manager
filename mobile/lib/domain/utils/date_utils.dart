@@ -24,3 +24,11 @@ List<DateTime> datesInRange(DateTime start, DateTime end) {
 /// Verschiebt einen Wochenstart um [weeks] Wochen (negativ = zurück).
 DateTime shiftWeekStart(DateTime weekStart, int weeks) =>
     addCalendarDays(weekStart, 7 * weeks);
+
+/// Kombiniert den Kalendertag von [day] mit der Uhrzeit [hour]:[minute] zu
+/// einer lokalen Zeit (Sekunden/Millisekunden = 0). Die Uhrzeit von [day]
+/// wird verworfen. Bewusst Kalender- statt Dauer-Arithmetik: bleibt über
+/// Zeitumstellungen hinweg am selben Tag (nicht existierende Zeiten
+/// normalisiert Dart, siehe #397).
+DateTime combineDateAndTime(DateTime day, int hour, int minute) =>
+    DateTime(day.year, day.month, day.day, hour, minute);

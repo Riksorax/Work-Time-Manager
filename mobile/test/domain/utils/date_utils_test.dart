@@ -101,4 +101,61 @@ void main() {
       check(DateTime(2025, 10, 27), -1, 2025, 10, 20);
     });
   });
+
+  group('combineDateAndTime', () {
+    test('übernimmt Datum von day und Uhrzeit aus Stunde/Minute', () {
+      final r = combineDateAndTime(DateTime(2024, 1, 15, 8, 45, 30), 13, 5);
+      expect(r, DateTime(2024, 1, 15, 13, 5));
+      expect(r.second, 0);
+    });
+
+    test('verwirft die Uhrzeit von day komplett', () {
+      final r = combineDateAndTime(DateTime(2024, 1, 15, 23, 59), 0, 10);
+      expect(r, DateTime(2024, 1, 15, 0, 10));
+    });
+
+    test('23:59 lässt das Datum unverändert', () {
+      final r = combineDateAndTime(DateTime(2024, 1, 15), 23, 59);
+      expect(r.year, 2024);
+      expect(r.month, 1);
+      expect(r.day, 15);
+      expect(r.hour, 23);
+      expect(r.minute, 59);
+    });
+
+    test('Jahreswechsel: Datum bleibt der Basistag', () {
+      final r = combineDateAndTime(DateTime(2025, 12, 31), 23, 30);
+      expect(r, DateTime(2025, 12, 31, 23, 30));
+    });
+
+    test('Frühjahrs-Umstellung 29.03.2026: Datum bleibt, Stunde 2 oder 3', () {
+      final r = combineDateAndTime(DateTime(2026, 3, 29), 2, 30);
+      expect(r.year, 2026);
+      expect(r.month, 3);
+      expect(r.day, 29);
+      expect(r.hour, anyOf(2, 3));
+    });
+
+    test('Herbst-Umstellung 25.10.2026: Datum und Uhrzeit bleiben', () {
+      final r = combineDateAndTime(DateTime(2026, 10, 25), 2, 30);
+      expect(r.year, 2026);
+      expect(r.month, 10);
+      expect(r.day, 25);
+      expect(r.hour, 2);
+      expect(r.minute, 30);
+    });
+
+    test('Tage um die Umstellung: Datum bleibt bei 00:00 und 23:59', () {
+      for (final day in [DateTime(2026, 3, 29), DateTime(2026, 10, 25)]) {
+        for (final (h, m) in [(0, 0), (23, 59)]) {
+          final r = combineDateAndTime(day, h, m);
+          expect(r.year, day.year);
+          expect(r.month, day.month);
+          expect(r.day, day.day);
+          expect(r.hour, h);
+          expect(r.minute, m);
+        }
+      }
+    });
+  });
 }

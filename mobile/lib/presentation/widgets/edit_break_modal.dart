@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/utils/time_format.dart';
 import '../../domain/entities/break_entity.dart';
+import '../../domain/utils/date_utils.dart';
 import '../../l10n/app_localizations.dart';
 import '../utils/break_name_localizer.dart';
 import '../view_models/dashboard_view_model.dart';
@@ -73,9 +74,11 @@ class _EditBreakModalState extends ConsumerState<EditBreakModal> {
     );
 
     if (selectedTime != null) {
-      final now = DateTime.now();
-      final newDateTime = DateTime(
-          now.year, now.month, now.day, selectedTime.hour, selectedTime.minute);
+      // Basisdatum ist das Datum der Pause selbst, nicht "jetzt" (siehe #397):
+      // Start nutzt den Tag des Starts, Ende den Tag des Endes (bzw. des Starts).
+      final baseDay = isStartTime ? _startTime : _endTime ?? _startTime;
+      final newDateTime =
+          combineDateAndTime(baseDay, selectedTime.hour, selectedTime.minute);
       setState(() {
         if (isStartTime) {
           // Berechne die bisherige Dauer, um die Endzeit mitzuverschieben
