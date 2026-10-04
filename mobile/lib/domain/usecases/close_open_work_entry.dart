@@ -36,7 +36,9 @@ enum CloseOpenEntryResult {
 /// speichern (wie im Stop-Pfad; ein Teilfehler zwischen beiden Writes ist ein
 /// bekanntes Rest-Risiko, siehe #402). `lastUpdated` wird bewusst **nicht**
 /// gesetzt: `DashboardViewModel._load` zieht bei `lastUpdated == heute` den
-/// Tagesanteil des heutigen Eintrags vom Saldo ab.
+/// Tagesanteil des heutigen Eintrags vom Saldo ab. Eingeloggt setzt das
+/// Backend es bei jedem Saldo-Write, daher `keepLastUpdated: true` (Backend ab
+/// #408; eine ältere API ignoriert das Feld und setzt es weiterhin, #406).
 ///
 /// Alle Zugriffe laufen über die Repositories des Konstruktors, also im
 /// Profil, in dem der Use Case gebaut wurde.
@@ -84,8 +86,8 @@ class CloseOpenWorkEntry {
 
       final net = workEnd.difference(closed.workStart!) - closed.totalBreakTime;
       final storedOvertime = await _overtimeRepository.ensureOvertimeLoaded();
-      await _overtimeRepository
-          .saveOvertime(storedOvertime + net - dailyTarget);
+      await _overtimeRepository.saveOvertime(storedOvertime + net - dailyTarget,
+          keepLastUpdated: true);
       await _workRepository.saveWorkEntry(closed);
       return CloseOpenEntryResult.closed;
     } catch (e, st) {

@@ -20,6 +20,7 @@ class _FakeFirebaseAuth extends Fake implements firebase.FirebaseAuth {
 /// Zeichnet den letzten Request auf, statt echte HTTP-Aufrufe zu machen.
 class _RecordingHttpClient extends Fake implements http.Client {
   Uri? lastUri;
+  Object? lastBody;
   http.Response nextResponse = http.Response('{}', 200);
 
   @override
@@ -32,6 +33,7 @@ class _RecordingHttpClient extends Fake implements http.Client {
   Future<http.Response> put(Uri url,
       {Map<String, String>? headers, Object? body, Encoding? encoding}) async {
     lastUri = url;
+    lastBody = body;
     return nextResponse;
   }
 
@@ -137,6 +139,35 @@ void main() {
       http_.nextResponse = http.Response('', 204);
       await api.putSettings({}, profileId: 'p1');
       expect(http_.lastUri!.queryParameters, {'profileId': 'p1'});
+    });
+  });
+
+  group('ApiClient — saveOvertime keepLastUpdated (#406)', () {
+    Map<String, dynamic> body() =>
+        jsonDecode(http_.lastBody! as String) as Map<String, dynamic>;
+
+    setUp(() => http_.nextResponse = http.Response('', 204));
+
+    test('ohne Parameter bleibt der Body unverändert {minutes}', () async {
+      await api.saveOvertime(30);
+      expect(body(), {'minutes': 30});
+      expect(body().containsKey('keepLastUpdated'), isFalse);
+    });
+
+    test('keepLastUpdated: true sendet das Feld im Body', () async {
+      await api.saveOvertime(30, keepLastUpdated: true);
+      expect(body(), {'minutes': 30, 'keepLastUpdated': true});
+    });
+
+    test('mit profileId: Query nur profileId, Feld im Body', () async {
+      await api.saveOvertime(30, profileId: 'p1', keepLastUpdated: true);
+      expect(http_.lastUri!.queryParameters, {'profileId': 'p1'});
+      expect(body(), {'minutes': 30, 'keepLastUpdated': true});
+    });
+
+    test('keepLastUpdated: false explizit sendet kein Feld', () async {
+      await api.saveOvertime(30, keepLastUpdated: false);
+      expect(body(), {'minutes': 30});
     });
   });
 }

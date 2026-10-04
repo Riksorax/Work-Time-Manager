@@ -74,10 +74,11 @@ class ApiDataSource implements FirestoreDataSource {
 
   @override
   Future<void> saveOvertime(String userId, Duration overtime,
-          {String? profileId}) =>
+          {String? profileId, bool keepLastUpdated = false}) =>
       // Kaufmännisch runden statt inMinutes (schneidet Richtung Null ab und
       // ließe den Saldo im Minus anders driften als im Plus).
-      _api.saveOvertime(toStoredMinutes(overtime), profileId: profileId);
+      _api.saveOvertime(toStoredMinutes(overtime),
+          profileId: profileId, keepLastUpdated: keepLastUpdated);
 
   @override
   Future<DateTime?> getLastOvertimeUpdate(String userId,
@@ -89,7 +90,9 @@ class ApiDataSource implements FirestoreDataSource {
   @override
   Future<void> saveLastOvertimeUpdate(String userId, DateTime date,
       {String? profileId}) async {
-    // No-op: Das Backend setzt lastUpdated automatisch beim Speichern des Saldos.
+    // No-op: Das Backend setzt lastUpdated automatisch beim Speichern des Saldos,
+    // außer mit keepLastUpdated: true (PUT-Body, ab #408; Mobile: nachträgliches
+    // Beenden, #385/#406).
   }
 
   // ── Settings → immer über die Backend-API (Read-Modify-Write, alle Profile) ─

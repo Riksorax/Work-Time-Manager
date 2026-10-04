@@ -32,6 +32,8 @@ void main() {
       h.act(h.vm.startOrStopTimer);
       // Stop 09:01: 61 min Netto, Soll 0 (Sa) -> -30 + 61 = 31 min.
       expect(h.overtime.savedOvertimes.last, const Duration(minutes: 31));
+      // Stop-Pfad bleibt beim Default: das Backend darf lastUpdated setzen (#406).
+      expect(h.overtime.savedKeepLastUpdated.last, isFalse);
     }, setUp: (h) {
       h.seed(entryOf(sa, start: DateTime(2026, 10, 3, 8)));
     });

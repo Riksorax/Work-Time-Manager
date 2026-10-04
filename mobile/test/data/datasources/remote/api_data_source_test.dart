@@ -112,6 +112,47 @@ void main() {
       verify(mockApi.saveOvertime(45, profileId: 'p1')).called(1);
       verifyZeroInteractions(mockAuth);
     });
+
+    test('saveOvertime reicht keepLastUpdated: true an die API weiter (#406)',
+        () async {
+      when(mockApi.saveOvertime(any,
+              profileId: anyNamed('profileId'),
+              keepLastUpdated: anyNamed('keepLastUpdated')))
+          .thenAnswer((_) async {});
+
+      await dataSource.saveOvertime(userId, const Duration(minutes: 45),
+          profileId: 'p1', keepLastUpdated: true);
+
+      verify(mockApi.saveOvertime(45, profileId: 'p1', keepLastUpdated: true))
+          .called(1);
+    });
+
+    test('saveOvertime ohne keepLastUpdated sendet false (Default, #406)',
+        () async {
+      when(mockApi.saveOvertime(any,
+              profileId: anyNamed('profileId'),
+              keepLastUpdated: anyNamed('keepLastUpdated')))
+          .thenAnswer((_) async {});
+
+      await dataSource.saveOvertime(userId, const Duration(minutes: 45));
+
+      verify(mockApi.saveOvertime(45, profileId: null, keepLastUpdated: false))
+          .called(1);
+    });
+
+    test('saveOvertime rundet kaufmännisch auch mit keepLastUpdated (#406)',
+        () async {
+      when(mockApi.saveOvertime(any,
+              profileId: anyNamed('profileId'),
+              keepLastUpdated: anyNamed('keepLastUpdated')))
+          .thenAnswer((_) async {});
+
+      await dataSource.saveOvertime(userId, const Duration(seconds: 90),
+          keepLastUpdated: true);
+
+      verify(mockApi.saveOvertime(2, profileId: null, keepLastUpdated: true))
+          .called(1);
+    });
   });
 
   group(

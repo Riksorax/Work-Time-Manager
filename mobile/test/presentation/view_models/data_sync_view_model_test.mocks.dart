@@ -275,6 +275,7 @@ class MockFirestoreDataSource extends _i1.Mock
     String? userId,
     Duration? overtime, {
     String? profileId,
+    bool? keepLastUpdated = false,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -283,7 +284,10 @@ class MockFirestoreDataSource extends _i1.Mock
             userId,
             overtime,
           ],
-          {#profileId: profileId},
+          {
+            #profileId: profileId,
+            #keepLastUpdated: keepLastUpdated,
+          },
         ),
         returnValue: _i4.Future<void>.value(),
         returnValueForMissingStub: _i4.Future<void>.value(),

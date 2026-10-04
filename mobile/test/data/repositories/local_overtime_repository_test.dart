@@ -21,6 +21,25 @@ void main() {
       expect(result, overtime);
     });
 
+    test('saveOvertime schreibt Minuten, lässt das Datum unverändert (#406)',
+        () async {
+      final date = DateTime(2026, 9, 1, 12);
+      await repository.saveLastUpdateDate(date);
+
+      await repository.saveOvertime(const Duration(minutes: 30));
+      await repository.saveOvertime(const Duration(minutes: 45),
+          keepLastUpdated: true);
+
+      expect(repository.getOvertime(), const Duration(minutes: 45));
+      expect(repository.getLastUpdateDate()?.toIso8601String(),
+          date.toIso8601String());
+    });
+
+    test('Default ohne vorheriges Datum setzt kein Datum (#406)', () async {
+      await repository.saveOvertime(const Duration(minutes: 30));
+      expect(repository.getLastUpdateDate(), isNull);
+    });
+
     test('should return zero duration if no overtime saved', () {
       final result = repository.getOvertime();
       expect(result, Duration.zero);
