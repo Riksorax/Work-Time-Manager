@@ -1135,7 +1135,7 @@ final class GetTodayWorkEntryUseCaseProvider extends $FunctionalProvider<
 }
 
 String _$getTodayWorkEntryUseCaseHash() =>
-    r'ceea9e9e54d584a5e90610ae3e7bc41ab19bbb7a';
+    r'dde53bb0a8325b8881666a6679c270f95af3e460';
 
 @ProviderFor(saveWorkEntryUseCase)
 const saveWorkEntryUseCaseProvider = SaveWorkEntryUseCaseProvider._();
@@ -1219,7 +1219,7 @@ final class ToggleBreakUseCaseProvider
 }
 
 String _$toggleBreakUseCaseHash() =>
-    r'761d763d291fdc270cffac41912025c2309287bd';
+    r'35a57d480ce8dd8627dcd875a53da57c3f1eee7b';
 
 @ProviderFor(getWorkEntriesForMonthUseCase)
 const getWorkEntriesForMonthUseCaseProvider =
@@ -1307,7 +1307,7 @@ final class StartOrStopTimerUseCaseProvider extends $FunctionalProvider<
 }
 
 String _$startOrStopTimerUseCaseHash() =>
-    r'6c5204912d94456a3bf558b3ac1b17c9b29a2b2a';
+    r'752ed93281064952520a951ac94b1add83802557';
 
 @ProviderFor(getOvertimeUseCase)
 const getOvertimeUseCaseProvider = GetOvertimeUseCaseProvider._();

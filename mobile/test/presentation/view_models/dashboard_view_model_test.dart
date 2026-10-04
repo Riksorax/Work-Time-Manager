@@ -28,6 +28,9 @@ void main() {
   late MockOvertimeRepository mockOvertimeRepository;
   late ProviderContainer container;
 
+  // todayProvider (#379) registriert einen WidgetsBindingObserver.
+  setUpAll(TestWidgetsFlutterBinding.ensureInitialized);
+
   setUp(() {
     mockGetTodayWorkEntry = MockGetTodayWorkEntry();
     mockGetOvertime = MockGetOvertime();

@@ -7,6 +7,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/services/version_service.dart';
 import 'settings_sync_provider.dart';
+import 'clock_provider.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/utils/logger.dart';
 import '../../data/datasources/remote/api_client.dart';
@@ -330,7 +331,8 @@ SetThemeMode setThemeModeUseCase(Ref ref) {
 // --- Work Entries ---
 @riverpod
 GetTodayWorkEntry getTodayWorkEntryUseCase(Ref ref) {
-  return GetTodayWorkEntry(ref.watch(workRepositoryProvider));
+  return GetTodayWorkEntry(ref.watch(workRepositoryProvider),
+      clock: ref.watch(clockProvider));
 }
 
 @riverpod
@@ -340,7 +342,8 @@ SaveWorkEntry saveWorkEntryUseCase(Ref ref) {
 
 @riverpod
 ToggleBreak toggleBreakUseCase(Ref ref) {
-  return ToggleBreak(ref.watch(workRepositoryProvider));
+  return ToggleBreak(ref.watch(workRepositoryProvider),
+      clock: ref.watch(clockProvider));
 }
 
 @riverpod
@@ -350,7 +353,8 @@ GetWorkEntriesForMonth getWorkEntriesForMonthUseCase(Ref ref) {
 
 @riverpod
 StartOrStopTimer startOrStopTimerUseCase(Ref ref) {
-  return StartOrStopTimer(ref.watch(workRepositoryProvider));
+  return StartOrStopTimer(ref.watch(workRepositoryProvider),
+      clock: ref.watch(clockProvider));
 }
 
 // --- Overtime ---

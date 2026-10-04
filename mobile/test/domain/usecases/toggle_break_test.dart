@@ -59,4 +59,30 @@ void main() {
     expect(result.breaks.first.end, isNotNull);
     verify(mockRepository.saveWorkEntry(any)).called(1);
   });
+
+  group('mit injizierter Uhr (#379)', () {
+    test('Pausenstart nutzt die Uhr, auf Minuten abgeschnitten', () async {
+      final clockValue = DateTime(2026, 10, 3, 9, 0, 40);
+      final uc = ToggleBreak(mockRepository, clock: () => clockValue);
+      when(mockRepository.saveWorkEntry(any)).thenAnswer((_) async {});
+
+      final result = await uc(WorkEntryEntity(id: '1', date: baseDate));
+
+      expect(result.breaks.single.start, DateTime(2026, 10, 3, 9, 0));
+    });
+
+    test('Pausenende nutzt die Uhr, auf Minuten abgeschnitten', () async {
+      final clockValue = DateTime(2026, 10, 3, 9, 30, 59);
+      final uc = ToggleBreak(mockRepository, clock: () => clockValue);
+      when(mockRepository.saveWorkEntry(any)).thenAnswer((_) async {});
+      final entry = WorkEntryEntity(id: '1', date: baseDate, breaks: [
+        BreakEntity(
+            id: 'b', name: 'Pause 1', start: DateTime(2026, 10, 3, 9, 0)),
+      ]);
+
+      final result = await uc(entry);
+
+      expect(result.breaks.single.end, DateTime(2026, 10, 3, 9, 30));
+    });
+  });
 }

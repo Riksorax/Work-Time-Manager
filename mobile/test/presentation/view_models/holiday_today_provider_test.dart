@@ -1,3 +1,4 @@
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_work_time/core/providers/clock_provider.dart';
@@ -7,6 +8,8 @@ import 'package:flutter_work_time/domain/utils/german_holidays.dart';
 import 'package:flutter_work_time/presentation/state/settings_state.dart';
 import 'package:flutter_work_time/presentation/view_models/holiday_today_provider.dart';
 import 'package:flutter_work_time/presentation/view_models/settings_view_model.dart';
+
+import '../../support/fake_clock.dart';
 
 class _FakeSettings extends SettingsViewModel {
   _FakeSettings(this.initial);
@@ -25,6 +28,9 @@ AsyncValue<SettingsState> _data(Bundesland? land) =>
     ));
 
 void main() {
+  // todayProvider (#379) registriert einen WidgetsBindingObserver.
+  setUpAll(TestWidgetsFlutterBinding.ensureInitialized);
+
   ProviderContainer make(
       AsyncValue<SettingsState> settings, DateTime Function() clock,
       {_FakeSettings? fake}) {
@@ -87,5 +93,24 @@ void main() {
     expect(c.read(holidayTodayProvider), isNull);
     fake.set(_data(Bundesland.sachsen));
     expect(c.read(holidayTodayProvider), GermanHoliday.reformationDay);
+  });
+
+  test('gecachter Wert zieht ueber Mitternacht nach (Tabwechsel ueber Nacht)',
+      () {
+    fakeAsync((async) {
+      final clock = FakeClock(DateTime(2026, 10, 2, 23, 59, 30))..bind(async);
+      final c = ProviderContainer(overrides: [
+        settingsViewModelProvider
+            .overrideWith(() => _FakeSettings(_data(Bundesland.bayern))),
+        clockProvider.overrideWithValue(clock.call),
+      ]);
+      expect(c.read(holidayTodayProvider), isNull);
+      // Kein Listener, Provider bleibt gecacht; nur die Zeit vergeht.
+      async.elapse(const Duration(seconds: 31));
+      async.flushMicrotasks();
+      expect(c.read(holidayTodayProvider), GermanHoliday.germanUnityDay);
+      c.dispose();
+      expect(async.pendingTimers, isEmpty);
+    });
   });
 }

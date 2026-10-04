@@ -10,8 +10,10 @@ import '../repositories/work_repository.dart';
 /// Use Case, um eine Pause zu starten oder die aktuell laufende zu beenden.
 class ToggleBreak {
   final WorkRepository _repository;
+  final DateTime Function() _clock;
 
-  ToggleBreak(this._repository);
+  ToggleBreak(this._repository, {DateTime Function() clock = DateTime.now})
+      : _clock = clock;
 
   /// Führt den Use Case aus.
   /// Nimmt den aktuellen Arbeitseintrag und gibt den modifizierten zurück.
@@ -28,7 +30,7 @@ class ToggleBreak {
       final updatedBreaks = currentEntry.breaks.map((b) {
         if (b == activeBreak) {
           // Erstelle eine neue Instanz der Pause mit gesetzter Endzeit.
-          return b.copyWith(end: nowToMinute());
+          return b.copyWith(end: roundToMinute(_clock()));
         }
         return b;
       }).toList();
@@ -39,7 +41,7 @@ class ToggleBreak {
       final newBreak = BreakEntity(
         id: const Uuid().v4(),
         name: 'Pause ${currentEntry.breaks.length + 1}',
-        start: nowToMinute(),
+        start: roundToMinute(_clock()),
       );
 
       // Füge die neue Pause zur Liste der Pausen hinzu.

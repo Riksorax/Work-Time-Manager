@@ -33,11 +33,14 @@ class DashboardState extends Equatable {
     this.isExtraDay = false,
   });
 
-  factory DashboardState.initial() {
+  /// [now] ist die Uhr (Default `DateTime.now()`); das ViewModel reicht
+  /// seine Uhr aus `clockProvider` durch (#379).
+  factory DashboardState.initial({DateTime? now}) {
+    final time = now ?? DateTime.now();
     return DashboardState(
       workEntry: WorkEntryEntity(
-        id: DateTime.now().toIso8601String(),
-        date: DateTime.now(),
+        id: time.toIso8601String(),
+        date: time,
       ),
       elapsedTime: Duration.zero,
       actualWorkDuration: null,

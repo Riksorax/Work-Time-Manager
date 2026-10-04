@@ -52,6 +52,8 @@ The app follows **Clean Architecture** with three layers:
 
 New ViewModels always follow the manual `NotifierProvider` pattern; new infrastructure providers use `@riverpod` codegen.
 
+`lib/core/providers/today_provider.dart` (`todayProvider`, manueller `NotifierProvider<TodayNotifier, DateTime>`) ist die zentrale "heute"-Quelle (lokaler Tag, Pendant zum Web-`TodayService`): wechselt zur lokalen Mitternacht, bei `AppLifecycleState.resumed` und bei `refresh()`. Alles, was "heute" braucht (Dashboard-VM, `holidayTodayProvider`), watcht/listent diesen Provider statt eigener Timer.
+
 `SharedPreferences` is provided via an override in `main.dart` and must not be accessed directly elsewhere.
 
 ### Hybrid Repository Pattern
@@ -95,6 +97,17 @@ Widget tests that pump a screen using `AppLocalizations.of(context)` must config
 ### Testing
 
 Tests mirror the `lib/` directory structure under `test/`. Use `mockito` with `@GenerateMocks([...])` annotations and `ProviderContainer(overrides: [...])` to inject mock dependencies into Riverpod providers. After adding new `@GenerateMocks` annotations, run `build_runner build` to regenerate `*.mocks.dart` files.
+
+### Tageswechsel (#379)
+
+Das Dashboard kennt den Tageswechsel (stiller Wechsel, analog Web #372):
+
+- `todayProvider` liefert den lokalen Tag; `DashboardViewModel` hört per `ref.listen` darauf (`_onDayChange`). Ein gestoppter/leerer Eintrag schaltet still auf den neuen Tag (`_init(dayChange: true)`), ein **laufender Timer läuft über Mitternacht weiter** — Eintrag, Soll, `isExtraDay` und Überstunden bleiben am Eintragsdatum (`_getEffectiveTargetDailyHours(forDate)`).
+- `_ensureCurrentDay()` läuft am Anfang jeder Schreibaktion: lädt bei Bedarf den aktuellen Tag nach und bricht die Aktion ab, wenn das fehlschlägt (nie in den Vortag oder einen Platzhalter schreiben). Nach dem Stop eines Vortags-Laufs folgt ein Reinit.
+- `_initGen`/`_initRun`/`_loadedOk`: überholte oder nach Dispose beendete Ladeläufe verwerfen ihr Ergebnis; `_init` baut den `DashboardState` per Konstruktor neu (`copyWith` ignoriert `null`).
+- Beim Tageswechsel ist `storedOvertime` die Basis (Ausnahme: neuer Eintrag schon abgeschlossen und danach gespeichert).
+- Use Cases (`GetTodayWorkEntry`, `ToggleBreak`, `StartOrStopTimer`) bekommen die Uhr per Konstruktor (`clock:`) aus `clockProvider`.
+- Tests: `test/support/fake_clock.dart` (an `fakeAsync.elapsed` koppelbar, `jumpTo` für Uhrsprünge) und `test/support/fake_repositories.dart` (In-Memory-Repos). VM-/Provider-Tests laufen in `fakeAsync` (Container innerhalb anlegen, am Ende `dispose` und Timer-Zähler prüfen); `TestWidgetsFlutterBinding.ensureInitialized()` ist nötig, weil `todayProvider` einen `WidgetsBindingObserver` registriert. DST-Tests als Invarianten formulieren (lokale Folgetag-Schlüssel), CI läuft in Europe/Berlin; lokal zusätzlich `TZ=UTC`/`America/Los_Angeles`/`Pacific/Auckland flutter test`.
 
 ### Code Generation
 
