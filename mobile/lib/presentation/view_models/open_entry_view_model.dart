@@ -7,6 +7,7 @@ import 'package:flutter_work_time/core/utils/logger.dart';
 import '../../core/providers/providers.dart';
 import '../../core/providers/today_provider.dart';
 import '../../domain/entities/work_entry_entity.dart';
+import '../../domain/repositories/settings_repository.dart';
 import '../../domain/usecases/close_open_work_entry.dart';
 import '../../domain/utils/overtime_utils.dart';
 import 'dashboard_view_model.dart';
@@ -151,6 +152,18 @@ class OpenEntryViewModel extends Notifier<OpenEntryState> {
     state = state.copyWith(entries: visible);
   }
 
+  /// Tages-Soll am Datum von [entry] aus den Einstellungen des aktiven Profils.
+  Duration targetFor(WorkEntryEntity entry) =>
+      _targetFor(ref.read(settingsRepositoryProvider), entry);
+
+  static Duration _targetFor(
+          SettingsRepository settings, WorkEntryEntity entry) =>
+      effectiveTargetForDate(
+        date: entry.date,
+        workdays: settings.getWorkdays(),
+        weeklyHours: settings.getTargetWeeklyHours(),
+      );
+
   /// "Später": blendet den Banner (alle Kandidaten des Profils) für diese
   /// Sitzung aus.
   void later() {
@@ -177,11 +190,7 @@ class OpenEntryViewModel extends Notifier<OpenEntryState> {
 
     CloseOpenEntryResult result;
     try {
-      final dailyTarget = effectiveTargetForDate(
-        date: entry.date,
-        workdays: settings.getWorkdays(),
-        weeklyHours: settings.getTargetWeeklyHours(),
-      );
+      final dailyTarget = _targetFor(settings, entry);
       result = await closeOpenWorkEntry(
           entry: entry, end: end, dailyTarget: dailyTarget);
     } catch (e, st) {

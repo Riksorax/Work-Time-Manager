@@ -151,4 +151,35 @@ void main() {
       expect(suggestion.nowAllowed, isFalse);
     });
   });
+
+  group('isValidOpenEntryEnd', () {
+    final start = DateTime(2026, 10, 2, 8);
+    final now = DateTime(2026, 10, 3, 9);
+    final withBreak = entryAt(start, breaks: [
+      closedBreak(DateTime(2026, 10, 2, 12), const Duration(minutes: 30)),
+    ]);
+
+    bool valid(WorkEntryEntity e, DateTime end) =>
+        isValidOpenEntryEnd(entry: e, end: end, now: now);
+
+    test('gültig zwischen Start und jetzt', () {
+      expect(valid(entryAt(start), DateTime(2026, 10, 2, 16)), isTrue);
+      expect(valid(entryAt(start), now), isTrue);
+    });
+
+    test('Ende <= Start ist ungültig', () {
+      expect(valid(entryAt(start), start), isFalse);
+      expect(valid(entryAt(start), DateTime(2026, 10, 2, 7)), isFalse);
+    });
+
+    test('Ende nach jetzt ist ungültig', () {
+      expect(
+          valid(entryAt(start), now.add(const Duration(minutes: 1))), isFalse);
+    });
+
+    test('Ende vor dem Start der letzten Pause ist ungültig', () {
+      expect(valid(withBreak, DateTime(2026, 10, 2, 11, 59)), isFalse);
+      expect(valid(withBreak, DateTime(2026, 10, 2, 12)), isTrue);
+    });
+  });
 }

@@ -5,6 +5,7 @@ import '../entities/work_entry_entity.dart';
 import '../repositories/overtime_repository.dart';
 import '../repositories/work_repository.dart';
 import '../services/break_calculator_service.dart';
+import '../utils/overtime_utils.dart';
 
 /// Ergebnis von [CloseOpenWorkEntry].
 enum CloseOpenEntryResult {
@@ -97,14 +98,8 @@ class CloseOpenWorkEntry {
     }
   }
 
-  bool _isValidEnd(WorkEntryEntity entry, DateTime workEnd) {
-    if (!workEnd.isAfter(entry.workStart!)) return false;
-    if (workEnd.isAfter(_clock())) return false;
-    for (final b in entry.breaks) {
-      if (workEnd.isBefore(b.start)) return false;
-    }
-    return true;
-  }
+  bool _isValidEnd(WorkEntryEntity entry, DateTime workEnd) =>
+      isValidOpenEntryEnd(entry: entry, end: workEnd, now: _clock());
 
   Future<WorkEntryEntity?> _readFresh(WorkEntryEntity entry) async {
     final day = _dayOf(entry.date);
