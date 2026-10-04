@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers/app_lock_provider.dart';
 import '../../core/utils/logger.dart';
+import '../../domain/utils/app_lock_lockout.dart';
 import '../../l10n/app_localizations.dart';
 import '../view_models/auth_view_model.dart';
+import 'lockout_countdown.dart';
 
 /// Dialog "PIN vergessen" der App-Sperre (siehe #288). Bestätigt die Identität
 /// per Google-Re-Auth (wenn eingeloggt) und/oder per Wiederherstellungscode
@@ -25,11 +27,19 @@ class ForgotPinDialog extends ConsumerStatefulWidget {
   ConsumerState<ForgotPinDialog> createState() => _ForgotPinDialogState();
 }
 
-class _ForgotPinDialogState extends ConsumerState<ForgotPinDialog> {
+class _ForgotPinDialogState extends ConsumerState<ForgotPinDialog>
+    with LockoutCountdownMixin<ForgotPinDialog> {
   final _codeController = TextEditingController();
   String? _codeError;
   String? _reauthError;
   bool _busy = false;
+  bool _submitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    initLockout();
+  }
 
   @override
   void dispose() {
@@ -59,15 +69,34 @@ class _ForgotPinDialogState extends ConsumerState<ForgotPinDialog> {
     if (ok && mounted) Navigator.of(context).pop(true);
   }
 
-  void _submitCode() {
+  Future<void> _submitCode() async {
+    if (_submitting || lockedOut) return;
+    setState(() => _submitting = true);
     final service = ref.read(appLockServiceProvider);
-    if (service.verifyRecoveryCode(_codeController.text)) {
-      Navigator.of(context).pop(true);
-    } else {
-      setState(() {
-        _codeError = AppLocalizations.of(context).wrongRecoveryCodeError;
-        _codeController.clear();
-      });
+    final AttemptResult result;
+    try {
+      result = await service.attemptRecoveryCode(_codeController.text);
+    } catch (_) {
+      if (mounted) setState(() => _submitting = false);
+      rethrow;
+    }
+    if (!mounted) return;
+    switch (result) {
+      case AttemptSuccess():
+        Navigator.of(context).pop(true);
+      case AttemptWrong(:final remaining):
+        setState(() {
+          _submitting = false;
+          _codeError = AppLocalizations.of(context).wrongRecoveryCodeError;
+          _codeController.clear();
+        });
+        applyLockout(remaining);
+      case AttemptLocked(:final remaining):
+        setState(() {
+          _submitting = false;
+          _codeController.clear();
+        });
+        applyLockout(remaining);
     }
   }
 
@@ -102,15 +131,21 @@ class _ForgotPinDialogState extends ConsumerState<ForgotPinDialog> {
           textCapitalization: TextCapitalization.characters,
           autocorrect: false,
           enableSuggestions: false,
+          enabled: !_submitting && !lockedOut,
           decoration: InputDecoration(
             labelText: l10n.enterRecoveryCodeLabel,
             errorText: _codeError,
           ),
           onSubmitted: (_) => _submitCode(),
         ))
+        ..add(LockoutNotice(
+          remaining: lockoutRemaining,
+          total: lockoutTotal,
+          expired: lockoutExpired,
+        ))
         ..add(const SizedBox(height: 8))
         ..add(FilledButton(
-          onPressed: _submitCode,
+          onPressed: (_submitting || lockedOut) ? null : _submitCode,
           child: Text(l10n.resetPinAction),
         ));
     }
