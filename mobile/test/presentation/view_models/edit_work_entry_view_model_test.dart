@@ -62,6 +62,39 @@ void main() {
       expect(state.type, WorkEntryType.sick);
     });
 
+    test('addBreak ohne Startzeit nutzt das Datum des Eintrags (#397)', () {
+      final entryWithoutStart = WorkEntryEntity(
+        id: '1',
+        date: baseDate,
+        type: WorkEntryType.work,
+      );
+      final viewModel = container
+          .read(editWorkEntryViewModelProvider(entryWithoutStart).notifier);
+      viewModel.addBreak();
+
+      final b = container
+          .read(editWorkEntryViewModelProvider(entryWithoutStart))
+          .breaks
+          .single;
+      expect(b.start.year, baseDate.year);
+      expect(b.start.month, baseDate.month);
+      expect(b.start.day, baseDate.day);
+      expect(b.end!.difference(b.start), const Duration(minutes: 30));
+    });
+
+    test('addBreak mit Startzeit startet die Pause an der Startzeit', () {
+      final viewModel =
+          container.read(editWorkEntryViewModelProvider(initialEntry).notifier);
+      viewModel.addBreak();
+
+      final b = container
+          .read(editWorkEntryViewModelProvider(initialEntry))
+          .breaks
+          .single;
+      expect(b.start, DateTime(2023, 10, 26, 8, 0));
+      expect(b.end, DateTime(2023, 10, 26, 8, 30));
+    });
+
     test('addBreak should add a new break to the list', () {
       final viewModel =
           container.read(editWorkEntryViewModelProvider(initialEntry).notifier);
