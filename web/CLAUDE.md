@@ -56,7 +56,7 @@ features/
 
 shared/
 ├── components/
-│   ├── calendar/               CalendarComponent — Multi-Select + Pointer-Drag, Feiertags-Markierung per `bundesland`-Input (#371)
+│   ├── calendar/               CalendarComponent — Multi-Select + Pointer-Drag, Feiertags-Markierung per `bundesland`-Input (#371), Tastaturbedienung (#377): ARIA `grid > row > gridcell`, Roving tabindex, Pfeile/Home/End/PageUp/PageDown, Enter/Space (Fokus folgt nicht der Auswahl, `event.repeat` ignoriert)
 │   ├── edit-entry-dialog/      EditEntryDialogComponent
 │   ├── leave-balance-card/     LeaveBalanceCardComponent — reine Darstellung der Urlaubsübersicht (Dashboard, Settings, Reports)
 │   ├── holiday-banner/         HolidayBannerComponent — „Heute ist Feiertag: …“ (#279), rein informativ
@@ -65,6 +65,7 @@ shared/
 ├── utils/
 │   ├── german-holidays.util.ts  Pure — gesetzliche Feiertage je Bundesland (#279), Port von Mobile `german_holidays.dart`
 │   ├── bundesland.util.ts       Pure — isBundesland / normalizeBundesland
+│   ├── calendar-keyboard.util.ts  Pure — Kalender-Tastenlogik (#377): `isCalendarNavKey`, `nextFocusDate`
 │   └── work-profile-path.util.ts  Pure — `profileScopedPath` (Firestore-Pfad je Profil), `profileIdForApi` (Profil-ID → API-Form, `'default'` → `undefined`, #380)
 └── models/index.ts        WorkEntry, WorkEntryType, Break, UserSettings, UserProfile, WorkProfile
 ```

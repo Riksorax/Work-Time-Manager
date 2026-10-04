@@ -2,6 +2,8 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  Injector,
+  afterNextRender,
   computed,
   effect,
   inject,
@@ -19,6 +21,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Bundesland } from '../../models';
 import { GermanHoliday, getGermanHolidayIds } from '../../utils/german-holidays.util';
 import { TodayService } from '../../../core/services/today';
+import { isCalendarNavKey, nextFocusDate } from '../../utils/calendar-keyboard.util';
 
 const EMPTY_HOLIDAYS = new Map<string, GermanHoliday>();
 
@@ -50,37 +53,46 @@ function toKey(d: Date): string {
         </button>
       </div>
 
-      <div class="calendar-grid" role="grid" [attr.aria-label]="viewDate() | date:'MMMM yyyy'">
-        @for (day of weekDays; track day) {
-          <div class="weekday-label" role="columnheader">{{ day }}</div>
-        }
+      <div class="calendar-grid" role="grid" [attr.aria-label]="viewDate() | date:'MMMM yyyy'"
+           (keydown)="onGridKeydown($event)">
+        <div class="calendar-week weekday-row" role="row">
+          @for (day of weekDays; track day) {
+            <div class="weekday-label" role="columnheader">{{ day }}</div>
+          }
+        </div>
 
-        @for (empty of emptyPrefix(); track $index) {
-          <div class="calendar-day empty" role="gridcell" aria-hidden="true"></div>
-        }
-
-        @for (day of daysInMonth(); track day.date.getTime()) {
-          @let holiday = holidayFor(day.date);
-          @let holidayName = holiday ? ('holidays.' + holiday | translate) : '';
-          @let ariaDate = day.date | date:'d. MMMM yyyy';
-          <div
-            class="calendar-day"
-            role="gridcell"
-            [attr.data-date]="dayKey(day.date)"
-            [attr.aria-label]="holiday ? ('shared.calendarHolidayAria' | translate: { date: ariaDate, name: holidayName }) : ariaDate"
-            [matTooltip]="holidayName"
-            [matTooltipDisabled]="holiday === null"
-            [class.holiday]="holiday !== null"
-            [attr.aria-selected]="isSameDay(day.date, selectedDate())"
-            [attr.aria-pressed]="isMultiSelected(day.date)"
-            [class.selected]="!hasMultiSelected() && isSameDay(day.date, selectedDate())"
-            [class.today]="isToday(day.date)"
-            [class.has-entry]="hasEntry(day.date)"
-            [class.multi-selected]="isMultiSelected(day.date)"
-          >
-            <span class="day-number">{{ day.date.getDate() }}</span>
-            @if (hasEntry(day.date)) {
-              <div class="entry-dot" aria-hidden="true"></div>
+        @for (week of weeks(); track $index) {
+          <div class="calendar-week" role="row">
+            @for (day of week; track day ? day.date.getTime() : 'empty-' + $index) {
+              @if (day) {
+                @let holiday = holidayFor(day.date);
+                @let holidayName = holiday ? ('holidays.' + holiday | translate) : '';
+                @let ariaDate = day.date | date:'EEEE, d. MMMM yyyy';
+                @let ariaDay = holiday ? ('shared.calendarHolidayAria' | translate: { date: ariaDate, name: holidayName }) : ariaDate;
+                <div
+                  class="calendar-day"
+                  role="gridcell"
+                  [attr.data-date]="dayKey(day.date)"
+                  [attr.aria-label]="hasEntry(day.date) ? ('shared.calendarHasEntryAria' | translate: { label: ariaDay }) : ariaDay"
+                  [matTooltip]="holidayName"
+                  [matTooltipDisabled]="holiday === null"
+                  [class.holiday]="holiday !== null"
+                  [attr.tabindex]="dayKey(day.date) === focusableKey() ? 0 : -1"
+                  [attr.aria-selected]="isSelected(day.date)"
+                  [attr.aria-current]="isToday(day.date) ? 'date' : null"
+                  [class.selected]="!hasMultiSelected() && isSameDay(day.date, selectedDate())"
+                  [class.today]="isToday(day.date)"
+                  [class.has-entry]="hasEntry(day.date)"
+                  [class.multi-selected]="isMultiSelected(day.date)"
+                >
+                  <span class="day-number">{{ day.date.getDate() }}</span>
+                  @if (hasEntry(day.date)) {
+                    <div class="entry-dot" aria-hidden="true"></div>
+                  }
+                </div>
+              } @else {
+                <div class="calendar-day empty" role="gridcell" aria-hidden="true"></div>
+              }
             }
           </div>
         }
@@ -106,6 +118,11 @@ function toKey(d: Date): string {
       font-size: 1.1rem;
     }
     .calendar-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .calendar-week {
       display: grid;
       grid-template-columns: repeat(7, 1fr);
       gap: 4px;
@@ -128,6 +145,15 @@ function toKey(d: Date): string {
       position: relative;
       font-size: 0.9rem;
       transition: background-color 0.2s;
+
+      &:focus-visible {
+        outline: 2px solid var(--mat-sys-primary);
+        outline-offset: 2px;
+      }
+
+      &:focus:not(:focus-visible) {
+        outline: none;
+      }
 
       &:hover:not(.empty) {
         background-color: var(--mat-sys-surface-container-high);
@@ -187,11 +213,15 @@ export class CalendarComponent {
 
   private readonly translate = inject(TranslateService);
   private readonly todayService = inject(TodayService);
+  private readonly injector = inject(Injector);
 
   readonly viewDate = signal(new Date());
   readonly weekDays: string[] = this.translate.instant('common.weekdaysShort');
 
   private readonly _cardRef = viewChild<ElementRef<HTMLElement>>('calendarCard');
+
+  /** Roving-Fokus (Key yyyy-MM-dd), nur durch Tastatur/Tap gesetzt; `null` = Fallback über focusableKey. */
+  private readonly _focusKey = signal<string | null>(null);
 
   private _dragStart: Date | null = null;
   private _isDragging = false;
@@ -202,6 +232,7 @@ export class CalendarComponent {
       const initial = this.selectedDate();
       untracked(() => {
         this.viewDate.set(new Date(initial.getFullYear(), initial.getMonth(), 1));
+        this._focusKey.set(null);
       });
     });
   }
@@ -213,12 +244,38 @@ export class CalendarComponent {
     return Array<number>(offset).fill(0);
   });
 
+  /** Wochenzeilen (Mo-So) für `role=row`; `null` = leere Zelle vor Monatsbeginn bzw. nach Monatsende. */
+  readonly weeks = computed(() => {
+    const cells: ({ date: Date } | null)[] = [
+      ...this.emptyPrefix().map(() => null),
+      ...this.daysInMonth(),
+    ];
+    while (cells.length % 7 !== 0) cells.push(null);
+    const rows: ({ date: Date } | null)[][] = [];
+    for (let i = 0; i < cells.length; i += 7) rows.push(cells.slice(i, i + 7));
+    return rows;
+  });
+
   readonly daysInMonth = computed(() => {
     const d = this.viewDate();
     const count = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
     return Array.from({ length: count }, (_, i) => ({
       date: new Date(d.getFullYear(), d.getMonth(), i + 1),
     }));
+  });
+
+  /** Einziger Tab-Stopp im Grid: Roving-Fokus, sonst selectedDate, sonst heute, sonst Tag 1 (nur im angezeigten Monat). */
+  readonly focusableKey = computed(() => {
+    const view = this.viewDate();
+    const prefix = toKey(view).slice(0, 7);
+    const inMonth = (key: string | null): key is string => key !== null && key.startsWith(prefix);
+    const focus = this._focusKey();
+    if (inMonth(focus)) return focus;
+    const selected = toKey(this.selectedDate());
+    if (inMonth(selected)) return selected;
+    const today = this.todayService.today();
+    if (inMonth(today)) return today;
+    return `${prefix}-01`;
   });
 
   // Jahr aus dem angezeigten Monat (nicht aus selectedDate): Dez -> Jan beim Blättern.
@@ -235,6 +292,11 @@ export class CalendarComponent {
     return d1.getFullYear() === d2.getFullYear()
       && d1.getMonth() === d2.getMonth()
       && d1.getDate() === d2.getDate();
+  }
+
+  /** Visuelle Auswahl (Mehrfachauswahl hat Vorrang vor selectedDate), Basis für aria-selected. */
+  isSelected(date: Date): boolean {
+    return this.hasMultiSelected() ? this.isMultiSelected(date) : this.isSameDay(date, this.selectedDate());
   }
 
   isToday(date: Date): boolean {
@@ -290,7 +352,10 @@ export class CalendarComponent {
     }
 
     if (!this._isDragging && this._dragStart) {
-      // Einfacher Tap → Tag auswählen
+      // Einfacher Tap → Tag auswählen; Fokus folgt dem Klick (pointerdown ruft preventDefault)
+      const key = toKey(this._dragStart);
+      this._focusKey.set(key);
+      this._focusElement(key);
       this.dateSelected.emit(this._dragStart);
     }
 
@@ -299,22 +364,67 @@ export class CalendarComponent {
     setTimeout(() => { this._isDragging = false; });
   }
 
+  // ── Tastatur (#377): Roving tabindex, Fokus folgt nicht der Auswahl ─────────
+
+  onGridKeydown(event: KeyboardEvent): void {
+    if (event.altKey || event.metaKey || event.shiftKey) return;
+    const from = this._dateFromElement(event.target);
+    if (!from) return;
+
+    const key = event.key;
+    if (key === 'Enter' || key === ' ') {
+      if (event.ctrlKey) return;
+      event.preventDefault();
+      if (!event.repeat) this.dateSelected.emit(from);
+      return;
+    }
+
+    if (!isCalendarNavKey(key)) return;
+    if (event.ctrlKey && key !== 'Home' && key !== 'End') return;
+    event.preventDefault();
+    this._focusCell(nextFocusDate(key, from, event.ctrlKey));
+  }
+
   changeMonth(delta: number): void {
     const d = this.viewDate();
-    const next = new Date(d.getFullYear(), d.getMonth() + delta, 1);
-    this.viewDate.set(next);
-    this.monthChanged.emit({ year: next.getFullYear(), month: next.getMonth() + 1 });
+    this._showMonth(d.getFullYear(), d.getMonth() + delta);
   }
 
   // ── Private ─────────────────────────────────────────────────────────────────
 
   private _dateFromPoint(x: number, y: number): Date | null {
-    const el      = document.elementFromPoint(x, y);
-    const dayEl   = el?.closest('[data-date]') as HTMLElement | null;
+    return this._dateFromElement(document.elementFromPoint(x, y));
+  }
+
+  private _dateFromElement(target: EventTarget | null): Date | null {
+    const dayEl   = (target as Element | null)?.closest?.('[data-date]') as HTMLElement | null;
     const dateStr = dayEl?.dataset['date'];
     if (!dateStr) return null;
     const [yr, mo, da] = dateStr.split('-').map(Number);
     return new Date(yr, mo - 1, da);
+  }
+
+  private _focusCell(date: Date): void {
+    const view = this.viewDate();
+    const key = toKey(date);
+    this._focusKey.set(key);
+    if (date.getFullYear() === view.getFullYear() && date.getMonth() === view.getMonth()) {
+      this._focusElement(key);
+      return;
+    }
+    // Monatswechsel: Zellen werden neu erzeugt, Fokus erst nach dem nächsten Render
+    this._showMonth(date.getFullYear(), date.getMonth());
+    afterNextRender(() => this._focusElement(key), { injector: this.injector });
+  }
+
+  private _focusElement(key: string): void {
+    this._cardRef()?.nativeElement.querySelector<HTMLElement>(`[data-date="${key}"]`)?.focus();
+  }
+
+  private _showMonth(year: number, monthIndex: number): void {
+    const next = new Date(year, monthIndex, 1);
+    this.viewDate.set(next);
+    this.monthChanged.emit({ year: next.getFullYear(), month: next.getMonth() + 1 });
   }
 
   private _dateRange(a: Date, b: Date): Date[] {
