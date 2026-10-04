@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_work_time/core/providers/clock_provider.dart';
 import 'package:flutter_work_time/core/providers/providers.dart';
+import 'package:flutter_work_time/domain/entities/break_entity.dart';
 import 'package:flutter_work_time/domain/entities/bundesland.dart';
 import 'package:flutter_work_time/domain/entities/settings_entity.dart';
 import 'package:flutter_work_time/domain/entities/user_entity.dart';
@@ -125,4 +126,69 @@ void main() {
       });
     });
   }
+
+  // Weitere Aktionen des Dashboards mit Saldo-Block (Aufrufer im Screen):
+  // Saldo-Fehler zeigt die Snackbar, der Eintrag bleibt unveraendert.
+  group('weitere Aktionen bei Saldo-Fehler', () {
+    final end = DateTime(2026, 10, 5, 17);
+    final b1 = BreakEntity(
+        id: 'b1',
+        name: 'Pause 1',
+        start: DateTime(2026, 10, 5, 12),
+        end: DateTime(2026, 10, 5, 12, 30));
+
+    void seedFinished({bool withBreak = false}) {
+      work.store[dayKey(mo)] = entryOf(mo,
+          start: DateTime(2026, 10, 5, 8),
+          end: end,
+          breaks: withBreak ? [b1] : const []);
+    }
+
+    Future<void> expectSnackbar(WidgetTester tester) async {
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.text(_en), findsOneWidget);
+      expect(overtime.savedOvertimes, isEmpty);
+      expect(work.saved, isEmpty);
+      await unmount(tester);
+    }
+
+    testWidgets('Startzeit aendern', (tester) async {
+      seedFinished();
+      overtime.failSaveOvertime = true;
+      await pump(tester, 'en');
+      await tester.tap(find.widgetWithText(TextField, 'Start time'));
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.tap(find.text('OK'));
+      await tester.pump(const Duration(milliseconds: 500));
+      await expectSnackbar(tester);
+    });
+
+    testWidgets('Endzeit aendern', (tester) async {
+      seedFinished();
+      overtime.failSaveOvertime = true;
+      await pump(tester, 'en');
+      await tester.tap(find.widgetWithText(TextField, 'End time'));
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.tap(find.text('OK'));
+      await tester.pump(const Duration(milliseconds: 500));
+      await expectSnackbar(tester);
+    });
+
+    testWidgets('Pause hinzufuegen', (tester) async {
+      seedFinished();
+      overtime.failSaveOvertime = true;
+      await pump(tester, 'en');
+      await tester.tap(find.text('Add break'));
+      await expectSnackbar(tester);
+    });
+
+    testWidgets('Pause loeschen', (tester) async {
+      seedFinished(withBreak: true);
+      overtime.failSaveOvertime = true;
+      await pump(tester, 'en');
+      await tester.tap(find.byIcon(Icons.delete).first);
+      await expectSnackbar(tester);
+    });
+  });
 }

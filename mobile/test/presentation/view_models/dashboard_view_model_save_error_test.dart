@@ -325,6 +325,42 @@ void main() {
       expect(result(h, h.vm.startOrStopTimer), isTrue);
     }, setUp: prep(running), profiles: true);
 
+    scenario('ueberholte Aktion mit gespeichertem Saldo: true', at(17), (h) {
+      h.boot();
+      h.overtime.holdSaveOvertime = true;
+      bool? r;
+      unawaited(h.vm.startOrStopTimer().then((v) => r = v));
+      h.async.flushMicrotasks();
+      h.switchProfile('B');
+      releaseSaldo(h);
+      expect(r, isTrue);
+    }, setUp: (h) {
+      prep(running)(h);
+      h.workB.store[moKey] = entryOf(mo, start: at(9), end: at(12));
+    }, profiles: true);
+
+    scenario('ueberholte Aktion mit Saldo-Fehler wird geloggt', at(17), (h) {
+      h.boot();
+      h.overtime.holdSaveOvertime = true;
+      go(h, [], h.vm.startOrStopTimer);
+      h.switchProfile('B');
+      h.overtime.failSaveOvertime = true;
+      final events = <LogEvent>[];
+      Logger.addLogListener(events.add);
+      try {
+        releaseSaldo(h);
+      } finally {
+        Logger.removeLogListener(events.add);
+      }
+      expect(
+          events.where((e) =>
+              e.level == Level.error && '${e.message}'.contains('Saldo')),
+          hasLength(1));
+    }, setUp: (h) {
+      prep(running)(h);
+      h.workB.store[moKey] = entryOf(mo, start: at(9), end: at(12));
+    }, profiles: true);
+
     scenario('ueberholte Aktion mit Saldo-Fehler: false', at(17), (h) {
       h.boot();
       h.overtime.holdSaveOvertime = true;
