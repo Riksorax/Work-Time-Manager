@@ -236,3 +236,13 @@ Nur Mobile (Code). `web/CLAUDE.md` bekommt nur einen Doku-Halbsatz (Abweichung e
 9. Folge-Issue Reentranz-Sperre im Dashboard: angelegt (#413).
 10. Teilfehler-Charakterisierungstests nicht committen, nur als Probe (wie O3 in #388).
 11. `failSaveOvertimeCalls` im Fake (1-basiert, Default unverändert) in #410 einführen.
+
+## Umsetzungsstand #402
+
+Umgesetzt wie entschieden (Option A, `Future<bool>` + Snackbar `dashboardSaveError`, kein Saldo-Rollback). Abweichungen und Ergänzungen:
+
+- **Snackbar auch im Modal `EditBreakModal`** (`updateBreak`): der Aufruf im Modal wäre sonst ohne Feedback geblieben. Der Messenger wird vor `Navigator.pop` synchron gelesen (`reportDashboardSave`), das Modal schließt, die Snackbar erscheint.
+- **Tageswechsel-Tick-Test entfallen:** der Stop läuft über `_startTimerIfNeeded`/Reinit wie bisher, der Pfad ist durch die #379-Tests abgedeckt.
+- **Fund im Review (Tick im Schreibfenster):** da der Timer bis nach dem Eintrag-Write läuft, setzte der Tick `grossWorkDuration` auf `jetzt - Start` am bereits beendeten Eintrag; der Wert blieb nach dem Abbruch des Timers stehen (UI zeigte 9:00:05 statt 9:00). Behoben: der Tick rechnet bis `workEnd ?? jetzt` (Test S-5b). Autosave im Schreibfenster schreibt den bereits beendeten State-Eintrag und ist harmlos.
+- **Grenze 4 (`_ensureCurrentDay`-Fehlschlag liefert still `true`)** bleibt offen: Empfehlung des Reviews siehe PR; nicht geändert.
+- Mutationen: Early-Cancel, Rethrow, Catch `true`, Erfolg `false`, Snackbar entfernt/immer, Log-Level/Inhalt/entfernt, Rückgabe je Aktion (9) vertauscht, Snackbar je Aufrufer (Screen 8 Stellen, Modal) entfernt. Überlebende nur bei den Screen-Aufrufern von `clearEndTime`, `startNewSessionKeepBreaks`, `startNewSession`: diese Aktionen haben keinen Saldo-Block und liefern nie `false`, der Zweig ist mit dem echten ViewModel unerreichbar (defensiv).
