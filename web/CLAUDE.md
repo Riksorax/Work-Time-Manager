@@ -204,8 +204,8 @@ neuesten offenen Eintrag vor heute (Ursache und Mobile-Vorlage: PR #405). Ohne N
 - **`DashboardService.reloadAfterRetroClose(pid)`:** zieht die Saldo-Basis neu (no-op bei anderem Profil). Läuft im Dashboard ein
   Vortag über Mitternacht, läuft kein `_init` (er würde den Timer verwerfen), es wird nur die Basis erneuert; sonst stiller Reload
   (`dayChange`). Richtung der Abhängigkeit: `OpenEntryService` → `DashboardService`, nie umgekehrt.
-- **Abweichung zu Mobile:** `manualOvertimeMinutes` wird eingerechnet (wie beim Dashboard-Stop) und es gibt einen Rollback bei
-  Eintrag-Fehler. `keepLastUpdated` sendet Mobile seit #406 ebenfalls (`CloseOpenWorkEntry`, Body nur bei `true`).
+- **Abweichung zu Mobile:** `manualOvertimeMinutes` wird eingerechnet (wie beim Dashboard-Stop). Den Saldo-Rollback bei
+  Eintrag-Fehler hat Mobile seit #410 ebenfalls. `keepLastUpdated` sendet Mobile seit #406 ebenfalls (`CloseOpenWorkEntry`, Body nur bei `true`).
 - **Grenzen:** Einträge älter als der Vormonat und andere Profile werden nicht gefunden, kein Re-Check beim Zurückkehren in den
   Tab, „Fortsetzen“ folgt mit Mobile PR 1b, Reports-Darstellung offener Einträge #404.
 - **Deploy-Reihenfolge: API vor Clients (Web und Mobile).** `keepLastUpdated` kommt aus Backend-PR #408. Eine ältere API ignoriert das Feld; Beenden
