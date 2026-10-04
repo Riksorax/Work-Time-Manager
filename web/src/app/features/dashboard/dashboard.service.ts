@@ -320,6 +320,33 @@ export class DashboardService {
     }
   }
 
+  // ─── Nachträgliches Beenden eines Vortags (#385) ────────────────────────────
+  /**
+   * Zieht nach dem nachträglichen Beenden eines offenen Vortagseintrags (`OpenEntryCloseService`) die Saldo-Basis neu.
+   * No-op, wenn das geladene Profil nicht mehr `pid` ist. Schreibt nichts (daher kein `_ensureCurrentDay`).
+   * Läuft im Dashboard ein Eintrag über Mitternacht (#372), darf kein `_init` laufen (er würde den Timer verwerfen):
+   * dann nur Basis erneuern. Sonst stiller Reload (`dayChange`), die Basis ist der gespeicherte Saldo.
+   */
+  async reloadAfterRetroClose(pid: string): Promise<void> {
+    if (pid !== this._loadedProfileId) return;
+    this.todayService.refresh();
+    const e = this._s().workEntry;
+    const runningPastDay = !!e.workStart && !e.workEnd && e.id !== this.todayService.today();
+    try {
+      if (runningPastDay) {
+        const gen = this._initGen;
+        const stored = await this.overtimeSvc.getOvertime(pid);
+        if (gen !== this._initGen || pid !== this._loadedProfileId) return;
+        this._s.update(s => ({ ...s, initialOvertimeMs: stored }));
+        this._recalculateOvertime();
+        return;
+      }
+      await this._init(this._uid(), { dayChange: true });
+      // Ohne sofortigen Tick stünde `elapsedMs` bis zum nächsten Sekunden-Tick auf 0.
+      if (this.isTimerRunning()) this._tick();
+    } catch { /* Anzeige bleibt auf dem bisherigen Stand; der nächste Reload zieht nach */ }
+  }
+
   // ─── Flow 2+3: Timer starten / stoppen ─────────────────────────────────────
   async startOrStopTimer(): Promise<'restart-dialog' | void> {
     if (!(await this._ensureCurrentDay())) return;

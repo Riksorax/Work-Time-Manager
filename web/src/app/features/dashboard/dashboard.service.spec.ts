@@ -854,3 +854,122 @@ fakeClockSuite('DashboardService Neuberechnung gestoppter Eintrag (#390)', () =>
     expect(h.svc.expectedEndTime()?.getTime()).toBe(MONDAY(15).getTime());
   });
 });
+
+fakeClockSuite('DashboardService.reloadAfterRetroClose (#385)', () => {
+  const SAT_KEY = '2026-10-03';
+  const initGen = (h: Harness): number => (h.svc as unknown as { _initGen: number })._initGen;
+
+  it('heute laufender Timer: läuft weiter, Basis = neuer gespeicherter Saldo, Stop speichert „neuer Saldo + Tagesanteil"', async () => {
+    // Sa 12:00, Timer seit 08:00 (Soll 0 -> Tagesanteil = Netto). lastUpdated liegt vor dem Beenden (unangetastet).
+    const h = setup({
+      entries: [mkEntry(2026, 9, 3, { workStart: new Date(2026, 9, 3, 8, 0) })],
+      storedOvertimeMs: 0, lastUpdate: new Date(2026, 9, 1, 10, 0),
+    });
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(h.svc.isTimerRunning()).toBe(true);
+    h.getOvertime.mockResolvedValue(3 * H); // gespeichert nach dem Beenden des Vortags
+    await h.svc.reloadAfterRetroClose('default');
+    expect(h.svc.isTimerRunning()).toBe(true);
+    expect(h.svc.workEntry().id).toBe(SAT_KEY);
+    expect(h.svc.totalOvertime()).toBe(3 * H + h.svc.dailyOvertime()!);
+    await h.svc.startOrStopTimer();
+    const saved = h.saveOvertime.mock.calls.at(-1)!;
+    const entry = h.saveEntry.mock.calls.at(-1)![0] as WorkEntry;
+    const breakMs = entry.breaks.reduce((s, b) => s + (b.end!.getTime() - b.start.getTime()), 0);
+    expect(saved[0]).toBe(3 * H + (entry.workEnd!.getTime() - entry.workStart!.getTime() - breakMs));
+  });
+
+  it('Anzeige springt nicht auf 0: Netto steht sofort nach dem Reload (ohne weiteren Sekunden-Tick)', async () => {
+    const h = setup({ entries: [mkEntry(2026, 9, 3, { workStart: new Date(2026, 9, 3, 8, 0) })] });
+    await vi.advanceTimersByTimeAsync(1000);
+    await h.svc.reloadAfterRetroClose('default');
+    expect(h.svc.netDuration()).toBe(Date.now() - new Date(2026, 9, 3, 8, 0).getTime());
+    expect(h.svc.netDuration()).toBeGreaterThan(0);
+  });
+
+  it('heute abgeschlossen und nach workEnd gespeichert: kein Doppelzählen', async () => {
+    const sat = mkEntry(2026, 9, 3, { workStart: new Date(2026, 9, 3, 8, 0), workEnd: new Date(2026, 9, 3, 10, 0) });
+    const h = setup({ entries: [sat], storedOvertimeMs: 5 * H, lastUpdate: new Date(2026, 9, 3, 10, 0) });
+    await vi.advanceTimersByTimeAsync(0);
+    await h.svc.reloadAfterRetroClose('default');
+    expect(h.svc.totalOvertime()).toBe(5 * H);
+  });
+
+  it('lastUpdated vor dem Beenden: der gespeicherte Saldo ist die Basis, heute wird nicht abgezogen', async () => {
+    const sat = mkEntry(2026, 9, 3, { workStart: new Date(2026, 9, 3, 8, 0), workEnd: new Date(2026, 9, 3, 10, 0) });
+    const h = setup({ entries: [sat], storedOvertimeMs: 0, lastUpdate: new Date(2026, 9, 1, 10, 0) });
+    await vi.advanceTimersByTimeAsync(0);
+    h.getOvertime.mockResolvedValue(3 * H);
+    await h.svc.reloadAfterRetroClose('default');
+    expect(h.svc.totalOvertime()).toBe(3 * H + 2 * H);
+  });
+
+  it('leerer heutiger Tag: kein Ladespinner, Saldo = neuer Wert', async () => {
+    const h = setup({ storedOvertimeMs: 0 });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(h.svc.isLoading()).toBe(false);
+    h.getOvertime.mockResolvedValue(3 * H);
+    const p = h.svc.reloadAfterRetroClose('default');
+    expect(h.svc.isLoading()).toBe(false);
+    await p;
+    expect(h.svc.isLoading()).toBe(false);
+    expect(h.svc.workEntry().id).toBe(SAT_KEY);
+    expect(h.svc.totalOvertime()).toBe(3 * H);
+  });
+
+  describe('im Dashboard läuft ein Vortag (#372)', () => {
+    async function runningFriday(): Promise<Harness> {
+      vi.setSystemTime(new Date(2026, 9, 2, 23, 59, 0));
+      const h = setup({ entries: [mkEntry(2026, 9, 2, { workStart: new Date(2026, 9, 2, 20, 0) })], storedOvertimeMs: 0 });
+      await vi.advanceTimersByTimeAsync(1000);
+      await vi.advanceTimersByTimeAsync(65_000); // über Mitternacht
+      expect(Date.now()).toBeGreaterThan(new Date(2026, 9, 3).getTime());
+      expect(h.svc.isTimerRunning()).toBe(true);
+      return h;
+    }
+
+    it('kein _init: Eintrag und Timer unangetastet, nur die Basis wird erneuert, _initGen bleibt', async () => {
+      const h = await runningFriday();
+      const gen = initGen(h);
+      const lastUpdateReads = h.getLastUpdateDate.mock.calls.length;
+      const entryRef = h.svc.workEntry();
+      h.getOvertime.mockResolvedValue(4 * H);
+      await h.svc.reloadAfterRetroClose('default');
+      expect(initGen(h)).toBe(gen);
+      expect(h.getLastUpdateDate.mock.calls.length).toBe(lastUpdateReads); // _init liest lastUpdated, wir nicht
+      expect(h.svc.workEntry()).toBe(entryRef);
+      expect(h.svc.workEntry().id).toBe('2026-10-02');
+      expect(h.svc.isTimerRunning()).toBe(true);
+      expect(h.svc.totalOvertime()).toBe(4 * H + h.svc.dailyOvertime()!);
+    });
+
+    it('überholter Lauf (Nutzerwechsel während des Reads): Ergebnis verworfen', async () => {
+      const h = await runningFriday();
+      let release!: (v: number) => void;
+      h.getOvertime.mockImplementationOnce(() => new Promise<number>(r => (release = r)));
+      const p = h.svc.reloadAfterRetroClose('default');
+      h.user.set({ uid: 'u2' });
+      TestBed.tick();
+      await vi.advanceTimersByTimeAsync(0);
+      const afterReinit = h.svc.totalOvertime();
+      release(9 * H);
+      await p;
+      expect(h.svc.totalOvertime()).toBe(afterReinit);
+      // Die verworfene Basis (9 h) darf nicht im neuen Zustand stehen: nach dem Start des heutigen Timers gilt Basis 0.
+      await h.svc.startOrStopTimer();
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(h.svc.isTimerRunning()).toBe(true);
+      expect(h.svc.totalOvertime()).toBe(h.svc.dailyOvertime());
+    });
+  });
+
+  it('anderes Profil als das geladene: no-op (kein Read)', async () => {
+    const h = setup({ storedOvertimeMs: 0 });
+    await vi.advanceTimersByTimeAsync(0);
+    const reads = h.getOvertime.mock.calls.length;
+    h.getOvertime.mockResolvedValue(7 * H);
+    await h.svc.reloadAfterRetroClose('someOtherProfile');
+    expect(h.getOvertime.mock.calls.length).toBe(reads);
+    expect(h.svc.totalOvertime()).toBe(0);
+  });
+});
