@@ -84,114 +84,114 @@ Semantik:
 - Ctrl bei Pfeilen/Page-Tasten ändert nichts an der Semantik (das Filtern von Modifikatoren erfolgt in der Komponente, nicht im Util).
 
 Tests zuerst (`calendar-keyboard.util.spec.ts`, ohne DOM):
-- [ ] Pfeile +-1/+-7 mitten im Monat
-- [ ] Monatsgrenze: 31.10.2026 +1 -> 01.11.2026; 01.11.2026 -1 -> 31.10.2026; 28.10. +7 -> 04.11.
-- [ ] Jahresgrenze: 31.12.2026 +1 -> 01.01.2027; 01.01.2027 -1 -> 31.12.2026; 01.01.2027 -7 -> 25.12.2026
-- [ ] Schaltjahr 2028: 28.02.2028 +1 -> 29.02.2028; 29.02.2028 +1 -> 01.03.2028; PageDown 31.01.2028 -> 29.02.2028
-- [ ] PageUp/PageDown Klemmen: 31.01.2026 PageDown -> 28.02.2026; 31.03.2026 PageUp -> 28.02.2026; Jahreswechsel 15.12.2026 PageDown -> 15.01.2027, 15.01.2027 PageUp -> 15.12.2026
-- [ ] Home/End Zeile: Mi 14.10.2026 Home -> Mo 12.10., End -> So 18.10.; Mo bleibt bei Home, So bleibt bei End
-- [ ] Home/End Zeilen-Klemmung: 02.10.2026 (Fr, Woche beginnt im September) Home -> 01.10.2026; 29.10.2026 End -> 31.10.2026 (Sa/So-Klemmung auf Monatsende, Monat endet am Sa)
-- [ ] Strg+Home/End: beliebiger Tag -> 01. bzw. letzter Monatstag (Februar 2026 = 28, Februar 2028 = 29)
-- [ ] DST: 25.10.2026 (Berlin Zeitumstellung) +-1 und +-7 und 29.03.2026 ohne Tagesverschiebung (Ergebnis `getDate()` exakt, `getHours() === 0`)
-- [ ] Reinheit: Eingabe-Date wird nicht mutiert; Rückgabe ist neue Instanz
-- [ ] `isCalendarNavKey`: true für die 8 Tasten, false für 'Enter', ' ', 'a', 'Tab'
+- [x] Pfeile +-1/+-7 mitten im Monat
+- [x] Monatsgrenze: 31.10.2026 +1 -> 01.11.2026; 01.11.2026 -1 -> 31.10.2026; 28.10. +7 -> 04.11.
+- [x] Jahresgrenze: 31.12.2026 +1 -> 01.01.2027; 01.01.2027 -1 -> 31.12.2026; 01.01.2027 -7 -> 25.12.2026
+- [x] Schaltjahr 2028: 28.02.2028 +1 -> 29.02.2028; 29.02.2028 +1 -> 01.03.2028; PageDown 31.01.2028 -> 29.02.2028
+- [x] PageUp/PageDown Klemmen: 31.01.2026 PageDown -> 28.02.2026; 31.03.2026 PageUp -> 28.02.2026; Jahreswechsel 15.12.2026 PageDown -> 15.01.2027, 15.01.2027 PageUp -> 15.12.2026
+- [x] Home/End Zeile: Mi 14.10.2026 Home -> Mo 12.10., End -> So 18.10.; Mo bleibt bei Home, So bleibt bei End
+- [x] Home/End Zeilen-Klemmung: 02.10.2026 (Fr, Woche beginnt im September) Home -> 01.10.2026; 29.10.2026 End -> 31.10.2026 (Sa/So-Klemmung auf Monatsende, Monat endet am Sa)
+- [x] Strg+Home/End: beliebiger Tag -> 01. bzw. letzter Monatstag (Februar 2026 = 28, Februar 2028 = 29)
+- [x] DST: 25.10.2026 (Berlin Zeitumstellung) +-1 und +-7 und 29.03.2026 ohne Tagesverschiebung (Ergebnis `getDate()` exakt, `getHours() === 0`)
+- [x] Reinheit: Eingabe-Date wird nicht mutiert; Rückgabe ist neue Instanz
+- [x] `isCalendarNavKey`: true für die 8 Tasten, false für 'Enter', ' ', 'a', 'Tab'
 - Rot-Nachweis: Stub liefert `from`, Tests schlagen inhaltlich fehl. Dann Impl, Grün.
 
 ### Schritt 2: ARIA-Struktur und Wochenzeilen im Template (Test zuerst)
 Tests zuerst (`calendar-keyboard.spec.ts`, Block "ARIA-Struktur"), Rot gegen den Ist-Zustand:
-- [ ] Grid hat `role=grid`; direkte Kinder sind ausschließlich `role=row`; Kopfzeile = 1 Row mit 7 `columnheader`
-- [ ] Oktober 2026 (Do 01.10. -> 3 leere Prefix-Zellen, 31 Tage): 5 Datenzeilen, jede Zeile 7 Zellen; Zellen nur `gridcell`/`columnheader`
-- [ ] Kein Element mit `aria-pressed`
-- [ ] `aria-selected` Einzelmodus: `"true"` genau auf `selectedDate`, `"false"` explizit auf allen anderen Tagen
-- [ ] `aria-selected` Mehrfachmodus (`multiSelectedDates` = {2026-10-05, 2026-10-06}): `"true"` nur auf diesen zwei, selectedDate `"false"` — konsistent zu `.multi-selected` / `.selected`
-- [ ] `aria-current="date"` genau auf heute (15.10.), sonst Attribut fehlt; nach Mitternachts-Rollover (an den #382-Test in calendar.spec.ts anlehnen, `vi.advanceTimersByTime`) wandert es auf den Folgetag
-- [ ] `aria-label` enthält Wochentag + Datum (z. B. `Donnerstag, 15. Oktober 2026`, Locale fest de-DE); Feiertag: `{{label}}, Feiertag: {{name}}` bleibt (bestehende #371-Tests in calendar.spec.ts laufen unverändert grün)
-- [ ] Tag mit Eintrag (`daysWithEntries=[15]`) hat im Label "Eintrag vorhanden" (de) / "entry available" (en, über `TranslateService.use('en')` wie vorhandene en-Tests); Tag ohne Eintrag nicht; Feiertag + Eintrag: beide Hinweise, Reihenfolge Datum -> Feiertag -> Eintrag
-- [ ] Leere Prefix-Zellen: `aria-hidden="true"`, ohne `tabindex`, ohne `data-date`
-- [ ] Regression: alle Tests in `calendar.spec.ts` (Pointer, Drag [3,4,5], Klassen `.holiday/.selected/.today`, `cell(key)`) grün
+- [x] Grid hat `role=grid`; direkte Kinder sind ausschließlich `role=row`; Kopfzeile = 1 Row mit 7 `columnheader`
+- [x] Oktober 2026 (Do 01.10. -> 3 leere Prefix-Zellen, 31 Tage): 5 Datenzeilen, jede Zeile 7 Zellen; Zellen nur `gridcell`/`columnheader`
+- [x] Kein Element mit `aria-pressed`
+- [x] `aria-selected` Einzelmodus: `"true"` genau auf `selectedDate`, `"false"` explizit auf allen anderen Tagen
+- [x] `aria-selected` Mehrfachmodus (`multiSelectedDates` = {2026-10-05, 2026-10-06}): `"true"` nur auf diesen zwei, selectedDate `"false"` — konsistent zu `.multi-selected` / `.selected`
+- [x] `aria-current="date"` genau auf heute (15.10.), sonst Attribut fehlt; nach Mitternachts-Rollover (an den #382-Test in calendar.spec.ts anlehnen, `vi.advanceTimersByTime`) wandert es auf den Folgetag
+- [x] `aria-label` enthält Wochentag + Datum (z. B. `Donnerstag, 15. Oktober 2026`, Locale fest de-DE); Feiertag: `{{label}}, Feiertag: {{name}}` bleibt (bestehende #371-Tests in calendar.spec.ts laufen unverändert grün)
+- [x] Tag mit Eintrag (`daysWithEntries=[15]`) hat im Label "Eintrag vorhanden" (de) / "entry available" (en, über `TranslateService.use('en')` wie vorhandene en-Tests); Tag ohne Eintrag nicht; Feiertag + Eintrag: beide Hinweise, Reihenfolge Datum -> Feiertag -> Eintrag
+- [x] Leere Prefix-Zellen: `aria-hidden="true"`, ohne `tabindex`, ohne `data-date`
+- [x] Regression: alle Tests in `calendar.spec.ts` (Pointer, Drag [3,4,5], Klassen `.holiday/.selected/.today`, `cell(key)`) grün
 
 Impl:
-- [ ] `weeks`-Computed: aus `viewDate` Array von Wochen (je 7 Einträge, `null` = leer vor Monatsbeginn bzw. nach Monatsende); ersetzt `emptyPrefix` für das Template (`emptyPrefix`/`daysInMonth` bleiben öffentlich, falls Tests sie nutzen; vor Entfernen Grep)
-- [ ] Template: `@for (week of weeks(); track $index)` -> `div.calendar-week[role=row]`, innen `@for` über Zellen; Kopfzeile `div.calendar-week.weekday-row[role=row]`; `track` für Tageszellen weiter `day.date.getTime()` (DOM-Stabilität innerhalb eines Monats)
-- [ ] `aria-pressed` entfernen; `aria-selected` an neue Methode `isSelected(date)`: `hasMultiSelected() ? isMultiSelected(d) : isSameDay(d, selectedDate())`, `.selected`-Klasse nutzt weiter dieselbe Logik
-- [ ] `aria-current` per `[attr.aria-current]="isToday(d) ? 'date' : null"`
-- [ ] Label-Komposition im Template per `@let` (Datum `EEEE, d. MMMM yyyy` -> optional Feiertag -> optional Eintrag über `shared.calendarHasEntryAria` mit `{ label }`); Template einfach halten, ggf. Hilfsmethode `cellLabel(...)` falls `@let`-Verschachtelung zu unlesbar
-- [ ] Styles: `.calendar-grid` wird Spaltenlayout (`display: flex; flex-direction: column; gap: 4px`), `.calendar-week` bekommt `display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px`; Hit-Testing darf nicht leiden (Zeilen-Wrapper ohne `pointer-events`-Änderung, kein Layout-Loch; `[data-date]` bleibt auf der Zelle)
+- [x] `weeks`-Computed: aus `viewDate` Array von Wochen (je 7 Einträge, `null` = leer vor Monatsbeginn bzw. nach Monatsende); ersetzt `emptyPrefix` für das Template (`emptyPrefix`/`daysInMonth` bleiben öffentlich, falls Tests sie nutzen; vor Entfernen Grep)
+- [x] Template: `@for (week of weeks(); track $index)` -> `div.calendar-week[role=row]`, innen `@for` über Zellen; Kopfzeile `div.calendar-week.weekday-row[role=row]`; `track` für Tageszellen weiter `day.date.getTime()` (DOM-Stabilität innerhalb eines Monats)
+- [x] `aria-pressed` entfernen; `aria-selected` an neue Methode `isSelected(date)`: `hasMultiSelected() ? isMultiSelected(d) : isSameDay(d, selectedDate())`, `.selected`-Klasse nutzt weiter dieselbe Logik
+- [x] `aria-current` per `[attr.aria-current]="isToday(d) ? 'date' : null"`
+- [x] Label-Komposition im Template per `@let` (Datum `EEEE, d. MMMM yyyy` -> optional Feiertag -> optional Eintrag über `shared.calendarHasEntryAria` mit `{ label }`); Template einfach halten, ggf. Hilfsmethode `cellLabel(...)` falls `@let`-Verschachtelung zu unlesbar
+- [x] Styles: `.calendar-grid` wird Spaltenlayout (`display: flex; flex-direction: column; gap: 4px`), `.calendar-week` bekommt `display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px`; Hit-Testing darf nicht leiden (Zeilen-Wrapper ohne `pointer-events`-Änderung, kein Layout-Loch; `[data-date]` bleibt auf der Zelle)
 - i18n: `shared.calendarHasEntryAria` in `de.json` (`"{{label}}, Eintrag vorhanden"`) und `en.json` (`"{{label}}, entry available"`) direkt neben `calendarHolidayAria`
 
 ### Schritt 3: Roving tabindex (Test zuerst)
 Tests zuerst, Rot (heute kein tabindex):
-- [ ] Initial genau eine Zelle `tabindex="0"` = `selectedDate` (15.10.), alle anderen Tageszellen `tabindex="-1"`, leere Zellen ohne tabindex
-- [ ] Nach `changeMonth(1)` ohne Auswahl im Zielmonat: `tabindex=0` auf "heute", wenn heute im Monat; sonst auf Tag 1 (Fixture mit heute in einem anderen Monat als selectedDate, z. B. selectedDate 15.10., heute 15.10., Blättern auf November -> 01.11.; Blättern zurück -> 15.10. = selectedDate)
-- [ ] selectedDate im angezeigten Monat hat Vorrang vor heute; heute vor Tag 1
-- [ ] Immer genau eine `tabindex=0`-Zelle (Property-Test über mehrere Monate/Blättern)
-- [ ] Tab-Reihenfolge: Grid hat insgesamt einen Tab-Stopp (Anzahl Elemente mit `tabindex=0` im Grid = 1)
+- [x] Initial genau eine Zelle `tabindex="0"` = `selectedDate` (15.10.), alle anderen Tageszellen `tabindex="-1"`, leere Zellen ohne tabindex
+- [x] Nach `changeMonth(1)` ohne Auswahl im Zielmonat: `tabindex=0` auf "heute", wenn heute im Monat; sonst auf Tag 1 (Fixture mit heute in einem anderen Monat als selectedDate, z. B. selectedDate 15.10., heute 15.10., Blättern auf November -> 01.11.; Blättern zurück -> 15.10. = selectedDate)
+- [x] selectedDate im angezeigten Monat hat Vorrang vor heute; heute vor Tag 1
+- [x] Immer genau eine `tabindex=0`-Zelle (Property-Test über mehrere Monate/Blättern)
+- [x] Tab-Reihenfolge: Grid hat insgesamt einen Tab-Stopp (Anzahl Elemente mit `tabindex=0` im Grid = 1)
 
 Impl:
-- [ ] `private readonly _focusKey = signal<string | null>(null)`
-- [ ] `focusableKey = computed(...)`: `_focusKey` wenn im angezeigten Monat, sonst selectedDate-Key wenn im Monat, sonst `todayService.today()` wenn im Monat, sonst Key von Tag 1
-- [ ] Zelle: `[attr.tabindex]="dayKey(d) === focusableKey() ? 0 : -1"`
-- [ ] `selectedDate`-Effekt setzt zusätzlich `_focusKey` auf `null` (Auswahl von außen setzt den Roving-Stand zurück); `untracked` beibehalten
+- [x] `private readonly _focusKey = signal<string | null>(null)`
+- [x] `focusableKey = computed(...)`: `_focusKey` wenn im angezeigten Monat, sonst selectedDate-Key wenn im Monat, sonst `todayService.today()` wenn im Monat, sonst Key von Tag 1
+- [x] Zelle: `[attr.tabindex]="dayKey(d) === focusableKey() ? 0 : -1"`
+- [x] `selectedDate`-Effekt setzt zusätzlich `_focusKey` auf `null` (Auswahl von außen setzt den Roving-Stand zurück); `untracked` beibehalten
 
 ### Schritt 4: Tastatursteuerung ohne Monatswechsel (Test zuerst)
 Tests zuerst, Rot:
-- [ ] ArrowRight/Left/Down/Up am Fokus-Tag (15.10.): `document.activeElement` ist 16./14./22./08.10.; `tabindex=0` wandert mit (nach `detectChanges`)
-- [ ] Pfeil emittiert weder `dateSelected` noch `dragSelected` noch `monthChanged` (Fokus folgt nicht der Auswahl)
-- [ ] Home -> Montag der Zeile (Mi 14.10. -> 12.10.), End -> So 18.10.; Strg+Home -> 01.10., Strg+End -> 31.10.
-- [ ] Enter und Leertaste (`key: ' '`) auf fokussierter Zelle emittieren `dateSelected` genau einmal mit diesem Tag (`getTime()`-Vergleich gegen `new Date(2026, 9, 22)`); Enter/Space ändern den Fokus nicht
-- [ ] `defaultPrevented === true` für Pfeile, Home/End, PageUp/PageDown, Space; Enter ruft `preventDefault` ebenfalls (verhindert Doppel-Auslösung/Click-Synthese), dokumentiert im Test
-- [ ] Nicht abgefangen (`defaultPrevented === false`, keine Emission, Fokus unverändert): Ctrl+ArrowRight, Alt+ArrowRight, Meta+ArrowRight, Shift+ArrowRight, Tab, andere Tasten (`a`), Keydown mit Target außerhalb einer Zelle (z. B. Event am Grid selbst)
-- [ ] Keydown auf Header-Buttons (Vorheriger/Nächster Monat) wird vom Grid-Handler nicht berührt (Handler hängt am Grid, nicht an der Card)
+- [x] ArrowRight/Left/Down/Up am Fokus-Tag (15.10.): `document.activeElement` ist 16./14./22./08.10.; `tabindex=0` wandert mit (nach `detectChanges`)
+- [x] Pfeil emittiert weder `dateSelected` noch `dragSelected` noch `monthChanged` (Fokus folgt nicht der Auswahl)
+- [x] Home -> Montag der Zeile (Mi 14.10. -> 12.10.), End -> So 18.10.; Strg+Home -> 01.10., Strg+End -> 31.10.
+- [x] Enter und Leertaste (`key: ' '`) auf fokussierter Zelle emittieren `dateSelected` genau einmal mit diesem Tag (`getTime()`-Vergleich gegen `new Date(2026, 9, 22)`); Enter/Space ändern den Fokus nicht
+- [x] `defaultPrevented === true` für Pfeile, Home/End, PageUp/PageDown, Space; Enter ruft `preventDefault` ebenfalls (verhindert Doppel-Auslösung/Click-Synthese), dokumentiert im Test
+- [x] Nicht abgefangen (`defaultPrevented === false`, keine Emission, Fokus unverändert): Ctrl+ArrowRight, Alt+ArrowRight, Meta+ArrowRight, Shift+ArrowRight, Tab, andere Tasten (`a`), Keydown mit Target außerhalb einer Zelle (z. B. Event am Grid selbst)
+- [x] Keydown auf Header-Buttons (Vorheriger/Nächster Monat) wird vom Grid-Handler nicht berührt (Handler hängt am Grid, nicht an der Card)
 
 Impl:
-- [ ] `host`-frei: `(keydown)="onGridKeydown($event)"` am `.calendar-grid` (Event-Delegation, ein Handler); Zelle über `event.target.closest('[data-date]')`, `data-date` -> lokales Date (wie `_dateFromPoint`; gemeinsame private Hilfsmethode `_parseKey` statt Duplikat)
-- [ ] Modifier-Filter: bei `ctrlKey` nur Home/End zulässig; `altKey`/`metaKey`/`shiftKey` -> unbehandelt zurückkehren
-- [ ] Navigation: `isCalendarNavKey` + `nextFocusDate` (Aufruf nur in der Methode); Enter/Space -> `dateSelected.emit(date)`
-- [ ] `_focusCell(date)`: gleicher Monat wie `viewDate` -> `_focusKey.set(key)` und direkt `querySelector('[data-date="…"]')?.focus()` (`focus()` auf `tabindex=-1` ist zulässig; Attribut zieht im nächsten CD nach)
-- [ ] `preventDefault()` nur bei behandelten Tasten
+- [x] `host`-frei: `(keydown)="onGridKeydown($event)"` am `.calendar-grid` (Event-Delegation, ein Handler); Zelle über `event.target.closest('[data-date]')`, `data-date` -> lokales Date (wie `_dateFromPoint`; gemeinsame private Hilfsmethode `_parseKey` statt Duplikat)
+- [x] Modifier-Filter: bei `ctrlKey` nur Home/End zulässig; `altKey`/`metaKey`/`shiftKey` -> unbehandelt zurückkehren
+- [x] Navigation: `isCalendarNavKey` + `nextFocusDate` (Aufruf nur in der Methode); Enter/Space -> `dateSelected.emit(date)`
+- [x] `_focusCell(date)`: gleicher Monat wie `viewDate` -> `_focusKey.set(key)` und direkt `querySelector('[data-date="…"]')?.focus()` (`focus()` auf `tabindex=-1` ist zulässig; Attribut zieht im nächsten CD nach)
+- [x] `preventDefault()` nur bei behandelten Tasten
 
 ### Schritt 5: Monatswechsel per Tastatur + Fokus per `afterNextRender` (Test zuerst)
 Tests zuerst, Rot:
-- [ ] ArrowRight auf 31.10.2026: `monthChanged` emittiert `{ year: 2026, month: 11 }`, `.current-month`/Grid-Label zeigt November 2026, `document.activeElement` = Zelle 01.11.2026
-- [ ] ArrowLeft auf 01.10. -> 30.09. (September), ArrowDown auf 28.10. -> 04.11., ArrowUp auf 05.11. -> 29.10.
-- [ ] Jahreswechsel: Fixture `selectedDate` 31.12.2026, ArrowRight -> `{ year: 2027, month: 1 }`, Fokus 01.01.2027; ArrowLeft zurück -> `{ year: 2026, month: 12 }`, Fokus 31.12.2026
-- [ ] PageDown auf 31.01.2026 (Fixture mit selectedDate in Jan 2026) -> Februar, Fokus 28.02.2026, `monthChanged {2026, 2}`; PageUp -> Fokus 15.09.2026 aus 15.10.
-- [ ] Zuordnung Roving: nach Monatswechsel genau eine `tabindex=0`-Zelle = fokussierte
-- [ ] Kein Fokusdiebstahl: Input-Änderungen (`daysWithEntries` neu gesetzt, `selectedDate` per `setInput` geändert, Mitternachts-Rollover per `vi.advanceTimersByTime`, Button-`changeMonth`) ändern `document.activeElement` nicht (Anfangsfokus z. B. auf `document.body` oder einem externen Button; bleibt dort)
-- [ ] Button-Monatswechsel (`changeMonth(±1)` / Klick auf Header-Button) setzt Fokus nicht in das Grid (Fokus bleibt am Button)
-- [ ] `monthChanged` wird bei Tastatur-Monatswechsel genau einmal emittiert
+- [x] ArrowRight auf 31.10.2026: `monthChanged` emittiert `{ year: 2026, month: 11 }`, `.current-month`/Grid-Label zeigt November 2026, `document.activeElement` = Zelle 01.11.2026
+- [x] ArrowLeft auf 01.10. -> 30.09. (September), ArrowDown auf 28.10. -> 04.11., ArrowUp auf 05.11. -> 29.10.
+- [x] Jahreswechsel: Fixture `selectedDate` 31.12.2026, ArrowRight -> `{ year: 2027, month: 1 }`, Fokus 01.01.2027; ArrowLeft zurück -> `{ year: 2026, month: 12 }`, Fokus 31.12.2026
+- [x] PageDown auf 31.01.2026 (Fixture mit selectedDate in Jan 2026) -> Februar, Fokus 28.02.2026, `monthChanged {2026, 2}`; PageUp -> Fokus 15.09.2026 aus 15.10.
+- [x] Zuordnung Roving: nach Monatswechsel genau eine `tabindex=0`-Zelle = fokussierte
+- [x] Kein Fokusdiebstahl: Input-Änderungen (`daysWithEntries` neu gesetzt, `selectedDate` per `setInput` geändert, Mitternachts-Rollover per `vi.advanceTimersByTime`, Button-`changeMonth`) ändern `document.activeElement` nicht (Anfangsfokus z. B. auf `document.body` oder einem externen Button; bleibt dort)
+- [x] Button-Monatswechsel (`changeMonth(±1)` / Klick auf Header-Button) setzt Fokus nicht in das Grid (Fokus bleibt am Button)
+- [x] `monthChanged` wird bei Tastatur-Monatswechsel genau einmal emittiert
 
 Impl:
-- [ ] `changeMonth(delta)` intern auf `_showMonth(year, month)` umstellen (öffentliche Signatur/Emission unverändert); Tastatur-Pfad ruft `_showMonth`, setzt `_focusKey` auf Zielkey und registriert `afterNextRender(() => focus(querySelector(...)), { injector })` (`Injector` per `inject()` als Feld; kein nackter Import als Feldwert)
-- [ ] Fokus-Flag nur im Tastatur-/Tap-Pfad; es gibt keinen `effect`, der Fokus setzt
-- [ ] Live-Region `.current-month[aria-live=polite]` unverändert belassen (Doppelansage nur per Handtest klären, siehe Checkliste)
+- [x] `changeMonth(delta)` intern auf `_showMonth(year, month)` umstellen (öffentliche Signatur/Emission unverändert); Tastatur-Pfad ruft `_showMonth`, setzt `_focusKey` auf Zielkey und registriert `afterNextRender(() => focus(querySelector(...)), { injector })` (`Injector` per `inject()` als Feld; kein nackter Import als Feldwert)
+- [x] Fokus-Flag nur im Tastatur-/Tap-Pfad; es gibt keinen `effect`, der Fokus setzt
+- [x] Live-Region `.current-month[aria-live=polite]` unverändert belassen (Doppelansage nur per Handtest klären, siehe Checkliste)
 
 ### Schritt 6: Tap/Klick setzt Roving-Stand (Test zuerst)
 Tests zuerst (über die bestehenden Methoden `onCardPointerDown/Up` mit gemocktem `document.elementFromPoint`/`setPointerCapture`, nicht über echte Pointer-Events):
-- [ ] Tap auf 20.10. (Down + Up ohne Move): `dateSelected` wie bisher, danach `tabindex=0` auf 20.10. und Zelle hat Fokus
-- [ ] Drag [3,4,5] (bestehender Test) bleibt grün, emittiert `dragSelected` unverändert; `_focusKey` nach Drag: bleibt unverändert (offene Detailfrage der Research bewusst nicht ausgeweitet)
-- [ ] Mit Fake-Timern: `onCardPointerUp` nutzt `setTimeout`, Assertions nicht von Timern abhängig machen
+- [x] Tap auf 20.10. (Down + Up ohne Move): `dateSelected` wie bisher, danach `tabindex=0` auf 20.10. und Zelle hat Fokus
+- [x] Drag [3,4,5] (bestehender Test) bleibt grün, emittiert `dragSelected` unverändert; `_focusKey` nach Drag: bleibt unverändert (offene Detailfrage der Research bewusst nicht ausgeweitet)
+- [x] Mit Fake-Timern: `onCardPointerUp` nutzt `setTimeout`, Assertions nicht von Timern abhängig machen
 
 Impl:
-- [ ] Im Tap-Zweig von `onCardPointerUp` vor/neben `dateSelected.emit`: `_focusKey.set(key)` und die Zelle fokussieren (Browser-unabhängig, da `preventDefault` auf `pointerdown` den nativen Fokus ggf. verhindert). Pointer-Methodennamen, Signaturen und Emissionen unverändert
+- [x] Im Tap-Zweig von `onCardPointerUp` vor/neben `dateSelected.emit`: `_focusKey.set(key)` und die Zelle fokussieren (Browser-unabhängig, da `preventDefault` auf `pointerdown` den nativen Fokus ggf. verhindert). Pointer-Methodennamen, Signaturen und Emissionen unverändert
 
 ### Schritt 7: Host-aria-label in reports.html
-- [ ] Test zuerst (Reports-Spec falls vorhanden, sonst Teil von `calendar-keyboard.spec.ts` mit Verwender nicht nötig): kein `aria-label` auf `app-calendar`-Host. Falls das Reports-Spec das Rendering des Hosts nicht abdeckt, Schritt als rein manuell prüfen und in der Checkliste führen (kein künstlicher Test)
-- [ ] `[attr.aria-label]="'reports.calendarAria'"` in `features/reports/reports.html` (Zeile ~17-26) entfernen; Begründung in PR: Label auf Element ohne Rolle (generic) ist laut ARIA unzulässig (`aria-prohibited-attr`), das Grid trägt den Monatsnamen
-- [ ] Prüfen per Grep, ob `reports.calendarAria` sonst genutzt wird; wenn nein, Key in de/en entfernen (nur, wenn ein vorhandener i18n-Paritätstest nicht anderes verlangt), sonst belassen und im PR benennen
+- [x] Test zuerst (Reports-Spec falls vorhanden, sonst Teil von `calendar-keyboard.spec.ts` mit Verwender nicht nötig): kein `aria-label` auf `app-calendar`-Host. Falls das Reports-Spec das Rendering des Hosts nicht abdeckt, Schritt als rein manuell prüfen und in der Checkliste führen (kein künstlicher Test)
+- [x] `[attr.aria-label]="'reports.calendarAria'"` in `features/reports/reports.html` (Zeile ~17-26) entfernen; Begründung in PR: Label auf Element ohne Rolle (generic) ist laut ARIA unzulässig (`aria-prohibited-attr`), das Grid trägt den Monatsnamen
+- [x] Prüfen per Grep, ob `reports.calendarAria` sonst genutzt wird; wenn nein, Key in de/en entfernen (nur, wenn ein vorhandener i18n-Paritätstest nicht anderes verlangt), sonst belassen und im PR benennen
 
 ### Schritt 8: Fokusring (SCSS im Inline-`styles` von `calendar.ts`)
-- [ ] Kein sinnvoller Unit-Test für Computed-Styles in jsdom; stattdessen Test, dass die Zelle fokussierbar ist (aus Schritt 3/4) und manuelle Prüfung (Checkliste)
-- [ ] `.calendar-day:focus-visible { outline: 2px solid var(--mat-sys-primary); outline-offset: 2px; }`, `.calendar-day:focus:not(:focus-visible) { outline: none; }` (Mausklick ohne Ring); `outline` statt `box-shadow` (forced-colors), kein `overflow: hidden` an Vorfahren
-- [ ] Fokus-Zustand nicht über Hintergrund lösen (`.selected` hat `!important`, `:hover` setzt Hintergrund)
-- [ ] Kontrast messen (>= 3:1 gegen `--mat-sys-surface-container-low`) in Hell und `.dark-theme` und auf Zuständen selected/today/holiday/multi-selected; bei Unterschreitung `--mat-sys-on-surface` (Entscheidung 8), Messwerte in den PR-Body
+- [x] Kein sinnvoller Unit-Test für Computed-Styles in jsdom; stattdessen Test, dass die Zelle fokussierbar ist (aus Schritt 3/4) und manuelle Prüfung (Checkliste)
+- [x] `.calendar-day:focus-visible { outline: 2px solid var(--mat-sys-primary); outline-offset: 2px; }`, `.calendar-day:focus:not(:focus-visible) { outline: none; }` (Mausklick ohne Ring); `outline` statt `box-shadow` (forced-colors), kein `overflow: hidden` an Vorfahren
+- [x] Fokus-Zustand nicht über Hintergrund lösen (`.selected` hat `!important`, `:hover` setzt Hintergrund)
+- [x] Kontrast messen (>= 3:1 gegen `--mat-sys-surface-container-low`) in Hell und `.dark-theme` und auf Zuständen selected/today/holiday/multi-selected; bei Unterschreitung `--mat-sys-on-surface` (Entscheidung 8), Messwerte in den PR-Body
 
 ### Schritt 9: Integration, Docs, Vollläufe
-- [ ] `web/CLAUDE.md` Zeile 59 ergänzen: "Tastaturbedienung (#377): Roving tabindex, Pfeile/Home/End/PageUp/PageDown, Enter/Space; ARIA grid > row > gridcell; Util `calendar-keyboard.util.ts`" (Utils-Liste unter `shared/utils/` um den neuen Eintrag ergänzen)
-- [ ] `cd web && npm test -- --watch=false` (Vollauf, Vite-SSR-Falle) unter `TZ=Europe/Berlin`, `TZ=UTC`, `TZ=America/Los_Angeles`, `TZ=Pacific/Auckland`
-- [ ] `npm run build -- --configuration production`
-- [ ] Vorhandene i18n-Tests/Paritätsprüfung (falls vorhanden) grün; de/en haben denselben Key
-- [ ] Commit-Trailer und PR-Footer laut Vorgabe der Hauptsession; PR-Titel/Body mit `Refs #377`
+- [x] `web/CLAUDE.md` Zeile 59 ergänzen: "Tastaturbedienung (#377): Roving tabindex, Pfeile/Home/End/PageUp/PageDown, Enter/Space; ARIA grid > row > gridcell; Util `calendar-keyboard.util.ts`" (Utils-Liste unter `shared/utils/` um den neuen Eintrag ergänzen)
+- [x] `cd web && npm test -- --watch=false` (Vollauf, Vite-SSR-Falle) unter `TZ=Europe/Berlin`, `TZ=UTC`, `TZ=America/Los_Angeles`, `TZ=Pacific/Auckland`
+- [x] `npm run build -- --configuration production`
+- [x] Vorhandene i18n-Tests/Paritätsprüfung (falls vorhanden) grün; de/en haben denselben Key
+- [x] Commit-Trailer und PR-Footer laut Vorgabe der Hauptsession; PR-Titel/Body mit `Refs #377`
 
 ## Signal-Design (Skizze, kein Code)
 - State: `viewDate` (besteht), `_focusKey: signal<string | null>`.
