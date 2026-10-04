@@ -51,49 +51,49 @@ Reports-Auswahl, Urlaubsbilanz, Insights-Fenster und Jahres-Tab beziehen "heute"
 ## Schritte (TDD)
 
 ### Schritt A0: Bestandsaufnahme Tests (vor allem anderen)
-- [ ] `DateTime.now()` in `reports_view_model_test.dart` (17 Treffer) und `reports_page_test.dart` (5) einzeln prüfen: datums-/TZ-abhängige Erwartungen (Wochen-/Monatsgrenzen, `selectedDay`-Vergleiche) identifizieren. Ergebnis als Liste in den Implementierungsnotizen.
-- [ ] `reports_page_widget_test.dart` und `reports_page_subscription_test.dart`: prüfen, ob `todayProvider`-Aufbau ohne Binding bricht (Binding-Setup ergänzen).
-- [ ] Hilfsfunktion im Test: Container mit `clockProvider`-Override + Fake-Repos (`test/support/fake_repositories.dart`, sonst bestehende Mocks) bauen.
+- [x] `DateTime.now()` in `reports_view_model_test.dart` (17 Treffer) und `reports_page_test.dart` (5) einzeln prüfen: datums-/TZ-abhängige Erwartungen (Wochen-/Monatsgrenzen, `selectedDay`-Vergleiche) identifizieren. Ergebnis als Liste in den Implementierungsnotizen.
+- [x] `reports_page_widget_test.dart` und `reports_page_subscription_test.dart`: prüfen, ob `todayProvider`-Aufbau ohne Binding bricht (Binding-Setup ergänzen).
+- [x] Hilfsfunktion im Test: Container mit `clockProvider`-Override + Fake-Repos (`test/support/fake_repositories.dart`, sonst bestehende Mocks) bauen.
 
 ### Schritt A1: `ReportsState.initial(today)` und `init()`
-- [ ] Test (rot): `init()` unter Fake-Uhr 2026-10-02 23:59:30 -> `selectedDay == DateTime(2026,10,2)` (ohne Uhrzeit, `hour==0`), `selectedMonth` entspricht Oktober 2026, `focusedDay` ebenso. (Ersetzt die Uhrzeit-behaftete Variante, R1.)
-- [ ] Impl: `ReportsState.initial` bekommt `DateTime today` und normalisiert zu `DateTime(y,m,d)`; `build()` ruft `initial(ref.read(todayProvider))`; `init()` nutzt `ref.read(todayProvider)`.
-- [ ] Bestandstests aus A0, die `DateTime.now()` erwarten, auf Fake-Uhr umstellen.
+- [x] Test (rot): `init()` unter Fake-Uhr 2026-10-02 23:59:30 -> `selectedDay == DateTime(2026,10,2)` (ohne Uhrzeit, `hour==0`), `selectedMonth` entspricht Oktober 2026, `focusedDay` ebenso. (Ersetzt die Uhrzeit-behaftete Variante, R1.)
+- [x] Impl: `ReportsState.initial` bekommt `DateTime today` und normalisiert zu `DateTime(y,m,d)`; `build()` ruft `initial(ref.read(todayProvider))`; `init()` nutzt `ref.read(todayProvider)`.
+- [x] Bestandstests aus A0, die `DateTime.now()` erwarten, auf Fake-Uhr umstellen.
 
 ### Schritt A2: `_onDayChange` (Kern)
 Tests zuerst (alle rot), in `fakeAsync` mit Fake-Uhr, Verify über Repository-Aufrufe:
-- [ ] T1 Tageswechsel innerhalb Monat: Auswahl auf heute (2026-10-02) -> nach `elapse` auf 00:00 ist `selectedDay == 2026-10-03`, `selectedMonth` Oktober, Berichte neu berechnet; **kein** zusätzlicher Monats-Reload (Aufrufzähler `getWorkEntriesForMonth(2026,10)` unverändert).
-- [ ] T2 Manuell gewählter Tag bleibt: `selectDate(2026-10-01)`, dann Wechsel -> `selectedDay` bleibt 2026-10-01.
-- [ ] T3 Monatswechsel, Auswahl auf heute: 10-31 -> 11-01: `selectedDay == 2026-11-01`, `selectedMonth` November, `getWorkEntriesForMonth(2026,11)` genau einmal zusätzlich (`verify`).
-- [ ] T4 Monatswechsel, Auswahl manuell (z. B. 2026-10-15): Auswahl und `selectedMonth` unverändert, **kein** Reload (`verifyNever(... (2026,11))`).
-- [ ] T5 `selectedMonth` steht auf heutigem Monat, Auswahl manuell im selben Monat, Monat wechselt: nichts ändern (Auswahl != heute, Entscheidung laut Regel). Fester Erwartungswert, damit das Verhalten dokumentiert ist.
-- [ ] T6 Wochenwechsel So 2026-10-04 -> Mo 2026-10-05: Auswahl folgt, Wochenbericht rechnet auf die Woche ab 2026-10-05 (Wochenstart-Wert prüfen).
-- [ ] T7 Jahreswechsel: Auswahl auf 2026-12-31 -> 2027-01-01 folgt, `selectedMonth` Januar 2027, `getWorkEntriesForMonth(2027,1)` aufgerufen; Wochenstart bleibt Mo 2026-12-28 (Silvesterwoche durchgehend 2026-W53 über `isoWeekYear(startOfWeek)`); danach Mo 2027-01-04: Wochenstart 2027-01-04, `isoWeekYear/Number` = 2027/1.
-- [ ] T8 Resume-Pfad: `clock.jumpTo(2026-10-03 00:00:05)` + `todayProvider.notifier.refresh()` -> Auswahl folgt wie T1.
-- [ ] T9 Multi-Select aktiv (`multiSelectMode`, `selectedDates` gesetzt), Auswahl != heute: `selectedDates`/Modus bleiben nach Wechsel unverändert (Entscheidung 7). Zusatzfall: Auswahl == heute und Multi-Select aktiv -> `selectedDay` folgt, `selectedDates` bleiben unangetastet.
-- [ ] T10 Kein Rebuild/Zustandsverlust: Zähler/`listen` auf den Provider; nach Tageswechsel wurde `build()` nicht erneut ausgeführt (z. B. `_monthlyEntries`/manueller Tag erhalten; `init`-Aufrufzahl unverändert).
-- [ ] T11 Dispose: `container.dispose()` -> `async.pendingTimers` leer.
+- [x] T1 Tageswechsel innerhalb Monat: Auswahl auf heute (2026-10-02) -> nach `elapse` auf 00:00 ist `selectedDay == 2026-10-03`, `selectedMonth` Oktober, Berichte neu berechnet; **kein** zusätzlicher Monats-Reload (Aufrufzähler `getWorkEntriesForMonth(2026,10)` unverändert).
+- [x] T2 Manuell gewählter Tag bleibt: `selectDate(2026-10-01)`, dann Wechsel -> `selectedDay` bleibt 2026-10-01.
+- [x] T3 Monatswechsel, Auswahl auf heute: 10-31 -> 11-01: `selectedDay == 2026-11-01`, `selectedMonth` November, `getWorkEntriesForMonth(2026,11)` genau einmal zusätzlich (`verify`).
+- [x] T4 Monatswechsel, Auswahl manuell (z. B. 2026-10-15): Auswahl und `selectedMonth` unverändert, **kein** Reload (`verifyNever(... (2026,11))`).
+- [x] T5 `selectedMonth` steht auf heutigem Monat, Auswahl manuell im selben Monat, Monat wechselt: nichts ändern (Auswahl != heute, Entscheidung laut Regel). Fester Erwartungswert, damit das Verhalten dokumentiert ist.
+- [x] T6 Wochenwechsel So 2026-10-04 -> Mo 2026-10-05: Auswahl folgt, Wochenbericht rechnet auf die Woche ab 2026-10-05 (Wochenstart-Wert prüfen).
+- [x] T7 Jahreswechsel: Auswahl auf 2026-12-31 -> 2027-01-01 folgt, `selectedMonth` Januar 2027, `getWorkEntriesForMonth(2027,1)` aufgerufen; Wochenstart bleibt Mo 2026-12-28 (Silvesterwoche durchgehend 2026-W53 über `isoWeekYear(startOfWeek)`); danach Mo 2027-01-04: Wochenstart 2027-01-04, `isoWeekYear/Number` = 2027/1.
+- [x] T8 Resume-Pfad: `clock.jumpTo(2026-10-03 00:00:05)` + `todayProvider.notifier.refresh()` -> Auswahl folgt wie T1.
+- [x] T9 Multi-Select aktiv (`multiSelectMode`, `selectedDates` gesetzt), Auswahl != heute: `selectedDates`/Modus bleiben nach Wechsel unverändert (Entscheidung 7). Zusatzfall: Auswahl == heute und Multi-Select aktiv -> `selectedDay` folgt, `selectedDates` bleiben unangetastet.
+- [x] T10 Kein Rebuild/Zustandsverlust: Zähler/`listen` auf den Provider; nach Tageswechsel wurde `build()` nicht erneut ausgeführt (z. B. `_monthlyEntries`/manueller Tag erhalten; `init`-Aufrufzahl unverändert).
+- [x] T11 Dispose: `container.dispose()` -> `async.pendingTimers` leer.
 - Rot-Nachweis: T1-T3, T6-T8, T10 müssen rot sein (Auswahl bewegt sich heute nie); T2/T4/T5/T9 sind Schutztests, die nach naiver Umsetzung (immer folgen) rot würden, vor der Impl. als "grün, Schutz" vermerken.
-- [ ] Impl in `ReportsViewModel`:
+- [x] Impl in `ReportsViewModel`:
   - In `build()`: `ref.listen<DateTime>(todayProvider, _onDayChange)` zusätzlich zu den bestehenden `ref.watch`-Aufrufen.
   - `_onDayChange(previous, next)`: Tagesvergleich per `DateUtils.isSameDay`/normalisierte Werte (nicht per Uhrzeit). Wenn `selectedDay == previous`: `selectedDay`/`focusedDay` = `next`; bei Monatswechsel `selectedMonth` auf `DateTime(next.year,next.month)` und `_loadWorkEntriesForMonth` (unter Beachtung der Guard-Regel unten), sonst `_updateCalculatedReports()`. Sonst: nichts. Multi-Select-Felder nie schreiben.
   - Guard: `ref.mounted`-Prüfung nach `await` im Reload-Pfad, damit nach Dispose nicht in den State geschrieben wird. Kein Generationszähler (bestehendes Race bleibt, im PR-Text als bekannt notiert). Während `isLoading` kein zusätzlicher Sonderfall.
   - `_updateCalculatedReports`, `saveWorkEntry`, `deleteWorkEntry`, Batch-Pfade: Fallback `?? DateTime.now()` -> `?? ref.read(todayProvider)`.
   - `loadCurrentMonthData()`: `now` -> `ref.read(todayProvider)`, sonst unverändert (Entscheidung 4). Test (grün nach Impl.): Fake-Uhr 2026-11-01, Auswahl alt (2026-10-15): `selectedMonth` wird November, `selectedDay` bleibt (dokumentiert die bekannte Inkonsistenz als Charakterisierungstest).
-- [ ] `reports_page.dart`: Fallbacks auf `ref.read(todayProvider)`; kein `ref.watch(todayProvider)` in der Page (Fallbacks tot). Kein Test nötig, abgedeckt durch bestehende Page-Tests (grün halten).
+- [x] `reports_page.dart`: Fallbacks auf `ref.read(todayProvider)`; kein `ref.watch(todayProvider)` in der Page (Fallbacks tot). Kein Test nötig, abgedeckt durch bestehende Page-Tests (grün halten).
 
 ### Schritt A3: Page-/Widget-Tests (nur wenn Kalender steuerbar)
-- [ ] `reports_page_widget_test.dart` (MaterialApp mit `AppLocalizations`-Delegates, `locale: Locale('de')`, `clockProvider`-Override, `tester.pump(Duration)` über Mitternacht): Wochen-Titel/KW wechselt am Montag 2026-10-05 bei Auswahl auf heute; Auswahl manuell: bleibt. Falls Steuerung im Widget-Test unverhältnismäßig aufwendig: weglassen, VM-Tests reichen (im PR-Text vermerken).
-- [ ] Widget-Test Reflexions-Dialog (nur wenn mit vertretbarem Aufwand): Dialog offen (`startOfWeek` 2026-12-28), Tageswechsel/Wochenwechsel der Reports-Auswahl dahinter -> eingegebener Text und Wochenanzeige im Dialog unverändert (Verhalten festschreiben; Dialog darf nie `selectedDay`/`todayProvider` watchen).
+- [x] `reports_page_widget_test.dart` (MaterialApp mit `AppLocalizations`-Delegates, `locale: Locale('de')`, `clockProvider`-Override, `tester.pump(Duration)` über Mitternacht): Wochen-Titel/KW wechselt am Montag 2026-10-05 bei Auswahl auf heute; Auswahl manuell: bleibt. Falls Steuerung im Widget-Test unverhältnismäßig aufwendig: weglassen, VM-Tests reichen (im PR-Text vermerken).
+- [x] Widget-Test Reflexions-Dialog (nur wenn mit vertretbarem Aufwand): Dialog offen (`startOfWeek` 2026-12-28), Tageswechsel/Wochenwechsel der Reports-Auswahl dahinter -> eingegebener Text und Wochenanzeige im Dialog unverändert (Verhalten festschreiben; Dialog darf nie `selectedDay`/`todayProvider` watchen).
 
 ### Schritt A4: Reflexion-Regressionstests (keine Logikänderung, bewusst grün)
-- [ ] `weekly_reflection_view_model_test.dart`: `loadReflection(DateTime(2027,1,4))` -> Jahr 2027 / KW 1 (Repository-Aufruf mit Schlüsselteilen verifizieren); `loadReflection(DateTime(2026,12,28))` -> 2026 / 53; `loadReflection(DateTime(2024,12,30))` -> 2025 / 1.
-- [ ] Test im Reports-Kontext (T7) deckt Folgekette Auswahl -> Wochenstart -> ISO-Schlüssel ab.
+- [x] `weekly_reflection_view_model_test.dart`: `loadReflection(DateTime(2027,1,4))` -> Jahr 2027 / KW 1 (Repository-Aufruf mit Schlüsselteilen verifizieren); `loadReflection(DateTime(2026,12,28))` -> 2026 / 53; `loadReflection(DateTime(2024,12,30))` -> 2025 / 1.
+- [x] Test im Reports-Kontext (T7) deckt Folgekette Auswahl -> Wochenstart -> ISO-Schlüssel ab.
 
 ### Schritt A5: Abschluss Teil A
-- [ ] `dart format --set-exit-if-changed lib test && flutter analyze --no-fatal-infos && dart run custom_lint && flutter test` und `TZ=Europe/Berlin flutter test`.
-- [ ] Prüfen: kein `build_runner` nötig (`git status` zeigt keine `.g.dart`-Änderung).
-- [ ] PR-Text: `Refs #387`; Nebenbefunde: `loadCurrentMonthData()` setzt nur `selectedMonth` (Inkonsistenz bleibt, Entscheidung 4); `edit_break_modal.dart:76` hat eigenes Issue; bekanntes Race `_loadWorkEntriesForMonth`/`_loadReportsFromApi` ohne Generationszähler.
+- [x] `dart format --set-exit-if-changed lib test && flutter analyze --no-fatal-infos && dart run custom_lint && flutter test` und `TZ=Europe/Berlin flutter test`.
+- [x] Prüfen: kein `build_runner` nötig (`git status` zeigt keine `.g.dart`-Änderung).
+- [x] PR-Text: `Refs #387`; Nebenbefunde: `loadCurrentMonthData()` setzt nur `selectedMonth` (Inkonsistenz bleibt, Entscheidung 4); `edit_break_modal.dart:76` hat eigenes Issue; bekanntes Race `_loadWorkEntriesForMonth`/`_loadReportsFromApi` ohne Generationszähler.
 
 ---
 # TEIL B — Urlaub, Insights, Jahres-Tab (PR B, `Closes #387`)
