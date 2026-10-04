@@ -7,13 +7,22 @@
     @if (svc.holidayToday(); as holiday) {
       <app-holiday-banner [holiday]="holiday" />
     }
+    @if (openBanner(); as ob) {
+      <app-open-entry-banner
+        [dateText]="ob.dateText"
+        [time]="ob.time"
+        [moreCount]="openEntry.moreCount()"
+        [busy]="openEntry.busy()"
+        (end)="onEndOpenEntry(ob.candidate)"
+        (later)="openEntry.later()" />
+    }
     <div class="dashboard-content">
 
       <!-- Linke Spalte / Oberer Teil: Timer & Statistiken -->
       <div class="main-column">
 
         <section class="timer-section" aria-live="polite" aria-atomic="true">
-          <p class="timer-label">{{ 'dashboard.netWorkTime' | translate }}</p>
+          <p class="timer-label" tabindex="-1" #focusAnchor>{{ 'dashboard.netWorkTime' | translate }}</p>
           <h1 class="display-time">{{ formatDuration(svc.netDuration()) }}</h1>
           <p class="gross-time">{{ 'dashboard.grossAttendance' | translate: { duration: formatDuration(svc.grossDuration()) } }}</p>
         </section>
