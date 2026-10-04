@@ -99,6 +99,26 @@ class DashboardViewModel extends Notifier<DashboardState> {
     unawaited(_init(dayChange: true));
   }
 
+  /// Lädt das Dashboard neu, nachdem ein offener Eintrag vor heute nachträglich
+  /// beendet wurde (#385): der Saldo im Repository enthält dann dessen Delta,
+  /// `initialOvertime` muss es als Basis übernehmen (sonst überschreibt der
+  /// nächste Stop das Delta). Läuft im Dashboard gerade ein Vortag über
+  /// Mitternacht, bleibt er unangetastet; nur die Saldo-Basis wird erneuert.
+  Future<void> reloadAfterRetroClose() async {
+    if (!ref.mounted) return;
+    final entry = state.workEntry;
+    if (_isRunning(entry) && _dayOf(entry.date) != _dayOf(_now())) {
+      final gen = _initGen;
+      final stored =
+          await ref.read(overtimeRepositoryProvider).ensureOvertimeLoaded();
+      if (gen != _initGen || !ref.mounted) return;
+      state = state.copyWith(initialOvertime: stored);
+      _recalculateOvertime();
+      return;
+    }
+    await _init(dayChange: true);
+  }
+
   Future<void> _init({bool dayChange = false}) {
     if (!ref.mounted) return Future.value();
     final gen = ++_initGen;
