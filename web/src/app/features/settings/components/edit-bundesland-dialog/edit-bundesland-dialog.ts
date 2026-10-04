@@ -39,7 +39,7 @@ export class EditBundeslandDialogComponent {
   private  readonly dialogRef = inject(MatDialogRef<EditBundeslandDialogComponent>);
   private  readonly fb        = inject(FormBuilder);
 
-  // Kopie statt direkter Referenz: mit der Modul-Konstante rendert @for in Multi-Spec-Läufen (ng test) teils leer (Ursache ungeklärt, Chunk-/Initialisierungsreihenfolge vermutet).
+  // Kopie statt nackter Referenz (`= BUNDESLAND_VALUES`): Vites SSR-Transform macht daraus im gebündelten Testlauf einen Schnappschuss vor der Klasse, der teils `undefined` ist (web/CLAUDE.md, „Test-Falle“).
   protected readonly values = [...BUNDESLAND_VALUES];
   protected readonly control = this.fb.control<Bundesland | null>(this.data.current);
 

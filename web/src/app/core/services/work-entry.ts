@@ -11,7 +11,7 @@ import { WorkProfileService } from './work-profile';
 import { WorkEntry, WorkEntryType, Break } from '../../shared/models';
 import { Observable, combineLatest, of, switchMap } from 'rxjs';
 import { roundToMinute, roundToMinuteOrUndefined } from '../../shared/utils/time-precision.util';
-import { profileScopedPath } from '../../shared/utils/work-profile-path.util';
+import { profileIdForApi, profileScopedPath } from '../../shared/utils/work-profile-path.util';
 
 // localStorage Keys — identisch zu Flutter LocalWorkRepositoryImpl
 const LS_PREFIX = 'local_work_entries_';
@@ -27,10 +27,20 @@ export class WorkEntryService {
 
   // ─── Public API ────────────────────────────────────────────────────────────
 
-  getTodayEntry(): Observable<WorkEntry | null> {
+  /**
+   * Heutiger Eintrag. Ohne `profileId` folgt er dem aktiven Profil (`activeProfileId$`); mit `profileId` (#380) wird
+   * genau dieses Profil gelesen, unabhängig vom Replay des Profil-Observables (kein gemischter Zustand im Lag-Fenster).
+   * Anonym wird das Argument ignoriert.
+   */
+  getTodayEntry(profileId?: string): Observable<WorkEntry | null> {
+    if (profileId !== undefined) {
+      return this.auth.user$.pipe(
+        switchMap(user => user ? this._firebaseToday(user.uid, profileId) : of(this._localGet(new Date()))),
+      );
+    }
     return combineLatest([this.auth.user$, this.workProfile.activeProfileId$]).pipe(
-      switchMap(([user, profileId]) => {
-        if (user) return this._firebaseToday(user.uid, profileId);
+      switchMap(([user, activeId]) => {
+        if (user) return this._firebaseToday(user.uid, activeId);
         return of(this._localGet(new Date()));
       })
     );
@@ -45,9 +55,18 @@ export class WorkEntryService {
     );
   }
 
-  async saveEntry(entry: WorkEntry): Promise<void> {
+  /**
+   * Speichert einen Eintrag. `profileId` (#380, `'default'` oder ID) bindet den Write an ein festes Profil; ohne
+   * Argument gilt das aktive Profil zum Aufrufzeitpunkt. Anonym wird das Argument ignoriert.
+   */
+  async saveEntry(entry: WorkEntry, profileId?: string): Promise<void> {
     // Eingeloggt: Schreibvorgang über die Backend-API; Reads bleiben onSnapshot (Hybrid).
-    if (this.auth.uid) await this.api.saveWorkEntry(entry, this.workProfile.activeProfileIdForApi);
+    if (this.auth.uid) {
+      await this.api.saveWorkEntry(
+        entry,
+        profileId === undefined ? this.workProfile.activeProfileIdForApi : profileIdForApi(profileId),
+      );
+    }
     else               this._localSave(entry);
   }
 

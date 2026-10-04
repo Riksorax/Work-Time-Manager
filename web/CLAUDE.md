@@ -26,8 +26,8 @@ core/
 ├── auth/           AuthService (Firebase Auth, Google Sign-In), AuthGuard
 │                   — deleteAccount() via Firebase deleteUser()
 ├── services/
-│   ├── work-entry.ts      Hybrid — eingeloggt: Reads live via Firestore onSnapshot, Writes über ApiClient (Backend-API); ausgeloggt: localStorage. getAllLocalEntries() für DataSync
-│   ├── overtime.ts        Hybrid — eingeloggt komplett über ApiClient (Reads + Writes), sonst localStorage
+│   ├── work-entry.ts      Hybrid — eingeloggt: Reads live via Firestore onSnapshot, Writes über ApiClient (Backend-API); ausgeloggt: localStorage. getAllLocalEntries() für DataSync. Optionales `profileId` (#380) bei `saveEntry(entry, profileId?)` / `getTodayEntry(profileId?)`: `undefined` = aktives Profil, sonst festes Profil (anonym ignoriert)
+│   ├── overtime.ts        Hybrid — eingeloggt komplett über ApiClient (Reads + Writes), sonst localStorage. Optionales `profileId` (#380) bei `getOvertime`/`getLastUpdateDate`/`saveOvertime` (`undefined` = aktives Profil)
 │   ├── settings.ts        Hybrid — wie work-entry.ts (Reads via Firestore onSnapshot, Writes via ApiClient). Feld `bundesland` (#279): Rohwert über `normalizeBundesland`; `""` ans Backend nur über `saveSettings(s, { clearBundesland: true })` (explizite Abwahl), sonst `null` = unangetastet
 │   ├── api-client.ts      ApiClient — typisierter Client für die .NET-Backend-API (Endpunkte: `server/CLAUDE.md`), Token via authInterceptor
 │   ├── work-profile.ts    WorkProfileService — aktives/zusätzliche Arbeitszeit-Profile (siehe #138/#244), profileId für ApiClient + Firestore-Pfade
@@ -64,7 +64,8 @@ shared/
 │   └── work-profile-switcher/  WorkProfileSwitcherComponent + Add-/Manage-Dialoge (siehe #138/#244)
 ├── utils/
 │   ├── german-holidays.util.ts  Pure — gesetzliche Feiertage je Bundesland (#279), Port von Mobile `german_holidays.dart`
-│   └── bundesland.util.ts       Pure — isBundesland / normalizeBundesland
+│   ├── bundesland.util.ts       Pure — isBundesland / normalizeBundesland
+│   └── work-profile-path.util.ts  Pure — `profileScopedPath` (Firestore-Pfad je Profil), `profileIdForApi` (Profil-ID → API-Form, `'default'` → `undefined`, #380)
 └── models/index.ts        WorkEntry, WorkEntryType, Break, UserSettings, UserProfile, WorkProfile
 ```
 
@@ -74,9 +75,9 @@ Jedes Feature hat einen eigenen `*.service.ts` der Core-Services aggregiert:
 
 | Feature-Service | Aggregiert |
 |---|---|
-| `DashboardService` | WorkEntryService, OvertimeService, SettingsService, TodayService, AuthService |
+| `DashboardService` | WorkEntryService, OvertimeService, SettingsService, TodayService, AuthService, WorkProfileService |
 | `ReportsService` | WorkEntryService, SettingsService, ProfileService, AuthService, OvertimeService, LeaveBalanceService |
-| `SettingsPageService` | SettingsService, AuthService, ProfileService, OvertimeService, ThemeService, DataSyncService, LeaveBalanceService |
+| `SettingsPageService` | SettingsService, AuthService, ProfileService, OvertimeService, ThemeService, DataSyncService, LeaveBalanceService, WorkProfileService |
 
 ### Key Angular-Regeln
 
@@ -138,6 +139,33 @@ reicht die Einstellung durch. Wochen-/Monatslisten sind nicht markiert, die Ausw
   bricht die Aktion ab; ein laufender anderer `_init` (Doppelklick, Login) wird vorher abgewartet (`_initRun`).
 - `_init` hat einen Generationszähler (`_initGen`); überholte Läufe (Login, Tageswechsel) ändern weder Zustand noch Timer.
 - Tests: feste lokale Daten + `vi.setSystemTime`, keine Zeitzonen-Annahme (lokal in Berlin/LA/Auckland/UTC prüfen).
+
+### Profilwechsel (#380)
+
+Das Dashboard lädt bei jedem Wechsel des Arbeitszeit-Profils (Header-Wechsler, Reload mit gemerktem Profil, `addProfile()`,
+`deleteProfile(aktiv)`) vollständig für das neue Profil neu; nie darf etwas ins falsche Profil geschrieben werden.
+- **Trigger** ist `WorkProfileService.activeProfileId$` (`distinctUntilChanged`), **nicht** ein Signal-Effect (`toObservable`
+  hinkt dem Signal hinterher). Der Auth-Effect ruft `_init` in `untracked`, sonst abonniert er das Profil-Signal mit.
+- `_loadedProfileId` = Profil der aktuell angezeigten Daten, synchron am Anfang jedes `_init` gesetzt. `_onProfileChange` ist
+  idempotent (gleiches Profil → kein Lauf). Reads laufen mit explizitem Profil (`getTodayEntry(pid)`, `getOvertime(pid)`,
+  `getLastUpdateDate(pid)`), nie „Eintrag A + Saldo B". Ein Profilwechsel ist nie ein stiller Tageswechsel (Ladezustand, Heuristik).
+- **Schreibaktionen** halten Profil und `_initGen` zum Aktionsbeginn fest (`ActionCtx`) und schreiben Eintrag, dann Saldo
+  (mit dem vor dem ersten `await` eingefrorenen Wert) explizit in dieses Profil (`saveEntry(entry, pid)`, `saveOvertime(ms, pid)`).
+  Nach einer Überholung (Profilwechsel mitten in der Aktion) werden nur Folgeschritte (Timer-Start, Reinit) abgebrochen.
+  Der Aktionen-Guard `_ensureCurrentDay` wartet zusätzlich auf einen laufenden Ladevorgang.
+- **Timer wird eingefroren:** `_init` stoppt ihn ohne Speichern, der Eintrag bleibt im alten Profil laufend und läuft beim
+  Zurückwechseln weiter. Autosave schreibt mit `_loadedProfileId`.
+- `updateInitialOvertime(ms, profileId?)` schreibt in das übergebene Profil (Settings-Seite: das angezeigte), sonst ins geladene;
+  `SettingsPageService` lädt den Saldo je Profil und verwirft überholte Antworten.
+- Test-Helper `shared/testing/work-profile-fake.ts` (ohne `vi`: `tsconfig.app.json` kompiliert ihn mit `types: []` mit).
+- `WorkProfileService.deleteProfile(aktiv)` wechselt zuerst ins Standard-Profil und ruft erst dann die API (kein Autosave
+  mehr ins zu löschende Profil; bei API-Fehler Rückwechsel). Stufe 2 (Warn-Dialog beim Wechsel mit laufendem Timer, i18n-Keys)
+  folgt in eigenem PR.
+- **Test-Falle (Vite 7.3 SSR-Transform, Ursache von #370/#380):** Steht ein importierter Wert direkt als Klassenfeld-Initializer
+  (`x = IMPORTIERTE_KONSTANTE;`), hebt der Transform ihn als Schnappschuss `const X = import.X` vor die Klasse. Ist das Modul
+  im Vollauf zu diesem Zeitpunkt noch nicht ausgewertet, ist der Wert `undefined` (nicht deterministisch, Einzellauf grün).
+  Kein Importzyklus im Quelltext (`madge --circular`: 0). Abhilfe: Wert im Constructor zuweisen oder als Argument/Ausdruck
+  einbetten (`[...X]`, `signal(X)`), nie als nackte Referenz.
 
 ### Dark Mode
 

@@ -1,4 +1,4 @@
-import { profileScopedPath } from './work-profile-path.util';
+import { profileIdForApi, profileScopedPath } from './work-profile-path.util';
 
 describe('work-profile-path.util', () => {
   describe('profileScopedPath', () => {
@@ -21,5 +21,19 @@ describe('work-profile-path.util', () => {
       expect(profileScopedPath('uid1', 'overtime', 'p1'))
         .toEqual('users/uid1/profiles/p1/overtime');
     });
+  });
+});
+
+describe('profileIdForApi (#380)', () => {
+  it('liefert undefined für das Standard-Profil', () => {
+    expect(profileIdForApi('default')).toBeUndefined();
+  });
+
+  it('reicht eine Profil-ID unverändert durch', () => {
+    expect(profileIdForApi('abc')).toBe('abc');
+  });
+
+  it('leere ID: wird unverändert durchgereicht (wie ein normaler Wert, kein Sonderfall)', () => {
+    expect(profileIdForApi('')).toBe('');
   });
 });
