@@ -86,3 +86,44 @@ describe('OvertimeService profileId (#380)', () => {
     });
   });
 });
+
+describe('OvertimeService keepLastUpdated (#385)', () => {
+  let api: { saveOvertimeMs: ReturnType<typeof vi.fn> };
+
+  function setup(uid: string | null): OvertimeService {
+    api = { saveOvertimeMs: vi.fn().mockResolvedValue(undefined) };
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: AuthService, useValue: { uid } },
+        { provide: ApiClient, useValue: api },
+        { provide: WorkProfileService, useValue: createFakeWorkProfile('B') },
+      ],
+    });
+    return TestBed.inject(OvertimeService);
+  }
+
+  beforeEach(() => localStorage.clear());
+  afterEach(() => { TestBed.resetTestingModule(); localStorage.clear(); });
+
+  it('eingeloggt: reicht { keepLastUpdated: true } an den ApiClient durch (explizites Profil)', async () => {
+    const svc = setup('u1');
+    await svc.saveOvertime(5 * 60000, 'A', { keepLastUpdated: true });
+    expect(api.saveOvertimeMs).toHaveBeenCalledWith(5 * 60000, 'A', { keepLastUpdated: true });
+  });
+
+  it('eingeloggt: Default-Aufruf bleibt unverändert (kein dritter Parameter)', async () => {
+    const svc = setup('u1');
+    await svc.saveOvertime(5 * 60000, 'A');
+    expect(api.saveOvertimeMs.mock.calls[0]).toEqual([5 * 60000, 'A']);
+  });
+
+  it('ausgeloggt: schreibt nur overtime_value, overtime_last_update bleibt unberührt', async () => {
+    const svc = setup(null);
+    localStorage.setItem('overtime_last_update', '2026-10-01T10:00:00.000Z');
+    await svc.saveOvertime(30 * 60000, 'A', { keepLastUpdated: true });
+    expect(localStorage.getItem('overtime_value')).toBe('30');
+    expect(localStorage.getItem('overtime_last_update')).toBe('2026-10-01T10:00:00.000Z');
+    expect(api.saveOvertimeMs).not.toHaveBeenCalled();
+  });
+});

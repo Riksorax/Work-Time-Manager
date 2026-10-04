@@ -56,6 +56,20 @@ export class WorkEntryService {
   }
 
   /**
+   * Einmaliger Monatsabruf (#385) mit explizitem Profil (`'default'` oder ID; ohne Argument das aktive Profil zum
+   * Aufrufzeitpunkt). Eingeloggt über die API (`GET /work-entries/{y}/{m}`), ausgeloggt aus localStorage (Profil
+   * ignoriert). Kein Abo, kein Replay-Lag des Profil-Observables; Lesefehler werden geworfen und nicht als leerer
+   * Monat getarnt. `getEntriesForMonth` (Reports) bleibt unverändert.
+   */
+  async getEntriesForMonthOnce(year: number, month: number, profileId?: string): Promise<WorkEntry[]> {
+    if (!this.auth.uid) return this._localGetMonth(year, month);
+    return this.api.getWorkEntriesForMonth(
+      year, month,
+      profileId === undefined ? this.workProfile.activeProfileIdForApi : profileIdForApi(profileId),
+    );
+  }
+
+  /**
    * Speichert einen Eintrag. `profileId` (#380, `'default'` oder ID) bindet den Write an ein festes Profil; ohne
    * Argument gilt das aktive Profil zum Aufrufzeitpunkt. Anonym wird das Argument ignoriert.
    */
