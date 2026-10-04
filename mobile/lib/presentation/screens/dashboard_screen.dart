@@ -12,6 +12,7 @@ import '../view_models/settings_view_model.dart';
 import '../widgets/common/responsive_center.dart';
 import '../widgets/edit_break_modal.dart';
 import '../widgets/holiday_banner.dart';
+import '../widgets/open_entry_banner.dart';
 import '../widgets/leave_balance_card.dart';
 import '../widgets/work_profile_switcher.dart';
 
@@ -183,6 +184,7 @@ class DashboardScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         const HolidayBanner(),
+                        const OpenEntryBanner(),
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -215,6 +217,7 @@ class DashboardScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         const HolidayBanner(),
+                        const OpenEntryBanner(),
                         timerDisplay,
                         const SizedBox(height: 24),
                         overtimeStats,

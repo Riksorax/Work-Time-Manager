@@ -12,6 +12,7 @@ import 'package:flutter_work_time/presentation/state/settings_state.dart';
 import 'package:flutter_work_time/presentation/view_models/auth_view_model.dart';
 import 'package:flutter_work_time/presentation/view_models/dashboard_view_model.dart';
 import 'package:flutter_work_time/presentation/view_models/leave_balance_view_model.dart';
+import 'package:flutter_work_time/presentation/view_models/open_entry_view_model.dart';
 import 'package:flutter_work_time/presentation/view_models/settings_view_model.dart';
 import 'package:flutter_work_time/domain/entities/settings_entity.dart';
 
@@ -39,6 +40,12 @@ class _FakeLeaveViewModel extends LeaveBalanceViewModel {
       );
 }
 
+/// Der Banner für offene Einträge (#385) ist hier nicht Thema.
+class _NoOpenEntriesViewModel extends OpenEntryViewModel {
+  @override
+  OpenEntryState build() => const OpenEntryState();
+}
+
 void main() {
   for (final width in [600.0, 1400.0]) {
     testWidgets('kompakte Resturlaub-Karte ohne Login sichtbar (Breite $width)',
@@ -54,6 +61,7 @@ void main() {
           dashboardViewModelProvider.overrideWith(_FakeDashboardViewModel.new),
           settingsViewModelProvider.overrideWith(_FakeSettingsViewModel.new),
           leaveBalanceViewModelProvider.overrideWith(_FakeLeaveViewModel.new),
+          openEntryViewModelProvider.overrideWith(_NoOpenEntriesViewModel.new),
           authStateProvider
               .overrideWithValue(const AsyncValue<UserEntity?>.data(null)),
         ],
