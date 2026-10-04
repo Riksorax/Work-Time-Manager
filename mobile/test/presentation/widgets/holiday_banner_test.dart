@@ -137,4 +137,43 @@ void main() {
     expect(data.flagsCollection.isLiveRegion, isTrue);
     handle.dispose();
   });
+
+  testWidgets('Banner nach Tabwechsel ueber Nacht zeigt den neuen Tag',
+      (tester) async {
+    // Container bleibt am Leben wie im App-Root; nur das Banner wird entfernt.
+    now = DateTime(2026, 10, 2, 23, 59, 30);
+    final container = ProviderContainer(overrides: [
+      settingsViewModelProvider.overrideWith(_FakeSettings.new),
+      clockProvider.overrideWithValue(() => now),
+    ]);
+    addTearDown(container.dispose);
+
+    Widget app(Widget body) => UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            locale: const Locale('de'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: body),
+          ),
+        );
+
+    await tester.pumpWidget(app(const HolidayBanner()));
+    await tester.pump();
+    expect(find.textContaining('Feiertag'), findsNothing);
+
+    // Tabwechsel: Banner ist nicht mehr gemountet.
+    await tester.pumpWidget(app(const SizedBox()));
+    now = DateTime(2026, 10, 3, 0, 0, 1);
+    await tester.pump(const Duration(seconds: 31));
+
+    // Zurueck zum Dashboard-Tab: ohne Lifecycle-Ereignis der neue Tag.
+    await tester.pumpWidget(app(const HolidayBanner()));
+    await tester.pump();
+    expect(find.text('Heute ist Feiertag: Tag der Deutschen Einheit'),
+        findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+    container.dispose();
+  });
 }

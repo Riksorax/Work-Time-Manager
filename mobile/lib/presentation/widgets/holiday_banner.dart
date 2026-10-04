@@ -1,9 +1,6 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/providers/clock_provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../utils/holiday_name_localizer.dart';
 import '../view_models/holiday_today_provider.dart';
@@ -11,57 +8,14 @@ import '../view_models/holiday_today_provider.dart';
 /// Rein informativer Hinweis "Heute ist Feiertag: …" im Dashboard (siehe #279).
 ///
 /// Zeigt nichts, wenn heute laut Bundesland kein Feiertag ist. Aktualisiert
-/// sich bei Tageswechsel (Timer bis zur nächsten lokalen Mitternacht) und beim
-/// Zurückkehren in die App. Der Abstand nach unten ist im Banner gekapselt,
+/// sich über `todayProvider` bei Tageswechsel und beim Zurückkehren in die App
+/// (#379). Der Abstand nach unten ist im Banner gekapselt,
 /// damit ohne Feiertag nichts verschoben wird.
-class HolidayBanner extends ConsumerStatefulWidget {
+class HolidayBanner extends ConsumerWidget {
   const HolidayBanner({super.key});
 
   @override
-  ConsumerState<HolidayBanner> createState() => _HolidayBannerState();
-}
-
-class _HolidayBannerState extends ConsumerState<HolidayBanner>
-    with WidgetsBindingObserver {
-  Timer? _midnightTimer;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    _scheduleMidnight();
-  }
-
-  @override
-  void dispose() {
-    _midnightTimer?.cancel();
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      ref.invalidate(holidayTodayProvider);
-      _scheduleMidnight();
-    }
-  }
-
-  void _scheduleMidnight() {
-    _midnightTimer?.cancel();
-    final now = ref.read(clockProvider)();
-    final nextMidnight = DateTime(now.year, now.month, now.day + 1);
-    var delay = nextMidnight.difference(now);
-    if (delay < const Duration(seconds: 1)) delay = const Duration(seconds: 1);
-    _midnightTimer = Timer(delay, () {
-      if (!mounted) return;
-      ref.invalidate(holidayTodayProvider);
-      _scheduleMidnight();
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final holiday = ref.watch(holidayTodayProvider);
     if (holiday == null) return const SizedBox.shrink();
 
