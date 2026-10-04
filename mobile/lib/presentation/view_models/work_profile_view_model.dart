@@ -41,13 +41,24 @@ class WorkProfileViewModel {
     final repository = _ref.read(core_providers.workProfileRepositoryProvider);
     if (repository == null) throw const WorkProfilesNotAvailableException();
 
-    await repository.deleteProfile(profileId);
-    _ref.invalidate(core_providers.workProfilesProvider);
-    // Falls das gelöschte Profil gerade aktiv war, zurück auf Standard.
-    if (_ref.read(core_providers.activeWorkProfileIdProvider) == profileId) {
-      _ref
-          .read(core_providers.activeWorkProfileIdProvider.notifier)
-          .setActiveProfile(null);
+    // Ist das Profil gerade aktiv, zuerst auf Standard wechseln und erst dann
+    // per API löschen (#388): sonst kann ein Autosave des Dashboards in das
+    // gerade gelöschte Profil schreiben. Die Prüfung steht vor dem `await`.
+    // Der Prefs-Write von `setActiveProfile` wird wie bei den übrigen
+    // Aufrufern nicht abgewartet (`state` ist sofort gesetzt).
+    final switchNotifier =
+        _ref.read(core_providers.activeWorkProfileIdProvider.notifier);
+    final wasActive =
+        _ref.read(core_providers.activeWorkProfileIdProvider) == profileId;
+    if (wasActive) switchNotifier.setActiveProfile(null);
+
+    try {
+      await repository.deleteProfile(profileId);
+    } catch (_) {
+      // Löschen fehlgeschlagen: das Profil existiert weiter, zurückwechseln.
+      if (wasActive) switchNotifier.setActiveProfile(profileId);
+      rethrow;
     }
+    _ref.invalidate(core_providers.workProfilesProvider);
   }
 }

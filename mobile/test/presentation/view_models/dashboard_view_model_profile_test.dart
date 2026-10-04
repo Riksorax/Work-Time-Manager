@@ -8,8 +8,13 @@ import 'package:flutter_work_time/domain/entities/break_entity.dart';
 import 'package:flutter_work_time/domain/entities/work_entry_entity.dart';
 import 'package:flutter_work_time/domain/usecases/toggle_break.dart';
 
+import 'package:mockito/mockito.dart';
+import 'package:flutter_work_time/domain/entities/work_profile_entity.dart';
+import 'package:flutter_work_time/presentation/view_models/work_profile_view_model.dart';
+
 import '../../support/dashboard_harness.dart';
 import '../../support/fake_repositories.dart';
+import 'work_profile_view_model_test.mocks.dart';
 
 // Profilwechsel im Dashboard (#388). Feste Daten: Mo 2026-10-05. Profil A =
 // Standard (Soll Mo-Fr 8 h, Saldo 120 min), Profil B: Di-Do, 24 h/Woche, also
@@ -24,6 +29,7 @@ void main() {
 
   final entryA = entryOf(mo, start: at(8));
   final entryB = entryOf(mo, start: at(9), end: at(12));
+  final finishedA = entryOf(mo, start: at(8), end: at(17));
   const saldoA = Duration(minutes: 120);
   const saldoB = Duration(minutes: 30);
 
@@ -356,6 +362,55 @@ void main() {
       expect(h.writeLog, isEmpty);
       expect(h.work.saved, isEmpty);
     }, setUp: prep(), profiles: true);
+  });
+
+  group('T10 WorkProfileViewModel x laufendes Dashboard', () {
+    final mock = MockWorkProfileRepository();
+
+    scenario('T10d addProfile wechselt automatisch und friert A ein', at(10),
+        (h) {
+      when(mock.addProfile('Neu')).thenAnswer(
+          (_) async => const WorkProfileEntity(id: 'p1', name: 'Neu'));
+      h.boot();
+      h.tick(const Duration(seconds: 31));
+      expect(count(h, 'A:entry'), 1, reason: 'Autosave in A');
+
+      h.act(() =>
+          h.container.read(workProfileViewModelProvider).addProfile('Neu'));
+      h.switchProfile('p1');
+      final before = h.writeLog.length;
+      h.tick(const Duration(seconds: 31));
+
+      expect(h.writeLog.length, before);
+      expect(h.state.workEntry, entryB);
+      expect(h.work.store[moKey], entryA);
+    },
+        setUp: prep(),
+        profiles: true,
+        overrides: [workProfileRepositoryProvider.overrideWithValue(mock)]);
+
+    scenario(
+        'T10e deleteProfile(aktiv) schreibt nichts mehr ins geloeschte', at(10),
+        (h) {
+      final hold = Completer<void>();
+      when(mock.deleteProfile('p1')).thenAnswer((_) => hold.future);
+      h.boot();
+      h.switchProfile('p1');
+      expect(h.state.workEntry.workEnd, isNull);
+      expect(h.async.periodicTimerCount, 1, reason: 'B laeuft');
+
+      h.act(() =>
+          h.container.read(workProfileViewModelProvider).deleteProfile('p1'));
+      h.tick(const Duration(seconds: 31));
+
+      expect(count(h, 'B:'), 0, reason: h.writeLog.toString());
+      hold.complete();
+      h.async.flushMicrotasks();
+      expect(h.state.workEntry, finishedA);
+    },
+        setUp: (h) => prep(a: finishedA, b: entryOf(mo, start: at(9)))(h),
+        profiles: true,
+        overrides: [workProfileRepositoryProvider.overrideWithValue(mock)]);
   });
 }
 
