@@ -8,6 +8,7 @@ import { SettingsService } from '../../core/services/settings';
 import { AuthService } from '../../core/auth/auth';
 import { ApiClient } from '../../core/services/api-client';
 import { ProfileService } from '../../core/services/profile';
+import { ProfileSwitchConfirmService } from '../../shared/components/work-profile-switcher/profile-switch-confirm';
 import { WorkProfileService } from '../../core/services/work-profile';
 import { createFakeWorkProfile, FakeWorkProfile } from '../../shared/testing/work-profile-fake';
 import { toDateKey } from '../../shared/utils/german-holidays.util';
@@ -664,6 +665,8 @@ function setupReal(
       ...fakeProviders(world, () => inject(WorkProfileService), user),
       { provide: ApiClient, useValue: api },
       { provide: ProfileService, useValue: { isPremium: signal(true) } },
+      // Stufe 2 (#380): addProfile() läuft durch den Guard; der Dialog ist hier immer „Beenden und wechseln".
+      { provide: ProfileSwitchConfirmService, useValue: { confirmStopAndSwitch: async () => true, notifySaveFailed: () => undefined } },
     ],
   });
   let workProfile: WorkProfileService;
@@ -718,7 +721,7 @@ suite('DashboardService Profilwechsel mit echtem WorkProfileService (#380)', () 
     expect(vi.getTimerCount()).toBe(1);
   });
 
-  it('addProfile() mit laufendem Timer in A (Fall 9a): lädt B, A-Eintrag wird nie unter B geschrieben', async () => {
+  it('addProfile() mit laufendem Timer in A (Fall 9a): A wird (nach Bestätigung) in A beendet, B lädt leer, nie A unter B', async () => {
     const h = setupReal({ aEntry: aRunning(), bEntry: null });
     TestBed.tick();
     await vi.advanceTimersByTimeAsync(1000);
@@ -731,8 +734,11 @@ suite('DashboardService Profilwechsel mit echtem WorkProfileService (#380)', () 
     expect(h.workProfile.activeProfileId()).toBe(B);
     expect(h.svc.workEntry().workStart).toBeUndefined();
     expect(h.svc.isTimerRunning()).toBe(false);
-    expect(h.world.writes).toEqual([]);
-    expect(h.world.data[A].entries.get(MON_KEY)!.workEnd).toBeUndefined(); // A bleibt laufend
+    // Stufe 2: Der Stop läuft vor dem Wechsel und schreibt ausschließlich in A.
+    expect(h.world.writes.length).toBeGreaterThan(0);
+    expect(h.world.writes.every(w => w.resolved === A && w.profileId === A)).toBe(true);
+    expect(h.world.data[A].entries.get(MON_KEY)!.workEnd).toBeDefined();
+    expect(h.world.data[B].entries.size).toBe(0);
     expect(vi.getTimerCount()).toBe(1);
   });
 

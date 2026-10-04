@@ -30,7 +30,7 @@ core/
 │   ├── overtime.ts        Hybrid — eingeloggt komplett über ApiClient (Reads + Writes), sonst localStorage. Optionales `profileId` (#380) bei `getOvertime`/`getLastUpdateDate`/`saveOvertime` (`undefined` = aktives Profil)
 │   ├── settings.ts        Hybrid — wie work-entry.ts (Reads via Firestore onSnapshot, Writes via ApiClient). Feld `bundesland` (#279): Rohwert über `normalizeBundesland`; `""` ans Backend nur über `saveSettings(s, { clearBundesland: true })` (explizite Abwahl), sonst `null` = unangetastet
 │   ├── api-client.ts      ApiClient — typisierter Client für die .NET-Backend-API (Endpunkte: `server/CLAUDE.md`), Token via authInterceptor
-│   ├── work-profile.ts    WorkProfileService — aktives/zusätzliche Arbeitszeit-Profile (siehe #138/#244), profileId für ApiClient + Firestore-Pfade
+│   ├── work-profile.ts    WorkProfileService — aktives/zusätzliche Arbeitszeit-Profile (siehe #138/#244), profileId für ApiClient + Firestore-Pfade; Guard-Registry `registerSwitchGuard`/`requestSwitch` für interaktive Wechsel (#380)
 │   ├── profile.ts         ProfileService — isPremium Signal (Firestore-Flag)
 │   ├── today.ts           TodayService — lokaler Tages-Key (Signal `today`), Midnight-Timer, visibilitychange/focus/pageshow, Cleanup via DestroyRef (#372)
 │   ├── theme.ts           ThemeService — isDarkMode Signal + localStorage-Persistenz
@@ -159,8 +159,15 @@ Das Dashboard lädt bei jedem Wechsel des Arbeitszeit-Profils (Header-Wechsler, 
   `SettingsPageService` lädt den Saldo je Profil und verwirft überholte Antworten.
 - Test-Helper `shared/testing/work-profile-fake.ts` (ohne `vi`: `tsconfig.app.json` kompiliert ihn mit `types: []` mit).
 - `WorkProfileService.deleteProfile(aktiv)` wechselt zuerst ins Standard-Profil und ruft erst dann die API (kein Autosave
-  mehr ins zu löschende Profil; bei API-Fehler Rückwechsel). Stufe 2 (Warn-Dialog beim Wechsel mit laufendem Timer, i18n-Keys)
-  folgt in eigenem PR.
+  mehr ins zu löschende Profil; bei API-Fehler Rückwechsel).
+- **Guard-Hook (Stufe 2):** `WorkProfileService.registerSwitchGuard(guard): () => void` + `requestSwitch(id): Promise<boolean>`
+  (Registry, der Core kennt keine Features). Guards laufen sequenziell vor dem Wechsel, `false`/Ausnahme/parallele Anfrage
+  (`_switchPending`) = kein Wechsel. Nutzer: `DashboardService` (Constructor, nicht die Component: der Timer läuft auch ohne
+  gerendertes Dashboard) fragt bei laufendem Timer über `ProfileSwitchConfirmService` (Dialog, `shared/components/work-profile-switcher/`,
+  lazy per `Injector` aufgelöst), stoppt/speichert via `stopRunningTimerForSwitch` im alten Profil (Rollback bei Fehler, Snackbar)
+  und wechselt erst danach. Interaktiv über Guard: Header-Wechsler (`requestSwitch`) und `addProfile()` (Guard VOR dem API-Aufruf,
+  Rückgabe `null` = abgelehnt, nichts angelegt). **Bewusst ohne Guard:** `setActiveProfile`, `deleteProfile(aktiv)`, Reload mit
+  gemerktem Profil, Logout (dort gilt das „Einfrieren").
 - **Test-Falle (Vite 7.3 SSR-Transform, Ursache von #370/#380):** Steht ein importierter Wert direkt als Klassenfeld-Initializer
   (`x = IMPORTIERTE_KONSTANTE;`), hebt der Transform ihn als Schnappschuss `const X = import.X` vor die Klasse. Ist das Modul
   im Vollauf zu diesem Zeitpunkt noch nicht ausgewertet, ist der Wert `undefined` (nicht deterministisch, Einzellauf grün).
