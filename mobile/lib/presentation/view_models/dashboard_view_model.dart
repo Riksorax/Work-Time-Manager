@@ -9,7 +9,6 @@ import '../../core/providers/providers.dart';
 import '../../domain/entities/break_entity.dart';
 import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/services/break_calculator_service.dart';
-import '../../domain/utils/date_utils.dart';
 import '../../domain/utils/overtime_utils.dart';
 import '../../domain/utils/overtime_warning_utils.dart';
 import '../../l10n/app_localizations.dart';
@@ -19,7 +18,6 @@ class DashboardViewModel extends Notifier<DashboardState> {
   Timer? _timer;
   Timer? _autoSaveTimer;
   int _tickCounter = 0;
-  List<WorkEntryEntity> _weekEntries = [];
 
   @override
   DashboardState build() {
@@ -42,9 +40,6 @@ class DashboardViewModel extends Notifier<DashboardState> {
     // Async laden statt synchronem Cache-Zugriff (verhindert Race Condition bei Firebase-Login)
     final storedOvertime = await overtimeRepository.ensureOvertimeLoaded();
     final lastUpdateDate = await overtimeRepository.ensureLastUpdateLoaded();
-
-    // Lade Wocheneinträge um zu prüfen ob heute ein Zusatztag ist
-    await _loadWeekEntries(workEntry);
 
     // Berechne dailyOvertime für den initialen Stand
     final targetDailyHours = _getEffectiveTargetDailyHours();
@@ -111,42 +106,6 @@ class DashboardViewModel extends Notifier<DashboardState> {
     );
     _recalculateStateAndSave(workEntry, save: false);
     _startTimerIfNeeded();
-  }
-
-  /// Lädt die Einträge für die aktuelle Woche, um zu bestimmen ob heute ein Zusatztag ist.
-  Future<void> _loadWeekEntries(WorkEntryEntity todayEntry) async {
-    try {
-      final workRepository = ref.read(workRepositoryProvider);
-      final now = DateTime.now();
-      final today = DateTime(now.year, now.month, now.day);
-      final startOfWeek = addCalendarDays(today, -(today.weekday - 1));
-
-      // Einträge des aktuellen Monats laden
-      var entries =
-          await workRepository.getWorkEntriesForMonth(now.year, now.month);
-
-      // Falls die Woche in den vorherigen Monat reicht, auch dessen Einträge laden
-      if (startOfWeek.month != now.month) {
-        final prevEntries = await workRepository.getWorkEntriesForMonth(
-            startOfWeek.year, startOfWeek.month);
-        entries = [...prevEntries, ...entries];
-      }
-
-      // Für aktuelle Woche filtern
-      _weekEntries = getWeekEntriesForDate(now, entries);
-
-      // Heutigen Eintrag hinzufügen falls noch nicht enthalten (z.B. neuer Tag)
-      final todayInEntries = _weekEntries.any((e) =>
-          e.date.year == today.year &&
-          e.date.month == today.month &&
-          e.date.day == today.day);
-      if (!todayInEntries && todayEntry.workStart != null) {
-        _weekEntries = [..._weekEntries, todayEntry];
-      }
-    } catch (e) {
-      logger.e('[Dashboard] Fehler beim Laden der Wocheneinträge: $e');
-      _weekEntries = [];
-    }
   }
 
   /// Berechnet das effektive Tages-Soll unter Berücksichtigung von Zusatztagen.
