@@ -330,11 +330,15 @@ class DashboardViewModel extends Notifier<DashboardState> {
     }
   }
 
+  /// Ende der Berechnung: `workEnd` bei beendetem Eintrag, sonst "jetzt".
+  /// Ein beendeter Eintrag darf nie mit der Uhr gerechnet werden (#386).
+  DateTime _calculationEnd() => state.workEntry.workEnd ?? _now();
+
   Duration _calculateElapsedTime() {
     if (state.workEntry.workStart == null) return Duration.zero;
-    final now = _now();
-    final breakDuration = _calculateTotalBreakDuration(now);
-    return now.difference(state.workEntry.workStart!) - breakDuration;
+    final end = _calculationEnd();
+    final breakDuration = _calculateTotalBreakDuration(end);
+    return end.difference(state.workEntry.workStart!) - breakDuration;
   }
 
   void _recalculateOvertime() {
@@ -374,10 +378,10 @@ class DashboardViewModel extends Notifier<DashboardState> {
     if (state.workEntry.workStart == null) return null;
 
     final start = state.workEntry.workStart!;
-    final now = _now();
+    final end = _calculationEnd();
 
-    // Bereits genommene Pausen (bis jetzt)
-    var currentBreaks = _calculateTotalBreakDuration(now);
+    // Bereits genommene Pausen (bis jetzt bzw. bis zum Ende)
+    var currentBreaks = _calculateTotalBreakDuration(end);
 
     // Iterative Berechnung, da zusätzliche Pausen die Brutto-Zeit erhöhen
     // und dadurch ggf. weitere Pausenregeln greifen (z.B. Sprung über 9h).
@@ -412,7 +416,14 @@ class DashboardViewModel extends Notifier<DashboardState> {
 
   Duration _calculateTotalBreakDuration(DateTime now,
       [WorkEntryEntity? entry]) {
-    return (entry ?? state.workEntry).breaks.fold(Duration.zero, (prev, b) {
+    final e = entry ?? state.workEntry;
+    if (e.workEnd != null) {
+      // Beendeter Eintrag: nur abgeschlossene Pausen, offene zaehlt 0
+      // (wie _load und _recalculateStateAndSave).
+      return e.breaks.fold(Duration.zero,
+          (prev, b) => prev + (b.end?.difference(b.start) ?? Duration.zero));
+    }
+    return e.breaks.fold(Duration.zero, (prev, b) {
       if (b.start.isAfter(now)) return prev;
       final end = b.end ?? now;
       return prev + end.difference(b.start);
