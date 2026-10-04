@@ -659,6 +659,14 @@ void main() {
 
     ReportsState st(ProviderContainer c) => c.read(reportsViewModelProvider);
 
+    test('ReportsState.initial normalisiert auf lokale Mitternacht', () {
+      final s = ReportsState.initial(DateTime(2026, 10, 2, 23, 59, 30));
+      expect(s.selectedDay, DateTime(2026, 10, 2));
+      expect(s.focusedDay, DateTime(2026, 10, 2));
+      expect(s.selectedMonth, DateTime(2026, 10));
+      expect(s.isLoading, isTrue);
+    });
+
     // A1
     scenario('init(): selectedDay/Monat/focusedDay normalisiert aus der Uhr',
         DateTime(2026, 10, 2, 23, 59, 30), (async, c, clock, vm, work) {
