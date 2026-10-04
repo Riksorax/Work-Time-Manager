@@ -121,6 +121,24 @@ void main() {
     }, setUp: prep(running), profiles: true);
 
     scenario(
+        'S-5b Tick im Eintrag-Write-Fenster verfaelscht die Bruttodauer nicht',
+        at(17), (h) {
+      h.boot();
+      h.work.holdSaves = true;
+      go(h, [], h.vm.startOrStopTimer);
+      expect(h.work.pendingSaves, hasLength(1));
+
+      h.tick(const Duration(seconds: 5));
+      h.work.holdSaves = false;
+      h.work.pendingSaves.single.complete();
+      h.async.flushMicrotasks();
+
+      expect(h.state.workEntry.workEnd, at(17));
+      expect(h.async.periodicTimerCount, 0);
+      expect(h.state.grossWorkDuration, const Duration(hours: 9));
+    }, setUp: prep(running), profiles: true);
+
+    scenario(
         'Fehler wird auf Error-Level geloggt, ohne Eintragsinhalte', at(17),
         (h) {
       h.boot();

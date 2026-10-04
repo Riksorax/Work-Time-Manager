@@ -343,8 +343,12 @@ class DashboardViewModel extends Notifier<DashboardState> {
         if (!ref.mounted) return;
         final now = _now();
         final elapsedTime = _calculateElapsedTime();
+        // Ein im Schreibfenster bereits beendeter Eintrag (Stop, #402) rechnet
+        // bis `workEnd`, nicht bis jetzt: der Timer wird erst nach dem Write
+        // abgebrochen und würde sonst die Bruttodauer verfälschen.
         final grossDuration = state.workEntry.workStart != null
-            ? now.difference(state.workEntry.workStart!)
+            ? (state.workEntry.workEnd ?? now)
+                .difference(state.workEntry.workStart!)
             : Duration.zero;
 
         state = state.copyWith(
