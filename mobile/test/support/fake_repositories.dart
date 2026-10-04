@@ -8,9 +8,21 @@ import 'package:flutter_work_time/domain/repositories/work_repository.dart';
 String dayKey(DateTime d) =>
     '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
+String _hm(DateTime? d) => d == null
+    ? '-'
+    : '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+
 /// In-Memory-[WorkRepository] mit Speicherlog (#379). Schlüssel `yyyy-MM-dd`
 /// des Tages, an dem [getWorkEntry] gefragt wurde bzw. des `entry.date`.
+///
+/// Mit [label] und [writeLog] (Profil-Tests, #388) landet jeder Write zusätzlich
+/// als `<label>:entry:<yyyy-MM-dd>:<start>-<end>` im gemeinsamen Log.
 class FakeWorkRepository implements WorkRepository {
+  FakeWorkRepository({this.label, this.writeLog});
+
+  final String? label;
+  final List<String>? writeLog;
+
   final Map<String, WorkEntryEntity> store = {};
 
   /// Chronologisches Log aller Aufrufe: `read:<key>` / `save:<key>`.
@@ -28,6 +40,11 @@ class FakeWorkRepository implements WorkRepository {
   /// Der Completer wird in [pendingReads] abgelegt.
   bool holdReads = false;
   final List<Completer<void>> pendingReads = [];
+
+  /// Wenn gesetzt, wartet jeder `saveWorkEntry`-Aufruf (vor dem Eintragen in
+  /// [store]/[saved]) auf einen Completer aus [pendingSaves].
+  bool holdSaves = false;
+  final List<Completer<void>> pendingSaves = [];
 
   @override
   Future<WorkEntryEntity> getWorkEntry(DateTime date) async {
@@ -49,9 +66,18 @@ class FakeWorkRepository implements WorkRepository {
   Future<void> saveWorkEntry(WorkEntryEntity entry) async {
     final key = dayKey(entry.date);
     log.add('save:$key');
+    if (holdSaves) {
+      final c = Completer<void>();
+      pendingSaves.add(c);
+      await c.future;
+    }
     if (failSaves) throw Exception('offline');
     saved.add(entry);
     store[key] = entry;
+    if (label != null) {
+      writeLog?.add(
+          '$label:entry:$key:${_hm(entry.workStart)}-${_hm(entry.workEnd)}');
+    }
   }
 
   @override
@@ -71,7 +97,15 @@ class FakeWorkRepository implements WorkRepository {
 
 /// In-Memory-[OvertimeRepository]; `saveLastUpdateDate` übernimmt den vom
 /// Aufrufer gelieferten Zeitpunkt (die Uhr des ViewModels).
+///
+/// Mit [label] und [writeLog] (#388): `<label>:overtime:<minuten>` bzw.
+/// `<label>:lastUpdate`.
 class FakeOvertimeRepository implements OvertimeRepository {
+  FakeOvertimeRepository({this.label, this.writeLog});
+
+  final String? label;
+  final List<String>? writeLog;
+
   Duration stored = Duration.zero;
   DateTime? lastUpdate;
   final List<Duration> savedOvertimes = [];
@@ -80,13 +114,28 @@ class FakeOvertimeRepository implements OvertimeRepository {
   /// Wenn gesetzt, blockiert `ensureOvertimeLoaded` bis zum Completer.
   Completer<void>? holdOvertimeLoad;
 
+  /// Wenn gesetzt, wartet jeder `saveOvertime`-Aufruf auf einen Completer aus
+  /// [pendingOvertimeSaves] (Wert wird erst danach gespeichert).
+  bool holdSaveOvertime = false;
+  final List<Completer<void>> pendingOvertimeSaves = [];
+
+  /// Wenn gesetzt, wirft `saveOvertime`.
+  bool failSaveOvertime = false;
+
   @override
   Duration getOvertime() => stored;
 
   @override
   Future<void> saveOvertime(Duration overtime) async {
+    if (holdSaveOvertime) {
+      final c = Completer<void>();
+      pendingOvertimeSaves.add(c);
+      await c.future;
+    }
+    if (failSaveOvertime) throw Exception('offline');
     stored = overtime;
     savedOvertimes.add(overtime);
+    if (label != null) writeLog?.add('$label:overtime:${overtime.inMinutes}');
   }
 
   @override
@@ -95,6 +144,7 @@ class FakeOvertimeRepository implements OvertimeRepository {
   @override
   Future<void> saveLastUpdateDate(DateTime date) async {
     lastUpdate = date;
+    if (label != null) writeLog?.add('$label:lastUpdate');
   }
 
   @override
