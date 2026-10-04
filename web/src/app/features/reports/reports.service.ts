@@ -11,7 +11,7 @@ import { ApiClient } from '../../core/services/api-client';
 import { LeaveBalanceService } from '../../core/services/leave-balance';
 import { calculateDailyStat, isSameDayRc, toDateKey } from '../../domain/services/report-calculator';
 import { DailyStat, MonthlyReport, WeeklyReport } from '../../domain/models/reports.models';
-import { DEFAULT_SETTINGS, WorkEntry, WorkEntryType, UserSettings } from '../../shared/models/index';
+import { Bundesland, DEFAULT_SETTINGS, WorkEntry, WorkEntryType, UserSettings } from '../../shared/models/index';
 import { addCalendarDays } from '../../shared/utils/iso-week.util';
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
@@ -106,6 +106,9 @@ export class ReportsService {
     ),
     { initialValue: DEFAULT_SETTINGS }
   );
+
+  /** Bundesland für die Feiertags-Markierung im Kalender (#371); null = nicht gewählt. */
+  readonly bundesland = computed<Bundesland | null>(() => this._settings().bundesland ?? null);
 
   // ── Reports aus der Backend-API (eingeloggt) ───────────────────────────────────
   // Berechnung erfolgt server-seitig (zentrale, korrigierte Logik). Roh-Einträge

@@ -17,6 +17,7 @@
             <app-calendar
               [selectedDate]="svc.selectedDate()"
               [daysWithEntries]="svc.daysWithEntries()"
+              [bundesland]="svc.bundesland()"
               [multiSelectedDates]="svc.selectedDates()"
               (dateSelected)="onCalendarDayTap($event)"
               (monthChanged)="svc.onMonthChanged($event)"

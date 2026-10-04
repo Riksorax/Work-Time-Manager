@@ -37,7 +37,7 @@ export interface UserSettings {
   notifyBreaks: boolean;
   /** Jahres-Urlaubsanspruch in Tagen (ganze Zahl 0-366, Default 30). Siehe #278. */
   vacationDaysPerYear: number;
-  /** Bundesland für Feiertage im Dashboard (null = nicht gewählt). Siehe #279. */
+  /** Bundesland für Feiertage im Dashboard und Kalender (null = nicht gewählt). Siehe #279. */
   bundesland: Bundesland | null;
 }
 

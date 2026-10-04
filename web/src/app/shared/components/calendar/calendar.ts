@@ -14,7 +14,12 @@ import {
 import { DatePipe } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { Bundesland } from '../../models';
+import { GermanHoliday, getGermanHolidayIds } from '../../utils/german-holidays.util';
+
+const EMPTY_HOLIDAYS = new Map<string, GermanHoliday>();
 
 function toKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -22,7 +27,7 @@ function toKey(d: Date): string {
 
 @Component({
   selector: 'app-calendar',
-  imports: [DatePipe, MatButtonModule, MatIconModule, TranslatePipe],
+  imports: [DatePipe, MatButtonModule, MatIconModule, MatTooltipModule, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="calendar-card"
@@ -54,11 +59,17 @@ function toKey(d: Date): string {
         }
 
         @for (day of daysInMonth(); track day.date.getTime()) {
+          @let holiday = holidayFor(day.date);
+          @let holidayName = holiday ? ('holidays.' + holiday | translate) : '';
+          @let ariaDate = day.date | date:'d. MMMM yyyy';
           <div
             class="calendar-day"
             role="gridcell"
             [attr.data-date]="dayKey(day.date)"
-            [attr.aria-label]="day.date | date:'d. MMMM yyyy'"
+            [attr.aria-label]="holiday ? ('shared.calendarHolidayAria' | translate: { date: ariaDate, name: holidayName }) : ariaDate"
+            [matTooltip]="holidayName"
+            [matTooltipDisabled]="holiday === null"
+            [class.holiday]="holiday !== null"
             [attr.aria-selected]="isSameDay(day.date, selectedDate())"
             [attr.aria-pressed]="isMultiSelected(day.date)"
             [class.selected]="!hasMultiSelected() && isSameDay(day.date, selectedDate())"
@@ -132,6 +143,17 @@ function toKey(d: Date): string {
         border: 1px solid var(--mat-sys-primary);
       }
 
+      &.holiday {
+        font-weight: 700;
+        text-decoration: underline;
+        text-decoration-thickness: 2px;
+        text-underline-offset: 3px;
+      }
+
+      &.holiday:not(.selected):not(.multi-selected) {
+        color: var(--mat-sys-error);
+      }
+
       &.multi-selected {
         background-color: var(--mat-sys-secondary-container);
         color: var(--mat-sys-on-secondary-container);
@@ -155,6 +177,8 @@ export class CalendarComponent {
   readonly selectedDate       = input.required<Date>();
   readonly daysWithEntries    = input<number[]>([]);
   readonly multiSelectedDates = input<Set<string>>(new Set());
+  /** Bundesland für die Feiertags-Markierung (null = keine Markierung). Siehe #371. */
+  readonly bundesland         = input<Bundesland | null>(null);
 
   readonly dateSelected = output<Date>();
   readonly monthChanged = output<{ year: number; month: number }>();
@@ -194,6 +218,16 @@ export class CalendarComponent {
       date: new Date(d.getFullYear(), d.getMonth(), i + 1),
     }));
   });
+
+  // Jahr aus dem angezeigten Monat (nicht aus selectedDate): Dez -> Jan beim Blättern.
+  private readonly holidayMap = computed(() => {
+    const b = this.bundesland();
+    return b ? getGermanHolidayIds(this.viewDate().getFullYear(), b) : EMPTY_HOLIDAYS;
+  });
+
+  holidayFor(date: Date): GermanHoliday | null {
+    return this.holidayMap().get(toKey(date)) ?? null;
+  }
 
   isSameDay(d1: Date, d2: Date): boolean {
     return d1.getFullYear() === d2.getFullYear()
