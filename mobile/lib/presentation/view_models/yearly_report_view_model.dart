@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
 
 import '../../core/providers/providers.dart' as core_providers;
+import '../../core/providers/today_provider.dart';
 import '../../domain/utils/yearly_report_utils.dart';
 import '../state/yearly_report_state.dart';
 
@@ -24,7 +25,9 @@ class YearlyReportViewModel extends Notifier<YearlyReportState> {
   @override
   YearlyReportState build() {
     ref.watch(core_providers.workRepositoryProvider);
-    return YearlyReportState.initial();
+    // Nur Startjahr aus todayProvider (read, kein watch/listen): das gewählte
+    // Jahr bleibt über den Jahreswechsel bestehen, kein Auto-Reload (#387).
+    return YearlyReportState.initial(ref.read(todayProvider).year);
   }
 
   Future<void> loadYear(int year) async {

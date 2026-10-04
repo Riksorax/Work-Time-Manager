@@ -1380,9 +1380,10 @@ class _YearlyReportViewState extends ConsumerState<YearlyReportView> {
     if (_loadTriggered) return;
     _loadTriggered = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       ref
           .read(yearlyReportViewModelProvider.notifier)
-          .loadYear(DateTime.now().year);
+          .loadYear(ref.read(todayProvider).year);
     });
   }
 
