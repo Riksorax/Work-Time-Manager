@@ -308,6 +308,25 @@ void main() {
       expect(fakeViewModel.lastUpdatedBreak!.end, DateTime(2024, 1, 16, 0, 50));
     });
 
+    testWidgets('Pause über Mitternacht: Ende ändern behält den Tag des Endes',
+        (tester) async {
+      await openModal(
+          tester,
+          BreakEntity(
+            id: 'b1',
+            name: 'Nachtpause',
+            start: DateTime(2024, 1, 15, 23, 30),
+            end: DateTime(2024, 1, 16, 0, 10),
+          ));
+
+      await pickTime(tester, 'Endzeit', 0, 20);
+      await save(tester);
+
+      expect(
+          fakeViewModel.lastUpdatedBreak!.start, DateTime(2024, 1, 15, 23, 30));
+      expect(fakeViewModel.lastUpdatedBreak!.end, DateTime(2024, 1, 16, 0, 20));
+    });
+
     testWidgets('laufende Pause ohne Ende: Start behält das Datum der Pause',
         (tester) async {
       await openModal(
