@@ -384,6 +384,20 @@ void main() {
       expect(overtime.savedOvertimes.last, const Duration(minutes: 37));
     });
 
+    test('Rollback-Wert kommt aus ensureOvertimeLoaded, nicht aus getOvertime',
+        () async {
+      // Das Firebase-Repo setzt seinen Cache vor dem Netzwerk-Write; ein
+      // veralteter synchroner `getOvertime()` darf nie Rollback-Wert werden.
+      final stale = _StaleGetOvertime(const Duration(hours: 99))
+        ..stored = const Duration(hours: 2);
+      final e = openEntry(friday);
+      seed(e);
+      work.failSaves = true;
+      await CloseOpenWorkEntry(work, stale, clock: () => now)(
+          entry: e, end: DateTime(2026, 10, 2, 16), dailyTarget: eight);
+      expect(stale.savedOvertimes.last, const Duration(hours: 2));
+    });
+
     test('Rollback lässt lastUpdated unverändert (Backend-Simulation)',
         () async {
       // U2
@@ -518,4 +532,14 @@ void main() {
     expect(overtimeB.savedOvertimes, isEmpty);
     expect(workB.store[dayKey(friday)]!.workEnd, isNull);
   });
+}
+
+/// `getOvertime()` liefert einen veralteten Wert, `ensureOvertimeLoaded()` den
+/// gespeicherten (Firebase-Cache nach gescheitertem Write, #410).
+class _StaleGetOvertime extends FakeOvertimeRepository {
+  _StaleGetOvertime(this.staleValue);
+  final Duration staleValue;
+
+  @override
+  Duration getOvertime() => staleValue;
 }
