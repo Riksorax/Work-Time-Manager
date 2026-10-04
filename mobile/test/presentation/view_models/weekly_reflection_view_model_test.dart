@@ -35,6 +35,8 @@ void main() {
       (DateTime(2024, 1, 1), 2024, 1, '2024-W01'),
       (DateTime(2026, 3, 9), 2026, 11, '2026-W11'),
       (DateTime(2026, 12, 28), 2026, 53, '2026-W53'),
+      // #387 Regression (bewusst gruen): Jahreswechsel 2026/2027.
+      (DateTime(2027, 1, 4), 2027, 1, '2027-W01'),
     ]) {
       test('Montag $monday -> $id', () async {
         final container = createContainer(mockRepository);
@@ -48,6 +50,19 @@ void main() {
             id);
       });
     }
+
+    test('Silvesterwoche 2026-W53 und Folgewoche 2027-W01 getrennt (#387)',
+        () async {
+      final container = createContainer(mockRepository);
+      final notifier =
+          container.read(weeklyReflectionViewModelProvider.notifier);
+
+      await notifier.loadReflection(DateTime(2026, 12, 28));
+      verify(mockRepository.getReflection(2026, 53)).called(1);
+      await notifier.loadReflection(DateTime(2027, 1, 4));
+      verify(mockRepository.getReflection(2027, 1)).called(1);
+      verifyNever(mockRepository.getReflection(2027, 53));
+    });
 
     test('Kollisionswochen bekommen getrennte Schlüssel', () async {
       final container = createContainer(mockRepository);
