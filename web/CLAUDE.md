@@ -32,6 +32,7 @@ core/
 │   ├── api-client.ts      ApiClient — typisierter Client für die .NET-Backend-API (Endpunkte: `server/CLAUDE.md`), Token via authInterceptor
 │   ├── work-profile.ts    WorkProfileService — aktives/zusätzliche Arbeitszeit-Profile (siehe #138/#244), profileId für ApiClient + Firestore-Pfade
 │   ├── profile.ts         ProfileService — isPremium Signal (Firestore-Flag)
+│   ├── today.ts           TodayService — lokaler Tages-Key (Signal `today`), Midnight-Timer, visibilitychange/focus/pageshow, Cleanup via DestroyRef (#372)
 │   ├── theme.ts           ThemeService — isDarkMode Signal + localStorage-Persistenz
 │   ├── leave-balance.ts   Hybrid — LeaveBalanceService: Jahres-Urlaubsübersicht (eingeloggt `ApiClient.getYearlyLeave`, anonym lokal via `calculateYearlyLeave`), `refresh()` nach Änderungen (#278)
 │   ├── data-sync.ts       DataSyncService — localStorage→Firebase-Migration bei Login (Settings inkl. Bundesland: Cloud gewinnt, nie `""`)
@@ -73,7 +74,7 @@ Jedes Feature hat einen eigenen `*.service.ts` der Core-Services aggregiert:
 
 | Feature-Service | Aggregiert |
 |---|---|
-| `DashboardService` | WorkEntryService, OvertimeService, SettingsService |
+| `DashboardService` | WorkEntryService, OvertimeService, SettingsService, TodayService, AuthService |
 | `ReportsService` | WorkEntryService, SettingsService, ProfileService, AuthService, OvertimeService, LeaveBalanceService |
 | `SettingsPageService` | SettingsService, AuthService, ProfileService, OvertimeService, ThemeService, DataSyncService, LeaveBalanceService |
 
@@ -118,10 +119,25 @@ runInInjectionContext(this.injector, () => {
 `getGermanHolidayIds(year, bundesland)` liefert `Map<'YYYY-MM-DD', GermanHoliday>`. Berechnung ausschließlich über UTC-Felder
 (Ostern, Buß- und Bettag), „heute“ über lokale Felder (`toDateKey`), nie `toISOString()` — TZ/DST-sicher. Parität mit der
 Mobile-Fixture (`mobile/test/domain/utils/german_holidays_fixture.dart`, im Spec 1:1 übernommen, bei Änderungen dort manuell nachziehen).
-`DashboardService.holidayToday` ist reiner Hinweis (Soll/Überstunden unberührt) und wechselt um lokale Mitternacht bzw. bei `visibilitychange`.
+`DashboardService.holidayToday` ist reiner Hinweis (Soll/Überstunden unberührt) und liest `TodayService.today()` (lokale Mitternacht, `visibilitychange`/`focus`/`pageshow`).
 Der Kalender (Reports, Tab „Täglich“, #371) markiert Feiertage rein visuell (fett, `--mat-sys-error`, Unterstrich, `matTooltip`,
 `aria-label` via `shared.calendarHolidayAria`); das Jahr kommt aus dem angezeigten Monat (`viewDate`), `ReportsService.bundesland`
 reicht die Einstellung durch. Wochen-/Monatslisten sind nicht markiert, die Auswahlfarbe hat Vorrang.
+
+### Tageswechsel (#372)
+
+`TodayService.today()` ist die einzige Quelle für „heute“ im Dashboard. Beim Wechsel gilt (Variante B):
+- **Laufender Timer** läuft über Mitternacht weiter, der Eintrag bleibt am Starttag; Soll und `isExtraDay` hängen am
+  **Eintragsdatum** (`_targetDailyMs(settings, entry.date)`), nicht an „jetzt“. Autosave/Stop/Pause bleiben am Starttag.
+  Nach dem Stop eines Vortagseintrags schaltet das Dashboard auf den neuen, leeren Tag um.
+- **Gestoppter/leerer Eintrag** schaltet still auf den neuen Tag (`_init(uid, { dayChange: true })`, kein Speichern).
+  Die Überstunden-Basis ist dann der gespeicherte Wert (ohne `calculateInitialOvertime`-Heuristik, `lastUpdated` ist nach
+  einem Vortags-Save „heute“); Ausnahme: der geladene heutige Eintrag ist abgeschlossen und nach `workEnd` gespeichert.
+- **Aktionen-Guard** `_ensureCurrentDay()` vor allen Schreibaktionen: ein gestoppter Vortagseintrag wird zuerst auf heute
+  umgestellt, „Start“ nach Mitternacht schreibt nie in den Vortag. Liefert er `false` (Reinit überholt/fehlgeschlagen),
+  bricht die Aktion ab; ein laufender anderer `_init` (Doppelklick, Login) wird vorher abgewartet (`_initRun`).
+- `_init` hat einen Generationszähler (`_initGen`); überholte Läufe (Login, Tageswechsel) ändern weder Zustand noch Timer.
+- Tests: feste lokale Daten + `vi.setSystemTime`, keine Zeitzonen-Annahme (lokal in Berlin/LA/Auckland/UTC prüfen).
 
 ### Dark Mode
 
