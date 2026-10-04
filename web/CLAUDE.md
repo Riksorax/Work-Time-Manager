@@ -55,7 +55,7 @@ features/
 
 shared/
 ├── components/
-│   ├── calendar/               CalendarComponent — Multi-Select + Pointer-Drag
+│   ├── calendar/               CalendarComponent — Multi-Select + Pointer-Drag, Feiertags-Markierung per `bundesland`-Input (#371)
 │   ├── edit-entry-dialog/      EditEntryDialogComponent
 │   ├── leave-balance-card/     LeaveBalanceCardComponent — reine Darstellung der Urlaubsübersicht (Dashboard, Settings, Reports)
 │   ├── holiday-banner/         HolidayBannerComponent — „Heute ist Feiertag: …“ (#279), rein informativ
@@ -119,6 +119,9 @@ runInInjectionContext(this.injector, () => {
 (Ostern, Buß- und Bettag), „heute“ über lokale Felder (`toDateKey`), nie `toISOString()` — TZ/DST-sicher. Parität mit der
 Mobile-Fixture (`mobile/test/domain/utils/german_holidays_fixture.dart`, im Spec 1:1 übernommen, bei Änderungen dort manuell nachziehen).
 `DashboardService.holidayToday` ist reiner Hinweis (Soll/Überstunden unberührt) und wechselt um lokale Mitternacht bzw. bei `visibilitychange`.
+Der Kalender (Reports, Tab „Täglich“, #371) markiert Feiertage rein visuell (fett, `--mat-sys-error`, Unterstrich, `matTooltip`,
+`aria-label` via `shared.calendarHolidayAria`); das Jahr kommt aus dem angezeigten Monat (`viewDate`), `ReportsService.bundesland`
+reicht die Einstellung durch. Wochen-/Monatslisten sind nicht markiert, die Auswahlfarbe hat Vorrang.
 
 ### Dark Mode
 
