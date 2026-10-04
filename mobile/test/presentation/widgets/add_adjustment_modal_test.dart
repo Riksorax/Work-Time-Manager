@@ -50,7 +50,8 @@ class _DelayedOvertimeRepository implements OvertimeRepository {
   Duration getOvertime() => _overtime;
 
   @override
-  Future<void> saveOvertime(Duration overtime) async {
+  Future<void> saveOvertime(Duration overtime,
+      {bool keepLastUpdated = false}) async {
     // Deutlich länger als jede Dialog-Übergangsanimation (~150ms), damit der
     // Test alt vs. neu tatsächlich unterscheiden kann: im alten (kaputten)
     // Code wird `Navigator.pop()` synchron aufgerufen, bevor dieser Save

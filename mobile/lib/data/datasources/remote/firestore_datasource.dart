@@ -35,7 +35,7 @@ abstract class FirestoreDataSource {
   // Overtime
   Future<Duration> getOvertime(String userId, {String? profileId});
   Future<void> saveOvertime(String userId, Duration overtime,
-      {String? profileId});
+      {String? profileId, bool keepLastUpdated = false});
   Future<DateTime?> getLastOvertimeUpdate(String userId, {String? profileId});
   Future<void> saveLastOvertimeUpdate(String userId, DateTime date,
       {String? profileId});
@@ -398,7 +398,10 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
 
   @override
   Future<void> saveOvertime(String userId, Duration overtime,
-      {String? profileId}) async {
+      {String? profileId, bool keepLastUpdated = false}) async {
+    // keepLastUpdated wird ignoriert: Dieser direkte Firestore-Write setzt
+    // `lastUpdated` nie (nur saveLastOvertimeUpdate); für Overtime ist diese
+    // Implementierung im Provider-Graph nicht verdrahtet (#406).
     logger.i(
         '[Firestore] Speichere Overtime für User: $userId, Wert: ${toStoredMinutes(overtime)} Minuten');
     final docRef = _getOvertimeDocRef(userId, profileId: profileId);

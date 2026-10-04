@@ -5,7 +5,12 @@ abstract class OvertimeRepository {
   Duration getOvertime();
 
   /// Speichert den neuen Überstundensaldo.
-  Future<void> saveOvertime(Duration overtime);
+  ///
+  /// Mit [keepLastUpdated] `true` bleibt das Datum der letzten Aktualisierung
+  /// unverändert, auch wenn das Backend es beim Speichern sonst auf "jetzt"
+  /// setzt (nachträgliches Beenden eines Vortags, #385/#406). Lokale
+  /// Implementierungen schreiben das Datum in dieser Methode ohnehin nie.
+  Future<void> saveOvertime(Duration overtime, {bool keepLastUpdated = false});
 
   /// Ruft das Datum der letzten Überstunden-Aktualisierung ab (synchron, aus Cache).
   DateTime? getLastUpdateDate();

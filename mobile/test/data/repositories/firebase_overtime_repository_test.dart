@@ -43,6 +43,37 @@ void main() {
         final result = repository.getOvertime();
         expect(result, overtime);
       });
+
+      test('reicht keepLastUpdated: true an die Datenquelle weiter (#406)',
+          () async {
+        const overtime = Duration(hours: 5, minutes: 30);
+        when(mockDataSource.saveOvertime(any, any,
+                profileId: anyNamed('profileId'),
+                keepLastUpdated: anyNamed('keepLastUpdated')))
+            .thenAnswer((_) async {});
+
+        await repository.saveOvertime(overtime, keepLastUpdated: true);
+
+        verify(mockDataSource.saveOvertime(testUserId, overtime,
+                profileId: null, keepLastUpdated: true))
+            .called(1);
+        expect(repository.getOvertime(), overtime);
+      });
+
+      test('Default sendet keepLastUpdated: false (#406)', () async {
+        const overtime = Duration(hours: 2);
+        when(mockDataSource.saveOvertime(any, any,
+                profileId: anyNamed('profileId'),
+                keepLastUpdated: anyNamed('keepLastUpdated')))
+            .thenAnswer((_) async {});
+
+        await repository.saveOvertime(overtime);
+
+        verify(mockDataSource.saveOvertime(testUserId, overtime,
+                profileId: null, keepLastUpdated: false))
+            .called(1);
+        expect(repository.getOvertime(), overtime);
+      });
     });
 
     group('getOvertime', () {

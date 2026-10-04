@@ -151,6 +151,30 @@ void main() {
     expect(overtime.getLastUpdateDate(), DateTime(2026, 9, 1));
   });
 
+  test('übergibt keepLastUpdated: true an das Speichern des Saldos (#406)',
+      () async {
+    final e = openEntry(friday);
+    seed(e);
+    await build()(entry: e, end: DateTime(2026, 10, 2, 16), dailyTarget: eight);
+    expect(overtime.savedKeepLastUpdated, [true]);
+  });
+
+  test('Backend-Simulation: lastUpdated bleibt beim Beenden unverändert (#406)',
+      () async {
+    final backend = FakeOvertimeRepository(
+        label: 'A',
+        writeLog: log,
+        serverNow: () => DateTime(2026, 10, 3, 9)) // Sa 09:00
+      ..lastUpdate = DateTime(2026, 9, 1);
+    final e = openEntry(friday);
+    seed(e);
+    final result = await CloseOpenWorkEntry(work, backend, clock: () => now)(
+        entry: e, end: DateTime(2026, 10, 2, 16), dailyTarget: eight);
+    expect(result, CloseOpenEntryResult.closed);
+    expect(backend.lastUpdate, DateTime(2026, 9, 1));
+    expect(log, isNot(contains('A:lastUpdate')));
+  });
+
   test('Reihenfolge: Saldo vor Eintrag', () async {
     final e = openEntry(friday);
     seed(e);

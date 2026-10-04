@@ -59,10 +59,15 @@ class MockOvertimeRepository extends _i1.Mock
       ) as Duration);
 
   @override
-  _i3.Future<void> saveOvertime(Duration? overtime) => (super.noSuchMethod(
+  _i3.Future<void> saveOvertime(
+    Duration? overtime, {
+    bool? keepLastUpdated = false,
+  }) =>
+      (super.noSuchMethod(
         Invocation.method(
           #saveOvertime,
           [overtime],
+          {#keepLastUpdated: keepLastUpdated},
         ),
         returnValue: _i3.Future<void>.value(),
         returnValueForMissingStub: _i3.Future<void>.value(),

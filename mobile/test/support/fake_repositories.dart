@@ -118,14 +118,23 @@ class FakeWorkRepository implements WorkRepository {
 /// Mit [label] und [writeLog] (#388): `<label>:overtime:<minuten>` bzw.
 /// `<label>:lastUpdate`.
 class FakeOvertimeRepository implements OvertimeRepository {
-  FakeOvertimeRepository({this.label, this.writeLog});
+  FakeOvertimeRepository({this.label, this.writeLog, this.serverNow});
 
   final String? label;
   final List<String>? writeLog;
 
+  /// Bildet das Backend nach (#406): Wenn gesetzt, setzt `saveOvertime` ohne
+  /// `keepLastUpdated` `lastUpdate = serverNow()` (wie `PUT /api/overtime`),
+  /// mit `keepLastUpdated: true` bleibt `lastUpdate` unverändert. Ohne
+  /// [serverNow] setzt `saveOvertime` `lastUpdate` nie (Local-Verhalten).
+  final DateTime Function()? serverNow;
+
   Duration stored = Duration.zero;
   DateTime? lastUpdate;
   final List<Duration> savedOvertimes = [];
+
+  /// Parallel zu [savedOvertimes]: das übergebene `keepLastUpdated`.
+  final List<bool> savedKeepLastUpdated = [];
   bool failReads = false;
 
   /// Wenn gesetzt, blockiert `ensureOvertimeLoaded` bis zum Completer.
@@ -143,7 +152,8 @@ class FakeOvertimeRepository implements OvertimeRepository {
   Duration getOvertime() => stored;
 
   @override
-  Future<void> saveOvertime(Duration overtime) async {
+  Future<void> saveOvertime(Duration overtime,
+      {bool keepLastUpdated = false}) async {
     if (holdSaveOvertime) {
       final c = Completer<void>();
       pendingOvertimeSaves.add(c);
@@ -152,7 +162,13 @@ class FakeOvertimeRepository implements OvertimeRepository {
     if (failSaveOvertime) throw Exception('offline');
     stored = overtime;
     savedOvertimes.add(overtime);
+    savedKeepLastUpdated.add(keepLastUpdated);
     if (label != null) writeLog?.add('$label:overtime:${overtime.inMinutes}');
+    final backendNow = serverNow;
+    if (backendNow != null && !keepLastUpdated) {
+      lastUpdate = backendNow();
+      if (label != null) writeLog?.add('$label:lastUpdate');
+    }
   }
 
   @override
