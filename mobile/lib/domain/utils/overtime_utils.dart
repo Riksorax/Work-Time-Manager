@@ -136,7 +136,8 @@ OpenEntryEndSuggestion suggestOpenEntryEnd({
 }
 
 /// Ob [end] ein gültiges Ende für den offenen [entry] ist (#385): nach dem
-/// Start, nicht nach [now] und nicht vor dem Beginn einer Pause. Ein Ende, das
+/// Start, nicht nach [now] und nicht vor dem Ende einer geschlossenen Pause
+/// (bei einer offenen Pause: nicht vor deren Beginn). Ein Ende, das
 /// nicht auf Minuten gerundet ist, wird so geprüft, wie es übergeben wird.
 bool isValidOpenEntryEnd({
   required WorkEntryEntity entry,
@@ -146,7 +147,7 @@ bool isValidOpenEntryEnd({
   if (!end.isAfter(entry.workStart!)) return false;
   if (end.isAfter(now)) return false;
   for (final b in entry.breaks) {
-    if (end.isBefore(b.start)) return false;
+    if (end.isBefore(b.end ?? b.start)) return false;
   }
   return true;
 }

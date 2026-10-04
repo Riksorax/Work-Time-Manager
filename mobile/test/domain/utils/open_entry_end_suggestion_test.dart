@@ -177,9 +177,20 @@ void main() {
           valid(entryAt(start), now.add(const Duration(minutes: 1))), isFalse);
     });
 
-    test('Ende vor dem Start der letzten Pause ist ungültig', () {
+    test('Ende vor dem Ende einer geschlossenen Pause ist ungültig', () {
       expect(valid(withBreak, DateTime(2026, 10, 2, 11, 59)), isFalse);
-      expect(valid(withBreak, DateTime(2026, 10, 2, 12)), isTrue);
+      expect(valid(withBreak, DateTime(2026, 10, 2, 12)), isFalse);
+      expect(valid(withBreak, DateTime(2026, 10, 2, 12, 29)), isFalse);
+      expect(valid(withBreak, DateTime(2026, 10, 2, 12, 30)), isTrue);
+    });
+
+    test('offene Pause: Ende nicht vor ihrem Beginn, danach gültig', () {
+      final open = entryAt(start, breaks: [
+        BreakEntity(
+            id: 'o', name: 'P', start: DateTime(2026, 10, 2, 15), end: null),
+      ]);
+      expect(valid(open, DateTime(2026, 10, 2, 14, 59)), isFalse);
+      expect(valid(open, DateTime(2026, 10, 2, 15)), isTrue);
     });
   });
 }
