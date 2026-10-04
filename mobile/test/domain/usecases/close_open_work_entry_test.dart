@@ -242,6 +242,7 @@ void main() {
           entry: stale, end: DateTime(2026, 10, 2, 16), dailyTarget: eight);
       expect(result, CloseOpenEntryResult.alreadyClosed);
       expect(log, isEmpty);
+      expect(overtime.saveOvertimeCalls, 0);
     });
 
     test('Eintrag im Repo nicht mehr vorhanden -> alreadyClosed', () async {
@@ -335,16 +336,128 @@ void main() {
       expect(work.store[dayKey(friday)]!.workEnd, isNull);
     });
 
-    test('Entry-Save schlägt nach Saldo fehl: failed (Rest-Risiko Teilfehler)',
+    test('Saldo-Write schlägt fehl: kein Rollback-Versuch, kein Eintrag-Write',
         () async {
+      // U5: ohne erfolgreichen Vorwärts-Write gibt es nichts zurückzurollen.
+      final e = openEntry(friday);
+      seed(e);
+      overtime.failSaveOvertime = true;
+      final result = await build()(
+          entry: e, end: DateTime(2026, 10, 2, 16), dailyTarget: eight);
+      expect(result, CloseOpenEntryResult.failed);
+      expect(overtime.saveOvertimeCalls, 1);
+      expect(work.saved, isEmpty);
+    });
+
+    test(
+        'Entry-Save schlägt nach Saldo fehl: Saldo wird zurückgeschrieben, '
+        'failed, Eintrag bleibt offen', () async {
+      // U1 (ersetzt den Test "Rest-Risiko Teilfehler", #410).
+      overtime.stored = const Duration(hours: 2);
       final e = openEntry(friday);
       seed(e);
       work.failSaves = true;
       final result = await build()(
           entry: e, end: DateTime(2026, 10, 2, 16), dailyTarget: eight);
       expect(result, CloseOpenEntryResult.failed);
-      expect(overtime.savedOvertimes, hasLength(1));
+      // 8 h brutto - 30 min Auto-Pause - 8 h Soll = -30 min
+      expect(overtime.savedOvertimes, [
+        const Duration(hours: 2) - const Duration(minutes: 30),
+        const Duration(hours: 2),
+      ]);
+      expect(overtime.savedKeepLastUpdated, [true, true]);
+      expect(overtime.stored, const Duration(hours: 2));
       expect(work.saved, isEmpty);
+      expect(work.store[dayKey(friday)]!.workEnd, isNull);
+    });
+
+    test('Rollback-Wert ist der gelesene Saldo, nicht der Vorwärtswert',
+        () async {
+      // U7: Fake mit krummem Saldo, Delta weicht deutlich davon ab.
+      overtime.stored = const Duration(minutes: 37);
+      final e = openEntry(friday);
+      seed(e);
+      work.failSaves = true;
+      await build()(
+          entry: e, end: DateTime(2026, 10, 2, 12), dailyTarget: eight);
+      expect(overtime.savedOvertimes.first, const Duration(minutes: 37 - 240));
+      expect(overtime.savedOvertimes.last, const Duration(minutes: 37));
+    });
+
+    test('Rollback lässt lastUpdated unverändert (Backend-Simulation)',
+        () async {
+      // U2
+      final backend = FakeOvertimeRepository(
+          label: 'A', writeLog: log, serverNow: () => DateTime(2026, 10, 3, 9))
+        ..lastUpdate = DateTime(2026, 9, 1);
+      final e = openEntry(friday);
+      seed(e);
+      work.failSaves = true;
+      final result = await CloseOpenWorkEntry(work, backend, clock: () => now)(
+          entry: e, end: DateTime(2026, 10, 2, 16), dailyTarget: eight);
+      expect(result, CloseOpenEntryResult.failed);
+      expect(backend.savedOvertimes, hasLength(2));
+      expect(backend.lastUpdate, DateTime(2026, 9, 1));
+      expect(log, isNot(contains('A:lastUpdate')));
+    });
+
+    test('Wiederholen nach gelungenem Rollback zählt das Delta einmal',
+        () async {
+      // U3
+      overtime.stored = const Duration(hours: 2);
+      final e = openEntry(friday);
+      seed(e);
+      final uc = build();
+      work.failSaves = true;
+      expect(
+          await uc(
+              entry: e, end: DateTime(2026, 10, 2, 16), dailyTarget: eight),
+          CloseOpenEntryResult.failed);
+      work.failSaves = false;
+      expect(
+          await uc(
+              entry: e, end: DateTime(2026, 10, 2, 16), dailyTarget: eight),
+          CloseOpenEntryResult.closed);
+      expect(overtime.stored, const Duration(minutes: 90));
+      expect(work.store[dayKey(friday)]!.workEnd, DateTime(2026, 10, 2, 16));
+      expect(log, [
+        'A:overtime:90',
+        'A:overtime:120',
+        'A:overtime:90',
+        'A:entry:2026-10-02:08:00-16:00',
+      ]);
+    });
+
+    test('Rollback scheitert: kein Wurf, failed, Fehler ohne Inhalte geloggt',
+        () async {
+      // U4
+      const secret = 'GEHEIM-Notiz';
+      overtime.stored = const Duration(hours: 2);
+      final e = openEntry(friday).copyWith(description: secret);
+      seed(e);
+      work.failSaves = true;
+      overtime.failSaveOvertimeCalls.add(2);
+      final logged = <String>[];
+      final messages = <String>[];
+      void listener(LogEvent event) {
+        messages.add('${event.message}');
+        logged.add('${event.message} ${event.error} ${event.stackTrace}'
+            .toLowerCase());
+      }
+
+      Logger.addLogListener(listener);
+      addTearDown(() => Logger.removeLogListener(listener));
+      final result = await build()(
+          entry: e, end: DateTime(2026, 10, 2, 16), dailyTarget: eight);
+      expect(result, CloseOpenEntryResult.failed);
+      expect(overtime.saveOvertimeCalls, 2);
+      // Bekannte Grenze: Saldo bleibt verschoben.
+      expect(overtime.stored, const Duration(minutes: 90));
+      expect(messages.where((m) => m.contains('Saldo-Rollback fehlgeschlagen')),
+          hasLength(1));
+      expect(logged.join(), contains('_exception'));
+      expect(logged.join(), isNot(contains(secret.toLowerCase())));
+      expect(logged.join(), isNot(contains('2026-10-02')));
     });
 
     test('Lesefehler beim frischen Lesen: failed ohne Writes', () async {
