@@ -342,8 +342,7 @@ SaveWorkEntry saveWorkEntryUseCase(Ref ref) {
 
 @riverpod
 ToggleBreak toggleBreakUseCase(Ref ref) {
-  return ToggleBreak(ref.watch(workRepositoryProvider),
-      clock: ref.watch(clockProvider));
+  return ToggleBreak(clock: ref.watch(clockProvider));
 }
 
 @riverpod

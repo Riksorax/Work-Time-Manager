@@ -1219,7 +1219,7 @@ final class ToggleBreakUseCaseProvider
 }
 
 String _$toggleBreakUseCaseHash() =>
-    r'35a57d480ce8dd8627dcd875a53da57c3f1eee7b';
+    r'e7aaa46859efbd7e3f20865699004c0ed1b0620a';
 
 @ProviderFor(getWorkEntriesForMonthUseCase)
 const getWorkEntriesForMonthUseCaseProvider =
