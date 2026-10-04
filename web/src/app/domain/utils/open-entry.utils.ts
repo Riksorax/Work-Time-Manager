@@ -96,3 +96,14 @@ export function retroDeltaMs(entry: WorkEntry, targetMs: number): number {
   const net = entry.workEnd.getTime() - entry.workStart.getTime() - closedBreakMs(entry.breaks);
   return net - targetMs + (entry.manualOvertimeMinutes ?? 0) * 60_000;
 }
+
+/** Kurzer, lokalisierter Tag (Wochentag, Tag, Monat) für den Kalendertag einer Eintrags-`id`. */
+export function formatEntryDay(id: string, locale: string): string {
+  return new Intl.DateTimeFormat(locale, { weekday: 'short', day: 'numeric', month: 'numeric' })
+    .format(localDateFromEntryId(id));
+}
+
+/** Lokale Uhrzeit als `HH:mm` (wie im restlichen Dashboard). */
+export function formatHm(date: Date): string {
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+}

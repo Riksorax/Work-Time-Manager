@@ -4,6 +4,8 @@ import { OpenEntryService } from './open-entry';
 import { CloseResult, OpenEntryCandidate, OpenEntryCloseService } from './open-entry-close';
 import { DashboardService } from './dashboard.service';
 import { WorkEntryService } from '../../core/services/work-entry';
+import { SettingsService } from '../../core/services/settings';
+import { DEFAULT_SETTINGS } from '../../shared/models';
 import { AuthService } from '../../core/auth/auth';
 import { WorkProfileService } from '../../core/services/work-profile';
 import { TodayService } from '../../core/services/today';
@@ -45,6 +47,7 @@ interface Env {
   months: Map<string, WorkEntry[] | Error>;
   gates: Map<string, Promise<void>>;
   today: TodayService;
+  settingsByProfile: Map<string, number | Error>;
 }
 
 function setup(init: { user?: TestUser; pid?: string } = {}): Env {
@@ -59,6 +62,7 @@ function setup(init: { user?: TestUser; pid?: string } = {}): Env {
   const reads: Env['reads'] = [];
   const months = new Map<string, WorkEntry[] | Error>();
   const gates = new Map<string, Promise<void>>();
+  const settingsByProfile = new Map<string, number | Error>();
 
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
@@ -69,6 +73,13 @@ function setup(init: { user?: TestUser; pid?: string } = {}): Env {
         isLoading: dashLoading.asReadonly(), workEntry: dashEntry.asReadonly(), reloadAfterRetroClose: reload,
       } },
       { provide: OpenEntryCloseService, useValue: { endEntry: closeFn } },
+      { provide: SettingsService, useValue: {
+        getSettingsOnce: async (pid?: string) => {
+          const v = settingsByProfile.get(String(pid));
+          if (v instanceof Error) throw v;
+          return { ...DEFAULT_SETTINGS, weeklyTargetHours: v ?? 40 };
+        },
+      } },
       { provide: WorkEntryService, useValue: {
         getEntriesForMonthOnce: async (year: number, month: number, pid?: string) => {
           reads.push({ year, month, pid });
@@ -83,7 +94,7 @@ function setup(init: { user?: TestUser; pid?: string } = {}): Env {
     ],
   });
   const svc = TestBed.inject(OpenEntryService);
-  return { svc, user, profile, dashLoading, dashEntry, reload, closeFn, reads, months, gates, today: TestBed.inject(TodayService) };
+  return { svc, user, profile, dashLoading, dashEntry, reload, closeFn, reads, months, gates, today: TestBed.inject(TodayService), settingsByProfile };
 }
 
 const ids = (svc: OpenEntryService): string[] => svc.entries().map(e => e.id);
@@ -549,6 +560,62 @@ describe('OpenEntryService (#385)', () => {
       await env.svc.endEntry({ id: '2026-10-01', profileId: 'A' }, new Date());
       expect(env.svc.closedCount()).toBe(1);
     });
+  });
+});
+
+describe('OpenEntryService Dialog-Daten (#385)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 9, 3, 9, 0));
+  });
+  afterEach(() => {
+    TestBed.resetTestingModule();
+    vi.useRealTimers();
+  });
+
+  it('entryOf liefert den gefundenen Eintrag (Startzeit für das Banner), sonst undefined', async () => {
+    const env = setup();
+    env.months.set('A|2026-10', [open('2026-10-02')]);
+    await flush();
+    expect(env.svc.entryOf('2026-10-02')!.workStart).toEqual(new Date(2026, 9, 2, 22, 0));
+    expect(env.svc.entryOf('2026-10-01')).toBeUndefined();
+  });
+
+  it('entryOf wird beim Profilwechsel geleert', async () => {
+    const env = setup();
+    env.months.set('A|2026-10', [open('2026-10-02')]);
+    await flush();
+    env.gates.set('B|2026-10', new Promise<void>(() => { /* hängt */ }));
+    env.profile.set('B');
+    TestBed.tick();
+    expect(env.svc.entryOf('2026-10-02')).toBeUndefined();
+  });
+
+  it('prepareEnd: Eintrag und Soll des Eintragstags aus den Einstellungen des Kandidaten-Profils', async () => {
+    const env = setup({ pid: 'A' });
+    env.settingsByProfile.set('A', 40); // Fr: 8 h
+    env.settingsByProfile.set('B', 20); // Fr: 4 h
+    env.months.set('A|2026-10', [open('2026-10-02')]);
+    await flush();
+    const data = await env.svc.prepareEnd({ id: '2026-10-02', profileId: 'A' });
+    expect(data!.entry.id).toBe('2026-10-02');
+    expect(data!.targetMs).toBe(8 * 3600000);
+    const other = await env.svc.prepareEnd({ id: '2026-10-02', profileId: 'B' });
+    expect(other!.targetMs).toBe(4 * 3600000);
+  });
+
+  it('prepareEnd: Einstellungen nicht lesbar -> Soll 0 (kein Soll-Ende), kein Wurf', async () => {
+    const env = setup({ pid: 'A' });
+    env.settingsByProfile.set('A', new Error('offline'));
+    env.months.set('A|2026-10', [open('2026-10-02')]);
+    await flush();
+    expect((await env.svc.prepareEnd({ id: '2026-10-02', profileId: 'A' }))!.targetMs).toBe(0);
+  });
+
+  it('prepareEnd: unbekannter Eintrag -> null', async () => {
+    const env = setup();
+    await flush();
+    expect(await env.svc.prepareEnd({ id: '2026-10-02', profileId: 'A' })).toBeNull();
   });
 });
 

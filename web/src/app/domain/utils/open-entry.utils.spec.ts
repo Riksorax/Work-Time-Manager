@@ -5,6 +5,8 @@ import {
   OPEN_ENTRY_MAX_NOW_AGE_MS,
   closedBreakMs,
   effectiveTargetMsForDate,
+  formatEntryDay,
+  formatHm,
   isValidOpenEntryEnd,
   localDateFromEntryId,
   retroDeltaMs,
@@ -281,6 +283,26 @@ describe('open-entry.utils', () => {
 
     it('ohne Ende: Fehler statt stillem Wert', () => {
       expect(() => retroDeltaMs(entry(), 8 * HOUR)).toThrow();
+    });
+  });
+
+  describe('formatEntryDay / formatHm', () => {
+    it('formatiert den Tag aus der id lokalisiert (Wochentag kurz, Tag, Monat), unabhängig von der Zeitzone', () => {
+      // 2026-10-02 ist ein Freitag
+      expect(formatEntryDay('2026-10-02', 'de')).toMatch(/^Fr\.?,?\s*2\.\s*10\.?$/);
+      expect(formatEntryDay('2026-10-02', 'en')).toContain('Fri');
+      expect(formatEntryDay('2026-10-02', 'en')).not.toContain('Fr.');
+      expect(formatEntryDay('2026-10-02', 'de')).not.toContain('Fri');
+    });
+
+    it('der Kalendertag bleibt auch am Monats- und Jahresrand der id', () => {
+      expect(formatEntryDay('2025-12-31', 'en')).toContain('31');
+      expect(formatEntryDay('2026-01-01', 'de')).toContain('1');
+    });
+
+    it('formatHm: HH:mm mit führenden Nullen', () => {
+      expect(formatHm(at(2026, 10, 2, 5, 7, 59))).toBe('05:07');
+      expect(formatHm(at(2026, 10, 2, 23, 59))).toBe('23:59');
     });
   });
 });
