@@ -1,4 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_work_time/core/utils/logger.dart';
+import 'package:logger/logger.dart';
 import 'package:flutter_work_time/domain/entities/break_entity.dart';
 import 'package:flutter_work_time/domain/entities/work_entry_entity.dart';
 import 'package:flutter_work_time/domain/services/break_calculator_service.dart';
@@ -249,6 +251,42 @@ void main() {
       // 8 h brutto - 30 min = 7:30 -> -30 min
       expect(overtime.savedOvertimes.single, const Duration(minutes: -30));
     });
+  });
+
+  test('übernimmt Felder des frischen Stands (z. B. Beschreibung)', () async {
+    final stale = openEntry(friday);
+    seed(stale.copyWith(description: 'am anderen Gerät ergänzt'));
+    await build()(
+        entry: stale, end: DateTime(2026, 10, 2, 16), dailyTarget: eight);
+    expect(work.saved.single.description, 'am anderen Gerät ergänzt');
+  });
+
+  test('ungültiges Ende liest nichts und schreibt nichts', () async {
+    final e = openEntry(friday);
+    seed(e);
+    final result = await build()(
+        entry: e, end: DateTime(2026, 10, 2, 7), dailyTarget: eight);
+    expect(result, CloseOpenEntryResult.invalidEnd);
+    expect(work.monthReads, isEmpty);
+    expect(log, isEmpty);
+  });
+
+  test('Fehlerlog enthält keine Eintragsinhalte (#385)', () async {
+    const secret = 'GEHEIM-Notiz';
+    final e = openEntry(friday).copyWith(description: secret);
+    seed(e);
+    overtime.failSaveOvertime = true;
+    final logged = <String>[];
+    void listener(LogEvent event) => logged.add(
+        '${event.message} ${event.error} ${event.stackTrace}'.toLowerCase());
+    Logger.addLogListener(listener);
+    addTearDown(() => Logger.removeLogListener(listener));
+    final result = await build()(
+        entry: e, end: DateTime(2026, 10, 2, 16), dailyTarget: eight);
+    expect(result, CloseOpenEntryResult.failed);
+    expect(logged, isNotEmpty);
+    expect(logged.join(), isNot(contains(secret.toLowerCase())));
+    expect(logged.join(), isNot(contains('2026-10-02')));
   });
 
   group('Fehlerpfade', () {
