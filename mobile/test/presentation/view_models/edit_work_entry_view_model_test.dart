@@ -147,7 +147,7 @@ class FakeReportsViewModel extends ReportsViewModel {
 
   @override
   ReportsState build() {
-    return ReportsState.initial();
+    return ReportsState.initial(DateTime(2026, 10, 2));
   }
 
   @override

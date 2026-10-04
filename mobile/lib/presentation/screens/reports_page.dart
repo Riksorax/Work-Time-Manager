@@ -7,6 +7,7 @@ import 'package:flutter_work_time/core/utils/time_format.dart';
 import 'package:flutter_work_time/core/utils/time_precision.dart';
 import 'package:intl/intl.dart';
 import '../../core/providers/subscription_provider.dart';
+import '../../core/providers/today_provider.dart';
 import '../../core/services/pdf_report_service.dart';
 
 import '../../domain/entities/work_entry_extensions.dart';
@@ -206,7 +207,8 @@ class DailyReportView extends ConsumerWidget {
         }
 
         final dailyReport = reportsState.dailyReportState;
-        final DateTime selectedDay = reportsState.selectedDay ?? DateTime.now();
+        final DateTime selectedDay =
+            reportsState.selectedDay ?? ref.read<DateTime>(todayProvider);
 
         // Effektives Tages-Soll: 0 für Zusatztage (mehr Arbeitstage als konfiguriert)
         final dailyTarget =
@@ -214,7 +216,7 @@ class DailyReportView extends ConsumerWidget {
         final isExtraDay =
             dailyTarget == Duration.zero && dailyReport.entries.isNotEmpty;
         final DateTime selectedMonth =
-            reportsState.selectedMonth ?? DateTime.now();
+            reportsState.selectedMonth ?? ref.read<DateTime>(todayProvider);
 
         final Set<int> daysWithEntriesInMonth = reportsState
             .monthlyReportState.dailyWork.keys
@@ -279,14 +281,14 @@ class DailyReportView extends ConsumerWidget {
               selectedDate: selectedDay,
               onDateSelected: (date) => reportsNotifier.selectDate(date),
               onPreviousMonthTapped: () {
-                final currentMonth =
-                    reportsState.selectedMonth ?? DateTime.now();
+                final currentMonth = reportsState.selectedMonth ??
+                    ref.read<DateTime>(todayProvider);
                 reportsNotifier.onMonthChanged(
                     DateTime(currentMonth.year, currentMonth.month - 1, 1));
               },
               onNextMonthTapped: () {
-                final currentMonth =
-                    reportsState.selectedMonth ?? DateTime.now();
+                final currentMonth = reportsState.selectedMonth ??
+                    ref.read<DateTime>(todayProvider);
                 reportsNotifier.onMonthChanged(
                     DateTime(currentMonth.year, currentMonth.month + 1, 1));
               },
@@ -695,7 +697,8 @@ class WeeklyReportView extends ConsumerWidget {
           }
 
           final weeklyReport = reportsState.weeklyReportState;
-          final selectedDay = reportsState.selectedDay ?? DateTime.now();
+          final selectedDay =
+              reportsState.selectedDay ?? ref.read<DateTime>(todayProvider);
           final startOfWeek = DateTime(selectedDay.year, selectedDay.month,
               selectedDay.day - selectedDay.weekday + 1);
           final endOfWeek = addCalendarDays(startOfWeek, 6);
@@ -1129,7 +1132,8 @@ class MonthlyReportView extends ConsumerWidget {
     }
 
     final monthlyReport = reportsState.monthlyReportState;
-    final selectedMonth = reportsState.selectedMonth ?? DateTime.now();
+    final selectedMonth =
+        reportsState.selectedMonth ?? ref.read<DateTime>(todayProvider);
     final month = DateFormat.yMMMM(locale)
         .format(DateTime(selectedMonth.year, selectedMonth.month));
 
