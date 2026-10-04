@@ -238,5 +238,50 @@ void main() {
         expect(async.pendingTimers, isEmpty);
       });
     });
+
+    test('reload() nach Dispose schreibt keinen State (ref.mounted-Guard)', () {
+      fakeAsync((async) {
+        final c = makeContainer(async, DateTime(2026, 10, 2, 12));
+        final vm = c.read(leaveBalanceViewModelProvider.notifier);
+        async.flushMicrotasks();
+        c.dispose();
+        clearInteractions(work);
+
+        // Ohne Guard: StateError beim Schreiben in einen entsorgten Notifier.
+        vm.reload();
+        async.flushMicrotasks();
+        verifyNever(work.getWorkEntriesForMonth(any, any));
+      });
+    });
+
+    test('Neuaufbau verwirft eine Bilanz aus dem Vorjahr (Nachzuegler)', () {
+      fakeAsync((async) {
+        final stale = Completer<List<WorkEntryEntity>>();
+        when(work.getWorkEntriesForMonth(2026, 1))
+            .thenAnswer((_) => stale.future);
+        final c = makeContainer(async, DateTime(2026, 12, 31, 23, 59, 30));
+        c.read(leaveBalanceViewModelProvider);
+        async.flushMicrotasks();
+
+        // Jahreswechsel, Vorjahres-Ladevorgang haengt noch.
+        async.elapse(const Duration(seconds: 30));
+        async.flushMicrotasks();
+        // Der Nachzuegler endet erst jetzt und setzt die 2026er Bilanz.
+        stale.complete([]);
+        async.flushMicrotasks();
+
+        // Neuaufbau (z. B. Profilwechsel) waehrend das 2027er Laden haengt.
+        final pending = Completer<List<WorkEntryEntity>>();
+        when(work.getWorkEntriesForMonth(2027, 1))
+            .thenAnswer((_) => pending.future);
+        c.invalidate(leaveBalanceViewModelProvider);
+        final s = c.read(leaveBalanceViewModelProvider);
+        expect(s.isLoading, true);
+        expect(s.balance, isNull);
+        pending.complete([]);
+        async.flushMicrotasks();
+        c.dispose();
+      });
+    });
   });
 }
