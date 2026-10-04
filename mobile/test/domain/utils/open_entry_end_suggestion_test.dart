@@ -27,18 +27,14 @@ void main() {
     test('Arbeitstag -> Tagessoll (Fr 2026-10-02, 40 h / 5 Tage = 8 h)', () {
       expect(
           effectiveTargetForDate(
-              date: DateTime(2026, 10, 2),
-              workdays: workdays,
-              weeklyHours: 40),
+              date: DateTime(2026, 10, 2), workdays: workdays, weeklyHours: 40),
           eight);
     });
 
     test('Nicht-Arbeitstag (Sa 2026-10-03) -> 0', () {
       expect(
           effectiveTargetForDate(
-              date: DateTime(2026, 10, 3),
-              workdays: workdays,
-              weeklyHours: 40),
+              date: DateTime(2026, 10, 3), workdays: workdays, weeklyHours: 40),
           Duration.zero);
     });
 
