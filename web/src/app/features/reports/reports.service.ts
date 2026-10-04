@@ -1,4 +1,4 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { catchError, combineLatest, of, switchMap, tap } from 'rxjs';
@@ -9,6 +9,7 @@ import { WorkEntryService } from '../../core/services/work-entry';
 import { WorkProfileService } from '../../core/services/work-profile';
 import { ApiClient } from '../../core/services/api-client';
 import { LeaveBalanceService } from '../../core/services/leave-balance';
+import { TodayService } from '../../core/services/today';
 import { calculateDailyStat, isSameDayRc, toDateKey } from '../../domain/services/report-calculator';
 import { DailyStat, MonthlyReport, WeeklyReport } from '../../domain/models/reports.models';
 import { Bundesland, DEFAULT_SETTINGS, WorkEntry, WorkEntryType, UserSettings } from '../../shared/models/index';
@@ -55,6 +56,7 @@ export class ReportsService {
   private readonly apiClient         = inject(ApiClient);
   private readonly router            = inject(Router);
   private readonly leave             = inject(LeaveBalanceService);
+  private readonly todayService      = inject(TodayService);
 
   // ── Auth / Premium ────────────────────────────────────────────────────────────
   readonly isLoggedIn = computed(() => !!this.authService.user());
@@ -80,6 +82,29 @@ export class ReportsService {
   // Woche / Monat für Wöchentlich-/Monatlich-Tab
   private readonly _weekRef  = signal<Date>(new Date());
   private readonly _monthRef = signal<Date>(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+
+  // Tageswechsel (#382): war die Auswahl/Ansicht auf dem bisherigen „heute", folgt sie dem neuen Tag.
+  private _prevToday = this.todayService.today();
+  private readonly _todayRollover = effect(() => {
+    const key = this.todayService.today();
+    untracked(() => {
+      const prev = this._prevToday;
+      if (key === prev) return;
+      this._prevToday = key;
+      const [y, m, d] = key.split('-').map(Number);
+      const now = new Date(y, m - 1, d);
+      if (toDateKey(this._selectedDate()) === prev) {
+        this._selectedDate.set(now);
+        this._viewMonth.set({ year: y, month: m });
+      }
+      const wk = this._weekRef();
+      if (toDateKey(wk) === prev) this._weekRef.set(now);
+      const mr = this._monthRef();
+      if (mr.getFullYear() * 12 + mr.getMonth() === Number(prev.slice(0, 4)) * 12 + Number(prev.slice(5, 7)) - 1) {
+        this._monthRef.set(new Date(y, m - 1, 1));
+      }
+    });
+  });
 
   // ── Reactive Data ─────────────────────────────────────────────────────────────
 

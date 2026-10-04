@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { CalendarComponent } from './calendar';
+import { TodayService } from '../../../core/services/today';
 import { Bundesland } from '../../models';
 
 describe('CalendarComponent - Feiertage (#371)', () => {
@@ -128,6 +129,7 @@ describe('CalendarComponent - Feiertage (#371)', () => {
   it('kombiniert today und holiday', () => {
     fixture.componentRef.setInput('selectedDate', new Date(2026, 9, 3));
     vi.setSystemTime(new Date(2026, 9, 3, 12));
+    TestBed.inject(TodayService).refresh();
     setBundesland('bayern');
     expect(cell('2026-10-03').classList).toContain('today');
     expect(cell('2026-10-03').classList).toContain('holiday');
@@ -189,5 +191,31 @@ describe('CalendarComponent - Feiertage (#371)', () => {
       expect(dragged.at(-1)!.map(d => d.getDate())).toEqual([3, 4, 5]);
       expect(selected).toHaveLength(0);
     });
+  });
+});
+
+describe('CalendarComponent - Mitternacht (#382)', () => {
+  afterEach(() => vi.useRealTimers());
+
+  it('verschiebt die „heute"-Markierung um Mitternacht', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 9, 15, 23, 59, 30));
+    await TestBed.configureTestingModule({
+      imports: [CalendarComponent],
+      providers: [provideTranslateService({ fallbackLang: 'de' })],
+    }).compileComponents();
+    TestBed.inject(TranslateService).setTranslation('de', {
+      common: { weekdaysShort: ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'] },
+    });
+    const fixture = TestBed.createComponent(CalendarComponent);
+    fixture.componentRef.setInput('selectedDate', new Date(2026, 9, 1));
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[data-date="2026-10-15"]')!.classList).toContain('today');
+
+    vi.advanceTimersByTime(60_000);
+    fixture.detectChanges();
+    expect(el.querySelector('[data-date="2026-10-15"]')!.classList).not.toContain('today');
+    expect(el.querySelector('[data-date="2026-10-16"]')!.classList).toContain('today');
   });
 });

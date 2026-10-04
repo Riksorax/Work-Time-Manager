@@ -18,6 +18,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Bundesland } from '../../models';
 import { GermanHoliday, getGermanHolidayIds } from '../../utils/german-holidays.util';
+import { TodayService } from '../../../core/services/today';
 
 const EMPTY_HOLIDAYS = new Map<string, GermanHoliday>();
 
@@ -185,6 +186,7 @@ export class CalendarComponent {
   readonly dragSelected = output<Date[]>();
 
   private readonly translate = inject(TranslateService);
+  private readonly todayService = inject(TodayService);
 
   readonly viewDate = signal(new Date());
   readonly weekDays: string[] = this.translate.instant('common.weekdaysShort');
@@ -236,8 +238,7 @@ export class CalendarComponent {
   }
 
   isToday(date: Date): boolean {
-    const today = new Date();
-    return this.isSameDay(date, today);
+    return toKey(date) === this.todayService.today();
   }
 
   hasEntry(date: Date): boolean {
