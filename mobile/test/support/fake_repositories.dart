@@ -148,18 +148,28 @@ class FakeOvertimeRepository implements OvertimeRepository {
   /// Wenn gesetzt, wirft `saveOvertime`.
   bool failSaveOvertime = false;
 
+  /// Anzahl der `saveOvertime`-Aufrufe (auch der scheiternden), 1-basiert (#410).
+  int saveOvertimeCalls = 0;
+
+  /// Nummern (1-basiert) der `saveOvertime`-Aufrufe, die werfen sollen, z. B.
+  /// `{2}` für "nur der zweite Aufruf" (#410). Default: keiner.
+  final Set<int> failSaveOvertimeCalls = {};
+
   @override
   Duration getOvertime() => stored;
 
   @override
   Future<void> saveOvertime(Duration overtime,
       {bool keepLastUpdated = false}) async {
+    final callNo = ++saveOvertimeCalls;
     if (holdSaveOvertime) {
       final c = Completer<void>();
       pendingOvertimeSaves.add(c);
       await c.future;
     }
-    if (failSaveOvertime) throw Exception('offline');
+    if (failSaveOvertime || failSaveOvertimeCalls.contains(callNo)) {
+      throw Exception('offline');
+    }
     stored = overtime;
     savedOvertimes.add(overtime);
     savedKeepLastUpdated.add(keepLastUpdated);

@@ -33,8 +33,11 @@ enum CloseOpenEntryResult {
 /// Ablauf: validieren, Eintrag frisch lesen, offene Pause schließen,
 /// Auto-Pausen wie beim Stop, Saldo inkrementell fortschreiben
 /// (`neu = alt + Netto - Soll am Eintragsdatum`), erst Saldo, dann Eintrag
-/// speichern (wie im Stop-Pfad; ein Teilfehler zwischen beiden Writes ist ein
-/// bekanntes Rest-Risiko, siehe #402). `lastUpdated` wird bewusst **nicht**
+/// speichern (wie im Stop-Pfad). Scheitert der Eintrag-Write nach dem Saldo,
+/// wird der Saldo best-effort auf den gelesenen Stand zurückgeschrieben (#410,
+/// Vorbild Web `OpenEntryCloseService`); scheitert auch das, bleibt er
+/// verschoben und nur ein Log entsteht. Scheitert schon der Saldo-Write, gibt
+/// es keinen Rollback. `lastUpdated` wird bewusst **nicht**
 /// gesetzt: `DashboardViewModel._load` zieht bei `lastUpdated == heute` den
 /// Tagesanteil des heutigen Eintrags vom Saldo ab. Eingeloggt setzt das
 /// Backend es bei jedem Saldo-Write, daher `keepLastUpdated: true` (Backend ab
@@ -88,7 +91,16 @@ class CloseOpenWorkEntry {
       final storedOvertime = await _overtimeRepository.ensureOvertimeLoaded();
       await _overtimeRepository.saveOvertime(storedOvertime + net - dailyTarget,
           keepLastUpdated: true);
-      await _workRepository.saveWorkEntry(closed);
+      try {
+        await _workRepository.saveWorkEntry(closed);
+      } catch (_) {
+        // Der Saldo ist schon verschoben, der Eintrag bleibt offen: ein
+        // Wiederholen würde das Delta doppelt zählen. Best-effort zurück auf
+        // den gelesenen Stand (#410); der Fehler des Eintrag-Writes geht an
+        // den äußeren catch.
+        await _rollbackOvertime(storedOvertime);
+        rethrow;
+      }
       return CloseOpenEntryResult.closed;
     } catch (e, st) {
       // Keine Eintragsinhalte loggen.
@@ -97,6 +109,19 @@ class CloseOpenWorkEntry {
           '(${e.runtimeType})',
           stackTrace: st);
       return CloseOpenEntryResult.failed;
+    }
+  }
+
+  /// Schreibt den vor dem Vorwärts-Write gelesenen Saldo zurück. Mit
+  /// `keepLastUpdated: true` stellt das den Vorzustand vollständig her. Ein
+  /// Fehlschlag wird nur geloggt (keine Eintragsinhalte) und nie weitergeworfen;
+  /// dann bleibt der Saldo verschoben (Korrektur über "Überstunden anpassen").
+  Future<void> _rollbackOvertime(Duration stored) async {
+    try {
+      await _overtimeRepository.saveOvertime(stored, keepLastUpdated: true);
+    } catch (e, st) {
+      logger.e('[OpenEntries] Saldo-Rollback fehlgeschlagen (${e.runtimeType})',
+          stackTrace: st);
     }
   }
 

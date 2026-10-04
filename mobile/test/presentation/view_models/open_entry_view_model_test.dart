@@ -272,6 +272,60 @@ void main() {
       seedOpen(h.work, fri);
     }, profiles: true);
 
+    scenario(
+        'Eintrag-Fehler nach Saldo-Write: Saldo zurückgerollt, Banner bleibt, '
+        'Wiederholen zählt einmal',
+        saturdayMorning, (h) {
+      boot(h);
+      final todayReads = h.work.getWorkEntryCalls;
+      h.work.failSaves = true;
+      h.act(() => openVm(h).endEntry(DateTime(2026, 10, 2, 16)));
+
+      expect(dates(h), [fri]);
+      expect(openState(h).saveError, isTrue);
+      expect(openState(h).busy, isFalse);
+      expect(h.overtime.stored, const Duration(hours: 1));
+      expect(h.writeLog, ['A:overtime:30', 'A:overtime:60']);
+      expect(h.work.getWorkEntryCalls, todayReads, reason: 'kein Reload');
+
+      h.work.failSaves = false;
+      h.writeLog.clear();
+      h.act(() => openVm(h).endEntry(DateTime(2026, 10, 2, 16)));
+      expect(h.writeLog, [
+        'A:overtime:30',
+        'A:entry:2026-10-02:08:00-16:00',
+      ]);
+      expect(h.overtime.stored, const Duration(minutes: 30));
+      expect(openState(h).saveError, isFalse);
+      expect(openState(h).entries, isEmpty);
+    }, setUp: (h) {
+      h.overtime.stored = const Duration(hours: 1);
+      seedOpen(h.work, fri);
+    }, profiles: true);
+
+    scenario(
+        'Profilwechsel im Schreibfenster + Eintrag-Fehler: Rollback landet im '
+        'Profil des Beginns',
+        saturdayMorning, (h) {
+      boot(h);
+      h.work.holdSaves = true;
+      h.act(() => openVm(h).endEntry(DateTime(2026, 10, 2, 16)));
+      expect(h.work.pendingSaves, hasLength(1));
+
+      h.switchProfile('b');
+      h.work.failSaves = true;
+      h.work.pendingSaves.single.complete();
+      h.async.flushMicrotasks();
+
+      expect(h.writeLog, ['A:overtime:30', 'A:overtime:60']);
+      expect(h.overtime.stored, const Duration(hours: 1));
+      expect(h.overtimeB.savedOvertimes, isEmpty);
+      expect(h.workB.saved, isEmpty);
+    }, setUp: (h) {
+      h.overtime.stored = const Duration(hours: 1);
+      seedOpen(h.work, fri);
+    }, profiles: true);
+
     scenario('Doppeltippen: zweiter Aufruf während der Aktion wird ignoriert',
         saturdayMorning, (h) {
       boot(h);
