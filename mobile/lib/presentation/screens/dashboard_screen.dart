@@ -9,6 +9,7 @@ import '../../l10n/app_localizations.dart';
 import '../utils/break_name_localizer.dart';
 import '../view_models/dashboard_view_model.dart';
 import '../view_models/settings_view_model.dart';
+import '../widgets/common/dashboard_save_feedback.dart';
 import '../widgets/common/responsive_center.dart';
 import '../widgets/edit_break_modal.dart';
 import '../widgets/holiday_banner.dart';
@@ -126,8 +127,8 @@ class DashboardScreen extends ConsumerWidget {
                 label: l10n.startTimeLabel,
                 initialValue: workEntry.workStart,
                 use24HourFormat: use24HourFormat,
-                onTimeSelected: (time) =>
-                    dashboardViewModel.setManualStartTime(time),
+                onTimeSelected: (time) => reportDashboardSave(
+                    context, dashboardViewModel.setManualStartTime(time)),
               ),
               const SizedBox(height: 16),
               _TimeInputField(
@@ -135,10 +136,11 @@ class DashboardScreen extends ConsumerWidget {
                 initialValue: workEntry.workEnd,
                 enabled: workEntry.workStart != null,
                 use24HourFormat: use24HourFormat,
-                onTimeSelected: (time) =>
-                    dashboardViewModel.setManualEndTime(time),
+                onTimeSelected: (time) => reportDashboardSave(
+                    context, dashboardViewModel.setManualEndTime(time)),
                 onClear: workEntry.workEnd != null
-                    ? () => dashboardViewModel.clearEndTime()
+                    ? () => reportDashboardSave(
+                        context, dashboardViewModel.clearEndTime())
                     : null,
               ),
               const SizedBox(height: 24),
@@ -149,7 +151,8 @@ class DashboardScreen extends ConsumerWidget {
                       workEntry.workEnd != null) {
                     _showRestartDialog(context, dashboardViewModel);
                   } else {
-                    dashboardViewModel.startOrStopTimer();
+                    reportDashboardSave(
+                        context, dashboardViewModel.startOrStopTimer());
                   }
                 },
                 style: ElevatedButton.styleFrom(
@@ -169,7 +172,8 @@ class DashboardScreen extends ConsumerWidget {
                   use24HourFormat),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: () => dashboardViewModel.startOrStopBreak(),
+                onPressed: () => reportDashboardSave(
+                    context, dashboardViewModel.startOrStopBreak()),
                 child: Text(isBreakRunning ? l10n.stopBreak : l10n.addBreak),
               ),
             ],
@@ -371,7 +375,8 @@ class DashboardScreen extends ConsumerWidget {
                     ),
                     IconButton(
                       icon: Icon(Icons.delete, color: Colors.red.shade700),
-                      onPressed: () => dashboardViewModel.deleteBreak(b.id),
+                      onPressed: () => reportDashboardSave(
+                          context, dashboardViewModel.deleteBreak(b.id)),
                     ),
                   ],
                 ),
@@ -396,14 +401,15 @@ class DashboardScreen extends ConsumerWidget {
           TextButton(
             onPressed: () {
               Navigator.of(dialogContext).pop();
-              viewModel.startNewSessionKeepBreaks();
+              reportDashboardSave(
+                  context, viewModel.startNewSessionKeepBreaks());
             },
             child: Text(l10n.keepBreaksAction),
           ),
           FilledButton(
             onPressed: () {
               Navigator.of(dialogContext).pop();
-              viewModel.startNewSession();
+              reportDashboardSave(context, viewModel.startNewSession());
             },
             child: Text(l10n.restartCompletelyAction),
           ),

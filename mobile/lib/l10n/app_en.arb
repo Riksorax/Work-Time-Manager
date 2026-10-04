@@ -413,5 +413,6 @@
   "openEntryEndInvalid": "The end must be after the start and before now.",
   "openEntryEndLongWarning": "That is more than 16 hours. Is that correct?",
   "openEntryEndDialogConfirm": "End entry",
-  "openEntrySaveError": "Could not end the entry."
+  "openEntrySaveError": "Could not end the entry.",
+  "dashboardSaveError": "Saving failed. Please check your connection and try again."
 }

@@ -38,15 +38,34 @@ class _FakeDashboardViewModel extends DashboardViewModel {
       );
 
   @override
-  Future<void> startOrStopTimer() async => writes++;
+  Future<bool> startOrStopTimer() async {
+    writes++;
+    return true;
+  }
+
   @override
-  Future<void> startOrStopBreak() async => writes++;
+  Future<bool> startOrStopBreak() async {
+    writes++;
+    return true;
+  }
+
   @override
-  Future<void> startNewSession() async => writes++;
+  Future<bool> startNewSession() async {
+    writes++;
+    return true;
+  }
+
   @override
-  Future<void> setManualStartTime(TimeOfDay time) async => writes++;
+  Future<bool> setManualStartTime(TimeOfDay time) async {
+    writes++;
+    return true;
+  }
+
   @override
-  Future<void> setManualEndTime(TimeOfDay time) async => writes++;
+  Future<bool> setManualEndTime(TimeOfDay time) async {
+    writes++;
+    return true;
+  }
 }
 
 Bundesland? _land;

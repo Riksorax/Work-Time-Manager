@@ -236,4 +236,90 @@ void main() {
       h.workB.store[moKey] = entryOf(mo, start: at(9), end: at(12));
     }, profiles: true);
   });
+
+  group('S-10 Rueckgabewert (Erfolg)', () {
+    /// Fuehrt [action] aus und gibt das Ergebnis zurueck (null = noch offen).
+    bool? result(Harness h, Future<bool> Function() action) {
+      bool? r;
+      unawaited(action().then((v) => r = v));
+      h.async.flushMicrotasks();
+      return r;
+    }
+
+    scenario('Stop bei Saldo-Fehler: false, danach Wiederholen: true', at(17),
+        (h) {
+      h.boot();
+      h.overtime.failSaveOvertime = true;
+      expect(result(h, h.vm.startOrStopTimer), isFalse);
+
+      h.overtime.failSaveOvertime = false;
+      expect(result(h, h.vm.startOrStopTimer), isTrue);
+    }, setUp: prep(running), profiles: true);
+
+    scenario('Start (ohne Saldo-Block): true', at(17), (h) {
+      h.boot();
+      expect(result(h, h.vm.startOrStopTimer), isTrue);
+      expect(h.state.workEntry.workStart, at(17));
+    }, setUp: (h) => prep(entryOf(mo))(h), profiles: true);
+
+    scenario(
+        'Stop auf beendetem Eintrag (UI-Auswahl, keine Aktion): true', at(17),
+        (h) {
+      h.boot();
+      h.overtime.failSaveOvertime = true;
+      expect(result(h, h.vm.startOrStopTimer), isTrue);
+      expect(h.writeLog, isEmpty);
+    }, setUp: prep(finished), profiles: true);
+
+    final failing = <String, Future<bool> Function(Harness)>{
+      'setManualEndTime': (h) =>
+          h.vm.setManualEndTime(const TimeOfDay(hour: 16, minute: 30)),
+      'setManualStartTime': (h) =>
+          h.vm.setManualStartTime(const TimeOfDay(hour: 8, minute: 30)),
+      'updateBreak': (h) => h.vm.updateBreak(breakB1.copyWith(end: at(12, 45))),
+      'deleteBreak': (h) => h.vm.deleteBreak('b1'),
+      'startOrStopBreak': (h) => h.vm.startOrStopBreak(),
+    };
+    for (final e in failing.entries) {
+      scenario('${e.key}: false bei Saldo-Fehler, true bei Erfolg', at(17),
+          (h) {
+        h.boot();
+        h.overtime.failSaveOvertime = true;
+        expect(result(h, () => e.value(h)), isFalse);
+        h.overtime.failSaveOvertime = false;
+        expect(result(h, () => e.value(h)), isTrue);
+      }, setUp: prep(finishedWithBreak), profiles: true);
+    }
+
+    scenario('startNewSession/-KeepBreaks/clearEndTime: true', at(17), (h) {
+      h.boot();
+      h.overtime.failSaveOvertime = true;
+      expect(result(h, h.vm.clearEndTime), isTrue);
+      expect(result(h, h.vm.startNewSession), isTrue);
+      expect(result(h, h.vm.startNewSessionKeepBreaks), isTrue);
+    }, setUp: prep(finishedWithBreak), profiles: true);
+
+    scenario(
+        'Eintrag-Write scheitert nach Saldo: bleibt true (#412 offen)', at(17),
+        (h) {
+      h.boot();
+      h.work.failSaves = true;
+      expect(result(h, h.vm.startOrStopTimer), isTrue);
+    }, setUp: prep(running), profiles: true);
+
+    scenario('ueberholte Aktion mit Saldo-Fehler: false', at(17), (h) {
+      h.boot();
+      h.overtime.holdSaveOvertime = true;
+      bool? r;
+      unawaited(h.vm.startOrStopTimer().then((v) => r = v));
+      h.async.flushMicrotasks();
+      h.switchProfile('B');
+      h.overtime.failSaveOvertime = true;
+      releaseSaldo(h);
+      expect(r, isFalse);
+    }, setUp: (h) {
+      prep(running)(h);
+      h.workB.store[moKey] = entryOf(mo, start: at(9), end: at(12));
+    }, profiles: true);
+  });
 }

@@ -491,8 +491,8 @@ class DashboardViewModel extends Notifier<DashboardState> {
     });
   }
 
-  Future<void> startOrStopTimer() async {
-    if (!await _ensureCurrentDay()) return;
+  Future<bool> startOrStopTimer() async {
+    if (!await _ensureCurrentDay()) return true;
     final ctx = _beginAction();
     final now = roundToMinute(_now());
     WorkEntryEntity updatedEntry;
@@ -504,7 +504,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
     } else if (state.workEntry.workEnd == null) {
       // STOP - Arbeit beenden. Der Timer wird erst in `_startTimerIfNeeded`
       // nach dem erfolgreichen Setzen des States abgebrochen: scheitert der
-      // Saldo-Write, laeuft er weiter (#402).
+      // Saldo-Write, läuft er weiter (#402).
       updatedEntry = state.workEntry.copyWith(workEnd: now);
       logger.i('[Dashboard] Timer gestoppt um $now');
 
@@ -525,15 +525,15 @@ class DashboardViewModel extends Notifier<DashboardState> {
       // Diese Methode wird vom UI mit dem gewählten Modus aufgerufen
       logger.i(
           '[Dashboard] Arbeit bereits beendet - Benutzer muss Aktion wählen');
-      return; // UI zeigt Dialog an
+      return true; // UI zeigt Dialog an, nichts zu speichern
     }
 
-    await _recalculateStateAndSave(updatedEntry, ctx: ctx);
+    return _recalculateStateAndSave(updatedEntry, ctx: ctx);
   }
 
   /// Startet eine komplett neue Session (Start, End und Pausen zurücksetzen)
-  Future<void> startNewSession() async {
-    if (!await _ensureCurrentDay()) return;
+  Future<bool> startNewSession() async {
+    if (!await _ensureCurrentDay()) return true;
     final ctx = _beginAction();
     final now = roundToMinute(_now());
     final updatedEntry = WorkEntryEntity(
@@ -549,12 +549,12 @@ class DashboardViewModel extends Notifier<DashboardState> {
     );
     logger.i(
         '[Dashboard] Komplett neue Session gestartet um $now (Start, End, Pausen zurückgesetzt)');
-    await _recalculateStateAndSave(updatedEntry, ctx: ctx);
+    return _recalculateStateAndSave(updatedEntry, ctx: ctx);
   }
 
   /// Neue Session mit Pausen behalten (nur Start und Endzeit zurücksetzen)
-  Future<void> startNewSessionKeepBreaks() async {
-    if (!await _ensureCurrentDay()) return;
+  Future<bool> startNewSessionKeepBreaks() async {
+    if (!await _ensureCurrentDay()) return true;
     final ctx = _beginAction();
     final now = roundToMinute(_now());
     final updatedEntry = WorkEntryEntity(
@@ -569,7 +569,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
       type: state.workEntry.type,
     );
     logger.i('[Dashboard] Neue Session gestartet um $now (Pausen behalten)');
-    await _recalculateStateAndSave(updatedEntry, ctx: ctx);
+    return _recalculateStateAndSave(updatedEntry, ctx: ctx);
   }
 
   /// Berechnet den State neu und speichert (Saldo, dann Eintrag).
@@ -579,7 +579,12 @@ class DashboardViewModel extends Notifier<DashboardState> {
   /// Aktion in der Zwischenzeit überholt (Profilwechsel, Dispose), werden die
   /// Writes trotzdem vollständig ausgeführt; nur State, Timer und Reinit
   /// entfallen (#388).
-  Future<void> _recalculateStateAndSave(WorkEntryEntity updatedEntry,
+  ///
+  /// Ergebnis: `false`, wenn der Saldo nicht gespeichert werden konnte (dann
+  /// ist nichts geschrieben, State und Timer sind unverändert, #402), sonst
+  /// `true`. Ein Fehler beim Eintrag-Write bleibt wie bisher geschluckt (#336,
+  /// Teilfehler siehe #412) und liefert `true`.
+  Future<bool> _recalculateStateAndSave(WorkEntryEntity updatedEntry,
       {bool save = true, _ActionCtx? ctx}) async {
     assert(!save || ctx != null, 'save: true braucht den Aktionskontext');
     bool overtaken() => !ref.mounted || (ctx != null && ctx.gen != _initGen);
@@ -625,14 +630,14 @@ class DashboardViewModel extends Notifier<DashboardState> {
               newTotalOvertime, actionCtx.settingsRepository);
         } catch (e, st) {
           // Vor dem State-Update und vor jedem Timer-Eingriff: State, Timer und
-          // Eintrag bleiben unveraendert, nichts wird weitergeworfen (sonst
+          // Eintrag bleiben unverändert, nichts wird weitergeworfen (sonst
           // landet es als fatal in Crashlytics, #402). Der Saldo ist absolut,
           // ein Wiederholen ist idempotent. Nur loggen, keine Eintragsinhalte.
           logger.e(
               '[Dashboard] Saldo nicht gespeichert (${e.runtimeType})'
               '${overtaken() ? ', Aktion überholt' : ''}',
               stackTrace: st);
-          return;
+          return false;
         }
       }
     } else {
@@ -677,7 +682,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
             stackTrace: st);
       }
     }
-    if (overtaken()) return;
+    if (overtaken()) return true;
     _startTimerIfNeeded();
 
     // Stop (bzw. Bearbeitung) eines über Mitternacht gelaufenen Vortags:
@@ -696,6 +701,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
         await _initRun;
       }
     }
+    return true;
   }
 
   /// Prüft nach jedem Speichern des Gleitzeitsaldos, ob ein konfigurierter
@@ -728,8 +734,8 @@ class DashboardViewModel extends Notifier<DashboardState> {
     }
   }
 
-  Future<void> setManualStartTime(TimeOfDay time) async {
-    if (!await _ensureCurrentDay()) return;
+  Future<bool> setManualStartTime(TimeOfDay time) async {
+    if (!await _ensureCurrentDay()) return true;
     final ctx = _beginAction();
     final oldDate = state.workEntry.workStart ?? state.workEntry.date;
     final newStart = DateTime(
@@ -754,12 +760,13 @@ class DashboardViewModel extends Notifier<DashboardState> {
           '[Dashboard] Automatische Pausen berechnet: ${updatedEntry.breaks.length} Pausen');
     }
 
-    await _recalculateStateAndSave(updatedEntry, ctx: ctx);
-    logger.i('[Dashboard] Startzeit gespeichert');
+    final ok = await _recalculateStateAndSave(updatedEntry, ctx: ctx);
+    if (ok) logger.i('[Dashboard] Startzeit gespeichert');
+    return ok;
   }
 
-  Future<void> setManualEndTime(TimeOfDay time) async {
-    if (!await _ensureCurrentDay()) return;
+  Future<bool> setManualEndTime(TimeOfDay time) async {
+    if (!await _ensureCurrentDay()) return true;
     final ctx = _beginAction();
     final oldDate = state.workEntry.workEnd ??
         state.workEntry.workStart ??
@@ -786,12 +793,13 @@ class DashboardViewModel extends Notifier<DashboardState> {
           '[Dashboard] Automatische Pausen berechnet: ${updatedEntry.breaks.length} Pausen');
     }
 
-    await _recalculateStateAndSave(updatedEntry, ctx: ctx);
-    logger.i('[Dashboard] Endzeit gespeichert');
+    final ok = await _recalculateStateAndSave(updatedEntry, ctx: ctx);
+    if (ok) logger.i('[Dashboard] Endzeit gespeichert');
+    return ok;
   }
 
-  Future<void> clearEndTime() async {
-    if (!await _ensureCurrentDay()) return;
+  Future<bool> clearEndTime() async {
+    if (!await _ensureCurrentDay()) return true;
     final ctx = _beginAction();
     logger.i('[Dashboard] Entferne Endzeit...');
 
@@ -808,35 +816,36 @@ class DashboardViewModel extends Notifier<DashboardState> {
       type: state.workEntry.type,
     );
 
-    await _recalculateStateAndSave(updatedEntry, ctx: ctx);
-    logger.i('[Dashboard] Endzeit entfernt');
+    final ok = await _recalculateStateAndSave(updatedEntry, ctx: ctx);
+    if (ok) logger.i('[Dashboard] Endzeit entfernt');
+    return ok;
   }
 
-  Future<void> startOrStopBreak() async {
-    if (!await _ensureCurrentDay()) return;
+  Future<bool> startOrStopBreak() async {
+    if (!await _ensureCurrentDay()) return true;
     final ctx = _beginAction();
     final toggleBreak = ref.read(toggleBreakUseCaseProvider);
     final updatedEntry = await toggleBreak.call(state.workEntry);
-    await _recalculateStateAndSave(updatedEntry, ctx: ctx);
+    return _recalculateStateAndSave(updatedEntry, ctx: ctx);
   }
 
-  Future<void> deleteBreak(String breakId) async {
-    if (!await _ensureCurrentDay()) return;
+  Future<bool> deleteBreak(String breakId) async {
+    if (!await _ensureCurrentDay()) return true;
     final ctx = _beginAction();
     final updatedBreaks =
         state.workEntry.breaks.where((b) => b.id != breakId).toList();
     final updatedEntry = state.workEntry.copyWith(breaks: updatedBreaks);
-    await _recalculateStateAndSave(updatedEntry, ctx: ctx);
+    return _recalculateStateAndSave(updatedEntry, ctx: ctx);
   }
 
-  Future<void> updateBreak(BreakEntity breakEntity) async {
-    if (!await _ensureCurrentDay()) return;
+  Future<bool> updateBreak(BreakEntity breakEntity) async {
+    if (!await _ensureCurrentDay()) return true;
     final ctx = _beginAction();
     final updatedBreaks = state.workEntry.breaks.map((b) {
       return b.id == breakEntity.id ? breakEntity : b;
     }).toList();
     final updatedEntry = state.workEntry.copyWith(breaks: updatedBreaks);
-    await _recalculateStateAndSave(updatedEntry, ctx: ctx);
+    return _recalculateStateAndSave(updatedEntry, ctx: ctx);
   }
 }
 
