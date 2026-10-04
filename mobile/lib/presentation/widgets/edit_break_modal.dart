@@ -8,6 +8,7 @@ import '../../l10n/app_localizations.dart';
 import '../utils/break_name_localizer.dart';
 import '../view_models/dashboard_view_model.dart';
 import '../view_models/settings_view_model.dart';
+import 'common/dashboard_save_feedback.dart';
 
 class EditBreakModal extends ConsumerStatefulWidget {
   final BreakEntity breakEntity;
@@ -123,7 +124,11 @@ class _EditBreakModalState extends ConsumerState<EditBreakModal> {
       end: _endTime,
     );
 
-    ref.read(dashboardViewModelProvider.notifier).updateBreak(updatedBreak);
+    reportDashboardSave(
+        context,
+        ref
+            .read(dashboardViewModelProvider.notifier)
+            .updateBreak(updatedBreak));
     Navigator.of(context).pop();
   }
 

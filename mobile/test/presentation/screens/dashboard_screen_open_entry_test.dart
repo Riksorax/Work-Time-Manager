@@ -33,7 +33,10 @@ class _FakeDashboardViewModel extends DashboardViewModel {
       );
 
   @override
-  Future<void> startOrStopTimer() async => writes++;
+  Future<bool> startOrStopTimer() async {
+    writes++;
+    return true;
+  }
 }
 
 class _FakeOpenEntryViewModel extends OpenEntryViewModel {

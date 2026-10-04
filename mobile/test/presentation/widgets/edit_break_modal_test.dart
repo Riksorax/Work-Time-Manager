@@ -171,6 +171,37 @@ void main() {
       expect(fakeViewModel.lastUpdatedBreak!.name, 'Pause 2');
     });
 
+    testWidgets('Saldo-Fehler (#402): Snackbar, Dialog schliesst',
+        (tester) async {
+      await tester
+          .pumpWidget(createSubject(breakNamed('Pause 2'), const Locale('en')));
+      fakeViewModel.updateResult = false;
+      await tester.tap(find.text('Open Modal'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(fakeViewModel.lastUpdatedBreak, isNotNull);
+      expect(find.text('Break name'), findsNothing);
+      expect(
+          find.text(
+              'Saving failed. Please check your connection and try again.'),
+          findsOneWidget);
+    });
+
+    testWidgets('Erfolg: kein Snackbar', (tester) async {
+      await tester
+          .pumpWidget(createSubject(breakNamed('Pause 2'), const Locale('en')));
+      await tester.tap(find.text('Open Modal'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SnackBar), findsNothing);
+    });
+
     testWidgets('speichert einen vom Nutzer geänderten Namen', (tester) async {
       await tester
           .pumpWidget(createSubject(breakNamed('Pause 2'), const Locale('en')));
@@ -422,6 +453,7 @@ void main() {
 
 class FakeDashboardViewModel extends DashboardViewModel {
   BreakEntity? lastUpdatedBreak;
+  bool updateResult = true;
 
   @override
   DashboardState build() {
@@ -436,7 +468,8 @@ class FakeDashboardViewModel extends DashboardViewModel {
   }
 
   @override
-  Future<void> updateBreak(BreakEntity breakEntity) async {
+  Future<bool> updateBreak(BreakEntity breakEntity) async {
     lastUpdatedBreak = breakEntity;
+    return updateResult;
   }
 }

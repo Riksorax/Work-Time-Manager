@@ -1254,5 +1254,7 @@
   "openEntryEndDialogConfirm": "Eintrag beenden",
   "@openEntryEndDialogConfirm": {"description": "Bestätigen-Button im Dialog zum Beenden eines offenen Eintrags."},
   "openEntrySaveError": "Eintrag konnte nicht beendet werden.",
-  "@openEntrySaveError": {"description": "Snackbar, wenn das Beenden eines offenen Eintrags fehlgeschlagen ist."}
+  "@openEntrySaveError": {"description": "Snackbar, wenn das Beenden eines offenen Eintrags fehlgeschlagen ist."},
+  "dashboardSaveError": "Speichern fehlgeschlagen. Bitte prüfe deine Verbindung und versuche es erneut.",
+  "@dashboardSaveError": {"description": "Snackbar im Dashboard, wenn eine Aktion (z. B. Zeiterfassung beenden, Zeit oder Pause ändern) den Überstundensaldo nicht speichern konnte. Der Zustand bleibt unverändert, die Aktion kann wiederholt werden."}
 }
