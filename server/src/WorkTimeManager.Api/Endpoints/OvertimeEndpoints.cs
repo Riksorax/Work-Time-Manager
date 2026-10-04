@@ -6,7 +6,7 @@ namespace WorkTimeManager.Api.Endpoints;
 
 internal static class OvertimeEndpoints
 {
-    public sealed record SaveOvertimeRequest(int Minutes);
+    public sealed record SaveOvertimeRequest(int Minutes, bool? KeepLastUpdated = null);
 
     public static RouteGroupBuilder MapOvertimeEndpoints(this RouteGroupBuilder group)
     {
@@ -25,7 +25,7 @@ internal static class OvertimeEndpoints
             ClaimsPrincipal user, OvertimeRepository repo, CancellationToken ct) =>
         {
             if (user.GetUid() is not { } uid) return Results.Unauthorized();
-            await repo.SaveAsync(uid, request.Minutes, profileId, ct);
+            await repo.SaveAsync(uid, request.Minutes, profileId, ct, request.KeepLastUpdated == true);
             return Results.Ok(await repo.GetAsync(uid, profileId, ct));
         })
         .WithName("SaveOvertime");

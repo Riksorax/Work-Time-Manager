@@ -131,6 +131,37 @@ public class RepositoryIntegrationTests(FirestoreEmulatorFixture fixture)
     }
 
     [SkippableFact]
+    public async Task Overtime_KeepLastUpdated_LeavesExistingTimestampUntouched()
+    {
+        RequireEmulator();
+        var repo = new OvertimeRepository(fixture.Db!);
+        var uid = NewUid();
+
+        await repo.SaveAsync(uid, 10, null, Ct);
+        var first = await repo.GetAsync(uid, null, Ct);
+        await Task.Delay(50, Ct);
+        await repo.SaveAsync(uid, 99, null, Ct, keepLastUpdated: true);
+        var second = await repo.GetAsync(uid, null, Ct);
+
+        Assert.Equal(99, second.Minutes);
+        Assert.Equal(first.LastUpdated, second.LastUpdated);
+    }
+
+    [SkippableFact]
+    public async Task Overtime_KeepLastUpdated_OnMissingDocument_LeavesLastUpdatedNull()
+    {
+        RequireEmulator();
+        var repo = new OvertimeRepository(fixture.Db!);
+        var uid = NewUid();
+
+        await repo.SaveAsync(uid, 20, "second", Ct, keepLastUpdated: true);
+        var result = await repo.GetAsync(uid, "second", Ct);
+
+        Assert.Equal(20, result.Minutes);
+        Assert.Null(result.LastUpdated);
+    }
+
+    [SkippableFact]
     public async Task Settings_SaveAndGet_RoundTrips()
     {
         RequireEmulator();

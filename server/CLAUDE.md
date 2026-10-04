@@ -38,7 +38,7 @@ Firestore-Integrationstests übersprungen (`SkippableFact`) — das ist erwartet
 | GET | `/api/work-entries/{year}/{month}/{day}` | Einzeleintrag (404 wenn fehlt) |
 | PUT | `/api/work-entries` | Eintrag speichern (merge in days-Map) |
 | DELETE | `/api/work-entries/{year}/{month}/{day}` | Tag löschen |
-| GET / PUT | `/api/overtime` | Gleitzeit-Saldo lesen/speichern (`minutes`) |
+| GET / PUT | `/api/overtime` | Gleitzeit-Saldo lesen/speichern (`minutes`, PUT optional `keepLastUpdated`, #406) |
 | GET / PUT | `/api/settings` | Einstellungen lesen/speichern |
 | GET | `/api/profile` | Premium-Status |
 | GET | `/api/reports/daily/{year}/{month}/{day}` | Tagesstatistik |
@@ -48,6 +48,8 @@ Firestore-Integrationstests übersprungen (`SkippableFact`) — das ist erwartet
 | GET | `/api/work-profiles` | Zusätzliche Arbeitszeit-Profile auflisten (ohne Standard-Profil, siehe #138/#239) |
 | POST | `/api/work-profiles` | Neues Profil anlegen (`{ name }`) |
 | DELETE | `/api/work-profiles/{profileId}` | Profil inkl. aller Daten löschen |
+
+**Gleitzeit ohne `lastUpdated` (#406):** `PUT /api/overtime` nimmt im JSON-Body optional `keepLastUpdated` (`bool?`, camelCase, neben `minutes`). Fehlt es, ist es `null` oder `false` (alte Clients/App-Versionen), gilt das bisherige Verhalten: `minutes` und `lastUpdated = jetzt (UTC)` werden geschrieben. Bei `true` wird nur `minutes` gemergt (`SetOptions.MergeAll`); ein vorhandenes `lastUpdated` bleibt unverändert. Existiert das Dokument noch nicht, wird es nur mit `minutes` angelegt, `lastUpdated` fehlt dann und `GET` liefert `lastUpdated: null` (wie bei einem nie gespeicherten Saldo). Gilt auch mit `?profileId=...`. Die Antwort (aktueller Saldo per `GET`-Form) bleibt gleich. Body statt Query, weil der Body bereits die Nutzdaten (`minutes`) trägt und der Query-Parameter dem Profil-Scope vorbehalten ist. Zweck: nachträgliches Beenden eines offenen Eintrags vor heute darf die „lastUpdated ist heute"-Heuristik der Dashboards nicht auslösen. Deploy-Reihenfolge: API vor Clients (ein älterer API-Stand ignoriert das Feld und setzt `lastUpdated` weiterhin).
 
 **Urlaubsanspruch (#278):** `SettingsDto.vacationDaysPerYear` (0–366, sonst 400; fehlt im Dokument: 30). Im `PUT /api/settings` optional: fehlt das Feld (alte Clients), bleibt der gespeicherte Wert erhalten (`SettingsMergeFields` lässt es aus dem Merge aus).
 
