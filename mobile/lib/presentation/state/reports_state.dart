@@ -35,13 +35,15 @@ class ReportsState extends Equatable {
     this.multiSelectMode = false,
   });
 
-  factory ReportsState.initial() {
-    final now = DateTime.now();
+  /// Startzustand für den lokalen Tag [today] (aus `todayProvider`, #387).
+  /// Auf lokale Mitternacht normalisiert, ohne Uhrzeitanteil.
+  factory ReportsState.initial(DateTime today) {
+    final day = DateTime(today.year, today.month, today.day);
     return ReportsState(
       isLoading: true,
-      focusedDay: now,
-      selectedDay: now,
-      selectedMonth: now,
+      focusedDay: day,
+      selectedDay: day,
+      selectedMonth: DateTime(day.year, day.month),
       workEntries: const {},
     );
   }

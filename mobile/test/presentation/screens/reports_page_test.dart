@@ -94,10 +94,10 @@ void main() {
 
   group('ReportsPage', () {
     testWidgets('shows DailyReportView by default', (tester) async {
-      final now = DateTime.now();
+      final now = DateTime(2026, 10, 2);
 
       final reportsViewModel = FakeReportsViewModel(
-        initialState: ReportsState.initial().copyWith(
+        initialState: ReportsState.initial(DateTime(2026, 10, 2)).copyWith(
           isLoading: false,
           selectedDay: now,
           selectedMonth: now,
@@ -140,16 +140,16 @@ void main() {
     });
 
     testWidgets('can switch tabs to Weekly and Monthly', (tester) async {
-      final dummyState = ReportsState.initial().copyWith(
+      final dummyState = ReportsState.initial(DateTime(2026, 10, 2)).copyWith(
         isLoading: false,
         monthlyReportState: MonthlyReportState(
           workDays: 5,
-          dailyWork: {DateTime.now(): const Duration(hours: 8)},
+          dailyWork: {DateTime(2026, 10, 2): const Duration(hours: 8)},
           weeklyWork: {1: const Duration(hours: 40)},
         ),
         weeklyReportState: WeeklyReportState(
           workDays: 5,
-          dailyWork: {DateTime.now(): const Duration(hours: 8)},
+          dailyWork: {DateTime(2026, 10, 2): const Duration(hours: 8)},
         ),
       );
 
@@ -190,7 +190,7 @@ void main() {
       testWidgets('Wochenbericht zeigt KW $expectedKw fuer $day',
           (tester) async {
         final reportsViewModel = FakeReportsViewModel(
-          initialState: ReportsState.initial().copyWith(
+          initialState: ReportsState.initial(DateTime(2026, 10, 2)).copyWith(
             isLoading: false,
             selectedDay: day,
             selectedMonth: day,
@@ -229,7 +229,7 @@ void main() {
           'Wochen-Reflexion Button öffnet Dialog und speichert ($year-W$week, $day)',
           (tester) async {
         final reportsViewModel = FakeReportsViewModel(
-          initialState: ReportsState.initial().copyWith(
+          initialState: ReportsState.initial(DateTime(2026, 10, 2)).copyWith(
             isLoading: false,
             selectedDay: day,
             selectedMonth: day,
@@ -281,7 +281,8 @@ void main() {
     testWidgets('Insights-Tab zeigt Platzhalter ohne Datenbasis',
         (tester) async {
       final reportsViewModel = FakeReportsViewModel(
-        initialState: ReportsState.initial().copyWith(isLoading: false),
+        initialState: ReportsState.initial(DateTime(2026, 10, 2))
+            .copyWith(isLoading: false),
         callback: mockCallback,
       );
       final settingsViewModel = FakeSettingsViewModel(
@@ -307,7 +308,8 @@ void main() {
     testWidgets(
         'Insights-Tab zeigt Wochentags-Analyse und Heatmap mit Datenbasis',
         (tester) async {
-      final now = DateTime.now();
+      final now = DateTime
+          .now(); // bleibt: InsightsViewModel liest noch DateTime.now() (Teil B)
       // Zwei Einträge am selben Wochentag + selber Startstunde, damit sowohl
       // die Wochentags-Analyse als auch die Heatmap (minSampleCount: 2)
       // Ergebnisse liefern.
@@ -329,7 +331,8 @@ void main() {
           .thenAnswer((_) async => testEntries);
 
       final reportsViewModel = FakeReportsViewModel(
-        initialState: ReportsState.initial().copyWith(isLoading: false),
+        initialState: ReportsState.initial(DateTime(2026, 10, 2))
+            .copyWith(isLoading: false),
         callback: mockCallback,
       );
       final settingsViewModel = FakeSettingsViewModel(
@@ -357,9 +360,9 @@ void main() {
 
     testWidgets('navigating previous month calls onMonthChanged',
         (tester) async {
-      final now = DateTime.now();
+      final now = DateTime(2026, 10, 2);
       final reportsViewModel = FakeReportsViewModel(
-        initialState: ReportsState.initial().copyWith(
+        initialState: ReportsState.initial(DateTime(2026, 10, 2)).copyWith(
           isLoading: false,
           selectedDay: now,
           selectedMonth: now,

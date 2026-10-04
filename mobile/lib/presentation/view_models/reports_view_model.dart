@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:flutter_work_time/core/utils/time_precision.dart';
 
 import '../../core/providers/providers.dart' as core_providers;
+import '../../core/providers/today_provider.dart';
 import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/services/break_calculator_service.dart';
 import '../../domain/utils/date_utils.dart';
@@ -32,22 +33,46 @@ class ReportsViewModel extends Notifier<ReportsState> {
     // Initial load logic
     Future.microtask(() => init());
 
-    return ReportsState.initial();
+    // Tageswechsel (#387): bewusst listen statt watch - ein watch würde den
+    // Notifier neu bauen (State, gewählter Tag und Monatsdaten gingen verloren).
+    ref.listen<DateTime>(todayProvider, _onDayChange);
+
+    return ReportsState.initial(ref.read(todayProvider));
   }
 
   Future<void> init() async {
-    final now = DateTime.now();
+    final now = ref.read(todayProvider);
     // Setze den initialen Zustand, inklusive selectedMonth
     state = state.copyWith(
         selectedDay: now,
+        focusedDay: now,
         selectedMonth: DateTime(now.year, now.month),
         isLoading: true);
 
     await _loadWorkEntriesForMonth(now.year, now.month);
   }
 
+  /// Zieht die Auswahl bei einem Tageswechsel nach, aber nur, wenn sie auf dem
+  /// bisherigen "heute" stand (Pendant zu Web #383). Ein manuell gewählter Tag
+  /// und die Mehrfachauswahl bleiben unangetastet.
+  void _onDayChange(DateTime? previous, DateTime next) {
+    if (previous == null) return;
+    final selected = state.selectedDay;
+    if (selected == null || !DateUtils.isSameDay(selected, previous)) return;
+
+    final monthChanged =
+        selected.year != next.year || selected.month != next.month;
+    state = state.copyWith(selectedDay: next, focusedDay: next);
+    if (monthChanged) {
+      state = state.copyWith(selectedMonth: DateTime(next.year, next.month));
+      unawaited(_loadWorkEntriesForMonth(next.year, next.month));
+    } else {
+      _updateCalculatedReports();
+    }
+  }
+
   void _updateCalculatedReports() {
-    final day = state.selectedDay ?? DateTime.now();
+    final day = state.selectedDay ?? ref.read<DateTime>(todayProvider);
     // Lokale Berechnung als Sofortanzeige und Fallback (offline / nicht eingeloggt).
     state = state.copyWith(
       isLoading: false,
@@ -75,6 +100,7 @@ class ReportsViewModel extends Notifier<ReportsState> {
         api.getMonthlyReport(monthRef.year, monthRef.month,
             profileId: profileId),
       ]);
+      if (!ref.mounted) return;
       state = state.copyWith(
         dailyReportState: _dailyWithApiOvertime(day, results[0]),
         weeklyReportState: _weeklyFromApi(results[1]),
@@ -154,7 +180,8 @@ class ReportsViewModel extends Notifier<ReportsState> {
       await workRepository.saveWorkEntry(entry);
       ref.invalidate(leaveBalanceViewModelProvider);
 
-      final selectedDate = state.selectedDay ?? DateTime.now();
+      final selectedDate =
+          state.selectedDay ?? ref.read<DateTime>(todayProvider);
       await _loadWorkEntriesForMonth(selectedDate.year, selectedDate.month);
     } catch (e, stackTrace) {
       logger.e('Fehler beim Speichern des Arbeitseintrags: $e',
@@ -171,7 +198,8 @@ class ReportsViewModel extends Notifier<ReportsState> {
       ref.invalidate(leaveBalanceViewModelProvider);
 
       // Nach dem Löschen die Einträge für den aktuellen Monat neu laden
-      final selectedDate = state.selectedDay ?? DateTime.now();
+      final selectedDate =
+          state.selectedDay ?? ref.read<DateTime>(todayProvider);
       await _loadWorkEntriesForMonth(selectedDate.year, selectedDate.month);
     } catch (e, stackTrace) {
       logger.e('Fehler beim Löschen des Arbeitseintrags: $e',
@@ -213,7 +241,7 @@ class ReportsViewModel extends Notifier<ReportsState> {
   /// Lädt Daten für den aktuellen Monat ohne selectedDay zu ändern
   /// Wird beim initialen Laden verwendet, um den aktuellen Tag beizubehalten
   void loadCurrentMonthData() {
-    final now = DateTime.now();
+    final now = ref.read(todayProvider);
     final normalizedMonth = DateTime(now.year, now.month, 1);
 
     // Aktualisiere nur selectedMonth, behalte selectedDay (sollte bereits auf heute gesetzt sein)
@@ -242,7 +270,8 @@ class ReportsViewModel extends Notifier<ReportsState> {
     } finally {
       // Dieser Block wird immer ausgeführt.
       // _updateCalculatedReports setzt isLoading auf false und aktualisiert alle Report-States.
-      _updateCalculatedReports();
+      // Nach Dispose (z. B. Logout während des Ladens) nichts mehr schreiben.
+      if (ref.mounted) _updateCalculatedReports();
     }
   }
 
@@ -547,7 +576,8 @@ class ReportsViewModel extends Notifier<ReportsState> {
       ref.invalidate(leaveBalanceViewModelProvider);
 
       // Clear selection, reset multi-select mode and reload data
-      final selectedDate = state.selectedDay ?? DateTime.now();
+      final selectedDate =
+          state.selectedDay ?? ref.read<DateTime>(todayProvider);
       clearDateSelection();
       state = state.copyWith(multiSelectMode: false);
       await _loadWorkEntriesForMonth(selectedDate.year, selectedDate.month);
