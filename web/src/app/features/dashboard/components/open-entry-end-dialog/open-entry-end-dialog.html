@@ -1,0 +1,56 @@
+<h2 mat-dialog-title>{{ 'dashboard.openEntryEndDialogTitle' | translate }}</h2>
+
+<mat-dialog-content>
+  <p class="end-body">{{ 'dashboard.openEntryEndDialogBody' | translate: { date: dayText() } }}</p>
+
+  @if (expectedEnd || nowEnd) {
+    <div class="suggestions">
+      @if (expectedEnd) {
+        <button mat-stroked-button type="button" (click)="useExpectedEnd()">
+          {{ 'dashboard.openEntryEndSuggestionExpected' | translate: { time: expectedEndText } }}
+        </button>
+      }
+      @if (nowEnd) {
+        <button mat-stroked-button type="button" (click)="useNow()">
+          {{ 'dashboard.openEntryEndSuggestionNow' | translate }}
+        </button>
+      }
+    </div>
+  }
+
+  <form class="fields" [formGroup]="form" (ngSubmit)="confirm()">
+    <mat-form-field appearance="outline">
+      <mat-label>{{ 'dashboard.openEntryEndDateLabel' | translate }}</mat-label>
+      <input matInput type="date" formControlName="date" [min]="minDate" [max]="maxDate" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>{{ 'dashboard.openEntryEndTimeLabel' | translate }}</mat-label>
+      <input matInput type="time" formControlName="time" cdkFocusInitial
+             [attr.aria-describedby]="timeMissing() ? 'open-entry-time-required' : null" />
+    </mat-form-field>
+  </form>
+
+  @if (timeMissing()) {
+    <p class="end-hint" id="open-entry-time-required">{{ 'dashboard.openEntryEndTimeRequired' | translate }}</p>
+  }
+  @if (endInvalid()) {
+    <p class="end-error" role="alert">
+      <mat-icon aria-hidden="true">error</mat-icon>
+      <span>{{ 'dashboard.openEntryEndInvalid' | translate }}</span>
+    </p>
+  }
+  @if (longWarning()) {
+    <p class="end-warning" role="status">
+      <mat-icon aria-hidden="true">warning</mat-icon>
+      <span>{{ 'dashboard.openEntryEndLongWarning' | translate }}</span>
+    </p>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button type="button" [mat-dialog-close]="undefined">{{ 'common.cancel' | translate }}</button>
+  <button mat-flat-button type="button" [disabled]="form.invalid" (click)="confirm()">
+    {{ 'dashboard.openEntryEndDialogConfirm' | translate }}
+  </button>
+</mat-dialog-actions>
