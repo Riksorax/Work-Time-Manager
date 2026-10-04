@@ -2,14 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
 
 import '../../core/providers/providers.dart' as core_providers;
+import '../../core/providers/today_provider.dart';
 import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/utils/leave_balance_utils.dart';
 import '../state/leave_balance_state.dart';
-
-/// Liefert "jetzt" - im Test überschreibbar, damit das Jahr nicht vom
-/// aktuellen Datum abhängt.
-final leaveBalanceNowProvider =
-    Provider<DateTime Function()>((ref) => DateTime.now);
 
 final leaveBalanceViewModelProvider =
     NotifierProvider<LeaveBalanceViewModel, LeaveBalanceState>(
@@ -20,7 +16,9 @@ final leaveBalanceViewModelProvider =
 /// Urlaubsanspruch aus den Einstellungen (siehe #278).
 ///
 /// Wird nach Änderungen an Einträgen/Anspruch per `ref.invalidate` neu
-/// geladen; das Jahr wird bei jedem Laden neu bestimmt.
+/// geladen; das Jahr kommt aus [todayProvider]. Beim Jahreswechsel (#387)
+/// wird die Vorjahres-Bilanz verworfen und neu geladen (Ladezustand statt
+/// falschem Resturlaub); Tageswechsel im selben Jahr lösen nichts aus.
 class LeaveBalanceViewModel extends Notifier<LeaveBalanceState> {
   LeaveBalance? _last;
 
@@ -29,19 +27,30 @@ class LeaveBalanceViewModel extends Notifier<LeaveBalanceState> {
     // Profil-/Login-Wechsel erzeugt neue Repository-Instanzen -> Neuladen.
     ref.watch(core_providers.workRepositoryProvider);
     ref.watch(core_providers.settingsRepositoryProvider);
+    // listen statt watch: watch würde den Notifier an jedem Tag neu bauen
+    // (12 Abfragen, Zustandsverlust).
+    ref.listen<DateTime>(todayProvider, (previous, next) {
+      if (previous != null && previous.year != next.year) {
+        _last = null;
+        reload();
+      }
+    });
+    final year = ref.read(todayProvider).year;
+    if (_last?.year != year) _last = null;
     Future.microtask(_load);
     return LeaveBalanceState(isLoading: true, balance: _last);
   }
 
   /// Lädt die Bilanz erneut (z. B. "Erneut versuchen" in der Fehleransicht).
   Future<void> reload() async {
+    if (!ref.mounted) return;
     state = LeaveBalanceState(isLoading: true, balance: _last);
     await _load();
   }
 
   Future<void> _load() async {
     try {
-      final year = ref.read(leaveBalanceNowProvider)().year;
+      final year = ref.read(todayProvider).year;
       final workRepository = ref.read(core_providers.workRepositoryProvider);
       final entitlement = ref
           .read(core_providers.settingsRepositoryProvider)

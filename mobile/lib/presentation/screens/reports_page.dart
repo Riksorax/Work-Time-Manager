@@ -2834,7 +2834,7 @@ class YearlyLeaveRows extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final currentYear = ref.watch(leaveBalanceNowProvider)().year;
+    final currentYear = ref.watch(todayProvider.select((d) => d.year));
 
     if (year != currentYear) {
       return Padding(
