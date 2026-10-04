@@ -15,6 +15,7 @@ import '../../domain/utils/german_holidays.dart';
 import '../../domain/utils/iso_week.dart';
 import '../../domain/utils/weekday_labels.dart';
 import '../../l10n/app_localizations.dart';
+import '../utils/holiday_name_localizer.dart';
 import '../widgets/common/paywall_launcher.dart';
 import '../widgets/common/responsive_center.dart';
 import '../widgets/premium_blur_gate.dart';
@@ -1973,10 +1974,10 @@ class _CalendarState extends ConsumerState<_Calendar> {
     // um welchen Feiertag es sich handelt (siehe #253).
     final bundesland =
         settingsState.whenData((s) => s.settings.bundesland).value;
-    final Map<DateTime, String> holidayNames = bundesland != null
-        ? getGermanHolidayNames(widget.selectedDate.year, bundesland)
-        : const <DateTime, String>{};
-    final Set<DateTime> holidays = holidayNames.keys.toSet();
+    final Map<DateTime, GermanHoliday> holidayIds = bundesland != null
+        ? getGermanHolidayIds(widget.selectedDate.year, bundesland)
+        : const <DateTime, GermanHoliday>{};
+    final Set<DateTime> holidays = holidayIds.keys.toSet();
 
     return Card(
       margin: const EdgeInsets.all(8.0),
@@ -2122,7 +2123,8 @@ class _CalendarState extends ConsumerState<_Calendar> {
                     final isHoliday = holidays
                         .contains(DateTime(date.year, date.month, date.day));
                     final holidayName =
-                        holidayNames[DateTime(date.year, date.month, date.day)];
+                        holidayIds[DateTime(date.year, date.month, date.day)]
+                            ?.localizedName(l10n);
 
                     Widget dayWidget = Center(
                       child: Text(
