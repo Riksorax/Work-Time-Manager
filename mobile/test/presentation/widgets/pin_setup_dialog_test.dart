@@ -154,4 +154,21 @@ void main() {
     expect(service.verifyPin('9999'), isTrue);
     expect(service.verifyRecoveryCode('ABCDEFGHJKLMNPQR'), isTrue);
   });
+
+  testWidgets('erfolgreiches Setzen setzt den Fehlversuchszähler zurück (#358)',
+      (tester) async {
+    await prefs.setInt('app_lock_failed_attempts', 7);
+    await prefs.setInt('app_lock_locked_until_ms',
+        DateTime.utc(2099, 1, 1).millisecondsSinceEpoch);
+    await goToCodeStep(tester, '1234');
+    await tester.tap(find.byType(CheckboxListTile));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Bestätigen'));
+    await tester.pumpAndSettle();
+
+    expect(result, isTrue);
+    expect(prefs.getInt('app_lock_failed_attempts'), isNull);
+    expect(prefs.getInt('app_lock_locked_until_ms'), isNull);
+    expect(service.remainingLockout, Duration.zero);
+  });
 }

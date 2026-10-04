@@ -17,6 +17,8 @@ import '../../domain/usecases/auth_usecases_test.mocks.dart';
 import 'package:flutter_work_time/domain/usecases/reauthenticate.dart';
 import 'package:mockito/mockito.dart';
 
+import '../../helpers/app_lock_fakes.dart';
+
 void main() {
   late SharedPreferences prefs;
   late AppLockService service;
@@ -174,5 +176,139 @@ void main() {
         find.widgetWithText(FilledButton, 'Mit Google bestätigen'));
     expect(button.onPressed, isNotNull);
     expect(result, isNull);
+  });
+
+  group('Brute-Force-Limit (#358)', () {
+    // Solange der Countdown-Timer läuft, nie pumpAndSettle verwenden.
+    late FakeClock clock;
+    late FakeMonotonic mono;
+    const failedKey = 'app_lock_failed_attempts';
+
+    AppLockService build() => AppLockService(
+          prefs: prefs,
+          localAuth: LocalAuthentication(),
+          now: clock.call,
+          monotonic: mono.call,
+        );
+
+    setUp(() async {
+      clock = FakeClock();
+      mono = FakeMonotonic();
+      service = build();
+      await service.setPinWithRecoveryCode('1234', 'ABCDEFGHJKLMNPQR');
+    });
+
+    Future<void> openNoSettle(WidgetTester tester,
+        {required bool loggedIn}) async {
+      await tester.pumpWidget(createSubject(loggedIn: loggedIn));
+      await tester.tap(find.text('open'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+    }
+
+    Future<void> tick(WidgetTester tester, Duration d) async {
+      clock.advance(d);
+      mono.advance(d);
+      await tester.pump(d);
+    }
+
+    Future<void> submit(WidgetTester tester, String code) async {
+      await tester.enterText(find.byType(TextField), code);
+      await tester.tap(find.text('PIN zurücksetzen').last);
+      await tester.pump();
+      await tester.pump();
+    }
+
+    TextField field(WidgetTester tester) =>
+        tester.widget<TextField>(find.byType(TextField));
+
+    testWidgets('gemeinsamer Zähler: 2 Fehlversuche + falscher Code -> Sperre',
+        (tester) async {
+      await service.attemptPin('0000');
+      await service.attemptPin('0000');
+      await openNoSettle(tester, loggedIn: false);
+      await submit(tester, 'AAAA-AAAA-AAAA-AAAA');
+      expect(field(tester).enabled, isFalse);
+      expect(
+          tester
+              .widget<FilledButton>(
+                  find.widgetWithText(FilledButton, 'PIN zurücksetzen'))
+              .onPressed,
+          isNull);
+      expect(find.text('Zu viele Fehlversuche. Versuche es in 00:05 erneut.'),
+          findsOneWidget);
+      await tick(tester, const Duration(seconds: 5));
+    });
+
+    testWidgets('Sperre besteht nach Schließen und Öffnen weiter',
+        (tester) async {
+      for (var i = 0; i < 3; i++) {
+        await service.attemptPin('0000');
+      }
+      await openNoSettle(tester, loggedIn: false);
+      expect(field(tester).enabled, isFalse);
+      await tester.tap(find.text('Abbrechen'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(result, isFalse);
+      // Abbrechen räumt den Timer auf.
+      await tester.pump(const Duration(seconds: 10));
+      await tester.tap(find.text('open'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(field(tester).enabled, isFalse);
+      await tick(tester, const Duration(seconds: 5));
+    });
+
+    testWidgets('Re-Auth bleibt in der Sperre nutzbar und zählt nicht',
+        (tester) async {
+      when(repo.reauthenticate()).thenAnswer((_) async => true);
+      for (var i = 0; i < 3; i++) {
+        await service.attemptPin('0000');
+      }
+      await openNoSettle(tester, loggedIn: true);
+      expect(field(tester).enabled, isFalse);
+      await tester.tap(find.text('Mit Google bestätigen'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(result, isTrue);
+      expect(prefs.getInt(failedKey), 3);
+    });
+
+    testWidgets('richtiger Code nach Ablauf liefert true und setzt zurück',
+        (tester) async {
+      for (var i = 0; i < 3; i++) {
+        await service.attemptPin('0000');
+      }
+      await openNoSettle(tester, loggedIn: false);
+      await tick(tester, const Duration(seconds: 5));
+      await tester.pump();
+      expect(field(tester).enabled, isTrue);
+      await submit(tester, 'ABCDEFGHJKLMNPQR');
+      await tester.pumpAndSettle();
+      expect(result, isTrue);
+      expect(prefs.getInt(failedKey), isNull);
+    });
+
+    testWidgets('Doppeltipp zählt nur einen Versuch', (tester) async {
+      final rec = RecordingSharedPreferences(prefs);
+      final gate = Completer<void>();
+      rec.setIntDelay = gate.future;
+      service = AppLockService(
+          prefs: rec,
+          localAuth: LocalAuthentication(),
+          now: clock.call,
+          monotonic: mono.call);
+      await openNoSettle(tester, loggedIn: false);
+      await tester.enterText(find.byType(TextField), 'AAAA-AAAA-AAAA-AAAA');
+      final button = find.text('PIN zurücksetzen').last;
+      await tester.tap(button);
+      await tester.tap(button, warnIfMissed: false);
+      await tester.pump();
+      gate.complete();
+      await tester.pump();
+      await tester.pump();
+      expect(prefs.getInt(failedKey), 1);
+    });
   });
 }
