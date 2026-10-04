@@ -577,16 +577,16 @@ export class DashboardService {
     const settings  = this._currentSettings();
     const targetMs  = this._targetDailyMs(settings, e.date);
     const manualMs  = (e.manualOvertimeMinutes ?? 0) * 60000;
-    const now       = new Date();
-    const breakMs   = this._totalBreakMs(e.breaks, now);
-    const elapsed   = now.getTime() - e.workStart.getTime() - breakMs;
+    const end       = e.workEnd ?? new Date(); // gestoppt: workEnd, nie "jetzt" (#390)
+    const breakMs   = this._totalBreakMs(e.breaks, end);
+    const elapsed   = end.getTime() - e.workStart.getTime() - breakMs;
     const daily     = elapsed - targetMs + manualMs;
     const base      = this._s().initialOvertimeMs ?? 0;
     const total     = base + daily;
 
-    const expectedEnd          = this._calcExpectedEnd(e.workStart, targetMs, this._totalBreakMs(e.breaks, now));
+    const expectedEnd          = this._calcExpectedEnd(e.workStart, targetMs, this._totalBreakMs(e.breaks, end));
     const remainingForZero     = Math.max(0, targetMs - base - manualMs);
-    const expectedEndTotalZero = this._calcExpectedEnd(e.workStart, remainingForZero, this._totalBreakMs(e.breaks, now));
+    const expectedEndTotalZero = this._calcExpectedEnd(e.workStart, remainingForZero, this._totalBreakMs(e.breaks, end));
 
     this._s.update(s => ({
       ...s,
