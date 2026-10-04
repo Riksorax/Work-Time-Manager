@@ -341,11 +341,11 @@ void main() {
   });
 
   group('O1 Dispose mitten in der Aktion', () {
-    // Nur eine ueberholte Aktion schluckt Fehler; sonst geht er wie vor #388
-    // an den Aufrufer (hier setManualEndTime, nicht der Stop-Pfad, dessen
-    // Fehlerbehandlung ein eigenes Thema ist).
+    // Ein Saldo-Fehler wird nie weitergereicht (#402, vorher Rethrow bei nicht
+    // ueberholter Aktion): loggen, State und Timer unveraendert, nichts
+    // geschrieben. Hier setManualEndTime auf beendetem Eintrag.
     scenario(
-        'ohne Ueberholung: Saldo-Fehler wird weitergereicht, nichts geschrieben',
+        'ohne Ueberholung: Saldo-Fehler wird nicht weitergereicht, nichts geschrieben',
         at(17), (h) {
       h.boot();
       h.overtime.failSaveOvertime = true;
@@ -355,9 +355,10 @@ void main() {
           .then<void>((_) {}, onError: (Object e) => error = e));
       h.async.flushMicrotasks();
 
-      expect(error, isA<Exception>());
+      expect(error, isNull);
       expect(h.writeLog, isEmpty);
       expect(h.work.saved, isEmpty);
+      expect(h.state.workEntry, finishedA);
     }, setUp: prep(a: finishedA), profiles: true);
 
     scenario('Logout/Dispose: begonnene Aktion schreibt zu Ende', at(17), (h) {

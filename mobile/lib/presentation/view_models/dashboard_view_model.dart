@@ -502,8 +502,9 @@ class DashboardViewModel extends Notifier<DashboardState> {
       updatedEntry = state.workEntry.copyWith(workStart: now);
       logger.i('[Dashboard] Timer gestartet um $now');
     } else if (state.workEntry.workEnd == null) {
-      // STOP - Arbeit beenden
-      _timer?.cancel();
+      // STOP - Arbeit beenden. Der Timer wird erst in `_startTimerIfNeeded`
+      // nach dem erfolgreichen Setzen des States abgebrochen: scheitert der
+      // Saldo-Write, laeuft er weiter (#402).
       updatedEntry = state.workEntry.copyWith(workEnd: now);
       logger.i('[Dashboard] Timer gestoppt um $now');
 
@@ -623,12 +624,13 @@ class DashboardViewModel extends Notifier<DashboardState> {
           await _checkOvertimeWarning(
               newTotalOvertime, actionCtx.settingsRepository);
         } catch (e, st) {
-          // Eine überholte Aktion (Profilwechsel, Logout) hat keinen Aufrufer
-          // mehr, der den Fehler sinnvoll behandeln könnte: loggen und
-          // aufhören. Im Normalfall bleibt das Verhalten unverändert.
-          if (!overtaken()) rethrow;
+          // Vor dem State-Update und vor jedem Timer-Eingriff: State, Timer und
+          // Eintrag bleiben unveraendert, nichts wird weitergeworfen (sonst
+          // landet es als fatal in Crashlytics, #402). Der Saldo ist absolut,
+          // ein Wiederholen ist idempotent. Nur loggen, keine Eintragsinhalte.
           logger.e(
-              '[Dashboard] Saldo der überholten Aktion nicht gespeichert: $e',
+              '[Dashboard] Saldo nicht gespeichert (${e.runtimeType})'
+              '${overtaken() ? ', Aktion überholt' : ''}',
               stackTrace: st);
           return;
         }
