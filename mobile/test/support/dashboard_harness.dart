@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_work_time/core/providers/clock_provider.dart';
 import 'package:flutter_work_time/core/providers/providers.dart';
@@ -20,22 +21,66 @@ import 'fake_repositories.dart';
 const eightHours = Duration(hours: 8);
 
 class Harness {
-  Harness(this.async, DateTime start) {
+  /// Mit [profiles] `true` gibt es ein zweites Repo-Set (Profil B, `workB`/
+  /// `overtimeB`/`settingsB`) und einen Test-Notifier für das aktive Profil;
+  /// die Repo-Provider watchen ihn wie in `providers.dart` (#388). Die Felder
+  /// `work`/`overtime`/`settings` sind immer Profil A (Standard, `null`).
+  Harness(this.async, DateTime start,
+      {this.profiles = false, List<Override> overrides = const []}) {
     clock = FakeClock(start)..bind(async);
+    if (!profiles) {
+      container = ProviderContainer(overrides: [
+        workRepositoryProvider.overrideWithValue(work),
+        overtimeRepositoryProvider.overrideWithValue(overtime),
+        settingsRepositoryProvider.overrideWithValue(settings),
+        clockProvider.overrideWithValue(clock.call),
+        ...overrides,
+      ]);
+      return;
+    }
     container = ProviderContainer(overrides: [
-      workRepositoryProvider.overrideWithValue(work),
-      overtimeRepositoryProvider.overrideWithValue(overtime),
-      settingsRepositoryProvider.overrideWithValue(settings),
+      activeWorkProfileIdProvider.overrideWith(_TestActiveProfile.new),
+      workRepositoryProvider.overrideWith((ref) =>
+          ref.watch(activeWorkProfileIdProvider) == null ? work : workB),
+      overtimeRepositoryProvider.overrideWith((ref) =>
+          ref.watch(activeWorkProfileIdProvider) == null
+              ? overtime
+              : overtimeB),
+      settingsRepositoryProvider.overrideWith((ref) =>
+          ref.watch(activeWorkProfileIdProvider) == null
+              ? settings
+              : settingsB),
       clockProvider.overrideWithValue(clock.call),
+      ...overrides,
     ]);
   }
 
   final FakeAsync async;
   late final FakeClock clock;
   late final ProviderContainer container;
-  final work = FakeWorkRepository();
-  final overtime = FakeOvertimeRepository();
-  final settings = FakeSettingsRepository();
+  final bool profiles;
+
+  /// Gemeinsames Schreib-Log aller Profil-Repos (nur im Profil-Modus gefüllt):
+  /// `<A|B>:entry:<yyyy-MM-dd>:<start>-<ende>`, `<A|B>:overtime:<min>`,
+  /// `<A|B>:lastUpdate`.
+  final List<String> writeLog = [];
+
+  late final work =
+      FakeWorkRepository(label: profiles ? 'A' : null, writeLog: writeLog);
+  late final overtime =
+      FakeOvertimeRepository(label: profiles ? 'A' : null, writeLog: writeLog);
+  late final settings = FakeSettingsRepository();
+  late final workB = FakeWorkRepository(label: 'B', writeLog: writeLog);
+  late final overtimeB = FakeOvertimeRepository(label: 'B', writeLog: writeLog);
+  late final settingsB = FakeSettingsRepository();
+
+  /// Wechselt das aktive Profil (`null` = A) und lässt den Scheduler-Task des
+  /// Rebuilds laufen. Wechsel in Tests immer darüber (nie von Hand verteilen).
+  void switchProfile(String? id) {
+    container.read(activeWorkProfileIdProvider.notifier).setActiveProfile(id);
+    async.elapse(Duration.zero);
+    async.flushMicrotasks();
+  }
 
   DashboardViewModel get vm =>
       container.read(dashboardViewModelProvider.notifier);
@@ -89,17 +134,31 @@ WorkEntryEntity entryOf(
       breaks: breaks,
     );
 
+/// Test-Ersatz für den echten Notifier: kein Auth/Prefs, `setActiveProfile`
+/// setzt nur `state` (synchron, wie das Original).
+class _TestActiveProfile extends ActiveWorkProfileIdNotifier {
+  @override
+  String? build() => null;
+
+  @override
+  Future<void> setActiveProfile(String? profileId) async {
+    state = profileId;
+  }
+}
+
 /// Fuehrt [body] in `fakeAsync` aus; danach darf kein Timer mehr laufen.
 void scenario(
   String name,
   DateTime start,
   void Function(Harness h) body, {
   void Function(Harness h)? setUp,
+  bool profiles = false,
+  List<Override> overrides = const [],
 }) {
   test(name, () {
     fakeAsync((async) {
       TestWidgetsFlutterBinding.ensureInitialized();
-      final h = Harness(async, start);
+      final h = Harness(async, start, profiles: profiles, overrides: overrides);
       setUp?.call(h);
       body(h);
       h.dispose();
