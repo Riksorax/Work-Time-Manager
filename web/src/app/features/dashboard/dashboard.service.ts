@@ -1,10 +1,11 @@
-import { Injectable, inject, signal, computed, effect, DestroyRef } from '@angular/core';
+import { Injectable, inject, signal, computed, effect, untracked, DestroyRef } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { catchError, firstValueFrom, interval, of } from 'rxjs';
 import { WorkEntryService } from '../../core/services/work-entry';
 import { OvertimeService }  from '../../core/services/overtime';
 import { SettingsService }  from '../../core/services/settings';
 import { AuthService }      from '../../core/auth/auth';
+import { TodayService }     from '../../core/services/today';
 import { GermanHoliday, getGermanHolidayIds, toDateKey } from '../../shared/utils/german-holidays.util';
 import { DEFAULT_SETTINGS, WorkEntry, WorkEntryType, Break } from '../../shared/models';
 import { calculateAndApplyBreaks } from '../../domain/services/break-calculator';
@@ -12,7 +13,6 @@ import { nowToMinute, roundToMinute, roundMsToMinute } from '../../shared/utils/
 import {
   getEffectiveDailyTarget,
   calculateInitialOvertime,
-  isSameDay,
 } from '../../domain/utils/overtime.utils';
 
 interface DashboardState {
@@ -72,15 +72,13 @@ export class DashboardService {
     this.settingsSvc.getSettings().pipe(catchError(() => of(DEFAULT_SETTINGS))),
     { initialValue: DEFAULT_SETTINGS },
   );
-  /** Lokales Datum als `YYYY-MM-DD`. */
-  private readonly _today = signal<string>(toDateKey(new Date()));
-  private _midnightHandle: ReturnType<typeof setTimeout> | null = null;
+  private readonly todayService = inject(TodayService);
 
   /** Feiertag des lokalen Datums laut gewähltem Bundesland, sonst `null` (rein informativ). */
   readonly holidayToday = computed<GermanHoliday | null>(() => {
     const land = this._holidaySettings().bundesland;
     if (!land) return null;
-    const key = this._today();
+    const key = this.todayService.today();
     return getGermanHolidayIds(Number(key.slice(0, 4)), land).get(key) ?? null;
   });
   readonly isLoggedIn = computed(() => !!this.authSvc.user());
@@ -106,15 +104,26 @@ export class DashboardService {
   readonly breaks          = computed(() => this._s().workEntry.breaks);
 
   // ─── Private timer state ────────────────────────────────────────────────────
-  private _timerSub: ReturnType<typeof interval> | null = null;
   private _timerUnsub: (() => void) | null = null;
   private _autoSaveTick = 0;
+  private _initGen = 0;
+  /** Letzter laufender `_init` (für `_ensureCurrentDay`, damit überholte Aktionen auf den neuesten warten). */
+  private _initRun: Promise<void> | null = null;
 
   constructor() {
     // Re-init on auth state change (Flow 11)
     effect(() => {
       const user = this.authSvc.user();
       void this._init(user?.uid ?? null);
+    });
+
+    // Tageswechsel (#372): erster Lauf = Startzustand, übersprungen. Nur gestoppte/leere Einträge wechseln still;
+    // ein laufender Timer läuft über Mitternacht weiter und der Eintrag bleibt am Starttag.
+    let firstDayRun = true;
+    effect(() => {
+      const day = this.todayService.today();
+      if (firstDayRun) { firstDayRun = false; return; }
+      untracked(() => this._onDayChange(day));
     });
 
     // Einstellungen reaktiv halten — Überstunden bei Änderung neu berechnen
@@ -126,68 +135,83 @@ export class DashboardService {
           this._recalculateOvertime();
         }
       });
-
-    // Tageswechsel für den Feiertags-Chip (#279)
-    const onVisible = (): void => {
-      if (document.visibilityState === 'visible') {
-        this._refreshToday();
-        this._scheduleMidnight();
-      }
-    };
-    document.addEventListener('visibilitychange', onVisible);
-    this._scheduleMidnight();
-    this.destroyRef.onDestroy(() => {
-      document.removeEventListener('visibilitychange', onVisible);
-      if (this._midnightHandle !== null) clearTimeout(this._midnightHandle);
-      this._midnightHandle = null;
-    });
-
-    // Page Visibility API — re-sync elapsed on tab focus (Flow 4)
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible' && this.isTimerRunning()) {
-        this._recalculateOvertime();
-      }
-    });
   }
 
-  private _refreshToday(): void {
-    this._today.set(toDateKey(new Date()));
+  private _uid(): string | null {
+    return this.authSvc.user()?.uid ?? null;
   }
 
-  private _scheduleMidnight(): void {
-    if (this._midnightHandle !== null) clearTimeout(this._midnightHandle);
-    const now = new Date();
-    const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime();
-    const delay = Math.max(1000, nextMidnight - now.getTime());
-    this._midnightHandle = setTimeout(() => {
-      this._refreshToday();
-      this._scheduleMidnight();
-    }, delay);
+  /**
+   * Aktionen-Guard: ein gestoppter Eintrag eines früheren Tages wird vor jeder Aktion auf den heutigen Tag
+   * umgestellt, damit „Start" nach Mitternacht nie in den Vortag schreibt. Laufende Einträge sind ausgenommen
+   * (Stop/Pause gehören zum Starttag).
+   *
+   * Liefert `false`, wenn der Zustand danach nicht zum heutigen Tag passt (Reinit überholt/fehlgeschlagen):
+   * die Aktion MUSS dann abbrechen — sonst liefe sie auf dem veralteten Vortags-Eintrag und schriebe dorthin.
+   * Läuft ein anderer `_init` (Doppelklick, Login), wird dessen Ende abgewartet.
+   */
+  private async _ensureCurrentDay(): Promise<boolean> {
+    this.todayService.refresh();
+    if (this._isCurrentDay()) return true;
+    await this._init(this._uid(), { dayChange: true });
+    // Überholt? Dann auf den neuesten Lauf warten (er setzt den endgültigen Zustand).
+    while (this._initRun !== null) await this._initRun;
+    this.todayService.refresh();
+    return this._isCurrentDay();
+  }
+
+  /** Eintrag läuft (Starttag bleibt) oder gehört zum heutigen Tag. */
+  private _isCurrentDay(): boolean {
+    const e = this._s().workEntry;
+    if (!!e.workStart && !e.workEnd) return true;
+    return toDateKey(e.date) === this.todayService.today();
+  }
+
+  private _onDayChange(day: string): void {
+    const e = this._s().workEntry;
+    if (!!e.workStart && !e.workEnd) return; // laufender Timer: nichts anfassen
+    if (toDateKey(e.date) === day && this._s().status === 'ready') return;
+    void this._init(this._uid(), { dayChange: true });
   }
 
   // ─── Flow 1: Initialisierung ────────────────────────────────────────────────
-  private async _init(uid: string | null): Promise<void> {
+  // Generationszähler: ein überholter Lauf (Login, Tageswechsel) darf Zustand/Timer nicht mehr verändern.
+  private _init(_uid: string | null, opts: { dayChange?: boolean } = {}): Promise<void> {
+    const run: Promise<void> = this._initInner(opts).finally(() => {
+      if (this._initRun === run) this._initRun = null;
+    });
+    this._initRun = run;
+    return run;
+  }
+
+  private async _initInner(opts: { dayChange?: boolean }): Promise<void> {
+    const gen = ++this._initGen;
     this._stopTimer();
-    this._s.set(initialState());
+    // Beim stillen Tageswechsel den alten Zustand stehen lassen (kein Lade-Flackern), sonst zurücksetzen.
+    if (!opts.dayChange) this._s.set(initialState());
 
     try {
       const today = new Date();
 
       // 1. Heutigen Eintrag laden
       const workEntry = (await firstValueFrom(this.workSvc.getTodayEntry())) ?? this.workSvc.emptyEntry(today);
+      if (gen !== this._initGen) return;
 
       // 2. Überstunden + Datum laden
       const storedOvertimeMs = await this.overtimeSvc.getOvertime();
+      if (gen !== this._initGen) return;
       const lastUpdateDate   = await this.overtimeSvc.getLastUpdateDate();
+      if (gen !== this._initGen) return;
 
       // 3. Einstellungen laden + Cache sofort befüllen (firstValueFrom = take(1), keine dauerhafte Subscription)
       const settings = await firstValueFrom(this.settingsSvc.getSettings());
+      if (gen !== this._initGen) return;
       this._settingsCache = { weeklyTargetHours: settings.weeklyTargetHours, workdays: settings.workdays };
 
       // 4. Effektives Tagessoll berechnen
       const weeklyMs          = settings.weeklyTargetHours * 60 * 60 * 1000;
       const regularDailyMs    = settings.workdays.length > 0 ? roundMsToMinute(weeklyMs / settings.workdays.length) : 0;
-      const targetDailyMs     = getEffectiveDailyTarget(today, settings.workdays, regularDailyMs);
+      const targetDailyMs     = getEffectiveDailyTarget(workEntry.date, settings.workdays, regularDailyMs);
       const isExtraDay        = targetDailyMs === 0;
 
       // 6. Initiales Daily Overtime berechnen
@@ -204,8 +228,15 @@ export class DashboardService {
         initialDailyMs   = netMs - targetDailyMs + manualEntryMs;
       }
 
-      // 7. Base-Overtime berechnen
-      const initialOvertimeMs = calculateInitialOvertime(storedOvertimeMs, lastUpdateDate, initialDailyMs);
+      // 7. Base-Overtime berechnen. Beim Tageswechsel ist der gespeicherte Wert die Basis: ein Vortags-Save nach
+      // Mitternacht setzt `lastUpdated` auf „heute" und würde sonst den neuen Tages-Daily fälschlich abziehen.
+      // Ausnahme: wurde der geladene heutige Eintrag bereits abgeschlossen UND danach gespeichert (z. B. auf einem
+      // anderen Gerät), steckt sein Daily im gespeicherten Wert — dann gilt weiter die Heuristik (kein Doppelzählen).
+      const dailyAlreadyStored = !!workEntry.workStart && !!workEntry.workEnd
+        && !!lastUpdateDate && lastUpdateDate.getTime() >= workEntry.workEnd.getTime();
+      const initialOvertimeMs = opts.dayChange && !dailyAlreadyStored
+        ? storedOvertimeMs
+        : calculateInitialOvertime(storedOvertimeMs, lastUpdateDate, initialDailyMs);
       const totalOvertimeMs   = initialOvertimeMs + initialDailyMs;
 
       this._s.set({
@@ -225,6 +256,7 @@ export class DashboardService {
       this._recalculateState(workEntry, false);
       this._startTimerIfNeeded();
     } catch {
+      if (gen !== this._initGen) return;
       // Initialisierung fehlgeschlagen — leeren Zustand zeigen statt Dauerladespinner
       this._s.update(s => ({ ...s, status: 'ready' }));
     }
@@ -232,6 +264,7 @@ export class DashboardService {
 
   // ─── Flow 2+3: Timer starten / stoppen ─────────────────────────────────────
   async startOrStopTimer(): Promise<'restart-dialog' | void> {
+    if (!(await this._ensureCurrentDay())) return;
     const e = this._s().workEntry;
     if (!e.workStart) {
       // START
@@ -248,6 +281,11 @@ export class DashboardService {
       }
       await this._recalculateState(updated, true);
       await this._saveOvertime();
+      // Über Mitternacht gelaufen: der Eintrag gehört zum Starttag, die Anzeige wechselt auf den neuen Tag.
+      this.todayService.refresh();
+      if (toDateKey(updated.date) !== this.todayService.today()) {
+        await this._init(this._uid(), { dayChange: true });
+      }
     } else {
       // Bereits gestoppt → Restart-Dialog nötig (Flow 5)
       return 'restart-dialog';
@@ -256,6 +294,7 @@ export class DashboardService {
 
   // ─── Flow 5: Restart Session ────────────────────────────────────────────────
   async startNewSession(keepBreaks: boolean): Promise<void> {
+    if (!(await this._ensureCurrentDay())) return;
     const e = this._s().workEntry;
     const updated: WorkEntry = {
       ...e,
@@ -270,6 +309,7 @@ export class DashboardService {
 
   // ─── Flow 6: Pause starten/stoppen ──────────────────────────────────────────
   async startOrStopBreak(): Promise<void> {
+    if (!(await this._ensureCurrentDay())) return;
     const e = this._s().workEntry;
     const runningBreak = e.breaks.find(b => !b.end);
     let updatedBreaks: Break[];
@@ -291,6 +331,7 @@ export class DashboardService {
 
   // ─── Flow 7: Manuelle Startzeit ──────────────────────────────────────────────
   async setManualStartTime(timeStr: string): Promise<void> {
+    if (!(await this._ensureCurrentDay())) return;
     const e = this._s().workEntry;
     let updated: WorkEntry = { ...e, workStart: this._parseTime(e.date, timeStr) };
     const hasRunning = updated.breaks.some(b => !b.end);
@@ -303,6 +344,7 @@ export class DashboardService {
 
   // ─── Flow 8: Manuelle Endzeit ─────────────────────────────────────────────
   async setManualEndTime(timeStr: string): Promise<void> {
+    if (!(await this._ensureCurrentDay())) return;
     const e = this._s().workEntry;
     let updated: WorkEntry = { ...e, workEnd: this._parseTime(e.date, timeStr) };
     const hasRunning = updated.breaks.some(b => !b.end);
@@ -313,6 +355,7 @@ export class DashboardService {
   }
 
   async clearEndTime(): Promise<void> {
+    if (!(await this._ensureCurrentDay())) return;
     const e = this._s().workEntry;
     const updated = { ...e, workEnd: undefined };
     await this._recalculateState(updated, true);
@@ -321,6 +364,7 @@ export class DashboardService {
 
   // ─── Flow 9: Pause bearbeiten ─────────────────────────────────────────────
   async updateBreak(updated: Break): Promise<void> {
+    if (!(await this._ensureCurrentDay())) return;
     const e = this._s().workEntry;
     const normalized: Break = {
       ...updated,
@@ -333,6 +377,7 @@ export class DashboardService {
 
   // ─── Flow 10: Pause löschen ───────────────────────────────────────────────
   async deleteBreak(id: string): Promise<void> {
+    if (!(await this._ensureCurrentDay())) return;
     const e = this._s().workEntry;
     const breaks = e.breaks.filter(b => b.id !== id);
     await this._recalculateState({ ...e, breaks }, true);
@@ -380,6 +425,7 @@ export class DashboardService {
   private _tick(): void {
     const e = this._s().workEntry;
     if (!e.workStart || e.workEnd) return;
+    this.todayService.refresh(); // Standby-Härtung: Tageswechsel auch ohne feuernden Mitternachts-Timer erkennen
     const now    = new Date();
     const breakMs = this._totalBreakMs(e.breaks, now);
     const elapsed = now.getTime() - e.workStart.getTime() - breakMs;
@@ -389,8 +435,11 @@ export class DashboardService {
   }
 
   private async _autoSave(): Promise<void> {
-    if (!this._s().workEntry.workStart) return;
-    try { await this.workSvc.saveEntry(this._s().workEntry); } catch { /* silent */ }
+    // Synchron aus dem aktuellen Zustand; `_init` stoppt den Timer vor jedem Zustandswechsel, ein Autosave
+    // kann daher nie mit einem überholten Eintrag laufen.
+    const entry = this._s().workEntry;
+    if (!entry.workStart) return;
+    try { await this.workSvc.saveEntry(entry); } catch { /* silent */ }
   }
 
   // ─── Overtime Calculation ─────────────────────────────────────────────────
@@ -399,7 +448,7 @@ export class DashboardService {
     if (!e.workStart) return;
 
     const settings  = this._currentSettings();
-    const targetMs  = this._targetDailyMs(settings);
+    const targetMs  = this._targetDailyMs(settings, e.date);
     const manualMs  = (e.manualOvertimeMinutes ?? 0) * 60000;
     const now       = new Date();
     const breakMs   = this._totalBreakMs(e.breaks, now);
@@ -418,6 +467,7 @@ export class DashboardService {
       totalOvertimeMs:      total,
       expectedEndTime:      expectedEnd,
       expectedEndTotalZero,
+      isExtraDay:           targetMs === 0,
     }));
   }
 
@@ -452,7 +502,7 @@ export class DashboardService {
       const breaks = this._totalBreakMs(entry.breaks, entry.workEnd);
       actualWorkMs = grossMs - breaks;
       const settings  = this._currentSettings();
-      const targetMs  = this._targetDailyMs(settings);
+      const targetMs  = this._targetDailyMs(settings, entry.date);
       const manualMs  = (entry.manualOvertimeMinutes ?? 0) * 60000;
       dailyMs    = actualWorkMs - targetMs + manualMs;
       const base = this._s().initialOvertimeMs ?? 0;
@@ -466,6 +516,7 @@ export class DashboardService {
       grossMs:        grossMs ?? s.grossMs,
       dailyOvertimeMs: dailyMs,
       totalOvertimeMs: totalMs,
+      isExtraDay:     dailyMs !== null ? this._targetDailyMs(this._currentSettings(), entry.date) === 0 : s.isExtraDay,
     }));
 
     if (save) {
@@ -493,11 +544,12 @@ export class DashboardService {
     return this._settingsCache;
   }
 
-  private _targetDailyMs(settings: { weeklyTargetHours: number; workdays: number[] }): number {
+  /** Tagessoll für das Eintragsdatum (nicht für „jetzt"): ein über Mitternacht laufender Eintrag behält sein Soll (#372). */
+  private _targetDailyMs(settings: { weeklyTargetHours: number; workdays: number[] }, forDate: Date): number {
     if (settings.workdays.length === 0) return 0;
     const weeklyMs    = settings.weeklyTargetHours * 3600000;
     const regularMs   = roundMsToMinute(weeklyMs / settings.workdays.length);
-    return getEffectiveDailyTarget(new Date(), settings.workdays, regularMs);
+    return getEffectiveDailyTarget(forDate, settings.workdays, regularMs);
   }
 
   // ─── Helpers ─────────────────────────────────────────────────────────────
