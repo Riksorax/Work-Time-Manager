@@ -12,101 +12,7 @@ import 'date_utils.dart';
 ///
 /// Die Rückgabe enthält reine Datums-DateTimes (lokale Mitternacht, nicht UTC).
 List<DateTime> getGermanHolidays(int year, Bundesland bundesland) {
-  return getGermanHolidayNames(year, bundesland).keys.toList();
-}
-
-/// Wie [getGermanHolidays], liefert aber zusätzlich den Namen jedes
-/// Feiertags (siehe #253 - im Kalender waren Feiertage bisher nur rot
-/// markiert, ohne dass ersichtlich war, um welchen Feiertag es sich
-/// handelt).
-///
-/// Die Schlüssel sind reine Datums-DateTimes (lokale Mitternacht, nicht UTC).
-Map<DateTime, String> getGermanHolidayNames(int year, Bundesland bundesland) {
-  final easter = _calculateEasterSunday(year);
-
-  final holidays = <DateTime, String>{
-    DateTime(year, 1, 1): 'Neujahr',
-    addCalendarDays(easter, -2): 'Karfreitag',
-    addCalendarDays(easter, 1): 'Ostermontag',
-    DateTime(year, 5, 1): 'Tag der Arbeit',
-    addCalendarDays(easter, 39): 'Christi Himmelfahrt',
-    addCalendarDays(easter, 50): 'Pfingstmontag',
-    DateTime(year, 10, 3): 'Tag der Deutschen Einheit',
-    DateTime(year, 12, 25): '1. Weihnachtsfeiertag',
-    DateTime(year, 12, 26): '2. Weihnachtsfeiertag',
-  };
-
-  final heiligeDreiKoenige = DateTime(year, 1, 6);
-  final fronleichnam = addCalendarDays(easter, 60);
-  final mariaeHimmelfahrt = DateTime(year, 8, 15);
-  final reformationstag = DateTime(year, 10, 31);
-  final allerheiligen = DateTime(year, 11, 1);
-
-  switch (bundesland) {
-    case Bundesland.badenWuerttemberg:
-      holidays[heiligeDreiKoenige] = 'Heilige Drei Könige';
-      holidays[fronleichnam] = 'Fronleichnam';
-      holidays[allerheiligen] = 'Allerheiligen';
-      break;
-    case Bundesland.bayern:
-      holidays[heiligeDreiKoenige] = 'Heilige Drei Könige';
-      holidays[fronleichnam] = 'Fronleichnam';
-      holidays[mariaeHimmelfahrt] = 'Mariä Himmelfahrt';
-      holidays[allerheiligen] = 'Allerheiligen';
-      break;
-    case Bundesland.berlin:
-      holidays[DateTime(year, 3, 8)] = 'Internationaler Frauentag';
-      break;
-    case Bundesland.brandenburg:
-      holidays[reformationstag] = 'Reformationstag';
-      break;
-    case Bundesland.bremen:
-      holidays[reformationstag] = 'Reformationstag';
-      break;
-    case Bundesland.hamburg:
-      holidays[reformationstag] = 'Reformationstag';
-      break;
-    case Bundesland.hessen:
-      holidays[fronleichnam] = 'Fronleichnam';
-      break;
-    case Bundesland.mecklenburgVorpommern:
-      holidays[DateTime(year, 3, 8)] = 'Internationaler Frauentag';
-      holidays[reformationstag] = 'Reformationstag';
-      break;
-    case Bundesland.niedersachsen:
-      holidays[reformationstag] = 'Reformationstag';
-      break;
-    case Bundesland.nordrheinWestfalen:
-      holidays[fronleichnam] = 'Fronleichnam';
-      holidays[allerheiligen] = 'Allerheiligen';
-      break;
-    case Bundesland.rheinlandPfalz:
-      holidays[fronleichnam] = 'Fronleichnam';
-      holidays[allerheiligen] = 'Allerheiligen';
-      break;
-    case Bundesland.saarland:
-      holidays[fronleichnam] = 'Fronleichnam';
-      holidays[mariaeHimmelfahrt] = 'Mariä Himmelfahrt';
-      holidays[allerheiligen] = 'Allerheiligen';
-      break;
-    case Bundesland.sachsen:
-      holidays[reformationstag] = 'Reformationstag';
-      holidays[_bussUndBettag(year)] = 'Buß- und Bettag';
-      break;
-    case Bundesland.sachsenAnhalt:
-      holidays[heiligeDreiKoenige] = 'Heilige Drei Könige';
-      holidays[reformationstag] = 'Reformationstag';
-      break;
-    case Bundesland.schleswigHolstein:
-      holidays[reformationstag] = 'Reformationstag';
-      break;
-    case Bundesland.thueringen:
-      holidays[DateTime(year, 9, 20)] = 'Weltkindertag';
-      holidays[reformationstag] = 'Reformationstag';
-      break;
-  }
-
-  return holidays;
+  return getGermanHolidayIds(year, bundesland).keys.toList();
 }
 
 /// Sprachneutrale ID eines gesetzlichen Feiertags (siehe #279). Die
@@ -131,12 +37,8 @@ enum GermanHoliday {
   repentanceDay,
 }
 
-/// Wie [getGermanHolidayNames], liefert aber sprachneutrale IDs statt
-/// deutscher Namen (siehe #279).
-///
-/// Paritaet: Berechnung und Laenderzuordnung muessen mit
-/// [getGermanHolidayNames] uebereinstimmen. Abgesichert durch den
-/// Paritaetstest in `german_holidays_test.dart`.
+/// Liefert die Feiertage eines Bundeslands als sprachneutrale IDs (siehe #279);
+/// die Anzeigenamen werden in der Presentation-Schicht lokalisiert (#369).
 ///
 /// Die Schluessel sind reine Datums-DateTimes (lokale Mitternacht, nicht UTC).
 Map<DateTime, GermanHoliday> getGermanHolidayIds(

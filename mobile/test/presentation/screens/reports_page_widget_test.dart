@@ -7,6 +7,7 @@ import 'package:intl/date_symbol_data_local.dart';
 
 import 'package:flutter_work_time/core/providers/providers.dart';
 import 'package:flutter_work_time/core/providers/subscription_provider.dart';
+import 'package:flutter_work_time/domain/entities/bundesland.dart';
 import 'package:flutter_work_time/domain/entities/settings_entity.dart';
 import 'package:flutter_work_time/domain/entities/work_entry_entity.dart';
 import 'package:flutter_work_time/l10n/app_localizations.dart';
@@ -36,16 +37,24 @@ class FakeReportsViewModel extends ReportsViewModel {
 }
 
 class FakeSettingsViewModel extends SettingsViewModel {
+  final Bundesland? bundesland;
+
+  FakeSettingsViewModel({this.bundesland});
+
   @override
-  AsyncValue<SettingsState> build() => const AsyncValue.data(
+  AsyncValue<SettingsState> build() => AsyncValue.data(
         SettingsState(
-            settings: SettingsEntity(), overtimeBalance: Duration.zero),
+            settings: SettingsEntity(bundesland: bundesland),
+            overtimeBalance: Duration.zero),
       );
 }
 
 @GenerateMocks([])
 void main() {
-  setUpAll(() async => initializeDateFormatting('de_DE', null));
+  setUpAll(() async {
+    await initializeDateFormatting('de_DE', null);
+    await initializeDateFormatting('en', null);
+  });
 
   late SharedPreferences prefs;
 
@@ -112,5 +121,78 @@ void main() {
     expect(find.text('-'), findsWidgets);
     // Überstunden: 6h Arbeit, kein Soll → +06:00
     expect(find.text('+06:00'), findsOneWidget);
+  });
+
+  Future<void> pumpHolidayCalendar(
+    WidgetTester tester, {
+    required Locale locale,
+    Bundesland? bundesland,
+  }) async {
+    final fakeState = ReportsState(
+      isLoading: false,
+      focusedDay: DateTime(2026, 10, 3),
+      selectedDay: DateTime(2026, 10, 3),
+      selectedMonth: DateTime(2026, 10),
+      workEntries: const {},
+    );
+
+    tester.view.physicalSize = const Size(800, 3000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          isPremiumProvider.overrideWithValue(false),
+          settingsViewModelProvider.overrideWith(
+              () => FakeSettingsViewModel(bundesland: bundesland)),
+          reportsViewModelProvider
+              .overrideWith(() => FakeReportsViewModel(fakeState)),
+        ],
+        child: MaterialApp(
+          locale: locale,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const ReportsPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('Calendar holiday tooltip and semantics are English in en (#369)',
+      (tester) async {
+    final handle = tester.ensureSemantics();
+    await pumpHolidayCalendar(tester,
+        locale: const Locale('en'), bundesland: Bundesland.bayern);
+
+    expect(find.byTooltip('German Unity Day'), findsOneWidget);
+    expect(find.byTooltip('Tag der Deutschen Einheit'), findsNothing);
+    expect(find.bySemanticsLabel(RegExp('German Unity Day')), findsWidgets);
+    expect(find.bySemanticsLabel(RegExp('Tag der Deutschen Einheit')),
+        findsNothing);
+    handle.dispose();
+  });
+
+  testWidgets('Calendar holiday tooltip and semantics are German in de (#369)',
+      (tester) async {
+    final handle = tester.ensureSemantics();
+    await pumpHolidayCalendar(tester,
+        locale: const Locale('de'), bundesland: Bundesland.bayern);
+
+    expect(find.byTooltip('Tag der Deutschen Einheit'), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('Tag der Deutschen Einheit')),
+        findsWidgets);
+    handle.dispose();
+  });
+
+  testWidgets('Calendar shows no holiday tooltip without Bundesland (#369)',
+      (tester) async {
+    await pumpHolidayCalendar(tester, locale: const Locale('en'));
+
+    expect(find.byTooltip('German Unity Day'), findsNothing);
+    expect(find.byTooltip('Tag der Deutschen Einheit'), findsNothing);
   });
 }

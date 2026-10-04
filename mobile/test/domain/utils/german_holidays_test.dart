@@ -98,9 +98,9 @@ void main() {
       }
     });
 
-    test('getGermanHolidayNames: Schlüssel sind reine Datumswerte', () {
+    test('getGermanHolidayIds: Schlüssel sind reine Datumswerte', () {
       for (final year in [2024, 2027]) {
-        final names = getGermanHolidayNames(year, Bundesland.bayern);
+        final names = getGermanHolidayIds(year, Bundesland.bayern);
         final easterMonday =
             year == 2024 ? DateTime(2024, 4, 1) : DateTime(2027, 3, 29);
         final himmelfahrt =
@@ -109,10 +109,10 @@ void main() {
             year == 2024 ? DateTime(2024, 5, 20) : DateTime(2027, 5, 17);
         final fronleichnam =
             year == 2024 ? DateTime(2024, 5, 30) : DateTime(2027, 5, 27);
-        expect(names[easterMonday], 'Ostermontag');
-        expect(names[himmelfahrt], 'Christi Himmelfahrt');
-        expect(names[pfingstmontag], 'Pfingstmontag');
-        expect(names[fronleichnam], 'Fronleichnam');
+        expect(names[easterMonday], GermanHoliday.easterMonday);
+        expect(names[himmelfahrt], GermanHoliday.ascension);
+        expect(names[pfingstmontag], GermanHoliday.whitMonday);
+        expect(names[fronleichnam], GermanHoliday.corpusChristi);
       }
     });
   });
@@ -193,15 +193,6 @@ void main() {
                 DateTime(entry.key.year, entry.key.month, entry.key.day));
             expect(expected[fmt(entry.key)], entry.value,
                 reason: '${fmt(entry.key)} ${entry.value}');
-          }
-        });
-
-        test('Paritaet mit getGermanHolidayNames $year ${land.name}', () {
-          final ids = getGermanHolidayIds(year, land);
-          final names = getGermanHolidayNames(year, land);
-          expect(ids.keys.toSet(), names.keys.toSet());
-          for (final entry in ids.entries) {
-            expect(germanHolidayGermanNames[entry.value], names[entry.key]);
           }
         });
       }

@@ -158,7 +158,7 @@ Map<String, GermanHoliday> expectedHolidays(int year, Bundesland land) {
   };
 }
 
-/// ID -> deutscher Name (identisch zu `getGermanHolidayNames`).
+/// ID -> deutscher Name (Referenz fuer den Localizer-Test).
 const Map<GermanHoliday, String> germanHolidayGermanNames = {
   GermanHoliday.newYear: 'Neujahr',
   GermanHoliday.goodFriday: 'Karfreitag',
