@@ -91,3 +91,72 @@ describe('SettingsService - bundesland', () => {
     expect(apiSaveSettings).toHaveBeenCalledWith(s, undefined, { clearBundesland: true });
   });
 });
+
+describe('SettingsService.getSettingsOnce (#385)', () => {
+  let apiGetSettings: ReturnType<typeof vi.fn>;
+  let activeForApi: string | undefined;
+
+  function setupOnce(uid: string | null): SettingsService {
+    apiGetSettings = vi.fn();
+    activeForApi = 'B';
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: Firestore, useValue: {} },
+        { provide: AuthService, useValue: { user$: of(null), uid } },
+        { provide: ApiClient, useValue: { getSettings: apiGetSettings, saveSettings: vi.fn() } },
+        {
+          provide: WorkProfileService,
+          useValue: { activeProfileId$: of('B'), get activeProfileIdForApi() { return activeForApi; } },
+        },
+      ],
+    });
+    return TestBed.inject(SettingsService);
+  }
+
+  beforeEach(() => localStorage.clear());
+  afterEach(() => { TestBed.resetTestingModule(); localStorage.clear(); });
+
+  it('eingeloggt: liest über die API mit explizitem Profil und merged mit den Defaults', async () => {
+    const svc = setupOnce('u1');
+    apiGetSettings.mockResolvedValue({ weeklyTargetHours: 20 });
+    const s = await svc.getSettingsOnce('A');
+    expect(apiGetSettings).toHaveBeenCalledWith('A');
+    expect(s.weeklyTargetHours).toBe(20);
+    expect(s.workdays).toEqual([1, 2, 3, 4, 5]); // Default greift
+    expect(s.vacationDaysPerYear).toBe(30);
+  });
+
+  it('eingeloggt: "default" -> undefined, ohne Argument das aktive Profil', async () => {
+    const svc = setupOnce('u1');
+    apiGetSettings.mockResolvedValue({});
+    await svc.getSettingsOnce('default');
+    expect(apiGetSettings).toHaveBeenLastCalledWith(undefined);
+    await svc.getSettingsOnce();
+    expect(apiGetSettings).toHaveBeenLastCalledWith('B');
+  });
+
+  it('eingeloggt: migriert workdaysPerWeek in workdays', async () => {
+    const svc = setupOnce('u1');
+    apiGetSettings.mockResolvedValue({ workdaysPerWeek: 3 });
+    expect((await svc.getSettingsOnce('A')).workdays).toEqual([1, 2, 3]);
+  });
+
+  it('ausgeloggt: liest localStorage, Profil und API unbeteiligt', async () => {
+    localStorage.setItem('user_settings', JSON.stringify({ weeklyTargetHours: 30 }));
+    const svc = setupOnce(null);
+    expect((await svc.getSettingsOnce('A')).weeklyTargetHours).toBe(30);
+    expect(apiGetSettings).not.toHaveBeenCalled();
+  });
+
+  it('ein Lesefehler wird geworfen', async () => {
+    const svc = setupOnce('u1');
+    apiGetSettings.mockRejectedValue(new Error('offline'));
+    await expect(svc.getSettingsOnce('A')).rejects.toThrow('offline');
+  });
+
+  it('getSettings() bleibt unverändert (Observable)', async () => {
+    const svc = setupOnce(null);
+    expect((await firstValueFrom(svc.getSettings())).weeklyTargetHours).toBe(40);
+  });
+});

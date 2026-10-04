@@ -100,9 +100,16 @@ export class ApiClient {
     return dto.lastUpdated ? new Date(dto.lastUpdated) : null;
   }
 
-  saveOvertimeMs(ms: number, profileId?: string): Promise<void> {
+  /**
+   * `opts.keepLastUpdated` (Backend ab #408): das Backend lässt `lastUpdated` unangetastet. Das Feld wird nur bei
+   * `true` gesendet, sonst bleibt der Body `{ minutes }` (Default = bisheriges Verhalten; ältere API-Stände ignorieren es).
+   */
+  saveOvertimeMs(ms: number, profileId?: string, opts?: { keepLastUpdated?: boolean }): Promise<void> {
+    const body = opts?.keepLastUpdated
+      ? { minutes: toStoredMinutes(ms), keepLastUpdated: true }
+      : { minutes: toStoredMinutes(ms) };
     return firstValueFrom(
-      this.http.put<OvertimeDto>(`${this.base}/overtime`, { minutes: toStoredMinutes(ms) }, { params: this._params(profileId) })
+      this.http.put<OvertimeDto>(`${this.base}/overtime`, body, { params: this._params(profileId) })
         .pipe(map(() => void 0))
     );
   }

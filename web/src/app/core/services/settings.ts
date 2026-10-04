@@ -7,7 +7,7 @@ import { WorkProfileService } from './work-profile';
 import { DEFAULT_SETTINGS, UserSettings } from '../../shared/models';
 import { normalizeBundesland } from '../../shared/utils/bundesland.util';
 import { normalizeVacationDays } from '../../shared/utils/vacation-days.util';
-import { profileScopedPath } from '../../shared/utils/work-profile-path.util';
+import { profileIdForApi, profileScopedPath } from '../../shared/utils/work-profile-path.util';
 
 const LS_KEY = 'user_settings';
 
@@ -62,6 +62,19 @@ export class SettingsService {
         });
       })
     );
+  }
+
+  /**
+   * Einmaliger Abruf der Einstellungen eines festen Profils (#385): eingeloggt `GET /settings` mit explizitem Profil
+   * (kein Lag-Fenster des Profil-Observables), ausgeloggt localStorage. Fehler werden geworfen. `getSettings()` bleibt
+   * für reaktive Aufrufer unverändert.
+   */
+  async getSettingsOnce(profileId?: string): Promise<UserSettings> {
+    if (!this.auth.uid) return this._localGet();
+    const raw = await this.api.getSettings(
+      profileId === undefined ? this.workProfile.activeProfileIdForApi : profileIdForApi(profileId),
+    );
+    return mergeSettings((raw ?? {}) as Partial<UserSettings>);
   }
 
   /** `opts.clearBundesland`: nur bei expliziter Abwahl, sendet `""` ans Backend (Details `ApiClient.saveSettings`). */

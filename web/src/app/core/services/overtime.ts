@@ -28,11 +28,17 @@ export class OvertimeService {
     return this._localGetLastUpdate();
   }
 
-  async saveOvertime(ms: number, profileId?: string): Promise<void> {
+  /**
+   * `opts.keepLastUpdated` (#385, Backend ab #408): `lastUpdated` nicht anfassen (nachträgliches Beenden eines
+   * Vortagseintrags). Nur eingeloggt relevant: lokal schreibt `saveOvertime` ohnehin nie `overtime_last_update`.
+   */
+  async saveOvertime(ms: number, profileId?: string, opts?: { keepLastUpdated?: boolean }): Promise<void> {
     if (this.auth.uid) {
-      // Backend setzt lastUpdated automatisch beim Speichern.
+      // Backend setzt lastUpdated automatisch beim Speichern (außer mit keepLastUpdated).
       // Auf Minuten gerundet wird im ApiClient — das Backend nimmt bereits int entgegen.
-      await this.api.saveOvertimeMs(ms, this._apiProfile(profileId));
+      const apiProfile = this._apiProfile(profileId);
+      if (opts) await this.api.saveOvertimeMs(ms, apiProfile, opts);
+      else      await this.api.saveOvertimeMs(ms, apiProfile);
     } else {
       localStorage.setItem(LS_OVERTIME, String(toStoredMinutes(ms)));
     }

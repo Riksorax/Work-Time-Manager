@@ -87,3 +87,98 @@ describe('ApiClient.saveSettings (bundesland)', () => {
     expect(put().params.has('profileId')).toBe(false);
   });
 });
+
+describe('ApiClient.getWorkEntriesForMonth (#385)', () => {
+  let api: ApiClient;
+  let http: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting()] });
+    api = TestBed.inject(ApiClient);
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => http.verify());
+
+  const dto = {
+    id: '2026-10-02',
+    date: '2026-10-02T00:00:00Z',
+    workStart: '2026-10-02T20:00:30Z',
+    workEnd: null,
+    type: 'work',
+    isManuallyEntered: false,
+    manualOvertimeMinutes: null,
+    description: null,
+    breaks: [{ id: 'b1', name: 'Pause', isAutomatic: false, start: '2026-10-02T21:00:00Z', end: null }],
+  };
+
+  it('GET /work-entries/{y}/{m} ohne profileId-Parameter, mappt das DTO inkl. id', async () => {
+    const p = api.getWorkEntriesForMonth(2026, 10);
+    const req = http.expectOne(r => r.url.endsWith('/api/work-entries/2026/10'));
+    expect(req.request.method).toBe('GET');
+    expect(req.request.params.has('profileId')).toBe(false);
+    req.flush([dto]);
+    const [e] = await p;
+    expect(e.id).toBe('2026-10-02');
+    expect(e.workStart).toEqual(new Date('2026-10-02T20:00:00Z')); // auf Minute abgeschnitten
+    expect(e.workEnd).toBeUndefined();
+    expect(e.breaks[0].end).toBeUndefined();
+    expect(e.type).toBe('work');
+  });
+
+  it('setzt profileId, falls angegeben', async () => {
+    const p = api.getWorkEntriesForMonth(2026, 11, 'p1');
+    const req = http.expectOne(r => r.url.endsWith('/api/work-entries/2026/11'));
+    expect(req.request.params.get('profileId')).toBe('p1');
+    req.flush([]);
+    expect(await p).toEqual([]);
+  });
+
+  it('der Tag eines Eintrags bleibt die id, auch wenn date in der Zone auf den Vortag fällt', async () => {
+    const p = api.getWorkEntriesForMonth(2026, 10);
+    http.expectOne(r => r.url.endsWith('/api/work-entries/2026/10')).flush([dto]);
+    const [e] = await p;
+    // `date` ist UTC-Mitternacht; lokal kann das der Vortag sein. Maßgeblich ist die id.
+    expect(e.id).toBe('2026-10-02');
+    expect(e.date.getTime()).toBe(Date.UTC(2026, 9, 2));
+  });
+});
+
+describe('ApiClient.saveOvertimeMs (#385, keepLastUpdated)', () => {
+  let api: ApiClient;
+  let http: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting()] });
+    api = TestBed.inject(ApiClient);
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => http.verify());
+
+  function put(ms: number, profileId?: string, opts?: { keepLastUpdated?: boolean }) {
+    void api.saveOvertimeMs(ms, profileId, opts);
+    const req = http.expectOne(r => r.url.endsWith('/api/overtime'));
+    expect(req.request.method).toBe('PUT');
+    req.flush({ minutes: 0, lastUpdated: null });
+    return req.request;
+  }
+
+  it('sendet mit keepLastUpdated: true { minutes, keepLastUpdated: true }', () => {
+    const req = put(90 * 60_000, 'p1', { keepLastUpdated: true });
+    expect(req.body).toEqual({ minutes: 90, keepLastUpdated: true });
+    expect(req.params.get('profileId')).toBe('p1');
+  });
+
+  it('ohne Option bleibt der Body unverändert { minutes } ohne keepLastUpdated-Schlüssel', () => {
+    const req = put(90 * 60_000);
+    expect(req.body).toEqual({ minutes: 90 });
+    expect('keepLastUpdated' in req.body).toBe(false);
+    expect(req.params.has('profileId')).toBe(false);
+  });
+
+  it('keepLastUpdated: false / leere Option sendet das Feld nicht', () => {
+    expect('keepLastUpdated' in put(60_000, undefined, { keepLastUpdated: false }).body).toBe(false);
+    expect('keepLastUpdated' in put(60_000, undefined, {}).body).toBe(false);
+  });
+});

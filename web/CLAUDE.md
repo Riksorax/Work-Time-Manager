@@ -26,9 +26,9 @@ core/
 ├── auth/           AuthService (Firebase Auth, Google Sign-In), AuthGuard
 │                   — deleteAccount() via Firebase deleteUser()
 ├── services/
-│   ├── work-entry.ts      Hybrid — eingeloggt: Reads live via Firestore onSnapshot, Writes über ApiClient (Backend-API); ausgeloggt: localStorage. getAllLocalEntries() für DataSync. Optionales `profileId` (#380) bei `saveEntry(entry, profileId?)` / `getTodayEntry(profileId?)`: `undefined` = aktives Profil, sonst festes Profil (anonym ignoriert)
-│   ├── overtime.ts        Hybrid — eingeloggt komplett über ApiClient (Reads + Writes), sonst localStorage. Optionales `profileId` (#380) bei `getOvertime`/`getLastUpdateDate`/`saveOvertime` (`undefined` = aktives Profil)
-│   ├── settings.ts        Hybrid — wie work-entry.ts (Reads via Firestore onSnapshot, Writes via ApiClient). Feld `bundesland` (#279): Rohwert über `normalizeBundesland`; `""` ans Backend nur über `saveSettings(s, { clearBundesland: true })` (explizite Abwahl), sonst `null` = unangetastet
+│   ├── work-entry.ts      Hybrid — eingeloggt: Reads live via Firestore onSnapshot, Writes über ApiClient (Backend-API); ausgeloggt: localStorage. getAllLocalEntries() für DataSync. Optionales `profileId` (#380) bei `saveEntry(entry, profileId?)` / `getTodayEntry(profileId?)`: `undefined` = aktives Profil, sonst festes Profil (anonym ignoriert). `getEntriesForMonthOnce(year, month, profileId?)` (#385): Einmalabruf eines Monats (eingeloggt `ApiClient.getWorkEntriesForMonth`, ausgeloggt localStorage), Fehler werden geworfen
+│   ├── overtime.ts        Hybrid — eingeloggt komplett über ApiClient (Reads + Writes), sonst localStorage. Optionales `profileId` (#380) bei `getOvertime`/`getLastUpdateDate`/`saveOvertime` (`undefined` = aktives Profil). `saveOvertime(ms, pid, { keepLastUpdated: true })` (#385, Backend ab PR #408) lässt `lastUpdated` unangetastet; das Feld geht nur eingeloggt und nur bei `true` in den Body
+│   ├── settings.ts        Hybrid — wie work-entry.ts (Reads via Firestore onSnapshot, Writes via ApiClient). Feld `bundesland` (#279): Rohwert über `normalizeBundesland`; `""` ans Backend nur über `saveSettings(s, { clearBundesland: true })` (explizite Abwahl), sonst `null` = unangetastet. `getSettingsOnce(profileId?)` (#385): Einmalabruf mit festem Profil (kein Lag-Fenster), `mergeSettings` wie bei `getSettings()`
 │   ├── api-client.ts      ApiClient — typisierter Client für die .NET-Backend-API (Endpunkte: `server/CLAUDE.md`), Token via authInterceptor
 │   ├── work-profile.ts    WorkProfileService — aktives/zusätzliche Arbeitszeit-Profile (siehe #138/#244), profileId für ApiClient + Firestore-Pfade; Guard-Registry `registerSwitchGuard`/`requestSwitch` für interaktive Wechsel (#380)
 │   ├── profile.ts         ProfileService — isPremium Signal (Firestore-Flag)
@@ -47,10 +47,11 @@ domain/
 │   ├── report-calculator.ts  Pure — ISO-8601-Wochennummer, DailyStat, Weekly/MonthlyReport
 │   └── leave-calculator.ts   Pure — calculateYearlyLeave (Urlaubs-/Kranktage je Jahr, anonyme Nutzer)
 └── utils/
-    └── overtime.utils.ts  Pure — getEffectiveDailyTarget, getWeekEntriesForDate, isSameDay
+    ├── overtime.utils.ts  Pure — getEffectiveDailyTarget, getWeekEntriesForDate, isSameDay
+    └── open-entry.utils.ts  Pure (#385) — Soll-Ende/Vorschlag, gültiges Ende, Saldo-Delta, Tag aus der Eintrags-`id`, Datumsformat
 
 features/
-├── dashboard/      DashboardComponent + DashboardService (Timer, Pausen, Überstunden)
+├── dashboard/      DashboardComponent + DashboardService (Timer, Pausen, Überstunden); `OpenEntryService` + `OpenEntryCloseService` + Beenden-Dialog (offene Einträge vor heute, #385)
 ├── reports/        ReportsComponent + ReportsService (Täglich/Wöchentlich/Monatlich, Premium-Gate)
 └── settings/       SettingsComponent + SettingsPageService (Profil, Arbeitszeit, Gleitzeit, Sync, Theme)
 
@@ -60,6 +61,7 @@ shared/
 │   ├── edit-entry-dialog/      EditEntryDialogComponent
 │   ├── leave-balance-card/     LeaveBalanceCardComponent — reine Darstellung der Urlaubsübersicht (Dashboard, Settings, Reports)
 │   ├── holiday-banner/         HolidayBannerComponent — „Heute ist Feiertag: …“ (#279), rein informativ
+│   ├── open-entry-banner/      OpenEntryBannerComponent — Hinweis auf offenen Eintrag vor heute mit „Beenden“/„Später“ (#385), rein darstellend
 │   ├── time-input/             TimeInputComponent
 │   └── work-profile-switcher/  WorkProfileSwitcherComponent + Add-/Manage-Dialoge (siehe #138/#244)
 ├── utils/
@@ -77,6 +79,8 @@ Jedes Feature hat einen eigenen `*.service.ts` der Core-Services aggregiert:
 | Feature-Service | Aggregiert |
 |---|---|
 | `DashboardService` | WorkEntryService, OvertimeService, SettingsService, TodayService, AuthService, WorkProfileService |
+| `OpenEntryService` | AuthService, WorkProfileService, TodayService, WorkEntryService, SettingsService, DashboardService, OpenEntryCloseService |
+| `OpenEntryCloseService` | WorkEntryService, OvertimeService, SettingsService |
 | `ReportsService` | WorkEntryService, SettingsService, ProfileService, AuthService, OvertimeService, LeaveBalanceService |
 | `SettingsPageService` | SettingsService, AuthService, ProfileService, OvertimeService, ThemeService, DataSyncService, LeaveBalanceService, WorkProfileService |
 
@@ -174,6 +178,42 @@ Das Dashboard lädt bei jedem Wechsel des Arbeitszeit-Profils (Header-Wechsler, 
   im Vollauf zu diesem Zeitpunkt noch nicht ausgewertet, ist der Wert `undefined` (nicht deterministisch, Einzellauf grün).
   Kein Importzyklus im Quelltext (`madge --circular`: 0). Abhilfe: Wert im Constructor zuweisen oder als Argument/Ausdruck
   einbetten (`[...X]`, `signal(X)`), nie als nackte Referenz.
+
+### Offene Einträge vor heute (#385)
+
+Ein über Mitternacht gelaufener Timer bleibt nach einem Reload als Eintrag mit Start und ohne Ende am Vortag stehen
+(das Dashboard lädt nur „heute“). Das Dashboard zeigt unter dem Feiertagsbanner einen nicht-modalen Banner für den
+neuesten offenen Eintrag vor heute (Ursache und Mobile-Vorlage: PR #405). Ohne Nutzeraktion ändert sich nichts.
+- **Suche** (`OpenEntryService`, `features/dashboard/open-entry.ts`): aktives Profil, aktueller und Vormonat (`new Date(y, m-2, 1)`,
+  Januar → Dezember Vorjahr), je Monat eigenes try/catch, über `WorkEntryService.getEntriesForMonthOnce`. Filter: Typ work, Start
+  gesetzt, kein Ende, `id`-Tag < heute (`TodayService.today()`, String-Vergleich), nicht der im Dashboard angezeigte Eintrag
+  (laufender Vortag, #372). Trigger: Auth (erst nach der ersten Emission), Profil, Tag, Eintragswechsel im Dashboard. Ein
+  Kontext-Epoch (Nutzer/Profil) und eine Suchsequenz verwerfen überholte Ergebnisse.
+- **Tag immer aus der `id`**, nie aus `date`: `date` ist beim Web UTC-Mitternacht und ergibt westlich von UTC den Vortag. Beim
+  Zurückschreiben wird `date` auf das lokale Datum aus der `id` gesetzt (`localDateFromEntryId`). Die bestehende `date`-Nutzung
+  im Dashboard ist nicht Teil davon (#407).
+- **„Später“:** blendet alle Kandidaten des aktuellen Nutzers und Profils für die Sitzung aus; Schlüssel `uid|profileId|yyyy-MM-dd`
+  (ausgeloggt `anon`), nicht persistent (Reload zeigt wieder an).
+- **Beenden** (`OpenEntryCloseService`, `open-entry-close.ts`): alle Zugriffe mit dem Profil des Kandidaten (`profileId` je Aktion,
+  #380-Semantik): Einstellungen des Profils (`getSettingsOnce`), Monat frisch lesen (nicht mehr offen ⇒ `alreadyClosed`), Ende mit
+  frischer Uhr prüfen (`isValidOpenEntryEnd`), offene Pausen zum Ende schließen, `calculateAndApplyBreaks`, Saldo
+  `alt + Netto − Soll(Eintragstag) + manualOvertimeMinutes`, **erst Saldo, dann Eintrag**; schlägt der Eintrag-Write fehl, wird der
+  Saldo best-effort zurückgesetzt (Rollback, sonst zählt ein Wiederholen doppelt). Der Saldo geht eingeloggt mit
+  `keepLastUpdated: true`, ausgeloggt wird `saveLastUpdateDate` nie aufgerufen. Ergebnis: `closed | alreadyClosed | invalidEnd |
+  invalidEntry | failed | busy`.
+- **`DashboardService.reloadAfterRetroClose(pid)`:** zieht die Saldo-Basis neu (no-op bei anderem Profil). Läuft im Dashboard ein
+  Vortag über Mitternacht, läuft kein `_init` (er würde den Timer verwerfen), es wird nur die Basis erneuert; sonst stiller Reload
+  (`dayChange`). Richtung der Abhängigkeit: `OpenEntryService` → `DashboardService`, nie umgekehrt.
+- **Abweichung zu Mobile:** `manualOvertimeMinutes` wird eingerechnet (wie beim Dashboard-Stop), Rollback bei Eintrag-Fehler,
+  `keepLastUpdated` (Mobile zieht in einem Folge-PR nach, #406).
+- **Grenzen:** Einträge älter als der Vormonat und andere Profile werden nicht gefunden, kein Re-Check beim Zurückkehren in den
+  Tab, „Fortsetzen“ folgt mit Mobile PR 1b, Reports-Darstellung offener Einträge #404.
+- **Deploy-Reihenfolge: API vor Web.** `keepLastUpdated` kommt aus Backend-PR #408. Eine ältere API ignoriert das Feld; Beenden
+  funktioniert dann, setzt aber `lastUpdated` (altes Verhalten), und die Heuristik im Dashboard kann im Fall „beenden, heute
+  arbeiten, neu laden“ eine falsche Basis liefern. (Bestehend und nicht Teil davon: der Kommentar in
+  `DashboardService.updateInitialOvertime` („kein lastUpdated-Update“) trifft eingeloggt ebenfalls nicht zu.)
+- **A11y:** Textblock `role="status"`, Buttons per `aria-describedby` auf den Titel, einmalige polite `LiveAnnouncer`-Ansage je
+  Eintrag, nach dem Entfall Fokus auf den nächsten Banner bzw. den Anker `p.timer-label` (`tabindex="-1"`, kein Zusatztext).
 
 ### Dark Mode
 

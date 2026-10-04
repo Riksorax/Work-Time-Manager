@@ -106,3 +106,73 @@ describe('WorkEntryService profileId (#380)', () => {
     });
   });
 });
+
+describe('WorkEntryService.getEntriesForMonthOnce (#385)', () => {
+  let api: { getWorkEntriesForMonth: ReturnType<typeof vi.fn> };
+  let profile: FakeWorkProfile;
+
+  function setup(uid: string | null): WorkEntryService {
+    api = { getWorkEntriesForMonth: vi.fn().mockResolvedValue([ENTRY]) };
+    profile = createFakeWorkProfile('B'); // aktiv ist B
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: Firestore, useValue: {} },
+        { provide: AuthService, useValue: { uid, user$: of(uid ? { uid } : null) } },
+        { provide: ApiClient, useValue: api },
+        { provide: WorkProfileService, useValue: profile },
+      ],
+    });
+    return TestBed.inject(WorkEntryService);
+  }
+
+  beforeEach(() => localStorage.clear());
+  afterEach(() => { TestBed.resetTestingModule(); localStorage.clear(); });
+
+  describe('eingeloggt', () => {
+    it('liest über die API mit explizitem Profil, unabhängig vom aktiven (B)', async () => {
+      const svc = setup('u1');
+      expect(await svc.getEntriesForMonthOnce(2026, 10, 'A')).toEqual([ENTRY]);
+      expect(api.getWorkEntriesForMonth).toHaveBeenCalledWith(2026, 10, 'A');
+    });
+
+    it('"default" -> undefined (kein Query-Parameter)', async () => {
+      const svc = setup('u1');
+      await svc.getEntriesForMonthOnce(2026, 10, 'default');
+      expect(api.getWorkEntriesForMonth).toHaveBeenCalledWith(2026, 10, undefined);
+    });
+
+    it('ohne Profil-Argument gilt das aktive Profil', async () => {
+      const svc = setup('u1');
+      await svc.getEntriesForMonthOnce(2026, 10);
+      expect(api.getWorkEntriesForMonth).toHaveBeenCalledWith(2026, 10, 'B');
+    });
+
+    it('ein Lesefehler wird geworfen, nie als leerer Monat getarnt', async () => {
+      const svc = setup('u1');
+      api.getWorkEntriesForMonth.mockRejectedValue(new Error('offline'));
+      await expect(svc.getEntriesForMonthOnce(2026, 10, 'A')).rejects.toThrow('offline');
+    });
+  });
+
+  describe('ausgeloggt', () => {
+    it('liest den Monat aus localStorage (Flutter-Keys), Profil wird ignoriert, id aus dem Tag', async () => {
+      localStorage.setItem('local_work_entries_2026_10', JSON.stringify({
+        days: {
+          '9': { workStart: new Date(2026, 9, 9, 8, 0).toISOString(), workEnd: null, type: 'work', breaks: [] },
+          '2': { workStart: new Date(2026, 9, 2, 22, 0).toISOString(), workEnd: null, type: 'work', breaks: [] },
+        },
+      }));
+      const svc = setup(null);
+      const entries = await svc.getEntriesForMonthOnce(2026, 10, 'A');
+      expect(entries.map(e => e.id)).toEqual(['2026-10-02', '2026-10-09']);
+      expect(entries[0].workStart).toEqual(new Date(2026, 9, 2, 22, 0));
+      expect(api.getWorkEntriesForMonth).not.toHaveBeenCalled();
+    });
+
+    it('leerer Monat -> []', async () => {
+      const svc = setup(null);
+      expect(await svc.getEntriesForMonthOnce(2026, 9)).toEqual([]);
+    });
+  });
+});
