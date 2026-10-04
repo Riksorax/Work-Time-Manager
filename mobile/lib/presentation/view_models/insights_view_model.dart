@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
 
 import '../../core/providers/providers.dart' as core_providers;
+import '../../core/providers/today_provider.dart';
 import '../../domain/utils/insights_utils.dart';
 import '../state/insights_state.dart';
 
@@ -37,7 +38,9 @@ class InsightsViewModel extends Notifier<InsightsState> {
         ? Duration.zero
         : Duration(minutes: (targetWeeklyHours / workdays.length * 60).round());
 
-    final now = DateTime.now();
+    // "heute" nur beim Laden aus todayProvider; bewusst kein Listener/Auto-Reload
+    // (keine Reads für Nutzer ohne Zugriff, #387).
+    final now = ref.read(todayProvider);
     final months = List.generate(_monthCount, (i) {
       final date = DateTime(now.year, now.month - i, 1);
       return (year: date.year, month: date.month);

@@ -5,6 +5,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_work_time/core/providers/clock_provider.dart';
 import 'package:flutter_work_time/core/providers/providers.dart';
 import 'package:flutter_work_time/core/providers/subscription_provider.dart';
 import 'package:flutter_work_time/domain/entities/settings_entity.dart';
@@ -72,6 +73,7 @@ void main() {
   }) {
     return ProviderScope(
       overrides: [
+        clockProvider.overrideWithValue(() => DateTime(2026, 10, 2, 12)),
         sharedPreferencesProvider.overrideWithValue(prefs),
         isPremiumProvider.overrideWithValue(true),
         settingsRepositoryProvider.overrideWithValue(mockSettingsRepository),
@@ -308,8 +310,8 @@ void main() {
     testWidgets(
         'Insights-Tab zeigt Wochentags-Analyse und Heatmap mit Datenbasis',
         (tester) async {
-      final now = DateTime
-          .now(); // bleibt: InsightsViewModel liest noch DateTime.now() (Teil B)
+      // Feste Uhr (clockProvider-Override in createSubject), kein DateTime.now().
+      final now = DateTime(2026, 10, 2);
       // Zwei Einträge am selben Wochentag + selber Startstunde, damit sowohl
       // die Wochentags-Analyse als auch die Heatmap (minSampleCount: 2)
       // Ergebnisse liefern.
