@@ -33,6 +33,12 @@ class FakeWorkRepository implements WorkRepository {
 
   int getWorkEntryCalls = 0;
   int getMonthCalls = 0;
+
+  /// Gelesene Monate in Reihenfolge (`yyyy-MM`), für Lese-Assertions (#385).
+  final List<String> monthReads = [];
+
+  /// Monate (`yyyy-MM`), deren Lesen fehlschlägt (#385).
+  final Set<String> failMonths = {};
   bool failReads = false;
   bool failSaves = false;
 
@@ -84,6 +90,17 @@ class FakeWorkRepository implements WorkRepository {
   Future<List<WorkEntryEntity>> getWorkEntriesForMonth(
       int year, int month) async {
     getMonthCalls++;
+    final monthKey =
+        '${year.toString().padLeft(4, '0')}-${month.toString().padLeft(2, '0')}';
+    monthReads.add(monthKey);
+    if (holdReads) {
+      final c = Completer<void>();
+      pendingReads.add(c);
+      await c.future;
+    }
+    if (failReads || failMonths.contains(monthKey)) {
+      throw Exception('offline');
+    }
     return store.values
         .where((e) => e.date.year == year && e.date.month == month)
         .toList();
