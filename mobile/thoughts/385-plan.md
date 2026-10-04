@@ -51,7 +51,7 @@ Splitten (#381).
 ## Schritte (TDD)
 
 ### Schritt 1: Domain — Suche `GetOpenPastWorkEntries`
-- [ ] Tests (`test/domain/usecases/get_open_past_work_entries_test.dart`, FakeWorkRepository, FakeClock):
+- [x] Tests (`test/domain/usecases/get_open_past_work_entries_test.dart`, FakeWorkRepository, FakeClock):
   - Fr 22:00 offen, jetzt Sa 09:00 -> 1 Treffer
   - heute offen -> kein Treffer; Eintrag mit Datum morgen/Zukunft -> kein Treffer (Uhrsprung)
   - abgeschlossen -> kein Treffer; `workStart == null` -> kein Treffer; Typ vacation/sick/holiday mit `workEnd == null` -> kein Treffer
@@ -60,21 +60,21 @@ Splitten (#381).
   - Tag-Vergleich per Kalendertag: Eintrag `date` mit Uhrzeitanteil/UTC-Offset nahe Mitternacht zählt als sein Kalendertag; „heute" um 00:30 vs. 23:30 gleiches Ergebnis (TZ-Invariante)
   - Lesefehler eines Monats: anderer Monat liefert weiter Treffer, kein Crash, `logger.e` ohne Eintragsinhalte; beide Fehler -> leere Liste
   - Parameter `excludeDate` (laufender Dashboard-Eintrag) wird nicht zurückgegeben
-- [ ] Impl: Konstruktor `(WorkRepository, {DateTime Function() clock = DateTime.now})` wie `GetTodayWorkEntry`; `call({DateTime? excludeDate})` -> `List<WorkEntryEntity>`; Monate parallel oder nacheinander lesen, jeder Monat in eigenem try/catch.
-- [ ] Mutationsproben: (a) `workEnd == null`-Filter entfernen, (b) `< today` auf `<= today`, (c) Typfilter entfernen, (d) Vormonat weglassen, (e) Sortierung umdrehen. Jeweils muss mindestens ein Test rot werden.
+- [x] Impl: Konstruktor `(WorkRepository, {DateTime Function() clock = DateTime.now})` wie `GetTodayWorkEntry`; `call({DateTime? excludeDate})` -> `List<WorkEntryEntity>`; Monate parallel oder nacheinander lesen, jeder Monat in eigenem try/catch.
+- [x] Mutationsproben: (a) `workEnd == null`-Filter entfernen, (b) `< today` auf `<= today`, (c) Typfilter entfernen, (d) Vormonat weglassen, (e) Sortierung umdrehen. Jeweils muss mindestens ein Test rot werden.
 
 ### Schritt 1b: Domain — reine Funktionen
-- [ ] Tests (`test/domain/utils/open_entry_end_suggestion_test.dart`):
+- [x] Tests (`test/domain/utils/open_entry_end_suggestion_test.dart`):
   - Soll-Ende = `workStart + Soll + Summe geschlossener Pausen`, per Duration-Addition (DST-Tag 2026-10-25: Invariante über absolute Differenz, nicht Wanduhr)
   - Soll-Ende < jetzt -> Vorschlag Soll-Ende; Soll-Ende >= jetzt und Eintrag <= 24 h alt -> Vorschlag „Jetzt"; Soll-Ende >= jetzt und > 24 h -> Soll-Ende gekappt/Picker ohne „Jetzt" (siehe offene Frage 1)
   - Soll = 0 (Wochenende/Zusatztag): kein sinnvolles Soll-Ende -> Vorschlag „Jetzt" nur bei <= 24 h, sonst Start + keine Vorbelegung (Picker leer-nah, Validierung greift)
   - „Jetzt" zulässig bei genau 24 h (Grenze), unzulässig bei 24 h + 1 min
   - `effectiveTargetForDate`: Arbeitstag -> Tagessoll, Nicht-Arbeitstag -> 0, leere Arbeitstage -> 0, Runden wie Dashboard
-- [ ] Impl in `overtime_utils.dart`.
-- [ ] Mutationsprobe: 24-h-Grenze (`<=` -> `<`), Pausen nicht addieren.
+- [x] Impl in `overtime_utils.dart`.
+- [x] Mutationsprobe: 24-h-Grenze (`<=` -> `<`), Pausen nicht addieren.
 
 ### Schritt 2: Domain — `CloseOpenWorkEntry`
-- [ ] Tests (`test/domain/usecases/close_open_work_entry_test.dart`; FakeWork-/FakeOvertimeRepository mit gemeinsamem `writeLog`):
+- [x] Tests (`test/domain/usecases/close_open_work_entry_test.dart`; FakeWork-/FakeOvertimeRepository mit gemeinsamem `writeLog`):
   - Ende gesetzt (auf Minute gerundet wie `roundToMinute`), gespeicherter Eintrag hat `workEnd == end`
   - offene Pause: `end` der Pause = gewähltes Ende; geschlossene Pausen unverändert
   - Auto-Pausen: Typ work, 10 h brutto ohne Pause -> Auto-Pause(n) wie `BreakCalculatorService.calculateAndApplyBreaks`; Ergebnis identisch zum Stop-Pfad (Vergleich gegen direkten Aufruf); kein Auto-Break bei kurzem Eintrag
@@ -88,16 +88,16 @@ Splitten (#381).
   - Offline (Repo wirft Netzwerk-Exception): `failed`, kein Teilzustand außer oben benanntem Rest-Risiko
   - Typ != work oder `workStart == null` -> `invalidEntry`, keine Writes
   - Profil-Kapselung: UseCase mit Repo A konstruiert, danach „Profilwechsel" (Repo B existiert) -> Writes landen ausschließlich in A (writeLog-Labels)
-- [ ] Impl: Konstruktor `(WorkRepository, OvertimeRepository, {clock})`, `call(entry, end, dailyTarget)` -> `CloseOpenEntryResult` (`closed`, `alreadyClosed`, `invalidEnd`, `invalidEntry`, `failed`). Ablauf: validieren -> Eintrag frisch lesen (`getWorkEntriesForMonth` des Eintragsmonats, per Datum finden) -> Pause schließen -> Auto-Pausen -> Saldo lesen (`ensureOvertimeLoaded`) -> `saveOvertime` -> `saveWorkEntry`. Keine Logs mit Eintragsinhalten.
-- [ ] Mutationsproben: (a) `saveLastUpdateDate` einbauen -> Test rot, (b) Saldoformel `+` -> `-` bzw. Soll vom heutigen Tag statt Eintragsdatum, (c) Pause nicht schließen, (d) Auto-Pause-Aufruf entfernen, (e) Reihenfolge Entry vor Saldo, (f) Frisch-lesen-Guard entfernen.
+- [x] Impl: Konstruktor `(WorkRepository, OvertimeRepository, {clock})`, `call(entry, end, dailyTarget)` -> `CloseOpenEntryResult` (`closed`, `alreadyClosed`, `invalidEnd`, `invalidEntry`, `failed`). Ablauf: validieren -> Eintrag frisch lesen (`getWorkEntriesForMonth` des Eintragsmonats, per Datum finden) -> Pause schließen -> Auto-Pausen -> Saldo lesen (`ensureOvertimeLoaded`) -> `saveOvertime` -> `saveWorkEntry`. Keine Logs mit Eintragsinhalten.
+- [x] Mutationsproben: (a) `saveLastUpdateDate` einbauen -> Test rot, (b) Saldoformel `+` -> `-` bzw. Soll vom heutigen Tag statt Eintragsdatum, (c) Pause nicht schließen, (d) Auto-Pause-Aufruf entfernen, (e) Reihenfolge Entry vor Saldo, (f) Frisch-lesen-Guard entfernen.
 
 ### Schritt 3: Provider
-- [ ] Verdrahtung in `lib/core/providers/providers.dart`: `getOpenPastWorkEntriesUseCase(Ref)` und `closeOpenWorkEntryUseCase(Ref)` mit `workRepositoryProvider`, `overtimeRepositoryProvider`, `clockProvider`.
-- [ ] `dart run build_runner build --delete-conflicting-outputs`
-- [ ] Test: Provider-Test mit `ProviderContainer(overrides)`: Profilwechsel (`Harness(profiles: true)`, `h.switchProfile`) liefert neue UseCase-Instanz mit Repo des neuen Profils.
+- [x] Verdrahtung in `lib/core/providers/providers.dart`: `getOpenPastWorkEntriesUseCase(Ref)` und `closeOpenWorkEntryUseCase(Ref)` mit `workRepositoryProvider`, `overtimeRepositoryProvider`, `clockProvider`.
+- [x] `dart run build_runner build --delete-conflicting-outputs`
+- [x] Test: Provider-Test mit `ProviderContainer(overrides)`: Profilwechsel (`Harness(profiles: true)`, `h.switchProfile`) liefert neue UseCase-Instanz mit Repo des neuen Profils.
 
 ### Schritt 4: ViewModel-Zustand + Dashboard-Reload
-- [ ] Tests `open_entry_view_model_test.dart` (Harness, FakeClock, `fakeAsync`):
+- [x] Tests `open_entry_view_model_test.dart` (Harness, FakeClock, `fakeAsync`):
   - Start mit offenem Vortag -> State enthält Eintrag, Zähler `moreCount == n-1`, Reihenfolge neuester zuerst
   - „Später" blendet den aktuellen aus, der nächste (falls vorhanden) wird sichtbar? **Entscheidung:** „Später" blendet den Banner komplett für diese Sitzung aus (alle Kandidaten des Profils), siehe offene Frage 2; Test entsprechend
   - Später gilt je Profil + Eintrag: Profilwechsel A->B->A hält A weiter ausgeblendet, B ist unabhängig; nach Neuerstellung des `ProviderContainer` (neuer Start) erscheint er wieder
@@ -109,21 +109,21 @@ Splitten (#381).
   - Aktion hält Use Case/Settings am Aktionsbeginn fest: Profilwechsel mitten in `endEntry` (`holdSaves`) -> Writes im Profil des Beginns, State des neuen Profils unverändert, kein Reload des neuen Dashboards
   - Doppeltippen: zweiter `endEntry` während laufender Aktion wird ignoriert (`busy`-Flag)
   - Lesefehler der Suche -> kein Banner, kein Crash
-- [ ] Tests `dashboard_view_model_reload_test.dart` (nutzt Harness):
+- [x] Tests `dashboard_view_model_reload_test.dart` (nutzt Harness):
   - Beenden mit **heute laufendem Timer**: nach `reloadAfterRetroClose()` Timer läuft weiter, `initialOvertime` = neuer gespeicherter Saldo, Stop danach speichert `neuer Saldo + Tagesanteil` (Delta des Vortags bleibt erhalten)
   - Beenden mit **heute bereits abgeschlossenem und gespeichertem Eintrag**: kein Doppelzählen (`dailyAlreadyStored`-Pfad)
   - `lastUpdated == heute` (nach heutigem Stop gesetzt) bleibt nach Retro-Beenden unverändert, Reload zieht heute nicht doppelt ab
   - Reload bei leerem heutigen Eintrag: Zustand = leerer Tag, Saldo = neuer Wert
   - Regression: bestehende `dashboard_view_model_day_change_test.dart` und `_profile_test.dart` unverändert grün
-- [ ] Impl: `open_entry_view_model.dart` (State-Klasse, `OpenEntryViewModel`, `openEntryViewModelProvider`, `openEntryDismissedProvider`); in `build()` `ref.watch(workRepositoryProvider)`/UseCase, `ref.watch(activeWorkProfileIdProvider)`, `ref.listen(todayProvider, ...)`, `ref.listen(dashboardViewModelProvider.select(laufender Eintrag-Datum), ...)` (nur Auslöser einer Neubewertung, kein Reload der Repo-Reads: Ausschluss per `excludeDate`-Filter im Speicher, damit keine zusätzlichen Reads); eigene Generationszählung gegen späte Ergebnisse. Im `DashboardViewModel` nur `reloadAfterRetroClose()` ergänzen (ohne Gen-/Action-Logik zu ändern).
-- [ ] Mutationsproben: (a) Später-Filter entfernen -> Banner trotz „Später" sichtbar -> Test rot, (b) Dismissed-Schlüssel ohne Profil-ID, (c) Ausschluss laufender Dashboard-Eintrag entfernen, (d) Reload nach Beenden weglassen -> Saldo-Test rot, (e) `ref.watch(todayProvider)` statt listen -> Dismissed-/Zustandsverlust-Test rot (optional).
+- [x] Impl: `open_entry_view_model.dart` (State-Klasse, `OpenEntryViewModel`, `openEntryViewModelProvider`, `openEntryDismissedProvider`); in `build()` `ref.watch(workRepositoryProvider)`/UseCase, `ref.watch(activeWorkProfileIdProvider)`, `ref.listen(todayProvider, ...)`, `ref.listen(dashboardViewModelProvider.select(laufender Eintrag-Datum), ...)` (nur Auslöser einer Neubewertung, kein Reload der Repo-Reads: Ausschluss per `excludeDate`-Filter im Speicher, damit keine zusätzlichen Reads); eigene Generationszählung gegen späte Ergebnisse. Im `DashboardViewModel` nur `reloadAfterRetroClose()` ergänzen (ohne Gen-/Action-Logik zu ändern).
+- [x] Mutationsproben: (a) Später-Filter entfernen -> Banner trotz „Später" sichtbar -> Test rot, (b) Dismissed-Schlüssel ohne Profil-ID, (c) Ausschluss laufender Dashboard-Eintrag entfernen, (d) Reload nach Beenden weglassen -> Saldo-Test rot, (e) `ref.watch(todayProvider)` statt listen -> Dismissed-/Zustandsverlust-Test rot (optional).
 
 ### Schritt 5: Texte
-- [ ] ARB-Keys in `app_de.arb` (mit `@key`-Beschreibung, `{date}`/`{time}`/`{count}`-Platzhalter) und `app_en.arb`: `openEntryBannerTitle`, `openEntryBannerMore`, `openEntryEnd`, `openEntryLater`, `openEntryEndDialogTitle`, `openEntryEndDialogBody`, `openEntryEndSuggestionExpected`, `openEntryEndSuggestionNow`, `openEntryEndInvalid`, `openEntryEndLongWarning`, `openEntrySaveError`, plus Dialog-Aktionen (`openEntryEndDialogConfirm`, Abbrechen falls kein vorhandener Key wiederverwendbar) und Semantik-Labels (`openEntryEndSemantics` mit `{date}`). `openEntryContinue` NICHT in PR 1.
-- [ ] `flutter gen-l10n`; Test: l10n-Test, dass de/en dieselben Keys haben (falls vorhandener Paritätstest, sonst Widget-Tests in Schritt 6 decken ab).
+- [x] ARB-Keys in `app_de.arb` (mit `@key`-Beschreibung, `{date}`/`{time}`/`{count}`-Platzhalter) und `app_en.arb`: `openEntryBannerTitle`, `openEntryBannerMore`, `openEntryEnd`, `openEntryLater`, `openEntryEndDialogTitle`, `openEntryEndDialogBody`, `openEntryEndSuggestionExpected`, `openEntryEndSuggestionNow`, `openEntryEndInvalid`, `openEntryEndLongWarning`, `openEntrySaveError`, plus Dialog-Aktionen (`openEntryEndDialogConfirm`, Abbrechen falls kein vorhandener Key wiederverwendbar) und Semantik-Labels (`openEntryEndSemantics` mit `{date}`). `openEntryContinue` NICHT in PR 1.
+- [x] `flutter gen-l10n`; Test: l10n-Test, dass de/en dieselben Keys haben (falls vorhandener Paritätstest, sonst Widget-Tests in Schritt 6 decken ab).
 
 ### Schritt 6: Presentation
-- [ ] Widget-Tests `open_entry_banner_test.dart` (Muster `holiday_banner_test.dart`, `MaterialApp` mit `AppLocalizations`-Delegates, `locale: Locale('de')` und `en`):
+- [x] Widget-Tests `open_entry_banner_test.dart` (Muster `holiday_banner_test.dart`, `MaterialApp` mit `AppLocalizations`-Delegates, `locale: Locale('de')` und `en`):
   - Text mit Datum + Startzeit (de/en, Datumsformat über `Localizations.localeOf`, Uhrzeit respektiert `use24HourFormat`)
   - „Noch 2 weitere offene Einträge" nur bei n > 0
   - Buttons „Beenden"/„Später" einzeln fokussierbar, Mindestgröße 48 dp, Semantics-Label enthält das Datum, `Semantics(container, liveRegion)` am Banner
@@ -131,14 +131,14 @@ Splitten (#381).
   - Dark Mode: Theme `ThemeData.dark` pumpen, Farben aus `ColorScheme` (Rollenpaar `secondaryContainer`/`onSecondaryContainer`, unterscheidet sich von `tertiaryContainer` des Feiertag-Banners), kein hartcodiertes `Color`
   - nichts gerendert bei leerem State / „Später" gedrückt (Banner verschwindet)
   - Busy-Zustand deaktiviert Buttons
-- [ ] Widget-Tests `open_entry_end_dialog_test.dart`: Vorschlag Soll-Ende vorbelegt; „Jetzt" nur bei <= 24 h sichtbar (feste Uhr); Datumsbereich [Starttag, heute]; Validierungsfehler `openEntryEndInvalid` (Text, nicht nur Farbe) bei Ende <= Start / > jetzt / vor letzter Pause, Bestätigen deaktiviert; Warnung bei > 16 h Netto (soft, bestätigbar); Rückgabewert = gewähltes `DateTime`; Fokus-Reihenfolge, Titel als Semantics-Header
-- [ ] Screen-Test `dashboard_screen_open_entry_test.dart` (Muster `dashboard_screen_holiday_test.dart`): Banner steht neben/unter `HolidayBanner` in schmaler und breiter Variante; Beenden -> Dialog -> Bestätigen ruft ViewModel; Fehler zeigt `openEntrySaveError`-Snackbar und Banner bleibt; „Später" blendet aus; Dashboard bleibt bedienbar (Timer-Start-Button tappbar, nicht modal)
-- [ ] Impl: `open_entry_banner.dart` (`ConsumerWidget`, `l10n` am Anfang von `build()`), `open_entry_end_dialog.dart` (Datum + Zeit per `showDatePicker`/`showTimePicker` oder ein Dialog mit beiden Feldern; Eingaben auf Minuten), Einbindung in `dashboard_screen.dart` an beiden `HolidayBanner`-Stellen.
+- [x] Widget-Tests `open_entry_end_dialog_test.dart`: Vorschlag Soll-Ende vorbelegt; „Jetzt" nur bei <= 24 h sichtbar (feste Uhr); Datumsbereich [Starttag, heute]; Validierungsfehler `openEntryEndInvalid` (Text, nicht nur Farbe) bei Ende <= Start / > jetzt / vor letzter Pause, Bestätigen deaktiviert; Warnung bei > 16 h Netto (soft, bestätigbar); Rückgabewert = gewähltes `DateTime`; Fokus-Reihenfolge, Titel als Semantics-Header
+- [x] Screen-Test `dashboard_screen_open_entry_test.dart` (Muster `dashboard_screen_holiday_test.dart`): Banner steht neben/unter `HolidayBanner` in schmaler und breiter Variante; Beenden -> Dialog -> Bestätigen ruft ViewModel; Fehler zeigt `openEntrySaveError`-Snackbar und Banner bleibt; „Später" blendet aus; Dashboard bleibt bedienbar (Timer-Start-Button tappbar, nicht modal)
+- [x] Impl: `open_entry_banner.dart` (`ConsumerWidget`, `l10n` am Anfang von `build()`), `open_entry_end_dialog.dart` (Datum + Zeit per `showDatePicker`/`showTimePicker` oder ein Dialog mit beiden Feldern; Eingaben auf Minuten), Einbindung in `dashboard_screen.dart` an beiden `HolidayBanner`-Stellen.
 
 ### Schritt 7: Dokumentation + Gesamtvalidierung
-- [ ] `mobile/CLAUDE.md`: neuer Abschnitt „Offene Einträge vor heute (#385)": Suche (aktueller + Vormonat, aktives Profil), Banner/Später-Semantik (nur Sitzung, Schlüssel Profil+Datum), `CloseOpenWorkEntry` (Saldo-Delta, `lastUpdated` bewusst nicht gesetzt wegen `_load`-Heuristik, Reihenfolge Saldo -> Eintrag, frisch lesen), Reload via `reloadAfterRetroClose()`, Grenzen (älter als Vormonat, andere Profile, kein `resumed`-Re-Check, Fortsetzen = PR 1b, Reports #404); in #388 Grenze (2) um Verweis ergänzen. `web/CLAUDE.md` bleibt für den Web-PR.
-- [ ] Mutations-Tabelle abgearbeitet (jede Mutation: Test rot, danach zurückgenommen, Ergebnis im Review-Protokoll).
-- [ ] Zeitzonenläufe der neuen Tests: `TZ=Europe/Berlin`, `UTC`, `America/Los_Angeles`, `Pacific/Auckland`.
+- [x] `mobile/CLAUDE.md`: neuer Abschnitt „Offene Einträge vor heute (#385)": Suche (aktueller + Vormonat, aktives Profil), Banner/Später-Semantik (nur Sitzung, Schlüssel Profil+Datum), `CloseOpenWorkEntry` (Saldo-Delta, `lastUpdated` bewusst nicht gesetzt wegen `_load`-Heuristik, Reihenfolge Saldo -> Eintrag, frisch lesen), Reload via `reloadAfterRetroClose()`, Grenzen (älter als Vormonat, andere Profile, kein `resumed`-Re-Check, Fortsetzen = PR 1b, Reports #404); in #388 Grenze (2) um Verweis ergänzen. `web/CLAUDE.md` bleibt für den Web-PR.
+- [x] Mutations-Tabelle abgearbeitet (jede Mutation: Test rot, danach zurückgenommen, Ergebnis im Review-Protokoll).
+- [x] Zeitzonenläufe der neuen Tests: `TZ=Europe/Berlin`, `UTC`, `America/Los_Angeles`, `Pacific/Auckland`.
 
 ## Risiken und Umgang
 | Risiko | Umgang im Plan |
