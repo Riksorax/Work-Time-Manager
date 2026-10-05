@@ -1,3 +1,4 @@
+import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { registerLocaleData } from '@angular/common';
 import localeDe from '@angular/common/locales/de';
 import { ChangeDetectionStrategy, Component, LOCALE_ID, signal } from '@angular/core';
@@ -81,6 +82,7 @@ describe('CalendarComponent - Mehrfachauswahl per Tastatur (#377)', () => {
   let fixture: ComponentFixture<HostComponent>;
   let host: HostComponent;
   let el: HTMLElement;
+  let announce: ReturnType<typeof vi.fn>;
 
   const cell = (k: string): HTMLElement => el.querySelector(`[data-date="${k}"]`) as HTMLElement;
   const grid = (): HTMLElement => el.querySelector('.calendar-grid') as HTMLElement;
@@ -104,12 +106,17 @@ describe('CalendarComponent - Mehrfachauswahl per Tastatur (#377)', () => {
     return Array.from({ length: d2 - d1 + 1 }, (_, i) => key(new Date(y, m - 1, d1 + i)));
   };
 
-  async function setup(date = new Date(2026, 9, 15), focus?: string): Promise<void> {
+  async function setup(date = new Date(2026, 9, 15), focus?: string, active = false): Promise<void> {
+    announce = vi.fn();
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 9, 15, 12));
     await TestBed.configureTestingModule({
       imports: [HostComponent],
-      providers: [provideTranslateService({ fallbackLang: 'de' }), { provide: LOCALE_ID, useValue: 'de-DE' }],
+      providers: [
+        provideTranslateService({ fallbackLang: 'de' }),
+        { provide: LOCALE_ID, useValue: 'de-DE' },
+        { provide: LiveAnnouncer, useValue: { announce } },
+      ],
     }).compileComponents();
     const translate = TestBed.inject(TranslateService);
     translate.setTranslation('de', {
@@ -119,13 +126,18 @@ describe('CalendarComponent - Mehrfachauswahl per Tastatur (#377)', () => {
         calendarNextMonthAria: 'Nächster Monat',
         calendarHolidayAria: '{{date}}, Feiertag: {{name}}',
         calendarHasEntryAria: '{{label}}, Eintrag vorhanden',
+        calendarMultiSelectOnAria: 'Mehrfachauswahl aktiv',
+        calendarMultiSelectOffAria: 'Mehrfachauswahl beendet',
+        calendarSelectedCountAria: 'Ausgewählte Tage: {{count}}',
       },
     });
     translate.use('de');
     fixture = TestBed.createComponent(HostComponent);
     host = fixture.componentInstance;
     host.selectedDate.set(date);
+    host.active.set(active);
     fixture.detectChanges();
+    TestBed.tick();
     el = fixture.nativeElement as HTMLElement;
     cell(focus ?? key(date)).focus();
   }
@@ -503,6 +515,143 @@ describe('CalendarComponent - Mehrfachauswahl per Tastatur (#377)', () => {
       } finally {
         outside.remove();
       }
+    });
+  });
+
+  describe('Live-Region (LiveAnnouncer)', () => {
+    const countText = (n: number): [string, string] => [`Ausgewählte Tage: ${n}`, 'polite'];
+    const tick = (): void => {
+      fixture.detectChanges();
+      TestBed.tick();
+    };
+
+    describe('Modus', () => {
+      beforeEach(() => setup());
+
+      it('sagt das Einschalten per Input einmal höflich an', () => {
+        host.active.set(true);
+        tick();
+        expect(announce.mock.calls).toEqual([['Mehrfachauswahl aktiv', 'polite']]);
+      });
+
+      it('sagt das Ausschalten einmal an', () => {
+        host.active.set(true);
+        tick();
+        announce.mockClear();
+        host.active.set(false);
+        tick();
+        expect(announce.mock.calls).toEqual([['Mehrfachauswahl beendet', 'polite']]);
+      });
+
+      it('Escape: genau eine Ansage (Modus beendet)', () => {
+        host.active.set(true);
+        tick();
+        announce.mockClear();
+        press('Escape');
+        expect(announce.mock.calls).toEqual([['Mehrfachauswahl beendet', 'polite']]);
+      });
+
+      it('sagt bei unverändertem Input nichts an', () => {
+        host.active.set(true);
+        tick();
+        announce.mockClear();
+        host.active.set(true);
+        tick();
+        tick();
+        expect(announce).not.toHaveBeenCalled();
+      });
+    });
+
+    it('sagt beim initialen Render nichts an, auch nicht mit Startwert multiSelectActive=true', async () => {
+      await setup(new Date(2026, 9, 15), undefined, true);
+      tick();
+      expect(announce).not.toHaveBeenCalled();
+    });
+
+    describe('Tastaturaktionen', () => {
+      beforeEach(() => setup());
+
+      it('Shift+Pfeil aus der Ruhe: genau eine Ansage mit der Anzahl, kein Modus-an-Hinweis', () => {
+        shift('ArrowRight');
+        expect(announce.mock.calls).toEqual([countText(2)]);
+      });
+
+      it('Shift+Pfeil bei bereits aktivem Modus: nur die Anzahl', () => {
+        host.active.set(true);
+        tick();
+        announce.mockClear();
+        shift('ArrowRight');
+        expect(announce.mock.calls).toEqual([countText(2)]);
+      });
+
+      it('sagt die Mengengröße an, nicht die Bereichslänge (Sa/So gefiltert), und die kleinere Zahl beim Verkleinern', async () => {
+        TestBed.resetTestingModule();
+        await setup(new Date(2026, 9, 1)); // Do 1.10.
+        shift('ArrowRight'); // 1.-2.: 2 Tage
+        shift('ArrowRight'); // Sa: Menge unverändert
+        shift('ArrowRight'); // So: Menge unverändert
+        shift('ArrowRight'); // Mo 5.: 3 Tage (Bereichslänge wäre 5)
+        expect(announce.mock.calls).toEqual([countText(2), countText(3)]);
+        shift('ArrowLeft'); // Bereich 1.-4.: Mo entfällt
+        expect(announce.mock.calls.at(-1)).toEqual(countText(2));
+      });
+
+      it('zwei Tastaturaktionen hintereinander ergeben zwei Ansagen', () => {
+        shift('ArrowDown'); // 15.-22.: 6 Arbeitstage
+        shift('ArrowUp'); // 15.: 1 Tag
+        expect(announce.mock.calls).toEqual([countText(6), countText(1)]);
+      });
+
+      it('Enter/Space im Modus sagt die neue Zahl an', () => {
+        shift('ArrowRight'); // 15., 16.
+        announce.mockClear();
+        press(' ');
+        expect(announce.mock.calls).toEqual([countText(1)]);
+        press('Enter');
+        expect(announce.mock.calls.at(-1)).toEqual(countText(2));
+      });
+
+      it('Pfeil ohne Shift (keine Mengenänderung) sagt nichts an', () => {
+        host.active.set(true);
+        tick();
+        announce.mockClear();
+        press('ArrowRight');
+        press('End');
+        expect(announce).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('Pointer', () => {
+      beforeEach(() => setup());
+
+      it('Drag und Tap lösen keine Ansage aus, auch wenn die Menge wächst', () => {
+        const efp = vi.fn();
+        Object.defineProperty(document, 'elementFromPoint', { value: efp, configurable: true });
+        try {
+          const card = el.querySelector('.calendar-card') as HTMLElement;
+          card.setPointerCapture = vi.fn();
+          card.releasePointerCapture = vi.fn();
+          card.hasPointerCapture = vi.fn().mockReturnValue(false);
+          const ptr = (type: string): PointerEvent =>
+            Object.assign(new Event(type, { cancelable: true, bubbles: true }), { clientX: 1, clientY: 1, pointerId: 1 }) as unknown as PointerEvent;
+          efp.mockReturnValue(cell('2026-10-20').querySelector('.day-number'));
+          card.dispatchEvent(ptr('pointerdown'));
+          efp.mockReturnValue(cell('2026-10-22').querySelector('.day-number'));
+          card.dispatchEvent(ptr('pointermove'));
+          card.dispatchEvent(ptr('pointerup'));
+          tick();
+          expect(selectedKeys()).toEqual(['2026-10-20', '2026-10-21', '2026-10-22']);
+          announce.mockClear(); // die Modus-an-Ansage durch den Drag ist erlaubt
+          efp.mockReturnValue(cell('2026-10-23').querySelector('.day-number'));
+          card.dispatchEvent(ptr('pointerdown'));
+          card.dispatchEvent(ptr('pointerup'));
+          tick();
+          expect(selectedKeys()).toContain('2026-10-23');
+          expect(announce).not.toHaveBeenCalled();
+        } finally {
+          delete (document as unknown as Record<string, unknown>)['elementFromPoint'];
+        }
+      });
     });
   });
 });

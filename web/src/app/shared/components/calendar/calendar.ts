@@ -13,6 +13,7 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { DatePipe } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -222,6 +223,7 @@ export class CalendarComponent {
   private readonly translate = inject(TranslateService);
   private readonly todayService = inject(TodayService);
   private readonly injector = inject(Injector);
+  private readonly announcer = inject(LiveAnnouncer);
 
   readonly viewDate = signal(new Date());
   readonly weekDays: string[] = this.translate.instant('common.weekdaysShort');
@@ -237,6 +239,10 @@ export class CalendarComponent {
   private _rangeBase = new Set<string>();
   /** Während eines Monatswechsels per Tastatur: Zellen werden neu erzeugt, ein focusout darf den Anker nicht verwerfen. */
   private _focusPending = false;
+  /** Tastatur hat die Auswahl geändert: die nächste Mengen-/Modusänderung wird (nur dann) angesagt. */
+  private _announceNext = false;
+  private _prevActive: boolean | null = null;
+  private _prevCount = 0;
 
   private _dragStart: Date | null = null;
   private _isDragging = false;
@@ -249,6 +255,14 @@ export class CalendarComponent {
         this.viewDate.set(new Date(initial.getFullYear(), initial.getMonth(), 1));
         this._focusKey.set(null);
       });
+    });
+
+    // Ansagen (LiveAnnouncer, polite): Modus an/aus nur bei Nicht-Tastaturaktionen, die Anzahl nur nach
+    // Tastaturaktionen (kein Dauerfeuer beim Pointer-Drag). Ein Effect, weil die Reihenfolge zweier nicht garantiert ist.
+    effect(() => {
+      const active = this.multiSelectActive();
+      const count = this.multiSelectedDates().size;
+      untracked(() => this._announceChange(active, count));
     });
 
     // Modus extern beendet (Button, Abbrechen, Batch-Speichern): Anker verwerfen, nur State, nie Fokus.
@@ -410,7 +424,10 @@ export class CalendarComponent {
       if (event.ctrlKey || event.shiftKey) return;
       event.preventDefault();
       this._resetAnchor();
-      if (!event.repeat) this.dateSelected.emit(from);
+      if (!event.repeat) {
+        if (this.multiSelectActive()) this._markKeyboardChange();
+        this.dateSelected.emit(from);
+      }
       return;
     }
 
@@ -454,6 +471,38 @@ export class CalendarComponent {
     return new Date(yr, mo - 1, da);
   }
 
+  private _markKeyboardChange(): void {
+    this._announceNext = true;
+    // Auffangnetz: ohne Änderung der Menge (z. B. Sa/So gefiltert) läuft der Effect nicht, das Flag darf nicht stehen bleiben.
+    afterNextRender(() => { this._announceNext = false; }, { injector: this.injector });
+  }
+
+  private _announceChange(active: boolean, count: number): void {
+    const prevActive = this._prevActive;
+    const prevCount = this._prevCount;
+    this._prevActive = active;
+    this._prevCount = count;
+    if (prevActive === null) return; // erste Ausführung: nur Vorwerte merken
+    const keyboard = this._announceNext;
+    this._announceNext = false;
+
+    if (keyboard) {
+      if (active !== prevActive || count !== prevCount) {
+        this._announce(this.translate.instant('shared.calendarSelectedCountAria', { count }));
+      }
+      return;
+    }
+    if (active !== prevActive) {
+      this._announce(this.translate.instant(
+        active ? 'shared.calendarMultiSelectOnAria' : 'shared.calendarMultiSelectOffAria',
+      ));
+    }
+  }
+
+  private _announce(message: string): void {
+    void this.announcer.announce(message, 'polite');
+  }
+
   private _resetAnchor(): void {
     this._anchorKey = null;
     this._rangeKeys = new Set();
@@ -469,6 +518,7 @@ export class CalendarComponent {
     }
     const [y, m, d] = this._anchorKey.split('-').map(Number);
     const target = nextFocusDate(key, from, false);
+    this._markKeyboardChange();
     const newRange = new Set(rangeKeys(new Date(y, m - 1, d), target));
     const diff = rangeDiff(this._rangeKeys, newRange, this._rangeBase);
     this.dragSelected.emit(diff.add.map(k => this._dateFromKey(k)));
