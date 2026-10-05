@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, Injector, afterNextRender, inject, signal, viewChild } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
@@ -7,6 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTabsModule } from '@angular/material/tabs';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { CalendarComponent } from '../../shared/components/calendar/calendar';
 import { EditEntryDialogComponent } from '../../shared/components/edit-entry-dialog/edit-entry-dialog';
@@ -35,6 +36,7 @@ import { LeaveBalanceCardComponent } from '../../shared/components/leave-balance
     MatIconModule,
     MatProgressSpinnerModule,
     MatTabsModule,
+    MatTooltipModule,
     CalendarComponent,
     LeaveBalanceCardComponent,
     TranslatePipe,
@@ -51,6 +53,8 @@ export class ReportsComponent {
   private  readonly dialog      = inject(MatDialog);
   private  readonly snackbar    = inject(MatSnackBar);
   private  readonly translate   = inject(TranslateService);
+  private  readonly injector    = inject(Injector);
+  private  readonly multiSelectToggle = viewChild('multiSelectToggle', { read: ElementRef<HTMLElement> });
   protected readonly activeTabIndex = signal(0);
 
   protected readonly isRestoring  = this.premiumSvc.isRestoring;
@@ -126,6 +130,12 @@ export class ReportsComponent {
     } else {
       this.svc.selectDate(date);
     }
+  }
+
+  /** „Abbrechen“ im Day-Panel verschwindet beim Klick: Fokus nach dem nächsten Render auf den Toggle (#377). */
+  onCancelMultiSelect(): void {
+    this.svc.endMultiSelect();
+    afterNextRender(() => this.multiSelectToggle()?.nativeElement.focus(), { injector: this.injector });
   }
 
   openEditDialog(entry?: WorkEntry): void {

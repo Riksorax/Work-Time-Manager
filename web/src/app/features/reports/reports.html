@@ -14,14 +14,28 @@
 
           <!-- Left panel: Calendar + Stats -->
           <aside class="calendar-panel">
+            <div class="calendar-toolbar">
+              <button mat-stroked-button #multiSelectToggle
+                      class="multi-select-toggle"
+                      [class.is-active]="svc.isMultiSelectActive()"
+                      [attr.aria-pressed]="svc.isMultiSelectActive()"
+                      [matTooltip]="'reports.multiSelectTooltip' | translate"
+                      (click)="svc.toggleMultiSelect()">
+                <mat-icon aria-hidden="true">{{ svc.isMultiSelectActive() ? 'done_all' : 'checklist' }}</mat-icon>
+                {{ 'reports.multiSelectButton' | translate }}
+              </button>
+            </div>
             <app-calendar
               [selectedDate]="svc.selectedDate()"
               [daysWithEntries]="svc.daysWithEntries()"
               [bundesland]="svc.bundesland()"
               [multiSelectedDates]="svc.selectedDates()"
+              [multiSelectActive]="svc.isMultiSelectActive()"
               (dateSelected)="onCalendarDayTap($event)"
               (monthChanged)="svc.onMonthChanged($event)"
               (dragSelected)="svc.addDateRangeSelection($event)"
+              (daysDeselected)="svc.removeDatesFromSelection($event)"
+              (multiSelectEnded)="svc.endMultiSelect()"
             />
 
             <!-- Day stats summary -->
@@ -63,7 +77,7 @@
                     </button>
                   }
                   <button mat-stroked-button
-                          (click)="svc.toggleMultiSelect()"
+                          (click)="onCancelMultiSelect()"
                           [attr.aria-label]="'reports.cancelMultiSelectAria' | translate">
                     <mat-icon>close</mat-icon>
                     {{ 'common.cancel' | translate }}
