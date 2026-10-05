@@ -1,5 +1,3 @@
-import 'package:flutter_work_time/core/utils/time_precision.dart';
-
 import 'work_entry_entity.dart';
 
 /// Diese Erweiterung fügt der WorkEntryEntity reine Berechnungslogik hinzu,
@@ -7,11 +5,14 @@ import 'work_entry_entity.dart';
 /// reines Datenobjekt sauber.
 extension WorkEntryCalculations on WorkEntryEntity {
   /// Berechnet die Brutto-Arbeitszeit (Zeit zwischen Start und Ende, ohne Pausen).
-  /// Wenn der Timer noch läuft, wird die Zeit bis "jetzt" berechnet.
+  /// Ohne Start oder ohne Ende (Timer läuft noch bzw. offener Eintrag) ist sie 0,
+  /// wie im Backend. Es wird nie mit "jetzt" gerechnet (#404); live zählt nur die
+  /// Reports-Anzeige für den heutigen Eintrag (`reportNetDuration`).
   Duration get calculatedWorkDuration {
-    if (workStart == null) return Duration.zero;
-    final end = workEnd ?? nowToMinute();
-    return end.difference(workStart!);
+    final start = workStart;
+    final end = workEnd;
+    if (start == null || end == null) return Duration.zero;
+    return end.difference(start);
   }
 
   /// Berechnet die Gesamtdauer aller abgeschlossenen Pausen.
