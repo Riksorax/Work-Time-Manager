@@ -42,6 +42,9 @@ class OpenEntryBanner extends ConsumerWidget {
     final endAction = state.busy
         ? null
         : () => _end(context, ref, entry, use24HourFormat: use24HourFormat);
+    final resumeAction = state.busy
+        ? null
+        : () => ref.read(openEntryViewModelProvider.notifier).resume();
     final laterAction = state.busy
         ? null
         : () => ref.read(openEntryViewModelProvider.notifier).later();
@@ -118,14 +121,41 @@ class OpenEntryBanner extends ConsumerWidget {
                     excludeSemantics: true,
                     label: l10n.openEntryEndSemantics(date),
                     onTap: endAction,
-                    child: FilledButton(
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size(48, 48),
-                      ),
-                      onPressed: endAction,
-                      child: Text(l10n.openEntryEnd),
-                    ),
+                    // Mit Fortsetzen ist Beenden sekundär (umrandet, Farben aus
+                    // dem Banner), sonst bleibt es die primäre Aktion.
+                    child: state.canResume
+                        ? OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: onContainer,
+                              side: BorderSide(color: onContainer),
+                              minimumSize: const Size(48, 48),
+                            ),
+                            onPressed: endAction,
+                            child: Text(l10n.openEntryEnd),
+                          )
+                        : FilledButton(
+                            style: FilledButton.styleFrom(
+                              minimumSize: const Size(48, 48),
+                            ),
+                            onPressed: endAction,
+                            child: Text(l10n.openEntryEnd),
+                          ),
                   ),
+                  if (state.canResume)
+                    Semantics(
+                      button: true,
+                      enabled: resumeAction != null,
+                      excludeSemantics: true,
+                      label: l10n.openEntryContinueSemantics(date),
+                      onTap: resumeAction,
+                      child: FilledButton(
+                        style: FilledButton.styleFrom(
+                          minimumSize: const Size(48, 48),
+                        ),
+                        onPressed: resumeAction,
+                        child: Text(l10n.openEntryContinue),
+                      ),
+                    ),
                 ],
               ),
             ],

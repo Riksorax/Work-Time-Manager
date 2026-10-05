@@ -20,7 +20,20 @@ void main() {
       expect((de['@$k'] as Map<String, dynamic>)['description'], isNotEmpty,
           reason: '@$k braucht eine Beschreibung');
     }
-    // Fortsetzen kommt erst mit PR 1b.
-    expect(deKeys, isNot(contains('openEntryContinue')));
+    // Fortsetzen (PR 1b).
+    expect(deKeys,
+        containsAll(['openEntryContinue', 'openEntryContinueSemantics']));
+  });
+
+  test('openEntryContinue*: Texte und Platzhalter date', () {
+    final de = load('app_de');
+    final en = load('app_en');
+    expect(de['openEntryContinue'], 'Fortsetzen');
+    expect(en['openEntryContinue'], 'Continue');
+    for (final arb in [de, en]) {
+      expect(arb['openEntryContinueSemantics'], contains('{date}'));
+    }
+    final meta = de['@openEntryContinueSemantics'] as Map<String, dynamic>;
+    expect((meta['placeholders'] as Map<String, dynamic>).keys, ['date']);
   });
 }
