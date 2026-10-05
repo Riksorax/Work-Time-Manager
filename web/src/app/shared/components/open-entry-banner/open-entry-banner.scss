@@ -58,3 +58,8 @@
   color: var(--mat-sys-on-secondary-container);
   border-color: var(--mat-sys-on-secondary-container);
 }
+
+// Text-Button (Später neben Fortsetzen): ebenfalls Rollenpaar statt Primärfarbe
+.banner-actions .mat-mdc-button:not(:disabled) {
+  color: var(--mat-sys-on-secondary-container);
+}

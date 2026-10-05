@@ -13,8 +13,10 @@
         [time]="ob.time"
         [moreCount]="openEntry.moreCount()"
         [busy]="openEntry.busy()"
+        [canResume]="openEntry.canResume()"
         (end)="onEndOpenEntry(ob.candidate)"
-        (later)="openEntry.later()" />
+        (later)="openEntry.later()"
+        (resume)="onResumeOpenEntry(ob.candidate)" />
     }
     <div class="dashboard-content">
 
