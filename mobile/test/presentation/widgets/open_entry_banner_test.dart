@@ -19,6 +19,7 @@ class _FakeVm extends OpenEntryViewModel {
   final OpenEntryState initial;
   final CloseOpenEntryResult result;
   static int laterCalls = 0;
+  static int resumeCalls = 0;
   static final List<DateTime> ends = [];
 
   @override
@@ -31,6 +32,12 @@ class _FakeVm extends OpenEntryViewModel {
   void later() {
     laterCalls++;
     state = const OpenEntryState();
+  }
+
+  @override
+  Future<bool> resume() async {
+    resumeCalls++;
+    return true;
   }
 
   @override
@@ -64,6 +71,7 @@ void main() {
   setUp(() {
     _use24 = true;
     _FakeVm.laterCalls = 0;
+    _FakeVm.resumeCalls = 0;
     _FakeVm.ends.clear();
   });
 
@@ -296,5 +304,139 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Eintrag konnte nicht beendet werden.'), findsOneWidget);
     expect(find.textContaining('Dein Eintrag'), findsOneWidget);
+  });
+
+  group('Fortsetzen (#385 PR 1b)', () {
+    OpenEntryState resumable({bool busy = false}) =>
+        OpenEntryState(entries: [_entry(fri)], canResume: true, busy: busy);
+
+    ButtonStyleButton buttonOf(WidgetTester tester, String label) =>
+        tester.widget<ButtonStyleButton>(find
+            .ancestor(
+                of: find.text(label),
+                matching: find.byWidgetPredicate((w) => w is ButtonStyleButton))
+            .first);
+
+    testWidgets('canResume: Button neben Beenden und Später (de/en)',
+        (tester) async {
+      await pump(tester, resumable());
+      expect(find.text('Fortsetzen'), findsOneWidget);
+      expect(find.text('Beenden'), findsOneWidget);
+      expect(find.text('Später'), findsOneWidget);
+
+      await pump(tester, resumable(), locale: 'en');
+      expect(find.text('Continue'), findsOneWidget);
+    });
+
+    testWidgets('ohne canResume: kein Button, Beenden bleibt primär',
+        (tester) async {
+      await pump(tester, one());
+      expect(find.text('Fortsetzen'), findsNothing);
+      expect(buttonOf(tester, 'Beenden'), isA<FilledButton>());
+    });
+
+    testWidgets('Hierarchie: Fortsetzen Filled, Beenden Outlined, Später Text',
+        (tester) async {
+      await pump(tester, resumable());
+      expect(buttonOf(tester, 'Fortsetzen'), isA<FilledButton>());
+      expect(buttonOf(tester, 'Beenden'), isA<OutlinedButton>());
+      expect(buttonOf(tester, 'Später'), isA<TextButton>());
+    });
+
+    testWidgets('Tap ruft resume() genau einmal, ohne Dialog und Snackbar',
+        (tester) async {
+      await pump(tester, resumable());
+      await tester.tap(find.text('Fortsetzen'));
+      await tester.pumpAndSettle();
+      expect(_FakeVm.resumeCalls, 1);
+      expect(find.byType(Dialog), findsNothing);
+      expect(find.byType(SnackBar), findsNothing);
+      expect(_FakeVm.ends, isEmpty);
+    });
+
+    testWidgets('busy: alle drei Buttons deaktiviert', (tester) async {
+      await pump(tester, resumable(busy: true));
+      for (final label in ['Fortsetzen', 'Beenden', 'Später']) {
+        expect(buttonOf(tester, label).onPressed, isNull, reason: label);
+      }
+    });
+
+    testWidgets('Mindestgröße 48 dp', (tester) async {
+      await pump(tester, resumable());
+      final size = tester.getSize(find
+          .ancestor(
+              of: find.text('Fortsetzen'),
+              matching: find.byWidgetPredicate((w) => w is ButtonStyleButton))
+          .first);
+      expect(size.height, greaterThanOrEqualTo(48));
+      expect(size.width, greaterThanOrEqualTo(48));
+    });
+
+    testWidgets('Semantics: eigenes Label mit Datum, Button, aktiv',
+        (tester) async {
+      final handle = tester.ensureSemantics();
+      await pump(tester, resumable());
+      final node = tester.getSemantics(
+          find.bySemanticsLabel('Eintrag vom Fr., 2. Okt. fortsetzen'));
+      expect(node.flagsCollection.isButton, isTrue);
+      expect(node.flagsCollection.isEnabled, Tristate.isTrue);
+
+      await pump(tester, resumable(), locale: 'en');
+      expect(find.bySemanticsLabel('Continue entry from Fri, Oct 2'),
+          findsOneWidget);
+      handle.dispose();
+    });
+
+    testWidgets('Tab-Reihenfolge: Später, Beenden, Fortsetzen', (tester) async {
+      await pump(tester, resumable());
+      final order = <String>[];
+      for (var i = 0; i < 3; i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pump();
+        final ctx = FocusManager.instance.primaryFocus!.context!;
+        String? label;
+        ctx.visitChildElements((e) {
+          void walk(Element el) {
+            if (label != null) return;
+            final w = el.widget;
+            if (w is Text) {
+              label = w.data;
+              return;
+            }
+            el.visitChildren(walk);
+          }
+
+          walk(e);
+        });
+        order.add(label!);
+      }
+      expect(order, ['Später', 'Beenden', 'Fortsetzen']);
+    });
+
+    testWidgets('schmal (320 px, Textskalierung 2.0): kein Overflow',
+        (tester) async {
+      tester.view.physicalSize = const Size(320, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await pump(tester,
+          OpenEntryState(entries: [_entry(fri), _entry(thu)], canResume: true),
+          textScale: 2.0);
+      expect(tester.takeException(), isNull);
+      expect(find.text('Fortsetzen'), findsOneWidget);
+    });
+
+    for (final dark in [false, true]) {
+      testWidgets('Farben aus dem ColorScheme (${dark ? 'dunkel' : 'hell'})',
+          (tester) async {
+        final theme = dark
+            ? ThemeData(brightness: Brightness.dark, useMaterial3: true)
+            : ThemeData(useMaterial3: true);
+        await pump(tester, resumable(), theme: theme);
+        final outlined = buttonOf(tester, 'Beenden');
+        final fg = outlined.style!.foregroundColor!.resolve(<WidgetState>{});
+        expect(fg, theme.colorScheme.onSecondaryContainer);
+        expect(tester.takeException(), isNull);
+      });
+    }
   });
 }

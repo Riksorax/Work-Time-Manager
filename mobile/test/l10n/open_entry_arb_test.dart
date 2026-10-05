@@ -21,7 +21,8 @@ void main() {
           reason: '@$k braucht eine Beschreibung');
     }
     // Fortsetzen (PR 1b).
-    expect(deKeys, containsAll(['openEntryContinue', 'openEntryContinueSemantics']));
+    expect(deKeys,
+        containsAll(['openEntryContinue', 'openEntryContinueSemantics']));
   });
 
   test('openEntryContinue*: Texte und Platzhalter date', () {
