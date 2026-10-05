@@ -10,6 +10,7 @@ import '../../core/providers/providers.dart';
 import '../../core/providers/today_provider.dart';
 import '../../domain/entities/break_entity.dart';
 import '../../domain/entities/work_entry_entity.dart';
+import '../../domain/entities/work_profile_entity.dart';
 import '../../domain/repositories/overtime_repository.dart';
 import '../../domain/repositories/settings_repository.dart';
 import '../../domain/services/break_calculator_service.dart';
@@ -533,6 +534,34 @@ class DashboardViewModel extends Notifier<DashboardState> {
     }
 
     return _recalculateStateAndSave(updatedEntry, ctx: ctx);
+  }
+
+  /// Läuft im Dashboard gerade ein Timer (geladen, Start gesetzt, kein Ende)?
+  /// Während des Ladens `false` (der State ist dann nur ein Platzhalter).
+  bool get isTimerRunning => !state.isLoading && _isRunning(state.workEntry);
+
+  /// Stoppt und speichert einen laufenden Timer vor einem Profilwechsel (#388)
+  /// über den normalen Stop-Pfad ([startOrStopTimer]). Liefert `true`, wenn
+  /// danach nichts mehr läuft (gestoppt oder nie gelaufen), sonst `false`
+  /// (Saldo-Fehler, Profil nicht mehr [fromProfileId], Stop ohne Wirkung).
+  /// Wechselt selbst nie das Profil.
+  Future<bool> stopRunningForSwitch(String fromProfileId) async {
+    // Nie auf dem Platzhalter arbeiten: laufenden Ladelauf abwarten.
+    final pending = _initRun;
+    if (state.isLoading && pending != null) await pending;
+    if (!ref.mounted) return false;
+
+    final active = ref.read(activeWorkProfileIdProvider) ??
+        WorkProfileEntity.defaultProfileId;
+    if (active != fromProfileId) return false;
+
+    if (!isTimerRunning) return true;
+
+    final ok = await startOrStopTimer();
+    if (!ok || !ref.mounted) return false;
+    // `startOrStopTimer` liefert auch `true`, ohne zu stoppen (z. B. wenn
+    // `_ensureCurrentDay` abbricht): Wirkung am State prüfen.
+    return !_isRunning(state.workEntry);
   }
 
   /// Startet eine komplett neue Session (Start, End und Pausen zurücksetzen)

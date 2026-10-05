@@ -1260,5 +1260,14 @@
   "reportsEntryIncompleteTitle": "Unvollständig",
   "@reportsEntryIncompleteTitle": {"description": "Titel einer Eintragskarte in den Reports (Tages-Tab und Tages-Sheet) für einen offenen Eintrag vor heute, der kein Ende hat. Ersetzt dort die Anzeige der Arbeitszeit."},
   "reportsEntryIncompleteHint": "Kein Ende erfasst – dieser Eintrag zählt nicht in die Auswertung.",
-  "@reportsEntryIncompleteHint": {"description": "Hinweis auf der Eintragskarte in den Reports für einen offenen Eintrag vor heute (Start, aber kein Ende). Er zählt mit Netto 0 wie im Backend."}
+  "@reportsEntryIncompleteHint": {"description": "Hinweis auf der Eintragskarte in den Reports für einen offenen Eintrag vor heute (Start, aber kein Ende). Er zählt mit Netto 0 wie im Backend."},
+  "switchWhileRunningTitle": "Zeiterfassung läuft",
+  "@switchWhileRunningTitle": {"description": "Titel des Bestätigungsdialogs, wenn beim Wechsel oder Anlegen eines Arbeitszeit-Profils im Dashboard noch ein Timer läuft."},
+  "switchWhileRunningText": "Im Profil \"{from}\" läuft noch eine Zeiterfassung. Sie wird beendet und gespeichert, bevor du in das Profil \"{to}\" wechselst.",
+  "@switchWhileRunningText": {
+    "description": "Text des Bestätigungsdialogs beim Profilwechsel mit laufendem Timer. from = Name des bisherigen Profils, to = Name des Ziel-Profils.",
+    "placeholders": { "from": { "type": "String" }, "to": { "type": "String" } }
+  },
+  "stopAndSwitchButton": "Beenden und wechseln",
+  "@stopAndSwitchButton": {"description": "Bestätigen-Button im Dialog beim Profilwechsel mit laufendem Timer: stoppt und speichert den Timer, danach wird das Profil gewechselt."}
 }
