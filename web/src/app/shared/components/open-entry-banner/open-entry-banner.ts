@@ -6,7 +6,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 let nextBannerId = 0;
 
 /**
- * Nicht-modaler Hinweis auf einen nicht beendeten Eintrag vor heute (#385) mit „Beenden" und „Später".
+ * Nicht-modaler Hinweis auf einen nicht beendeten Eintrag vor heute (#385) mit „Beenden", „Später" und optional „Fortsetzen".
  * Rein darstellend: Datum und Startzeit kommen fertig formatiert, die Logik liegt im Dashboard/`OpenEntryService`.
  */
 @Component({
@@ -25,11 +25,14 @@ export class OpenEntryBannerComponent {
   readonly time = input.required<string>();
   /** Anzahl weiterer offener Einträge (0 = Zeile entfällt). */
   readonly moreCount = input.required<number>();
-  /** Beenden läuft: beide Buttons deaktiviert. */
+  /** Beenden/Fortsetzen läuft: alle Buttons deaktiviert. */
   readonly busy = input.required<boolean>();
+  /** „Fortsetzen" anbieten (Regel liegt im `OpenEntryService`); ohne bleibt es bei „Später" und „Beenden". */
+  readonly canResume = input(false);
 
   readonly end = output<void>();
   readonly later = output<void>();
+  readonly resume = output<void>();
 
   protected readonly titleId = `open-entry-banner-title-${nextBannerId++}`;
 

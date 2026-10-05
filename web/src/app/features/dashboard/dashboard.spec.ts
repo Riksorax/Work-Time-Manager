@@ -330,6 +330,82 @@ describe('DashboardComponent Banner für offene Einträge (#385)', () => {
     expect(startOrStop).toHaveBeenCalledTimes(1);
   });
 
+  describe('Fortsetzen', () => {
+    const resumeBtn = (): HTMLButtonElement | undefined =>
+      Array.from(openBanner()?.querySelectorAll('button') ?? []).find(b => b.textContent!.includes('Fortsetzen'));
+
+    it('canResume aus dem Service steuert den Button', async () => {
+      fake.current.set(FRI);
+      await flush();
+      expect(resumeBtn()).toBeUndefined();
+      fake.canResume.set(true);
+      await flush();
+      expect(resumeBtn()).toBeTruthy();
+      fake.canResume.set(false);
+      await flush();
+      expect(resumeBtn()).toBeUndefined();
+    });
+
+    it('Klick ruft resume mit dem Kandidaten genau einmal auf, ohne Dialog, Snackbar oder zusätzliche Ansage', async () => {
+      fake.current.set(FRI);
+      fake.canResume.set(true);
+      await flush();
+      expect(announce).toHaveBeenCalledTimes(1); // nur die einmalige Banner-Ansage
+      resumeBtn()!.click();
+      await flush();
+      expect(fake.resumeCalls).toEqual([FRI]);
+      expect(dialogOpen).not.toHaveBeenCalled();
+      expect(snackOpen).not.toHaveBeenCalled();
+      expect(announce).toHaveBeenCalledTimes(1);
+    });
+
+    it('während busy sind alle drei Buttons deaktiviert', async () => {
+      fake.current.set(FRI);
+      fake.canResume.set(true);
+      fake.resumeResult = new Promise<boolean>(() => { /* hängt */ });
+      await flush();
+      resumeBtn()!.click();
+      fake.busy.set(true);
+      await flush();
+      expect(Array.from(openBanner()!.querySelectorAll('button')).every(b => b.disabled)).toBe(true);
+    });
+
+    it('Fokus nach Erfolg: Spinner beim Pin, danach der stabile Anker', async () => {
+      fake.current.set(FRI);
+      fake.canResume.set(true);
+      await flush();
+      resumeBtn()!.focus();
+      isLoading.set(true); // Dashboard pinnt: Spinner
+      await flush();
+      expect(el().querySelector('.timer-label')).toBeNull();
+      fake.current.set(null);
+      isLoading.set(false);
+      fake.closedCount.set(1);
+      await flush();
+      expect(document.activeElement).toBe(el().querySelector('.timer-label'));
+    });
+
+    it('Fokus nach Erfolg: gibt es einen nächsten Banner, bekommt er den Fokus', async () => {
+      fake.current.set(FRI);
+      fake.canResume.set(true);
+      await flush();
+      fake.current.set(SAT_EARLIER);
+      fake.canResume.set(false);
+      fake.closedCount.set(1);
+      await flush();
+      expect(document.activeElement).toBe(openBanner()!.querySelector('button'));
+    });
+
+    it('nicht modal: der Timer-Start bleibt neben dem Fortsetzen-Button bedienbar', async () => {
+      fake.current.set(FRI);
+      fake.canResume.set(true);
+      await flush();
+      el().querySelector<HTMLButtonElement>('.main-action-btn')!.click();
+      await flush();
+      expect(startOrStop).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('Fokus und Ansage', () => {
     it('nach dem Entfall des letzten Banners landet der Fokus auf dem stabilen Anker', async () => {
       fake.current.set(FRI);

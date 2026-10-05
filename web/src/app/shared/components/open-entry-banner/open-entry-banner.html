@@ -7,13 +7,29 @@
     }
   </div>
   <div class="banner-actions">
-    <button mat-stroked-button type="button" class="banner-btn" [disabled]="busy()"
-            [attr.aria-describedby]="titleId" (click)="later.emit()">
-      {{ 'dashboard.openEntryLater' | translate }}
-    </button>
-    <button mat-flat-button type="button" class="banner-btn" [disabled]="busy()"
-            [attr.aria-describedby]="titleId" (click)="end.emit()">
-      {{ 'dashboard.openEntryEnd' | translate }}
-    </button>
+    @if (canResume()) {
+      <button mat-button type="button" class="banner-btn" [disabled]="busy()"
+              [attr.aria-describedby]="titleId" (click)="later.emit()">
+        {{ 'dashboard.openEntryLater' | translate }}
+      </button>
+      <button mat-stroked-button type="button" class="banner-btn" [disabled]="busy()"
+              [attr.aria-describedby]="titleId" (click)="end.emit()">
+        {{ 'dashboard.openEntryEnd' | translate }}
+      </button>
+      <button mat-flat-button type="button" class="banner-btn" [disabled]="busy()"
+              [attr.aria-label]="'dashboard.openEntryContinueSemantics' | translate: { date: dateText() }"
+              (click)="resume.emit()">
+        {{ 'dashboard.openEntryContinue' | translate }}
+      </button>
+    } @else {
+      <button mat-stroked-button type="button" class="banner-btn" [disabled]="busy()"
+              [attr.aria-describedby]="titleId" (click)="later.emit()">
+        {{ 'dashboard.openEntryLater' | translate }}
+      </button>
+      <button mat-flat-button type="button" class="banner-btn" [disabled]="busy()"
+              [attr.aria-describedby]="titleId" (click)="end.emit()">
+        {{ 'dashboard.openEntryEnd' | translate }}
+      </button>
+    }
   </div>
 </div>

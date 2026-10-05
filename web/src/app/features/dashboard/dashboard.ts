@@ -141,6 +141,11 @@ export class DashboardComponent {
     }
   }
 
+  /** Fortsetzen: kein Dialog, Ablehnung bleibt still (der Service sucht neu); Fokus läuft über `closedCount`. */
+  async onResumeOpenEntry(candidate: OpenEntryCandidate): Promise<void> {
+    await this.openEntry.resume(candidate);
+  }
+
   goToSettings(): void {
     void this.router.navigate(['/settings']);
   }

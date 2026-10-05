@@ -16,6 +16,7 @@ import {
   getEffectiveDailyTarget,
   calculateInitialOvertime,
 } from '../../domain/utils/overtime.utils';
+import { canResumeOpenEntry, localDateFromEntryId } from '../../domain/utils/open-entry.utils';
 
 /**
  * Kontext einer Schreibaktion (#380): Profil und `_init`-Generation zum Aktionsbeginn. Alle Writes der Aktion gehen
@@ -66,6 +67,9 @@ function initialState(): DashboardState {
   };
 }
 
+/** `pinned`: statt „heute" den offenen Eintrag dieses Tages laden („Fortsetzen", #385). */
+interface InitOpts { dayChange?: boolean; pinned?: { id: string } }
+
 @Injectable({ providedIn: 'root' })
 export class DashboardService {
   private readonly _s            = signal<DashboardState>(initialState());
@@ -114,10 +118,24 @@ export class DashboardService {
   readonly expectedEndTotalZero = computed(() => this._s().expectedEndTotalZero);
   readonly breaks          = computed(() => this._s().workEntry.breaks);
 
+  /** Letzter `_initInner` ist fehlerfrei durchgelaufen (nach einem Fehler ist `status` ebenfalls `ready`, #385). */
+  private readonly _loadOk = signal(false);
+  /**
+   * Heute ist sicher leer: geladen ohne Fehler, angezeigt wird der heutige Tag, Typ work, kein Start. Heutiger
+   * Urlaub/Krank zählt nicht als leer. Grundlage für „Fortsetzen" eines offenen Vortags (#385).
+   */
+  readonly todayIsEmpty = computed(() => {
+    if (!this._loadOk() || this._s().status !== 'ready') return false;
+    const e = this._s().workEntry;
+    return e.id === this.todayService.today() && e.type === WorkEntryType.Work && !e.workStart;
+  });
+
   // ─── Private timer state ────────────────────────────────────────────────────
   private _timerUnsub: (() => void) | null = null;
   private _autoSaveTick = 0;
   private _initGen = 0;
+  /** Generation des `_init`-Laufs, der zuletzt einen Vortag gepinnt hat (#385); nur Literal, keine importierte Konstante. */
+  private _pinnedGen = 0;
   /** Letzter laufender `_init` (für `_ensureCurrentDay`, damit überholte Aktionen auf den neuesten warten). */
   private _initRun: Promise<void> | null = null;
   /** Profil, dessen Daten gerade im Dashboard stehen (#380). Wird synchron zu Beginn jedes `_init` gesetzt. */
@@ -227,7 +245,7 @@ export class DashboardService {
 
   // ─── Flow 1: Initialisierung ────────────────────────────────────────────────
   // Generationszähler: ein überholter Lauf (Login, Tageswechsel) darf Zustand/Timer nicht mehr verändern.
-  private _init(_uid: string | null, opts: { dayChange?: boolean } = {}): Promise<void> {
+  private _init(_uid: string | null, opts: InitOpts = {}): Promise<void> {
     const run: Promise<void> = this._initInner(opts).finally(() => {
       if (this._initRun === run) this._initRun = null;
     });
@@ -235,7 +253,7 @@ export class DashboardService {
     return run;
   }
 
-  private async _initInner(opts: { dayChange?: boolean }): Promise<void> {
+  private async _initInner(opts: InitOpts): Promise<void> {
     const gen = ++this._initGen;
     this._stopTimer();
     // Profil dieses Laufs synchron festhalten; alle Reads gehen mit explizitem `pid`, damit nie „Eintrag A + Saldo B"
@@ -247,12 +265,20 @@ export class DashboardService {
     const dayChange = !!opts.dayChange && !profileChanged;
     // Beim stillen Tageswechsel den alten Zustand stehen lassen (kein Lade-Flackern), sonst zurücksetzen.
     if (!dayChange) this._s.set(initialState());
+    this._loadOk.set(false);
 
     try {
       const today = new Date();
 
-      // 1. Heutigen Eintrag laden
-      const workEntry = (await firstValueFrom(this.workSvc.getTodayEntry(pid))) ?? this.workSvc.emptyEntry(today);
+      // 1. Heutigen Eintrag laden — oder bei „Fortsetzen" den gepinnten Vortag (Fehler/ungültig: Fallback auf heute)
+      let pinnedEntry: WorkEntry | null = null;
+      if (opts.pinned) {
+        pinnedEntry = await this._readPinned(pid, opts.pinned.id);
+        if (gen !== this._initGen) return;
+      }
+      const workEntry = pinnedEntry
+        ?? (await firstValueFrom(this.workSvc.getTodayEntry(pid)))
+        ?? this.workSvc.emptyEntry(today);
       if (gen !== this._initGen) return;
 
       // 2. Überstunden + Datum laden
@@ -292,7 +318,10 @@ export class DashboardService {
       // anderen Gerät), steckt sein Daily im gespeicherten Wert — dann gilt weiter die Heuristik (kein Doppelzählen).
       const dailyAlreadyStored = !!workEntry.workStart && !!workEntry.workEnd
         && !!lastUpdateDate && lastUpdateDate.getTime() >= workEntry.workEnd.getTime();
-      const initialOvertimeMs = dayChange && !dailyAlreadyStored
+      // Fortsetzen (`pinned`) rechnet wie ein stiller Tageswechsel: Basis = gespeicherter Saldo (bei einem offenen
+      // Eintrag ist `dailyAlreadyStored` immer false).
+      const storedBase = dayChange || !!opts.pinned;
+      const initialOvertimeMs = storedBase && !dailyAlreadyStored
         ? storedOvertimeMs
         : calculateInitialOvertime(storedOvertimeMs, lastUpdateDate, initialDailyMs);
       const totalOvertimeMs   = initialOvertimeMs + initialDailyMs;
@@ -312,12 +341,58 @@ export class DashboardService {
       });
 
       this._recalculateState(workEntry, false);
+      if (pinnedEntry) this._pinnedGen = gen;
       this._startTimerIfNeeded();
+      this._loadOk.set(true);
     } catch {
       if (gen !== this._initGen) return;
       // Initialisierung fehlgeschlagen — leeren Zustand zeigen statt Dauerladespinner
       this._s.update(s => ({ ...s, status: 'ready' }));
     }
+  }
+
+  /**
+   * Liest den gepinnten Tag frisch (Monats-Einmalabruf, Suche per `id`). Nur ein weiterhin offener, nach
+   * `canResumeOpenEntry` zulässiger Eintrag wird geliefert (`date` = lokales Datum aus der `id`, wie der Close-Service);
+   * Lesefehler und ungültige Einträge ergeben `null` (normaler Ladepfad für heute, kein Fehlerzustand).
+   */
+  private async _readPinned(pid: string, id: string): Promise<WorkEntry | null> {
+    try {
+      const [y, m] = id.split('-').map(Number);
+      const fresh = (await this.workSvc.getEntriesForMonthOnce(y, m, pid)).find(e => e.id === id);
+      if (!fresh) return null;
+      const ok = canResumeOpenEntry({
+        entry: fresh, now: new Date(), todayId: this.todayService.today(), todayIsEmpty: true,
+      });
+      return ok ? { ...fresh, date: localDateFromEntryId(id) } : null;
+    } catch {
+      return null;
+    }
+  }
+
+  // ─── Fortsetzen eines offenen Vortags (#385) ────────────────────────────────
+  /**
+   * Lädt den offenen Eintrag `entry` des Profils `pid` ins Dashboard („Pinning"); der Timer läuft weiter (#372).
+   * Schreibt nichts. `true` nur, wenn der Lauf wirklich gepinnt hat und nicht überholt wurde. Ablehnung (`false`,
+   * Zustand unverändert): Profil nicht das geladene/aktive, heute nicht sicher leer, Regel `canResumeOpenEntry` verletzt,
+   * Eintrag inzwischen beendet/älter als 24 h/nicht lesbar, überholt (Profil-/Tages-/Login-Wechsel).
+   */
+  async resumePastEntry(entry: WorkEntry, pid: string): Promise<boolean> {
+    // Auf laufende Ladeläufe warten; danach läuft Prüfung bis `_init` synchron (keine Lücke bis `_initGen`++).
+    while (this._initRun !== null) await this._initRun;
+    this.todayService.refresh();
+    if (pid !== this._loadedProfileId || pid !== this.workProfile.activeProfileId()) return false;
+    if (!this.todayIsEmpty()) return false;
+    if (!canResumeOpenEntry({
+      entry, now: new Date(), todayId: this.todayService.today(), todayIsEmpty: this.todayIsEmpty(),
+    })) return false;
+    const run = this._init(this._uid(), { pinned: { id: entry.id } });
+    const gen = this._initGen;
+    await run;
+    if (this._pinnedGen !== gen || this._initGen !== gen || this._s().workEntry.id !== entry.id) return false;
+    // Ohne sofortigen Tick stünde `elapsedMs` bis zum nächsten Sekunden-Tick auf 0.
+    this._tick();
+    return true;
   }
 
   // ─── Nachträgliches Beenden eines Vortags (#385) ────────────────────────────

@@ -19,6 +19,8 @@ const KEYS = [
   'openEntryEndLongWarning',
   'openEntryEndDialogConfirm',
   'openEntrySaveError',
+  'openEntryContinue',
+  'openEntryContinueSemantics',
 ] as const;
 
 const PLACEHOLDERS: Record<string, string[]> = {
@@ -26,6 +28,7 @@ const PLACEHOLDERS: Record<string, string[]> = {
   openEntryBannerMoreOther: ['count'],
   openEntryEndDialogBody: ['date'],
   openEntryEndSuggestionExpected: ['time'],
+  openEntryContinueSemantics: ['date'],
 };
 
 type Dict = Record<string, string>;
@@ -49,7 +52,7 @@ describe('i18n dashboard.openEntry* (#385)', () => {
     expect(placeholders(deDash[key])).toEqual([...(PLACEHOLDERS[key] ?? [])].sort());
   });
 
-  it('es gibt keine weiteren openEntry*-Keys ohne Gegenstück (kein Fortsetzen, keine Semantics-Keys)', () => {
+  it('es gibt keine weiteren openEntry*-Keys ohne Gegenstück (Fortsetzen und Semantics-Key sind Teil der Liste, kein dritter Key)', () => {
     const deKeys = Object.keys(deDash).filter(k => k.startsWith('openEntry')).sort();
     const enKeys = Object.keys(enDash).filter(k => k.startsWith('openEntry')).sort();
     expect(deKeys).toEqual([...KEYS].sort());

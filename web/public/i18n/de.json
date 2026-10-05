@@ -58,7 +58,9 @@
     "openEntryEndInvalid": "Das Ende muss nach dem Start und vor jetzt liegen.",
     "openEntryEndLongWarning": "Das ergibt mehr als 16 Stunden. Stimmt das?",
     "openEntryEndDialogConfirm": "Eintrag beenden",
-    "openEntrySaveError": "Eintrag konnte nicht beendet werden."
+    "openEntrySaveError": "Eintrag konnte nicht beendet werden.",
+    "openEntryContinue": "Fortsetzen",
+    "openEntryContinueSemantics": "Eintrag vom {{date}} fortsetzen"
   },
   "holidays": {
     "newYear": "Neujahr",

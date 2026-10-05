@@ -13,16 +13,22 @@ export interface FakeOpenEntry {
   readonly busy: ReturnType<typeof signal<boolean>>;
   readonly saveError: ReturnType<typeof signal<OpenEntrySaveError | null>>;
   readonly closedCount: ReturnType<typeof signal<number>>;
+  /** Fortsetzen anbieten (die Regel liegt im echten Service). */
+  readonly canResume: ReturnType<typeof signal<boolean>>;
   /** Einträge für `entryOf`/`prepareEnd` (Schlüssel = id). */
   readonly entries: ReturnType<typeof signal<Record<string, WorkEntry>>>;
   /** Ergebnis von `prepareEnd` (`undefined` = aus `entries` ableiten, `null` = nicht verfügbar). */
   prepareResult: OpenEntryEndData | null | undefined;
   readonly endCalls: { candidate: OpenEntryCandidate; end: Date }[];
   laterCalls: number;
+  /** Ergebnis von resume (auch ein hängendes Promise, um busy zu simulieren). */
+  resumeResult: boolean | Promise<boolean>;
+  readonly resumeCalls: OpenEntryCandidate[];
   entryOf(id: string): WorkEntry | undefined;
   prepareEnd(c: OpenEntryCandidate): Promise<OpenEntryEndData | null>;
   endEntry(c: OpenEntryCandidate, end: Date): Promise<string>;
   later(): void;
+  resume(c: OpenEntryCandidate): Promise<boolean>;
 }
 
 export function createFakeOpenEntry(): FakeOpenEntry {
@@ -33,10 +39,13 @@ export function createFakeOpenEntry(): FakeOpenEntry {
     busy: signal(false),
     saveError: signal<OpenEntrySaveError | null>(null),
     closedCount: signal(0),
+    canResume: signal(false),
     entries,
     prepareResult: undefined,
     endCalls: [],
     laterCalls: 0,
+    resumeResult: true,
+    resumeCalls: [],
     entryOf: (id: string) => entries()[id],
     prepareEnd: async (c: OpenEntryCandidate) => {
       if (fake.prepareResult !== undefined) return fake.prepareResult;
@@ -48,6 +57,10 @@ export function createFakeOpenEntry(): FakeOpenEntry {
       return 'closed';
     },
     later: () => { fake.laterCalls++; },
+    resume: async (c: OpenEntryCandidate) => {
+      fake.resumeCalls.push(c);
+      return fake.resumeResult;
+    },
   };
   return fake;
 }

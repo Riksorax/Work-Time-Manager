@@ -4,7 +4,7 @@ import { TodayService } from '../../core/services/today';
 import { WorkEntryService } from '../../core/services/work-entry';
 import { SettingsService } from '../../core/services/settings';
 import { WorkProfileService } from '../../core/services/work-profile';
-import { effectiveTargetMsForDate, localDateFromEntryId } from '../../domain/utils/open-entry.utils';
+import { canResumeOpenEntry, effectiveTargetMsForDate, localDateFromEntryId } from '../../domain/utils/open-entry.utils';
 import { WorkEntry, WorkEntryType } from '../../shared/models';
 import { DashboardService } from './dashboard.service';
 import { CloseResult, OpenEntryCandidate, OpenEntryCloseService } from './open-entry-close';
@@ -54,6 +54,10 @@ export class OpenEntryService {
   private _ctxEpoch = 0;
   /** Jede Suche trägt eine Sequenznummer; nur die neueste darf ihr Ergebnis setzen. */
   private _searchSeq = 0;
+  /** Dashboard-Eintrags-Id des letzten Effect-Laufs (Flash-Schutz); `''` = noch keiner. */
+  private _prevDashId = '';
+  /** `Date.now()` ist nicht reaktiv: wird erhöht, wenn `canResume` neu bewertet werden soll. */
+  private readonly _clockTick = signal(0);
 
   readonly busy = this._busy.asReadonly();
   readonly saveError = this._saveError.asReadonly();
@@ -73,6 +77,23 @@ export class OpenEntryService {
       c.profileId === pid && c.id !== dashId && !dismissed.has(this._key(uid, pid, c.id)));
   });
   readonly current = computed<OpenEntryCandidate | null>(() => this.entries()[0] ?? null);
+  /**
+   * „Fortsetzen" ist für den neuesten sichtbaren Kandidaten möglich (Regel `canResumeOpenEntry`: heute leer, höchstens
+   * 24 h alt). Ältere Kandidaten bieten es nie an.
+   */
+  readonly canResume = computed(() => {
+    this._clockTick();
+    const cur = this.current();
+    if (!cur) return false;
+    const entry = this._found().get(cur.id);
+    if (!entry) return false;
+    return canResumeOpenEntry({
+      entry,
+      now: new Date(),
+      todayId: this.todayService.today(),
+      todayIsEmpty: this.dashboard.todayIsEmpty(),
+    });
+  });
   readonly moreCount = computed(() => Math.max(0, this.entries().length - 1));
 
   constructor() {
@@ -80,8 +101,14 @@ export class OpenEntryService {
       const user = this.auth.user(); // undefined, bis Firebase zum ersten Mal geantwortet hat
       const pid = this.workProfile.activeProfileId();
       const today = this.todayService.today();
-      this._dashEntryId(); // Dashboard schaltet den Eintrag um (z. B. Stop eines Vortags): neu prüfen
-      untracked(() => this._onTrigger(user, pid, today));
+      const dashId = this._dashEntryId(); // Dashboard schaltet den Eintrag um (z. B. Stop eines Vortags): neu prüfen
+      untracked(() => {
+        // Flash-Schutz: der zuvor im Dashboard angezeigte Tag (z. B. gepinnter Vortag nach dem Stop) ist nicht mehr offen;
+        // ein älteres Suchergebnis darf ihn nicht kurz wieder als Banner zeigen.
+        if (this._prevDashId !== '' && this._prevDashId !== dashId) this._dropCandidate(this._prevDashId);
+        this._prevDashId = dashId;
+        this._onTrigger(user, pid, today);
+      });
     });
   }
 
@@ -117,6 +144,45 @@ export class OpenEntryService {
     this._dismissed.set(next);
   }
 
+  /**
+   * „Fortsetzen": lädt den Kandidaten ins Dashboard (`DashboardService.resumePastEntry`, schreibt nichts). Prüft die Regel
+   * vorher mit frischer Uhr. Erfolg: Kandidat sofort entfernt, Fokus-Zähler +1. Ablehnung: still, stille Neusuche
+   * (ein anderswo beendeter Eintrag verschwindet).
+   */
+  async resume(candidate: OpenEntryCandidate): Promise<boolean> {
+    if (this._busy()) return false;
+    const visible = this.entries().some(c => c.id === candidate.id && c.profileId === candidate.profileId);
+    const entry = this._found().get(candidate.id);
+    if (!visible || !entry) return false;
+    this.todayService.refresh();
+    const allowed = canResumeOpenEntry({
+      entry,
+      now: new Date(),
+      todayId: this.todayService.today(),
+      todayIsEmpty: this.dashboard.todayIsEmpty(),
+    });
+    if (!allowed) {
+      this._clockTick.update(n => n + 1);
+      return false;
+    }
+    this._busy.set(true);
+    const epoch = this._ctxEpoch;
+    try {
+      const ok = await this.dashboard.resumePastEntry(entry, candidate.profileId);
+      if (epoch !== this._ctxEpoch) return ok; // Profil/Nutzer gewechselt: nichts im neuen Zustand anfassen
+      if (ok) {
+        this._dropCandidate(candidate.id);
+        this._closedCount.update(n => n + 1);
+      } else {
+        this._clockTick.update(n => n + 1);
+        await this._search(candidate.profileId, this._ctxUid, this.todayService.today(), ++this._searchSeq);
+      }
+      return ok;
+    } finally {
+      if (epoch === this._ctxEpoch) this._busy.set(false);
+    }
+  }
+
   /** Beendet den Eintrag (Ergebnis auch als Rückgabewert) und zieht Dashboard und Anzeige nach. */
   async endEntry(candidate: OpenEntryCandidate, end: Date): Promise<CloseResult> {
     if (this._busy()) return 'busy';
@@ -137,7 +203,7 @@ export class OpenEntryService {
       }
       return result;
     } finally {
-      this._busy.set(false);
+      if (epoch === this._ctxEpoch) this._busy.set(false); // ein überholter Lauf darf busy des neuen Kontexts nicht lösen
     }
   }
 
@@ -147,6 +213,7 @@ export class OpenEntryService {
       this._ctxUid = '';
       this._ctxPid = '';
       this._ctxEpoch++;
+      this._busy.set(false);
       this._setCandidates([], new Map());
       return;
     }
@@ -155,6 +222,7 @@ export class OpenEntryService {
       this._ctxUid = uid;
       this._ctxPid = pid;
       this._ctxEpoch++;
+      this._busy.set(false);
       this._setCandidates([], new Map());
     }
     void this._search(pid, uid, today, seq);
@@ -183,6 +251,14 @@ export class OpenEntryService {
       entriesById.set(e.id, e);
     }
     this._setCandidates([...found.values()].sort((a, b) => (a.id < b.id ? 1 : a.id > b.id ? -1 : 0)), entriesById);
+  }
+
+  private _dropCandidate(id: string): void {
+    if (!this._found().has(id) && !this._candidates().some(c => c.id === id)) return;
+    this._candidates.update(list => list.filter(c => c.id !== id));
+    const next = new Map(this._found());
+    next.delete(id);
+    this._found.set(next);
   }
 
   private _setCandidates(list: OpenEntryCandidate[], entriesById: Map<string, WorkEntry>): void {

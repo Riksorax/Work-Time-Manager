@@ -1,4 +1,4 @@
-import { Break, UserSettings, WorkEntry } from '../../shared/models';
+import { Break, UserSettings, WorkEntry, WorkEntryType } from '../../shared/models';
 import { roundMsToMinute, roundToMinute } from '../../shared/utils/time-precision.util';
 import { getEffectiveDailyTarget } from './overtime.utils';
 
@@ -95,6 +95,25 @@ export function retroDeltaMs(entry: WorkEntry, targetMs: number): number {
   }
   const net = entry.workEnd.getTime() - entry.workStart.getTime() - closedBreakMs(entry.breaks);
   return net - targetMs + (entry.manualOvertimeMinutes ?? 0) * 60_000;
+}
+
+/**
+ * „Fortsetzen" eines offenen Eintrags (Pinning im Dashboard): nur Typ work mit Start und ohne Ende, nur Tage vor heute
+ * (Tag aus der `id`, String-Vergleich), höchstens 24 h alt (Grenze inklusive, absolute Differenz) und nur, wenn heute leer ist.
+ * Einzige Regel für Anzeige und Durchsetzung.
+ */
+export function canResumeOpenEntry(args: {
+  entry: WorkEntry;
+  now: Date;
+  todayId: string;
+  todayIsEmpty: boolean;
+}): boolean {
+  const { entry, now, todayId, todayIsEmpty } = args;
+  if (!todayIsEmpty) return false;
+  if (entry.type !== WorkEntryType.Work) return false;
+  if (!entry.workStart || entry.workEnd) return false;
+  if (!(entry.id < todayId)) return false;
+  return now.getTime() - entry.workStart.getTime() <= OPEN_ENTRY_MAX_NOW_AGE_MS;
 }
 
 /** Kurzer, lokalisierter Tag (Wochentag, Tag, Monat) für den Kalendertag einer Eintrags-`id`. */
