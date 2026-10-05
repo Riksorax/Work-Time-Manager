@@ -7,6 +7,10 @@ import 'package:flutter_work_time/domain/entities/work_profile_entity.dart';
 import 'package:flutter_work_time/domain/repositories/work_profile_repository.dart';
 import 'package:flutter_work_time/presentation/view_models/work_profile_view_model.dart';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_work_time/presentation/state/dashboard_state.dart';
+import 'package:flutter_work_time/presentation/view_models/dashboard_view_model.dart';
+
 import '../../support/dashboard_harness.dart';
 import '../../support/fake_repositories.dart';
 
@@ -25,6 +29,11 @@ class _FakeProfileRepo implements WorkProfileRepository {
 
   @override
   Future<List<WorkProfileEntity>> getAdditionalProfiles() async => const [];
+}
+
+class _ThrowingDashboard extends DashboardViewModel {
+  @override
+  DashboardState build() => throw StateError('nicht baubar');
 }
 
 // Guard vor dem Profilwechsel (#388, PR 2). Mo 2026-10-05, Uhr 17:00, A
@@ -181,5 +190,21 @@ void main() {
         setUp: prep(),
         profiles: true,
         overrides: [workProfileRepositoryProvider.overrideWithValue(repo)]);
+
+    test('G8 Dashboard nicht baubar: allowed ohne confirm', () async {
+      final container = ProviderContainer(overrides: [
+        dashboardViewModelProvider.overrideWith(_ThrowingDashboard.new),
+      ]);
+      addTearDown(container.dispose);
+      var calls = 0;
+      final result = await container
+          .read(workProfileViewModelProvider)
+          .checkSwitchAllowed(confirm: () async {
+        calls++;
+        return true;
+      });
+      expect(result, ProfileSwitchGuardResult.allowed);
+      expect(calls, 0);
+    });
   });
 }

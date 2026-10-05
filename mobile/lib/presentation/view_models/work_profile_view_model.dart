@@ -57,9 +57,20 @@ class WorkProfileViewModel {
     if (_switchPending) return ProfileSwitchGuardResult.busy;
     _switchPending = true;
     try {
-      final dashboard = _ref.read(dashboardViewModelProvider.notifier);
-      // `isTimerRunning` ist während des Ladens `false` (kein Dialog).
-      if (!dashboard.isTimerRunning) return ProfileSwitchGuardResult.allowed;
+      final DashboardViewModel dashboard;
+      try {
+        dashboard = _ref.read(dashboardViewModelProvider.notifier);
+        // `isTimerRunning` ist während des Ladens `false` (kein Dialog).
+        if (!dashboard.isTimerRunning) return ProfileSwitchGuardResult.allowed;
+      } catch (e, st) {
+        // Dashboard nicht baubar (z. B. Repositories nicht verfügbar): dann
+        // läuft dort auch kein Timer, der Wechsel darf nicht blockieren.
+        logger.e(
+            '[WorkProfile] Dashboard-Zustand nicht lesbar '
+            '(${e.runtimeType})',
+            stackTrace: st);
+        return ProfileSwitchGuardResult.allowed;
+      }
 
       final fromProfileId =
           _ref.read(core_providers.activeWorkProfileIdProvider) ??

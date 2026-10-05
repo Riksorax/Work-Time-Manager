@@ -6,8 +6,10 @@ import '../../core/providers/subscription_provider.dart';
 import '../../domain/entities/work_profile_entity.dart';
 import '../../l10n/app_localizations.dart';
 import 'add_work_profile_dialog.dart';
+import '../view_models/work_profile_view_model.dart';
 import 'common/paywall_launcher.dart';
 import 'manage_work_profiles_dialog.dart';
+import 'profile_switch_confirm_dialog.dart';
 
 /// Profil-Wechsler im Header (siehe #138): zeigt alle Arbeitszeit-Profile
 /// des Nutzers und erlaubt das Anlegen eines weiteren Profils, begrenzt auf
@@ -53,8 +55,8 @@ class WorkProfileSwitcher extends ConsumerWidget {
                   context: context,
                   builder: (_) => const ManageWorkProfilesDialog());
             } else {
-              ref.read(activeWorkProfileIdProvider.notifier).setActiveProfile(
-                  value == WorkProfileEntity.defaultProfileId ? null : value);
+              _handleSelectProfile(context, ref, value, profiles,
+                  activeProfileId: activeProfile.id);
             }
           },
           itemBuilder: (context) => [
@@ -95,6 +97,49 @@ class WorkProfileSwitcher extends ConsumerWidget {
         );
       },
     );
+  }
+
+  /// Wechselt das Profil. Läuft im Dashboard ein Timer, fragt der Guard vor
+  /// dem Wechsel (#388). Alles Nötige wird vor dem ersten `await` gelesen.
+  Future<void> _handleSelectProfile(
+    BuildContext context,
+    WidgetRef ref,
+    String profileId,
+    List<WorkProfileEntity> profiles, {
+    required String activeProfileId,
+  }) async {
+    if (profileId == activeProfileId) return;
+
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final switchNotifier = ref.read(activeWorkProfileIdProvider.notifier);
+    final guard = ref.read(workProfileViewModelProvider);
+    String nameOf(String id) => profiles
+        .firstWhere((p) => p.id == id,
+            orElse: () => id == WorkProfileEntity.defaultProfileId
+                ? WorkProfileEntity.defaultProfile()
+                : WorkProfileEntity(id: id, name: id))
+        .name;
+    final fromName = nameOf(activeProfileId);
+    final toName = nameOf(profileId);
+
+    final result = await guard.checkSwitchAllowed(
+      confirm: () => context.mounted
+          ? showProfileSwitchConfirmDialog(context,
+              fromName: fromName, toName: toName)
+          : Future.value(false),
+    );
+    switch (result) {
+      case ProfileSwitchGuardResult.allowed:
+        switchNotifier.setActiveProfile(
+            profileId == WorkProfileEntity.defaultProfileId ? null : profileId);
+      case ProfileSwitchGuardResult.saveFailed:
+        messenger
+            .showSnackBar(SnackBar(content: Text(l10n.dashboardSaveError)));
+      case ProfileSwitchGuardResult.cancelled:
+      case ProfileSwitchGuardResult.busy:
+        break;
+    }
   }
 
   void _handleAddProfile(
