@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_work_time/core/providers/today_provider.dart';
 import 'package:flutter_work_time/domain/usecases/close_open_work_entry.dart';
@@ -396,5 +398,258 @@ void main() {
     }, setUp: (h) {
       seedOpen(h.work, fri);
     }, profiles: true);
+  });
+
+  group('canResume und resume() (#385 PR 1b)', () {
+    bool? resumeResult;
+
+    Future<void> doResume(Harness h) async {
+      resumeResult = await openVm(h).resume();
+    }
+
+    setUp(() => resumeResult = null);
+
+    scenario('Vortag offen, heute leer, <= 24 h: canResume', saturdayMorning,
+        (h) {
+      boot(h);
+      expect(openState(h).canResume, isTrue);
+    }, setUp: (h) => seedOpen(h.work, fri, startHour: 22), profiles: true);
+
+    scenario('> 24 h: kein canResume, Beenden bleibt (Eintrag sichtbar)',
+        saturdayMorning, (h) {
+      boot(h);
+      expect(dates(h), [fri]);
+      expect(openState(h).canResume, isFalse);
+    }, setUp: (h) => seedOpen(h.work, fri), profiles: true);
+
+    scenario('heute nicht leer: kein canResume', saturdayMorning, (h) {
+      boot(h);
+      expect(dates(h), [fri]);
+      expect(h.state.workEntry.workStart, isNotNull);
+      expect(openState(h).canResume, isFalse);
+    }, setUp: (h) {
+      seedOpen(h.work, fri, startHour: 22);
+      seedOpen(h.work, sat);
+    }, profiles: true);
+
+    scenario('Dashboard lädt noch: kein canResume, danach ja', saturdayMorning,
+        (h) {
+      final hold = Completer<void>();
+      h.overtime.holdOvertimeLoad = hold;
+      boot(h);
+      expect(h.state.isLoading, isTrue);
+      expect(dates(h), [fri]);
+      expect(openState(h).canResume, isFalse);
+
+      hold.complete();
+      h.async.flushMicrotasks();
+      expect(h.state.isLoading, isFalse);
+      expect(openState(h).canResume, isTrue);
+    }, setUp: (h) => seedOpen(h.work, fri, startHour: 22), profiles: true);
+
+    scenario('Start heute blendet canResume aus, Stop heute lässt es aus',
+        saturdayMorning, (h) {
+      boot(h);
+      expect(openState(h).canResume, isTrue);
+
+      h.act(h.vm.startOrStopTimer);
+      expect(h.state.workEntry.workStart, isNotNull);
+      expect(openState(h).canResume, isFalse);
+      expect(dates(h), [fri], reason: 'Beenden bleibt');
+
+      h.tick(const Duration(minutes: 1));
+      h.act(h.vm.startOrStopTimer);
+      expect(h.state.workEntry.workEnd, isNotNull);
+      expect(openState(h).canResume, isFalse, reason: 'heute nicht leer');
+    }, setUp: (h) => seedOpen(h.work, fri, startHour: 22), profiles: true);
+
+    scenario('Tageswechsel über die 24-h-Grenze: canResume wird false',
+        saturdayMorning, (h) {
+      boot(h);
+      expect(openState(h).canResume, isTrue);
+
+      h.clock.jumpTo(DateTime(2026, 10, 4, 0, 30)); // Fr 22:00 + 26,5 h
+      h.container.read(todayProvider.notifier).refresh();
+      h.async.flushMicrotasks();
+      expect(dates(h), contains(fri));
+      expect(openState(h).canResume, isFalse);
+    }, setUp: (h) => seedOpen(h.work, fri, startHour: 22), profiles: true);
+
+    scenario(
+        'mehrere Kandidaten: canResume gilt für den neuesten', saturdayMorning,
+        (h) {
+      boot(h);
+      expect(dates(h), [fri, thu]);
+      expect(openState(h).canResume, isTrue);
+    }, setUp: (h) {
+      seedOpen(h.work, thu, startHour: 22);
+      seedOpen(h.work, fri, startHour: 22);
+    }, profiles: true);
+
+    scenario(
+        'mehrere Kandidaten, neuester > 24 h: kein canResume', saturdayMorning,
+        (h) {
+      boot(h);
+      expect(dates(h), [fri, thu]);
+      expect(openState(h).canResume, isFalse);
+    }, setUp: (h) {
+      seedOpen(h.work, thu, startHour: 22);
+      seedOpen(h.work, fri, startHour: 8);
+    }, profiles: true);
+
+    scenario(
+        'resume() Erfolg: Dashboard pinnt, Banner weg, keine Zusatz-Reads, '
+        'Später-Schlüssel unverändert',
+        saturdayMorning, (h) {
+      boot(h);
+      final monthReads = h.work.monthReads.length;
+      final dismissed = h.container.read(openEntryDismissedProvider);
+
+      h.act(() => doResume(h));
+
+      expect(resumeResult, isTrue);
+      expect(h.state.workEntry.date, fri);
+      expect(h.vm.isTimerRunning, isTrue);
+      expect(openState(h).busy, isFalse);
+      expect(openState(h).saveError, isFalse);
+      expect(dates(h), [thu], reason: 'nur der ältere bleibt Kandidat');
+      expect(openState(h).canResume, isFalse,
+          reason: 'Dashboard zeigt Vortag, heute nicht leer');
+      expect(h.work.monthReads.length, monthReads);
+      expect(h.container.read(openEntryDismissedProvider), dismissed);
+      expect(h.writeLog, isEmpty);
+    }, setUp: (h) {
+      seedOpen(h.work, thu, startHour: 22);
+      seedOpen(h.work, fri, startHour: 22);
+    }, profiles: true);
+
+    scenario(
+        'nach Stop im Dashboard: Eintrag nicht mehr Kandidat', saturdayMorning,
+        (h) {
+      boot(h);
+      h.act(() => doResume(h));
+      expect(dates(h), isEmpty);
+
+      h.tick(const Duration(minutes: 1));
+      h.act(h.vm.startOrStopTimer);
+      expect(h.state.workEntry.date, sat, reason: 'Reinit auf heute');
+      expect(dates(h), isEmpty, reason: 'beendeter Eintrag kommt nicht zurück');
+    }, setUp: (h) => seedOpen(h.work, fri, startHour: 22), profiles: true);
+
+    scenario(
+        'nach Stop wird der ältere Kandidat sichtbar, ohne Fortsetzen (> 24 h)',
+        saturdayMorning, (h) {
+      boot(h);
+      h.act(() => doResume(h));
+      expect(dates(h), [thu]);
+      h.tick(const Duration(minutes: 1));
+      h.act(h.vm.startOrStopTimer);
+      expect(dates(h), [thu]);
+      expect(openState(h).canResume, isFalse);
+    }, setUp: (h) {
+      seedOpen(h.work, thu, startHour: 22);
+      seedOpen(h.work, fri, startHour: 22);
+    }, profiles: true);
+
+    scenario(
+        'resume() abgelehnt (anderes Gerät beendet): Banner bleibt, kein Fehler',
+        saturdayMorning, (h) {
+      boot(h);
+      h.work.store[dayKey(fri)] = entryOf(fri,
+          start: DateTime(2026, 10, 2, 22), end: DateTime(2026, 10, 2, 23));
+      h.act(() => doResume(h));
+
+      expect(resumeResult, isFalse);
+      expect(openState(h).busy, isFalse);
+      expect(openState(h).saveError, isFalse);
+      expect(dates(h), [fri], reason: 'Banner bleibt (stiller Fehlschlag)');
+      expect(h.state.workEntry.date, sat);
+      expect(h.vm.isTimerRunning, isFalse);
+      expect(h.writeLog, isEmpty);
+    }, setUp: (h) => seedOpen(h.work, fri, startHour: 22), profiles: true);
+
+    scenario('resume() prüft zum Tap-Zeitpunkt erneut (24 h überschritten)',
+        saturdayMorning, (h) {
+      boot(h);
+      expect(openState(h).canResume, isTrue);
+      final reads = h.work.getWorkEntryCalls;
+      // Uhr läuft über die Grenze, ohne dass ein Ereignis neu veröffentlicht.
+      h.clock.jumpTo(DateTime(2026, 10, 3, 22, 1));
+      h.act(() => doResume(h));
+
+      expect(resumeResult, isFalse);
+      expect(h.work.getWorkEntryCalls, reads,
+          reason: 'Dashboard nicht gefragt');
+      expect(openState(h).busy, isFalse);
+      expect(openState(h).canResume, isFalse, reason: 'neu berechnet');
+      expect(dates(h), [fri]);
+    }, setUp: (h) => seedOpen(h.work, fri, startHour: 22), profiles: true);
+
+    scenario('resume() ohne Kandidat: false', saturdayMorning, (h) {
+      boot(h);
+      expect(openState(h).current, isNull);
+      h.act(() => doResume(h));
+      expect(resumeResult, isFalse);
+      expect(openState(h).busy, isFalse);
+    }, profiles: true);
+
+    scenario('Doppeltippen: zweiter Aufruf ignoriert, ein Pin', saturdayMorning,
+        (h) {
+      boot(h);
+      final reads = h.work.getWorkEntryCalls;
+      h.work.holdReads = true;
+      final results = <bool>[];
+      h.act(() async => results.add(await openVm(h).resume()));
+      expect(openState(h).busy, isTrue);
+      h.act(() async => results.add(await openVm(h).resume()));
+      expect(results, [false], reason: 'zweiter Aufruf sofort abgewiesen');
+
+      h.work.holdReads = false;
+      for (final c in h.work.pendingReads.toList()) {
+        c.complete();
+      }
+      h.async.flushMicrotasks();
+      expect(results, [false, true]);
+      expect(h.work.getWorkEntryCalls - reads, 1, reason: 'genau ein Pin-Read');
+      expect(openState(h).busy, isFalse);
+    }, setUp: (h) => seedOpen(h.work, fri, startHour: 22), profiles: true);
+
+    scenario(
+        'Profilwechsel mitten im resume(): kein State-Schreiben im neuen Profil',
+        saturdayMorning, (h) {
+      boot(h);
+      h.work.holdReads = true;
+      var emissions = 0;
+      h.act(() => doResume(h));
+      expect(openState(h).busy, isTrue);
+
+      h.switchProfile('b');
+      expect(dates(h), isEmpty, reason: 'Profil B ohne offene Einträge');
+      h.container.listen(openEntryViewModelProvider, (_, __) => emissions++);
+
+      h.work.holdReads = false;
+      for (final c in h.work.pendingReads.toList()) {
+        c.complete();
+      }
+      h.async.flushMicrotasks();
+
+      expect(resumeResult, isFalse);
+      expect(emissions, 0, reason: 'nach dem Wechsel nichts mehr publiziert');
+      expect(openState(h).busy, isFalse);
+      expect(openState(h).saveError, isFalse);
+      expect(h.state.workEntry.workStart, isNull);
+      expect(h.writeLog, isEmpty);
+    }, setUp: (h) => seedOpen(h.work, fri, startHour: 22), profiles: true);
+
+    scenario('Später, dann resume(): kein Kandidat, false', saturdayMorning,
+        (h) {
+      boot(h);
+      openVm(h).later();
+      h.async.flushMicrotasks();
+      expect(openState(h).entries, isEmpty);
+      h.act(() => doResume(h));
+      expect(resumeResult, isFalse);
+      expect(h.state.workEntry.date, sat);
+    }, setUp: (h) => seedOpen(h.work, fri, startHour: 22), profiles: true);
   });
 }

@@ -4,12 +4,14 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
 
+import '../../core/providers/clock_provider.dart';
 import '../../core/providers/providers.dart';
 import '../../core/providers/today_provider.dart';
 import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/repositories/settings_repository.dart';
 import '../../domain/usecases/close_open_work_entry.dart';
 import '../../domain/utils/overtime_utils.dart';
+import '../state/dashboard_state.dart';
 import 'dashboard_view_model.dart';
 
 /// Zustand des Banners für offene Einträge vor heute (#385).
@@ -18,6 +20,7 @@ class OpenEntryState extends Equatable {
     this.entries = const [],
     this.busy = false,
     this.saveError = false,
+    this.canResume = false,
   });
 
   /// Sichtbare Kandidaten, neuester zuerst.
@@ -29,6 +32,10 @@ class OpenEntryState extends Equatable {
   /// Die letzte Beenden-Aktion ist fehlgeschlagen (UI zeigt eine Snackbar).
   final bool saveError;
 
+  /// [current] darf im Dashboard fortgesetzt werden (`canResumeOpenEntry` mit
+  /// aktuellem Dashboard-Zustand, #385 PR 1b).
+  final bool canResume;
+
   WorkEntryEntity? get current => entries.isEmpty ? null : entries.first;
 
   /// Anzahl weiterer offener Einträge neben [current].
@@ -38,15 +45,17 @@ class OpenEntryState extends Equatable {
     List<WorkEntryEntity>? entries,
     bool? busy,
     bool? saveError,
+    bool? canResume,
   }) =>
       OpenEntryState(
         entries: entries ?? this.entries,
         busy: busy ?? this.busy,
         saveError: saveError ?? this.saveError,
+        canResume: canResume ?? this.canResume,
       );
 
   @override
-  List<Object?> get props => [entries, busy, saveError];
+  List<Object?> get props => [entries, busy, saveError, canResume];
 }
 
 /// Schlüssel `<profileId>|<yyyy-MM-dd>` der Einträge, die der Nutzer in dieser
@@ -88,6 +97,16 @@ class OpenEntryViewModel extends Notifier<OpenEntryState> {
   static DateTime? _runningDay(WorkEntryEntity e) =>
       e.workStart != null && e.workEnd == null ? _dayOf(e.date) : null;
 
+  /// Ist der heutige Tag im (fertig geladenen) Dashboard noch leer? Ein
+  /// Urlaubs-/Krank-Eintrag von heute zählt nicht als leer.
+  static bool _todayIsEmpty(DashboardState dashboard, DateTime now) {
+    final e = dashboard.workEntry;
+    return !dashboard.isLoading &&
+        _dayOf(e.date) == _dayOf(now) &&
+        e.type == WorkEntryType.work &&
+        e.workStart == null;
+  }
+
   String get _profileId => ref.read(activeWorkProfileIdProvider) ?? 'default';
 
   @override
@@ -98,20 +117,27 @@ class OpenEntryViewModel extends Notifier<OpenEntryState> {
     _epoch++;
     _candidates = const [];
 
+    // Uhr beim Aufbau festhalten: `ref.read` im `select` ist nicht erlaubt.
+    final clock = ref.read(clockProvider);
+
     // Immer listen, nie watch: sonst würde jeder Tageswechsel den Notifier neu
     // bauen (#387).
     ref.listen<DateTime>(todayProvider, (previous, next) {
       if (previous != next) unawaited(_load());
     });
     ref.listen<Set<String>>(openEntryDismissedProvider, (_, __) => _publish());
-    ref.listen<DateTime?>(
-      dashboardViewModelProvider.select((s) => _runningDay(s.workEntry)),
+    // Record (laufender Tag, heute leer): "heute leer" ändert `canResume`.
+    ref.listen<(DateTime?, bool)>(
+      dashboardViewModelProvider
+          .select((s) => (_runningDay(s.workEntry), _todayIsEmpty(s, clock()))),
       (previous, next) {
         // Das Dashboard hat den laufenden Eintrag beendet: er ist
         // abgeschlossen und darf nicht als offener Kandidat zurückkommen.
-        if (previous != null && next == null) {
-          _candidates =
-              _candidates.where((e) => _dayOf(e.date) != previous).toList();
+        final previousRunning = previous?.$1;
+        if (previousRunning != null && next.$1 == null) {
+          _candidates = _candidates
+              .where((e) => _dayOf(e.date) != previousRunning)
+              .toList();
         }
         _publish();
       },
@@ -149,7 +175,15 @@ class OpenEntryViewModel extends Notifier<OpenEntryState> {
             _dayOf(e.date) != running &&
             !dismissed.contains(_key(profileId, e.date)))
         .toList();
-    state = state.copyWith(entries: visible);
+    final dashboard = ref.read(dashboardViewModelProvider);
+    final now = ref.read(clockProvider)();
+    final canResume = visible.isNotEmpty &&
+        canResumeOpenEntry(
+          entry: visible.first,
+          now: now,
+          todayIsEmpty: _todayIsEmpty(dashboard, now),
+        );
+    state = state.copyWith(entries: visible, canResume: canResume);
   }
 
   /// Tages-Soll am Datum von [entry] aus den Einstellungen des aktiven Profils.
@@ -171,6 +205,43 @@ class OpenEntryViewModel extends Notifier<OpenEntryState> {
     ref
         .read(openEntryDismissedProvider.notifier)
         .addAll(_candidates.map((e) => _key(profileId, e.date)));
+  }
+
+  /// Setzt den aktuellen Eintrag im Dashboard fort (Pinning, #385 PR 1b). `true`
+  /// = Dashboard läuft jetzt mit diesem Eintrag (der Listener blendet den Banner
+  /// aus). Schreibt nichts, lädt nicht neu, fasst "Später" nicht an. Ein
+  /// abgelehnter Versuch (`false`) bleibt still: der Banner wird neu
+  /// veröffentlicht, Fehler loggt das Dashboard.
+  Future<bool> resume() async {
+    final entry = state.current;
+    if (entry == null || state.busy) return false;
+    state = state.copyWith(busy: true);
+
+    // Zum Aktionsbeginn festhalten (Profilwechsel, #388).
+    final epoch = _epoch;
+    final dashboard = ref.read(dashboardViewModelProvider.notifier);
+    final clock = ref.read(clockProvider);
+    bool overtaken() => epoch != _epoch || !ref.mounted;
+
+    var ok = false;
+    try {
+      // Zeit kann seit der Anzeige vergangen sein: Regel erneut prüfen.
+      final now = clock();
+      final allowed = canResumeOpenEntry(
+        entry: entry,
+        now: now,
+        todayIsEmpty: _todayIsEmpty(ref.read(dashboardViewModelProvider), now),
+      );
+      if (allowed) ok = await dashboard.resumePastEntry(entry);
+    } catch (e, st) {
+      logger.e('[OpenEntries] Fortsetzen fehlgeschlagen (${e.runtimeType})',
+          stackTrace: st);
+    }
+    if (overtaken()) return ok;
+
+    state = state.copyWith(busy: false);
+    _publish();
+    return ok;
   }
 
   /// Beendet den aktuellen Eintrag mit [end]. Gibt `null` zurück, wenn nichts
