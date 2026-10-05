@@ -35,3 +35,9 @@ i18n, UI, Doku. Parität zu Mobile #422.
 - Text-Button `mat-button` bekommt in der Banner-SCSS die Rollenfarbe (`on-secondary-container`) statt Primärfarbe.
 - Bestands-i18n-Spec „keine weiteren Keys (kein Fortsetzen ...)" bewusst umgekehrt (Keys jetzt Teil der Liste).
 - Manuelle Prüfliste und axe/320 px/200 % Zoom nicht lokal geprüft: in den PR-Body.
+
+## Review-Lauf (Web-Reviewer)
+- Funde 🔴: keine. Vollauf Standard-TZ und Europe/Berlin je 43 Dateien / 1043 Tests grün, Production-Build grün.
+- Stichproben-Mutationen (gesichert, per cmp zurückgesetzt): Neusuche bei Ablehnung entfernen -> 2 rot (Mobile-Ablehnungs-Neusuche ist im Web vorhanden und getestet);
+  24-h-Grenze `<=` -> `<` -> 3 rot; `_pinnedGen`/`_initGen`-Prüfung nach dem Pin entfernen -> überlebt (redundant zur `workEntry.id`-Prüfung, Defense in Depth, behalten).
+- Offen (manuell): axe/Lighthouse, 320 px, 200 % Zoom, Screenreader, Fortsetzen + Stop mit echtem Backend.
