@@ -40,6 +40,8 @@ class HostComponent {
   readonly taps: string[] = [];
   readonly months: { year: number; month: number }[] = [];
   ends = 0;
+  /** Simuliert einen Parent, der die Auswahl nicht ändert (kein neues Set, kein Input-Update). */
+  frozen = false;
 
   onDate(d: Date): void {
     this.taps.push(key(d));
@@ -57,6 +59,7 @@ class HostComponent {
 
   onDrag(dates: Date[]): void {
     this.drags.push(dates.map(key));
+    if (this.frozen) return;
     this.active.set(true);
     const workdays = dates.filter(d => d.getDay() >= 1 && d.getDay() <= 5);
     this.selected.update(prev => new Set([...prev, ...workdays.map(key)]));
@@ -261,6 +264,21 @@ describe('CalendarComponent - Mehrfachauswahl per Tastatur (#377)', () => {
       expect(host.months).toEqual([{ year: 2026, month: 11 }, { year: 2026, month: 10 }]);
       expect(focusedKey()).toBe('2026-10-15');
       expect(selectedKeys()).toEqual(['2026-10-15']);
+    });
+
+    it('ein focusout der entfernten Zelle beim Monatswechsel verwirft den Anker nicht', async () => {
+      await setup();
+      const old = document.activeElement as HTMLElement;
+      // Browser feuern focusout, wenn die fokussierte Zelle beim Monatswechsel entfernt wird (relatedTarget null)
+      old.dispatchEvent(new KeyboardEvent('keydown', { key: 'PageDown', shiftKey: true, bubbles: true, cancelable: true }));
+      old.dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: null }));
+      fixture.detectChanges();
+      TestBed.tick();
+      expect(focusedKey()).toBe('2026-11-15');
+      shift('ArrowRight');
+      expect(lastDrag()).toContain('2026-10-15'); // Anker blieb am 15.10., Bereich reicht bis 16.11.
+      expect(lastDrag()).toContain('2026-11-16');
+      expect(lastDrag()).toHaveLength(33);
     });
 
     it('Jahreswechsel: Shift+Pfeil rechts vom 31.12. in den 01.01.2027', async () => {
@@ -600,6 +618,26 @@ describe('CalendarComponent - Mehrfachauswahl per Tastatur (#377)', () => {
         shift('ArrowDown'); // 15.-22.: 6 Arbeitstage
         shift('ArrowUp'); // 15.: 1 Tag
         expect(announce.mock.calls).toEqual([countText(6), countText(1)]);
+      });
+
+      it('Shift+Pfeil aus der Ruhe auf Sa/So: Modus an, Menge leer, Ansage mit Anzahl 0', async () => {
+        TestBed.resetTestingModule();
+        await setup(new Date(2026, 9, 17)); // Sa 17.10., Sa/So werden vom Host gefiltert
+        shift('ArrowRight');
+        expect(host.active()).toBe(true);
+        expect(selectedKeys()).toEqual([]);
+        expect(announce.mock.calls).toEqual([countText(0)]);
+      });
+
+      it('eine Tastaturaktion ohne Eingabeänderung lässt kein Flag stehen: spätere externe Änderung bleibt stumm', async () => {
+        TestBed.resetTestingModule();
+        await setup(new Date(2026, 9, 15), undefined, true);
+        host.frozen = true; // Parent übernimmt den Bereich nicht: kein Input ändert sich, der Effect läuft nicht
+        shift('ArrowRight');
+        expect(announce).not.toHaveBeenCalled();
+        host.selected.set(new Set(['2026-10-20'])); // wie Pointer-Tap: Menge wächst ohne Tastatur
+        tick();
+        expect(announce).not.toHaveBeenCalled();
       });
 
       it('Enter/Space im Modus sagt die neue Zahl an', () => {
