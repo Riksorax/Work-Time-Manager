@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_work_time/core/providers/clock_provider.dart';
+import 'package:flutter_work_time/core/providers/providers.dart';
 import 'package:flutter_work_time/domain/entities/bundesland.dart';
 import 'package:flutter_work_time/domain/entities/settings_entity.dart';
 import 'package:flutter_work_time/domain/entities/user_entity.dart';
@@ -17,6 +18,9 @@ import 'package:flutter_work_time/presentation/view_models/dashboard_view_model.
 import 'package:flutter_work_time/presentation/view_models/leave_balance_view_model.dart';
 import 'package:flutter_work_time/presentation/view_models/open_entry_view_model.dart';
 import 'package:flutter_work_time/presentation/view_models/settings_view_model.dart';
+
+import '../../support/dashboard_harness.dart' show entryOf;
+import '../../support/fake_repositories.dart';
 
 const _openText = 'Dein Eintrag vom Fr., 2. Okt. läuft noch seit 22:00.';
 const _holidayText = 'Heute ist Feiertag: Tag der Deutschen Einheit';
@@ -176,4 +180,116 @@ void main() {
       });
     });
   }
+
+  // Ende-zu-Ende mit echtem Dashboard- und Banner-ViewModel (#385 PR 1b).
+  // So 2026-10-04 22:00 offen, jetzt Mo 2026-10-05 09:00 (kein Feiertag).
+  group('Fortsetzen mit echten ViewModels', () {
+    final sun = DateTime(2026, 10, 4);
+    final mon = DateTime(2026, 10, 5);
+    final now = DateTime(2026, 10, 5, 9);
+    const openTitle = 'Dein Eintrag vom So., 4. Okt. läuft noch seit 22:00.';
+    late FakeWorkRepository work;
+    late FakeOvertimeRepository overtime;
+
+    setUp(() {
+      work = FakeWorkRepository()
+        ..store[dayKey(sun)] = entryOf(sun, start: DateTime(2026, 10, 4, 22));
+      overtime = FakeOvertimeRepository();
+    });
+
+    Future<void> pumpReal(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(600, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          workRepositoryProvider.overrideWithValue(work),
+          overtimeRepositoryProvider.overrideWithValue(overtime),
+          settingsRepositoryProvider
+              .overrideWithValue(FakeSettingsRepository()),
+          settingsViewModelProvider.overrideWith(_FakeSettingsViewModel.new),
+          leaveBalanceViewModelProvider.overrideWith(_FakeLeaveViewModel.new),
+          authStateProvider
+              .overrideWithValue(const AsyncValue<UserEntity?>.data(null)),
+          clockProvider.overrideWithValue(() => now),
+        ],
+        child: MaterialApp(
+          locale: const Locale('de'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const DashboardScreen(),
+        ),
+      ));
+      await _settle(tester);
+    }
+
+    Future<void> unmount(WidgetTester tester) async {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    }
+
+    testWidgets(
+        'Fortsetzen: Timer läuft mit Vortag-Start, Banner weg, Stop geht',
+        (tester) async {
+      await pumpReal(tester);
+      expect(find.text(openTitle), findsOneWidget);
+      expect(find.text('Fortsetzen'), findsOneWidget);
+      expect(find.text('Zeiterfassung starten'), findsOneWidget);
+
+      await tester.tap(find.text('Fortsetzen'));
+      await _settle(tester);
+
+      expect(find.text(openTitle), findsNothing);
+      expect(find.text('Zeiterfassung beenden'), findsOneWidget);
+      expect(find.text('Zeiterfassung starten'), findsNothing);
+      expect(find.text('22:00'), findsWidgets);
+      expect(find.byType(SnackBar), findsNothing);
+      expect(work.saved, isEmpty, reason: 'Fortsetzen schreibt nichts');
+
+      await tester.tap(find.text('Zeiterfassung beenden'));
+      await _settle(tester);
+      expect(work.saved.last.date, sun);
+      expect(work.saved.last.workEnd, isNotNull);
+      expect(find.text('Zeiterfassung starten'), findsOneWidget,
+          reason: 'Dashboard zeigt wieder heute');
+      expect(find.text(openTitle), findsNothing);
+      await unmount(tester);
+    });
+
+    testWidgets('heute schon gestartet: nur Beenden, kein Fortsetzen',
+        (tester) async {
+      work.store[dayKey(mon)] = entryOf(mon, start: DateTime(2026, 10, 5, 8));
+      await pumpReal(tester);
+      expect(find.text(openTitle), findsOneWidget);
+      expect(find.text('Beenden'), findsOneWidget);
+      expect(find.text('Fortsetzen'), findsNothing);
+      await unmount(tester);
+    });
+
+    testWidgets('Eintrag älter als 24 h: nur Beenden', (tester) async {
+      work.store[dayKey(sun)] = entryOf(sun, start: DateTime(2026, 10, 4, 8));
+      await pumpReal(tester);
+      expect(find.text('Beenden'), findsOneWidget);
+      expect(find.text('Fortsetzen'), findsNothing);
+      await unmount(tester);
+    });
+
+    testWidgets('abgelehnt (anderes Gerät beendet): Dashboard bleibt bedienbar',
+        (tester) async {
+      await pumpReal(tester);
+      work.store[dayKey(sun)] = entryOf(sun,
+          start: DateTime(2026, 10, 4, 22), end: DateTime(2026, 10, 4, 23));
+      await tester.tap(find.text('Fortsetzen'));
+      await _settle(tester);
+      expect(find.byType(SnackBar), findsNothing);
+      expect(find.text('Zeiterfassung starten'), findsOneWidget);
+
+      await tester.tap(find.text('Zeiterfassung starten'));
+      await _settle(tester);
+      expect(find.text('Zeiterfassung beenden'), findsOneWidget);
+      expect(work.saved.last.date, mon);
+      await unmount(tester);
+    });
+  });
 }
