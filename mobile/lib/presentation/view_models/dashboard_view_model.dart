@@ -120,22 +120,73 @@ class DashboardViewModel extends Notifier<DashboardState> {
     await _init(dayChange: true);
   }
 
-  Future<void> _init({bool dayChange = false}) {
+  /// Setzt einen offenen Vortag ([entry]) als laufenden Dashboard-Eintrag fort
+  /// (#385 PR 1b, "Pinning"). `true` = gepinnt, der Timer läuft.
+  ///
+  /// Zulässig nur bei fertig geladenem Dashboard, leerem heutigen Tag
+  /// (`type == work`, kein Start) und [canResumeOpenEntry]. Prüfung und `_init`
+  /// laufen ohne `await` dazwischen. Der Eintrag wird frisch gelesen (siehe
+  /// `_load`); ist er inzwischen beendet oder gelöscht, wird nicht gepinnt.
+  /// Schreibt selbst nichts (erst Autosave/Stop), braucht also keinen
+  /// [_ActionCtx]; Überholung (Profilwechsel) läuft über `_initGen`.
+  Future<bool> resumePastEntry(WorkEntryEntity entry) async {
+    if (!ref.mounted) return false;
+    final pending = _initRun;
+    if (pending != null) await pending;
+    if (!ref.mounted) return false;
+
+    // Ab hier synchron bis `_init` (kein Start-Tap kann dazwischen laufen).
+    final now = _now();
+    final today = state.workEntry;
+    final todayIsEmpty = _loadedOk &&
+        !state.isLoading &&
+        _dayOf(today.date) == _dayOf(now) &&
+        today.type == WorkEntryType.work &&
+        today.workStart == null;
+    if (!canResumeOpenEntry(
+        entry: entry, now: now, todayIsEmpty: todayIsEmpty)) {
+      return false;
+    }
+
+    state = state.copyWith(isLoading: true);
+    final run = _init(dayChange: true, pinnedDate: entry.date);
+    final gen = _initGen;
+    await run;
+    if (gen != _initGen || !ref.mounted) return false;
+    return _loadedOk &&
+        _isRunning(state.workEntry) &&
+        _dayOf(state.workEntry.date) == _dayOf(entry.date);
+  }
+
+  Future<void> _init({bool dayChange = false, DateTime? pinnedDate}) {
     if (!ref.mounted) return Future.value();
     final gen = ++_initGen;
-    final run = _load(gen, dayChange);
+    final run = _load(gen, dayChange, pinnedDate: pinnedDate);
     _initRun = run;
     return run;
   }
 
-  Future<void> _load(int gen, bool dayChange) async {
+  /// Mit [pinnedDate] wird statt "heute" der (frisch gelesene) offene Eintrag
+  /// dieses Tages geladen (Fortsetzen, #385); ist er nicht mehr offen, fällt
+  /// der Lauf auf den heutigen Tag zurück.
+  Future<void> _load(int gen, bool dayChange, {DateTime? pinnedDate}) async {
     bool stale() => gen != _initGen || !ref.mounted;
     try {
       logger.i('[Dashboard] Initialisiere Dashboard...');
       final getTodayWorkEntry = ref.read(getTodayWorkEntryUseCaseProvider);
       final overtimeRepository = ref.read(overtimeRepositoryProvider);
+      final pinnedRepository =
+          pinnedDate == null ? null : ref.read(workRepositoryProvider);
 
-      final workEntry = await getTodayWorkEntry.call();
+      WorkEntryEntity? pinned;
+      if (pinnedRepository != null) {
+        final fresh = await pinnedRepository.getWorkEntry(pinnedDate!);
+        if (stale()) return;
+        if (fresh.type == WorkEntryType.work && _isRunning(fresh)) {
+          pinned = fresh;
+        }
+      }
+      final workEntry = pinned ?? await getTodayWorkEntry.call();
       if (stale()) return;
       // Async laden statt synchronem Cache-Zugriff (verhindert Race Condition bei Firebase-Login)
       final storedOvertime = await overtimeRepository.ensureOvertimeLoaded();

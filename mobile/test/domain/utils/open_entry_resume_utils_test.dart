@@ -120,8 +120,8 @@ void main() {
     test('DST-Beginn 2026-03-29: Alter über absolute Differenz', () {
       final start = DateTime(2026, 3, 28, 12);
       final limit = start.add(openEntryMaxNowAge);
-      expect(can(entry(date: DateTime(2026, 3, 28), start: start), limit),
-          isTrue);
+      expect(
+          can(entry(date: DateTime(2026, 3, 28), start: start), limit), isTrue);
       expect(
           can(entry(date: DateTime(2026, 3, 28), start: start),
               limit.add(const Duration(minutes: 1))),
