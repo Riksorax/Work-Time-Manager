@@ -3,6 +3,7 @@ import { DashboardService } from '../../features/dashboard/dashboard.service';
 import {
   OPEN_ENTRY_LONG_WARNING_MS,
   OPEN_ENTRY_MAX_NOW_AGE_MS,
+  canResumeOpenEntry,
   closedBreakMs,
   effectiveTargetMsForDate,
   formatEntryDay,
@@ -283,6 +284,72 @@ describe('open-entry.utils', () => {
 
     it('ohne Ende: Fehler statt stillem Wert', () => {
       expect(() => retroDeltaMs(entry(), 8 * HOUR)).toThrow();
+    });
+  });
+
+  describe('canResumeOpenEntry', () => {
+    const now = at(2026, 10, 3, 9, 0);
+    const base = (e: WorkEntry = entry({ workStart: at(2026, 10, 2, 22, 0) })) => ({
+      entry: e,
+      now,
+      todayId: '2026-10-03',
+      todayIsEmpty: true,
+    });
+
+    it('offener Vortag, heute leer: erlaubt', () => {
+      expect(canResumeOpenEntry(base())).toBe(true);
+    });
+
+    it('heute nicht leer: nicht erlaubt', () => {
+      expect(canResumeOpenEntry({ ...base(), todayIsEmpty: false })).toBe(false);
+    });
+
+    it('Typ ungleich work, ohne Start, mit Ende: nicht erlaubt', () => {
+      const s = at(2026, 10, 2, 22, 0);
+      for (const type of [WorkEntryType.Vacation, WorkEntryType.Sick, WorkEntryType.Holiday]) {
+        expect(canResumeOpenEntry(base(entry({ workStart: s, type })))).toBe(false);
+      }
+      expect(canResumeOpenEntry(base({ ...entry(), workStart: undefined }))).toBe(false);
+      expect(canResumeOpenEntry(base(entry({ workStart: s, workEnd: at(2026, 10, 2, 23, 0) })))).toBe(false);
+    });
+
+    it('nur Tage vor heute (id == heute und id > heute: nicht erlaubt)', () => {
+      const s = at(2026, 10, 2, 22, 0);
+      expect(canResumeOpenEntry(base(entry({ id: '2026-10-03', workStart: s })))).toBe(false);
+      expect(canResumeOpenEntry(base(entry({ id: '2026-10-04', workStart: s })))).toBe(false);
+    });
+
+    it('Alter: genau 24 h erlaubt, + 1 ms und + 1 min nicht (Grenze inklusiv)', () => {
+      const exact = new Date(now.getTime() - OPEN_ENTRY_MAX_NOW_AGE_MS);
+      expect(canResumeOpenEntry(base(entry({ workStart: exact })))).toBe(true);
+      expect(canResumeOpenEntry(base(entry({ workStart: new Date(exact.getTime() - 1) })))).toBe(false);
+      expect(canResumeOpenEntry(base(entry({ workStart: new Date(exact.getTime() - MIN) })))).toBe(false);
+    });
+
+    it('Mitternachtsfall: jetzt 00:30, Start 23:30 am Vortag', () => {
+      const n = at(2026, 10, 3, 0, 30);
+      const e = entry({ workStart: at(2026, 10, 2, 23, 30) });
+      expect(canResumeOpenEntry({ entry: e, now: n, todayId: '2026-10-03', todayIsEmpty: true })).toBe(true);
+    });
+
+    it('Tag nur aus der id, nicht aus date (UTC-Mitternacht)', () => {
+      // date = UTC-Mitternacht des Folgetags: bliebe das id-Datum unbeachtet, wäre "heute" erreicht
+      const e = entry({ id: '2026-10-02', date: new Date(Date.UTC(2026, 9, 3)), workStart: at(2026, 10, 2, 22, 0) });
+      expect(canResumeOpenEntry(base(e))).toBe(true);
+      const e2 = entry({ id: '2026-10-03', date: new Date(Date.UTC(2026, 9, 2)), workStart: at(2026, 10, 2, 22, 0) });
+      expect(canResumeOpenEntry(base(e2))).toBe(false);
+    });
+
+    it('DST: Alter über absolute Differenz', () => {
+      for (const [y, m, d] of [[2026, 10, 25], [2026, 3, 29], [2026, 11, 1], [2026, 3, 8], [2026, 4, 5]] as const) {
+        const start = at(y, m, d, 12, 0);
+        const todayId = `${new Date(y, m - 1, d + 1).getFullYear()}-${String(new Date(y, m - 1, d + 1).getMonth() + 1).padStart(2, '0')}-${String(new Date(y, m - 1, d + 1).getDate()).padStart(2, '0')}`;
+        const id = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const e = entry({ id, workStart: start });
+        const edge = new Date(start.getTime() + OPEN_ENTRY_MAX_NOW_AGE_MS);
+        expect(canResumeOpenEntry({ entry: e, now: edge, todayId, todayIsEmpty: true })).toBe(true);
+        expect(canResumeOpenEntry({ entry: e, now: new Date(edge.getTime() + 1), todayId, todayIsEmpty: true })).toBe(false);
+      }
     });
   });
 
