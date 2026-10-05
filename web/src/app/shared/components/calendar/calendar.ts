@@ -13,6 +13,7 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { DatePipe } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -21,7 +22,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Bundesland } from '../../models';
 import { GermanHoliday, getGermanHolidayIds } from '../../utils/german-holidays.util';
 import { TodayService } from '../../../core/services/today';
-import { isCalendarNavKey, nextFocusDate } from '../../utils/calendar-keyboard.util';
+import { CalendarNavKey, isCalendarNavKey, nextFocusDate, rangeDiff, rangeKeys } from '../../utils/calendar-keyboard.util';
 
 const EMPTY_HOLIDAYS = new Map<string, GermanHoliday>();
 
@@ -54,7 +55,9 @@ function toKey(d: Date): string {
       </div>
 
       <div class="calendar-grid" role="grid" [attr.aria-label]="viewDate() | date:'MMMM yyyy'"
-           (keydown)="onGridKeydown($event)">
+           [attr.aria-multiselectable]="multiSelectActive() ? 'true' : null"
+           (keydown)="onGridKeydown($event)"
+           (focusout)="onGridFocusOut($event)">
         <div class="calendar-week weekday-row" role="row">
           @for (day of weekDays; track day) {
             <div class="weekday-label" role="columnheader">{{ day }}</div>
@@ -80,7 +83,7 @@ function toKey(d: Date): string {
                   [attr.tabindex]="dayKey(day.date) === focusableKey() ? 0 : -1"
                   [attr.aria-selected]="isSelected(day.date)"
                   [attr.aria-current]="isToday(day.date) ? 'date' : null"
-                  [class.selected]="!hasMultiSelected() && isSameDay(day.date, selectedDate())"
+                  [class.selected]="!isMultiMode() && isSameDay(day.date, selectedDate())"
                   [class.today]="isToday(day.date)"
                   [class.has-entry]="hasEntry(day.date)"
                   [class.multi-selected]="isMultiSelected(day.date)"
@@ -206,14 +209,21 @@ export class CalendarComponent {
   readonly multiSelectedDates = input<Set<string>>(new Set());
   /** Bundesland für die Feiertags-Markierung (null = keine Markierung). Siehe #371. */
   readonly bundesland         = input<Bundesland | null>(null);
+  /** Mehrfachauswahl-Modus (gehört dem Parent, #377): Escape beendet ihn, `aria-multiselectable`. */
+  readonly multiSelectActive  = input(false);
 
   readonly dateSelected = output<Date>();
   readonly monthChanged = output<{ year: number; month: number }>();
   readonly dragSelected = output<Date[]>();
+  /** Tage, die beim Verkleinern/Umkehren eines Tastatur-Bereichs wieder abgewählt werden (#377). */
+  readonly daysDeselected = output<Date[]>();
+  /** Escape im aktiven Modus: Parent beendet den Modus inkl. Auswahl (#377). */
+  readonly multiSelectEnded = output<void>();
 
   private readonly translate = inject(TranslateService);
   private readonly todayService = inject(TodayService);
   private readonly injector = inject(Injector);
+  private readonly announcer = inject(LiveAnnouncer);
 
   readonly viewDate = signal(new Date());
   readonly weekDays: string[] = this.translate.instant('common.weekdaysShort');
@@ -222,6 +232,17 @@ export class CalendarComponent {
 
   /** Roving-Fokus (Key yyyy-MM-dd), nur durch Tastatur/Tap gesetzt; `null` = Fallback über focusableKey. */
   private readonly _focusKey = signal<string | null>(null);
+
+  // Anker-State der Tastatur-Bereichsauswahl (#377); nur Methodenzugriff, kein Service-State.
+  private _anchorKey: string | null = null;
+  private _rangeKeys = new Set<string>();
+  private _rangeBase = new Set<string>();
+  /** Während eines Monatswechsels per Tastatur: Zellen werden neu erzeugt, ein focusout darf den Anker nicht verwerfen. */
+  private _focusPending = false;
+  /** Tastatur hat die Auswahl geändert: die nächste Mengen-/Modusänderung wird (nur dann) angesagt. */
+  private _announceNext = false;
+  private _prevActive: boolean | null = null;
+  private _prevCount = 0;
 
   private _dragStart: Date | null = null;
   private _isDragging = false;
@@ -234,6 +255,19 @@ export class CalendarComponent {
         this.viewDate.set(new Date(initial.getFullYear(), initial.getMonth(), 1));
         this._focusKey.set(null);
       });
+    });
+
+    // Ansagen (LiveAnnouncer, polite): Modus an/aus nur bei Nicht-Tastaturaktionen, die Anzahl nur nach
+    // Tastaturaktionen (kein Dauerfeuer beim Pointer-Drag). Ein Effect, weil die Reihenfolge zweier nicht garantiert ist.
+    effect(() => {
+      const active = this.multiSelectActive();
+      const count = this.multiSelectedDates().size;
+      untracked(() => this._announceChange(active, count));
+    });
+
+    // Modus extern beendet (Button, Abbrechen, Batch-Speichern): Anker verwerfen, nur State, nie Fokus.
+    effect(() => {
+      if (!this.multiSelectActive()) untracked(() => this._resetAnchor());
     });
   }
 
@@ -296,7 +330,7 @@ export class CalendarComponent {
 
   /** Visuelle Auswahl (Mehrfachauswahl hat Vorrang vor selectedDate), Basis für aria-selected. */
   isSelected(date: Date): boolean {
-    return this.hasMultiSelected() ? this.isMultiSelected(date) : this.isSameDay(date, this.selectedDate());
+    return this.isMultiMode() ? this.isMultiSelected(date) : this.isSameDay(date, this.selectedDate());
   }
 
   isToday(date: Date): boolean {
@@ -315,11 +349,17 @@ export class CalendarComponent {
     return this.multiSelectedDates().size > 0;
   }
 
+  /** Mehrfachmodus aktiv oder Menge nicht leer: Einzelauswahl (`selectedDate`) wird dann nicht dargestellt. */
+  isMultiMode(): boolean {
+    return this.multiSelectActive() || this.hasMultiSelected();
+  }
+
   dayKey(d: Date): string { return toKey(d); }
 
   // ── Pointer Events (Container-level) ────────────────────────────────────────
 
   onCardPointerDown(event: PointerEvent): void {
+    this._resetAnchor();
     const date = this._dateFromPoint(event.clientX, event.clientY);
     if (!date) return;
 
@@ -367,22 +407,49 @@ export class CalendarComponent {
   // ── Tastatur (#377): Roving tabindex, Fokus folgt nicht der Auswahl ─────────
 
   onGridKeydown(event: KeyboardEvent): void {
-    if (event.altKey || event.metaKey || event.shiftKey) return;
+    if (event.altKey || event.metaKey) return;
     const from = this._dateFromElement(event.target);
     if (!from) return;
 
     const key = event.key;
-    if (key === 'Enter' || key === ' ') {
-      if (event.ctrlKey) return;
+    if (key === 'Escape') {
+      if (!this.multiSelectActive() || event.ctrlKey || event.shiftKey) return;
       event.preventDefault();
-      if (!event.repeat) this.dateSelected.emit(from);
+      this._resetAnchor();
+      this.multiSelectEnded.emit();
+      return;
+    }
+
+    if (key === 'Enter' || key === ' ') {
+      if (event.ctrlKey || event.shiftKey) return;
+      event.preventDefault();
+      this._resetAnchor();
+      if (!event.repeat) {
+        if (this.multiSelectActive()) this._markKeyboardChange();
+        this.dateSelected.emit(from);
+      }
       return;
     }
 
     if (!isCalendarNavKey(key)) return;
+    if (event.shiftKey) {
+      if (event.ctrlKey) return;
+      event.preventDefault();
+      this._extendRange(key, from);
+      return;
+    }
     if (event.ctrlKey && key !== 'Home' && key !== 'End') return;
     event.preventDefault();
+    this._resetAnchor();
     this._focusCell(nextFocusDate(key, from, event.ctrlKey));
+  }
+
+  onGridFocusOut(event: FocusEvent): void {
+    if (this._focusPending) return;
+    const next = event.relatedTarget as Node | null;
+    const gridEl = event.currentTarget as HTMLElement | null;
+    if (next && gridEl?.contains(next)) return;
+    this._resetAnchor();
   }
 
   changeMonth(delta: number): void {
@@ -404,6 +471,67 @@ export class CalendarComponent {
     return new Date(yr, mo - 1, da);
   }
 
+  private _markKeyboardChange(): void {
+    this._announceNext = true;
+    // Auffangnetz: ohne Änderung der Menge (z. B. Sa/So gefiltert) läuft der Effect nicht, das Flag darf nicht stehen bleiben.
+    afterNextRender(() => { this._announceNext = false; }, { injector: this.injector });
+  }
+
+  private _announceChange(active: boolean, count: number): void {
+    const prevActive = this._prevActive;
+    const prevCount = this._prevCount;
+    this._prevActive = active;
+    this._prevCount = count;
+    if (prevActive === null) return; // erste Ausführung: nur Vorwerte merken
+    const keyboard = this._announceNext;
+    this._announceNext = false;
+
+    if (keyboard) {
+      if (active !== prevActive || count !== prevCount) {
+        this._announce(this.translate.instant('shared.calendarSelectedCountAria', { count }));
+      }
+      return;
+    }
+    if (active !== prevActive) {
+      this._announce(this.translate.instant(
+        active ? 'shared.calendarMultiSelectOnAria' : 'shared.calendarMultiSelectOffAria',
+      ));
+    }
+  }
+
+  private _announce(message: string): void {
+    void this.announcer.announce(message, 'polite');
+  }
+
+  private _resetAnchor(): void {
+    this._anchorKey = null;
+    this._rangeKeys = new Set();
+    this._rangeBase = new Set();
+  }
+
+  /** Shift+Navigation: Bereich Anker..Ziel; erweitert/verkleinert/kehrt um, vorher gewählte Tage (Base) bleiben. */
+  private _extendRange(key: CalendarNavKey, from: Date): void {
+    if (this._anchorKey === null) {
+      this._anchorKey = toKey(from);
+      this._rangeBase = new Set(this.multiSelectedDates());
+      this._rangeKeys = new Set();
+    }
+    const [y, m, d] = this._anchorKey.split('-').map(Number);
+    const target = nextFocusDate(key, from, false);
+    this._markKeyboardChange();
+    const newRange = new Set(rangeKeys(new Date(y, m - 1, d), target));
+    const diff = rangeDiff(this._rangeKeys, newRange, this._rangeBase);
+    this.dragSelected.emit(diff.add.map(k => this._dateFromKey(k)));
+    if (diff.remove.length > 0) this.daysDeselected.emit(diff.remove.map(k => this._dateFromKey(k)));
+    this._rangeKeys = newRange;
+    this._focusCell(target);
+  }
+
+  private _dateFromKey(k: string): Date {
+    const [y, m, d] = k.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
+
   private _focusCell(date: Date): void {
     const view = this.viewDate();
     const key = toKey(date);
@@ -413,8 +541,12 @@ export class CalendarComponent {
       return;
     }
     // Monatswechsel: Zellen werden neu erzeugt, Fokus erst nach dem nächsten Render
+    this._focusPending = true;
     this._showMonth(date.getFullYear(), date.getMonth());
-    afterNextRender(() => this._focusElement(key), { injector: this.injector });
+    afterNextRender(() => {
+      this._focusElement(key);
+      this._focusPending = false;
+    }, { injector: this.injector });
   }
 
   private _focusElement(key: string): void {

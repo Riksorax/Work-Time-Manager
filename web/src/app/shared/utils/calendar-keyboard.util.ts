@@ -51,3 +51,38 @@ export function nextFocusDate(key: CalendarNavKey, from: Date, ctrl: boolean): D
     }
   }
 }
+
+function toKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/**
+ * Geordnete Tages-Keys (`yyyy-MM-dd`) von min bis max, beide inklusive, richtungsunabhängig.
+ * Schritt über `new Date(y, m, d + i)` (lokale Mitternacht, DST-sicher); Eingaben bleiben unverändert.
+ */
+export function rangeKeys(anchor: Date, target: Date): string[] {
+  const a = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate());
+  const b = new Date(target.getFullYear(), target.getMonth(), target.getDate());
+  const [start, end] = a <= b ? [a, b] : [b, a];
+  const keys: string[] = [];
+  for (let i = 0; ; i++) {
+    const cur = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+    if (cur > end) return keys;
+    keys.push(toKey(cur));
+  }
+}
+
+/**
+ * Änderung der Auswahl bei einem Bereichsschritt: `add` = neuer Bereich (idempotent additiv),
+ * `remove` = vorher gemeldete, nun nicht mehr enthaltene Tage, ohne die vorher bereits gewählten (`base`).
+ */
+export function rangeDiff(
+  oldRange: ReadonlySet<string>,
+  newRange: ReadonlySet<string>,
+  base: ReadonlySet<string>,
+): { add: string[]; remove: string[] } {
+  return {
+    add: [...newRange],
+    remove: [...oldRange].filter(k => !newRange.has(k) && !base.has(k)),
+  };
+}

@@ -79,6 +79,22 @@
   }
 }
 
+.calendar-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.multi-select-toggle {
+  gap: 6px;
+
+  &.is-active {
+    background: var(--mat-sys-secondary-container);
+    color: var(--mat-sys-on-secondary-container);
+  }
+}
+
 .stats-card {
   background: var(--mat-sys-surface-container-low);
   border-radius: 16px;

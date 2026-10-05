@@ -52,12 +52,12 @@ domain/
 
 features/
 ├── dashboard/      DashboardComponent + DashboardService (Timer, Pausen, Überstunden); `OpenEntryService` + `OpenEntryCloseService` + Beenden-Dialog (offene Einträge vor heute, #385)
-├── reports/        ReportsComponent + ReportsService (Täglich/Wöchentlich/Monatlich, Premium-Gate)
+├── reports/        ReportsComponent + ReportsService (Täglich/Wöchentlich/Monatlich, Premium-Gate); Mehrfachauswahl-Modus im Service: `toggleMultiSelect`, idempotentes `endMultiSelect`, `removeDatesFromSelection`, Modus endet nach erfolgreichem Batch-Speichern (#377)
 └── settings/       SettingsComponent + SettingsPageService (Profil, Arbeitszeit, Gleitzeit, Sync, Theme)
 
 shared/
 ├── components/
-│   ├── calendar/               CalendarComponent — Multi-Select + Pointer-Drag, Feiertags-Markierung per `bundesland`-Input (#371), Tastaturbedienung (#377): ARIA `grid > row > gridcell`, Roving tabindex, Pfeile/Home/End/PageUp/PageDown, Enter/Space (Fokus folgt nicht der Auswahl, `event.repeat` ignoriert)
+│   ├── calendar/               CalendarComponent — Multi-Select + Pointer-Drag, Feiertags-Markierung per `bundesland`-Input (#371), Tastaturbedienung (#377): ARIA `grid > row > gridcell`, Roving tabindex, Pfeile/Home/End/PageUp/PageDown, Enter/Space (Fokus folgt nicht der Auswahl, `event.repeat` ignoriert). Mehrfachauswahl per Tastatur (#377): Toggle-Button im Reports-Kalender-Panel (`ReportsService` besitzt den Modus), Shift+Pfeil/Home/End/PageUp/PageDown wählen einen Bereich ab Anker (Anker/Base im Kalender, `daysDeselected` beim Verkleinern/Umkehren, vorher gewählte Tage bleiben), Escape (`multiSelectEnded`) beendet den Modus, `aria-multiselectable`, im aktiven Modus keine Einzelauswahl-Darstellung; `LiveAnnouncer` (polite) sagt Modus an/aus und nur nach Tastaturaktionen die Anzahl an. Kein Shift+Klick, kein Ctrl+Shift+Home/End
 │   ├── edit-entry-dialog/      EditEntryDialogComponent
 │   ├── leave-balance-card/     LeaveBalanceCardComponent — reine Darstellung der Urlaubsübersicht (Dashboard, Settings, Reports)
 │   ├── holiday-banner/         HolidayBannerComponent — „Heute ist Feiertag: …“ (#279), rein informativ
@@ -67,7 +67,7 @@ shared/
 ├── utils/
 │   ├── german-holidays.util.ts  Pure — gesetzliche Feiertage je Bundesland (#279), Port von Mobile `german_holidays.dart`
 │   ├── bundesland.util.ts       Pure — isBundesland / normalizeBundesland
-│   ├── calendar-keyboard.util.ts  Pure — Kalender-Tastenlogik (#377): `isCalendarNavKey`, `nextFocusDate`
+│   ├── calendar-keyboard.util.ts  Pure — Kalender-Tastenlogik (#377): `isCalendarNavKey`, `nextFocusDate`, `rangeKeys`, `rangeDiff`
 │   └── work-profile-path.util.ts  Pure — `profileScopedPath` (Firestore-Pfad je Profil), `profileIdForApi` (Profil-ID → API-Form, `'default'` → `undefined`, #380)
 └── models/index.ts        WorkEntry, WorkEntryType, Break, UserSettings, UserProfile, WorkProfile
 ```

@@ -299,8 +299,10 @@ describe('CalendarComponent - Tastatur und ARIA (#377)', () => {
     it('lässt Ctrl/Alt/Meta/Shift+Pfeil, Tab und andere Tasten unbehandelt', () => {
       const variants: [string, KeyboardEventInit][] = [
         ['ArrowRight', { ctrlKey: true }], ['ArrowRight', { altKey: true }],
-        ['ArrowRight', { metaKey: true }], ['ArrowRight', { shiftKey: true }],
-        ['PageDown', { ctrlKey: true }], ['Home', { shiftKey: true }], ['Enter', { ctrlKey: true }],
+        ['ArrowRight', { metaKey: true }], ['Enter', { shiftKey: true }], [' ', { shiftKey: true }],
+        ['ArrowRight', { ctrlKey: true, shiftKey: true }], ['ArrowRight', { altKey: true, shiftKey: true }],
+        ['ArrowRight', { metaKey: true, shiftKey: true }],
+        ['PageDown', { ctrlKey: true }], ['Enter', { ctrlKey: true }],
         ['Tab', {}], ['a', {}],
       ];
       for (const [key, init] of variants) {
