@@ -42,6 +42,8 @@ interface Env {
   dashLoading: ReturnType<typeof signal<boolean>>;
   dashEntry: ReturnType<typeof signal<WorkEntry>>;
   reload: ReturnType<typeof vi.fn>;
+  todayEmpty: ReturnType<typeof signal<boolean>>;
+  resumeFn: ReturnType<typeof vi.fn>;
   closeFn: ReturnType<typeof vi.fn>;
   reads: { year: number; month: number; pid: string | undefined }[];
   months: Map<string, WorkEntry[] | Error>;
@@ -58,6 +60,8 @@ function setup(init: { user?: TestUser; pid?: string } = {}): Env {
     id: '2026-10-03', date: new Date(2026, 9, 3), breaks: [], isManuallyEntered: false, type: WorkEntryType.Work,
   });
   const reload = vi.fn().mockResolvedValue(undefined);
+  const todayEmpty = signal(true);
+  const resumeFn = vi.fn().mockResolvedValue(true);
   const closeFn = vi.fn().mockResolvedValue('closed' as CloseResult);
   const reads: Env['reads'] = [];
   const months = new Map<string, WorkEntry[] | Error>();
@@ -71,6 +75,7 @@ function setup(init: { user?: TestUser; pid?: string } = {}): Env {
       { provide: WorkProfileService, useValue: profile },
       { provide: DashboardService, useValue: {
         isLoading: dashLoading.asReadonly(), workEntry: dashEntry.asReadonly(), reloadAfterRetroClose: reload,
+        todayIsEmpty: todayEmpty.asReadonly(), resumePastEntry: resumeFn,
       } },
       { provide: OpenEntryCloseService, useValue: { endEntry: closeFn } },
       { provide: SettingsService, useValue: {
@@ -94,7 +99,7 @@ function setup(init: { user?: TestUser; pid?: string } = {}): Env {
     ],
   });
   const svc = TestBed.inject(OpenEntryService);
-  return { svc, user, profile, dashLoading, dashEntry, reload, closeFn, reads, months, gates, today: TestBed.inject(TodayService), settingsByProfile };
+  return { svc, user, profile, dashLoading, dashEntry, reload, todayEmpty, resumeFn, closeFn, reads, months, gates, today: TestBed.inject(TodayService), settingsByProfile };
 }
 
 const ids = (svc: OpenEntryService): string[] => svc.entries().map(e => e.id);
@@ -623,5 +628,252 @@ describe('OpenEntryCandidate', () => {
   it('ist ein reiner Wert {id, profileId}', () => {
     const c: OpenEntryCandidate = { id: '2026-10-02', profileId: 'A' };
     expect(Object.keys(c).sort()).toEqual(['id', 'profileId']);
+  });
+});
+
+describe('OpenEntryService Fortsetzen (#385)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 9, 3, 9, 0)); // Sa 2026-10-03 09:00, Fr 22:00 offen = 11 h alt
+  });
+  afterEach(() => {
+    TestBed.resetTestingModule();
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  const FRI = { id: '2026-10-02', profileId: 'A' };
+
+  async function ready(entries: WorkEntry[] = [open('2026-10-02')]): Promise<Env> {
+    const env = setup();
+    env.months.set('A|2026-10', entries);
+    await flush();
+    return env;
+  }
+
+  describe('canResume', () => {
+    it('Fr offen, Sa 09:00, heute leer: true', async () => {
+      const env = await ready();
+      expect(env.svc.canResume()).toBe(true);
+    });
+
+    it('älter als 24 h: false, Beenden-Kandidat bleibt', async () => {
+      vi.setSystemTime(new Date(2026, 9, 3, 22, 1));
+      const env = await ready();
+      expect(env.svc.current()).toEqual(FRI);
+      expect(env.svc.canResume()).toBe(false);
+    });
+
+    it('heute nicht leer: false; wieder leer: true', async () => {
+      const env = await ready();
+      env.todayEmpty.set(false);
+      expect(env.svc.canResume()).toBe(false);
+      env.todayEmpty.set(true);
+      expect(env.svc.canResume()).toBe(true);
+    });
+
+    it('Dashboard lädt: kein Kandidat, false', async () => {
+      const env = await ready();
+      env.dashLoading.set(true);
+      expect(env.svc.entries()).toEqual([]);
+      expect(env.svc.canResume()).toBe(false);
+    });
+
+    it('ohne Kandidat: false', async () => {
+      const env = await ready([]);
+      expect(env.svc.canResume()).toBe(false);
+    });
+
+    it('bezieht sich nur auf den neuesten sichtbaren Kandidaten (current), nie auf ältere', async () => {
+      const stale = open('2026-10-02', { workStart: new Date(2026, 9, 1, 8, 0) }); // 49 h alt
+      const freshOlder = open('2026-10-01', { workStart: new Date(2026, 9, 2, 23, 0) }); // formal jünger
+      const env = await ready([stale, freshOlder]);
+      expect(env.svc.current()!.id).toBe('2026-10-02');
+      expect(env.svc.canResume()).toBe(false);
+    });
+
+    it('Uhrsprung über die 24-h-Grenze samt Tageswechsel: false', async () => {
+      const env = await ready();
+      expect(env.svc.canResume()).toBe(true);
+      vi.setSystemTime(new Date(2026, 9, 4, 22, 1));
+      env.today.refresh();
+      await flush();
+      expect(env.svc.canResume()).toBe(false);
+    });
+  });
+
+  describe('resume()', () => {
+    it('Erfolg: Dashboard einmal mit Eintrag und Profil, Kandidat sofort weg, closedCount +1, kein Zusatz-Read', async () => {
+      const env = await ready();
+      const reads = env.reads.length;
+      expect(await env.svc.resume(FRI)).toBe(true);
+      expect(env.resumeFn).toHaveBeenCalledTimes(1);
+      expect(env.resumeFn).toHaveBeenCalledWith(expect.objectContaining({ id: '2026-10-02' }), 'A');
+      expect(env.svc.entries()).toEqual([]);
+      expect(env.svc.entryOf('2026-10-02')).toBeUndefined();
+      expect(env.svc.closedCount()).toBe(1);
+      expect(env.reads.length).toBe(reads);
+      expect(env.svc.busy()).toBe(false);
+      expect(env.svc.saveError()).toBeNull();
+    });
+
+    it('Erfolg lässt „Später" unberührt: ein anderer Kandidat bleibt sichtbar', async () => {
+      const env = await ready([open('2026-10-02'), open('2026-10-01')]);
+      await env.svc.resume(FRI);
+      expect(ids(env.svc)).toEqual(['2026-10-01']);
+    });
+
+    it('frische Regelprüfung beim Tap: Uhr vorgestellt ⇒ kein Dashboard-Aufruf, false', async () => {
+      const env = await ready();
+      vi.setSystemTime(new Date(2026, 9, 3, 22, 1)); // Signal-Berechnung noch alt
+      expect(await env.svc.resume(FRI)).toBe(false);
+      expect(env.resumeFn).not.toHaveBeenCalled();
+      expect(env.svc.busy()).toBe(false);
+      expect(env.svc.canResume()).toBe(false);
+    });
+
+    it('frische Regelprüfung beim Tap: Dashboard seitdem nicht mehr leer', async () => {
+      const env = await ready();
+      env.todayEmpty.set(false);
+      expect(await env.svc.resume(FRI)).toBe(false);
+      expect(env.resumeFn).not.toHaveBeenCalled();
+    });
+
+    it('Ablehnung: still, Neusuche, Banner bleibt bei weiter offenem Eintrag', async () => {
+      const env = await ready();
+      env.resumeFn.mockResolvedValue(false);
+      const reads = env.reads.length;
+      expect(await env.svc.resume(FRI)).toBe(false);
+      expect(env.reads.length).toBe(reads + 2);
+      expect(ids(env.svc)).toEqual(['2026-10-02']);
+      expect(env.svc.busy()).toBe(false);
+      expect(env.svc.saveError()).toBeNull();
+      expect(env.svc.closedCount()).toBe(0);
+    });
+
+    it('Ablehnung: ein inzwischen beendeter Eintrag verschwindet nach der Neusuche', async () => {
+      const env = await ready();
+      env.resumeFn.mockImplementation(async () => {
+        env.months.set('A|2026-10', [open('2026-10-02', { workEnd: new Date(2026, 9, 2, 23, 0) })]);
+        return false;
+      });
+      await env.svc.resume(FRI);
+      expect(env.svc.entries()).toEqual([]);
+      expect(env.svc.canResume()).toBe(false);
+    });
+
+    it('Doppelklick: zweiter Aufruf bei busy false, genau ein Dashboard-Aufruf', async () => {
+      const env = await ready();
+      let finish!: (v: boolean) => void;
+      env.resumeFn.mockImplementation(() => new Promise<boolean>(r => (finish = r)));
+      const first = env.svc.resume(FRI);
+      expect(env.svc.busy()).toBe(true);
+      expect(await env.svc.resume(FRI)).toBe(false);
+      expect(env.resumeFn).toHaveBeenCalledTimes(1);
+      finish(true);
+      await first;
+      expect(env.svc.busy()).toBe(false);
+    });
+
+    it('unbekannter Kandidat und nach „Später": false ohne Dashboard-Aufruf', async () => {
+      const env = await ready();
+      expect(await env.svc.resume({ id: '2026-09-01', profileId: 'A' })).toBe(false);
+      env.svc.later();
+      expect(await env.svc.resume(FRI)).toBe(false);
+      expect(env.resumeFn).not.toHaveBeenCalled();
+    });
+
+    it('Profilwechsel mitten im resume: kein Zustand im neuen Profil, busy des neuen Profils unberührt', async () => {
+      const env = await ready();
+      env.months.set('B|2026-10', [open('2026-10-01')]);
+      let finish!: (v: boolean) => void;
+      env.resumeFn.mockImplementation(() => new Promise<boolean>(r => (finish = r)));
+      const p = env.svc.resume(FRI);
+      env.profile.set('B');
+      await flush();
+      expect(env.svc.busy()).toBe(false); // Kontextwechsel setzt busy zurück
+      finish(true);
+      await p;
+      await flush();
+      expect(env.svc.closedCount()).toBe(0);
+      expect(env.svc.entries()).toEqual([{ id: '2026-10-01', profileId: 'B' }]);
+      expect(env.svc.busy()).toBe(false);
+    });
+
+    it('Härtung busy: ein überholter resume-Lauf aus Profil A setzt busy von Profil B nicht zurück', async () => {
+      const env = await ready();
+      env.months.set('B|2026-10', [open('2026-10-01')]);
+      let finishResume!: (v: boolean) => void;
+      env.resumeFn.mockImplementation(() => new Promise<boolean>(r => (finishResume = r)));
+      const a = env.svc.resume(FRI);
+      env.profile.set('B');
+      await flush();
+      let finishEnd!: (r: CloseResult) => void;
+      env.closeFn.mockImplementation(() => new Promise<CloseResult>(r => (finishEnd = r)));
+      const b = env.svc.endEntry({ id: '2026-10-01', profileId: 'B' }, new Date());
+      expect(env.svc.busy()).toBe(true);
+      finishResume(false);
+      await a;
+      expect(env.svc.busy()).toBe(true); // B läuft noch
+      finishEnd('failed');
+      await b;
+      expect(env.svc.busy()).toBe(false);
+    });
+
+    it('Härtung busy: ein überholter endEntry-Lauf aus Profil A setzt busy von Profil B nicht zurück', async () => {
+      const env = await ready([open('2026-10-02'), open('2026-10-01')]);
+      env.months.set('B|2026-10', [open('2026-10-01')]);
+      const finishers: ((r: CloseResult) => void)[] = [];
+      env.closeFn.mockImplementation(() => new Promise<CloseResult>(r => finishers.push(r)));
+      const a = env.svc.endEntry(FRI, new Date());
+      env.profile.set('B');
+      await flush();
+      const b = env.svc.endEntry({ id: '2026-10-01', profileId: 'B' }, new Date());
+      expect(env.svc.busy()).toBe(true);
+      finishers[0]('failed');
+      await a;
+      expect(env.svc.busy()).toBe(true); // B läuft noch
+      finishers[1]('failed');
+      await b;
+      expect(env.svc.busy()).toBe(false);
+    });
+  });
+
+  describe('Flash-Schutz', () => {
+    it('Pin -> Stop (Folge-Read gehalten): der Vortag erscheint nie kurz als Banner, danach auch nicht', async () => {
+      const env = await ready();
+      env.dashEntry.set(open('2026-10-02')); // Pin: Dashboard zeigt den Vortag
+      await flush();
+      expect(ids(env.svc)).toEqual([]);
+      let release!: () => void;
+      env.gates.set('A|2026-10', new Promise<void>(r => (release = r)));
+      env.dashEntry.set({ id: '2026-10-03', date: new Date(2026, 9, 3), breaks: [], isManuallyEntered: false, type: WorkEntryType.Work }); // Stop -> heute
+      await flush();
+      expect(ids(env.svc)).toEqual([]); // Read hängt, Altergebnis hat den Vortag noch
+      env.months.set('A|2026-10', [open('2026-10-02', { workEnd: new Date(2026, 9, 3, 9, 0) })]);
+      release();
+      await flush();
+      expect(ids(env.svc)).toEqual([]);
+    });
+
+    it('nur der Wechsel der Dashboard-Id entfernt: stiller Tageswechsel mit leerem Vortag ändert nichts', async () => {
+      const env = await ready();
+      env.dashEntry.set({ id: '2026-10-04', date: new Date(2026, 9, 4), breaks: [], isManuallyEntered: false, type: WorkEntryType.Work });
+      env.gates.set('A|2026-10', new Promise<void>(() => { /* hängt */ }));
+      await flush();
+      expect(ids(env.svc)).toEqual(['2026-10-02']);
+    });
+
+    it('nach Pin -> Stop erscheint der nächste ältere Eintrag; Fortsetzen nur, wenn die Regel erfüllt ist', async () => {
+      const older = open('2026-10-01');
+      const env = await ready([open('2026-10-02'), older]);
+      env.dashEntry.set(open('2026-10-02'));
+      await flush();
+      env.months.set('A|2026-10', [open('2026-10-02', { workEnd: new Date(2026, 9, 3, 9, 0) }), older]);
+      env.dashEntry.set({ id: '2026-10-03', date: new Date(2026, 9, 3), breaks: [], isManuallyEntered: false, type: WorkEntryType.Work });
+      await flush();
+      expect(env.svc.current()).toEqual({ id: '2026-10-01', profileId: 'A' });
+      expect(env.svc.canResume()).toBe(false); // 35 h alt
+    });
   });
 });
