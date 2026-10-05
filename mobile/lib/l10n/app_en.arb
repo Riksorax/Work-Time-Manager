@@ -403,6 +403,8 @@
   "openEntryLater": "Later",
   "openEntryEndSemantics": "End entry from {date}",
   "openEntryLaterSemantics": "Handle entry from {date} later",
+  "openEntryContinue": "Continue",
+  "openEntryContinueSemantics": "Continue entry from {date}",
   "openEntryEndDialogTitle": "Set the end of the entry",
   "openEntryEndDialogBody": "When did you stop on {date}?",
   "openEntryEndSuggestionExpected": "Target end ({time})",
