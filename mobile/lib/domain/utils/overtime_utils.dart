@@ -79,6 +79,26 @@ Duration effectiveTargetForDate({
 /// angeboten (#385): es entstünde eine riesige Dauer.
 const Duration openEntryMaxNowAge = Duration(hours: 24);
 
+/// Ob der offene [entry] im Dashboard fortgesetzt werden darf (#385): Typ
+/// `work`, Start gesetzt, kein Ende, Kalendertag vor dem Tag von [now], höchstens
+/// [openEntryMaxNowAge] alt (Grenze inklusiv, wie bei [suggestOpenEntryEnd]) und
+/// der heutige Tag noch leer ([todayIsEmpty]). Einzige Regel für Anzeige und
+/// Durchsetzung.
+bool canResumeOpenEntry({
+  required WorkEntryEntity entry,
+  required DateTime now,
+  required bool todayIsEmpty,
+}) {
+  if (!todayIsEmpty) return false;
+  final start = entry.workStart;
+  if (entry.type != WorkEntryType.work || start == null) return false;
+  if (entry.workEnd != null) return false;
+  final entryDay = DateTime(entry.date.year, entry.date.month, entry.date.day);
+  final today = DateTime(now.year, now.month, now.day);
+  if (!entryDay.isBefore(today)) return false;
+  return now.difference(start) <= openEntryMaxNowAge;
+}
+
 /// Vorschlag für das Ende eines offenen Eintrags vor heute (#385).
 class OpenEntryEndSuggestion {
   const OpenEntryEndSuggestion({
