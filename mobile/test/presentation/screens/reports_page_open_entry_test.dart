@@ -187,6 +187,26 @@ void main() {
     });
   });
 
+  group('Tages-Tab, Typ ungleich work', () {
+    testWidgets(
+        'Urlaub mit Zeiten zählt nicht als Arbeitszeit, Soll gilt als erfüllt',
+        (tester) async {
+      final vacation = WorkEntryEntity(
+        id: 'v',
+        date: orphanDay,
+        workStart: DateTime(2026, 10, 2, 8),
+        workEnd: DateTime(2026, 10, 2, 10),
+        type: WorkEntryType.vacation,
+      );
+      await pump(tester, const ReportsPage(), stateFor(orphanDay, [vacation]));
+
+      // Ist = Soll (08:00), Saldo 00:00 (nicht 02:00 - 08:00)
+      expect(find.text('-06:00'), findsNothing);
+      expect(find.text('08:00'), findsWidgets);
+      expect(find.text('Unvollständig'), findsNothing);
+    });
+  });
+
   group('Bottom-Sheet je Kalendertag', () {
     Widget sheet(DateTime day) =>
         Scaffold(body: DayEntriesBottomSheet(date: day));

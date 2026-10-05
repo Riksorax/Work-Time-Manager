@@ -220,6 +220,13 @@ void main() {
           isFalse);
     });
 
+    test('offener Eintrag in der Zukunft: kein "Unvollständig", Netto 0', () {
+      final e =
+          entry(day: DateTime(2026, 10, 6), start: DateTime(2026, 10, 6, 8));
+      expect(isOpenBeforeToday(e, now), isFalse);
+      expect(reportNetDuration(e, now: now), Duration.zero);
+    });
+
     test('Mitternachtsgrenze: gleicher Eintrag ab 00:00 des Folgetags true',
         () {
       final e =
