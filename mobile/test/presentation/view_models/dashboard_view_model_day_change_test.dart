@@ -621,7 +621,10 @@ void main() {
       h.boot();
       h.clock.jumpTo(DateTime(2026, 10, 3, 9));
       h.work.failReads = true;
-      h.act(h.vm.startOrStopTimer);
+      bool? ok;
+      h.act(() async => ok = await h.vm.startOrStopTimer());
+      // #416: Abbruch meldet false, damit die UI die Snackbar zeigt.
+      expect(ok, isFalse);
       expect(h.work.saved, isEmpty);
       expect(h.state.workEntry.date, fr);
       h.work.failReads = false;

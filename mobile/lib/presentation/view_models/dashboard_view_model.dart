@@ -496,7 +496,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
   }
 
   Future<bool> startOrStopTimer() async {
-    if (!await _ensureCurrentDay()) return true;
+    if (!await _ensureCurrentDay()) return false;
     final ctx = _beginAction();
     final now = roundToMinute(_now());
     WorkEntryEntity updatedEntry;
@@ -537,7 +537,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
 
   /// Startet eine komplett neue Session (Start, End und Pausen zurücksetzen)
   Future<bool> startNewSession() async {
-    if (!await _ensureCurrentDay()) return true;
+    if (!await _ensureCurrentDay()) return false;
     final ctx = _beginAction();
     final now = roundToMinute(_now());
     final updatedEntry = WorkEntryEntity(
@@ -558,7 +558,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
 
   /// Neue Session mit Pausen behalten (nur Start und Endzeit zurücksetzen)
   Future<bool> startNewSessionKeepBreaks() async {
-    if (!await _ensureCurrentDay()) return true;
+    if (!await _ensureCurrentDay()) return false;
     final ctx = _beginAction();
     final now = roundToMinute(_now());
     final updatedEntry = WorkEntryEntity(
@@ -739,7 +739,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
   }
 
   Future<bool> setManualStartTime(TimeOfDay time) async {
-    if (!await _ensureCurrentDay()) return true;
+    if (!await _ensureCurrentDay()) return false;
     final ctx = _beginAction();
     final oldDate = state.workEntry.workStart ?? state.workEntry.date;
     final newStart = DateTime(
@@ -770,7 +770,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
   }
 
   Future<bool> setManualEndTime(TimeOfDay time) async {
-    if (!await _ensureCurrentDay()) return true;
+    if (!await _ensureCurrentDay()) return false;
     final ctx = _beginAction();
     final oldDate = state.workEntry.workEnd ??
         state.workEntry.workStart ??
@@ -803,7 +803,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
   }
 
   Future<bool> clearEndTime() async {
-    if (!await _ensureCurrentDay()) return true;
+    if (!await _ensureCurrentDay()) return false;
     final ctx = _beginAction();
     logger.i('[Dashboard] Entferne Endzeit...');
 
@@ -826,7 +826,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
   }
 
   Future<bool> startOrStopBreak() async {
-    if (!await _ensureCurrentDay()) return true;
+    if (!await _ensureCurrentDay()) return false;
     final ctx = _beginAction();
     final toggleBreak = ref.read(toggleBreakUseCaseProvider);
     final updatedEntry = await toggleBreak.call(state.workEntry);
@@ -834,7 +834,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
   }
 
   Future<bool> deleteBreak(String breakId) async {
-    if (!await _ensureCurrentDay()) return true;
+    if (!await _ensureCurrentDay()) return false;
     final ctx = _beginAction();
     final updatedBreaks =
         state.workEntry.breaks.where((b) => b.id != breakId).toList();
@@ -843,7 +843,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
   }
 
   Future<bool> updateBreak(BreakEntity breakEntity) async {
-    if (!await _ensureCurrentDay()) return true;
+    if (!await _ensureCurrentDay()) return false;
     final ctx = _beginAction();
     final updatedBreaks = state.workEntry.breaks.map((b) {
       return b.id == breakEntity.id ? breakEntity : b;
