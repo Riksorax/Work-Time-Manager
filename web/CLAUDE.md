@@ -61,7 +61,7 @@ shared/
 │   ├── edit-entry-dialog/      EditEntryDialogComponent
 │   ├── leave-balance-card/     LeaveBalanceCardComponent — reine Darstellung der Urlaubsübersicht (Dashboard, Settings, Reports)
 │   ├── holiday-banner/         HolidayBannerComponent — „Heute ist Feiertag: …“ (#279), rein informativ
-│   ├── open-entry-banner/      OpenEntryBannerComponent — Hinweis auf offenen Eintrag vor heute mit „Beenden“/„Später“ (#385), rein darstellend
+│   ├── open-entry-banner/      OpenEntryBannerComponent — Hinweis auf offenen Eintrag vor heute mit „Beenden“/„Später“ und optional „Fortsetzen“ (#385), rein darstellend
 │   ├── time-input/             TimeInputComponent
 │   └── work-profile-switcher/  WorkProfileSwitcherComponent + Add-/Manage-Dialoge (siehe #138/#244)
 ├── utils/
@@ -133,7 +133,7 @@ reicht die Einstellung durch. Wochen-/Monatslisten sind nicht markiert, die Ausw
 ### Tageswechsel (#372)
 
 `TodayService.today()` ist die einzige Quelle für „heute“ im Dashboard. Beim Wechsel gilt (Variante B):
-- **Laufender Timer** läuft über Mitternacht weiter, der Eintrag bleibt am Starttag; Soll und `isExtraDay` hängen am
+- **Laufender Timer** läuft über Mitternacht weiter (ein laufender Vortag kommt auch über „Fortsetzen" ins Dashboard, #385), der Eintrag bleibt am Starttag; Soll und `isExtraDay` hängen am
   **Eintragsdatum** (`_targetDailyMs(settings, entry.date)`), nicht an „jetzt“. Autosave/Stop/Pause bleiben am Starttag.
   Nach dem Stop eines Vortagseintrags schaltet das Dashboard auf den neuen, leeren Tag um.
 - **Gestoppter/leerer Eintrag** schaltet still auf den neuen Tag (`_init(uid, { dayChange: true })`, kein Speichern).
@@ -207,7 +207,29 @@ neuesten offenen Eintrag vor heute (Ursache und Mobile-Vorlage: PR #405). Ohne N
 - **Abweichung zu Mobile:** `manualOvertimeMinutes` wird eingerechnet (wie beim Dashboard-Stop). Den Saldo-Rollback bei
   Eintrag-Fehler hat Mobile seit #410 ebenfalls. `keepLastUpdated` sendet Mobile seit #406 ebenfalls (`CloseOpenWorkEntry`, Body nur bei `true`).
 - **Grenzen:** Einträge älter als der Vormonat und andere Profile werden nicht gefunden, kein Re-Check beim Zurückkehren in den
-  Tab, „Fortsetzen“ folgt mit Mobile PR 1b, Reports-Darstellung offener Einträge #404.
+  Tab, Reports-Darstellung offener Einträge #404. „Fortsetzen" gibt es nur für den neuesten Eintrag, nur bei leerem heutigem Tag
+  und höchstens 24 h Alter; eine Ablehnung bleibt still (ohne Text, der Banner wird neu gesucht). Ein Service-Aufruf in der
+  Ladelücke des Pins (z. B. `startOrStopTimer`) wartet auf den Pin und stoppt danach den gepinnten Lauf; im UI ist das wegen des
+  Spinners nicht erreichbar.
+- **Fortsetzen (Web-Parität zu Mobile PR 1b #422):** Der Banner bietet für den **neuesten** sichtbaren Kandidaten „Fortsetzen" an
+  (`OpenEntryService.canResume`, Button Später Text / Beenden stroked / Fortsetzen flat; ohne `canResume` bleibt das alte Aussehen).
+  - **Regel** `canResumeOpenEntry({ entry, now, todayId, todayIsEmpty })` (`domain/utils/open-entry.utils.ts`): Typ work, Start, kein
+    Ende, `id` < heute, Alter ≤ 24 h (inklusiv), heute leer. Einzige Regel für Anzeige und Durchsetzung (Tap prüft mit frischer Uhr neu).
+  - **`DashboardService.todayIsEmpty`** = nicht ladend **und** `_loadOk` (letzter `_initInner` fehlerfrei; nach einem Fehler ist
+    `status` ebenfalls `ready`) **und** angezeigt wird heute, Typ work, kein Start. Heutiger Urlaub/Krank ist nicht „leer".
+  - **Pinning:** `resumePastEntry(entry, pid)` wartet auf laufende `_init`, prüft dann synchron (Profil, `todayIsEmpty`, Regel) und
+    startet `_init(uid, { pinned: { id } })` ohne dazwischenliegendes `await`. `_initInner` liest den Monat frisch
+    (`getEntriesForMonthOnce`), validiert erneut (offen, ≤ 24 h) und setzt `date` auf das lokale Datum aus der `id` (UTC-Falle). Lesefehler
+    oder ungültiger Eintrag fallen auf den normalen Pfad für heute zurück (Dashboard bleibt geladen, Ergebnis `false`). Die Saldo-Basis
+    ist der gespeicherte Saldo (`storedBase = dayChange || pinned`, nicht die `lastUpdated`-Heuristik); der Zustand wird zurückgesetzt
+    (Spinner). `_pinnedGen === _initGen` entscheidet über `true`; danach sofortiger `_tick()`. Kein Write, kein `ActionCtx`
+    (Überholung über `_initGen`); Timer, Stop, Mitternacht laufen unverändert nach #372.
+  - **`OpenEntryService.resume(candidate)`:** `busy`-Guard, Regel erneut, `await resumePastEntry`; Erfolg entfernt den Kandidaten und
+    erhöht `closedCount` (Fokus), Ablehnung erhöht `_clockTick` und sucht still neu. **Flash-Schutz:** wechselt die Dashboard-Id,
+    wird der vorherige Tag synchron aus den Kandidaten entfernt (nach Pin, Stop und Reinit sonst kurz wieder als Banner sichtbar).
+  - **`busy`-Härtung:** Reset nur bei unverändertem Kontext-Epoch (auch für `endEntry`), der Kontextwechsel setzt `busy` selbst zurück.
+  - Texte: `dashboard.openEntryContinue`, `dashboard.openEntryContinueSemantics` (`aria-label` mit Datum, ohne `aria-describedby`).
+    Fortsetzen löst keine zusätzliche Ansage aus.
 - **Deploy-Reihenfolge: API vor Clients (Web und Mobile).** `keepLastUpdated` kommt aus Backend-PR #408. Eine ältere API ignoriert das Feld; Beenden
   funktioniert dann, setzt aber `lastUpdated` (altes Verhalten), und die Heuristik im Dashboard kann im Fall „beenden, heute
   arbeiten, neu laden“ eine falsche Basis liefern. (Bestehend und nicht Teil davon: der Kommentar in
