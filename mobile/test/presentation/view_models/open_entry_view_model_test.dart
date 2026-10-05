@@ -552,7 +552,7 @@ void main() {
     }, profiles: true);
 
     scenario(
-        'resume() abgelehnt (anderes Gerät beendet): Banner bleibt, kein Fehler',
+        'resume() abgelehnt (anderes Gerät beendet): Neusuche, kein Fehler',
         saturdayMorning, (h) {
       boot(h);
       h.work.store[dayKey(fri)] = entryOf(fri,
@@ -562,7 +562,8 @@ void main() {
       expect(resumeResult, isFalse);
       expect(openState(h).busy, isFalse);
       expect(openState(h).saveError, isFalse);
-      expect(dates(h), [fri], reason: 'Banner bleibt (stiller Fehlschlag)');
+      expect(dates(h), isEmpty,
+          reason: 'Ablehnung sucht neu: beendeter Eintrag verschwindet');
       expect(h.state.workEntry.date, sat);
       expect(h.vm.isTimerRunning, isFalse);
       expect(h.writeLog, isEmpty);
@@ -603,6 +604,8 @@ void main() {
       expect(openState(h).busy, isTrue);
       h.act(() async => results.add(await openVm(h).resume()));
       expect(results, [false], reason: 'zweiter Aufruf sofort abgewiesen');
+      expect(openState(h).busy, isTrue,
+          reason: 'der abgewiesene Aufruf darf busy nicht zurücksetzen');
 
       h.work.holdReads = false;
       for (final c in h.work.pendingReads.toList()) {
@@ -639,6 +642,55 @@ void main() {
       expect(openState(h).saveError, isFalse);
       expect(h.state.workEntry.workStart, isNull);
       expect(h.writeLog, isEmpty);
+    }, setUp: (h) => seedOpen(h.work, fri, startHour: 22), profiles: true);
+
+    scenario('Profilwechsel mitten im resume(): busy des neuen Profils bleibt',
+        saturdayMorning, (h) {
+      boot(h);
+      h.work.holdReads = true;
+      h.act(() => doResume(h)); // Profil A, hängt im Pin-Read
+      final aReads = h.work.pendingReads.toList();
+
+      h.switchProfile('b');
+      h.async.flushMicrotasks();
+      expect(dates(h), [fri], reason: 'Profil B hat einen eigenen Kandidaten');
+      h.workB.holdReads = true;
+      var bResult = false;
+      h.act(() async => bResult = await openVm(h).resume());
+      expect(openState(h).busy, isTrue);
+
+      h.work.holdReads = false;
+      for (final c in aReads) {
+        c.complete();
+      }
+      h.async.flushMicrotasks();
+
+      expect(openState(h).busy, isTrue,
+          reason: 'die überholte Aktion aus A fasst B nicht an');
+      expect(bResult, isFalse);
+      h.workB.holdReads = false;
+      for (final c in h.workB.pendingReads.toList()) {
+        c.complete();
+      }
+      h.async.flushMicrotasks();
+      expect(bResult, isTrue);
+      expect(openState(h).busy, isFalse);
+    }, setUp: (h) {
+      seedOpen(h.work, fri, startHour: 22);
+      seedOpen(h.workB, fri, startHour: 22);
+    }, profiles: true);
+
+    scenario('Ablehnung ohne Änderung: Neusuche lässt Kandidat stehen',
+        saturdayMorning, (h) {
+      boot(h);
+      final reads = h.work.monthReads.length;
+      h.clock.jumpTo(DateTime(2026, 10, 3, 22, 1));
+      h.act(() => doResume(h));
+      expect(resumeResult, isFalse);
+      expect(h.work.monthReads.length, greaterThan(reads),
+          reason: 'Ablehnung sucht neu');
+      expect(dates(h), [fri]);
+      expect(openState(h).busy, isFalse);
     }, setUp: (h) => seedOpen(h.work, fri, startHour: 22), profiles: true);
 
     scenario('Später, dann resume(): kein Kandidat, false', saturdayMorning,

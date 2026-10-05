@@ -209,9 +209,10 @@ class OpenEntryViewModel extends Notifier<OpenEntryState> {
 
   /// Setzt den aktuellen Eintrag im Dashboard fort (Pinning, #385 PR 1b). `true`
   /// = Dashboard läuft jetzt mit diesem Eintrag (der Listener blendet den Banner
-  /// aus). Schreibt nichts, lädt nicht neu, fasst "Später" nicht an. Ein
-  /// abgelehnter Versuch (`false`) bleibt still: der Banner wird neu
-  /// veröffentlicht, Fehler loggt das Dashboard.
+  /// aus). Schreibt nichts, fasst "Später" nicht an und lädt bei Erfolg nicht
+  /// neu. Ein abgelehnter Versuch (`false`) bleibt still (kein Text), sucht aber
+  /// die Kandidaten neu (z. B. von einem anderen Gerät beendet): der Banner
+  /// zeigt danach den echten Stand. Fehler loggt das Dashboard.
   Future<bool> resume() async {
     final entry = state.current;
     if (entry == null || state.busy) return false;
@@ -241,6 +242,7 @@ class OpenEntryViewModel extends Notifier<OpenEntryState> {
 
     state = state.copyWith(busy: false);
     _publish();
+    if (!ok) await _load();
     return ok;
   }
 
