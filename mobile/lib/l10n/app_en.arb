@@ -416,5 +416,8 @@
   "openEntrySaveError": "Could not end the entry.",
   "dashboardSaveError": "Saving failed. Please check your connection and try again.",
   "reportsEntryIncompleteTitle": "Incomplete",
-  "reportsEntryIncompleteHint": "No end recorded – this entry is not counted in the reports."
+  "reportsEntryIncompleteHint": "No end recorded – this entry is not counted in the reports.",
+  "switchWhileRunningTitle": "Time tracking is running",
+  "switchWhileRunningText": "Time tracking is still running in profile \"{from}\". It will be stopped and saved before you switch to profile \"{to}\".",
+  "stopAndSwitchButton": "Stop and switch"
 }
