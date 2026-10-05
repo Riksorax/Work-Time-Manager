@@ -262,7 +262,7 @@ export class ReportsService {
       type,
     }));
     await Promise.all(entries.map(e => this.workEntryService.saveEntry(e)));
-    this.clearDateSelection();
+    this.endMultiSelect();
     this._reloadCurrentMonth();
   }
 
@@ -301,6 +301,21 @@ export class ReportsService {
   }
 
   clearDateSelection(): void {
+    this._selectedDates.set(new Set());
+  }
+
+  /** Entfernt Tage aus der Auswahl (kein Arbeitstage-Filter, unbekannte Keys sind ein No-op); der Modus bleibt aktiv. */
+  removeDatesFromSelection(dates: Date[]): void {
+    this._selectedDates.update((prev: Set<string>) => {
+      const next = new Set(prev);
+      dates.forEach(d => next.delete(toDateKey(d)));
+      return next;
+    });
+  }
+
+  /** Idempotent: Modus aus und Auswahl leer (im Gegensatz zu `toggleMultiSelect`). */
+  endMultiSelect(): void {
+    this._isMultiSelectActive.set(false);
     this._selectedDates.set(new Set());
   }
 

@@ -142,3 +142,154 @@ describe('ReportsService - Tageswechsel (#382)', () => {
     expect(svc.selectedDate().getDate()).toBe(5);
   });
 });
+
+describe('ReportsService - Mehrfachauswahl', () => {
+  let saveEntry: ReturnType<typeof vi.fn>;
+  let svc: ReportsService;
+
+  // Feste lokale Daten: 1.10.2026 = Do, 2. = Fr, 3. = Sa, 4. = So, 5. = Mo (nur über Konstruktoren).
+  const d = (day: number) => new Date(2026, 9, day);
+  const key = (day: number) => `2026-10-${String(day).padStart(2, '0')}`;
+
+  function create(settings: UserSettings = DEFAULT_SETTINGS): void {
+    saveEntry = vi.fn().mockResolvedValue(undefined);
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: AuthService, useValue: { user$: of(null), user: signal(null) } },
+        { provide: WorkProfileService, useValue: { activeProfileId$: of('default'), activeProfileIdForApi: undefined } },
+        { provide: WorkEntryService, useValue: { getEntriesForMonth: () => of([]), saveEntry } },
+        { provide: SettingsService, useValue: { getSettings: () => of(settings) } },
+        { provide: ProfileService, useValue: { isPremium: signal(false) } },
+        { provide: ApiClient, useValue: {} },
+        { provide: Router, useValue: { navigate: vi.fn() } },
+        { provide: LeaveBalanceService, useValue: { refresh: vi.fn() } },
+      ],
+    });
+    svc = TestBed.inject(ReportsService);
+  }
+
+  const sorted = (): string[] => [...svc.selectedDates()].sort();
+
+  it('startet mit ausgeschaltetem Modus und leerer Auswahl', () => {
+    create();
+    expect(svc.isMultiSelectActive()).toBe(false);
+    expect(svc.selectedDates().size).toBe(0);
+  });
+
+  it('toggleMultiSelect schaltet an (leere Menge) und beim Ausschalten wird die Auswahl geleert', () => {
+    create();
+    svc.toggleMultiSelect();
+    expect(svc.isMultiSelectActive()).toBe(true);
+    expect(svc.selectedDates().size).toBe(0);
+    svc.toggleDateSelection(d(1));
+    svc.toggleMultiSelect();
+    expect(svc.isMultiSelectActive()).toBe(false);
+    expect(svc.selectedDates().size).toBe(0);
+  });
+
+  it('toggleDateSelection fügt hinzu, der zweite Aufruf entfernt; Sa/So werden nicht gefiltert', () => {
+    create();
+    svc.toggleDateSelection(d(3));
+    expect(sorted()).toEqual([key(3)]);
+    svc.toggleDateSelection(d(3));
+    expect(svc.selectedDates().size).toBe(0);
+  });
+
+  describe('addDateRangeSelection', () => {
+    it('schaltet den Modus ein, filtert Sa/So (Default Mo-Fr) und ist additiv', () => {
+      create();
+      svc.toggleDateSelection(d(8));
+      svc.addDateRangeSelection([d(1), d(2), d(3), d(4), d(5)]);
+      expect(svc.isMultiSelectActive()).toBe(true);
+      expect(sorted()).toEqual([key(1), key(2), key(5), key(8)]);
+    });
+
+    it('enthält mit allen Arbeitstagen auch Sa/So', () => {
+      create({ ...DEFAULT_SETTINGS, workdays: [1, 2, 3, 4, 5, 6, 7] });
+      svc.addDateRangeSelection([d(1), d(2), d(3), d(4), d(5)]);
+      expect(sorted()).toEqual([key(1), key(2), key(3), key(4), key(5)]);
+    });
+
+    it('lässt die Menge bei reinem Wochenende unverändert, der Modus bleibt an', () => {
+      create();
+      svc.addDateRangeSelection([d(3), d(4)]);
+      expect(svc.selectedDates().size).toBe(0);
+      expect(svc.isMultiSelectActive()).toBe(true);
+    });
+  });
+
+  describe('removeDatesFromSelection', () => {
+    beforeEach(() => create());
+
+    it('entfernt nur die genannten Keys', () => {
+      svc.addDateRangeSelection([d(1), d(2), d(5), d(6)]);
+      svc.removeDatesFromSelection([d(2), d(6)]);
+      expect(sorted()).toEqual([key(1), key(5)]);
+    });
+
+    it('ist ein No-op für nicht vorhandene Keys und für ein leeres Array', () => {
+      svc.addDateRangeSelection([d(1), d(2)]);
+      svc.removeDatesFromSelection([d(20)]);
+      svc.removeDatesFromSelection([]);
+      expect(sorted()).toEqual([key(1), key(2)]);
+    });
+
+    it('filtert beim Entfernen nicht nach Arbeitstagen (Sa per Toggle wird entfernt)', () => {
+      svc.toggleDateSelection(d(3));
+      svc.toggleDateSelection(d(1));
+      svc.removeDatesFromSelection([d(3)]);
+      expect(sorted()).toEqual([key(1)]);
+    });
+
+    it('lässt den Modus aktiv, auch bei leerer Menge', () => {
+      svc.addDateRangeSelection([d(1)]);
+      svc.removeDatesFromSelection([d(1)]);
+      expect(svc.selectedDates().size).toBe(0);
+      expect(svc.isMultiSelectActive()).toBe(true);
+    });
+  });
+
+  describe('endMultiSelect', () => {
+    beforeEach(() => create());
+
+    it('schaltet den Modus aus und leert die Auswahl', () => {
+      svc.addDateRangeSelection([d(1), d(2)]);
+      svc.endMultiSelect();
+      expect(svc.isMultiSelectActive()).toBe(false);
+      expect(svc.selectedDates().size).toBe(0);
+    });
+
+    it('ist idempotent und schaltet nie wieder ein', () => {
+      svc.addDateRangeSelection([d(1)]);
+      svc.endMultiSelect();
+      svc.endMultiSelect();
+      expect(svc.isMultiSelectActive()).toBe(false);
+    });
+
+    it('bleibt im Ruhezustand aus', () => {
+      svc.endMultiSelect();
+      expect(svc.isMultiSelectActive()).toBe(false);
+      expect(svc.selectedDates().size).toBe(0);
+    });
+  });
+
+  describe('saveBatchEntries', () => {
+    beforeEach(() => create());
+
+    it('beendet nach Erfolg den Modus und leert die Auswahl', async () => {
+      svc.addDateRangeSelection([d(1), d(2)]);
+      await svc.saveBatchEntries([d(1), d(2)], WorkEntryType.Vacation);
+      expect(saveEntry).toHaveBeenCalledTimes(2);
+      expect(svc.isMultiSelectActive()).toBe(false);
+      expect(svc.selectedDates().size).toBe(0);
+    });
+
+    it('behält bei Schreibfehler Modus und Auswahl', async () => {
+      svc.addDateRangeSelection([d(1), d(2)]);
+      saveEntry.mockRejectedValue(new Error('x'));
+      await expect(svc.saveBatchEntries([d(1), d(2)], WorkEntryType.Sick)).rejects.toThrow();
+      expect(svc.isMultiSelectActive()).toBe(true);
+      expect(sorted()).toEqual([key(1), key(2)]);
+    });
+  });
+});
