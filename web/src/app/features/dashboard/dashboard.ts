@@ -21,8 +21,6 @@ import { RestartSessionDialogComponent, RestartSessionDialogResult } from './com
 import { AdjustOvertimeDialogComponent, AdjustOvertimeDialogResult } from '../settings/components/adjust-overtime-dialog/adjust-overtime-dialog';
 import { TimeInputComponent } from '../../shared/components/time-input/time-input';
 import { Break } from '../../shared/models/index';
-import { Router } from '@angular/router';
-import { LeaveBalanceService } from '../../core/services/leave-balance';
 import { LanguageService } from '../../core/services/language';
 import { formatEntryDay, formatHm } from '../../domain/utils/open-entry.utils';
 import { OpenEntryBannerComponent } from '../../shared/components/open-entry-banner/open-entry-banner';
@@ -32,7 +30,6 @@ import {
   OpenEntryEndDialogComponent, OpenEntryEndDialogData, OpenEntryEndDialogResult,
 } from './components/open-entry-end-dialog/open-entry-end-dialog';
 import { HolidayBannerComponent } from '../../shared/components/holiday-banner/holiday-banner';
-import { LeaveBalanceCardComponent } from '../../shared/components/leave-balance-card/leave-balance-card';
 
 @Component({
   selector: 'app-dashboard',
@@ -46,7 +43,6 @@ import { LeaveBalanceCardComponent } from '../../shared/components/leave-balance
     MatProgressSpinnerModule,
     MatTooltipModule,
     TimeInputComponent,
-    LeaveBalanceCardComponent,
     HolidayBannerComponent,
     OpenEntryBannerComponent,
     TranslatePipe,
@@ -58,9 +54,7 @@ import { LeaveBalanceCardComponent } from '../../shared/components/leave-balance
 })
 export class DashboardComponent {
   protected readonly svc    = inject(DashboardService);
-  protected readonly leave  = inject(LeaveBalanceService);
   private  readonly dialog  = inject(MatDialog);
-  private  readonly router  = inject(Router);
   protected readonly openEntry = inject(OpenEntryService);
   private  readonly language = inject(LanguageService);
   private  readonly snackBar = inject(MatSnackBar);
@@ -144,10 +138,6 @@ export class DashboardComponent {
   /** Fortsetzen: kein Dialog, Ablehnung bleibt still (der Service sucht neu); Fokus läuft über `closedCount`. */
   async onResumeOpenEntry(candidate: OpenEntryCandidate): Promise<void> {
     await this.openEntry.resume(candidate);
-  }
-
-  goToSettings(): void {
-    void this.router.navigate(['/settings']);
   }
 
   // ─── Template helpers ────────────────────────────────────────────────────────

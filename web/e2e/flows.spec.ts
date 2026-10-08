@@ -26,6 +26,29 @@ test.describe('Dashboard', () => {
   });
 });
 
+test.describe('Resturlaub', () => {
+  test('steht nicht im Dashboard, aber in Einstellungen und Reports', async ({ page }) => {
+    await seedPreferences(page, 'de', 'light');
+    await gotoReady(page, '/dashboard');
+    await expect(page.getByRole('button', { name: 'Zeiterfassung starten' })).toBeVisible();
+    await expect(page.locator('app-leave-balance-card')).toHaveCount(0);
+
+    await gotoReady(page, '/settings');
+    await expect(page.locator('app-leave-balance-card')).toBeVisible();
+    await gotoReady(page, '/reports');
+    await page.getByRole('tab', { name: 'Jahr', exact: true }).click();
+    await expect(page.locator('app-leave-balance-card')).toBeVisible();
+  });
+
+  test('Start-Button liegt auf dem Handy ohne Scrollen im sichtbaren Bereich', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await seedPreferences(page, 'de', 'light');
+    await gotoReady(page, '/dashboard');
+    const box = await page.getByRole('button', { name: 'Zeiterfassung starten' }).boundingBox();
+    expect(box!.y + box!.height).toBeLessThanOrEqual(667 - 64); // über der unteren Navigation
+  });
+});
+
 test.describe('Navigation', () => {
   test('wechselt zwischen Dashboard, Reports und Einstellungen', async ({ page, isMobile }) => {
     await seedPreferences(page, 'en', 'light');

@@ -77,7 +77,7 @@ shared/
 ├── components/
 │   ├── calendar/               CalendarComponent — Multi-Select + Pointer-Drag, Feiertags-Markierung per `bundesland`-Input (#371), Tastaturbedienung (#377): ARIA `grid > row > gridcell`, Roving tabindex, Pfeile/Home/End/PageUp/PageDown, Enter/Space (Fokus folgt nicht der Auswahl, `event.repeat` ignoriert). Mehrfachauswahl per Tastatur (#377): Toggle-Button im Reports-Kalender-Panel (`ReportsService` besitzt den Modus), Shift+Pfeil/Home/End/PageUp/PageDown wählen einen Bereich ab Anker (Anker/Base im Kalender, `daysDeselected` beim Verkleinern/Umkehren, vorher gewählte Tage bleiben), Escape (`multiSelectEnded`) beendet den Modus, `aria-multiselectable`, im aktiven Modus keine Einzelauswahl-Darstellung; `LiveAnnouncer` (polite) sagt Modus an/aus und nur nach Tastaturaktionen die Anzahl an. Kein Shift+Klick, kein Ctrl+Shift+Home/End
 │   ├── edit-entry-dialog/      EditEntryDialogComponent
-│   ├── leave-balance-card/     LeaveBalanceCardComponent — reine Darstellung der Urlaubsübersicht (Dashboard, Settings, Reports)
+│   ├── leave-balance-card/     LeaveBalanceCardComponent — reine Darstellung der Urlaubsübersicht (Settings, Reports; bewusst nicht im Dashboard: dort schob sie Start-/Endzeit und den Start-Button unter den sichtbaren Bereich)
 │   ├── holiday-banner/         HolidayBannerComponent — „Heute ist Feiertag: …“ (#279), rein informativ
 │   ├── open-entry-banner/      OpenEntryBannerComponent — Hinweis auf offenen Eintrag vor heute mit „Beenden“/„Später“ und optional „Fortsetzen“ (#385), rein darstellend
 │   ├── time-input/             TimeInputComponent
