@@ -48,7 +48,9 @@ test.describe('Kalender (#377)', () => {
     await cell(page, '2026-03-18').focus();
     await page.keyboard.press('PageDown');
     await expect(cell(page, '2026-04-18')).toBeFocused();
+    // Nach jedem Tastendruck auf den Fokus im neuen Monat warten, sonst geht ein Druck während des Neuaufbaus verloren.
     await page.keyboard.press('PageUp');
+    await expect(cell(page, '2026-03-18')).toBeFocused();
     await page.keyboard.press('PageUp');
     await expect(cell(page, '2026-02-18')).toBeFocused();
   });
