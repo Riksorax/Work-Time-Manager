@@ -14,7 +14,6 @@ import '../widgets/common/responsive_center.dart';
 import '../widgets/edit_break_modal.dart';
 import '../widgets/holiday_banner.dart';
 import '../widgets/open_entry_banner.dart';
-import '../widgets/leave_balance_card.dart';
 import '../widgets/work_profile_switcher.dart';
 
 class DashboardScreen extends ConsumerWidget {
@@ -118,8 +117,6 @@ class DashboardScreen extends ConsumerWidget {
                 _buildExpectedEndTimeWithBalance(context,
                     dashboardState.expectedEndTotalZero, use24HourFormat),
               ],
-              const SizedBox(height: 16),
-              const LeaveBalanceCard.compact(),
             ],
           );
 

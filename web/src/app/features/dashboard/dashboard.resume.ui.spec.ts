@@ -14,10 +14,8 @@ import { WorkEntryService } from '../../core/services/work-entry';
 import { OvertimeService } from '../../core/services/overtime';
 import { SettingsService } from '../../core/services/settings';
 import { AuthService } from '../../core/auth/auth';
-import { LeaveBalanceService } from '../../core/services/leave-balance';
 import { WorkProfileService } from '../../core/services/work-profile';
 import { createFakeWorkProfile } from '../../shared/testing/work-profile-fake';
-import { LeaveBalanceCardComponent } from '../../shared/components/leave-balance-card/leave-balance-card';
 import { TimeInputComponent } from '../../shared/components/time-input/time-input';
 import { toDateKey } from '../../shared/utils/german-holidays.util';
 import { DEFAULT_SETTINGS, WorkEntry, WorkEntryType } from '../../shared/models/index';
@@ -27,15 +25,6 @@ import en from '../../../../public/i18n/en.json';
 // Ende-zu-Ende im Dashboard (#385): echter DashboardService + echter OpenEntryService + echte Component, nur Repos gefakt.
 // Feste lokale Daten: Sa 2026-10-03 09:00, Fr 2026-10-02 22:00 offen. Flush nur über Microtasks/Timer-Advance, nie setTimeout.
 
-@Component({ selector: 'app-leave-balance-card', template: '' })
-class LeaveCardStub {
-  readonly report = input<unknown>();
-  readonly state = input<unknown>();
-  readonly editable = input<boolean>();
-  readonly localOnly = input<boolean>();
-  readonly retry = output<void>();
-  readonly editEntitlement = output<void>();
-}
 @Component({ selector: 'app-time-input', template: '' })
 class TimeInputStub {
   readonly label = input<string>();
@@ -85,8 +74,8 @@ describe('Dashboard Fortsetzen Ende-zu-Ende (#385)', () => {
     const user = signal<{ uid: string } | null>({ uid: 'u1' });
     let stored = 0;
     TestBed.overrideComponent(DashboardComponent, {
-      remove: { imports: [LeaveBalanceCardComponent, TimeInputComponent] },
-      add: { imports: [LeaveCardStub, TimeInputStub] },
+      remove: { imports: [TimeInputComponent] },
+      add: { imports: [TimeInputStub] },
     });
     TestBed.configureTestingModule({
       providers: [
@@ -113,8 +102,6 @@ describe('Dashboard Fortsetzen Ende-zu-Ende (#385)', () => {
         { provide: AuthService, useValue: { user, get uid() { return user()?.uid ?? null; } } },
         { provide: WorkProfileService, useValue: profile },
         { provide: OpenEntryCloseService, useValue: { endEntry: async () => 'closed' } },
-        { provide: LeaveBalanceService, useValue: {
-          currentYearReport: signal(null), currentYearState: signal('loading'), refresh: vi.fn() } },
         { provide: Router, useValue: { navigate: vi.fn() } },
         { provide: MatDialog, useValue: { open: dialogOpen } },
         { provide: MatSnackBar, useValue: { open: snackOpen } },

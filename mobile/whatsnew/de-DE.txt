@@ -1,6 +1,4 @@
 Das ist neu:
-• Fehlerbehebungen und kleine Verbesserungen
-• Überarbeitete Darstellung der Web-Version auf kleinen Bildschirmen
-• Korrektur bei den Arbeitstagen in den Einstellungen der Web-Version
-
-Die Android-App selbst bleibt unverändert.
+• Der Resturlaub steht nicht mehr auf dem Dashboard, du findest ihn weiterhin in den Einstellungen und in den Berichten
+• Zeiteingabe und Start-Button rücken auf dem Dashboard nach oben
+• Kleine Verbesserungen
