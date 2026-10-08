@@ -6,6 +6,8 @@ import 'package:http/http.dart' as http;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/services/version_service.dart';
+import 'settings_sync_provider.dart';
+import 'clock_provider.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/utils/logger.dart';
 import '../../data/datasources/remote/api_client.dart';
@@ -29,8 +31,11 @@ import '../../domain/repositories/settings_repository.dart';
 import '../../domain/repositories/weekly_reflection_repository.dart';
 import '../../domain/repositories/work_profile_repository.dart';
 import '../../domain/repositories/work_repository.dart';
+import '../../domain/usecases/close_open_work_entry.dart';
 import '../../domain/usecases/delete_account.dart';
+import '../../domain/usecases/reauthenticate.dart';
 import '../../domain/usecases/get_auth_state_changes.dart';
+import '../../domain/usecases/get_open_past_work_entries.dart';
 import '../../domain/usecases/get_theme_mode.dart';
 import '../../domain/usecases/get_today_work_entry.dart';
 import '../../domain/usecases/get_work_entries_for_month.dart';
@@ -129,7 +134,16 @@ SettingsRepository settingsRepository(Ref ref) {
     profileId,
   );
   // Beim Login Firestore-Einstellungen in SharedPrefs übernehmen
-  if (userId != null) repo.syncFromFirestore();
+  if (userId != null) {
+    var disposed = false;
+    ref.onDispose(() => disposed = true);
+    repo.syncFromFirestore().then((changed) {
+      // Nur das SettingsViewModel neu laden lassen (nicht dieses Repo).
+      if (changed && !disposed) {
+        ref.read(settingsSyncTickProvider.notifier).bump();
+      }
+    });
+  }
   return repo;
 }
 
@@ -300,6 +314,11 @@ DeleteAccount deleteAccountUseCase(Ref ref) {
   return DeleteAccount(ref.watch(authRepositoryProvider));
 }
 
+@riverpod
+Reauthenticate reauthenticateUseCase(Ref ref) {
+  return Reauthenticate(ref.watch(authRepositoryProvider));
+}
+
 // --- Settings ---
 @riverpod
 GetThemeMode getThemeModeUseCase(Ref ref) {
@@ -314,7 +333,21 @@ SetThemeMode setThemeModeUseCase(Ref ref) {
 // --- Work Entries ---
 @riverpod
 GetTodayWorkEntry getTodayWorkEntryUseCase(Ref ref) {
-  return GetTodayWorkEntry(ref.watch(workRepositoryProvider));
+  return GetTodayWorkEntry(ref.watch(workRepositoryProvider),
+      clock: ref.watch(clockProvider));
+}
+
+@riverpod
+GetOpenPastWorkEntries getOpenPastWorkEntriesUseCase(Ref ref) {
+  return GetOpenPastWorkEntries(ref.watch(workRepositoryProvider),
+      clock: ref.watch(clockProvider));
+}
+
+@riverpod
+CloseOpenWorkEntry closeOpenWorkEntryUseCase(Ref ref) {
+  return CloseOpenWorkEntry(
+      ref.watch(workRepositoryProvider), ref.watch(overtimeRepositoryProvider),
+      clock: ref.watch(clockProvider));
 }
 
 @riverpod
@@ -324,7 +357,7 @@ SaveWorkEntry saveWorkEntryUseCase(Ref ref) {
 
 @riverpod
 ToggleBreak toggleBreakUseCase(Ref ref) {
-  return ToggleBreak(ref.watch(workRepositoryProvider));
+  return ToggleBreak(clock: ref.watch(clockProvider));
 }
 
 @riverpod
@@ -334,7 +367,8 @@ GetWorkEntriesForMonth getWorkEntriesForMonthUseCase(Ref ref) {
 
 @riverpod
 StartOrStopTimer startOrStopTimerUseCase(Ref ref) {
-  return StartOrStopTimer(ref.watch(workRepositoryProvider));
+  return StartOrStopTimer(ref.watch(workRepositoryProvider),
+      clock: ref.watch(clockProvider));
 }
 
 // --- Overtime ---

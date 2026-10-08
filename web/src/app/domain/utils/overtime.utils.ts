@@ -1,4 +1,5 @@
 import { WorkEntry } from '../../shared/models';
+import { getIsoWeekBounds } from '../../shared/utils/iso-week.util';
 
 /** ISO-Wochentag (1 = Montag, 7 = Sonntag) für ein Datum. */
 function isoWeekday(d: Date): number {
@@ -23,10 +24,7 @@ export function getEffectiveWorkDays(entries: WorkEntry[], workdays: number[]): 
 }
 
 export function getWeekEntriesForDate(date: Date, monthlyEntries: WorkEntry[]): WorkEntry[] {
-  const d = startOfDay(date);
-  const dayOfWeek = d.getDay() === 0 ? 7 : d.getDay(); // ISO: Mo=1, So=7
-  const startOfWeek = new Date(d.getTime() - (dayOfWeek - 1) * 86400000);
-  const endOfWeek   = new Date(startOfWeek.getTime() + 6 * 86400000);
+  const { start: startOfWeek, end: endOfWeek } = getIsoWeekBounds(date);
 
   return monthlyEntries.filter(e => {
     const ed = startOfDay(e.date);

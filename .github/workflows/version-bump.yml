@@ -21,6 +21,8 @@ jobs:
       # Der Branch-Name trägt Version und Release-Charakter:
       #   release/v1.3.2-Roxas        -> 1.3.2 / "Roxas"
       #   release/v1.4.0-Micky-Maus   -> 1.4.0 / "Micky Maus"
+      # Ab 1.6 gilt ein Charakter pro Minor-Linie: release/v1.6.1-Saix muss denselben
+      # Namen tragen wie release/v1.6.0-Saix.
       # Der Charakter wird hier in RELEASE_NAMES.md festgeschrieben, weil
       # flutter-production.yml auf main läuft und den Branch-Namen dort nicht
       # mehr sehen kann.
@@ -63,22 +65,54 @@ jobs:
               print(f"Version {version} steht bereits in {path} — nichts zu tun.")
               sys.exit(0)
 
-          free_idx = [i for i, l in enumerate(lines) if l.strip() == f"- {character}"]
-          used = [l for l in lines if l.startswith("|") and l.split("|")[2].strip() == character]
+          def parse(v):
+              m = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)", v)
+              return tuple(int(x) for x in m.groups()) if m else None
 
-          if used:
-              sys.exit(f"::error::Der Charakter '{character}' ist bereits vergeben. Freie Namen stehen in {path}.")
-          if not free_idx:
-              sys.exit(f"::error::'{character}' steht nicht in der Frei-Liste von {path}. Entweder ist der Name falsch geschrieben oder er muss dort ergänzt werden.")
+          # Ab dieser Minor-Linie gilt EIN Charakter pro Linie (1.6.0, 1.6.1, ...
+          # tragen alle denselben Namen). Ältere Versionen bekamen je Version
+          # einen eigenen Namen und bleiben unverändert.
+          LINE_NAMING_FROM = (1, 6)
+          v = parse(version)
+          if v is None:
+              sys.exit(f"::error::'{version}' ist keine gültige Version (erwartet MAJOR.MINOR.PATCH).")
+          per_line = (v[0], v[1]) >= LINE_NAMING_FROM
 
-          today = datetime.date.today().isoformat()
+          line_owner = None
+          if per_line:
+              for l in lines:
+                  if not l.startswith("|"):
+                      continue
+                  cols = [c.strip() for c in l.split("|")]
+                  rv = parse(cols[1]) if len(cols) > 2 else None
+                  if rv and rv[:2] == v[:2]:
+                      line_owner = cols[2]
+                      break
+
           sep = next(i for i, l in enumerate(lines) if re.match(r"^\|\s*---", l))
-          lines.insert(sep + 1, f"| {version} | {character} | {today} |")
-          # Index verschiebt sich durch das Einfügen um eins
-          lines.pop(free_idx[0] + 1)
+          today = datetime.date.today().isoformat()
+
+          if line_owner is not None:
+              # Weiteres Release derselben Linie: Name ist vorgegeben.
+              if line_owner != character:
+                  sys.exit(f"::error::Die Linie {v[0]}.{v[1]}.x gehört zum Charakter '{line_owner}', nicht '{character}'. Branch muss release/v{version}-{line_owner.replace(' ', '-')} heißen.")
+              lines.insert(sep + 1, f"| {version} | {character} | {today} |")
+              print(f"'{character}' für {version} eingetragen (Linie {v[0]}.{v[1]}.x, Name bereits vergeben).")
+          else:
+              free_idx = [i for i, l in enumerate(lines) if l.strip() == f"- {character}"]
+              used = [l for l in lines if l.startswith("|") and len(l.split("|")) > 2 and l.split("|")[2].strip() == character]
+
+              if used:
+                  sys.exit(f"::error::Der Charakter '{character}' ist bereits vergeben. Freie Namen stehen in {path}.")
+              if not free_idx:
+                  sys.exit(f"::error::'{character}' steht nicht in der Frei-Liste von {path}. Entweder ist der Name falsch geschrieben oder er muss dort ergänzt werden.")
+
+              lines.insert(sep + 1, f"| {version} | {character} | {today} |")
+              # Index verschiebt sich durch das Einfügen um eins
+              lines.pop(free_idx[0] + 1)
+              print(f"'{character}' als {version} eingetragen.")
 
           open(path, "w", encoding="utf-8").write("\n".join(lines))
-          print(f"'{character}' als {version} eingetragen.")
           PY
 
       - name: pubspec.yaml aktualisieren und committen

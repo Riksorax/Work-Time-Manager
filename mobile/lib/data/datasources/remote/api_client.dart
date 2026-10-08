@@ -100,11 +100,17 @@ class ApiClient {
     );
   }
 
-  Future<void> saveOvertime(int minutes, {String? profileId}) async {
+  Future<void> saveOvertime(int minutes,
+      {String? profileId, bool keepLastUpdated = false}) async {
     final res = await _http.put(
       _uri('/overtime', profileId),
       headers: await _headers(),
-      body: jsonEncode({'minutes': minutes}),
+      // Das Feld nur bei true senden: der Default-Body bleibt unverändert, ältere
+      // APIs (vor #408) ignorieren das unbekannte Feld ohnehin.
+      body: jsonEncode({
+        'minutes': minutes,
+        if (keepLastUpdated) 'keepLastUpdated': true,
+      }),
     );
     if (res.statusCode != 200 && res.statusCode != 204)
       _fail('saveOvertime', res);

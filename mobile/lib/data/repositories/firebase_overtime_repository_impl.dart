@@ -44,14 +44,16 @@ class FirebaseOvertimeRepositoryImpl implements OvertimeRepository {
   }
 
   @override
-  Future<void> saveOvertime(Duration overtime) async {
+  Future<void> saveOvertime(Duration overtime,
+      {bool keepLastUpdated = false}) async {
     // Minutengenau speichern — der Cache muss denselben Wert halten wie Firestore,
     // sonst driftet die Bilanz zwischen Cache und persistiertem Stand.
     final rounded = roundDurationToMinute(overtime);
     logger.i(
         '[FirebaseOvertimeRepository] saveOvertime: ${rounded.inMinutes} min');
     _cachedOvertime = rounded;
-    await _dataSource.saveOvertime(_userId, rounded, profileId: _profileId);
+    await _dataSource.saveOvertime(_userId, rounded,
+        profileId: _profileId, keepLastUpdated: keepLastUpdated);
   }
 
   @override

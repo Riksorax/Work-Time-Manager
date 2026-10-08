@@ -164,6 +164,15 @@ class MockFirestoreDataSource extends _i1.Mock
       ) as _i4.Future<void>);
 
   @override
+  _i4.Future<bool> reauthenticate() => (super.noSuchMethod(
+        Invocation.method(
+          #reauthenticate,
+          [],
+        ),
+        returnValue: _i4.Future<bool>.value(false),
+      ) as _i4.Future<bool>);
+
+  @override
   _i4.Future<_i7.WorkEntryModel?> getWorkEntry(
     String? userId,
     DateTime? date, {
@@ -266,6 +275,7 @@ class MockFirestoreDataSource extends _i1.Mock
     String? userId,
     Duration? overtime, {
     String? profileId,
+    bool? keepLastUpdated = false,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -274,7 +284,10 @@ class MockFirestoreDataSource extends _i1.Mock
             userId,
             overtime,
           ],
-          {#profileId: profileId},
+          {
+            #profileId: profileId,
+            #keepLastUpdated: keepLastUpdated,
+          },
         ),
         returnValue: _i4.Future<void>.value(),
         returnValueForMissingStub: _i4.Future<void>.value(),

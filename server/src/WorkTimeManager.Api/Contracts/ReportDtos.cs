@@ -38,3 +38,13 @@ public sealed record MonthlyReportDto
     public IReadOnlyList<ReportWeekDto> Weeks { get; init; } = Array.Empty<ReportWeekDto>();
     public IReadOnlyList<ReportDayDto> Days { get; init; } = Array.Empty<ReportDayDto>();
 }
+
+/// <summary>Jahresauswertung Urlaub/Krank (#278). Rest darf negativ sein (Überschreitung).</summary>
+public sealed record YearlyLeaveReportDto
+{
+    public int Year { get; init; }
+    public int VacationDaysPerYear { get; init; }
+    public int VacationDaysTaken { get; init; }
+    public int VacationDaysRemaining { get; init; }
+    public int SickDays { get; init; }
+}

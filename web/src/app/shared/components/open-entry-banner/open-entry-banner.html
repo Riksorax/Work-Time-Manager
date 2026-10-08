@@ -1,0 +1,35 @@
+<div class="open-entry-banner">
+  <mat-icon class="banner-icon" aria-hidden="true">history</mat-icon>
+  <div class="banner-text" role="status">
+    <span class="banner-title" [id]="titleId">{{ 'dashboard.openEntryBannerTitle' | translate: { date: dateText(), time: time() } }}</span>
+    @if (moreCount() > 0) {
+      <span class="banner-more">{{ (moreCount() === 1 ? 'dashboard.openEntryBannerMoreOne' : 'dashboard.openEntryBannerMoreOther') | translate: { count: moreCount() } }}</span>
+    }
+  </div>
+  <div class="banner-actions">
+    @if (canResume()) {
+      <button mat-button type="button" class="banner-btn" [disabled]="busy()"
+              [attr.aria-describedby]="titleId" (click)="later.emit()">
+        {{ 'dashboard.openEntryLater' | translate }}
+      </button>
+      <button mat-stroked-button type="button" class="banner-btn" [disabled]="busy()"
+              [attr.aria-describedby]="titleId" (click)="end.emit()">
+        {{ 'dashboard.openEntryEnd' | translate }}
+      </button>
+      <button mat-flat-button type="button" class="banner-btn" [disabled]="busy()"
+              [attr.aria-label]="'dashboard.openEntryContinueSemantics' | translate: { date: dateText() }"
+              (click)="resume.emit()">
+        {{ 'dashboard.openEntryContinue' | translate }}
+      </button>
+    } @else {
+      <button mat-stroked-button type="button" class="banner-btn" [disabled]="busy()"
+              [attr.aria-describedby]="titleId" (click)="later.emit()">
+        {{ 'dashboard.openEntryLater' | translate }}
+      </button>
+      <button mat-flat-button type="button" class="banner-btn" [disabled]="busy()"
+              [attr.aria-describedby]="titleId" (click)="end.emit()">
+        {{ 'dashboard.openEntryEnd' | translate }}
+      </button>
+    }
+  </div>
+</div>

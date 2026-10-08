@@ -63,7 +63,8 @@ export class WorkProfileSwitcherComponent {
   );
 
   select(id: string): void {
-    this.workProfile.setActiveProfile(id);
+    // Interaktiver Wechsel: Guards (z. B. Dialog bei laufendem Timer) entscheiden; der Haken im Menü folgt dem Signal.
+    void this.workProfile.requestSwitch(id);
   }
 
   handleAdd(): void {
@@ -84,6 +85,7 @@ export class WorkProfileSwitcherComponent {
       if (!result) return;
       try {
         const created = await this.workProfile.addProfile(result.name);
+        if (!created) return; // Wechsel abgelehnt (z. B. Abbrechen im Timer-Dialog): nichts angelegt
         this.snackBar.open(
           this.translate.instant('shared.profileCreated', { name: created.name }),
           'OK',

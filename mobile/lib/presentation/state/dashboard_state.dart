@@ -19,6 +19,10 @@ class DashboardState extends Equatable {
   final bool
       isExtraDay; // Zusatztag (mehr Arbeitstage als konfiguriert in dieser Woche)
 
+  /// Eine Schreibaktion des ViewModels läuft (Reentranz-Sperre, #413).
+  /// Die UI deaktiviert dann die Schreib-Buttons.
+  final bool isSaving;
+
   const DashboardState({
     required this.workEntry,
     required this.elapsedTime,
@@ -31,13 +35,17 @@ class DashboardState extends Equatable {
     this.expectedEndTime,
     this.expectedEndTotalZero,
     this.isExtraDay = false,
+    this.isSaving = false,
   });
 
-  factory DashboardState.initial() {
+  /// [now] ist die Uhr (Default `DateTime.now()`); das ViewModel reicht
+  /// seine Uhr aus `clockProvider` durch (#379).
+  factory DashboardState.initial({DateTime? now}) {
+    final time = now ?? DateTime.now();
     return DashboardState(
       workEntry: WorkEntryEntity(
-        id: DateTime.now().toIso8601String(),
-        date: DateTime.now(),
+        id: time.toIso8601String(),
+        date: time,
       ),
       elapsedTime: Duration.zero,
       actualWorkDuration: null,
@@ -49,6 +57,7 @@ class DashboardState extends Equatable {
       expectedEndTime: null,
       expectedEndTotalZero: null,
       isExtraDay: false,
+      isSaving: false,
     );
   }
 
@@ -64,6 +73,7 @@ class DashboardState extends Equatable {
     DateTime? expectedEndTime,
     DateTime? expectedEndTotalZero,
     bool? isExtraDay,
+    bool? isSaving,
   }) {
     return DashboardState(
       workEntry: workEntry ?? this.workEntry,
@@ -77,6 +87,7 @@ class DashboardState extends Equatable {
       expectedEndTime: expectedEndTime ?? this.expectedEndTime,
       expectedEndTotalZero: expectedEndTotalZero ?? this.expectedEndTotalZero,
       isExtraDay: isExtraDay ?? this.isExtraDay,
+      isSaving: isSaving ?? this.isSaving,
     );
   }
 
@@ -93,5 +104,6 @@ class DashboardState extends Equatable {
         expectedEndTime,
         expectedEndTotalZero,
         isExtraDay,
+        isSaving,
       ];
 }

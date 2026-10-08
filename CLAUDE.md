@@ -30,7 +30,7 @@ Integrationsbranch ist `develop`; PRs gehen gegen `develop`, nur Release-Branche
 | Workflow | Trigger | Jobs |
 |---|---|---|
 | `ci.yml` | PRs und Push auf alle Branches außer `main` | Flutter Analyze & Test, Angular Test & Build, Cloud Functions Build & Test, .NET Build & Test |
-| `flutter-production.yml` | Push auf `main` oder `workflow_dispatch` | Android AAB → Google Play (Closed Testing Track `<Version> <Charakter>`) |
+| `flutter-production.yml` | Push auf `main` oder `workflow_dispatch` | Android AAB → Google Play (Closed Testing Track `<Version> <Charakter>`, ab 1.6 `<Major>.<Minor> <Charakter>`) |
 | `deploy-angular.yml` | Push auf `main` oder `workflow_dispatch` | Angular Build → Docker Hub → Hetzner |
 | `deploy-api.yml` | Push auf `main` oder `workflow_dispatch` | .NET Build & Test → Docker Hub → Hetzner |
 | `version-bump.yml` | Push auf `release/v*` | Version in `mobile/pubspec.yaml`, Charakter in `RELEASE_NAMES.md` |
@@ -46,6 +46,7 @@ Details der Deploy-Workflows, Uptime-Monitoring und benötigte Secrets: `CONTRIB
 | Gleitzeit | `users/{uid}/overtime/balance` | `minutes` (int), `lastUpdated` (Timestamp) |
 | Einstellungen | `users/{uid}/settings/current` | nur Web — Flutter nutzt SharedPreferences |
 | Profil/Premium | `users/{uid}` | `isPremium` (bool) |
+| Wochen-Reflexion | `users/{uid}/weekly_reflections/{yyyy-Www}` | `whatWentWell`, `whatWasHard`, `updatedAt` — nur Mobile, nicht profilgebunden; Schlüssel = ISO-Wochenjahr + KW (Mo 29.12.2025 → `2026-W01`) |
 | Zusätzliches Arbeitszeit-Profil | `users/{uid}/profiles/{profileId}` | `name` (string), `createdAt` (Timestamp) — siehe #138/#239 |
 | Profil-Daten (Arbeitszeit-Profil) | `users/{uid}/profiles/{profileId}/{work_entries\|overtime\|settings}/...` | wie oben, nur unter dem Profil verschachtelt. Das Standard-Profil bleibt unter dem unveränderten `users/{uid}/...`-Pfad (keine Migration) |
 
@@ -70,7 +71,7 @@ Jede Phase läuft als Subagent in eigenem Kontext und übergibt ihr Ergebnis üb
 | `/mobile-analyze` … `/mobile-review <nr>` | Flutter: Analyse → Plan → Implementierung → Validierung → Review |
 | `/web-analyze` … `/web-review <nr>` | Web-Port eines Flutter-Features: Analyse → Design → Plan → Implementierung → Review |
 | `/server-implement <nr>` | Backend-Änderung |
-| `/release <Version> <Charakter>` | Release-Branch, Versionshinweise, Release-PR |
+| `/release <Version> <Charakter>` | Release-Branch, Versionshinweise, Release-PR (ab 1.6 ein Charakter pro Minor-Linie) |
 | `/auto-bugfix` | Cron-Routine: offene `bug`-Issues automatisch analysieren, bis zum review-fertigen PR umsetzen — **mergt nicht selbst**, das bleibt ein menschlicher Schritt |
 
 Betrifft ein Issue mehrere Plattformen, plant der Subagent `cross-platform-coordinator` den

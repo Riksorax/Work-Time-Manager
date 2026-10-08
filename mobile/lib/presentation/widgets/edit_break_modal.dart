@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/utils/time_format.dart';
 import '../../domain/entities/break_entity.dart';
+import '../../domain/utils/date_utils.dart';
 import '../../l10n/app_localizations.dart';
 import '../utils/break_name_localizer.dart';
 import '../view_models/dashboard_view_model.dart';
 import '../view_models/settings_view_model.dart';
+import 'common/dashboard_save_feedback.dart';
 
 class EditBreakModal extends ConsumerStatefulWidget {
   final BreakEntity breakEntity;
@@ -73,9 +75,11 @@ class _EditBreakModalState extends ConsumerState<EditBreakModal> {
     );
 
     if (selectedTime != null) {
-      final now = DateTime.now();
-      final newDateTime = DateTime(
-          now.year, now.month, now.day, selectedTime.hour, selectedTime.minute);
+      // Basisdatum ist das Datum der Pause selbst, nicht "jetzt" (siehe #397):
+      // Start nutzt den Tag des Starts, Ende den Tag des Endes (bzw. des Starts).
+      final baseDay = isStartTime ? _startTime : _endTime ?? _startTime;
+      final newDateTime =
+          combineDateAndTime(baseDay, selectedTime.hour, selectedTime.minute);
       setState(() {
         if (isStartTime) {
           // Berechne die bisherige Dauer, um die Endzeit mitzuverschieben
@@ -120,13 +124,22 @@ class _EditBreakModalState extends ConsumerState<EditBreakModal> {
       end: _endTime,
     );
 
-    ref.read(dashboardViewModelProvider.notifier).updateBreak(updatedBreak);
+    reportDashboardSave(
+        context,
+        ref
+            .read(dashboardViewModelProvider.notifier)
+            .updateBreak(updatedBreak));
     Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    // Läuft eine Schreibaktion, würde ein Update verworfen und das Modal
+    // trotzdem schließen: Speichern erst danach möglich (#413).
+    final isSaving = ref.watch(dashboardViewModelProvider.select(
+      (s) => s.isSaving,
+    ));
     return AlertDialog(
       title: Text(l10n.editBreakTitle),
       content: Column(
@@ -166,7 +179,7 @@ class _EditBreakModalState extends ConsumerState<EditBreakModal> {
           child: Text(l10n.cancel),
         ),
         ElevatedButton(
-          onPressed: _saveChanges,
+          onPressed: isSaving ? null : _saveChanges,
           child: Text(l10n.save),
         ),
       ],

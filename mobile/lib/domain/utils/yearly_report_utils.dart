@@ -1,4 +1,5 @@
 import '../entities/work_entry_entity.dart';
+import 'iso_week.dart';
 
 /// Aggregierte Kennzahlen für einen einzelnen Monat innerhalb des
 /// Jahresberichts (siehe #136).
@@ -74,7 +75,7 @@ MonthSummary calculateMonthSummary({
   final Map<int, Set<DateTime>> weekToWorkDays = {};
   for (final entry in entriesForMonth) {
     if (entry.workStart != null) {
-      final weekNum = _isoWeekNumber(entry.date);
+      final weekNum = isoWeekNumber(entry.date);
       final dayOnly =
           DateTime(entry.date.year, entry.date.month, entry.date.day);
       weekToWorkDays.putIfAbsent(weekNum, () => {}).add(dayOnly);
@@ -122,12 +123,4 @@ MonthSummary calculateMonthSummary({
     sickDays: sickDays,
     holidayDays: holidayDays,
   );
-}
-
-int _isoWeekNumber(DateTime date) {
-  final firstWeek = DateTime(date.year, 1, 4);
-  final dayOfWeek = firstWeek.weekday;
-  final firstDayOfFirstWeek = firstWeek.subtract(Duration(days: dayOfWeek - 1));
-  final diff = date.difference(firstDayOfFirstWeek).inDays;
-  return (diff / 7).floor() + 1;
 }

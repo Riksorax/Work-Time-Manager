@@ -61,6 +61,10 @@ class SettingsEntity extends Equatable {
   /// Siehe #221.
   final String locale;
 
+  /// Jahres-Urlaubsanspruch in ganzen Tagen (0-366), je Arbeitszeit-Profil.
+  /// Siehe #278.
+  final int vacationDaysPerYear;
+
   const SettingsEntity({
     this.weeklyTargetHours = 40.0,
     this.workdays = const [1, 2, 3, 4, 5], // Monday to Friday
@@ -78,6 +82,7 @@ class SettingsEntity extends Equatable {
     this.use24HourFormat = true,
     this.timezoneOverride,
     this.locale = 'de',
+    this.vacationDaysPerYear = 30,
   });
 
   /// Creates a copy of this [SettingsEntity] but with the given fields
@@ -97,6 +102,7 @@ class SettingsEntity extends Equatable {
     double? undertimeThresholdHours,
     bool? use24HourFormat,
     String? locale,
+    int? vacationDaysPerYear,
   }) {
     return SettingsEntity(
       weeklyTargetHours: weeklyTargetHours ?? this.weeklyTargetHours,
@@ -119,6 +125,7 @@ class SettingsEntity extends Equatable {
       use24HourFormat: use24HourFormat ?? this.use24HourFormat,
       timezoneOverride: timezoneOverride,
       locale: locale ?? this.locale,
+      vacationDaysPerYear: vacationDaysPerYear ?? this.vacationDaysPerYear,
     );
   }
 
@@ -145,6 +152,7 @@ class SettingsEntity extends Equatable {
       use24HourFormat: use24HourFormat,
       timezoneOverride: timezoneOverride,
       locale: locale,
+      vacationDaysPerYear: vacationDaysPerYear,
     );
   }
 
@@ -169,6 +177,7 @@ class SettingsEntity extends Equatable {
       use24HourFormat: use24HourFormat,
       timezoneOverride: timezoneOverride,
       locale: locale,
+      vacationDaysPerYear: vacationDaysPerYear,
     );
   }
 
@@ -190,5 +199,6 @@ class SettingsEntity extends Equatable {
         use24HourFormat,
         timezoneOverride,
         locale,
+        vacationDaysPerYear,
       ];
 }

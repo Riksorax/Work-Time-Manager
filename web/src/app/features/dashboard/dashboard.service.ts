@@ -1,18 +1,28 @@
-import { Injectable, inject, signal, computed, effect, DestroyRef } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { firstValueFrom, interval } from 'rxjs';
+import { Injectable, Injector, inject, signal, computed, effect, untracked, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { catchError, distinctUntilChanged, firstValueFrom, interval, of } from 'rxjs';
 import { WorkEntryService } from '../../core/services/work-entry';
 import { OvertimeService }  from '../../core/services/overtime';
 import { SettingsService }  from '../../core/services/settings';
 import { AuthService }      from '../../core/auth/auth';
-import { WorkEntry, WorkEntryType, Break } from '../../shared/models';
+import { TodayService }     from '../../core/services/today';
+import { ProfileSwitchRequest, WorkProfileService } from '../../core/services/work-profile';
+import { ProfileSwitchConfirmService } from '../../shared/components/work-profile-switcher/profile-switch-confirm';
+import { GermanHoliday, getGermanHolidayIds, toDateKey } from '../../shared/utils/german-holidays.util';
+import { DEFAULT_SETTINGS, WorkEntry, WorkEntryType, Break } from '../../shared/models';
 import { calculateAndApplyBreaks } from '../../domain/services/break-calculator';
 import { nowToMinute, roundToMinute, roundMsToMinute } from '../../shared/utils/time-precision.util';
 import {
   getEffectiveDailyTarget,
   calculateInitialOvertime,
-  isSameDay,
 } from '../../domain/utils/overtime.utils';
+import { canResumeOpenEntry, localDateFromEntryId } from '../../domain/utils/open-entry.utils';
+
+/**
+ * Kontext einer Schreibaktion (#380): Profil und `_init`-Generation zum Aktionsbeginn. Alle Writes der Aktion gehen
+ * explizit an `pid` (nie „das gerade aktive Profil"); nach jedem `await` verhindert `gen` zustandsändernde Folgeschritte.
+ */
+interface ActionCtx { pid: string; gen: number }
 
 interface DashboardState {
   status: 'loading' | 'ready';
@@ -57,6 +67,9 @@ function initialState(): DashboardState {
   };
 }
 
+/** `pinned`: statt „heute" den offenen Eintrag dieses Tages laden („Fortsetzen", #385). */
+interface InitOpts { dayChange?: boolean; pinned?: { id: string } }
+
 @Injectable({ providedIn: 'root' })
 export class DashboardService {
   private readonly _s            = signal<DashboardState>(initialState());
@@ -64,7 +77,27 @@ export class DashboardService {
   private readonly overtimeSvc   = inject(OvertimeService);
   private readonly settingsSvc   = inject(SettingsService);
   private readonly authSvc       = inject(AuthService);
+  private readonly workProfile   = inject(WorkProfileService);
+
+  // ─── Feiertag heute (#279) ──────────────────────────────────────────────────
+  // Nur der Chip wechselt um Mitternacht; das restliche Dashboard bleibt (Folge-Issue).
+  private readonly _holidaySettings = toSignal(
+    this.settingsSvc.getSettings().pipe(catchError(() => of(DEFAULT_SETTINGS))),
+    { initialValue: DEFAULT_SETTINGS },
+  );
+  private readonly todayService = inject(TodayService);
+
+  /** Feiertag des lokalen Datums laut gewähltem Bundesland, sonst `null` (rein informativ). */
+  readonly holidayToday = computed<GermanHoliday | null>(() => {
+    const land = this._holidaySettings().bundesland;
+    if (!land) return null;
+    const key = this.todayService.today();
+    return getGermanHolidayIds(Number(key.slice(0, 4)), land).get(key) ?? null;
+  });
+  readonly isLoggedIn = computed(() => !!this.authSvc.user());
   private readonly destroyRef    = inject(DestroyRef);
+  /** Nur lazy genutzt (Dialog-Service wird erst bei laufendem Timer aufgelöst, #380). */
+  private readonly injector      = inject(Injector);
 
   // ─── Public Signals ────────────────────────────────────────────────────────
   readonly isLoading       = computed(() => this._s().status === 'loading');
@@ -85,16 +118,68 @@ export class DashboardService {
   readonly expectedEndTotalZero = computed(() => this._s().expectedEndTotalZero);
   readonly breaks          = computed(() => this._s().workEntry.breaks);
 
+  /** Letzter `_initInner` ist fehlerfrei durchgelaufen (nach einem Fehler ist `status` ebenfalls `ready`, #385). */
+  private readonly _loadOk = signal(false);
+  /**
+   * Heute ist sicher leer: geladen ohne Fehler, angezeigt wird der heutige Tag, Typ work, kein Start. Heutiger
+   * Urlaub/Krank zählt nicht als leer. Grundlage für „Fortsetzen" eines offenen Vortags (#385).
+   */
+  readonly todayIsEmpty = computed(() => {
+    if (!this._loadOk() || this._s().status !== 'ready') return false;
+    const e = this._s().workEntry;
+    return e.id === this.todayService.today() && e.type === WorkEntryType.Work && !e.workStart;
+  });
+
   // ─── Private timer state ────────────────────────────────────────────────────
-  private _timerSub: ReturnType<typeof interval> | null = null;
   private _timerUnsub: (() => void) | null = null;
   private _autoSaveTick = 0;
+  private _initGen = 0;
+  /** Generation des `_init`-Laufs, der zuletzt einen Vortag gepinnt hat (#385); nur Literal, keine importierte Konstante. */
+  private _pinnedGen = 0;
+  /** Letzter laufender `_init` (für `_ensureCurrentDay`, damit überholte Aktionen auf den neuesten warten). */
+  private _initRun: Promise<void> | null = null;
+  /** Profil, dessen Daten gerade im Dashboard stehen (#380). Wird synchron zu Beginn jedes `_init` gesetzt. */
+  private _loadedProfileId = '';
+  /** Letzter Wert, den `activeProfileId$` geliefert hat (das Observable hinkt dem Signal hinterher). */
+  private _lastObservedProfileId: string | undefined;
+  /** Der letzte `_init` lief im Lag-Fenster (Signal schon neu, Observable noch alt): Einstellungen evtl. vom alten Profil. */
+  private _settingsMaybeStale = false;
 
   constructor() {
+    // Startwert = aktuelles Profil. Bewusst im Constructor und nicht als `= DEFAULT_WORK_PROFILE_ID`-Feldinitializer:
+    // Vites SSR-Transform hebt eine nackte importierte Referenz als Schnappschuss vor die Klasse; im gebündelten Vollauf
+    // der Tests ist sie dann (nicht deterministisch) `undefined`. Siehe web/CLAUDE.md, „Test-Falle“.
+    this._loadedProfileId = this.workProfile.activeProfileId();
+
+    // Interaktive Profilwechsel (#380, Stufe 2): bei laufendem Timer erst bestätigen lassen, stoppen und speichern.
+    // Hier und nicht in der Component: der Timer läuft auch, wenn das Dashboard nie gerendert wurde (Start auf /settings).
+    const unregisterGuard = this.workProfile.registerSwitchGuard(req => this._confirmSwitch(req));
+    this.destroyRef.onDestroy(unregisterGuard);
+
     // Re-init on auth state change (Flow 11)
     effect(() => {
       const user = this.authSvc.user();
-      void this._init(user?.uid ?? null);
+      // untracked: `_init` liest synchron `activeProfileId()`; der Profilwechsel läuft nur über `activeProfileId$` (#380).
+      untracked(() => { void this._init(user?.uid ?? null); });
+    });
+
+    // Profilwechsel (#380): Trigger ist das Observable (nicht das Signal), damit der Replay von `getTodayEntry()`
+    // beim neuen Abonnieren garantiert das neue Profil liefert. Ein laufender Timer wird dabei eingefroren: `_init`
+    // stoppt ihn ohne zu speichern, der Eintrag bleibt im alten Profil laufend und setzt sich beim Rückwechsel fort.
+    this.workProfile.activeProfileId$
+      .pipe(distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
+      .subscribe(id => {
+        this._lastObservedProfileId = id;
+        this._onProfileChange(id);
+      });
+
+    // Tageswechsel (#372): erster Lauf = Startzustand, übersprungen. Nur gestoppte/leere Einträge wechseln still;
+    // ein laufender Timer läuft über Mitternacht weiter und der Eintrag bleibt am Starttag.
+    let firstDayRun = true;
+    effect(() => {
+      const day = this.todayService.today();
+      if (firstDayRun) { firstDayRun = false; return; }
+      untracked(() => this._onDayChange(day));
     });
 
     // Einstellungen reaktiv halten — Überstunden bei Änderung neu berechnen
@@ -106,38 +191,111 @@ export class DashboardService {
           this._recalculateOvertime();
         }
       });
+  }
 
-    // Page Visibility API — re-sync elapsed on tab focus (Flow 4)
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible' && this.isTimerRunning()) {
-        this._recalculateOvertime();
-      }
-    });
+  /** Idempotent: ein bereits geladenes Profil (Start-Replay, Doppel-Auslöser Auth + Profil) lädt nicht erneut. */
+  private _onProfileChange(id: string): void {
+    if (id === this._loadedProfileId && !this._settingsMaybeStale) return;
+    void this._init(this._uid());
+  }
+
+  /** Kontext (Profil + Generation) für eine Schreibaktion; synchron zusammen mit dem gelesenen Eintrag erfassen. */
+  private _ctx(): ActionCtx {
+    return { pid: this._loadedProfileId, gen: this._initGen };
+  }
+
+  private _uid(): string | null {
+    return this.authSvc.user()?.uid ?? null;
+  }
+
+  /**
+   * Aktionen-Guard: ein gestoppter Eintrag eines früheren Tages wird vor jeder Aktion auf den heutigen Tag
+   * umgestellt, damit „Start" nach Mitternacht nie in den Vortag schreibt. Laufende Einträge sind ausgenommen
+   * (Stop/Pause gehören zum Starttag).
+   *
+   * Liefert `false`, wenn der Zustand danach nicht zum heutigen Tag passt (Reinit überholt/fehlgeschlagen):
+   * die Aktion MUSS dann abbrechen — sonst liefe sie auf dem veralteten Vortags-Eintrag und schriebe dorthin.
+   * Läuft ein anderer `_init` (Doppelklick, Login), wird dessen Ende abgewartet.
+   */
+  private async _ensureCurrentDay(): Promise<boolean> {
+    this.todayService.refresh();
+    // Lädt gerade (Login, Profilwechsel, Tageswechsel): nie auf dem Lade-Platzhalter schreiben, erst den Lauf abwarten.
+    while (this._s().status === 'loading' && this._initRun !== null) await this._initRun;
+    if (this._isCurrentDay()) return true;
+    await this._init(this._uid(), { dayChange: true });
+    // Überholt? Dann auf den neuesten Lauf warten (er setzt den endgültigen Zustand).
+    while (this._initRun !== null) await this._initRun;
+    this.todayService.refresh();
+    return this._isCurrentDay();
+  }
+
+  /** Eintrag läuft (Starttag bleibt) oder gehört zum heutigen Tag. */
+  private _isCurrentDay(): boolean {
+    const e = this._s().workEntry;
+    if (!!e.workStart && !e.workEnd) return true;
+    return toDateKey(e.date) === this.todayService.today();
+  }
+
+  private _onDayChange(day: string): void {
+    const e = this._s().workEntry;
+    if (!!e.workStart && !e.workEnd) return; // laufender Timer: nichts anfassen
+    if (toDateKey(e.date) === day && this._s().status === 'ready') return;
+    void this._init(this._uid(), { dayChange: true });
   }
 
   // ─── Flow 1: Initialisierung ────────────────────────────────────────────────
-  private async _init(uid: string | null): Promise<void> {
+  // Generationszähler: ein überholter Lauf (Login, Tageswechsel) darf Zustand/Timer nicht mehr verändern.
+  private _init(_uid: string | null, opts: InitOpts = {}): Promise<void> {
+    const run: Promise<void> = this._initInner(opts).finally(() => {
+      if (this._initRun === run) this._initRun = null;
+    });
+    this._initRun = run;
+    return run;
+  }
+
+  private async _initInner(opts: InitOpts): Promise<void> {
+    const gen = ++this._initGen;
     this._stopTimer();
-    this._s.set(initialState());
+    // Profil dieses Laufs synchron festhalten; alle Reads gehen mit explizitem `pid`, damit nie „Eintrag A + Saldo B"
+    // entsteht. Ein Profilwechsel ist nie ein stiller Tageswechsel (kein dayChange-Pfad, Ladezustand).
+    const pid = this.workProfile.activeProfileId();
+    const profileChanged = pid !== this._loadedProfileId;
+    this._loadedProfileId = pid;
+    this._settingsMaybeStale = this._lastObservedProfileId !== undefined && this._lastObservedProfileId !== pid;
+    const dayChange = !!opts.dayChange && !profileChanged;
+    // Beim stillen Tageswechsel den alten Zustand stehen lassen (kein Lade-Flackern), sonst zurücksetzen.
+    if (!dayChange) this._s.set(initialState());
+    this._loadOk.set(false);
 
     try {
       const today = new Date();
 
-      // 1. Heutigen Eintrag laden
-      const workEntry = (await firstValueFrom(this.workSvc.getTodayEntry())) ?? this.workSvc.emptyEntry(today);
+      // 1. Heutigen Eintrag laden — oder bei „Fortsetzen" den gepinnten Vortag (Fehler/ungültig: Fallback auf heute)
+      let pinnedEntry: WorkEntry | null = null;
+      if (opts.pinned) {
+        pinnedEntry = await this._readPinned(pid, opts.pinned.id);
+        if (gen !== this._initGen) return;
+      }
+      const workEntry = pinnedEntry
+        ?? (await firstValueFrom(this.workSvc.getTodayEntry(pid)))
+        ?? this.workSvc.emptyEntry(today);
+      if (gen !== this._initGen) return;
 
       // 2. Überstunden + Datum laden
-      const storedOvertimeMs = await this.overtimeSvc.getOvertime();
-      const lastUpdateDate   = await this.overtimeSvc.getLastUpdateDate();
+      const storedOvertimeMs = await this.overtimeSvc.getOvertime(pid);
+      if (gen !== this._initGen) return;
+      const lastUpdateDate   = await this.overtimeSvc.getLastUpdateDate(pid);
+      if (gen !== this._initGen) return;
 
       // 3. Einstellungen laden + Cache sofort befüllen (firstValueFrom = take(1), keine dauerhafte Subscription)
       const settings = await firstValueFrom(this.settingsSvc.getSettings());
+      if (gen !== this._initGen) return;
       this._settingsCache = { weeklyTargetHours: settings.weeklyTargetHours, workdays: settings.workdays };
 
       // 4. Effektives Tagessoll berechnen
       const weeklyMs          = settings.weeklyTargetHours * 60 * 60 * 1000;
       const regularDailyMs    = settings.workdays.length > 0 ? roundMsToMinute(weeklyMs / settings.workdays.length) : 0;
-      const targetDailyMs     = getEffectiveDailyTarget(today, settings.workdays, regularDailyMs);
+      const targetDailyMs     = getEffectiveDailyTarget(workEntry.date, settings.workdays, regularDailyMs);
       const isExtraDay        = targetDailyMs === 0;
 
       // 6. Initiales Daily Overtime berechnen
@@ -154,8 +312,18 @@ export class DashboardService {
         initialDailyMs   = netMs - targetDailyMs + manualEntryMs;
       }
 
-      // 7. Base-Overtime berechnen
-      const initialOvertimeMs = calculateInitialOvertime(storedOvertimeMs, lastUpdateDate, initialDailyMs);
+      // 7. Base-Overtime berechnen. Beim Tageswechsel ist der gespeicherte Wert die Basis: ein Vortags-Save nach
+      // Mitternacht setzt `lastUpdated` auf „heute" und würde sonst den neuen Tages-Daily fälschlich abziehen.
+      // Ausnahme: wurde der geladene heutige Eintrag bereits abgeschlossen UND danach gespeichert (z. B. auf einem
+      // anderen Gerät), steckt sein Daily im gespeicherten Wert — dann gilt weiter die Heuristik (kein Doppelzählen).
+      const dailyAlreadyStored = !!workEntry.workStart && !!workEntry.workEnd
+        && !!lastUpdateDate && lastUpdateDate.getTime() >= workEntry.workEnd.getTime();
+      // Fortsetzen (`pinned`) rechnet wie ein stiller Tageswechsel: Basis = gespeicherter Saldo (bei einem offenen
+      // Eintrag ist `dailyAlreadyStored` immer false).
+      const storedBase = dayChange || !!opts.pinned;
+      const initialOvertimeMs = storedBase && !dailyAlreadyStored
+        ? storedOvertimeMs
+        : calculateInitialOvertime(storedOvertimeMs, lastUpdateDate, initialDailyMs);
       const totalOvertimeMs   = initialOvertimeMs + initialDailyMs;
 
       this._s.set({
@@ -173,40 +341,176 @@ export class DashboardService {
       });
 
       this._recalculateState(workEntry, false);
+      if (pinnedEntry) this._pinnedGen = gen;
       this._startTimerIfNeeded();
+      this._loadOk.set(true);
     } catch {
+      if (gen !== this._initGen) return;
       // Initialisierung fehlgeschlagen — leeren Zustand zeigen statt Dauerladespinner
       this._s.update(s => ({ ...s, status: 'ready' }));
     }
   }
 
+  /**
+   * Liest den gepinnten Tag frisch (Monats-Einmalabruf, Suche per `id`). Nur ein weiterhin offener, nach
+   * `canResumeOpenEntry` zulässiger Eintrag wird geliefert (`date` = lokales Datum aus der `id`, wie der Close-Service);
+   * Lesefehler und ungültige Einträge ergeben `null` (normaler Ladepfad für heute, kein Fehlerzustand).
+   */
+  private async _readPinned(pid: string, id: string): Promise<WorkEntry | null> {
+    try {
+      const [y, m] = id.split('-').map(Number);
+      const fresh = (await this.workSvc.getEntriesForMonthOnce(y, m, pid)).find(e => e.id === id);
+      if (!fresh) return null;
+      const ok = canResumeOpenEntry({
+        entry: fresh, now: new Date(), todayId: this.todayService.today(), todayIsEmpty: true,
+      });
+      return ok ? { ...fresh, date: localDateFromEntryId(id) } : null;
+    } catch {
+      return null;
+    }
+  }
+
+  // ─── Fortsetzen eines offenen Vortags (#385) ────────────────────────────────
+  /**
+   * Lädt den offenen Eintrag `entry` des Profils `pid` ins Dashboard („Pinning"); der Timer läuft weiter (#372).
+   * Schreibt nichts. `true` nur, wenn der Lauf wirklich gepinnt hat und nicht überholt wurde. Ablehnung (`false`,
+   * Zustand unverändert): Profil nicht das geladene/aktive, heute nicht sicher leer, Regel `canResumeOpenEntry` verletzt,
+   * Eintrag inzwischen beendet/älter als 24 h/nicht lesbar, überholt (Profil-/Tages-/Login-Wechsel).
+   */
+  async resumePastEntry(entry: WorkEntry, pid: string): Promise<boolean> {
+    // Auf laufende Ladeläufe warten; danach läuft Prüfung bis `_init` synchron (keine Lücke bis `_initGen`++).
+    while (this._initRun !== null) await this._initRun;
+    this.todayService.refresh();
+    if (pid !== this._loadedProfileId || pid !== this.workProfile.activeProfileId()) return false;
+    if (!this.todayIsEmpty()) return false;
+    if (!canResumeOpenEntry({
+      entry, now: new Date(), todayId: this.todayService.today(), todayIsEmpty: this.todayIsEmpty(),
+    })) return false;
+    const run = this._init(this._uid(), { pinned: { id: entry.id } });
+    const gen = this._initGen;
+    await run;
+    if (this._pinnedGen !== gen || this._initGen !== gen || this._s().workEntry.id !== entry.id) return false;
+    // Ohne sofortigen Tick stünde `elapsedMs` bis zum nächsten Sekunden-Tick auf 0.
+    this._tick();
+    return true;
+  }
+
+  // ─── Nachträgliches Beenden eines Vortags (#385) ────────────────────────────
+  /**
+   * Zieht nach dem nachträglichen Beenden eines offenen Vortagseintrags (`OpenEntryCloseService`) die Saldo-Basis neu.
+   * No-op, wenn das geladene Profil nicht mehr `pid` ist. Schreibt nichts (daher kein `_ensureCurrentDay`).
+   * Läuft im Dashboard ein Eintrag über Mitternacht (#372), darf kein `_init` laufen (er würde den Timer verwerfen):
+   * dann nur Basis erneuern. Sonst stiller Reload (`dayChange`), die Basis ist der gespeicherte Saldo.
+   */
+  async reloadAfterRetroClose(pid: string): Promise<void> {
+    if (pid !== this._loadedProfileId) return;
+    this.todayService.refresh();
+    const e = this._s().workEntry;
+    const runningPastDay = !!e.workStart && !e.workEnd && e.id !== this.todayService.today();
+    try {
+      if (runningPastDay) {
+        const gen = this._initGen;
+        const stored = await this.overtimeSvc.getOvertime(pid);
+        if (gen !== this._initGen || pid !== this._loadedProfileId) return;
+        this._s.update(s => ({ ...s, initialOvertimeMs: stored }));
+        this._recalculateOvertime();
+        return;
+      }
+      await this._init(this._uid(), { dayChange: true });
+      // Ohne sofortigen Tick stünde `elapsedMs` bis zum nächsten Sekunden-Tick auf 0.
+      if (this.isTimerRunning()) this._tick();
+    } catch { /* Anzeige bleibt auf dem bisherigen Stand; der nächste Reload zieht nach */ }
+  }
+
   // ─── Flow 2+3: Timer starten / stoppen ─────────────────────────────────────
   async startOrStopTimer(): Promise<'restart-dialog' | void> {
+    if (!(await this._ensureCurrentDay())) return;
     const e = this._s().workEntry;
+    const ctx = this._ctx();
     if (!e.workStart) {
       // START
       const updated = { ...e, workStart: nowToMinute(), workEnd: undefined };
-      await this._recalculateState(updated, true);
-      this._startTimerIfNeeded();
+      await this._recalculateState(updated, true, ctx);
+      if (this._isCurrent(ctx)) this._startTimerIfNeeded();
     } else if (!e.workEnd) {
       // STOP
-      this._stopTimer();
-      let updated: WorkEntry = { ...e, workEnd: nowToMinute() };
-      const hasRunningBreak = updated.breaks.some(b => !b.end);
-      if (!hasRunningBreak && updated.type === WorkEntryType.Work) {
-        updated = calculateAndApplyBreaks(updated);
-      }
-      await this._recalculateState(updated, true);
-      await this._saveOvertime();
+      await this._stopRunning(e, ctx, { reinitAfterMidnight: true });
     } else {
       // Bereits gestoppt → Restart-Dialog nötig (Flow 5)
       return 'restart-dialog';
     }
   }
 
+  // ─── Stop-Logik (Stop-Button und Profilwechsel, #380) ──────────────────────────────────────────────────
+  /**
+   * Beendet den laufenden Timer: Pflichtpausen, Eintrag und Saldo werden in das festgehaltene Profil geschrieben.
+   * Wirft bei Speicherfehlern (der Zustand ist dann schon gesetzt, Rollback macht der Aufrufer).
+   * `reinitAfterMidnight`: nach einem Lauf über Mitternacht auf den neuen Tag umschalten (Stop-Button); der Profilwechsel
+   * lädt ohnehin neu und braucht das nicht.
+   */
+  private async _stopRunning(e: WorkEntry, ctx: ActionCtx, opts: { reinitAfterMidnight: boolean }): Promise<void> {
+    this._stopTimer();
+    let updated: WorkEntry = { ...e, workEnd: nowToMinute() };
+    const hasRunningBreak = updated.breaks.some(b => !b.end);
+    if (!hasRunningBreak && updated.type === WorkEntryType.Work) {
+      updated = calculateAndApplyBreaks(updated);
+    }
+    const totalMs = await this._recalculateState(updated, true, ctx);
+    // Saldo mit dem VOR dem ersten await eingefrorenen Wert und dem festgehaltenen Profil (auch nach Überholung).
+    await this._saveOvertime(ctx.pid, totalMs);
+    if (!opts.reinitAfterMidnight || !this._isCurrent(ctx)) return;
+    // Über Mitternacht gelaufen: der Eintrag gehört zum Starttag, die Anzeige wechselt auf den neuen Tag.
+    this.todayService.refresh();
+    if (toDateKey(updated.date) !== this.todayService.today()) {
+      await this._init(this._uid(), { dayChange: true });
+    }
+  }
+
+  /**
+   * Guard für interaktive Profilwechsel: ohne laufenden Timer sofort `true`; sonst Bestätigung, dann Stoppen und
+   * Speichern im alten Profil. `false` = Wechsel nicht durchführen.
+   */
+  private async _confirmSwitch(req: ProfileSwitchRequest): Promise<boolean> {
+    if (!this.isTimerRunning()) return true;
+    const confirm = this.injector.get(ProfileSwitchConfirmService);
+    if (!(await confirm.confirmStopAndSwitch(req))) return false;
+    const ok = await this.stopRunningTimerForSwitch(req.from);
+    if (!ok) confirm.notifySaveFailed();
+    return ok;
+  }
+
+  /**
+   * Stoppt und speichert den laufenden Timer des Profils `from` vor einem Profilwechsel. `true` = es läuft nichts
+   * (mehr) oder der Stop wurde gespeichert; `false` = Speichern fehlgeschlagen oder das Profil ist nicht mehr `from`.
+   * Bei einem Fehler wird der Zustand zurückgesetzt und der Timer läuft weiter.
+   */
+  async stopRunningTimerForSwitch(from: string): Promise<boolean> {
+    // Lädt gerade (Reload-Wechsel): erst abwarten, nie auf dem Lade-Platzhalter arbeiten.
+    while (this._s().status === 'loading' && this._initRun !== null) await this._initRun;
+    // Der Dialog war offen: das Profil kann sich nicht-interaktiv geändert haben.
+    if (this._loadedProfileId !== from || this.workProfile.activeProfileId() !== from) return false;
+    // Der Timer kann in der Zwischenzeit manuell gestoppt worden sein.
+    if (!this.isTimerRunning()) return true;
+    const e = this._s().workEntry;
+    const ctx = this._ctx();
+    const snapshot = this._s();
+    try {
+      await this._stopRunning(e, ctx, { reinitAfterMidnight: false });
+      return true;
+    } catch {
+      if (this._isCurrent(ctx)) {
+        this._s.set(snapshot);
+        this._startTimerIfNeeded();
+      }
+      return false;
+    }
+  }
+
   // ─── Flow 5: Restart Session ────────────────────────────────────────────────
   async startNewSession(keepBreaks: boolean): Promise<void> {
+    if (!(await this._ensureCurrentDay())) return;
     const e = this._s().workEntry;
+    const ctx = this._ctx();
     const updated: WorkEntry = {
       ...e,
       workStart:         nowToMinute(),
@@ -214,13 +518,15 @@ export class DashboardService {
       breaks:            keepBreaks ? e.breaks : [],
       isManuallyEntered: false,
     };
-    await this._recalculateState(updated, true);
-    this._startTimerIfNeeded();
+    await this._recalculateState(updated, true, ctx);
+    if (this._isCurrent(ctx)) this._startTimerIfNeeded();
   }
 
   // ─── Flow 6: Pause starten/stoppen ──────────────────────────────────────────
   async startOrStopBreak(): Promise<void> {
+    if (!(await this._ensureCurrentDay())) return;
     const e = this._s().workEntry;
+    const ctx = this._ctx();
     const runningBreak = e.breaks.find(b => !b.end);
     let updatedBreaks: Break[];
 
@@ -236,70 +542,87 @@ export class DashboardService {
       };
       updatedBreaks = [...e.breaks, newBreak];
     }
-    await this._recalculateState({ ...e, breaks: updatedBreaks }, true);
+    await this._recalculateState({ ...e, breaks: updatedBreaks }, true, ctx);
   }
 
   // ─── Flow 7: Manuelle Startzeit ──────────────────────────────────────────────
   async setManualStartTime(timeStr: string): Promise<void> {
+    if (!(await this._ensureCurrentDay())) return;
     const e = this._s().workEntry;
+    const ctx = this._ctx();
     let updated: WorkEntry = { ...e, workStart: this._parseTime(e.date, timeStr) };
     const hasRunning = updated.breaks.some(b => !b.end);
     if (updated.workStart && updated.workEnd && !hasRunning && updated.type === WorkEntryType.Work) {
       updated = calculateAndApplyBreaks(updated);
     }
-    await this._recalculateState(updated, true);
-    this._startTimerIfNeeded();
+    await this._recalculateState(updated, true, ctx);
+    if (this._isCurrent(ctx)) this._startTimerIfNeeded();
   }
 
   // ─── Flow 8: Manuelle Endzeit ─────────────────────────────────────────────
   async setManualEndTime(timeStr: string): Promise<void> {
+    if (!(await this._ensureCurrentDay())) return;
     const e = this._s().workEntry;
+    const ctx = this._ctx();
     let updated: WorkEntry = { ...e, workEnd: this._parseTime(e.date, timeStr) };
     const hasRunning = updated.breaks.some(b => !b.end);
     if (updated.workStart && updated.workEnd && !hasRunning && updated.type === WorkEntryType.Work) {
       updated = calculateAndApplyBreaks(updated);
     }
-    await this._recalculateState(updated, true);
+    await this._recalculateState(updated, true, ctx);
   }
 
   async clearEndTime(): Promise<void> {
+    if (!(await this._ensureCurrentDay())) return;
     const e = this._s().workEntry;
+    const ctx = this._ctx();
     const updated = { ...e, workEnd: undefined };
-    await this._recalculateState(updated, true);
-    this._startTimerIfNeeded();
+    await this._recalculateState(updated, true, ctx);
+    if (this._isCurrent(ctx)) this._startTimerIfNeeded();
   }
 
   // ─── Flow 9: Pause bearbeiten ─────────────────────────────────────────────
   async updateBreak(updated: Break): Promise<void> {
+    if (!(await this._ensureCurrentDay())) return;
     const e = this._s().workEntry;
+    const ctx = this._ctx();
     const normalized: Break = {
       ...updated,
       start: roundToMinute(updated.start),
       end:   updated.end ? roundToMinute(updated.end) : undefined,
     };
     const breaks = e.breaks.map(b => b.id === updated.id ? normalized : b);
-    await this._recalculateState({ ...e, breaks }, true);
+    await this._recalculateState({ ...e, breaks }, true, ctx);
   }
 
   // ─── Flow 10: Pause löschen ───────────────────────────────────────────────
   async deleteBreak(id: string): Promise<void> {
+    if (!(await this._ensureCurrentDay())) return;
     const e = this._s().workEntry;
+    const ctx = this._ctx();
     const breaks = e.breaks.filter(b => b.id !== id);
-    await this._recalculateState({ ...e, breaks }, true);
+    await this._recalculateState({ ...e, breaks }, true, ctx);
   }
 
   // ─── Flow 12: Überstunden manuell anpassen ────────────────────────────────
   // newBaseMs = Basis-Bilanz aus Vortagen (NICHT inkl. heutiger Daily-Overtime).
-  async updateInitialOvertime(newBaseMs: number): Promise<void> {
-    const daily = this._s().dailyOvertimeMs ?? 0;
-    this._s.update(s => ({
-      ...s,
-      initialOvertimeMs: newBaseMs,
-      totalOvertimeMs:   newBaseMs + daily,
-    }));
+  /**
+   * `profileId` (#380): Profil, dessen Saldo der Nutzer gesehen hat (Settings-Seite). Ohne Argument gilt das geladene
+   * Profil. Geschrieben wird immer in dieses Profil; der Dashboard-Zustand ändert sich nur, wenn es das geladene ist.
+   */
+  async updateInitialOvertime(newBaseMs: number, profileId?: string): Promise<void> {
+    const target = profileId ?? this._loadedProfileId;
+    if (target === this._loadedProfileId) {
+      const daily = this._s().dailyOvertimeMs ?? 0;
+      this._s.update(s => ({
+        ...s,
+        initialOvertimeMs: newBaseMs,
+        totalOvertimeMs:   newBaseMs + daily,
+      }));
+    }
     // Nur minutes speichern — kein lastUpdated-Update.
     // So behandelt _init den Wert beim nächsten Load als Basis, nicht als heutigen Total.
-    await this.overtimeSvc.saveOvertime(newBaseMs);
+    await this.overtimeSvc.saveOvertime(newBaseMs, target);
   }
 
   // ─── Timer Internals ──────────────────────────────────────────────────────
@@ -330,6 +653,7 @@ export class DashboardService {
   private _tick(): void {
     const e = this._s().workEntry;
     if (!e.workStart || e.workEnd) return;
+    this.todayService.refresh(); // Standby-Härtung: Tageswechsel auch ohne feuernden Mitternachts-Timer erkennen
     const now    = new Date();
     const breakMs = this._totalBreakMs(e.breaks, now);
     const elapsed = now.getTime() - e.workStart.getTime() - breakMs;
@@ -339,8 +663,12 @@ export class DashboardService {
   }
 
   private async _autoSave(): Promise<void> {
-    if (!this._s().workEntry.workStart) return;
-    try { await this.workSvc.saveEntry(this._s().workEntry); } catch { /* silent */ }
+    // Synchron aus dem aktuellen Zustand; `_init` stoppt den Timer vor jedem Zustandswechsel, ein Autosave
+    // kann daher nie mit einem überholten Eintrag laufen. Das Profil ist explizit das geladene (#380): im
+    // Lag-Fenster eines Profilwechsels (Signal neu, Reinit noch nicht gelaufen) gehört der Eintrag noch dorthin.
+    const entry = this._s().workEntry;
+    if (!entry.workStart) return;
+    try { await this.workSvc.saveEntry(entry, this._loadedProfileId); } catch { /* silent */ }
   }
 
   // ─── Overtime Calculation ─────────────────────────────────────────────────
@@ -349,18 +677,18 @@ export class DashboardService {
     if (!e.workStart) return;
 
     const settings  = this._currentSettings();
-    const targetMs  = this._targetDailyMs(settings);
+    const targetMs  = this._targetDailyMs(settings, e.date);
     const manualMs  = (e.manualOvertimeMinutes ?? 0) * 60000;
-    const now       = new Date();
-    const breakMs   = this._totalBreakMs(e.breaks, now);
-    const elapsed   = now.getTime() - e.workStart.getTime() - breakMs;
+    const end       = e.workEnd ?? new Date(); // gestoppt: workEnd, nie "jetzt" (#390)
+    const breakMs   = this._totalBreakMs(e.breaks, end);
+    const elapsed   = end.getTime() - e.workStart.getTime() - breakMs;
     const daily     = elapsed - targetMs + manualMs;
     const base      = this._s().initialOvertimeMs ?? 0;
     const total     = base + daily;
 
-    const expectedEnd          = this._calcExpectedEnd(e.workStart, targetMs, this._totalBreakMs(e.breaks, now));
+    const expectedEnd          = this._calcExpectedEnd(e.workStart, targetMs, this._totalBreakMs(e.breaks, end));
     const remainingForZero     = Math.max(0, targetMs - base - manualMs);
-    const expectedEndTotalZero = this._calcExpectedEnd(e.workStart, remainingForZero, this._totalBreakMs(e.breaks, now));
+    const expectedEndTotalZero = this._calcExpectedEnd(e.workStart, remainingForZero, this._totalBreakMs(e.breaks, end));
 
     this._s.update(s => ({
       ...s,
@@ -368,6 +696,7 @@ export class DashboardService {
       totalOvertimeMs:      total,
       expectedEndTime:      expectedEnd,
       expectedEndTotalZero,
+      isExtraDay:           targetMs === 0,
     }));
   }
 
@@ -391,7 +720,11 @@ export class DashboardService {
   }
 
   // ─── State + Save ─────────────────────────────────────────────────────────
-  private async _recalculateState(entry: WorkEntry, save: boolean): Promise<void> {
+  /**
+   * Setzt den Zustand und speichert optional. Liefert den (vor dem ersten `await` eingefrorenen) Gesamtsaldo.
+   * Alle Writes gehen mit den festgehaltenen Werten explizit an `ctx.pid`, auch wenn das Profil währenddessen wechselt.
+   */
+  private async _recalculateState(entry: WorkEntry, save: boolean, ctx?: ActionCtx): Promise<number | null> {
     let actualWorkMs: number | null = null;
     let dailyMs: number | null = null;
     let totalMs = this._s().totalOvertimeMs;
@@ -402,7 +735,7 @@ export class DashboardService {
       const breaks = this._totalBreakMs(entry.breaks, entry.workEnd);
       actualWorkMs = grossMs - breaks;
       const settings  = this._currentSettings();
-      const targetMs  = this._targetDailyMs(settings);
+      const targetMs  = this._targetDailyMs(settings, entry.date);
       const manualMs  = (entry.manualOvertimeMinutes ?? 0) * 60000;
       dailyMs    = actualWorkMs - targetMs + manualMs;
       const base = this._s().initialOvertimeMs ?? 0;
@@ -416,21 +749,29 @@ export class DashboardService {
       grossMs:        grossMs ?? s.grossMs,
       dailyOvertimeMs: dailyMs,
       totalOvertimeMs: totalMs,
+      isExtraDay:     dailyMs !== null ? this._targetDailyMs(this._currentSettings(), entry.date) === 0 : s.isExtraDay,
     }));
 
     if (save) {
-      await this.workSvc.saveEntry(entry);
+      const pid = ctx?.pid ?? this._loadedProfileId;
+      await this.workSvc.saveEntry(entry, pid);
       if (entry.workEnd && actualWorkMs !== null && totalMs !== null) {
-        await this._saveOvertime();
+        await this._saveOvertime(pid, totalMs);
       }
     }
+    return totalMs;
   }
 
-  private async _saveOvertime(): Promise<void> {
-    const ms = this._s().totalOvertimeMs;
+  /** Schreibt den Saldo in das festgehaltene Profil, mit dem übergebenen (nicht nach einem `await` neu gelesenen) Wert. */
+  private async _saveOvertime(pid: string, ms: number | null): Promise<void> {
     if (ms === null) return;
-    await this.overtimeSvc.saveOvertime(ms);
+    await this.overtimeSvc.saveOvertime(ms, pid);
     await this.overtimeSvc.saveLastUpdateDate(new Date());
+  }
+
+  /** Läuft noch derselbe Zustand wie zum Aktionsbeginn (kein Profil-/Reinit-Überholer)? */
+  private _isCurrent(ctx: ActionCtx): boolean {
+    return ctx.gen === this._initGen;
   }
 
   // ─── Settings Cache (from Observable) ─────────────────────────────────────
@@ -443,11 +784,12 @@ export class DashboardService {
     return this._settingsCache;
   }
 
-  private _targetDailyMs(settings: { weeklyTargetHours: number; workdays: number[] }): number {
+  /** Tagessoll für das Eintragsdatum (nicht für „jetzt"): ein über Mitternacht laufender Eintrag behält sein Soll (#372). */
+  private _targetDailyMs(settings: { weeklyTargetHours: number; workdays: number[] }, forDate: Date): number {
     if (settings.workdays.length === 0) return 0;
     const weeklyMs    = settings.weeklyTargetHours * 3600000;
     const regularMs   = roundMsToMinute(weeklyMs / settings.workdays.length);
-    return getEffectiveDailyTarget(new Date(), settings.workdays, regularMs);
+    return getEffectiveDailyTarget(forDate, settings.workdays, regularMs);
   }
 
   // ─── Helpers ─────────────────────────────────────────────────────────────

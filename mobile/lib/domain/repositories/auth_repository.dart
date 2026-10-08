@@ -25,4 +25,11 @@ abstract class AuthRepository {
 
   /// Löscht den Account des aktuellen Benutzers.
   Future<void> deleteAccount();
+
+  /// Bestätigt die Identität des aktuellen Benutzers erneut (Google-Re-Auth).
+  ///
+  /// Gibt `false` zurück bei Abbruch, Fehler (z. B. Netzwerk), anderem Konto
+  /// oder wenn kein Benutzer/kein Google-Login vorliegt. Nur `true` bei
+  /// verifizierter Re-Authentifizierung.
+  Future<bool> reauthenticate();
 }

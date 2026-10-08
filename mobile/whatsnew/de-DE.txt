@@ -1,1 +1,9 @@
-Neu: Mit englischer App-Sprache erscheinen jetzt auch Erinnerungen, Überstunden-Warnungen, der Biometrie-Dialog und der Update-Hinweis auf Englisch. Standard-Pausennamen (z. B. "Automatische Pause") werden in der App-Sprache angezeigt. Außerdem sprechen wir dich jetzt durchgehend mit "du" an und haben kleine Übersetzungsfehler korrigiert.
+Das ist neu:
+• Urlaubskontingent und Resturlaub
+• Feiertage im Dashboard, Bundesland je Profil einstellbar
+• App-Sperre: PIN zurücksetzen, Schutz vor wiederholtem PIN-Raten
+• Vergessener Timer: Hinweis mit Beenden, Später oder Fortsetzen
+• Profilwechsel mit laufendem Timer fragt nach
+• Zuverlässigeres Speichern beim Stoppen, kein doppeltes Auslösen beim Doppeltippen
+• Richtige Kalenderwoche und Feiertage bei Zeitumstellung
+• Dashboard folgt dem Tageswechsel um Mitternacht

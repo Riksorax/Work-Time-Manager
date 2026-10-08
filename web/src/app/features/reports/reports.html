@@ -14,14 +14,28 @@
 
           <!-- Left panel: Calendar + Stats -->
           <aside class="calendar-panel">
+            <div class="calendar-toolbar">
+              <button mat-stroked-button #multiSelectToggle
+                      class="multi-select-toggle"
+                      [class.is-active]="svc.isMultiSelectActive()"
+                      [attr.aria-pressed]="svc.isMultiSelectActive()"
+                      [matTooltip]="'reports.multiSelectTooltip' | translate"
+                      (click)="svc.toggleMultiSelect()">
+                <mat-icon aria-hidden="true">{{ svc.isMultiSelectActive() ? 'done_all' : 'checklist' }}</mat-icon>
+                {{ 'reports.multiSelectButton' | translate }}
+              </button>
+            </div>
             <app-calendar
               [selectedDate]="svc.selectedDate()"
               [daysWithEntries]="svc.daysWithEntries()"
+              [bundesland]="svc.bundesland()"
               [multiSelectedDates]="svc.selectedDates()"
+              [multiSelectActive]="svc.isMultiSelectActive()"
               (dateSelected)="onCalendarDayTap($event)"
               (monthChanged)="svc.onMonthChanged($event)"
               (dragSelected)="svc.addDateRangeSelection($event)"
-              [attr.aria-label]="'reports.calendarAria' | translate"
+              (daysDeselected)="svc.removeDatesFromSelection($event)"
+              (multiSelectEnded)="svc.endMultiSelect()"
             />
 
             <!-- Day stats summary -->
@@ -63,7 +77,7 @@
                     </button>
                   }
                   <button mat-stroked-button
-                          (click)="svc.toggleMultiSelect()"
+                          (click)="onCancelMultiSelect()"
                           [attr.aria-label]="'reports.cancelMultiSelectAria' | translate">
                     <mat-icon>close</mat-icon>
                     {{ 'common.cancel' | translate }}
@@ -428,6 +442,37 @@
               </div>
             </div>
           }
+        </div>
+      </mat-tab>
+
+      <!-- ════════════════════════════════════════════════════════ TAB: JAHR ══ -->
+      <!-- Frei (kein Premium-/Auth-Gate): anonyme Nutzer sehen lokal berechnete Werte. -->
+      <mat-tab [label]="'reports.tabYearly' | translate">
+        <div class="tab-content">
+          <div class="yearly-layout">
+            <div class="month-nav" role="navigation" [attr.aria-label]="'reports.yearNavAria' | translate">
+              <button mat-icon-button (click)="leave.navigateYear(-1)"
+                      [disabled]="!leave.canGoPrevYear()"
+                      [attr.aria-label]="'reports.prevYearAria' | translate">
+                <mat-icon>chevron_left</mat-icon>
+              </button>
+              <span class="month-label" aria-live="polite">{{ leave.year() }}</span>
+              <button mat-icon-button (click)="leave.navigateYear(1)"
+                      [disabled]="!leave.canGoNextYear()"
+                      [attr.aria-label]="'reports.nextYearAria' | translate">
+                <mat-icon>chevron_right</mat-icon>
+              </button>
+            </div>
+
+            <app-leave-balance-card [report]="leave.report()"
+                                    [state]="leave.state()"
+                                    [showRemaining]="leave.isCurrentYear()"
+                                    [showEmptyHint]="true"
+                                    [editable]="true"
+                                    [localOnly]="!svc.isLoggedIn()"
+                                    (retry)="leave.refresh()"
+                                    (editEntitlement)="goToSettings()" />
+          </div>
         </div>
       </mat-tab>
 

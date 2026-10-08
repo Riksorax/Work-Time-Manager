@@ -129,5 +129,37 @@ void main() {
       );
       expect(entry.effectiveWorkDuration, Duration.zero);
     });
+
+    // #404: Die Extension rechnet nie mit der Uhr ("jetzt"); ein offener
+    // Eintrag hat keine Dauer (Backend-konform), nur ein Ende zählt.
+    test('calculatedWorkDuration ist 0 bei offenem Eintrag (ohne Uhr)', () {
+      final entry = WorkEntryEntity(
+        id: '1',
+        date: DateTime(2020, 1, 6),
+        workStart: DateTime(2020, 1, 6, 8),
+      );
+      expect(entry.calculatedWorkDuration, Duration.zero);
+    });
+
+    test('calculatedWorkDuration ist Ende - Start bei abgeschlossenem Eintrag',
+        () {
+      final entry = WorkEntryEntity(
+        id: '1',
+        date: DateTime(2020, 1, 6),
+        workStart: DateTime(2020, 1, 6, 8),
+        workEnd: DateTime(2020, 1, 6, 16, 30),
+      );
+      expect(
+          entry.calculatedWorkDuration, const Duration(hours: 8, minutes: 30));
+    });
+
+    test('calculatedWorkDuration ist 0 ohne Start', () {
+      final entry = WorkEntryEntity(
+        id: '1',
+        date: DateTime(2020, 1, 6),
+        workEnd: DateTime(2020, 1, 6, 16),
+      );
+      expect(entry.calculatedWorkDuration, Duration.zero);
+    });
   });
 }

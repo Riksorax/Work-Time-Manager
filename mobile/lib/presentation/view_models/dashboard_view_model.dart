@@ -5,20 +5,94 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
 import 'package:flutter_work_time/core/utils/time_precision.dart';
 
+import '../../core/providers/clock_provider.dart';
 import '../../core/providers/providers.dart';
+import '../../core/providers/today_provider.dart';
 import '../../domain/entities/break_entity.dart';
 import '../../domain/entities/work_entry_entity.dart';
+import '../../domain/entities/work_profile_entity.dart';
+import '../../domain/repositories/overtime_repository.dart';
+import '../../domain/repositories/settings_repository.dart';
 import '../../domain/services/break_calculator_service.dart';
+import '../../domain/usecases/save_work_entry.dart';
 import '../../domain/utils/overtime_utils.dart';
 import '../../domain/utils/overtime_warning_utils.dart';
 import '../../l10n/app_localizations.dart';
 import '../state/dashboard_state.dart';
 
+/// Zum Aktionsbeginn festgehaltene Abhängigkeiten einer Schreibaktion (#388).
+///
+/// Ein Profilwechsel invalidiert Repos und UseCases; löst eine Aktion sie erst
+/// nach einem `await` per `ref.read` auf, landet der Write im neuen Profil. Die
+/// Repos sind an ihr Profil gebunden, also schreibt die Aktion Eintrag **und**
+/// Saldo über diese Objekte immer in das Profil des Aktionsbeginns. [gen] ist
+/// der `_initGen` zu diesem Zeitpunkt (Überholungsprüfung). [before] ist der
+/// Eintrag vor der Aktion (Vorzustand für die Kompensation, #412); er wird
+/// synchron festgehalten, weil manche Aktionen (`startOrStopBreak`) danach noch
+/// ein `await` haben.
+class _ActionCtx {
+  const _ActionCtx({
+    required this.gen,
+    required this.saveWorkEntry,
+    required this.overtimeRepository,
+    required this.settingsRepository,
+    required this.now,
+    required this.before,
+  });
+
+  final int gen;
+  final SaveWorkEntry saveWorkEntry;
+  final OvertimeRepository overtimeRepository;
+  final SettingsRepository settingsRepository;
+  final DateTime Function() now;
+  final WorkEntryEntity before;
+}
+
 class DashboardViewModel extends Notifier<DashboardState> {
   Timer? _timer;
   Timer? _autoSaveTimer;
   int _tickCounter = 0;
-  List<WorkEntryEntity> _weekEntries = [];
+
+  /// Generationszähler: jeder `_init` erhöht ihn; ein überholter Lauf (oder
+  /// einer nach Dispose) verwirft sein Ergebnis (#379).
+  int _initGen = 0;
+
+  /// Der zuletzt gestartete Ladelauf (Aktionen warten darauf, siehe
+  /// [_ensureCurrentDay]).
+  Future<void>? _initRun;
+
+  /// Ob der letzte `_init` erfolgreich war. Ohne erfolgreichen Ladevorgang ist
+  /// `state.workEntry` nur ein Platzhalter und darf nie gespeichert werden.
+  bool _loadedOk = false;
+
+  /// Reentranz-Sperre der Schreibaktionen (#413): läuft eine Aktion, werden
+  /// weitere still verworfen (siehe [_runAction]).
+  bool _busy = false;
+
+  /// Besitzer des Flags: nur die Aktion mit dem aktuellen Token gibt es frei.
+  /// Ein Rebuild (Profilwechsel) vergibt ein neues Token, damit eine alte,
+  /// spät endende Aktion das Flag einer neuen nicht löscht.
+  Object _actionToken = Object();
+
+  /// Wird beendet, wenn die laufende Aktion fertig oder überholt ist (nie mit
+  /// Fehler). [stopRunningForSwitch] wartet darauf.
+  Completer<void>? _actionDone;
+
+  /// Der laufende Autosave (Aktionen warten darauf, damit er den frischen
+  /// Eintrag nie überholt; siehe [_runAction]). Räumt sich bei Identität ab.
+  Future<void>? _autoSaveRun;
+
+  /// Obergrenze je Write-Block: ein nie zurückkehrender Write sperrt das
+  /// Dashboard höchstens so lange (#413).
+  static const _writeTimeout = Duration(seconds: 30);
+
+  /// Die aktuelle Zeit aus [clockProvider] (Tests injizieren eine Fake-Uhr).
+  DateTime _now() => ref.read(clockProvider)();
+
+  static bool _isRunning(WorkEntryEntity e) =>
+      e.workStart != null && e.workEnd == null;
+
+  static DateTime _dayOf(DateTime d) => DateTime(d.year, d.month, d.day);
 
   @override
   DashboardState build() {
@@ -27,129 +101,313 @@ class DashboardViewModel extends Notifier<DashboardState> {
     ref.watch(getOvertimeUseCaseProvider);
     ref.watch(settingsRepositoryProvider);
 
+    _loadedOk = false;
+    // Profilwechsel/Rebuild: eine alte Aktion besitzt das Flag nicht mehr.
+    _busy = false;
+    _actionToken = Object();
+    _actionDone = null;
+    _autoSaveRun = null;
+    ref.listen<DateTime>(todayProvider, (previous, next) {
+      if (previous != next) _onDayChange();
+    });
+    ref.onDispose(() {
+      _timer?.cancel();
+      _timer = null;
+      _autoSaveTimer?.cancel();
+      _autoSaveTimer = null;
+      _initGen++;
+      final done = _actionDone;
+      if (done != null && !done.isCompleted) done.complete();
+    });
+
     // Start initial load
     Future.microtask(() => _init());
-    return DashboardState.initial();
+    return DashboardState.initial(now: _now());
   }
 
-  Future<void> _init() async {
-    logger.i('[Dashboard] Initialisiere Dashboard...');
-    final getTodayWorkEntry = ref.read(getTodayWorkEntryUseCaseProvider);
-    final overtimeRepository = ref.read(overtimeRepositoryProvider);
-
-    final workEntry = await getTodayWorkEntry.call();
-    // Async laden statt synchronem Cache-Zugriff (verhindert Race Condition bei Firebase-Login)
-    final storedOvertime = await overtimeRepository.ensureOvertimeLoaded();
-    final lastUpdateDate = await overtimeRepository.ensureLastUpdateLoaded();
-
-    // Lade Wocheneinträge um zu prüfen ob heute ein Zusatztag ist
-    await _loadWeekEntries(workEntry);
-
-    // Berechne dailyOvertime für den initialen Stand
-    final targetDailyHours = _getEffectiveTargetDailyHours();
-    final isExtraDay = targetDailyHours == Duration.zero;
-    Duration initialDailyOvertime = Duration.zero;
-
-    if (workEntry.workStart != null && workEntry.workEnd != null) {
-      // Wenn der Tag bereits abgeschlossen ist, berechne Overtime basierend auf dem Eintrag
-      final breakDuration = workEntry.breaks.fold<Duration>(
-        Duration.zero,
-        (previousValue, element) =>
-            previousValue +
-            (element.end?.difference(element.start) ?? Duration.zero),
-      );
-      final actualWorkDuration =
-          workEntry.workEnd!.difference(workEntry.workStart!) - breakDuration;
-      initialDailyOvertime = actualWorkDuration - targetDailyHours;
-    } else if (workEntry.workStart != null) {
-      // Laufender Tag -> Overtime wird im Timer berechnet.
-      // Um initialOvertime (Basis) korrekt wiederherzustellen, müssen wir den aktuellen "Tagesfortschritt" vom gespeicherten Gesamtwert abziehen.
-      final now = DateTime.now();
-
-      // Berechne aktuelle Pausenzeit
-      final breakDuration = _calculateTotalBreakDuration(now);
-
-      // Berechne aktuelle Arbeitszeit (Brutto - Pause)
-      final elapsedTime = now.difference(workEntry.workStart!) - breakDuration;
-
-      // Aktueller Überstunden-Stand für heute (wird meist negativ sein, da Tag noch läuft)
-      initialDailyOvertime = elapsedTime - targetDailyHours;
-    }
-
-    Duration initialOvertime;
-    if (lastUpdateDate != null &&
-        DateUtils.isSameDay(lastUpdateDate, DateTime.now())) {
-      // Wenn das Update heute war, beinhaltet storedOvertime bereits den heutigen Tag.
-      // Wir müssen den heutigen Anteil abziehen, um die Basis (Start des Tages) zu bekommen.
-      // Aber ACHTUNG: Das gespeicherte Daily könnte anders sein als das jetzt berechnete (z.B. nach Edit).
-      // Wir nehmen an: Base = Stored - "Daily at save time".
-      // Das ist schwierig.
-      // Strategie: Wir vertrauen storedOvertime als "Total".
-      // Aber wir wollen Base + Daily anzeigen.
-      // Wenn wir storedOvertime als Total nehmen, ist Base = Total - Daily.
-      initialOvertime = storedOvertime - initialDailyOvertime;
-    } else {
-      // Neuer Tag oder noch nie heute gespeichert: Stored ist Base (von gestern).
-      initialOvertime = storedOvertime;
-    }
-
-    final totalOvertime = initialOvertime + initialDailyOvertime;
-
-    logger.i(
-        '[Dashboard] Geladener WorkEntry - Start: ${workEntry.workStart}, End: ${workEntry.workEnd}');
-    logger.i(
-        '[Dashboard] Overtime Init: Stored=$storedOvertime, InitialBase=$initialOvertime, Daily=$initialDailyOvertime, Total=$totalOvertime, ExtraDay=$isExtraDay');
-
-    state = state.copyWith(
-      workEntry: workEntry,
-      isLoading: false,
-      totalOvertime: totalOvertime,
-      initialOvertime: initialOvertime,
-      dailyOvertime: initialDailyOvertime,
-      isExtraDay: isExtraDay,
-    );
-    _recalculateStateAndSave(workEntry, save: false);
-    _startTimerIfNeeded();
+  /// Tageswechsel: ein laufender Eintrag bleibt unverändert am Starttag, ein
+  /// gestoppter oder leerer Eintrag schaltet still auf den neuen Tag.
+  void _onDayChange() {
+    if (!ref.mounted) return;
+    if (_isRunning(state.workEntry)) return;
+    unawaited(_init(dayChange: true));
   }
 
-  /// Lädt die Einträge für die aktuelle Woche, um zu bestimmen ob heute ein Zusatztag ist.
-  Future<void> _loadWeekEntries(WorkEntryEntity todayEntry) async {
+  /// Lädt das Dashboard neu, nachdem ein offener Eintrag vor heute nachträglich
+  /// beendet wurde (#385): der Saldo im Repository enthält dann dessen Delta,
+  /// `initialOvertime` muss es als Basis übernehmen (sonst überschreibt der
+  /// nächste Stop das Delta). Läuft im Dashboard gerade ein Vortag über
+  /// Mitternacht, bleibt er unangetastet; nur die Saldo-Basis wird erneuert.
+  Future<void> reloadAfterRetroClose() async {
+    if (!ref.mounted) return;
+    final entry = state.workEntry;
+    if (_isRunning(entry) && _dayOf(entry.date) != _dayOf(_now())) {
+      final gen = _initGen;
+      final stored =
+          await ref.read(overtimeRepositoryProvider).ensureOvertimeLoaded();
+      if (gen != _initGen || !ref.mounted) return;
+      state = state.copyWith(initialOvertime: stored);
+      _recalculateOvertime();
+      return;
+    }
+    await _init(dayChange: true);
+  }
+
+  /// Setzt einen offenen Vortag ([entry]) als laufenden Dashboard-Eintrag fort
+  /// (#385 PR 1b, "Pinning"). `true` = gepinnt, der Timer läuft.
+  ///
+  /// Zulässig nur bei fertig geladenem Dashboard, leerem heutigen Tag
+  /// (`type == work`, kein Start) und [canResumeOpenEntry]. Prüfung und `_init`
+  /// laufen ohne `await` dazwischen. Der Eintrag wird frisch gelesen (siehe
+  /// `_load`); ist er inzwischen beendet oder gelöscht, wird nicht gepinnt.
+  /// Schreibt selbst nichts (erst Autosave/Stop), braucht also keinen
+  /// [_ActionCtx]; Überholung (Profilwechsel) läuft über `_initGen`.
+  Future<bool> resumePastEntry(WorkEntryEntity entry) async {
+    if (!ref.mounted) return false;
+    // Läuft eine Schreibaktion (z. B. ein Start-Tap in der Ladelücke), wird
+    // nicht gepinnt (#413): Prüfung vor und nach dem Warten auf den Ladelauf.
+    if (_busy) return false;
+    final pending = _initRun;
+    if (pending != null) await pending;
+    if (!ref.mounted) return false;
+    if (_busy) return false;
+
+    // Ab hier synchron bis `_init` (kein Start-Tap kann dazwischen laufen).
+    final now = _now();
+    final today = state.workEntry;
+    final todayIsEmpty = _loadedOk &&
+        !state.isLoading &&
+        _dayOf(today.date) == _dayOf(now) &&
+        today.type == WorkEntryType.work &&
+        today.workStart == null;
+    if (!canResumeOpenEntry(
+        entry: entry, now: now, todayIsEmpty: todayIsEmpty)) {
+      return false;
+    }
+
+    state = state.copyWith(isLoading: true);
+    final run = _init(dayChange: true, pinnedDate: entry.date);
+    final gen = _initGen;
+    await run;
+    if (gen != _initGen || !ref.mounted) return false;
+    return _loadedOk &&
+        _isRunning(state.workEntry) &&
+        _dayOf(state.workEntry.date) == _dayOf(entry.date);
+  }
+
+  Future<void> _init({bool dayChange = false, DateTime? pinnedDate}) {
+    if (!ref.mounted) return Future.value();
+    final gen = ++_initGen;
+    final run = _load(gen, dayChange, pinnedDate: pinnedDate);
+    _initRun = run;
+    return run;
+  }
+
+  /// Mit [pinnedDate] wird statt "heute" der (frisch gelesene) offene Eintrag
+  /// dieses Tages geladen (Fortsetzen, #385); ist er nicht mehr offen, fällt
+  /// der Lauf auf den heutigen Tag zurück.
+  Future<void> _load(int gen, bool dayChange, {DateTime? pinnedDate}) async {
+    bool stale() => gen != _initGen || !ref.mounted;
     try {
-      final workRepository = ref.read(workRepositoryProvider);
-      final now = DateTime.now();
-      final today = DateTime(now.year, now.month, now.day);
-      final startOfWeek = today.subtract(Duration(days: today.weekday - 1));
+      logger.i('[Dashboard] Initialisiere Dashboard...');
+      final getTodayWorkEntry = ref.read(getTodayWorkEntryUseCaseProvider);
+      final overtimeRepository = ref.read(overtimeRepositoryProvider);
+      final pinnedRepository =
+          pinnedDate == null ? null : ref.read(workRepositoryProvider);
 
-      // Einträge des aktuellen Monats laden
-      var entries =
-          await workRepository.getWorkEntriesForMonth(now.year, now.month);
+      WorkEntryEntity? pinned;
+      if (pinnedRepository != null) {
+        final fresh = await pinnedRepository.getWorkEntry(pinnedDate!);
+        if (stale()) return;
+        if (fresh.type == WorkEntryType.work && _isRunning(fresh)) {
+          pinned = fresh;
+        }
+      }
+      final workEntry = pinned ?? await getTodayWorkEntry.call();
+      if (stale()) return;
+      // Async laden statt synchronem Cache-Zugriff (verhindert Race Condition bei Firebase-Login)
+      final storedOvertime = await overtimeRepository.ensureOvertimeLoaded();
+      if (stale()) return;
+      final lastUpdateDate = await overtimeRepository.ensureLastUpdateLoaded();
+      if (stale()) return;
 
-      // Falls die Woche in den vorherigen Monat reicht, auch dessen Einträge laden
-      if (startOfWeek.month != now.month) {
-        final prevEntries = await workRepository.getWorkEntriesForMonth(
-            startOfWeek.year, startOfWeek.month);
-        entries = [...prevEntries, ...entries];
+      // Berechne dailyOvertime für den initialen Stand
+      final targetDailyHours = _getEffectiveTargetDailyHours(workEntry.date);
+      final isExtraDay = targetDailyHours == Duration.zero;
+      Duration initialDailyOvertime = Duration.zero;
+
+      if (workEntry.workStart != null && workEntry.workEnd != null) {
+        // Wenn der Tag bereits abgeschlossen ist, berechne Overtime basierend auf dem Eintrag
+        final breakDuration = workEntry.breaks.fold<Duration>(
+          Duration.zero,
+          (previousValue, element) =>
+              previousValue +
+              (element.end?.difference(element.start) ?? Duration.zero),
+        );
+        final actualWorkDuration =
+            workEntry.workEnd!.difference(workEntry.workStart!) - breakDuration;
+        initialDailyOvertime = actualWorkDuration - targetDailyHours;
+      } else if (workEntry.workStart != null) {
+        // Laufender Tag -> Overtime wird im Timer berechnet.
+        // Um initialOvertime (Basis) korrekt wiederherzustellen, müssen wir den aktuellen "Tagesfortschritt" vom gespeicherten Gesamtwert abziehen.
+        final now = _now();
+
+        // Berechne aktuelle Pausenzeit
+        final breakDuration = _calculateTotalBreakDuration(now, workEntry);
+
+        // Berechne aktuelle Arbeitszeit (Brutto - Pause)
+        final elapsedTime =
+            now.difference(workEntry.workStart!) - breakDuration;
+
+        // Aktueller Überstunden-Stand für heute (wird meist negativ sein, da Tag noch läuft)
+        initialDailyOvertime = elapsedTime - targetDailyHours;
       }
 
-      // Für aktuelle Woche filtern
-      _weekEntries = getWeekEntriesForDate(now, entries);
-
-      // Heutigen Eintrag hinzufügen falls noch nicht enthalten (z.B. neuer Tag)
-      final todayInEntries = _weekEntries.any((e) =>
-          e.date.year == today.year &&
-          e.date.month == today.month &&
-          e.date.day == today.day);
-      if (!todayInEntries && todayEntry.workStart != null) {
-        _weekEntries = [..._weekEntries, todayEntry];
+      Duration initialOvertime;
+      if (dayChange) {
+        // Tageswechsel: storedOvertime ist die Basis (Stand bis gestern).
+        // Ausnahme: der neue Eintrag ist schon abgeschlossen und sein Anteil
+        // wurde nach seinem Ende gespeichert.
+        final dailyAlreadyStored = workEntry.workStart != null &&
+            workEntry.workEnd != null &&
+            lastUpdateDate != null &&
+            !lastUpdateDate.isBefore(workEntry.workEnd!);
+        initialOvertime = dailyAlreadyStored
+            ? storedOvertime - initialDailyOvertime
+            : storedOvertime;
+      } else if (lastUpdateDate != null &&
+          DateUtils.isSameDay(lastUpdateDate, _now())) {
+        // Wenn das Update heute war, beinhaltet storedOvertime bereits den heutigen Tag.
+        // Wir müssen den heutigen Anteil abziehen, um die Basis (Start des Tages) zu bekommen.
+        // Aber ACHTUNG: Das gespeicherte Daily könnte anders sein als das jetzt berechnete (z.B. nach Edit).
+        // Wir nehmen an: Base = Stored - "Daily at save time".
+        // Das ist schwierig.
+        // Strategie: Wir vertrauen storedOvertime als "Total".
+        // Aber wir wollen Base + Daily anzeigen.
+        // Wenn wir storedOvertime als Total nehmen, ist Base = Total - Daily.
+        initialOvertime = storedOvertime - initialDailyOvertime;
+      } else {
+        // Neuer Tag oder noch nie heute gespeichert: Stored ist Base (von gestern).
+        initialOvertime = storedOvertime;
       }
-    } catch (e) {
-      logger.e('[Dashboard] Fehler beim Laden der Wocheneinträge: $e');
-      _weekEntries = [];
+
+      final totalOvertime = initialOvertime + initialDailyOvertime;
+
+      logger.i(
+          '[Dashboard] Geladener WorkEntry - Start: ${workEntry.workStart}, End: ${workEntry.workEnd}');
+      logger.i(
+          '[Dashboard] Overtime Init: Stored=$storedOvertime, InitialBase=$initialOvertime, Daily=$initialDailyOvertime, Total=$totalOvertime, ExtraDay=$isExtraDay');
+
+      // Neu per Konstruktor statt copyWith: copyWith ignoriert null und
+      // würde Werte des Vortags (Dauer, erwartetes Ende) stehen lassen.
+      state = DashboardState(
+        workEntry: workEntry,
+        elapsedTime: Duration.zero,
+        isLoading: false,
+        totalOvertime: totalOvertime,
+        initialOvertime: initialOvertime,
+        dailyOvertime: initialDailyOvertime,
+        isExtraDay: isExtraDay,
+        // Ein Reinit mitten in einer Aktion darf die UI nicht entsperren.
+        isSaving: _busy,
+      );
+      _loadedOk = true;
+      await _recalculateStateAndSave(workEntry, save: false);
+      if (stale()) return;
+      _startTimerIfNeeded();
+    } catch (e, st) {
+      // Nur der aktuelle Lauf darf den Zustand ändern. Keine Nutzerdaten loggen.
+      logger.e('[Dashboard] Laden fehlgeschlagen (${e.runtimeType})',
+          stackTrace: st);
+      if (!stale()) {
+        _loadedOk = false;
+        state = state.copyWith(isLoading: false);
+      }
     }
   }
 
-  /// Berechnet das effektive Tages-Soll unter Berücksichtigung von Zusatztagen.
-  Duration _getEffectiveTargetDailyHours() {
+  /// Serialisiert Schreibaktionen (#413): läuft bereits eine, wird [body]
+  /// still verworfen und `true` geliefert (kein Fehler, kein State-Update).
+  ///
+  /// Das Flag wird **synchron als erste Anweisung** gesetzt, noch vor
+  /// `_ensureCurrentDay` im Body: so kann auch ein Tap im Ladefenster nicht
+  /// mit einem zweiten überlappen. `false` nur, wenn das ViewModel nicht mehr
+  /// aktiv ist. Exceptions aus [body] werden unverändert weitergereicht; das
+  /// Flag ist danach frei. Freigegeben wird nur, solange das Token noch das
+  /// aktuelle ist (Rebuild, siehe [_actionToken]).
+  Future<bool> _runAction(Future<bool> Function() body) async {
+    if (!ref.mounted) return false;
+    if (_busy) {
+      logger.i('[Dashboard] Schreibaktion verworfen: andere Aktion läuft');
+      return true;
+    }
+    final token = Object();
+    _actionToken = token;
+    _busy = true;
+    _actionDone = Completer<void>();
+    state = state.copyWith(isSaving: true);
+    try {
+      // Ein laufender Autosave (max. 30 s) endet vor jedem Write der Aktion.
+      final autoSave = _autoSaveRun;
+      if (autoSave != null) await autoSave;
+      return await body();
+    } finally {
+      if (identical(token, _actionToken)) {
+        _busy = false;
+        final done = _actionDone;
+        _actionDone = null;
+        if (done != null && !done.isCompleted) done.complete();
+        if (ref.mounted) state = state.copyWith(isSaving: false);
+      }
+    }
+  }
+
+  /// Hält die Abhängigkeiten einer Schreibaktion fest. Muss in jeder Aktion
+  /// **synchron direkt nach** `_ensureCurrentDay()` aufgerufen werden (vor dem
+  /// nächsten `await`) und nie nach einem `await` per `ref.read(...)` ersetzt
+  /// werden (#388).
+  _ActionCtx _beginAction() => _ActionCtx(
+        gen: _initGen,
+        saveWorkEntry: ref.read(saveWorkEntryUseCaseProvider),
+        overtimeRepository: ref.read(overtimeRepositoryProvider),
+        settingsRepository: ref.read(settingsRepositoryProvider),
+        now: ref.read(clockProvider),
+        before: state.workEntry,
+      );
+
+  /// Stellt vor einer Schreibaktion sicher, dass das Dashboard den aktuellen
+  /// Tag zeigt. Ein laufender Eintrag bleibt am Starttag. Gibt `false`
+  /// zurück, wenn der aktuelle Tag nicht geladen werden konnte: die Aktion
+  /// muss dann abbrechen (nie in den Vortag oder einen Platzhalter schreiben).
+  Future<bool> _ensureCurrentDay() async {
+    if (!ref.mounted) return false;
+    if (_isRunning(state.workEntry)) return true;
+
+    ref.read(todayProvider.notifier).refresh();
+    final pending = _initRun;
+    if (pending != null) await pending;
+    if (!ref.mounted) return false;
+
+    final today = ref.read(todayProvider);
+    bool current() =>
+        _loadedOk &&
+        (_isRunning(state.workEntry) || _dayOf(state.workEntry.date) == today);
+    if (!current()) {
+      // Tageswechsel-Basis nur, wenn wirklich ein Vortag angezeigt wird; beim
+      // Retry eines fehlgeschlagenen Erstladens (Platzhalter = heute) gilt die
+      // normale Heuristik (sonst wäre die Basis bei einem heute schon
+      // gespeicherten Saldo falsch).
+      await _init(dayChange: _dayOf(state.workEntry.date) != today);
+      if (!ref.mounted) return false;
+      if (!current()) return false;
+    }
+    return true;
+  }
+
+  /// Berechnet das effektive Tages-Soll für [forDate] (Datum des Eintrags,
+  /// nicht "heute": ein über Mitternacht laufender Eintrag behält das Soll
+  /// seines Starttags, siehe #379).
+  Duration _getEffectiveTargetDailyHours(DateTime forDate) {
     final settingsRepository = ref.read(settingsRepositoryProvider);
     final workdays = settingsRepository.getWorkdays();
     if (workdays.isEmpty) return Duration.zero;
@@ -160,7 +418,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
           .round(),
     ));
     return getEffectiveDailyTarget(
-      date: DateTime.now(),
+      date: forDate,
       workdays: workdays,
       regularDailyTarget: regularDailyTarget,
     );
@@ -195,7 +453,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
       _tickCounter = 0;
 
       // Sofortiges Update
-      final now = DateTime.now();
+      final now = _now();
       final initialElapsedTime = _calculateElapsedTime();
       final initialGrossDuration = now.difference(state.workEntry.workStart!);
 
@@ -206,10 +464,19 @@ class DashboardViewModel extends Notifier<DashboardState> {
       _recalculateOvertime();
 
       _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-        final now = DateTime.now();
+        if (!ref.mounted) return;
+        // Standby-Härtung: ein verpasster Mitternachts-Timer wird hier
+        // nachgeholt (der laufende Eintrag bleibt am Starttag).
+        ref.read(todayProvider.notifier).refresh();
+        if (!ref.mounted) return;
+        final now = _now();
         final elapsedTime = _calculateElapsedTime();
+        // Ein im Schreibfenster bereits beendeter Eintrag (Stop, #402) rechnet
+        // bis `workEnd`, nicht bis jetzt: der Timer wird erst nach dem Write
+        // abgebrochen und würde sonst die Bruttodauer verfälschen.
         final grossDuration = state.workEntry.workStart != null
-            ? now.difference(state.workEntry.workStart!)
+            ? (state.workEntry.workEnd ?? now)
+                .difference(state.workEntry.workStart!)
             : Duration.zero;
 
         state = state.copyWith(
@@ -218,11 +485,16 @@ class DashboardViewModel extends Notifier<DashboardState> {
         );
         _recalculateOvertime();
 
-        // Auto-Save alle 30 Sekunden
+        // Auto-Save alle 30 Sekunden, nie überlappend mit einer Aktion. Läuft
+        // gerade eine, bleibt der Zähler >= 30 (Retry im nächsten Tick).
         _tickCounter++;
-        if (_tickCounter >= 30) {
+        if (_tickCounter >= 30 && !_busy && _autoSaveRun == null) {
           _tickCounter = 0;
-          _autoSave();
+          late final Future<void> run;
+          run = _autoSave().whenComplete(() {
+            if (identical(_autoSaveRun, run)) _autoSaveRun = null;
+          });
+          _autoSaveRun = run;
         }
       });
     } else {
@@ -232,6 +504,14 @@ class DashboardViewModel extends Notifier<DashboardState> {
   }
 
   Future<void> _autoSave() async {
+    // Kein Generations-/id-Guard: der Timer läuft nur bei laufendem Eintrag und
+    // wird in `_startTimerIfNeeded` und `onDispose` abgebrochen. Ein Reinit
+    // durch Tages- oder Stop-Logik findet nie bei laufendem Timer statt
+    // (`_onDayChange`/`_ensureCurrentDay` lassen laufende Einträge unberührt).
+    // Ein Profilwechsel invalidiert das ViewModel dagegen auch bei laufendem
+    // Timer, `onDispose` räumt ihn aber sofort ab (Einfrieren, #388), und ein
+    // bereits laufender Autosave hat den UseCase vor dem `await` aufgelöst,
+    // schreibt also ins alte Profil. Ein Guard wäre unerreichbar (#379).
     // Nur speichern, wenn tatsächlich eine Zeiterfassung läuft
     if (state.workEntry.workStart == null) {
       logger.i('[Dashboard] Auto-Save übersprungen: Keine Zeiterfassung aktiv');
@@ -241,24 +521,29 @@ class DashboardViewModel extends Notifier<DashboardState> {
     logger.i('[Dashboard] Auto-Save: Speichere aktuellen Stand');
     try {
       final saveWorkEntry = ref.read(saveWorkEntryUseCaseProvider);
-      await saveWorkEntry.call(state.workEntry);
+      await saveWorkEntry.call(state.workEntry).timeout(_writeTimeout);
       logger.i('[Dashboard] Auto-Save erfolgreich');
     } catch (e) {
       logger.e('[Dashboard] Auto-Save Fehler: $e');
     }
   }
 
+  /// Ende der Berechnung: `workEnd` bei beendetem Eintrag, sonst "jetzt".
+  /// Ein beendeter Eintrag darf nie mit der Uhr gerechnet werden (#386).
+  DateTime _calculationEnd() => state.workEntry.workEnd ?? _now();
+
   Duration _calculateElapsedTime() {
     if (state.workEntry.workStart == null) return Duration.zero;
-    final now = DateTime.now();
-    final breakDuration = _calculateTotalBreakDuration(now);
-    return now.difference(state.workEntry.workStart!) - breakDuration;
+    final end = _calculationEnd();
+    final breakDuration = _calculateTotalBreakDuration(end);
+    return end.difference(state.workEntry.workStart!) - breakDuration;
   }
 
   void _recalculateOvertime() {
     if (state.workEntry.workStart == null) return;
 
-    final targetDailyHours = _getEffectiveTargetDailyHours();
+    final targetDailyHours =
+        _getEffectiveTargetDailyHours(state.workEntry.date);
     final dailyOvertime = _calculateElapsedTime() - targetDailyHours;
 
     // Berechne Total = Base (initialOvertime) + Daily
@@ -282,6 +567,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
       totalOvertime: total,
       expectedEndTime: expectedEndTime,
       expectedEndTotalZero: expectedEndTotalZero,
+      isExtraDay: targetDailyHours == Duration.zero,
     );
   }
 
@@ -290,10 +576,10 @@ class DashboardViewModel extends Notifier<DashboardState> {
     if (state.workEntry.workStart == null) return null;
 
     final start = state.workEntry.workStart!;
-    final now = DateTime.now();
+    final end = _calculationEnd();
 
-    // Bereits genommene Pausen (bis jetzt)
-    var currentBreaks = _calculateTotalBreakDuration(now);
+    // Bereits genommene Pausen (bis jetzt bzw. bis zum Ende)
+    var currentBreaks = _calculateTotalBreakDuration(end);
 
     // Iterative Berechnung, da zusätzliche Pausen die Brutto-Zeit erhöhen
     // und dadurch ggf. weitere Pausenregeln greifen (z.B. Sprung über 9h).
@@ -326,16 +612,28 @@ class DashboardViewModel extends Notifier<DashboardState> {
     return projectedEnd;
   }
 
-  Duration _calculateTotalBreakDuration(DateTime now) {
-    return state.workEntry.breaks.fold(Duration.zero, (prev, b) {
+  Duration _calculateTotalBreakDuration(DateTime now,
+      [WorkEntryEntity? entry]) {
+    final e = entry ?? state.workEntry;
+    if (e.workEnd != null) {
+      // Beendeter Eintrag: nur abgeschlossene Pausen, offene zaehlt 0
+      // (wie _load und _recalculateStateAndSave).
+      return e.breaks.fold(Duration.zero,
+          (prev, b) => prev + (b.end?.difference(b.start) ?? Duration.zero));
+    }
+    return e.breaks.fold(Duration.zero, (prev, b) {
       if (b.start.isAfter(now)) return prev;
       final end = b.end ?? now;
       return prev + end.difference(b.start);
     });
   }
 
-  Future<void> startOrStopTimer() async {
-    final now = nowToMinute();
+  Future<bool> startOrStopTimer() => _runAction(() => _startOrStopTimerBody());
+
+  Future<bool> _startOrStopTimerBody() async {
+    if (!await _ensureCurrentDay()) return false;
+    final ctx = _beginAction();
+    final now = roundToMinute(_now());
     WorkEntryEntity updatedEntry;
 
     if (state.workEntry.workStart == null) {
@@ -343,8 +641,9 @@ class DashboardViewModel extends Notifier<DashboardState> {
       updatedEntry = state.workEntry.copyWith(workStart: now);
       logger.i('[Dashboard] Timer gestartet um $now');
     } else if (state.workEntry.workEnd == null) {
-      // STOP - Arbeit beenden
-      _timer?.cancel();
+      // STOP - Arbeit beenden. Der Timer wird erst in `_startTimerIfNeeded`
+      // nach dem erfolgreichen Setzen des States abgebrochen: scheitert der
+      // Saldo-Write, läuft er weiter (#402).
       updatedEntry = state.workEntry.copyWith(workEnd: now);
       logger.i('[Dashboard] Timer gestoppt um $now');
 
@@ -365,15 +664,60 @@ class DashboardViewModel extends Notifier<DashboardState> {
       // Diese Methode wird vom UI mit dem gewählten Modus aufgerufen
       logger.i(
           '[Dashboard] Arbeit bereits beendet - Benutzer muss Aktion wählen');
-      return; // UI zeigt Dialog an
+      return true; // UI zeigt Dialog an, nichts zu speichern
     }
 
-    await _recalculateStateAndSave(updatedEntry);
+    return _recalculateStateAndSave(updatedEntry, ctx: ctx);
+  }
+
+  /// Läuft im Dashboard gerade ein Timer (geladen, Start gesetzt, kein Ende)?
+  /// Während des Ladens `false` (der State ist dann nur ein Platzhalter).
+  bool get isTimerRunning => !state.isLoading && _isRunning(state.workEntry);
+
+  /// Stoppt und speichert einen laufenden Timer vor einem Profilwechsel (#388)
+  /// über den normalen Stop-Pfad ([startOrStopTimer]). Liefert `true`, wenn
+  /// danach nichts mehr läuft (gestoppt oder nie gelaufen), sonst `false`
+  /// (Eintrag- oder Saldo-Fehler, Profil nicht mehr [fromProfileId], Stop ohne
+  /// Wirkung; seit #412 verhindert auch ein Eintrag-Fehler den Wechsel).
+  /// Wechselt selbst nie das Profil.
+  Future<bool> stopRunningForSwitch(String fromProfileId) async {
+    // Nie auf dem Platzhalter arbeiten: laufenden Ladelauf abwarten.
+    final pending = _initRun;
+    if (state.isLoading && pending != null) await pending;
+    if (!ref.mounted) return false;
+
+    // Eine laufende Schreibaktion (Stop, Pause, Autosave-Wartezeit ...) zu Ende
+    // laufen lassen, statt parallel zu stoppen (#413). Danach **kein** `await`
+    // mehr bis `startOrStopTimer()`: dessen Wrapper setzt die Sperre synchron.
+    // Ein bereits beendeter Completer beendet die Schleife (sonst Endlosschleife
+    // über Microtasks, falls je einer stehen bliebe).
+    for (var done = _actionDone;
+        done != null && !done.isCompleted;
+        done = _actionDone) {
+      await done.future;
+      if (!ref.mounted) return false;
+    }
+
+    final active = ref.read(activeWorkProfileIdProvider) ??
+        WorkProfileEntity.defaultProfileId;
+    if (active != fromProfileId) return false;
+
+    if (!isTimerRunning) return true;
+
+    final ok = await startOrStopTimer();
+    if (!ok || !ref.mounted) return false;
+    // `startOrStopTimer` liefert auch `true`, ohne zu stoppen (z. B. wenn
+    // `_ensureCurrentDay` abbricht): Wirkung am State prüfen.
+    return !_isRunning(state.workEntry);
   }
 
   /// Startet eine komplett neue Session (Start, End und Pausen zurücksetzen)
-  Future<void> startNewSession() async {
-    final now = nowToMinute();
+  Future<bool> startNewSession() => _runAction(() => _startNewSessionBody());
+
+  Future<bool> _startNewSessionBody() async {
+    if (!await _ensureCurrentDay()) return false;
+    final ctx = _beginAction();
+    final now = roundToMinute(_now());
     final updatedEntry = WorkEntryEntity(
       id: state.workEntry.id,
       date: state.workEntry.date,
@@ -387,12 +731,17 @@ class DashboardViewModel extends Notifier<DashboardState> {
     );
     logger.i(
         '[Dashboard] Komplett neue Session gestartet um $now (Start, End, Pausen zurückgesetzt)');
-    await _recalculateStateAndSave(updatedEntry);
+    return _recalculateStateAndSave(updatedEntry, ctx: ctx);
   }
 
   /// Neue Session mit Pausen behalten (nur Start und Endzeit zurücksetzen)
-  Future<void> startNewSessionKeepBreaks() async {
-    final now = nowToMinute();
+  Future<bool> startNewSessionKeepBreaks() =>
+      _runAction(() => _startNewSessionKeepBreaksBody());
+
+  Future<bool> _startNewSessionKeepBreaksBody() async {
+    if (!await _ensureCurrentDay()) return false;
+    final ctx = _beginAction();
+    final now = roundToMinute(_now());
     final updatedEntry = WorkEntryEntity(
       id: state.workEntry.id,
       date: state.workEntry.date,
@@ -405,14 +754,41 @@ class DashboardViewModel extends Notifier<DashboardState> {
       type: state.workEntry.type,
     );
     logger.i('[Dashboard] Neue Session gestartet um $now (Pausen behalten)');
-    await _recalculateStateAndSave(updatedEntry);
+    return _recalculateStateAndSave(updatedEntry, ctx: ctx);
   }
 
-  Future<void> _recalculateStateAndSave(WorkEntryEntity updatedEntry,
-      {bool save = true}) async {
+  /// Berechnet den State neu und speichert.
+  ///
+  /// Reihenfolge bei Aktionen mit Saldo-Block (nach der Aktion sind Start und
+  /// Ende gesetzt): **Eintrag -> Saldo -> State -> Timer -> ggf. Reinit** (#412).
+  /// Nur der Eintrag ist rückrollbar (der Saldo-Write setzt `lastUpdated`), der
+  /// nicht rückrollbare Schritt kommt ans Ende. Scheitert der Eintrag-Write
+  /// (auch per Timeout), ist nichts geschrieben; scheitert der Saldo, wird der
+  /// Eintrag best-effort auf [_ActionCtx.before] zurückgeschrieben
+  /// ([_compensateEntry]). Aktionen ohne Saldo-Block bleiben optimistisch:
+  /// State zuerst, Eintrag-Fehler geschluckt (#336), der Autosave heilt.
+  ///
+  /// Mit `save: true` ist [ctx] Pflicht: alle Writes laufen über die dort
+  /// festgehaltenen Objekte, also im Profil des Aktionsbeginns. Wurde die
+  /// Aktion in der Zwischenzeit überholt (Profilwechsel, Dispose), werden die
+  /// Writes trotzdem vollständig ausgeführt; nur State, Timer und Reinit
+  /// entfallen (#388).
+  ///
+  /// Ergebnis: `false`, wenn bei einer Aktion mit Saldo-Block der Eintrag oder
+  /// der Saldo nicht gespeichert werden konnte (dann ist nichts zurückgeblieben,
+  /// State und Timer sind unverändert, #402/#412), sonst `true`. Bei Aktionen
+  /// ohne Saldo-Block bleibt ein Eintrag-Write-Fehler geschluckt (#336).
+  Future<bool> _recalculateStateAndSave(WorkEntryEntity updatedEntry,
+      {bool save = true, _ActionCtx? ctx}) async {
+    assert(!save || ctx != null, 'save: true braucht den Aktionskontext');
+    bool overtaken() => !ref.mounted || (ctx != null && ctx.gen != _initGen);
     Duration? newActualWorkDuration;
     Duration? newTotalOvertime = state.totalOvertime;
     Duration? dailyOvertime;
+    bool? isExtraDay;
+    var saved = false;
+    // Eintrag schon im Saldo-Zweig geschrieben (Eintrag vor Saldo, #412).
+    var entryWritten = false;
 
     Duration? newGrossWorkDuration;
     if (updatedEntry.workStart != null && updatedEntry.workEnd != null) {
@@ -429,7 +805,8 @@ class DashboardViewModel extends Notifier<DashboardState> {
           updatedEntry.workEnd!.difference(updatedEntry.workStart!) -
               breakDuration;
 
-      final targetDailyHours = _getEffectiveTargetDailyHours();
+      final targetDailyHours = _getEffectiveTargetDailyHours(updatedEntry.date);
+      isExtraDay = targetDailyHours == Duration.zero;
       dailyOvertime = newActualWorkDuration - targetDailyHours;
 
       // Total = Base + Daily
@@ -440,10 +817,55 @@ class DashboardViewModel extends Notifier<DashboardState> {
         logger.i(
             '[Dashboard] Speichere Overtime: Base=$base, Daily=$dailyOvertime, NewTotal=$newTotalOvertime');
 
-        final overtimeRepository = ref.read(overtimeRepositoryProvider);
-        await overtimeRepository.saveOvertime(newTotalOvertime);
-        await overtimeRepository.saveLastUpdateDate(DateTime.now());
-        await _checkOvertimeWarning(newTotalOvertime);
+        final actionCtx = ctx!;
+        // 1. Eintrag (rückrollbar). Fehler/Timeout: nichts geschrieben, State
+        // und Timer bleiben, `false` (auch bei überholter Aktion; nichts wird
+        // weitergeworfen). Nur `runtimeType` loggen, keine Eintragsinhalte.
+        try {
+          await actionCtx.saveWorkEntry
+              .call(updatedEntry)
+              .timeout(_writeTimeout);
+          entryWritten = true;
+          logger.i('[Dashboard] WorkEntry erfolgreich gespeichert');
+        } catch (e, st) {
+          logger.e(
+              '[Dashboard] Eintrag nicht gespeichert (${e.runtimeType})'
+              '${overtaken() ? ', Aktion überholt' : ''}',
+              stackTrace: st);
+          return false;
+        }
+
+        // 2. Saldo.
+        final saldo = newTotalOvertime;
+        // Nach einem Timeout läuft die Schließung weiter: sie darf
+        // lastUpdate/Warnung nicht mehr nachholen (ein bereits gesendeter
+        // saveOvertime ist nicht abbrechbar, Wiederholen ist idempotent).
+        var timedOut = false;
+        Future<void> writeSaldo() async {
+          await actionCtx.overtimeRepository.saveOvertime(saldo);
+          if (timedOut) return;
+          await actionCtx.overtimeRepository
+              .saveLastUpdateDate(actionCtx.now());
+          if (timedOut) return;
+          await _checkOvertimeWarning(saldo, actionCtx.settingsRepository);
+        }
+
+        try {
+          await writeSaldo().timeout(_writeTimeout);
+        } catch (e, st) {
+          timedOut = true;
+          // Vor dem State-Update und vor jedem Timer-Eingriff: State, Timer und
+          // Eintrag bleiben unverändert, nichts wird weitergeworfen (sonst
+          // landet es als fatal in Crashlytics, #402). Der Saldo ist absolut,
+          // ein Wiederholen ist idempotent. Nur loggen, keine Eintragsinhalte.
+          logger.e(
+              '[Dashboard] Saldo nicht gespeichert (${e.runtimeType})'
+              '${overtaken() ? ', Aktion überholt' : ''}',
+              stackTrace: st);
+          await _compensateEntry(actionCtx);
+          return false;
+        }
+        saved = true;
       }
     } else {
       newActualWorkDuration = null;
@@ -458,20 +880,25 @@ class DashboardViewModel extends Notifier<DashboardState> {
       // Wenn gestartet: dailyOvertime wird im Timer Loop berechnet.
     }
 
-    state = state.copyWith(
-      workEntry: updatedEntry,
-      actualWorkDuration: newActualWorkDuration,
-      grossWorkDuration: newGrossWorkDuration,
-      totalOvertime: newTotalOvertime,
-      dailyOvertime: dailyOvertime,
-    );
+    // Überholt (anderes Profil oder disposed): der State gehört nicht mehr zu
+    // dieser Aktion, der Eintrag-Write unten läuft trotzdem zu Ende.
+    if (!save || !overtaken()) {
+      state = state.copyWith(
+        workEntry: updatedEntry,
+        actualWorkDuration: newActualWorkDuration,
+        grossWorkDuration: newGrossWorkDuration,
+        totalOvertime: newTotalOvertime,
+        dailyOvertime: dailyOvertime,
+        isExtraDay: isExtraDay,
+      );
+    }
 
-    if (save) {
+    if (save && !entryWritten) {
       logger.i(
           '[Dashboard] Speichere WorkEntry: ${updatedEntry.id}, Start: ${updatedEntry.workStart}, End: ${updatedEntry.workEnd}');
-      final saveWorkEntry = ref.read(saveWorkEntryUseCaseProvider);
       try {
-        await saveWorkEntry.call(updatedEntry);
+        await ctx!.saveWorkEntry.call(updatedEntry).timeout(_writeTimeout);
+        saved = true;
         logger.i('[Dashboard] WorkEntry erfolgreich gespeichert');
       } catch (e, st) {
         // Transiente Fehler (z. B. Netzwerkabbruch beim Abruf des ID-Tokens)
@@ -482,17 +909,50 @@ class DashboardViewModel extends Notifier<DashboardState> {
             stackTrace: st);
       }
     }
+    if (overtaken()) return true;
     _startTimerIfNeeded();
+
+    // Stop (bzw. Bearbeitung) eines über Mitternacht gelaufenen Vortags:
+    // danach auf den aktuellen Tag umschalten (der Eintrag selbst bleibt am
+    // Starttag gespeichert).
+    if (saved &&
+        updatedEntry.workEnd != null &&
+        _dayOf(updatedEntry.date) != _dayOf(_now())) {
+      // refresh() zieht todayProvider nach (Standby) und startet über den
+      // Listener bereits den Reinit; sonst starten wir ihn selbst.
+      final gen = _initGen;
+      ref.read(todayProvider.notifier).refresh();
+      if (gen == _initGen) {
+        await _init(dayChange: true);
+      } else {
+        await _initRun;
+      }
+    }
+    return true;
+  }
+
+  /// Schreibt den Eintrag vor der Aktion ([_ActionCtx.before]) zurück, nachdem
+  /// der Saldo nicht gespeichert werden konnte (#412). Best-effort: ein Fehler
+  /// oder Timeout wird nur geloggt (`runtimeType`, keine Inhalte), nie
+  /// weitergeworfen. Fasst `lastUpdated` nie an und läuft über die `ctx`-Objekte
+  /// auch bei überholter Aktion im Profil des Aktionsbeginns zu Ende.
+  Future<void> _compensateEntry(_ActionCtx ctx) async {
+    try {
+      await ctx.saveWorkEntry.call(ctx.before).timeout(_writeTimeout);
+    } catch (e) {
+      logger.e(
+          '[Dashboard] Eintrag-Kompensation fehlgeschlagen (${e.runtimeType})');
+    }
   }
 
   /// Prüft nach jedem Speichern des Gleitzeitsaldos, ob ein konfigurierter
   /// Über-/Minusstunden-Schwellwert erreicht ist, und löst ggf. eine
   /// Benachrichtigung aus (siehe #219).
-  Future<void> _checkOvertimeWarning(Duration totalOvertime) async {
+  Future<void> _checkOvertimeWarning(
+      Duration totalOvertime, SettingsRepository settingsRepository) async {
     // Eine fehlschlagende Warnprüfung darf niemals das eigentliche Speichern
     // der Arbeitszeit gefährden - daher komplett defensiv.
     try {
-      final settingsRepository = ref.read(settingsRepositoryProvider);
       final warningType = checkOvertimeWarning(
         totalOvertime: totalOvertime,
         warnOnOvertime: settingsRepository.getWarnOnOvertimeThreshold(),
@@ -515,8 +975,13 @@ class DashboardViewModel extends Notifier<DashboardState> {
     }
   }
 
-  Future<void> setManualStartTime(TimeOfDay time) async {
-    final oldDate = state.workEntry.workStart ?? DateTime.now();
+  Future<bool> setManualStartTime(TimeOfDay time) =>
+      _runAction(() => _setManualStartTimeBody(time));
+
+  Future<bool> _setManualStartTimeBody(TimeOfDay time) async {
+    if (!await _ensureCurrentDay()) return false;
+    final ctx = _beginAction();
+    final oldDate = state.workEntry.workStart ?? state.workEntry.date;
     final newStart = DateTime(
         oldDate.year, oldDate.month, oldDate.day, time.hour, time.minute);
     var updatedEntry = state.workEntry.copyWith(workStart: newStart);
@@ -539,13 +1004,20 @@ class DashboardViewModel extends Notifier<DashboardState> {
           '[Dashboard] Automatische Pausen berechnet: ${updatedEntry.breaks.length} Pausen');
     }
 
-    await _recalculateStateAndSave(updatedEntry);
-    logger.i('[Dashboard] Startzeit gespeichert');
+    final ok = await _recalculateStateAndSave(updatedEntry, ctx: ctx);
+    if (ok) logger.i('[Dashboard] Startzeit gespeichert');
+    return ok;
   }
 
-  Future<void> setManualEndTime(TimeOfDay time) async {
-    final oldDate =
-        state.workEntry.workEnd ?? state.workEntry.workStart ?? DateTime.now();
+  Future<bool> setManualEndTime(TimeOfDay time) =>
+      _runAction(() => _setManualEndTimeBody(time));
+
+  Future<bool> _setManualEndTimeBody(TimeOfDay time) async {
+    if (!await _ensureCurrentDay()) return false;
+    final ctx = _beginAction();
+    final oldDate = state.workEntry.workEnd ??
+        state.workEntry.workStart ??
+        state.workEntry.date;
     final newEnd = DateTime(
         oldDate.year, oldDate.month, oldDate.day, time.hour, time.minute);
     var updatedEntry = state.workEntry.copyWith(workEnd: newEnd);
@@ -568,11 +1040,16 @@ class DashboardViewModel extends Notifier<DashboardState> {
           '[Dashboard] Automatische Pausen berechnet: ${updatedEntry.breaks.length} Pausen');
     }
 
-    await _recalculateStateAndSave(updatedEntry);
-    logger.i('[Dashboard] Endzeit gespeichert');
+    final ok = await _recalculateStateAndSave(updatedEntry, ctx: ctx);
+    if (ok) logger.i('[Dashboard] Endzeit gespeichert');
+    return ok;
   }
 
-  Future<void> clearEndTime() async {
+  Future<bool> clearEndTime() => _runAction(() => _clearEndTimeBody());
+
+  Future<bool> _clearEndTimeBody() async {
+    if (!await _ensureCurrentDay()) return false;
+    final ctx = _beginAction();
     logger.i('[Dashboard] Entferne Endzeit...');
 
     // Manuelles Kopieren, da copyWith null-Werte ignoriert
@@ -588,29 +1065,44 @@ class DashboardViewModel extends Notifier<DashboardState> {
       type: state.workEntry.type,
     );
 
-    await _recalculateStateAndSave(updatedEntry);
-    logger.i('[Dashboard] Endzeit entfernt');
+    final ok = await _recalculateStateAndSave(updatedEntry, ctx: ctx);
+    if (ok) logger.i('[Dashboard] Endzeit entfernt');
+    return ok;
   }
 
-  Future<void> startOrStopBreak() async {
+  Future<bool> startOrStopBreak() => _runAction(() => _startOrStopBreakBody());
+
+  Future<bool> _startOrStopBreakBody() async {
+    if (!await _ensureCurrentDay()) return false;
+    final ctx = _beginAction();
     final toggleBreak = ref.read(toggleBreakUseCaseProvider);
     final updatedEntry = await toggleBreak.call(state.workEntry);
-    await _recalculateStateAndSave(updatedEntry);
+    return _recalculateStateAndSave(updatedEntry, ctx: ctx);
   }
 
-  Future<void> deleteBreak(String breakId) async {
+  Future<bool> deleteBreak(String breakId) =>
+      _runAction(() => _deleteBreakBody(breakId));
+
+  Future<bool> _deleteBreakBody(String breakId) async {
+    if (!await _ensureCurrentDay()) return false;
+    final ctx = _beginAction();
     final updatedBreaks =
         state.workEntry.breaks.where((b) => b.id != breakId).toList();
     final updatedEntry = state.workEntry.copyWith(breaks: updatedBreaks);
-    await _recalculateStateAndSave(updatedEntry);
+    return _recalculateStateAndSave(updatedEntry, ctx: ctx);
   }
 
-  Future<void> updateBreak(BreakEntity breakEntity) async {
+  Future<bool> updateBreak(BreakEntity breakEntity) =>
+      _runAction(() => _updateBreakBody(breakEntity));
+
+  Future<bool> _updateBreakBody(BreakEntity breakEntity) async {
+    if (!await _ensureCurrentDay()) return false;
+    final ctx = _beginAction();
     final updatedBreaks = state.workEntry.breaks.map((b) {
       return b.id == breakEntity.id ? breakEntity : b;
     }).toList();
     final updatedEntry = state.workEntry.copyWith(breaks: updatedBreaks);
-    await _recalculateStateAndSave(updatedEntry);
+    return _recalculateStateAndSave(updatedEntry, ctx: ctx);
   }
 }
 

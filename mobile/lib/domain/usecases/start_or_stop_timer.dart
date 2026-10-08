@@ -6,8 +6,10 @@ import '../repositories/work_repository.dart';
 /// Use Case, der die Logik zum Starten oder Stoppen des Haupt-Timers kapselt.
 class StartOrStopTimer {
   final WorkRepository _repository;
+  final DateTime Function() _clock;
 
-  StartOrStopTimer(this._repository);
+  StartOrStopTimer(this._repository, {DateTime Function() clock = DateTime.now})
+      : _clock = clock;
 
   /// Führt die Logik aus und gibt die aktualisierte Entity zurück.
   /// Nimmt die aktuelle Entity als Parameter, um den Zustand zu ändern.
@@ -16,10 +18,10 @@ class StartOrStopTimer {
 
     if (currentEntry.workStart == null) {
       // Fall 1: Timer wurde noch nicht gestartet. -> STARTEN
-      updatedEntry = currentEntry.copyWith(workStart: nowToMinute());
+      updatedEntry = currentEntry.copyWith(workStart: roundToMinute(_clock()));
     } else if (currentEntry.workEnd == null) {
       // Fall 2: Timer läuft, aber wurde noch nicht gestoppt. -> STOPPEN
-      updatedEntry = currentEntry.copyWith(workEnd: nowToMinute());
+      updatedEntry = currentEntry.copyWith(workEnd: roundToMinute(_clock()));
     } else {
       // Fall 3: Timer wurde bereits gestoppt. Nichts tun.
       return currentEntry;

@@ -1,7 +1,18 @@
 # Release-Namen
  
-Jedes Release im geschlossenen Test (Play-Track `<Version> <Charakter>`) trägt den Namen
-`<Version> <Charakter>` — der Charakter stammt aus Kingdom Hearts.
+Jedes Release im geschlossenen Test trägt den Namen `<Version> <Charakter>` — der Charakter
+stammt aus Kingdom Hearts.
+
+**Ab 1.6 gilt ein Charakter pro Minor-Linie:** Alle Releases von `1.6.x` (1.6.0, 1.6.1, ...)
+tragen denselben Charakter, die nächste Linie `1.7.x` bekommt einen neuen. Der Play-Track
+heißt dann `<Major>.<Minor> <Charakter>` (z. B. `1.6 Saix`) und wird nur einmal pro Linie
+angelegt; der Release-Name behält die volle Version (`1.6.1 Saix`). Für `1.6.x` ist **Saix**
+vorgesehen. Bis einschließlich 1.5.x bekam jede Version einen eigenen Charakter und einen
+Track `<Version> <Charakter>`.
+
+**Versionsregel ab 1.6:** `x.y.0` bringt neue Funktionen. Jede Patch-Version (`x.y.1`, `x.y.2`, ...)
+enthält nur Bugfixes und Hotfixes; auch ein späterer Hotfix erhöht nur die Patch-Version und
+behält den Charakter der Linie. Neue Funktionen kommen erst mit der nächsten Minor-Version.
  
 ## Wie ein Name vergeben wird
  
@@ -10,6 +21,8 @@ Der Charakter kommt aus dem Namen des Release-Branches:
 ```
 release/v1.3.2-Vanitas        ->  Release- und Track-Name "1.3.2 Vanitas"
 release/v1.4.0-Micky-Maus     ->  Release- und Track-Name "1.4.0 Micky Maus"
+release/v1.6.0-Saix           ->  Release-Name "1.6.0 Saix", Track "1.6 Saix"
+release/v1.6.1-Saix           ->  Release-Name "1.6.1 Saix", Track "1.6 Saix" (derselbe)
 ```
  
 Alles vor dem ersten `-` ist die Version, alles danach der Charakter;
@@ -17,19 +30,24 @@ Bindestriche im Charakternamen werden zu Leerzeichen.
  
 `version-bump.yml` prüft beim Push auf den Release-Branch, ob der Charakter
 unter „Noch frei" steht, verschiebt ihn nach „Vergeben" und committet das
-zusammen mit der Versionsnummer. `flutter-production.yml` liest den Namen
-später aus der Tabelle unten und übergibt ihn beim Play-Upload als `track` und
-`releaseName` — der Branch-Name ist zu diesem Zeitpunkt nicht mehr verfügbar,
-weil der Workflow auf `main` läuft.
+zusammen mit der Versionsnummer. Gibt es für die Minor-Linie (ab 1.6) schon einen
+Eintrag, muss der Branch denselben Charakter tragen; die Frei-Liste bleibt dann
+unverändert, es kommt nur eine neue Zeile für die Version dazu.
+
+`flutter-production.yml` liest den Namen später aus der Tabelle unten und übergibt ihn
+beim Play-Upload als `releaseName` (`<Version> <Charakter>`) und als `track` (bis 1.5.x
+ebenfalls `<Version> <Charakter>`, ab 1.6 `<Major>.<Minor> <Charakter>`) — der Branch-Name
+ist zu diesem Zeitpunkt nicht mehr verfügbar, weil der Workflow auf `main` läuft.
  
-> **Wichtig:** Der geschlossene Test-Track mit dem Namen `<Version> <Charakter>`
-> (z. B. `1.3.2 Vanitas`) muss vorab in der Google Play Console unter
+> **Wichtig:** Der geschlossene Test-Track (bis 1.5.x `<Version> <Charakter>`, z. B.
+> `1.3.2 Vanitas`; ab 1.6 `<Major>.<Minor> <Charakter>`, z. B. `1.6 Saix`, nur einmal pro
+> Linie) muss vorab in der Google Play Console unter
 > *Testen > Geschlossene Tests* erstellt und mit Testern verknüpft sein!
 > Die Play Developer API kann keine neuen Tracks anlegen — das ist nur
 > manuell in der Console möglich.
 
-Steht der Charakter nicht in der Frei-Liste, bricht der Bump mit einer
-Fehlermeldung ab. Namen werden also nie doppelt vergeben.
+Steht der Charakter nicht in der Frei-Liste oder passt er nicht zur Linie, bricht der
+Bump mit einer Fehlermeldung ab. Namen werden also nie doppelt vergeben.
 
 Vor dem Mergen des Release-Branches nach `main` außerdem
 `mobile/whatsnew/de-DE.txt` mit den Versionshinweisen für dieses Release
@@ -40,6 +58,7 @@ lädt den Inhalt beim Play-Upload automatisch als Änderungsprotokoll mit hoch.
 
 | Version | Charakter | Datum |
 | --- | --- | --- |
+| 1.6.0 | Saix | 2026-10-08 |
 | 1.5.2 | Xaldin | 2026-10-01 |
 | 1.5.1 | Xigbar | 2026-10-01 |
 | 1.5.0 | Lexaeus | 2026-09-30 |
@@ -82,7 +101,6 @@ Einige Einträge sind alternative Identitäten derselben Figur (Lea/Axel,
 Isa/Saix). Ist eine Variante vergeben, sollte die andere nicht mehr
 verwendet werden, auch wenn die Prüfung sie formal durchlässt.
 
-- Saix
 - Isa
 - Lea
 - Eraqus

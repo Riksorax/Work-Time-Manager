@@ -6,7 +6,7 @@
 import 'dart:async' as _i5;
 
 import 'package:flutter_work_time/domain/entities/app_theme_mode.dart' as _i8;
-import 'package:flutter_work_time/domain/entities/bundesland.dart' as _i11;
+import 'package:flutter_work_time/domain/entities/bundesland.dart' as _i10;
 import 'package:flutter_work_time/domain/entities/work_entry_entity.dart'
     as _i2;
 import 'package:flutter_work_time/domain/repositories/overtime_repository.dart'
@@ -17,7 +17,7 @@ import 'package:flutter_work_time/domain/usecases/get_today_work_entry.dart'
     as _i4;
 import 'package:flutter_work_time/domain/usecases/overtime_usecases.dart'
     as _i6;
-import 'package:flutter_work_time/domain/usecases/save_work_entry.dart' as _i10;
+import 'package:flutter_work_time/domain/usecases/save_work_entry.dart' as _i11;
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i9;
 
@@ -354,15 +354,7 @@ class MockSettingsRepository extends _i1.Mock
       ) as _i5.Future<void>);
 
   @override
-  _i11.Bundesland? getBundesland() => (super.noSuchMethod(
-        Invocation.method(
-          #getBundesland,
-          [],
-        ),
-      ) as _i11.Bundesland?);
-
-  @override
-  _i5.Future<void> setBundesland(_i11.Bundesland? bundesland) =>
+  _i5.Future<void> setBundesland(_i10.Bundesland? bundesland) =>
       (super.noSuchMethod(
         Invocation.method(
           #setBundesland,
@@ -372,10 +364,6 @@ class MockSettingsRepository extends _i1.Mock
         returnValueForMissingStub: _i5.Future<void>.value(),
       ) as _i5.Future<void>);
 
-  // Manuell ergänzt (siehe #219 / SettingsRepository) - Flutter-SDK war in
-  // der Umgebung, in der diese Änderung entstand, nicht verfügbar, um
-  // `dart run build_runner build` auszuführen. Entspricht exakt dem Muster,
-  // das der Generator für die anderen bool-/double-Getter/-Setter erzeugt.
   @override
   bool getWarnOnOvertimeThreshold() => (super.noSuchMethod(
         Invocation.method(
@@ -456,17 +444,13 @@ class MockSettingsRepository extends _i1.Mock
         returnValueForMissingStub: _i5.Future<void>.value(),
       ) as _i5.Future<void>);
 
-  // Manuell ergänzt (siehe #218 / SettingsRepository) - Flutter-SDK war in
-  // der Umgebung, in der diese Änderung entstand, nicht verfügbar, um
-  // `dart run build_runner build` auszuführen. Entspricht exakt dem Muster,
-  // das der Generator für die anderen bool-Getter/-Setter erzeugt.
   @override
   bool getUse24HourFormat() => (super.noSuchMethod(
         Invocation.method(
           #getUse24HourFormat,
           [],
         ),
-        returnValue: true,
+        returnValue: false,
       ) as bool);
 
   @override
@@ -478,12 +462,66 @@ class MockSettingsRepository extends _i1.Mock
         returnValue: _i5.Future<void>.value(),
         returnValueForMissingStub: _i5.Future<void>.value(),
       ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> setTimezoneOverride(String? timezone) => (super.noSuchMethod(
+        Invocation.method(
+          #setTimezoneOverride,
+          [timezone],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  String getLocale() => (super.noSuchMethod(
+        Invocation.method(
+          #getLocale,
+          [],
+        ),
+        returnValue: _i9.dummyValue<String>(
+          this,
+          Invocation.method(
+            #getLocale,
+            [],
+          ),
+        ),
+      ) as String);
+
+  @override
+  _i5.Future<void> setLocale(String? locale) => (super.noSuchMethod(
+        Invocation.method(
+          #setLocale,
+          [locale],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  int getVacationDaysPerYear() => (super.noSuchMethod(
+        Invocation.method(
+          #getVacationDaysPerYear,
+          [],
+        ),
+        returnValue: 0,
+      ) as int);
+
+  @override
+  _i5.Future<void> setVacationDaysPerYear(int? days) => (super.noSuchMethod(
+        Invocation.method(
+          #setVacationDaysPerYear,
+          [days],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 }
 
 /// A class which mocks [SaveWorkEntry].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockSaveWorkEntry extends _i1.Mock implements _i10.SaveWorkEntry {
+class MockSaveWorkEntry extends _i1.Mock implements _i11.SaveWorkEntry {
   MockSaveWorkEntry() {
     _i1.throwOnMissingStub(this);
   }
@@ -524,10 +562,15 @@ class MockOvertimeRepository extends _i1.Mock
       ) as Duration);
 
   @override
-  _i5.Future<void> saveOvertime(Duration? overtime) => (super.noSuchMethod(
+  _i5.Future<void> saveOvertime(
+    Duration? overtime, {
+    bool? keepLastUpdated = false,
+  }) =>
+      (super.noSuchMethod(
         Invocation.method(
           #saveOvertime,
           [overtime],
+          {#keepLastUpdated: keepLastUpdated},
         ),
         returnValue: _i5.Future<void>.value(),
         returnValueForMissingStub: _i5.Future<void>.value(),

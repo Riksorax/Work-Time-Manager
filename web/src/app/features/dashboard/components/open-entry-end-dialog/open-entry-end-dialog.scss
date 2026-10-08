@@ -1,0 +1,44 @@
+.end-body {
+  margin: 0 0 12px;
+}
+
+.suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 8px;
+
+  mat-form-field {
+    width: 100%;
+  }
+}
+
+.end-hint,
+.end-error,
+.end-warning {
+  margin: 0 0 8px;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.end-error,
+.end-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.end-error {
+  color: var(--mat-sys-error);
+}
+
+.end-warning {
+  color: var(--mat-sys-on-surface);
+}

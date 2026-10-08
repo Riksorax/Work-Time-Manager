@@ -25,6 +25,8 @@ public class EndpointAuthTests : IClassFixture<WebApplicationFactory<Program>>
     [InlineData("/api/reports/daily/2026/6/5")]
     [InlineData("/api/reports/weekly/2026/6/5")]
     [InlineData("/api/reports/monthly/2026/6")]
+    [InlineData("/api/reports/yearly/2026")]
+    [InlineData("/api/reports/yearly/2026?profileId=abc")]
     public async Task Get_WithoutToken_ReturnsUnauthorized(string url)
     {
         var response = await _client.GetAsync(url);

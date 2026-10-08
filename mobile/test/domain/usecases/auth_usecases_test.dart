@@ -3,6 +3,7 @@ import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:flutter_work_time/domain/repositories/auth_repository.dart';
 import 'package:flutter_work_time/domain/usecases/delete_account.dart';
+import 'package:flutter_work_time/domain/usecases/reauthenticate.dart';
 import 'package:flutter_work_time/domain/usecases/sign_in_with_google.dart';
 import 'package:flutter_work_time/domain/usecases/sign_out.dart';
 
@@ -14,12 +15,14 @@ void main() {
   late SignInWithGoogle signInWithGoogle;
   late SignOut signOut;
   late DeleteAccount deleteAccount;
+  late Reauthenticate reauthenticate;
 
   setUp(() {
     mockAuthRepository = MockAuthRepository();
     signInWithGoogle = SignInWithGoogle(mockAuthRepository);
     signOut = SignOut(mockAuthRepository);
     deleteAccount = DeleteAccount(mockAuthRepository);
+    reauthenticate = Reauthenticate(mockAuthRepository);
   });
 
   group('AuthUseCases', () {
@@ -45,6 +48,14 @@ void main() {
       await deleteAccount();
 
       verify(mockAuthRepository.deleteAccount()).called(1);
+    });
+
+    test('Reauthenticate reicht true/false des Repositories durch', () async {
+      when(mockAuthRepository.reauthenticate()).thenAnswer((_) async => true);
+      expect(await reauthenticate(), isTrue);
+      when(mockAuthRepository.reauthenticate()).thenAnswer((_) async => false);
+      expect(await reauthenticate(), isFalse);
+      verify(mockAuthRepository.reauthenticate()).called(2);
     });
   });
 }

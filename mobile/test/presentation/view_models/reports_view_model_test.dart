@@ -1,15 +1,26 @@
+import 'dart:async';
+
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
+import 'package:flutter_work_time/core/providers/clock_provider.dart';
 import 'package:flutter_work_time/core/providers/providers.dart';
+import 'package:flutter_work_time/core/providers/today_provider.dart';
 import 'package:flutter_work_time/data/datasources/remote/api_client.dart';
 import 'package:flutter_work_time/domain/entities/work_entry_entity.dart';
 import 'package:flutter_work_time/domain/repositories/settings_repository.dart';
 import 'package:flutter_work_time/domain/repositories/work_repository.dart';
+import 'package:flutter_work_time/domain/utils/date_utils.dart';
+import 'package:flutter_work_time/domain/utils/iso_week.dart';
+import 'package:flutter_work_time/presentation/state/leave_balance_state.dart';
+import 'package:flutter_work_time/presentation/state/reports_state.dart';
+import 'package:flutter_work_time/presentation/view_models/leave_balance_view_model.dart';
 import 'package:flutter_work_time/presentation/view_models/reports_view_model.dart';
 
+import '../../support/fake_clock.dart';
 import 'reports_view_model_test.mocks.dart';
 
 /// Liefert im Test ein festes aktives Arbeitszeit-Profil, ohne den echten
@@ -21,8 +32,33 @@ class _FixedActiveWorkProfileIdNotifier extends ActiveWorkProfileIdNotifier {
   String? build() => _value;
 }
 
+/// Feste Uhr für alle Tests (Fr 2026-10-02, kein DateTime.now(), #387).
+final _fixedNow = DateTime(2026, 10, 2, 12);
+
+/// Zählt `build()`-Läufe, um einen Neuaufbau durch `todayProvider` zu erkennen.
+class _CountingReportsViewModel extends ReportsViewModel {
+  static int builds = 0;
+  @override
+  ReportsState build() {
+    builds++;
+    return super.build();
+  }
+}
+
+class _CountingLeaveViewModel extends LeaveBalanceViewModel {
+  static int builds = 0;
+  @override
+  LeaveBalanceState build() {
+    builds++;
+    return const LeaveBalanceState();
+  }
+}
+
 @GenerateMocks([WorkRepository, SettingsRepository, ApiClient])
 void main() {
+  // todayProvider registriert einen WidgetsBindingObserver.
+  setUpAll(TestWidgetsFlutterBinding.ensureInitialized);
+
   late MockWorkRepository mockWorkRepository;
   late MockSettingsRepository mockSettingsRepository;
   late MockApiClient mockApiClient;
@@ -35,6 +71,7 @@ void main() {
     container.dispose();
     container = ProviderContainer(
       overrides: [
+        clockProvider.overrideWithValue(() => _fixedNow),
         workRepositoryProvider.overrideWithValue(mockWorkRepository),
         settingsRepositoryProvider.overrideWithValue(mockSettingsRepository),
         apiClientProvider.overrideWithValue(mockApiClient),
@@ -50,6 +87,7 @@ void main() {
     mockApiClient = MockApiClient();
     container = ProviderContainer(
       overrides: [
+        clockProvider.overrideWithValue(() => _fixedNow),
         workRepositoryProvider.overrideWithValue(mockWorkRepository),
         settingsRepositoryProvider.overrideWithValue(mockSettingsRepository),
       ],
@@ -60,7 +98,7 @@ void main() {
     when(mockSettingsRepository.getTargetWeeklyHours()).thenReturn(40.0);
 
     // Stub for initial load (current date)
-    final now = DateTime.now();
+    final now = _fixedNow;
     when(mockWorkRepository.getWorkEntriesForMonth(now.year, now.month))
         .thenAnswer((_) async => []);
   });
@@ -72,7 +110,7 @@ void main() {
   group('ReportsViewModel', () {
     test('initial state should be loading and then populated', () async {
       // Arrange
-      final now = DateTime.now();
+      final now = _fixedNow;
       when(mockWorkRepository.getWorkEntriesForMonth(now.year, now.month))
           .thenAnswer((_) async => []);
 
@@ -87,6 +125,71 @@ void main() {
       expect(state.selectedDay!.year, now.year);
       verify(mockWorkRepository.getWorkEntriesForMonth(now.year, now.month))
           .called(1);
+    });
+
+    group('selectDate normalisiert auf lokale Mitternacht (#362)', () {
+      for (final date in [
+        DateTime(2025, 10, 26, 23),
+        DateTime(2025, 3, 23, 23),
+      ]) {
+        test('$date', () async {
+          when(mockWorkRepository.getWorkEntriesForMonth(date.year, date.month))
+              .thenAnswer((_) async => []);
+          final viewModel = container.read(reportsViewModelProvider.notifier);
+          await Future.delayed(Duration.zero);
+          viewModel.selectDate(date);
+          await Future.delayed(Duration.zero);
+          expect(container.read(reportsViewModelProvider).selectedDay,
+              DateTime(date.year, date.month, date.day));
+        });
+      }
+    });
+
+    group('ISO-Kalenderwoche in monthlyReportState.weeklyWork (#352)', () {
+      WorkEntryEntity entryOn(int y, int m, int d) => WorkEntryEntity(
+            id: '$y-$m-$d',
+            date: DateTime(y, m, d),
+            workStart: DateTime(y, m, d, 8),
+            workEnd: DateTime(y, m, d, 16),
+          );
+
+      Future<Map<int, Duration>> weeklyWorkFor(
+          int year, int month, List<WorkEntryEntity> entries) async {
+        when(mockWorkRepository.getWorkEntriesForMonth(year, month))
+            .thenAnswer((_) async => entries);
+        final viewModel = container.read(reportsViewModelProvider.notifier);
+        await Future.delayed(Duration.zero);
+        viewModel.selectDate(DateTime(year, month, 15));
+        await Future.delayed(Duration.zero);
+        return container
+            .read(reportsViewModelProvider)
+            .monthlyReportState
+            .weeklyWork;
+      }
+
+      test('Montag 31.08.2026 (Sommerzeit) liegt in KW 36', () async {
+        final weekly = await weeklyWorkFor(2026, 8, [
+          entryOn(2026, 8, 28),
+          entryOn(2026, 8, 31),
+        ]);
+        expect(weekly.keys.toSet(), {35, 36});
+      });
+
+      test('Dezember 2025: 29.12. gehoert zu KW 1', () async {
+        final weekly = await weeklyWorkFor(2025, 12, [
+          entryOn(2025, 12, 22),
+          entryOn(2025, 12, 29),
+        ]);
+        expect(weekly.keys.toSet(), {52, 1});
+      });
+
+      test('Januar 2027: 01.01. gehoert zu KW 53, keine Woche 0', () async {
+        final weekly = await weeklyWorkFor(2027, 1, [
+          entryOn(2027, 1, 1),
+          entryOn(2027, 1, 4),
+        ]);
+        expect(weekly.keys.toSet(), {53, 1});
+      });
     });
 
     test('should calculate daily report correctly', () async {
@@ -302,7 +405,7 @@ void main() {
     group('Multi-Select Mode', () {
       test('toggleMultiSelectMode should toggle the mode and clear selection',
           () async {
-        final now = DateTime.now();
+        final now = _fixedNow;
         when(mockWorkRepository.getWorkEntriesForMonth(now.year, now.month))
             .thenAnswer((_) async => []);
 
@@ -320,15 +423,15 @@ void main() {
       });
 
       test('addDateToSelection should add past and future dates', () async {
-        final now = DateTime.now();
+        final now = _fixedNow;
         when(mockWorkRepository.getWorkEntriesForMonth(now.year, now.month))
             .thenAnswer((_) async => []);
 
         final viewModel = container.read(reportsViewModelProvider.notifier);
         await Future.delayed(Duration.zero);
 
-        final pastDate = DateTime.now().subtract(const Duration(days: 5));
-        final futureDate = DateTime.now().add(const Duration(days: 5));
+        final pastDate = _fixedNow.subtract(const Duration(days: 5));
+        final futureDate = _fixedNow.add(const Duration(days: 5));
 
         viewModel.addDateToSelection(pastDate);
         expect(viewModel.state.selectedDates.length, 1);
@@ -339,14 +442,14 @@ void main() {
       });
 
       test('toggleDateSelection should add/remove dates', () async {
-        final now = DateTime.now();
+        final now = _fixedNow;
         when(mockWorkRepository.getWorkEntriesForMonth(now.year, now.month))
             .thenAnswer((_) async => []);
 
         final viewModel = container.read(reportsViewModelProvider.notifier);
         await Future.delayed(Duration.zero);
 
-        final testDate = DateTime.now().subtract(const Duration(days: 3));
+        final testDate = _fixedNow.subtract(const Duration(days: 3));
 
         viewModel.toggleDateSelection(testDate);
         expect(viewModel.state.selectedDates,
@@ -357,15 +460,15 @@ void main() {
       });
 
       test('clearDateSelection should empty selected dates', () async {
-        final now = DateTime.now();
+        final now = _fixedNow;
         when(mockWorkRepository.getWorkEntriesForMonth(now.year, now.month))
             .thenAnswer((_) async => []);
 
         final viewModel = container.read(reportsViewModelProvider.notifier);
         await Future.delayed(Duration.zero);
 
-        final date1 = DateTime.now().subtract(const Duration(days: 1));
-        final date2 = DateTime.now().subtract(const Duration(days: 2));
+        final date1 = _fixedNow.subtract(const Duration(days: 1));
+        final date2 = _fixedNow.subtract(const Duration(days: 2));
 
         viewModel.addDateToSelection(date1);
         viewModel.addDateToSelection(date2);
@@ -377,7 +480,7 @@ void main() {
 
       test('saveBatchWorkEntries should create entries for all selected dates',
           () async {
-        final now = DateTime.now();
+        final now = _fixedNow;
         when(mockWorkRepository.getWorkEntriesForMonth(now.year, now.month))
             .thenAnswer((_) async => []);
 
@@ -387,9 +490,9 @@ void main() {
         await Future.delayed(Duration.zero);
 
         final dates = [
-          DateTime.now().subtract(const Duration(days: 3)),
-          DateTime.now().subtract(const Duration(days: 2)),
-          DateTime.now().subtract(const Duration(days: 1)),
+          _fixedNow.subtract(const Duration(days: 3)),
+          _fixedNow.subtract(const Duration(days: 2)),
+          _fixedNow.subtract(const Duration(days: 1)),
         ];
 
         viewModel.toggleMultiSelectMode();
@@ -417,7 +520,7 @@ void main() {
       test('Standard-Profil: Server-Reports werden ohne profileId angefragt',
           () async {
         rebuildContainerWithActiveProfile(null);
-        final now = DateTime.now();
+        final now = _fixedNow;
         when(mockWorkRepository.getWorkEntriesForMonth(now.year, now.month))
             .thenAnswer((_) async => []);
         when(mockApiClient.getDailyReport(now.year, now.month, now.day,
@@ -462,7 +565,7 @@ void main() {
           'zusätzliches Profil: Server-Reports werden mit dessen profileId angefragt',
           () async {
         rebuildContainerWithActiveProfile('p1');
-        final now = DateTime.now();
+        final now = _fixedNow;
         when(mockWorkRepository.getWorkEntriesForMonth(now.year, now.month))
             .thenAnswer((_) async => []);
         when(mockApiClient.getDailyReport(now.year, now.month, now.day,
@@ -502,6 +605,336 @@ void main() {
                 profileId: 'p1'))
             .called(1);
       });
+    });
+  });
+
+  group('Tageswechsel (#387)', () {
+    WorkEntryEntity entry(int y, int m, int d, {int hours = 8}) =>
+        WorkEntryEntity(
+          id: '$y-$m-$d',
+          date: DateTime(y, m, d),
+          workStart: DateTime(y, m, d, 8),
+          workEnd: DateTime(y, m, d, 8 + hours),
+        );
+
+    /// Fake-Uhr ab [start], Container in `fakeAsync`, `init()` abgeschlossen.
+    void scenario(
+      String name,
+      DateTime start,
+      void Function(FakeAsync async, ProviderContainer c, FakeClock clock,
+              ReportsViewModel vm, MockWorkRepository work)
+          body, {
+      List<WorkEntryEntity> entries = const [],
+    }) {
+      test(name, () {
+        fakeAsync((async) {
+          final clock = FakeClock(start)..bind(async);
+          final work = MockWorkRepository();
+          final settings = MockSettingsRepository();
+          when(settings.getWorkdays()).thenReturn([1, 2, 3, 4, 5]);
+          when(settings.getTargetWeeklyHours()).thenReturn(40.0);
+          when(work.getWorkEntriesForMonth(any, any)).thenAnswer((inv) async {
+            final y = inv.positionalArguments[0] as int;
+            final m = inv.positionalArguments[1] as int;
+            return entries
+                .where((e) => e.date.year == y && e.date.month == m)
+                .toList();
+          });
+          _CountingReportsViewModel.builds = 0;
+          final c = ProviderContainer(overrides: [
+            clockProvider.overrideWithValue(clock.call),
+            workRepositoryProvider.overrideWithValue(work),
+            settingsRepositoryProvider.overrideWithValue(settings),
+            reportsViewModelProvider
+                .overrideWith(_CountingReportsViewModel.new),
+          ]);
+          final vm = c.read(reportsViewModelProvider.notifier);
+          async.flushMicrotasks();
+          body(async, c, clock, vm, work);
+          c.dispose();
+          expect(async.pendingTimers, isEmpty);
+        });
+      });
+    }
+
+    ReportsState st(ProviderContainer c) => c.read(reportsViewModelProvider);
+
+    test('ReportsState.initial normalisiert auf lokale Mitternacht', () {
+      final s = ReportsState.initial(DateTime(2026, 10, 2, 23, 59, 30));
+      expect(s.selectedDay, DateTime(2026, 10, 2));
+      expect(s.focusedDay, DateTime(2026, 10, 2));
+      expect(s.selectedMonth, DateTime(2026, 10));
+      expect(s.isLoading, isTrue);
+    });
+
+    // A1
+    scenario('init(): selectedDay/Monat/focusedDay normalisiert aus der Uhr',
+        DateTime(2026, 10, 2, 23, 59, 30), (async, c, clock, vm, work) {
+      final s = st(c);
+      expect(s.selectedDay, DateTime(2026, 10, 2));
+      expect(s.selectedDay!.hour, 0);
+      expect(s.focusedDay, DateTime(2026, 10, 2));
+      expect(s.selectedMonth, DateTime(2026, 10));
+      expect(s.isLoading, isFalse);
+    });
+
+    // T1
+    scenario('T1 Auswahl auf heute folgt dem Tageswechsel, kein Monats-Reload',
+        DateTime(2026, 10, 2, 23, 59, 30), (async, c, clock, vm, work) {
+      expect(st(c).selectedDay, DateTime(2026, 10, 2));
+      async.elapse(const Duration(seconds: 30));
+      async.flushMicrotasks();
+      final s = st(c);
+      expect(s.selectedDay, DateTime(2026, 10, 3));
+      expect(s.focusedDay, DateTime(2026, 10, 3));
+      expect(s.selectedMonth, DateTime(2026, 10));
+      expect(s.isLoading, isFalse);
+      verify(work.getWorkEntriesForMonth(2026, 10)).called(1);
+    });
+
+    scenario('T1b Tagesbericht rechnet auf den neuen Tag',
+        DateTime(2026, 10, 2, 23, 59, 30), (async, c, clock, vm, work) {
+      expect(st(c).dailyReportState.entries.single.date, DateTime(2026, 10, 2));
+      async.elapse(const Duration(seconds: 30));
+      async.flushMicrotasks();
+      expect(st(c).dailyReportState.entries, isEmpty);
+    }, entries: [entry(2026, 10, 2)]);
+
+    // T2
+    scenario(
+        'T2 manuell gewaehlter Tag bleibt', DateTime(2026, 10, 2, 23, 59, 30),
+        (async, c, clock, vm, work) {
+      vm.selectDate(DateTime(2026, 10, 1));
+      async.flushMicrotasks();
+      async.elapse(const Duration(seconds: 30));
+      async.flushMicrotasks();
+      expect(st(c).selectedDay, DateTime(2026, 10, 1));
+      expect(st(c).selectedMonth, DateTime(2026, 10));
+    });
+
+    // T3
+    scenario('T3 Monatswechsel, Auswahl auf heute: Monat folgt und laedt neu',
+        DateTime(2026, 10, 31, 23, 59, 30), (async, c, clock, vm, work) {
+      verify(work.getWorkEntriesForMonth(2026, 10)).called(1);
+      async.elapse(const Duration(seconds: 30));
+      async.flushMicrotasks();
+      final s = st(c);
+      expect(s.selectedDay, DateTime(2026, 11, 1));
+      expect(s.selectedMonth, DateTime(2026, 11));
+      expect(s.isLoading, isFalse);
+      verify(work.getWorkEntriesForMonth(2026, 11)).called(1);
+      expect(s.monthlyReportState.workDays, 1);
+    }, entries: [entry(2026, 11, 1, hours: 4)]);
+
+    // T4
+    scenario('T4 Monatswechsel, Auswahl manuell: nichts aendert sich',
+        DateTime(2026, 10, 31, 23, 59, 30), (async, c, clock, vm, work) {
+      vm.selectDate(DateTime(2026, 10, 15));
+      async.flushMicrotasks();
+      async.elapse(const Duration(seconds: 30));
+      async.flushMicrotasks();
+      expect(st(c).selectedDay, DateTime(2026, 10, 15));
+      expect(st(c).selectedMonth, DateTime(2026, 10));
+      verifyNever(work.getWorkEntriesForMonth(2026, 11));
+    });
+
+    // T5
+    scenario(
+        'T5 selectedMonth auf heutigem Monat, Auswahl manuell: Monatswechsel '
+        'aendert nichts',
+        DateTime(2026, 10, 31, 23, 59, 30), (async, c, clock, vm, work) {
+      vm.selectDate(DateTime(2026, 10, 20));
+      async.flushMicrotasks();
+      expect(st(c).selectedMonth, DateTime(2026, 10));
+      async.elapse(const Duration(seconds: 30));
+      async.flushMicrotasks();
+      expect(st(c).selectedMonth, DateTime(2026, 10));
+      expect(st(c).selectedDay, DateTime(2026, 10, 20));
+      verifyNever(work.getWorkEntriesForMonth(2026, 11));
+    });
+
+    // T6
+    scenario('T6 Wochenwechsel So->Mo: Wochenbericht rechnet ab Mo 2026-10-05',
+        DateTime(2026, 10, 4, 23, 59, 30), (async, c, clock, vm, work) {
+      expect(st(c).selectedDay, DateTime(2026, 10, 4));
+      // Woche Mo 09-28 .. So 10-04: Fr 10-02 (8 h) zaehlt mit.
+      expect(st(c).weeklyReportState.totalNetWorkDuration,
+          const Duration(hours: 8));
+      async.elapse(const Duration(seconds: 30));
+      async.flushMicrotasks();
+      expect(st(c).selectedDay, DateTime(2026, 10, 5));
+      // Woche Mo 10-05 .. So 10-11: nur Mo 10-05 (4 h).
+      expect(st(c).weeklyReportState.totalNetWorkDuration,
+          const Duration(hours: 4));
+    }, entries: [entry(2026, 10, 2), entry(2026, 10, 5, hours: 4)]);
+
+    // T7
+    scenario(
+        'T7 Jahreswechsel: Silvesterwoche bleibt 2026-W53, Mo 2027-01-04 ist '
+        '2027-W01',
+        DateTime(2026, 12, 31, 23, 59, 30), (async, c, clock, vm, work) {
+      DateTime mondayOf(DateTime d) => addCalendarDays(d, -(d.weekday - 1));
+      expect(st(c).selectedDay, DateTime(2026, 12, 31));
+      async.elapse(const Duration(seconds: 30));
+      async.flushMicrotasks();
+      var s = st(c);
+      expect(s.selectedDay, DateTime(2027, 1, 1));
+      expect(s.selectedMonth, DateTime(2027, 1));
+      verify(work.getWorkEntriesForMonth(2027, 1)).called(1);
+      var monday = mondayOf(s.selectedDay!);
+      expect(monday, DateTime(2026, 12, 28));
+      expect((isoWeekYear(monday), isoWeekNumber(monday)), (2026, 53));
+      // Wochenbericht: nur Fr 2027-01-01 (3 h), nicht Mo 2027-01-04.
+      expect(
+          s.weeklyReportState.totalNetWorkDuration, const Duration(hours: 3));
+
+      // Montag 2027-01-04 (Resume-Pfad): Auswahl stand auf heute (Fr 01-01).
+      clock.jumpTo(DateTime(2027, 1, 4, 0, 0, 5));
+      c.read(todayProvider.notifier).refresh();
+      async.flushMicrotasks();
+      s = st(c);
+      expect(s.selectedDay, DateTime(2027, 1, 4));
+      monday = mondayOf(s.selectedDay!);
+      expect(monday, DateTime(2027, 1, 4));
+      expect((isoWeekYear(monday), isoWeekNumber(monday)), (2027, 1));
+      expect(
+          s.weeklyReportState.totalNetWorkDuration, const Duration(hours: 5));
+    }, entries: [entry(2027, 1, 1, hours: 3), entry(2027, 1, 4, hours: 5)]);
+
+    // T8
+    scenario('T8 Resume-Pfad: Uhrsprung + refresh() zieht die Auswahl nach',
+        DateTime(2026, 10, 2, 22), (async, c, clock, vm, work) {
+      expect(st(c).selectedDay, DateTime(2026, 10, 2));
+      clock.jumpTo(DateTime(2026, 10, 3, 0, 0, 5));
+      c.read(todayProvider.notifier).refresh();
+      async.flushMicrotasks();
+      expect(st(c).selectedDay, DateTime(2026, 10, 3));
+      expect(st(c).selectedMonth, DateTime(2026, 10));
+      verify(work.getWorkEntriesForMonth(2026, 10)).called(1);
+    });
+
+    // T9
+    scenario('T9 Multi-Select bleibt unangetastet (Auswahl != heute)',
+        DateTime(2026, 10, 2, 23, 59, 30), (async, c, clock, vm, work) {
+      vm.selectDate(DateTime(2026, 10, 1));
+      async.flushMicrotasks();
+      vm.toggleMultiSelectMode();
+      vm.addDateToSelection(DateTime(2026, 10, 6));
+      vm.addDateToSelection(DateTime(2026, 10, 7));
+      async.elapse(const Duration(seconds: 30));
+      async.flushMicrotasks();
+      expect(st(c).multiSelectMode, isTrue);
+      expect(
+          st(c).selectedDates, {DateTime(2026, 10, 6), DateTime(2026, 10, 7)});
+      expect(st(c).selectedDay, DateTime(2026, 10, 1));
+    });
+
+    scenario(
+        'T9b Multi-Select, Auswahl == heute: selectedDay folgt, Dates bleiben',
+        DateTime(2026, 10, 2, 23, 59, 30), (async, c, clock, vm, work) {
+      vm.toggleMultiSelectMode();
+      vm.addDateToSelection(DateTime(2026, 10, 6));
+      async.elapse(const Duration(seconds: 30));
+      async.flushMicrotasks();
+      expect(st(c).selectedDay, DateTime(2026, 10, 3));
+      expect(st(c).multiSelectMode, isTrue);
+      expect(st(c).selectedDates, {DateTime(2026, 10, 6)});
+    });
+
+    // T10
+    scenario('T10 kein Rebuild, geladene Monatsdaten bleiben erhalten',
+        DateTime(2026, 10, 2, 23, 59, 30), (async, c, clock, vm, work) {
+      expect(_CountingReportsViewModel.builds, 1);
+      async.elapse(const Duration(seconds: 30));
+      async.flushMicrotasks();
+      expect(_CountingReportsViewModel.builds, 1);
+      expect(identical(c.read(reportsViewModelProvider.notifier), vm), isTrue);
+      expect(st(c).selectedDay, DateTime(2026, 10, 3));
+      // Monatsbericht kennt weiterhin den Eintrag vom 2.10. ohne Reload.
+      expect(st(c).monthlyReportState.workDays, 1);
+      verify(work.getWorkEntriesForMonth(2026, 10)).called(1);
+    }, entries: [entry(2026, 10, 2)]);
+
+    // T11: Dispose in jedem Szenario (pendingTimers leer); hier zusaetzlich
+    // Dispose waehrend eines offenen Reloads.
+    scenario('T11 Dispose waehrend laufendem Reload schreibt keinen State',
+        DateTime(2026, 10, 31, 23, 59, 30), (async, c, clock, vm, work) {
+      final pending = Completer<List<WorkEntryEntity>>();
+      when(work.getWorkEntriesForMonth(2026, 11))
+          .thenAnswer((_) => pending.future);
+      async.elapse(const Duration(seconds: 30)); // Reload 11/2026 offen
+      verify(work.getWorkEntriesForMonth(2026, 11)).called(1);
+      c.dispose();
+      pending.complete([]);
+      // wirft, falls nach Dispose State geschrieben wird
+      async.flushMicrotasks();
+    });
+
+    // Charakterisierung Entscheidung 4
+    scenario(
+        'loadCurrentMonthData setzt nur selectedMonth (bekannte Inkonsistenz)',
+        DateTime(2026, 11, 1, 10), (async, c, clock, vm, work) {
+      vm.selectDate(DateTime(2026, 10, 15));
+      async.flushMicrotasks();
+      expect(st(c).selectedMonth, DateTime(2026, 10));
+      vm.loadCurrentMonthData();
+      async.flushMicrotasks();
+      expect(st(c).selectedMonth, DateTime(2026, 11));
+      expect(st(c).selectedDay, DateTime(2026, 10, 15));
+    });
+  });
+
+  group('Resturlaub-Invalidierung (#278)', () {
+    late ProviderContainer leaveContainer;
+    late ReportsViewModel vm;
+
+    setUp(() async {
+      _CountingLeaveViewModel.builds = 0;
+      when(mockWorkRepository.saveWorkEntry(any)).thenAnswer((_) async {});
+      when(mockWorkRepository.deleteWorkEntry(any)).thenAnswer((_) async {});
+      when(mockWorkRepository.getWorkEntriesForMonth(any, any))
+          .thenAnswer((_) async => []);
+      leaveContainer = ProviderContainer(overrides: [
+        clockProvider.overrideWithValue(() => _fixedNow),
+        workRepositoryProvider.overrideWithValue(mockWorkRepository),
+        settingsRepositoryProvider.overrideWithValue(mockSettingsRepository),
+        leaveBalanceViewModelProvider.overrideWith(_CountingLeaveViewModel.new),
+      ]);
+      leaveContainer.listen(leaveBalanceViewModelProvider, (_, __) {});
+      vm = leaveContainer.read(reportsViewModelProvider.notifier);
+      await Future.delayed(Duration.zero);
+    });
+
+    tearDown(() => leaveContainer.dispose());
+
+    final entry = WorkEntryEntity(
+        id: '2026-03-02',
+        date: DateTime(2026, 3, 2),
+        type: WorkEntryType.vacation);
+
+    test('saveWorkEntry invalidiert', () async {
+      final before = _CountingLeaveViewModel.builds;
+      await vm.saveWorkEntry(entry);
+      await Future.delayed(Duration.zero);
+      expect(_CountingLeaveViewModel.builds, before + 1);
+    });
+
+    test('deleteWorkEntry invalidiert', () async {
+      final before = _CountingLeaveViewModel.builds;
+      await vm.deleteWorkEntry(entry.id);
+      await Future.delayed(Duration.zero);
+      expect(_CountingLeaveViewModel.builds, before + 1);
+    });
+
+    test('saveBatchWorkEntries invalidiert', () async {
+      final before = _CountingLeaveViewModel.builds;
+      await vm.saveBatchWorkEntries(
+          [DateTime(2026, 3, 2), DateTime(2026, 3, 3)],
+          WorkEntryType.vacation,
+          null,
+          null);
+      await Future.delayed(Duration.zero);
+      expect(_CountingLeaveViewModel.builds, before + 1);
     });
   });
 }

@@ -398,4 +398,23 @@ class MockSettingsRepository extends _i1.Mock
         returnValue: _i4.Future<void>.value(),
         returnValueForMissingStub: _i4.Future<void>.value(),
       ) as _i4.Future<void>);
+
+  @override
+  int getVacationDaysPerYear() => (super.noSuchMethod(
+        Invocation.method(
+          #getVacationDaysPerYear,
+          [],
+        ),
+        returnValue: 0,
+      ) as int);
+
+  @override
+  _i4.Future<void> setVacationDaysPerYear(int? days) => (super.noSuchMethod(
+        Invocation.method(
+          #setVacationDaysPerYear,
+          [days],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
 }

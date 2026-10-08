@@ -4,6 +4,10 @@ import { WorkEntryService } from './work-entry';
 import { OvertimeService } from './overtime';
 import { SettingsService } from './settings';
 import { AuthService } from '../auth/auth';
+import { LeaveBalanceService } from './leave-balance';
+import { DEFAULT_VACATION_DAYS_PER_YEAR, UserSettings } from '../../shared/models';
+import { normalizeBundesland } from '../../shared/utils/bundesland.util';
+import { isValidVacationDays } from '../../shared/utils/vacation-days.util';
 
 export interface DataSyncResult {
   workEntriesSynced: number;
@@ -20,6 +24,7 @@ export class DataSyncService {
   private readonly overtimeService  = inject(OvertimeService);
   private readonly settingsService  = inject(SettingsService);
   private readonly authService      = inject(AuthService);
+  private readonly leave            = inject(LeaveBalanceService);
 
   private readonly _isSyncing = signal(false);
   readonly isSyncing = this._isSyncing.asReadonly();
@@ -67,7 +72,7 @@ export class DataSyncService {
       }
 
       // ── Einstellungen ─────────────────────────────────────────────────────
-      // Nur weeklyTargetHours und workdays — Benachrichtigungen sind gerätespezifisch
+      // Nur weeklyTargetHours, workdays und vacationDaysPerYear — Benachrichtigungen sind gerätespezifisch
       const localSettingsRaw = localStorage.getItem(LS_SETTINGS);
       if (localSettingsRaw) {
         try {
@@ -81,8 +86,22 @@ export class DataSyncService {
             const count = Math.min(Math.max(local['workdaysPerWeek'], 0), 7);
             patch['workdays'] = Array.from({ length: count }, (_, i) => i + 1);
           }
+          // Nur gültige, vom Default abweichende Werte migrieren: der lokale Speicher schreibt immer
+          // das komplette Objekt (inkl. 30) und würde sonst einen Cloud-Wert überschreiben.
+          const localVacation = local['vacationDaysPerYear'];
+          if (isValidVacationDays(localVacation) && localVacation !== DEFAULT_VACATION_DAYS_PER_YEAR) {
+            patch['vacationDaysPerYear'] = localVacation;
+          }
+          // Bundesland (#279): Cloud gewinnt. Nur übernehmen, wenn lokal gültig und in der Cloud noch leer.
+          // Es wird nie `""` gesendet (`saveSettings` ohne clearBundesland).
+          const localBundesland = normalizeBundesland(local['bundesland']);
+          let current: UserSettings | undefined;
+          if (localBundesland) {
+            current = await firstValueFrom(this.settingsService.getSettings());
+            if (current.bundesland === null) patch['bundesland'] = localBundesland;
+          }
           if (Object.keys(patch).length > 0) {
-            const current = await firstValueFrom(this.settingsService.getSettings());
+            current ??= await firstValueFrom(this.settingsService.getSettings());
             await this.settingsService.saveSettings({ ...current, ...patch });
           }
           result.settingsSynced = true;
@@ -94,6 +113,7 @@ export class DataSyncService {
       }
     } finally {
       this._isSyncing.set(false);
+      this.leave.refresh();
     }
 
     return result;

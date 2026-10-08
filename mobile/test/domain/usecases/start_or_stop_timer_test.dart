@@ -70,4 +70,27 @@ void main() {
     expect(result, equals(entry));
     verifyNever(mockWorkRepository.saveWorkEntry(any));
   });
+
+  group('mit injizierter Uhr (#379)', () {
+    test('Start nutzt die Uhr', () async {
+      final uc = StartOrStopTimer(mockWorkRepository,
+          clock: () => DateTime(2026, 10, 3, 0, 0, 45));
+      when(mockWorkRepository.saveWorkEntry(any)).thenAnswer((_) async {});
+
+      final result = await uc(WorkEntryEntity(id: '1', date: baseDate));
+
+      expect(result.workStart, DateTime(2026, 10, 3, 0, 0));
+    });
+
+    test('Stop nutzt die Uhr', () async {
+      final uc = StartOrStopTimer(mockWorkRepository,
+          clock: () => DateTime(2026, 10, 3, 1, 5, 59));
+      when(mockWorkRepository.saveWorkEntry(any)).thenAnswer((_) async {});
+
+      final result = await uc(WorkEntryEntity(
+          id: '1', date: baseDate, workStart: DateTime(2026, 10, 2, 22)));
+
+      expect(result.workEnd, DateTime(2026, 10, 3, 1, 5));
+    });
+  });
 }

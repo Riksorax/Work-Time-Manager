@@ -20,14 +20,12 @@ import 'core/providers/app_lock_provider.dart';
 import 'core/providers/providers.dart';
 import 'core/services/notification_service.dart';
 import 'core/theme/app_theme.dart';
+import 'core/utils/app_navigator.dart';
 import 'firebase_options.dart';
 import 'l10n/app_localizations.dart';
 import 'presentation/view_models/settings_view_model.dart';
 import 'presentation/view_models/theme_view_model.dart';
 import 'presentation/widgets/app_lock_screen.dart';
-
-// Global key for navigation from notifications
-final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

@@ -1,34 +1,27 @@
-import { Injectable, computed, effect, inject, signal } from '@angular/core';
+import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/auth/auth';
 import { ProfileService } from '../../core/services/profile';
 import { SettingsService } from '../../core/services/settings';
 import { OvertimeService } from '../../core/services/overtime';
+import { WorkProfileService } from '../../core/services/work-profile';
 import { ThemeService } from '../../core/services/theme';
 import { LanguageService } from '../../core/services/language';
 import { DataSyncService, DataSyncResult } from '../../core/services/data-sync';
 import { WebPremiumService } from '../../core/services/web-premium';
+import { LeaveBalanceService } from '../../core/services/leave-balance';
 import { DashboardService } from '../dashboard/dashboard.service';
-import { UserSettings } from '../../shared/models/index';
-
-const DEFAULT_SETTINGS: UserSettings = {
-  weeklyTargetHours: 40,
-  workdays: [1, 2, 3, 4, 5],
-  notificationsEnabled: false,
-  notificationTime: '08:00',
-  notificationDays: [1, 2, 3, 4, 5],
-  notifyWorkStart: false,
-  notifyWorkEnd: false,
-  notifyBreaks: false,
-};
+import { Bundesland, DEFAULT_SETTINGS, UserSettings } from '../../shared/models/index';
 
 @Injectable({ providedIn: 'root' })
 export class SettingsPageService {
   private readonly coreSettings   = inject(SettingsService);
+  private readonly leave          = inject(LeaveBalanceService);
   private readonly authService    = inject(AuthService);
   private readonly profileService = inject(ProfileService);
   private readonly overtimeSvc    = inject(OvertimeService);
+  private readonly workProfile    = inject(WorkProfileService);
   private readonly themeSvc       = inject(ThemeService);
   private readonly languageSvc    = inject(LanguageService);
   private readonly dataSyncSvc    = inject(DataSyncService);
@@ -56,6 +49,9 @@ export class SettingsPageService {
   private readonly _lastOvertimeUpdate = signal<Date | null>(null);
   readonly overtimeMs         = this._overtimeMs.asReadonly();
   readonly lastOvertimeUpdate = this._lastOvertimeUpdate.asReadonly();
+  /** Profil, dessen Saldo gerade angezeigt wird (#380): nur dorthin darf `setOvertime` schreiben. */
+  private _overtimeProfileId = this.workProfile.activeProfileId();
+  private _overtimeGen = 0;
 
   // ── Theme ─────────────────────────────────────────────────────────────────
   readonly isDarkMode = this.themeSvc.isDarkMode;
@@ -80,9 +76,10 @@ export class SettingsPageService {
 
   constructor() {
     effect(() => {
-      // Neu laden wenn Auth-Status wechselt
+      // Neu laden wenn Auth-Status oder aktives Arbeitszeit-Profil wechselt (#380)
       this.authService.user();
-      this._loadOvertime();
+      const profileId = this.workProfile.activeProfileId();
+      untracked(() => this._loadOvertime(profileId));
     });
 
     effect(() => {
@@ -101,6 +98,19 @@ export class SettingsPageService {
     await this.coreSettings.saveSettings({ ...current, weeklyTargetHours: hours });
   }
 
+  /** Setzt das Bundesland (#279). Nur die explizite Abwahl (`null`) sendet über `clearBundesland` ein `""` ans Backend. */
+  async setBundesland(bundesland: Bundesland | null): Promise<void> {
+    const current = this.settings();
+    if (bundesland === null) await this.coreSettings.saveSettings({ ...current, bundesland: null }, { clearBundesland: true });
+    else                     await this.coreSettings.saveSettings({ ...current, bundesland });
+  }
+
+  async setVacationDays(days: number): Promise<void> {
+    const current = this.settings();
+    await this.coreSettings.saveSettings({ ...current, vacationDaysPerYear: days });
+    this.leave.refresh();
+  }
+
   async setWorkdays(days: number[]): Promise<void> {
     const current = this.settings();
     await this.coreSettings.saveSettings({ ...current, workdays: days });
@@ -109,8 +119,10 @@ export class SettingsPageService {
   async setOvertime(ms: number): Promise<void> {
     // Dashboard live aktualisieren + Basis-Wert speichern (ohne lastUpdated zu setzen).
     // Der eingegebene Wert ist die Basis aus Vortagen, nicht der heutige Gesamtstand.
-    await this.dashboardSvc.updateInitialOvertime(ms);
-    this._overtimeMs.set(ms);
+    // Geschrieben wird in das Profil, dessen Saldo der Nutzer sieht (#380), nie blind ins gerade aktive.
+    const profileId = this._overtimeProfileId;
+    await this.dashboardSvc.updateInitialOvertime(ms, profileId);
+    if (profileId === this._overtimeProfileId) this._overtimeMs.set(ms);
   }
 
   setTheme(dark: boolean): void {
@@ -147,8 +159,17 @@ export class SettingsPageService {
 
   // ── Private ───────────────────────────────────────────────────────────────
 
-  private _loadOvertime(): void {
-    this.overtimeSvc.getOvertime().then(ms => this._overtimeMs.set(ms));
-    this.overtimeSvc.getLastUpdateDate().then(d => this._lastOvertimeUpdate.set(d));
+  /** Lädt Saldo + Datum des Profils; eine überholte Antwort (Profil/Login gewechselt) wird verworfen. */
+  private _loadOvertime(profileId: string): void {
+    const gen = ++this._overtimeGen;
+    void Promise.all([
+      this.overtimeSvc.getOvertime(profileId),
+      this.overtimeSvc.getLastUpdateDate(profileId),
+    ]).then(([ms, lastUpdate]) => {
+      if (gen !== this._overtimeGen) return;
+      this._overtimeProfileId = profileId;
+      this._overtimeMs.set(ms);
+      this._lastOvertimeUpdate.set(lastUpdate);
+    });
   }
 }

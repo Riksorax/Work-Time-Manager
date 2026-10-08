@@ -97,5 +97,59 @@ void main() {
 
       expect(container.read(activeWorkProfileIdProvider), 'p2');
     });
+
+    // #388: zuerst wechseln, dann API. Sonst kann ein Autosave in das gerade
+    // geloeschte Profil schreiben.
+    test('wechselt bei aktivem Profil vor dem API-Aufruf auf Standard',
+        () async {
+      String? activeDuringDelete = 'nicht aufgerufen';
+      when(mockRepository.deleteProfile('p1')).thenAnswer((_) async {
+        activeDuringDelete = container.read(activeWorkProfileIdProvider);
+      });
+      await container
+          .read(activeWorkProfileIdProvider.notifier)
+          .setActiveProfile('p1');
+
+      await container.read(workProfileViewModelProvider).deleteProfile('p1');
+
+      expect(activeDuringDelete, isNull);
+      expect(container.read(activeWorkProfileIdProvider), isNull);
+    });
+
+    test('API-Fehler: Exception geht weiter, Rueckwechsel auf das Profil',
+        () async {
+      when(mockRepository.deleteProfile('p1'))
+          .thenAnswer((_) async => throw Exception('offline'));
+      await container
+          .read(activeWorkProfileIdProvider.notifier)
+          .setActiveProfile('p1');
+
+      await expectLater(
+        container.read(workProfileViewModelProvider).deleteProfile('p1'),
+        throwsA(isA<Exception>()),
+      );
+
+      expect(container.read(activeWorkProfileIdProvider), 'p1');
+    });
+
+    test('inaktives Profil: kein Wechsel, auch nicht bei API-Fehler', () async {
+      final seen = <String?>[];
+      container.listen<String?>(
+          activeWorkProfileIdProvider, (_, next) => seen.add(next));
+      when(mockRepository.deleteProfile('p1'))
+          .thenAnswer((_) async => throw Exception('offline'));
+      await container
+          .read(activeWorkProfileIdProvider.notifier)
+          .setActiveProfile('p2');
+      seen.clear();
+
+      await expectLater(
+        container.read(workProfileViewModelProvider).deleteProfile('p1'),
+        throwsA(isA<Exception>()),
+      );
+
+      expect(seen, isEmpty);
+      expect(container.read(activeWorkProfileIdProvider), 'p2');
+    });
   });
 }

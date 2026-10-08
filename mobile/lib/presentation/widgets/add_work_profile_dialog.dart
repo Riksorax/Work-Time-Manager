@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/providers/providers.dart';
 import '../../core/utils/logger.dart';
+import '../../domain/entities/work_profile_entity.dart';
 import '../../l10n/app_localizations.dart';
 import '../view_models/work_profile_view_model.dart';
+import 'profile_switch_confirm_dialog.dart';
 
 /// Dialog zum Anlegen eines weiteren Arbeitszeit-Profils (siehe #138).
 class AddWorkProfileDialog extends ConsumerStatefulWidget {
@@ -24,6 +27,17 @@ class _AddWorkProfileDialogState extends ConsumerState<AddWorkProfileDialog> {
     super.dispose();
   }
 
+  /// Name des aktuell aktiven Profils (Fallback: Standard-Profil).
+  String _activeProfileName() {
+    final activeId = ref.read(activeWorkProfileIdProvider) ??
+        WorkProfileEntity.defaultProfileId;
+    final profiles = ref.read(workProfilesProvider).asData?.value ?? const [];
+    return profiles
+        .firstWhere((p) => p.id == activeId,
+            orElse: WorkProfileEntity.defaultProfile)
+        .name;
+  }
+
   Future<void> _save() async {
     final name = _nameController.text.trim();
     if (name.isEmpty) return;
@@ -38,9 +52,26 @@ class _AddWorkProfileDialogState extends ConsumerState<AddWorkProfileDialog> {
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     final l10n = AppLocalizations.of(context);
+    final viewModel = ref.read(workProfileViewModelProvider);
+    final fromName = _activeProfileName();
     try {
-      final newProfile =
-          await ref.read(workProfileViewModelProvider).addProfile(name);
+      // Läuft im Dashboard ein Timer, erst bestätigen und speichern, dann
+      // anlegen (#388). Bei Abbruch/Fehler bleibt der Dialog offen.
+      final guardResult = await viewModel.checkSwitchAllowed(
+        confirm: () => mounted
+            ? showProfileSwitchConfirmDialog(context,
+                fromName: fromName, toName: name)
+            : Future.value(false),
+      );
+      if (guardResult != ProfileSwitchGuardResult.allowed) {
+        if (mounted) setState(() => _isSaving = false);
+        if (guardResult == ProfileSwitchGuardResult.saveFailed) {
+          messenger
+              .showSnackBar(SnackBar(content: Text(l10n.dashboardSaveError)));
+        }
+        return;
+      }
+      final newProfile = await viewModel.addProfile(name);
       navigator.pop();
       messenger.showSnackBar(
           SnackBar(content: Text(l10n.profileCreatedMessage(newProfile.name))));

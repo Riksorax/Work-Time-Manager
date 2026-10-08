@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_work_time/core/providers/clock_provider.dart';
 import 'package:flutter_work_time/core/providers/providers.dart';
 import 'package:flutter_work_time/core/providers/subscription_provider.dart';
 import 'package:flutter_work_time/domain/entities/settings_entity.dart';
@@ -69,9 +71,13 @@ void main() {
     required ReportsViewModel reportsViewModel,
     required SettingsViewModel settingsViewModel,
     required AsyncValue<UserEntity?> authState,
+    DateTime? clock,
+    List<Override> extraOverrides = const [],
   }) {
     return ProviderScope(
       overrides: [
+        clockProvider
+            .overrideWithValue(() => clock ?? DateTime(2026, 10, 2, 12)),
         sharedPreferencesProvider.overrideWithValue(prefs),
         isPremiumProvider.overrideWithValue(true),
         settingsRepositoryProvider.overrideWithValue(mockSettingsRepository),
@@ -82,6 +88,7 @@ void main() {
         reportsViewModelProvider.overrideWith(() => reportsViewModel),
         settingsViewModelProvider.overrideWith(() => settingsViewModel),
         authStateProvider.overrideWithValue(authState),
+        ...extraOverrides,
       ],
       child: MaterialApp(
         locale: const Locale('de'),
@@ -94,10 +101,10 @@ void main() {
 
   group('ReportsPage', () {
     testWidgets('shows DailyReportView by default', (tester) async {
-      final now = DateTime.now();
+      final now = DateTime(2026, 10, 2);
 
       final reportsViewModel = FakeReportsViewModel(
-        initialState: ReportsState.initial().copyWith(
+        initialState: ReportsState.initial(DateTime(2026, 10, 2)).copyWith(
           isLoading: false,
           selectedDay: now,
           selectedMonth: now,
@@ -140,16 +147,16 @@ void main() {
     });
 
     testWidgets('can switch tabs to Weekly and Monthly', (tester) async {
-      final dummyState = ReportsState.initial().copyWith(
+      final dummyState = ReportsState.initial(DateTime(2026, 10, 2)).copyWith(
         isLoading: false,
         monthlyReportState: MonthlyReportState(
           workDays: 5,
-          dailyWork: {DateTime.now(): const Duration(hours: 8)},
+          dailyWork: {DateTime(2026, 10, 2): const Duration(hours: 8)},
           weeklyWork: {1: const Duration(hours: 40)},
         ),
         weeklyReportState: WeeklyReportState(
           workDays: 5,
-          dailyWork: {DateTime.now(): const Duration(hours: 8)},
+          dailyWork: {DateTime(2026, 10, 2): const Duration(hours: 8)},
         ),
       );
 
@@ -181,10 +188,112 @@ void main() {
       expect(find.textContaining('Wochenübersicht'), findsOneWidget);
     });
 
-    testWidgets('Wochen-Reflexion Button öffnet Dialog und speichert',
+    for (final (day, expectedKw) in [
+      (DateTime(2026, 8, 31), 36), // Sommerzeit-Montag (#352)
+      (DateTime(2026, 9, 3), 36),
+      (DateTime(2025, 12, 31), 1), // Jahreswechsel
+      (DateTime(2027, 1, 1), 53),
+    ]) {
+      testWidgets('Wochenbericht zeigt KW $expectedKw fuer $day',
+          (tester) async {
+        final reportsViewModel = FakeReportsViewModel(
+          initialState: ReportsState.initial(DateTime(2026, 10, 2)).copyWith(
+            isLoading: false,
+            selectedDay: day,
+            selectedMonth: day,
+          ),
+          callback: mockCallback,
+        );
+        final settingsViewModel = FakeSettingsViewModel(
+          initialState: const AsyncValue.data(SettingsState(
+              settings: SettingsEntity(), overtimeBalance: Duration.zero)),
+        );
+
+        await tester.pumpWidget(createSubject(
+          reportsViewModel: reportsViewModel,
+          settingsViewModel: settingsViewModel,
+          authState: const AsyncValue.data(
+              UserEntity(id: '1', email: 'test@test.com')),
+        ));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Wöchentlich'));
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('KW $expectedKw'), findsWidgets);
+        if (expectedKw == 36) {
+          expect(find.textContaining('KW 35'), findsNothing);
+        }
+      });
+    }
+
+    for (final (day, year, week) in [
+      (DateTime(2025, 12, 31), 2026, 1), // Montag 2025-12-29
+      (DateTime(2024, 12, 31), 2025, 1), // Montag 2024-12-30
+      (DateTime(2024, 1, 2), 2024, 1), // Montag 2024-01-01
+    ]) {
+      testWidgets(
+          'Wochen-Reflexion Button öffnet Dialog und speichert ($year-W$week, $day)',
+          (tester) async {
+        final reportsViewModel = FakeReportsViewModel(
+          initialState: ReportsState.initial(DateTime(2026, 10, 2)).copyWith(
+            isLoading: false,
+            selectedDay: day,
+            selectedMonth: day,
+          ),
+          callback: mockCallback,
+        );
+        final settingsViewModel = FakeSettingsViewModel(
+          initialState: const AsyncValue.data(SettingsState(
+              settings: SettingsEntity(), overtimeBalance: Duration.zero)),
+        );
+
+        await tester.pumpWidget(createSubject(
+          reportsViewModel: reportsViewModel,
+          settingsViewModel: settingsViewModel,
+          authState: const AsyncValue.data(
+              UserEntity(id: '1', email: 'test@test.com')),
+        ));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Wöchentlich'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Wochen-Reflexion'));
+        await tester.pumpAndSettle();
+
+        verify(mockWeeklyReflectionRepository.getReflection(year, week))
+            .called(1);
+        expect(find.text('Was lief gut?'), findsOneWidget);
+        expect(find.text('Was war anstrengend?'), findsOneWidget);
+
+        await tester.enterText(
+            find.widgetWithText(TextField, 'Was lief gut?'), 'Guter Sprint');
+        await tester.tap(find.text('Speichern'));
+        await tester.pumpAndSettle();
+
+        final captured =
+            verify(mockWeeklyReflectionRepository.saveReflection(captureAny))
+                .captured
+                .single as WeeklyReflectionEntity;
+        expect(captured.whatWentWell, 'Guter Sprint');
+        expect(captured.year, year);
+        expect(captured.week, week);
+        expect(captured.id, '$year-W0$week');
+        expect(find.text('Was lief gut?'), findsNothing); // Dialog geschlossen
+        expect(find.textContaining('Reflexion gespeichert'), findsOneWidget);
+      });
+    }
+
+    testWidgets(
+        'Jahres-Tab laedt das Jahr aus der Uhr, nicht aus DateTime.now()',
         (tester) async {
+      final api = MockApiClient();
+      when(api.getMonthlyReport(any, any, profileId: anyNamed('profileId')))
+          .thenAnswer((_) async => {'monthlyOvertimeMs': 0});
       final reportsViewModel = FakeReportsViewModel(
-        initialState: ReportsState.initial().copyWith(isLoading: false),
+        initialState: ReportsState.initial(DateTime(2026, 10, 2))
+            .copyWith(isLoading: false),
         callback: mockCallback,
       );
       final settingsViewModel = FakeSettingsViewModel(
@@ -197,37 +306,22 @@ void main() {
         settingsViewModel: settingsViewModel,
         authState:
             const AsyncValue.data(UserEntity(id: '1', email: 'test@test.com')),
+        clock: DateTime(2027, 1, 4, 12),
+        extraOverrides: [apiClientProvider.overrideWithValue(api)],
       ));
       await tester.pumpAndSettle();
-
-      await tester.tap(find.text('Wöchentlich'));
+      await tester.tap(find.text('Jährlich'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Wochen-Reflexion'));
-      await tester.pumpAndSettle();
-
-      verify(mockWeeklyReflectionRepository.getReflection(any, any)).called(1);
-      expect(find.text('Was lief gut?'), findsOneWidget);
-      expect(find.text('Was war anstrengend?'), findsOneWidget);
-
-      await tester.enterText(
-          find.widgetWithText(TextField, 'Was lief gut?'), 'Guter Sprint');
-      await tester.tap(find.text('Speichern'));
-      await tester.pumpAndSettle();
-
-      final captured =
-          verify(mockWeeklyReflectionRepository.saveReflection(captureAny))
-              .captured
-              .single as WeeklyReflectionEntity;
-      expect(captured.whatWentWell, 'Guter Sprint');
-      expect(find.text('Was lief gut?'), findsNothing); // Dialog geschlossen
-      expect(find.textContaining('Reflexion gespeichert'), findsOneWidget);
+      verify(mockWorkRepository.getWorkEntriesForMonth(2027, 1)).called(1);
+      verifyNever(mockWorkRepository.getWorkEntriesForMonth(2026, 12));
     });
 
     testWidgets('Insights-Tab zeigt Platzhalter ohne Datenbasis',
         (tester) async {
       final reportsViewModel = FakeReportsViewModel(
-        initialState: ReportsState.initial().copyWith(isLoading: false),
+        initialState: ReportsState.initial(DateTime(2026, 10, 2))
+            .copyWith(isLoading: false),
         callback: mockCallback,
       );
       final settingsViewModel = FakeSettingsViewModel(
@@ -253,7 +347,8 @@ void main() {
     testWidgets(
         'Insights-Tab zeigt Wochentags-Analyse und Heatmap mit Datenbasis',
         (tester) async {
-      final now = DateTime.now();
+      // Feste Uhr (clockProvider-Override in createSubject), kein DateTime.now().
+      final now = DateTime(2026, 10, 2);
       // Zwei Einträge am selben Wochentag + selber Startstunde, damit sowohl
       // die Wochentags-Analyse als auch die Heatmap (minSampleCount: 2)
       // Ergebnisse liefern.
@@ -275,7 +370,8 @@ void main() {
           .thenAnswer((_) async => testEntries);
 
       final reportsViewModel = FakeReportsViewModel(
-        initialState: ReportsState.initial().copyWith(isLoading: false),
+        initialState: ReportsState.initial(DateTime(2026, 10, 2))
+            .copyWith(isLoading: false),
         callback: mockCallback,
       );
       final settingsViewModel = FakeSettingsViewModel(
@@ -303,9 +399,9 @@ void main() {
 
     testWidgets('navigating previous month calls onMonthChanged',
         (tester) async {
-      final now = DateTime.now();
+      final now = DateTime(2026, 10, 2);
       final reportsViewModel = FakeReportsViewModel(
-        initialState: ReportsState.initial().copyWith(
+        initialState: ReportsState.initial(DateTime(2026, 10, 2)).copyWith(
           isLoading: false,
           selectedDay: now,
           selectedMonth: now,

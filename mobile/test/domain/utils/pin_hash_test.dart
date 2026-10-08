@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_work_time/domain/utils/pin_hash.dart';
 
@@ -39,6 +41,42 @@ void main() {
 
     test('liefert einen nicht-leeren Salt', () {
       expect(generateSalt().isNotEmpty, isTrue);
+    });
+  });
+
+  group('Recovery-Code', () {
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+    test('hat 16 Zeichen aus dem erlaubten Alphabet', () {
+      final code = generateRecoveryCode(random: Random(42));
+      expect(code.length, 16);
+      expect(code.split('').every(alphabet.contains), isTrue);
+    });
+
+    test('ist bei gleichem Seed deterministisch, bei anderem verschieden', () {
+      expect(generateRecoveryCode(random: Random(42)),
+          generateRecoveryCode(random: Random(42)));
+      expect(generateRecoveryCode(random: Random(42)),
+          isNot(generateRecoveryCode(random: Random(7))));
+    });
+
+    test('formatRecoveryCode liefert XXXX-XXXX-XXXX-XXXX', () {
+      expect(formatRecoveryCode('ABCDEFGHJKLMNPQR'), 'ABCD-EFGH-JKLM-NPQR');
+    });
+
+    test('normalizeRecoveryCode entfernt Trenner und macht Großbuchstaben', () {
+      expect(normalizeRecoveryCode('abcd-efgh ijkl-mnop'), 'ABCDEFGHIJKLMNOP');
+    });
+
+    test('Round-Trip format -> normalize', () {
+      final code = generateRecoveryCode(random: Random(1));
+      expect(normalizeRecoveryCode(formatRecoveryCode(code)), code);
+    });
+
+    test('hashPin ist für den normalisierten Code stabil', () {
+      final code = generateRecoveryCode(random: Random(3));
+      final shown = formatRecoveryCode(code).toLowerCase();
+      expect(hashPin(normalizeRecoveryCode(shown), 's'), hashPin(code, 's'));
     });
   });
 }

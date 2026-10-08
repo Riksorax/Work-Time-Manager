@@ -48,6 +48,10 @@ jobs:
       - name: Test
         run: flutter test
 
+      # Ganze Suite unter Zeitzone mit Zeitumstellung (#362)
+      - name: Test (TZ=Europe/Berlin)
+        run: TZ=Europe/Berlin flutter test
+
   web:
     name: Angular Build Check
     runs-on: ubuntu-latest
@@ -94,6 +98,10 @@ jobs:
       # Watch-Modus gehen und den Job hängen lassen.
       - name: Test
         run: npm test -- --watch=false
+
+      # Sommerzeit-Fehler (z. B. #355) sind unter UTC unsichtbar.
+      - name: Test (TZ=Europe/Berlin)
+        run: TZ=Europe/Berlin npm test -- --watch=false
 
       - name: Build check
         run: |

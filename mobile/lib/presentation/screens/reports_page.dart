@@ -4,15 +4,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
 import 'package:flutter_work_time/core/utils/time_format.dart';
-import 'package:flutter_work_time/core/utils/time_precision.dart';
 import 'package:intl/intl.dart';
+import '../../core/providers/clock_provider.dart';
 import '../../core/providers/subscription_provider.dart';
+import '../../core/providers/today_provider.dart';
 import '../../core/services/pdf_report_service.dart';
 
 import '../../domain/entities/work_entry_extensions.dart';
+import '../../domain/utils/date_utils.dart';
 import '../../domain/utils/german_holidays.dart';
+import '../../domain/utils/iso_week.dart';
+import '../../domain/utils/open_entry_report_utils.dart';
 import '../../domain/utils/weekday_labels.dart';
 import '../../l10n/app_localizations.dart';
+import '../utils/holiday_name_localizer.dart';
 import '../widgets/common/paywall_launcher.dart';
 import '../widgets/common/responsive_center.dart';
 import '../widgets/premium_blur_gate.dart';
@@ -21,6 +26,7 @@ import '../state/reports_state.dart';
 import '../state/weekly_report_state.dart';
 import '../state/yearly_report_state.dart';
 import '../view_models/insights_view_model.dart';
+import '../view_models/leave_balance_view_model.dart';
 import '../view_models/reports_view_model.dart';
 import '../view_models/settings_view_model.dart';
 import '../view_models/yearly_report_view_model.dart';
@@ -202,7 +208,8 @@ class DailyReportView extends ConsumerWidget {
         }
 
         final dailyReport = reportsState.dailyReportState;
-        final DateTime selectedDay = reportsState.selectedDay ?? DateTime.now();
+        final DateTime selectedDay =
+            reportsState.selectedDay ?? ref.read<DateTime>(todayProvider);
 
         // Effektives Tages-Soll: 0 für Zusatztage (mehr Arbeitstage als konfiguriert)
         final dailyTarget =
@@ -210,7 +217,7 @@ class DailyReportView extends ConsumerWidget {
         final isExtraDay =
             dailyTarget == Duration.zero && dailyReport.entries.isNotEmpty;
         final DateTime selectedMonth =
-            reportsState.selectedMonth ?? DateTime.now();
+            reportsState.selectedMonth ?? ref.read<DateTime>(todayProvider);
 
         final Set<int> daysWithEntriesInMonth = reportsState
             .monthlyReportState.dailyWork.keys
@@ -220,6 +227,8 @@ class DailyReportView extends ConsumerWidget {
             .map((date) => date.day)
             .toSet();
 
+        // Offene Einträge zählen nur am heutigen Tag live (#404), sonst 0.
+        final DateTime now = ref.read(clockProvider)();
         Duration totalWorked = Duration.zero;
         Duration totalManualAdjustment = Duration.zero;
         for (final e in dailyReport.entries) {
@@ -230,25 +239,7 @@ class DailyReportView extends ConsumerWidget {
           // Nur Arbeitseinträge zählen zur Arbeitszeit
           // Urlaub, Krankheit und Feiertage erfüllen das Soll automatisch
           if (dE.type == WorkEntryType.work) {
-            final DateTime? start = dE.workStart;
-            // FIX: DateTime type, not DateTime? to ensure non-null usage later
-            final DateTime end = dE.workEnd ?? nowToMinute();
-            if (start != null) {
-              // end is always not null due to ??
-              Duration breakDur = Duration.zero;
-              for (final b in dE.breaks) {
-                final DateTime bStart = b.start;
-                // b.end is nullable, end is not
-                final DateTime bEnd = b.end ?? end;
-                final DateTime effStart =
-                    bStart.isBefore(start) ? start : bStart;
-                final DateTime effEnd = bEnd.isAfter(end) ? end : bEnd;
-                if (effEnd.isAfter(effStart)) {
-                  breakDur += effEnd.difference(effStart);
-                }
-              }
-              totalWorked += end.difference(start) - breakDur;
-            }
+            totalWorked += reportNetDuration(dE, now: now);
           }
 
           if (dE.manualOvertime != null) {
@@ -275,14 +266,14 @@ class DailyReportView extends ConsumerWidget {
               selectedDate: selectedDay,
               onDateSelected: (date) => reportsNotifier.selectDate(date),
               onPreviousMonthTapped: () {
-                final currentMonth =
-                    reportsState.selectedMonth ?? DateTime.now();
+                final currentMonth = reportsState.selectedMonth ??
+                    ref.read<DateTime>(todayProvider);
                 reportsNotifier.onMonthChanged(
                     DateTime(currentMonth.year, currentMonth.month - 1, 1));
               },
               onNextMonthTapped: () {
-                final currentMonth =
-                    reportsState.selectedMonth ?? DateTime.now();
+                final currentMonth = reportsState.selectedMonth ??
+                    ref.read<DateTime>(todayProvider);
                 reportsNotifier.onMonthChanged(
                     DateTime(currentMonth.year, currentMonth.month + 1, 1));
               },
@@ -451,24 +442,9 @@ class DailyReportView extends ConsumerWidget {
                 final displayEntry = ref
                     .read(reportsViewModelProvider.notifier)
                     .applyBreakCalculation(entry);
-                final DateTime? start = displayEntry.workStart;
-                final DateTime end = displayEntry.workEnd ?? nowToMinute();
-                Duration breakDuration = Duration.zero;
-                if (start != null) {
-                  for (final b in displayEntry.breaks) {
-                    final DateTime bStart = b.start;
-                    final DateTime bEnd = b.end ?? end;
-                    final DateTime effStart =
-                        bStart.isBefore(start) ? start : bStart;
-                    final DateTime effEnd = bEnd.isAfter(end) ? end : bEnd;
-                    if (effEnd.isAfter(effStart)) {
-                      breakDuration += effEnd.difference(effStart);
-                    }
-                  }
-                }
-                final Duration workedDuration = (start != null)
-                    ? end.difference(start) - breakDuration
-                    : Duration.zero;
+                final Duration workedDuration =
+                    reportNetDuration(displayEntry, now: now);
+                final bool isIncomplete = isOpenBeforeToday(displayEntry, now);
 
                 final isSpecialType = displayEntry.type != WorkEntryType.work;
 
@@ -486,10 +462,12 @@ class DailyReportView extends ConsumerWidget {
                               isSpecialType
                                   ? _getWorkEntryTypeLabel(
                                       l10n, displayEntry.type)
-                                  : l10n.workTimeLabel(workedDuration
-                                      .toString()
-                                      .split('.')
-                                      .first),
+                                  : isIncomplete
+                                      ? l10n.reportsEntryIncompleteTitle
+                                      : l10n.workTimeLabel(workedDuration
+                                          .toString()
+                                          .split('.')
+                                          .first),
                               style: Theme.of(context).textTheme.titleMedium,
                             ),
                             Row(
@@ -539,20 +517,26 @@ class DailyReportView extends ConsumerWidget {
                                 .split('.')
                                 .first)),
                           ),
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8.0),
-                          child: Text(
-                            l10n.overtimeValueLabel(_formatDuration(
-                                displayEntry.calculateOvertime(dailyTarget))),
-                            style: TextStyle(
-                                color: (displayEntry
-                                        .calculateOvertime(dailyTarget)
-                                        .isNegative
-                                    ? Colors.red
-                                    : Colors.green),
-                                fontWeight: FontWeight.bold),
+                        if (isIncomplete)
+                          const Padding(
+                            padding: EdgeInsets.only(top: 8.0),
+                            child: _IncompleteEntryHint(),
+                          )
+                        else
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: Text(
+                              l10n.overtimeValueLabel(_formatDuration(
+                                  displayEntry.calculateOvertime(dailyTarget))),
+                              style: TextStyle(
+                                  color: (displayEntry
+                                          .calculateOvertime(dailyTarget)
+                                          .isNegative
+                                      ? Colors.red
+                                      : Colors.green),
+                                  fontWeight: FontWeight.bold),
+                            ),
                           ),
-                        ),
                       ],
                     ),
                   ),
@@ -691,15 +675,12 @@ class WeeklyReportView extends ConsumerWidget {
           }
 
           final weeklyReport = reportsState.weeklyReportState;
-          final selectedDay = reportsState.selectedDay ?? DateTime.now();
+          final selectedDay =
+              reportsState.selectedDay ?? ref.read<DateTime>(todayProvider);
           final startOfWeek = DateTime(selectedDay.year, selectedDay.month,
               selectedDay.day - selectedDay.weekday + 1);
-          final endOfWeek = startOfWeek.add(const Duration(days: 6));
-          final weekNumber =
-              (startOfWeek.difference(DateTime(startOfWeek.year, 1, 1)).inDays /
-                          7)
-                      .floor() +
-                  1;
+          final endOfWeek = addCalendarDays(startOfWeek, 6);
+          final weekNumber = isoWeekNumber(startOfWeek);
           final Duration weeklyOvertimeLocal = weeklyReport.dailyWork.entries
               .fold(Duration.zero, (sum, e) => sum + (e.value - dailyTarget));
 
@@ -714,8 +695,8 @@ class WeeklyReportView extends ConsumerWidget {
                   children: [
                     IconButton(
                       icon: const Icon(Icons.chevron_left),
-                      onPressed: () => reportsNotifier.selectDate(
-                          startOfWeek.subtract(const Duration(days: 7))),
+                      onPressed: () => reportsNotifier
+                          .selectDate(shiftWeekStart(startOfWeek, -1)),
                       tooltip: l10n.previousWeekTooltip,
                     ),
                     Expanded(
@@ -743,7 +724,7 @@ class WeeklyReportView extends ConsumerWidget {
                     IconButton(
                       icon: const Icon(Icons.chevron_right),
                       onPressed: () => reportsNotifier
-                          .selectDate(startOfWeek.add(const Duration(days: 7))),
+                          .selectDate(shiftWeekStart(startOfWeek, 1)),
                       tooltip: l10n.nextWeekTooltip,
                     ),
                   ],
@@ -754,10 +735,8 @@ class WeeklyReportView extends ConsumerWidget {
                       child: TextButton.icon(
                         onPressed: () => showDialog(
                           context: context,
-                          builder: (_) => WeeklyReflectionDialog(
-                            year: startOfWeek.year,
-                            week: weekNumber,
-                          ),
+                          builder: (_) =>
+                              WeeklyReflectionDialog(startOfWeek: startOfWeek),
                         ),
                         icon: const Icon(Icons.rate_review_outlined),
                         label: Text(l10n.weeklyReflectionButton,
@@ -911,18 +890,6 @@ void _showDayEntriesBottomSheet(
   );
 }
 
-/// Entspricht exakt `_getWeekNumber` in [ReportsViewModel] - dort werden die
-/// Schlüssel für `monthlyReport.weeklyWork` berechnet. Muss identisch bleiben,
-/// damit ein Tap auf eine Kalenderwoche im Monatsbericht (#258) auf die
-/// richtige Woche navigiert.
-int _isoWeekNumber(DateTime date) {
-  final firstWeek = DateTime(date.year, 1, 4);
-  final dayOfWeek = firstWeek.weekday;
-  final firstDayOfFirstWeek = firstWeek.subtract(Duration(days: dayOfWeek - 1));
-  final diff = date.difference(firstDayOfFirstWeek).inDays;
-  return (diff / 7).floor() + 1;
-}
-
 /// Sucht innerhalb von [month] den ersten Tag, dessen Kalenderwoche
 /// [weekNumber] entspricht (siehe #258 - Klick auf Kalenderwoche im
 /// Monatsbericht → Wochenbericht).
@@ -930,7 +897,7 @@ DateTime? _firstDateInMonthForWeek(DateTime month, int weekNumber) {
   final daysInMonth = DateTime(month.year, month.month + 1, 0).day;
   for (var day = 1; day <= daysInMonth; day++) {
     final date = DateTime(month.year, month.month, day);
-    if (_isoWeekNumber(date) == weekNumber) return date;
+    if (isoWeekNumber(date) == weekNumber) return date;
   }
   return null;
 }
@@ -1143,7 +1110,8 @@ class MonthlyReportView extends ConsumerWidget {
     }
 
     final monthlyReport = reportsState.monthlyReportState;
-    final selectedMonth = reportsState.selectedMonth ?? DateTime.now();
+    final selectedMonth =
+        reportsState.selectedMonth ?? ref.read<DateTime>(todayProvider);
     final month = DateFormat.yMMMM(locale)
         .format(DateTime(selectedMonth.year, selectedMonth.month));
 
@@ -1390,9 +1358,10 @@ class _YearlyReportViewState extends ConsumerState<YearlyReportView> {
     if (_loadTriggered) return;
     _loadTriggered = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       ref
           .read(yearlyReportViewModelProvider.notifier)
-          .loadYear(DateTime.now().year);
+          .loadYear(ref.read(todayProvider).year);
     });
   }
 
@@ -1545,6 +1514,7 @@ class _YearlyReportViewState extends ConsumerState<YearlyReportView> {
                         Text('${yearlyState.totalVacationDays}'),
                       ],
                     ),
+                    YearlyLeaveRows(year: yearlyState.year),
                     const SizedBox(height: 12),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1883,23 +1853,13 @@ class _CalendarState extends ConsumerState<_Calendar> {
       DateTime startDate, DateTime endDate, List<int> workdays) {
     final reportsNotifier = ref.read(reportsViewModelProvider.notifier);
 
-    // Normalize dates
-    final start = DateTime(startDate.year, startDate.month, startDate.day);
-    final end = DateTime(endDate.year, endDate.month, endDate.day);
-
-    // Ensure start is before end
-    final minDate = start.isBefore(end) ? start : end;
-    final maxDate = start.isBefore(end) ? end : start;
-
-    // Clear previous selection and select all dates in range
+    // Clear previous selection and select all workdays in range
     reportsNotifier.clearDateSelection();
 
-    DateTime currentDate = minDate;
-    while (!currentDate.isAfter(maxDate)) {
-      if (_isWorkday(currentDate, workdays)) {
-        reportsNotifier.addDateToSelection(currentDate);
+    for (final day in datesInRange(startDate, endDate)) {
+      if (_isWorkday(day, workdays)) {
+        reportsNotifier.addDateToSelection(day);
       }
-      currentDate = currentDate.add(const Duration(days: 1));
     }
   }
 
@@ -1997,10 +1957,10 @@ class _CalendarState extends ConsumerState<_Calendar> {
     // um welchen Feiertag es sich handelt (siehe #253).
     final bundesland =
         settingsState.whenData((s) => s.settings.bundesland).value;
-    final Map<DateTime, String> holidayNames = bundesland != null
-        ? getGermanHolidayNames(widget.selectedDate.year, bundesland)
-        : const <DateTime, String>{};
-    final Set<DateTime> holidays = holidayNames.keys.toSet();
+    final Map<DateTime, GermanHoliday> holidayIds = bundesland != null
+        ? getGermanHolidayIds(widget.selectedDate.year, bundesland)
+        : const <DateTime, GermanHoliday>{};
+    final Set<DateTime> holidays = holidayIds.keys.toSet();
 
     return Card(
       margin: const EdgeInsets.all(8.0),
@@ -2146,7 +2106,8 @@ class _CalendarState extends ConsumerState<_Calendar> {
                     final isHoliday = holidays
                         .contains(DateTime(date.year, date.month, date.day));
                     final holidayName =
-                        holidayNames[DateTime(date.year, date.month, date.day)];
+                        holidayIds[DateTime(date.year, date.month, date.day)]
+                            ?.localizedName(l10n);
 
                     Widget dayWidget = Center(
                       child: Text(
@@ -2452,25 +2413,11 @@ class _DayEntriesBottomSheetState extends ConsumerState<DayEntriesBottomSheet> {
                             displayEntry.type != WorkEntryType.work;
 
                         final DateTime? start = displayEntry.workStart;
-                        final DateTime? end =
-                            displayEntry.workEnd ?? nowToMinute();
-                        Duration worked = Duration.zero;
-
-                        if (start != null && end != null) {
-                          Duration breakDur = Duration.zero;
-                          for (final b in displayEntry.breaks) {
-                            final DateTime bStart = b.start;
-                            final DateTime bEnd = b.end ?? end;
-                            final DateTime effStart =
-                                bStart.isBefore(start) ? start : bStart;
-                            final DateTime effEnd =
-                                bEnd.isAfter(end) ? end : bEnd;
-                            if (effEnd.isAfter(effStart)) {
-                              breakDur += effEnd.difference(effStart);
-                            }
-                          }
-                          worked = end.difference(start) - breakDur;
-                        }
+                        final DateTime now = ref.read(clockProvider)();
+                        final Duration worked =
+                            reportNetDuration(displayEntry, now: now);
+                        final bool isIncomplete =
+                            isOpenBeforeToday(displayEntry, now);
 
                         return Card(
                           margin: const EdgeInsets.symmetric(vertical: 6),
@@ -2480,8 +2427,10 @@ class _DayEntriesBottomSheetState extends ConsumerState<DayEntriesBottomSheet> {
                             title: Text(isSpecialType
                                 ? _getWorkEntryTypeLabel(
                                     l10n, displayEntry.type)
-                                : l10n.workTimeLabel(
-                                    worked.toString().split('.').first)),
+                                : isIncomplete
+                                    ? l10n.reportsEntryIncompleteTitle
+                                    : l10n.workTimeLabel(
+                                        worked.toString().split('.').first)),
                             subtitle: (isSpecialType &&
                                     displayEntry.workStart == null &&
                                     displayEntry.workEnd == null)
@@ -2514,6 +2463,8 @@ class _DayEntriesBottomSheetState extends ConsumerState<DayEntriesBottomSheet> {
                                                 .toString()
                                                 .split('.')
                                                 .first)),
+                                      if (isIncomplete)
+                                        const _IncompleteEntryHint(),
                                     ],
                                   ),
                             trailing: Row(
@@ -2636,6 +2587,38 @@ Future<void> _handleBatchQuickEntry(
 // ---------------------------------------------------------------------------
 // Platzhalter-Widgets für den Blur-Effekt (nicht-Premium-Nutzer)
 // ---------------------------------------------------------------------------
+
+/// Hinweis auf einer Eintragskarte: offener Eintrag vor heute, zählt nicht in
+/// die Auswertung (#404). Das Icon ist rein dekorativ (kein Semantics-Label),
+/// der Text trägt die Aussage für TalkBack; er bricht bei großer Schrift um.
+class _IncompleteEntryHint extends StatelessWidget {
+  const _IncompleteEntryHint();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final color = Theme.of(context).colorScheme.onSurfaceVariant;
+    return Padding(
+      padding: const EdgeInsets.only(top: 4.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.info_outline, size: 18, color: color),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              l10n.reportsEntryIncompleteHint,
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(color: color),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _WeeklyReportPlaceholder extends StatelessWidget {
   const _WeeklyReportPlaceholder();
@@ -2837,6 +2820,47 @@ class _MonthlyReportPlaceholder extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Zeilen "Urlaubsanspruch"/"Resturlaub" im Jahresreport (siehe #278).
+/// Der Resturlaub wird nur für das laufende Jahr berechnet; für andere Jahre
+/// erscheint ein Hinweis.
+class YearlyLeaveRows extends ConsumerWidget {
+  final int year;
+
+  const YearlyLeaveRows({super.key, required this.year});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final currentYear = ref.watch(todayProvider.select((d) => d.year));
+
+    if (year != currentYear) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 12),
+        child: Text(l10n.leavePastYearNote,
+            style: Theme.of(context).textTheme.bodySmall),
+      );
+    }
+
+    final balance = ref.watch(leaveBalanceViewModelProvider).balance;
+    if (balance == null) return const SizedBox.shrink();
+
+    Widget row(String label, String value) => Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [Text(label), Text(value)],
+          ),
+        );
+
+    return Column(
+      children: [
+        row(l10n.vacationEntitlementLabel, '${balance.entitlement}'),
+        row(l10n.remainingVacationTitle, '${balance.remaining}'),
+      ],
     );
   }
 }

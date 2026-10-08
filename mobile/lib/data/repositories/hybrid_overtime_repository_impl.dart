@@ -32,8 +32,10 @@ class HybridOvertimeRepositoryImpl implements OvertimeRepository {
   }
 
   @override
-  Future<void> saveOvertime(Duration overtime) async {
-    await _activeRepository.saveOvertime(overtime);
+  Future<void> saveOvertime(Duration overtime,
+      {bool keepLastUpdated = false}) async {
+    await _activeRepository.saveOvertime(overtime,
+        keepLastUpdated: keepLastUpdated);
   }
 
   @override

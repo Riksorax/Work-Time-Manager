@@ -4,15 +4,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/providers/providers.dart' as core_providers;
+import '../../core/providers/settings_sync_provider.dart';
 import '../../core/utils/timezone_utils.dart';
 import '../../domain/entities/app_theme_mode.dart';
 import '../../domain/entities/bundesland.dart';
 import '../../domain/entities/settings_entity.dart';
 import '../../domain/repositories/settings_repository.dart';
+import '../../domain/utils/leave_balance_utils.dart';
 import '../../domain/utils/overtime_warning_utils.dart';
 import '../../l10n/app_localizations.dart';
 import '../state/settings_state.dart';
 import 'dashboard_view_model.dart' show dashboardViewModelProvider;
+import 'leave_balance_view_model.dart' show leaveBalanceViewModelProvider;
 
 // Temporary No-op repository - wird nur für Fallback-Fälle benötigt
 class NoOpSettingsRepository implements SettingsRepository {
@@ -124,6 +127,12 @@ class NoOpSettingsRepository implements SettingsRepository {
 
   @override
   Future<void> setLocale(String locale) async {}
+
+  @override
+  int getVacationDaysPerYear() => 30;
+
+  @override
+  Future<void> setVacationDaysPerYear(int days) async {}
 }
 
 class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
@@ -137,6 +146,11 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
     // _init() unten fängt denselben Fehler zwar auch ab, aber erst
     // asynchron, also zu spät für diesen synchronen build()-Aufruf.
     try {
+      // Nach einem Firestore-Sync mit geänderten Einstellungen still neu laden
+      // (#279): listen statt watch, damit build() nicht erneut `loading`
+      // liefert - sonst ersetzt der Settings-Screen seinen Inhalt kurz durch
+      // einen Spinner und verwirft flüchtigen UI-State (Scroll, Eingaben).
+      ref.listen(settingsSyncTickProvider, (_, __) => _init());
       ref.watch(core_providers.getOvertimeUseCaseProvider);
       ref.watch(core_providers.settingsRepositoryProvider);
     } catch (_) {
@@ -184,6 +198,7 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
       final use24HourFormat = settingsRepository.getUse24HourFormat();
       final timezoneOverride = settingsRepository.getTimezoneOverride();
       final locale = settingsRepository.getLocale();
+      final vacationDaysPerYear = settingsRepository.getVacationDaysPerYear();
 
       final settings = SettingsEntity(
         weeklyTargetHours: weeklyTargetHours,
@@ -202,6 +217,7 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
         use24HourFormat: use24HourFormat,
         timezoneOverride: timezoneOverride,
         locale: locale,
+        vacationDaysPerYear: vacationDaysPerYear,
       );
       state = AsyncValue.data(SettingsState(
         settings: settings,
@@ -283,6 +299,19 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
     ref
         .read(dashboardViewModelProvider.notifier)
         .recalculateOvertimeFromSettings();
+  }
+
+  /// Speichert den Jahres-Urlaubsanspruch (ganze Tage 0-366, siehe #278).
+  /// Werte außerhalb des Bereichs werden ignoriert.
+  Future<void> updateVacationDaysPerYear(int days) async {
+    if (days < 0 || days > maxVacationDaysPerYear) return;
+    final settingsRepository =
+        ref.read(core_providers.settingsRepositoryProvider);
+    await settingsRepository.setVacationDaysPerYear(days);
+    final newSettings =
+        state.value!.settings.copyWith(vacationDaysPerYear: days);
+    state = state.whenData((value) => value.copyWith(settings: newSettings));
+    ref.invalidate(leaveBalanceViewModelProvider);
   }
 
   Future<void> updateNotificationsEnabled(bool enabled) async {

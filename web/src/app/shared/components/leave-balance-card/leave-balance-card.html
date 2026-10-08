@@ -1,0 +1,101 @@
+<section class="leave-card"
+         role="group"
+         [attr.aria-label]="'leave.cardAria' | translate"
+         [attr.aria-busy]="state() === 'loading'">
+
+  @switch (state()) {
+    @case ('loading') {
+      <div class="leave-loading" role="status" [attr.aria-label]="'leave.loadingAria' | translate">
+        <mat-spinner diameter="28" aria-hidden="true" />
+      </div>
+    }
+
+    @case ('error') {
+      <div class="leave-error" role="alert">
+        <mat-icon aria-hidden="true">error_outline</mat-icon>
+        <span class="leave-error-text">{{ 'leave.loadError' | translate }}</span>
+        <button mat-stroked-button (click)="retry.emit()">
+          <mat-icon aria-hidden="true">refresh</mat-icon>
+          {{ 'leave.retry' | translate }}
+        </button>
+      </div>
+    }
+
+    @default {
+      @if (report(); as r) {
+        <header class="leave-header">
+          <mat-icon class="leave-icon" aria-hidden="true">beach_access</mat-icon>
+          <h3 class="leave-title">
+            @if (showRemaining()) {
+              {{ 'leave.remainingTitle' | translate }} {{ r.year }}
+            } @else {
+              {{ 'leave.vacationTitle' | translate: { year: r.year } }}
+            }
+          </h3>
+        </header>
+
+        @if (showRemaining()) {
+          <!-- Hauptwert: Rest (nie auf 0 geklemmt) -->
+          <div class="leave-main" [class.leave-main--over]="isOver()">
+            <span class="leave-remaining">{{ r.vacationDaysRemaining }}</span>
+            <span class="leave-of">{{ 'leave.ofTotal' | translate: { total: r.vacationDaysPerYear } }}</span>
+          </div>
+
+          @if (isOver()) {
+            <p class="leave-over" role="status">
+              <mat-icon aria-hidden="true">warning</mat-icon>
+              {{ (overBy() === 1 ? 'leave.overEntitlementOne' : 'leave.overEntitlementOther') | translate: { days: overBy() } }}
+            </p>
+          }
+
+          @if (!entitlementZero()) {
+            <mat-progress-bar class="leave-progress"
+                              [class.leave-progress--over]="isOver()"
+                              mode="determinate"
+                              [value]="percent()"
+                              [attr.aria-label]="'leave.progressAria' | translate: { taken: r.vacationDaysTaken, total: r.vacationDaysPerYear }" />
+          } @else {
+            <p class="leave-zero">
+              {{ 'leave.entitlementZero' | translate }}
+              @if (editable()) {
+                <button mat-button class="leave-zero-link" (click)="editEntitlement.emit()">
+                  {{ 'leave.setEntitlement' | translate }}
+                </button>
+              }
+            </p>
+          }
+        }
+
+        <dl class="leave-rows">
+          <div class="leave-row">
+            <dt>{{ 'leave.taken' | translate }}</dt>
+            <dd>{{ r.vacationDaysTaken }}</dd>
+          </div>
+          @if (showRemaining()) {
+            <div class="leave-row">
+              <dt>{{ 'leave.entitlement' | translate }}</dt>
+              <dd>{{ r.vacationDaysPerYear }}</dd>
+            </div>
+          }
+          <div class="leave-row">
+            <dt>{{ 'leave.sickDays' | translate: { year: r.year } }}</dt>
+            <dd>{{ r.sickDays }}</dd>
+          </div>
+        </dl>
+
+        @if (!showRemaining()) {
+          <p class="leave-note">{{ 'leave.pastYearNote' | translate }}</p>
+        }
+        @if (showEmptyHint() && isEmpty()) {
+          <p class="leave-note" role="status">{{ 'leave.empty' | translate: { year: r.year } }}</p>
+        }
+        @if (localOnly()) {
+          <p class="leave-note leave-note--local">
+            <mat-icon aria-hidden="true">cloud_off</mat-icon>
+            {{ 'leave.localHint' | translate }}
+          </p>
+        }
+      }
+    }
+  }
+</section>

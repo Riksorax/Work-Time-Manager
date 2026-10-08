@@ -112,6 +112,47 @@ void main() {
       verify(mockApi.saveOvertime(45, profileId: 'p1')).called(1);
       verifyZeroInteractions(mockAuth);
     });
+
+    test('saveOvertime reicht keepLastUpdated: true an die API weiter (#406)',
+        () async {
+      when(mockApi.saveOvertime(any,
+              profileId: anyNamed('profileId'),
+              keepLastUpdated: anyNamed('keepLastUpdated')))
+          .thenAnswer((_) async {});
+
+      await dataSource.saveOvertime(userId, const Duration(minutes: 45),
+          profileId: 'p1', keepLastUpdated: true);
+
+      verify(mockApi.saveOvertime(45, profileId: 'p1', keepLastUpdated: true))
+          .called(1);
+    });
+
+    test('saveOvertime ohne keepLastUpdated sendet false (Default, #406)',
+        () async {
+      when(mockApi.saveOvertime(any,
+              profileId: anyNamed('profileId'),
+              keepLastUpdated: anyNamed('keepLastUpdated')))
+          .thenAnswer((_) async {});
+
+      await dataSource.saveOvertime(userId, const Duration(minutes: 45));
+
+      verify(mockApi.saveOvertime(45, profileId: null, keepLastUpdated: false))
+          .called(1);
+    });
+
+    test('saveOvertime rundet kaufmännisch auch mit keepLastUpdated (#406)',
+        () async {
+      when(mockApi.saveOvertime(any,
+              profileId: anyNamed('profileId'),
+              keepLastUpdated: anyNamed('keepLastUpdated')))
+          .thenAnswer((_) async {});
+
+      await dataSource.saveOvertime(userId, const Duration(seconds: 90),
+          keepLastUpdated: true);
+
+      verify(mockApi.saveOvertime(2, profileId: null, keepLastUpdated: true))
+          .called(1);
+    });
   });
 
   group(
@@ -150,6 +191,24 @@ void main() {
       });
       verifyZeroInteractions(mockAuth);
     });
+
+    test('saveSettings reicht vacationDaysPerYear durch und erhält es (#278)',
+        () async {
+      when(mockApi.getSettings(profileId: 'p1')).thenAnswer(
+          (_) async => {'weeklyTargetHours': 40, 'vacationDaysPerYear': 28});
+      when(mockApi.putSettings(any, profileId: 'p1')).thenAnswer((_) async {});
+
+      await dataSource.saveSettings(userId, {'weeklyTargetHours': 35},
+          profileId: 'p1');
+      await dataSource.saveSettings(userId, {'vacationDaysPerYear': 25},
+          profileId: 'p1');
+
+      final captured = verify(mockApi.putSettings(captureAny, profileId: 'p1'))
+          .captured
+          .cast<Map>();
+      expect(captured[0], {'weeklyTargetHours': 35, 'vacationDaysPerYear': 28});
+      expect(captured[1], {'weeklyTargetHours': 40, 'vacationDaysPerYear': 25});
+    });
   });
 
   group(
@@ -177,5 +236,11 @@ void main() {
       verify(mockAuth.getWorkProfiles(userId)).called(1);
       verifyZeroInteractions(mockApi);
     });
+  });
+
+  test('reauthenticate delegiert an das Auth-DataSource', () async {
+    when(mockAuth.reauthenticate()).thenAnswer((_) async => true);
+    expect(await dataSource.reauthenticate(), isTrue);
+    verify(mockAuth.reauthenticate()).called(1);
   });
 }

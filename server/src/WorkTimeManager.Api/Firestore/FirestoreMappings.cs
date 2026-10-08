@@ -73,6 +73,8 @@ internal static class FirestoreMappings
         NotifyWorkStart = doc.NotifyWorkStart,
         NotifyWorkEnd = doc.NotifyWorkEnd,
         NotifyBreaks = doc.NotifyBreaks,
+        VacationDaysPerYear = doc.VacationDaysPerYear ?? SettingsDto.DefaultVacationDaysPerYear,
+        Bundesland = IsValidBundesland(doc.Bundesland) ? NullIfEmpty(doc.Bundesland) : null,
     };
 
     public static SettingsDocument ToDocument(SettingsDto dto) => new()
@@ -85,7 +87,46 @@ internal static class FirestoreMappings
         NotifyWorkStart = dto.NotifyWorkStart,
         NotifyWorkEnd = dto.NotifyWorkEnd,
         NotifyBreaks = dto.NotifyBreaks,
+        VacationDaysPerYear = dto.VacationDaysPerYear,
+        Bundesland = NullIfEmpty(dto.Bundesland),
     };
+
+    /// <summary>
+    /// Felder für den Merge-Schreibvorgang. Ist <c>vacationDaysPerYear</c> nicht gesetzt (alter
+    /// Client), wird das Feld ausgelassen, damit ein gespeicherter Wert nicht überschrieben wird
+    /// (MergeAll würde sonst <c>null</c> schreiben). Siehe #278.
+    /// </summary>
+    public static string[] SettingsMergeFields(SettingsDto dto)
+    {
+        var fields = new List<string>
+        {
+            "weeklyTargetHours", "workdays", "notificationsEnabled", "notificationTime",
+            "notificationDays", "notifyWorkStart", "notifyWorkEnd", "notifyBreaks",
+        };
+        if (dto.VacationDaysPerYear is not null) fields.Add("vacationDaysPerYear");
+        if (dto.Bundesland is not null) fields.Add("bundesland"); // "" = löschen (siehe IsBundeslandDelete)
+        return fields.ToArray();
+    }
+
+    /// <summary>Gültiger Urlaubsanspruch: nicht gesetzt oder 0-366.</summary>
+    public static bool IsValidVacationDays(int? value) => value is null or >= 0 and <= 366;
+
+    /// <summary>Die 16 gültigen Bundesland-Werte (Dart-Enum-Namen aus <c>bundesland.dart</c>, #279).</summary>
+    public static readonly IReadOnlySet<string> Bundeslaender = new HashSet<string>(StringComparer.Ordinal)
+    {
+        "badenWuerttemberg", "bayern", "berlin", "brandenburg", "bremen", "hamburg", "hessen",
+        "mecklenburgVorpommern", "niedersachsen", "nordrheinWestfalen", "rheinlandPfalz",
+        "saarland", "sachsen", "sachsenAnhalt", "schleswigHolstein", "thueringen",
+    };
+
+    /// <summary>Gültiges Bundesland: <c>null</c>, <c>""</c> (löschen) oder einer der 16 Namen (exakte Schreibweise).</summary>
+    public static bool IsValidBundesland(string? value) =>
+        string.IsNullOrEmpty(value) || Bundeslaender.Contains(value);
+
+    /// <summary>PUT mit <c>bundesland: ""</c> = gespeichertes Feld entfernen (#279).</summary>
+    public static bool IsBundeslandDelete(SettingsDto dto) => dto.Bundesland is "";
+
+    private static string? NullIfEmpty(string? value) => string.IsNullOrEmpty(value) ? null : value;
 
     /// <summary>
     /// Migriert das alte <c>workdaysPerWeek</c>-Feld (Anzahl) in konkrete ISO-Wochentage

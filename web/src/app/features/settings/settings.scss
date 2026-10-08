@@ -324,3 +324,17 @@ button[mat-list-item] {
 :host {
   --color-overtime-positive: #4CAF50;
 }
+
+// ── Urlaub (#278) ──────────────────────────────────────────────────────────────
+.vacation-section .vacation-card {
+  margin-top: 12px;
+}
+
+// ── Bundesland / Feiertage (#279) ───────────────────────────────────────────────
+.bundesland-section .bundesland-hint {
+  margin: 0;
+  padding: 0 16px 8px 72px; // bündig mit dem Zeilentext (Icon-Spalte)
+  font-size: 0.875rem;
+  color: var(--mat-sys-on-surface-variant);
+  overflow-wrap: anywhere; // bricht auf schmalen Breiten um
+}

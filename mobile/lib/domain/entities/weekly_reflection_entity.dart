@@ -18,6 +18,9 @@ class WeeklyReflectionEntity extends Equatable {
   });
 
   /// Eindeutiger Dokument-Schlüssel im Format `yyyy-Www`, z.B. `2026-W11`.
+  ///
+  /// `year` ist das ISO-Wochenjahr (nicht das Kalenderjahr des Montags), z.B.
+  /// Montag 2025-12-29 -> `2026-W01`. Vertrag für Web (siehe #354).
   String get id => '$year-W${week.toString().padLeft(2, '0')}';
 
   bool get isEmpty => whatWentWell.trim().isEmpty && whatWasHard.trim().isEmpty;

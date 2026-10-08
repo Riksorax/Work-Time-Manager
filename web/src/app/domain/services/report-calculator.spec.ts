@@ -1,16 +1,5 @@
 import { getIsoWeekNumber, calculateDailyStat, calculateWeeklyReport, calculateMonthlyReport } from './report-calculator';
-import { WorkEntry, WorkEntryType, UserSettings } from '../../shared/models/index';
-
-const DEFAULT_SETTINGS: UserSettings = {
-  weeklyTargetHours: 40,
-  workdays: [1, 2, 3, 4, 5],
-  notificationsEnabled: false,
-  notificationTime: '08:00',
-  notificationDays: [1, 2, 3, 4, 5],
-  notifyWorkStart: false,
-  notifyWorkEnd: false,
-  notifyBreaks: false,
-};
+import { DEFAULT_SETTINGS, WorkEntry, WorkEntryType, UserSettings } from '../../shared/models/index';
 
 // 8h daily target (40h / 5d)
 const DAILY_MS = 8 * 3600000;
@@ -61,6 +50,73 @@ describe('ReportCalculatorService', () => {
     it('returns 53 for 2015-12-31 (year with week 53)', () => {
       // 2015 had 53 ISO weeks
       expect(getIsoWeekNumber(d(2015, 12, 31))).toBe(53);
+    });
+
+    // Feste Daten, unabhaengig von Prozess-Zeitzone (lokale Kalenderfelder).
+    // Montage direkt nach Sommerzeit-Umstellung waren frueher um eine Woche zu klein.
+    it.each([
+      [2026, 3, 30, 14],  // Mo nach Umstellung auf Sommerzeit
+      [2026, 8, 31, 36],  // Mo in Sommerzeit
+      [2026, 10, 26, 44], // Mo nach Rueckstellung auf Winterzeit
+      [2026, 3, 29, 13],  // So (Umstellungstag)
+      [2026, 10, 25, 43], // So (Rueckstellungstag)
+      [2025, 3, 31, 14],
+      [2025, 10, 27, 44],
+    ])('KW fuer %i-%i-%i ist %i', (y, m, day, kw) => {
+      expect(getIsoWeekNumber(d(y, m, day))).toBe(kw);
+    });
+
+    it.each([
+      [2024, 12, 29, 52], [2024, 12, 30, 1], [2025, 1, 5, 1], [2025, 1, 6, 2],
+      [2025, 12, 28, 52], [2025, 12, 29, 1], [2026, 1, 4, 1], [2026, 1, 5, 2],
+      [2026, 12, 31, 53], [2027, 1, 1, 53], [2027, 1, 3, 53], [2027, 1, 4, 1],
+      [2020, 12, 31, 53], [2021, 1, 1, 53], [2021, 1, 3, 53], [2021, 1, 4, 1],
+      [2015, 12, 28, 53], [2016, 1, 3, 53], [2016, 1, 4, 1],
+    ])('Jahreswechsel %i-%i-%i ist KW %i', (y, m, day, kw) => {
+      expect(getIsoWeekNumber(d(y, m, day))).toBe(kw);
+    });
+
+    it('Mo-So einer Woche haben dieselbe KW (rund um beide Umstellungen)', () => {
+      for (const [y, m, day] of [[2026, 3, 23], [2026, 3, 30], [2026, 10, 19], [2026, 10, 26]]) {
+        const kws = new Set<number>();
+        for (let i = 0; i < 7; i++) kws.add(getIsoWeekNumber(d(y, m, day + i)));
+        expect(kws.size).toBe(1);
+      }
+    });
+
+    it('ist unabhaengig von der Uhrzeit', () => {
+      expect(getIsoWeekNumber(d(2026, 8, 31, 0, 0))).toBe(36);
+      expect(getIsoWeekNumber(d(2026, 8, 31, 23, 59))).toBe(36);
+      expect(getIsoWeekNumber(d(2026, 9, 6, 23, 59))).toBe(36);
+    });
+
+    it('jeder Tag 2020-2030: KW stimmt mit Donnerstag-Methode ueberein und waechst woechentlich', () => {
+      let prev = -1;
+      for (let t = Date.UTC(2020, 0, 1); t < Date.UTC(2031, 0, 1); t += 86400000) {
+        const u = new Date(t);
+        const local = new Date(u.getUTCFullYear(), u.getUTCMonth(), u.getUTCDate());
+        const wd = u.getUTCDay() === 0 ? 7 : u.getUTCDay();
+        const thu = new Date(Date.UTC(u.getUTCFullYear(), u.getUTCMonth(), u.getUTCDate() + 4 - wd));
+        const expected = Math.floor((thu.getTime() - Date.UTC(thu.getUTCFullYear(), 0, 1)) / 86400000 / 7) + 1;
+        const kw = getIsoWeekNumber(local);
+        expect(kw).toBe(expected);
+        if (wd === 1) prev = kw;
+        else if (prev >= 0) expect(kw).toBe(prev);
+      }
+    });
+  });
+
+  describe('calculateWeeklyReport Wochengrenzen (DST)', () => {
+    it.each([
+      [2026, 3, 30], [2026, 3, 29], [2026, 4, 1], [2026, 10, 25], [2026, 10, 26], [2026, 10, 28],
+    ])('%i-%i-%i: Woche beginnt Montag 0:00 und endet Sonntag (Kalendertage)', (y, m, day) => {
+      const r = calculateWeeklyReport([], d(y, m, day), DEFAULT_SETTINGS);
+      expect(r.start.getDay()).toBe(1);
+      expect(r.end.getDay()).toBe(0);
+      expect(r.start.getHours()).toBe(0);
+      expect(r.end.getHours()).toBe(0);
+      expect(r.weekNumber).toBe(getIsoWeekNumber(r.start));
+      expect(getIsoWeekNumber(r.end)).toBe(r.weekNumber);
     });
   });
 

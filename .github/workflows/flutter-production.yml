@@ -37,6 +37,7 @@ jobs:
           OVERRIDE="${{ github.event.inputs.track_name }}"
           if [ -n "$OVERRIDE" ]; then
             echo "name=$OVERRIDE" >> "$GITHUB_OUTPUT"
+            echo "track=$OVERRIDE" >> "$GITHUB_OUTPUT"
             echo "Release- und Track-Name (aus Input): $OVERRIDE"
             exit 0
           fi
@@ -59,8 +60,19 @@ jobs:
             ;;
           esac
 
+          # Ab 1.6 gibt es einen Track pro Minor-Linie ("1.6 Saix", gilt für 1.6.0,
+          # 1.6.1, ...); der Release-Name behält die volle Version ("1.6.1 Saix").
+          # Ältere Versionen: Track und Release-Name sind beide "<Version> <Charakter>".
+          MAJOR=$(echo "$VERSION" | cut -d. -f1)
+          MINOR=$(echo "$VERSION" | cut -d. -f2)
+          TRACK="$VERSION $CHARACTER"
+          if [ "$MAJOR" -gt 1 ] || { [ "$MAJOR" -eq 1 ] && [ "$MINOR" -ge 6 ]; }; then
+            TRACK="$MAJOR.$MINOR $CHARACTER"
+          fi
+
           echo "name=$VERSION $CHARACTER" >> "$GITHUB_OUTPUT"
-          echo "Release- und Track-Name: $VERSION $CHARACTER"
+          echo "track=$TRACK" >> "$GITHUB_OUTPUT"
+          echo "Release-Name: $VERSION $CHARACTER — Track: $TRACK"
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
@@ -132,6 +144,6 @@ jobs:
           packageName: app.work_time_manager
           releaseFiles: mobile/build/app/outputs/bundle/release/app-release.aab
           releaseName: ${{ steps.release_name.outputs.name }}
-          track: ${{ steps.release_name.outputs.name }}
+          track: ${{ steps.release_name.outputs.track }}
           status: completed
           whatsNewDirectory: mobile/whatsnew

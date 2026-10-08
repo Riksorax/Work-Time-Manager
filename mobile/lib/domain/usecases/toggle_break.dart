@@ -5,13 +5,15 @@ import 'package:flutter_work_time/core/utils/time_precision.dart';
 
 import '../entities/break_entity.dart';
 import '../entities/work_entry_entity.dart';
-import '../repositories/work_repository.dart';
 
 /// Use Case, um eine Pause zu starten oder die aktuell laufende zu beenden.
+///
+/// Reine Transformation Entry -> Entry: gespeichert wird nicht hier, sondern
+/// einmal vom aufrufenden ViewModel (#386).
 class ToggleBreak {
-  final WorkRepository _repository;
+  final DateTime Function() _clock;
 
-  ToggleBreak(this._repository);
+  ToggleBreak({DateTime Function() clock = DateTime.now}) : _clock = clock;
 
   /// Führt den Use Case aus.
   /// Nimmt den aktuellen Arbeitseintrag und gibt den modifizierten zurück.
@@ -28,7 +30,7 @@ class ToggleBreak {
       final updatedBreaks = currentEntry.breaks.map((b) {
         if (b == activeBreak) {
           // Erstelle eine neue Instanz der Pause mit gesetzter Endzeit.
-          return b.copyWith(end: nowToMinute());
+          return b.copyWith(end: roundToMinute(_clock()));
         }
         return b;
       }).toList();
@@ -39,7 +41,7 @@ class ToggleBreak {
       final newBreak = BreakEntity(
         id: const Uuid().v4(),
         name: 'Pause ${currentEntry.breaks.length + 1}',
-        start: nowToMinute(),
+        start: roundToMinute(_clock()),
       );
 
       // Füge die neue Pause zur Liste der Pausen hinzu.
@@ -48,10 +50,7 @@ class ToggleBreak {
       );
     }
 
-    // Speichere den aktualisierten Arbeitseintrag in der Datenbank.
-    await _repository.saveWorkEntry(updatedEntry);
-
-    // Gib den aktualisierten Eintrag zurück, damit das ViewModel seinen Zustand erneuern kann.
+    // Gib den aktualisierten Eintrag zurück, das ViewModel erneuert den Zustand und speichert.
     return updatedEntry;
   }
 }

@@ -5,6 +5,7 @@ import 'package:flutter_work_time/core/utils/timezone_utils.dart';
 import '../../domain/entities/app_theme_mode.dart';
 import '../../domain/entities/bundesland.dart';
 import '../../domain/repositories/settings_repository.dart';
+import '../../domain/utils/leave_balance_utils.dart';
 import '../datasources/remote/firestore_datasource.dart';
 
 class SettingsRepositoryImpl implements SettingsRepository {
@@ -20,7 +21,9 @@ class SettingsRepositoryImpl implements SettingsRepository {
   static const String _notifyWorkStartKey = 'notify_work_start';
   static const String _notifyWorkEndKey = 'notify_work_end';
   static const String _notifyBreaksKey = 'notify_breaks';
-  static const String _bundeslandKey = 'bundesland';
+  // Alter globaler Key (vor #279, nicht profil-/kontospezifisch) - nur noch
+  // als Fallback beim Lesen relevant.
+  static const String _legacyGlobalBundeslandKey = 'bundesland';
   static const String _warnOnOvertimeThresholdKey =
       'warn_on_overtime_threshold';
   static const String _overtimeThresholdHoursKey = 'overtime_threshold_hours';
@@ -36,10 +39,10 @@ class SettingsRepositoryImpl implements SettingsRepository {
   final FirestoreDataSource _firestoreDataSource;
   final String _userId;
 
-  /// Aktives Arbeitszeit-Profil (siehe #138). Nur Soll-Wochenstunden und
-  /// Arbeitstage sind profil-spezifisch - alle anderen Einstellungen
-  /// (Theme, Benachrichtigungen, Zeitformat, Sprache, ...) bleiben bewusst
-  /// geräte-/kontoweit, wie schon vor #138 (siehe Kommentare unten).
+  /// Aktives Arbeitszeit-Profil (siehe #138). Soll-Wochenstunden, Arbeitstage,
+  /// Urlaubsanspruch und Bundesland sind profil-spezifisch - alle anderen
+  /// Einstellungen (Theme, Benachrichtigungen, Zeitformat, Sprache, ...)
+  /// bleiben bewusst geräte-/kontoweit (siehe Kommentare unten).
   final String? _profileId;
 
   SettingsRepositoryImpl(this._prefs, this._firestoreDataSource, this._userId,
@@ -51,6 +54,13 @@ class SettingsRepositoryImpl implements SettingsRepository {
   // Generiere userId- (und profil-)spezifische Keys für Einstellungen
   String get _targetHoursKey => 'target_weekly_hours_$_userId$_profileSuffix';
   String get _workdaysKey => 'workdays_$_userId$_profileSuffix';
+  // Urlaubsanspruch ist profil-spezifisch (siehe #278).
+  String get _vacationDaysKey =>
+      'vacation_days_per_year_$_userId$_profileSuffix';
+  // Bundesland ist profil-spezifisch (siehe #279).
+  String get _bundeslandKey => 'bundesland_$_userId$_profileSuffix';
+  // Vor dem Login gewähltes Bundesland (Nutzer 'local', gleiches Profil).
+  String get _localBundeslandKey => 'bundesland_local$_profileSuffix';
   // Alter Schlüssel (reine Anzahl statt konkreter Wochentage) - nur noch
   // zur Migration bestehender Nutzer beim ersten Lesen relevant (#217).
   String get _legacyWorkdaysPerWeekKey =>
@@ -109,15 +119,40 @@ class SettingsRepositoryImpl implements SettingsRepository {
     _syncToFirestore({'workdays': days});
   }
 
-  /// Beim Login: Firestore-Einstellungen in SharedPreferences übernehmen.
-  /// Nur weeklyTargetHours und workdays werden synchronisiert —
-  /// Benachrichtigungen sind gerätespezifisch.
-  Future<void> syncFromFirestore() async {
-    if (_userId == 'local' || _userId.isEmpty) return;
+  @override
+  int getVacationDaysPerYear() {
     try {
+      final value = _prefs.getInt(_vacationDaysKey);
+      if (value != null && value >= 0 && value <= maxVacationDaysPerYear) {
+        return value;
+      }
+    } catch (_) {
+      // Fremdtyp unter dem Key - auf Default zurückfallen.
+    }
+    return defaultVacationDaysPerYear;
+  }
+
+  @override
+  Future<void> setVacationDaysPerYear(int days) async {
+    logger.i(
+        '[SettingsRepository] setVacationDaysPerYear for user $_userId: $days');
+    await _prefs.setInt(_vacationDaysKey, days);
+    _syncToFirestore({'vacationDaysPerYear': days});
+  }
+
+  /// Beim Login: Firestore-Einstellungen in SharedPreferences übernehmen.
+  /// Nur weeklyTargetHours, workdays, vacationDaysPerYear und bundesland werden
+  /// synchronisiert — Benachrichtigungen sind gerätespezifisch.
+  ///
+  /// Liefert `true`, wenn sich dadurch das Bundesland geändert hat (damit die
+  /// UI neu laden kann, siehe #279).
+  Future<bool> syncFromFirestore() async {
+    if (_userId == 'local' || _userId.isEmpty) return false;
+    try {
+      final before = getBundesland();
       final data = await _firestoreDataSource.getSettings(_userId,
           profileId: _profileId);
-      if (data == null) return;
+      if (data == null) return false;
       if (data['weeklyTargetHours'] != null) {
         await _prefs.setDouble(
             _targetHoursKey, (data['weeklyTargetHours'] as num).toDouble());
@@ -133,9 +168,53 @@ class SettingsRepositoryImpl implements SettingsRepository {
           List.generate(legacyCount.clamp(0, 7), (i) => i + 1).join(','),
         );
       }
+      final vacation = data['vacationDaysPerYear'];
+      if (vacation is num &&
+          vacation == vacation.toInt() &&
+          vacation >= 0 &&
+          vacation <= maxVacationDaysPerYear) {
+        await _prefs.setInt(_vacationDaysKey, vacation.toInt());
+      }
+      await _syncBundeslandFromRemote(data['bundesland']);
       logger.i('[SettingsRepository] Einstellungen von Firestore geladen.');
+      return getBundesland() != before;
     } catch (e) {
       logger.w('[SettingsRepository] Firestore-Import fehlgeschlagen: $e');
+      return false;
+    }
+  }
+
+  Future<void> _syncBundeslandFromRemote(Object? remote) async {
+    if (remote is String && remote.isNotEmpty) {
+      // Nur gültige Namen übernehmen, Unbekanntes ignorieren.
+      if (bundeslandFromName(remote) != null) {
+        await _prefs.setString(_bundeslandKey, remote);
+      }
+      return;
+    }
+    if (remote != null && remote is! String) return; // Fremdtyp
+    // Remote leer/nicht vorhanden.
+    if (_hasOwnBundeslandKey()) {
+      // Remote leer = nicht gewählt.
+      await _prefs.setString(_bundeslandKey, '');
+      return;
+    }
+    // Legacy-Migration: lokal gewählt (Fallback-Kette), aber noch nie
+    // hochgeladen -> hochladen und in den neuen Key übernehmen.
+    final legacy = getBundesland();
+    if (legacy != null) {
+      await _prefs.setString(_bundeslandKey, legacy.name);
+      await _firestoreDataSource.saveSettings(
+          _userId, {'bundesland': legacy.name},
+          profileId: _profileId);
+    }
+  }
+
+  bool _hasOwnBundeslandKey() {
+    try {
+      return _prefs.getString(_bundeslandKey) != null;
+    } catch (_) {
+      return true;
     }
   }
 
@@ -233,16 +312,36 @@ class SettingsRepositoryImpl implements SettingsRepository {
 
   @override
   Bundesland? getBundesland() {
-    return bundeslandFromName(_prefs.getString(_bundeslandKey));
+    try {
+      final own = _prefs.getString(_bundeslandKey);
+      if (own != null) {
+        // '' = bewusst nicht gewählt, kein Fallback.
+        return bundeslandFromName(own);
+      }
+      if (_userId != 'local') {
+        final local = _prefs.getString(_localBundeslandKey);
+        if (local != null) return bundeslandFromName(local);
+      }
+      return bundeslandFromName(_prefs.getString(_legacyGlobalBundeslandKey));
+    } catch (_) {
+      // Fremdtyp unter dem Key - als nicht gewählt behandeln.
+      return null;
+    }
   }
 
   @override
   Future<void> setBundesland(Bundesland? bundesland) async {
     if (bundesland == null) {
-      await _prefs.remove(_bundeslandKey);
+      // '' statt remove: markiert "bewusst nicht gewählt", damit die
+      // Fallback-Kette nicht wieder einen Altwert liefert. Das Backend löscht
+      // das Feld ebenfalls nur über ''. Achtung: Das Löschen des globalen
+      // Legacy-Keys betrifft alle Profile ohne eigenen Key.
+      await _prefs.setString(_bundeslandKey, '');
+      await _prefs.remove(_legacyGlobalBundeslandKey);
     } else {
       await _prefs.setString(_bundeslandKey, bundesland.name);
     }
+    _syncToFirestore({'bundesland': bundesland?.name ?? ''});
   }
 
   @override

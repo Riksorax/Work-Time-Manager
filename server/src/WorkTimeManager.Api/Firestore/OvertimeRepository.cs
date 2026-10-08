@@ -18,13 +18,22 @@ public sealed class OvertimeRepository(FirestoreDb db)
             : new OvertimeDto { Minutes = 0 };
     }
 
-    public async Task SaveAsync(string uid, int minutes, string? profileId, CancellationToken ct)
+    /// <summary>
+    /// Baut das Merge-Update für <c>balance</c>. Standard: <c>minutes</c> + <c>lastUpdated = now</c>.
+    /// Mit <paramref name="keepLastUpdated"/> nur <c>minutes</c> (#406).
+    /// </summary>
+    public static Dictionary<string, object> BuildUpdate(int minutes, bool keepLastUpdated, DateTimeOffset now)
     {
-        var update = new Dictionary<string, object>
-        {
-            ["minutes"] = minutes,
-            ["lastUpdated"] = Timestamp.FromDateTimeOffset(DateTimeOffset.UtcNow),
-        };
+        var update = new Dictionary<string, object> { ["minutes"] = minutes };
+        if (!keepLastUpdated)
+            update["lastUpdated"] = Timestamp.FromDateTimeOffset(now);
+        return update;
+    }
+
+    public async Task SaveAsync(
+        string uid, int minutes, string? profileId, CancellationToken ct, bool keepLastUpdated = false)
+    {
+        var update = BuildUpdate(minutes, keepLastUpdated, DateTimeOffset.UtcNow);
         await BalanceDoc(uid, profileId).SetAsync(update, SetOptions.MergeAll, ct);
     }
 }

@@ -2,6 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_work_time/domain/entities/bundesland.dart';
 import 'package:flutter_work_time/domain/utils/german_holidays.dart';
 
+import 'german_holidays_fixture.dart';
+
 void main() {
   group('getGermanHolidays - bundesweite Feiertage', () {
     test('enthält alle 9 bundesweiten Feiertage 2024', () {
@@ -28,6 +30,90 @@ void main() {
       expect(holidays, contains(DateTime(2025, 5, 29))); // Christi Himmelfahrt
       expect(holidays, contains(DateTime(2025, 4, 18))); // Karfreitag
       expect(holidays, contains(DateTime(2025, 4, 21))); // Ostermontag
+    });
+  });
+
+  group('getGermanHolidays - Zeitumstellung (DST)', () {
+    void expectBeweglicheFeiertage(
+      int year, {
+      required DateTime karfreitag,
+      required DateTime ostermontag,
+      required DateTime himmelfahrt,
+      required DateTime pfingstmontag,
+      required DateTime fronleichnam,
+    }) {
+      final holidays = getGermanHolidays(year, Bundesland.bayern);
+      expect(holidays, contains(karfreitag));
+      expect(holidays, contains(ostermontag));
+      expect(holidays, contains(himmelfahrt));
+      expect(holidays, contains(pfingstmontag));
+      expect(holidays, contains(fronleichnam));
+    }
+
+    test('2024 (Ostern am Umstellungstag)', () {
+      expectBeweglicheFeiertage(
+        2024,
+        karfreitag: DateTime(2024, 3, 29),
+        ostermontag: DateTime(2024, 4, 1),
+        himmelfahrt: DateTime(2024, 5, 9),
+        pfingstmontag: DateTime(2024, 5, 20),
+        fronleichnam: DateTime(2024, 5, 30),
+      );
+    });
+
+    test('2027 (Ostern 28.3.)', () {
+      expectBeweglicheFeiertage(
+        2027,
+        karfreitag: DateTime(2027, 3, 26),
+        ostermontag: DateTime(2027, 3, 29),
+        himmelfahrt: DateTime(2027, 5, 6),
+        pfingstmontag: DateTime(2027, 5, 17),
+        fronleichnam: DateTime(2027, 5, 27),
+      );
+    });
+
+    test('2008 (Ostern 23.3.)', () {
+      expectBeweglicheFeiertage(
+        2008,
+        karfreitag: DateTime(2008, 3, 21),
+        ostermontag: DateTime(2008, 3, 24),
+        himmelfahrt: DateTime(2008, 5, 1),
+        pfingstmontag: DateTime(2008, 5, 12),
+        fronleichnam: DateTime(2008, 5, 22),
+      );
+    });
+
+    test('alle Rückgabe-DateTimes sind lokale Mitternacht', () {
+      for (final year in [2008, 2013, 2016, 2024, 2025, 2027, 2035]) {
+        for (final land in [Bundesland.bayern, Bundesland.sachsen]) {
+          for (final d in getGermanHolidays(year, land)) {
+            final reason = '$year $land $d';
+            expect(d.hour, 0, reason: reason);
+            expect(d.minute, 0, reason: reason);
+            expect(d.second, 0, reason: reason);
+            expect(d.millisecond, 0, reason: reason);
+            expect(d.isUtc, isFalse, reason: reason);
+          }
+        }
+      }
+    });
+
+    test('getGermanHolidayIds: Schlüssel sind reine Datumswerte', () {
+      for (final year in [2024, 2027]) {
+        final names = getGermanHolidayIds(year, Bundesland.bayern);
+        final easterMonday =
+            year == 2024 ? DateTime(2024, 4, 1) : DateTime(2027, 3, 29);
+        final himmelfahrt =
+            year == 2024 ? DateTime(2024, 5, 9) : DateTime(2027, 5, 6);
+        final pfingstmontag =
+            year == 2024 ? DateTime(2024, 5, 20) : DateTime(2027, 5, 17);
+        final fronleichnam =
+            year == 2024 ? DateTime(2024, 5, 30) : DateTime(2027, 5, 27);
+        expect(names[easterMonday], GermanHoliday.easterMonday);
+        expect(names[himmelfahrt], GermanHoliday.ascension);
+        expect(names[pfingstmontag], GermanHoliday.whitMonday);
+        expect(names[fronleichnam], GermanHoliday.corpusChristi);
+      }
     });
   });
 
@@ -83,5 +169,33 @@ void main() {
       expect(holidays, contains(DateTime(2024, 10, 31)));
       expect(holidays.length, 9 + 2);
     });
+  });
+
+  group('getGermanHolidayIds', () {
+    String fmt(DateTime d) =>
+        '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+    test('Enum hat genau 17 Werte, Mapping deckt alle ab', () {
+      expect(GermanHoliday.values.length, 17);
+      expect(
+          germanHolidayGermanNames.keys.toSet(), GermanHoliday.values.toSet());
+    });
+
+    for (final year in holidayDatesByYear.keys) {
+      for (final land in Bundesland.values) {
+        test('Fixture $year ${land.name}', () {
+          final result = getGermanHolidayIds(year, land);
+          final expected = expectedHolidays(year, land);
+          expect(result.length, expected.length);
+          for (final entry in result.entries) {
+            // Schluessel sind lokale Mitternacht.
+            expect(entry.key,
+                DateTime(entry.key.year, entry.key.month, entry.key.day));
+            expect(expected[fmt(entry.key)], entry.value,
+                reason: '${fmt(entry.key)} ${entry.value}');
+          }
+        });
+      }
+    }
   });
 }

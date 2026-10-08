@@ -23,7 +23,10 @@ class LocalOvertimeRepositoryImpl implements OvertimeRepository {
   }
 
   @override
-  Future<void> saveOvertime(Duration overtime) async {
+  Future<void> saveOvertime(Duration overtime,
+      {bool keepLastUpdated = false}) async {
+    // keepLastUpdated ist hier wirkungslos: lokal wird das Datum nur über
+    // saveLastUpdateDate geschrieben, nie in saveOvertime (#406).
     logger.i(
         '[LocalOvertimeRepository] saveOvertime, key: $_overtimeKey, value: ${toStoredMinutes(overtime)} min');
     final success =

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:local_auth/local_auth.dart';
 
 import '../services/app_lock_service.dart';
+import 'clock_provider.dart';
 import 'providers.dart';
 
 final localAuthProvider =
@@ -13,6 +14,7 @@ final appLockServiceProvider = Provider<AppLockService>((ref) {
   return AppLockService(
     prefs: ref.watch(sharedPreferencesProvider),
     localAuth: ref.watch(localAuthProvider),
+    now: ref.watch(clockProvider),
   );
 });
 

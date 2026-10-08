@@ -1,4 +1,4 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { catchError, combineLatest, of, switchMap, tap } from 'rxjs';
@@ -8,22 +8,14 @@ import { SettingsService } from '../../core/services/settings';
 import { WorkEntryService } from '../../core/services/work-entry';
 import { WorkProfileService } from '../../core/services/work-profile';
 import { ApiClient } from '../../core/services/api-client';
+import { LeaveBalanceService } from '../../core/services/leave-balance';
+import { TodayService } from '../../core/services/today';
 import { calculateDailyStat, isSameDayRc, toDateKey } from '../../domain/services/report-calculator';
 import { DailyStat, MonthlyReport, WeeklyReport } from '../../domain/models/reports.models';
-import { WorkEntry, WorkEntryType, UserSettings } from '../../shared/models/index';
+import { Bundesland, DEFAULT_SETTINGS, WorkEntry, WorkEntryType, UserSettings } from '../../shared/models/index';
+import { addCalendarDays } from '../../shared/utils/iso-week.util';
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
-
-const DEFAULT_SETTINGS: UserSettings = {
-  weeklyTargetHours: 40,
-  workdays: [1, 2, 3, 4, 5],
-  notificationsEnabled: false,
-  notificationTime: '08:00',
-  notificationDays: [1, 2, 3, 4, 5],
-  notifyWorkStart: false,
-  notifyWorkEnd: false,
-  notifyBreaks: false,
-};
 
 const EMPTY_DAILY_STAT: DailyStat = { target: 0, worked: 0, overtime: 0 };
 
@@ -63,6 +55,8 @@ export class ReportsService {
   private readonly authService       = inject(AuthService);
   private readonly apiClient         = inject(ApiClient);
   private readonly router            = inject(Router);
+  private readonly leave             = inject(LeaveBalanceService);
+  private readonly todayService      = inject(TodayService);
 
   // ── Auth / Premium ────────────────────────────────────────────────────────────
   readonly isLoggedIn = computed(() => !!this.authService.user());
@@ -89,6 +83,29 @@ export class ReportsService {
   private readonly _weekRef  = signal<Date>(new Date());
   private readonly _monthRef = signal<Date>(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
 
+  // Tageswechsel (#382): war die Auswahl/Ansicht auf dem bisherigen „heute", folgt sie dem neuen Tag.
+  private _prevToday = this.todayService.today();
+  private readonly _todayRollover = effect(() => {
+    const key = this.todayService.today();
+    untracked(() => {
+      const prev = this._prevToday;
+      if (key === prev) return;
+      this._prevToday = key;
+      const [y, m, d] = key.split('-').map(Number);
+      const now = new Date(y, m - 1, d);
+      if (toDateKey(this._selectedDate()) === prev) {
+        this._selectedDate.set(now);
+        this._viewMonth.set({ year: y, month: m });
+      }
+      const wk = this._weekRef();
+      if (toDateKey(wk) === prev) this._weekRef.set(now);
+      const mr = this._monthRef();
+      if (mr.getFullYear() * 12 + mr.getMonth() === Number(prev.slice(0, 4)) * 12 + Number(prev.slice(5, 7)) - 1) {
+        this._monthRef.set(new Date(y, m - 1, 1));
+      }
+    });
+  });
+
   // ── Reactive Data ─────────────────────────────────────────────────────────────
 
   // Monatliche Einträge (täglich-Tab / Monatlich-Tab)
@@ -114,6 +131,9 @@ export class ReportsService {
     ),
     { initialValue: DEFAULT_SETTINGS }
   );
+
+  /** Bundesland für die Feiertags-Markierung im Kalender (#371); null = nicht gewählt. */
+  readonly bundesland = computed<Bundesland | null>(() => this._settings().bundesland ?? null);
 
   // ── Reports aus der Backend-API (eingeloggt) ───────────────────────────────────
   // Berechnung erfolgt server-seitig (zentrale, korrigierte Logik). Roh-Einträge
@@ -213,7 +233,7 @@ export class ReportsService {
 
   navigateWeek(delta: number): void {
     const ref = this._weekRef();
-    this._weekRef.set(new Date(ref.getTime() + delta * 7 * 86400000));
+    this._weekRef.set(addCalendarDays(ref, delta * 7));
   }
 
   navigateMonth(delta: number): void {
@@ -242,7 +262,7 @@ export class ReportsService {
       type,
     }));
     await Promise.all(entries.map(e => this.workEntryService.saveEntry(e)));
-    this.clearDateSelection();
+    this.endMultiSelect();
     this._reloadCurrentMonth();
   }
 
@@ -284,6 +304,21 @@ export class ReportsService {
     this._selectedDates.set(new Set());
   }
 
+  /** Entfernt Tage aus der Auswahl (kein Arbeitstage-Filter, unbekannte Keys sind ein No-op); der Modus bleibt aktiv. */
+  removeDatesFromSelection(dates: Date[]): void {
+    this._selectedDates.update((prev: Set<string>) => {
+      const next = new Set(prev);
+      dates.forEach(d => next.delete(toDateKey(d)));
+      return next;
+    });
+  }
+
+  /** Idempotent: Modus aus und Auswahl leer (im Gegensatz zu `toggleMultiSelect`). */
+  endMultiSelect(): void {
+    this._isMultiSelectActive.set(false);
+    this._selectedDates.set(new Set());
+  }
+
   navigateToLogin(): void {
     this.router.navigate(['/auth/login']);
   }
@@ -304,6 +339,8 @@ export class ReportsService {
     const vm = this._viewMonth();
     // Trigger erneuten Load durch neues Objekt
     this._viewMonth.set({ ...vm });
+    // Urlaubs-/Kranktage können sich geändert haben (#278)
+    this.leave.refresh();
   }
 
   private _dateId(date: Date): string {

@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
+import { firstValueFrom } from 'rxjs';
 import { MatDialog } from '@angular/material/dialog';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
@@ -24,6 +25,17 @@ import {
   AdjustOvertimeDialogComponent,
   AdjustOvertimeDialogResult,
 } from './components/adjust-overtime-dialog/adjust-overtime-dialog';
+import {
+  EditVacationDaysDialogComponent,
+  EditVacationDaysDialogResult,
+} from './components/edit-vacation-days-dialog/edit-vacation-days-dialog';
+import {
+  EditBundeslandDialogComponent,
+  EditBundeslandDialogResult,
+} from './components/edit-bundesland-dialog/edit-bundesland-dialog';
+import { LeaveBalanceService } from '../../core/services/leave-balance';
+import { DEFAULT_VACATION_DAYS_PER_YEAR } from '../../shared/models/index';
+import { LeaveBalanceCardComponent } from '../../shared/components/leave-balance-card/leave-balance-card';
 
 @Component({
   selector: 'app-settings',
@@ -36,6 +48,7 @@ import {
     MatProgressSpinnerModule,
     MatSlideToggleModule,
     MatButtonToggleModule,
+    LeaveBalanceCardComponent,
     TranslatePipe,
   ],
   templateUrl: './settings.html',
@@ -44,6 +57,7 @@ import {
 })
 export class SettingsComponent {
   protected readonly svc      = inject(SettingsPageService);
+  protected readonly leave    = inject(LeaveBalanceService);
   private  readonly dialog    = inject(MatDialog);
   private  readonly snackbar  = inject(MatSnackBar);
   private  readonly translate = inject(TranslateService);
@@ -88,6 +102,34 @@ export class SettingsComponent {
       await this.svc.setWorkdays(result.days);
       this.snackbar.open(this.translate.instant('settings.workdaysSaved'), 'OK', { duration: 2500 });
     });
+  }
+
+  async openEditVacationDaysDialog(): Promise<void> {
+    const ref = this.dialog.open(EditVacationDaysDialogComponent, {
+      data: { currentDays: this.svc.settings()?.vacationDaysPerYear ?? DEFAULT_VACATION_DAYS_PER_YEAR },
+    });
+    const result: EditVacationDaysDialogResult | undefined = await firstValueFrom(ref.afterClosed());
+    if (!result) return;
+    try {
+      await this.svc.setVacationDays(result.days);
+      this.snackbar.open(this.translate.instant('settings.vacationDaysSaved'), 'OK', { duration: 2500 });
+    } catch {
+      this.snackbar.open(this.translate.instant('settings.vacationDaysSaveError'), 'OK', { duration: 4000 });
+    }
+  }
+
+  async openEditBundeslandDialog(): Promise<void> {
+    const ref = this.dialog.open(EditBundeslandDialogComponent, {
+      data: { current: this.svc.settings()?.bundesland ?? null },
+    });
+    const result: EditBundeslandDialogResult | undefined = await firstValueFrom(ref.afterClosed());
+    if (!result) return;
+    try {
+      await this.svc.setBundesland(result.bundesland);
+      this.snackbar.open(this.translate.instant('settings.bundesland.saved'), 'OK', { duration: 2500 });
+    } catch {
+      this.snackbar.open(this.translate.instant('settings.bundesland.saveError'), 'OK', { duration: 4000 });
+    }
   }
 
   openAdjustOvertimeDialog(): void {

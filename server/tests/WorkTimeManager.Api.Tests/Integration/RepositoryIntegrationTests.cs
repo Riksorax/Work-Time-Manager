@@ -131,6 +131,37 @@ public class RepositoryIntegrationTests(FirestoreEmulatorFixture fixture)
     }
 
     [SkippableFact]
+    public async Task Overtime_KeepLastUpdated_LeavesExistingTimestampUntouched()
+    {
+        RequireEmulator();
+        var repo = new OvertimeRepository(fixture.Db!);
+        var uid = NewUid();
+
+        await repo.SaveAsync(uid, 10, null, Ct);
+        var first = await repo.GetAsync(uid, null, Ct);
+        await Task.Delay(50, Ct);
+        await repo.SaveAsync(uid, 99, null, Ct, keepLastUpdated: true);
+        var second = await repo.GetAsync(uid, null, Ct);
+
+        Assert.Equal(99, second.Minutes);
+        Assert.Equal(first.LastUpdated, second.LastUpdated);
+    }
+
+    [SkippableFact]
+    public async Task Overtime_KeepLastUpdated_OnMissingDocument_LeavesLastUpdatedNull()
+    {
+        RequireEmulator();
+        var repo = new OvertimeRepository(fixture.Db!);
+        var uid = NewUid();
+
+        await repo.SaveAsync(uid, 20, "second", Ct, keepLastUpdated: true);
+        var result = await repo.GetAsync(uid, "second", Ct);
+
+        Assert.Equal(20, result.Minutes);
+        Assert.Null(result.LastUpdated);
+    }
+
+    [SkippableFact]
     public async Task Settings_SaveAndGet_RoundTrips()
     {
         RequireEmulator();
@@ -155,6 +186,94 @@ public class RepositoryIntegrationTests(FirestoreEmulatorFixture fixture)
         Assert.Equal("07:30", loaded.NotificationTime);
         Assert.Equal([1, 3, 5], loaded.NotificationDays);
         Assert.True(loaded.NotifyBreaks);
+    }
+
+    [SkippableFact]
+    public async Task Settings_PutWithoutVacationField_KeepsStoredValue()
+    {
+        RequireEmulator();
+        var repo = new SettingsRepository(fixture.Db!);
+        var uid = NewUid();
+
+        await repo.SaveAsync(uid, new SettingsDto { VacationDaysPerYear = 25 }, null, Ct);
+        await repo.SaveAsync(uid, new SettingsDto { WeeklyTargetHours = 36 }, null, Ct); // alter Client
+
+        var loaded = await repo.GetAsync(uid, null, Ct);
+        Assert.Equal(25, loaded.VacationDaysPerYear);
+        Assert.Equal(36, loaded.WeeklyTargetHours);
+    }
+
+    [SkippableFact]
+    public async Task Settings_NeverSetVacation_DefaultsTo30()
+    {
+        RequireEmulator();
+        var repo = new SettingsRepository(fixture.Db!);
+        var uid = NewUid();
+
+        Assert.Equal(30, (await repo.GetAsync(uid, null, Ct)).VacationDaysPerYear);
+        await repo.SaveAsync(uid, new SettingsDto { WeeklyTargetHours = 36 }, null, Ct);
+        Assert.Equal(30, (await repo.GetAsync(uid, null, Ct)).VacationDaysPerYear);
+    }
+
+    [SkippableFact]
+    public async Task Settings_Bundesland_RoundTripsKeepsOnAbsentAndDeletesOnEmpty()
+    {
+        RequireEmulator();
+        var repo = new SettingsRepository(fixture.Db!);
+        var uid = NewUid();
+
+        Assert.Null((await repo.GetAsync(uid, null, Ct)).Bundesland);
+
+        await repo.SaveAsync(uid, new SettingsDto { Bundesland = "bayern" }, null, Ct);
+        Assert.Equal("bayern", (await repo.GetAsync(uid, null, Ct)).Bundesland);
+
+        await repo.SaveAsync(uid, new SettingsDto { WeeklyTargetHours = 36 }, null, Ct); // alter Client
+        var kept = await repo.GetAsync(uid, null, Ct);
+        Assert.Equal("bayern", kept.Bundesland);
+        Assert.Equal(36, kept.WeeklyTargetHours);
+
+        await repo.SaveAsync(uid, new SettingsDto { Bundesland = "" }, null, Ct);
+        Assert.Null((await repo.GetAsync(uid, null, Ct)).Bundesland);
+    }
+
+    [SkippableFact]
+    public async Task Settings_Bundesland_IsIsolatedPerProfile()
+    {
+        RequireEmulator();
+        var repo = new SettingsRepository(fixture.Db!);
+        var uid = NewUid();
+
+        await repo.SaveAsync(uid, new SettingsDto { Bundesland = "bayern" }, null, Ct);
+        await repo.SaveAsync(uid, new SettingsDto { Bundesland = "berlin" }, "second", Ct);
+
+        Assert.Equal("bayern", (await repo.GetAsync(uid, null, Ct)).Bundesland);
+        Assert.Equal("berlin", (await repo.GetAsync(uid, "second", Ct)).Bundesland);
+
+        await repo.SaveAsync(uid, new SettingsDto { Bundesland = "" }, "second", Ct);
+        Assert.Null((await repo.GetAsync(uid, "second", Ct)).Bundesland);
+        Assert.Equal("bayern", (await repo.GetAsync(uid, null, Ct)).Bundesland);
+    }
+
+    [SkippableFact]
+    public async Task WorkEntry_GetYear_SpansMonthsAndIsolatesProfile()
+    {
+        RequireEmulator();
+        var repo = new WorkEntryRepository(fixture.Db!);
+        var uid = NewUid();
+        WorkEntryDto Vac(int y, int m, int d) => new()
+        {
+            Id = $"{y:D4}-{m:D2}-{d:D2}",
+            Date = new DateTimeOffset(y, m, d, 0, 0, 0, TimeSpan.Zero),
+            Type = "vacation",
+        };
+
+        await repo.SaveAsync(uid, Vac(2026, 1, 2), null, Ct);
+        await repo.SaveAsync(uid, Vac(2026, 12, 31), null, Ct);
+        await repo.SaveAsync(uid, Vac(2025, 12, 31), null, Ct);
+        await repo.SaveAsync(uid, Vac(2026, 5, 4), "p1", Ct);
+
+        Assert.Equal(2, (await repo.GetYearAsync(uid, 2026, null, Ct)).Count);
+        Assert.Single(await repo.GetYearAsync(uid, 2026, "p1", Ct));
     }
 
     [SkippableFact]
