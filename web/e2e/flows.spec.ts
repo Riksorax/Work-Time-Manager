@@ -26,6 +26,33 @@ test.describe('Dashboard', () => {
   });
 });
 
+test.describe('Resturlaub', () => {
+  test('steht nicht im Dashboard, aber in Einstellungen und Reports', async ({ page }) => {
+    await seedPreferences(page, 'de', 'light');
+    await gotoReady(page, '/dashboard');
+    await expect(page.getByRole('button', { name: 'Zeiterfassung starten' })).toBeVisible();
+    await expect(page.locator('app-leave-balance-card')).toHaveCount(0);
+
+    await gotoReady(page, '/settings');
+    await expect(page.locator('app-leave-balance-card')).toBeVisible();
+    await gotoReady(page, '/reports');
+    await page.getByRole('tab', { name: 'Jahr', exact: true }).click();
+    await expect(page.locator('app-leave-balance-card')).toBeVisible();
+  });
+
+  test('Start-Button liegt auf dem Handy ohne Scrollen über der unteren Navigation', async ({ page }) => {
+    // 375x812: übliche Handy-Größe. In der Android-Emulation (mobile-chrome) liegt der Button ~85 px tiefer als in
+    // Desktop-Chromium (Text-Skalierung), bei 667 px Höhe verdeckt ihn dort die Navigation, daher nicht 667.
+    // Mit der Resturlaub-Karte lag er bei 893 (Chromium) bzw. 977 px (mobile-chrome), also unter jedem Handy-Bildschirm.
+    await page.setViewportSize({ width: 375, height: 812 });
+    await seedPreferences(page, 'de', 'light');
+    await gotoReady(page, '/dashboard');
+    const button = await page.getByRole('button', { name: 'Zeiterfassung starten' }).boundingBox();
+    const nav = await page.locator('nav.bottom-nav').boundingBox();
+    expect(button!.y + button!.height).toBeLessThanOrEqual(nav!.y);
+  });
+});
+
 test.describe('Navigation', () => {
   test('wechselt zwischen Dashboard, Reports und Einstellungen', async ({ page, isMobile }) => {
     await seedPreferences(page, 'en', 'light');

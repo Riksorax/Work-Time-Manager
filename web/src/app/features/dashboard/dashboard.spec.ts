@@ -13,44 +13,13 @@ import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { Subject, of } from 'rxjs';
 import de from '../../../../public/i18n/de.json';
 import en from '../../../../public/i18n/en.json';
-import { LeaveBalanceService } from '../../core/services/leave-balance';
 import { GermanHoliday } from '../../shared/utils/german-holidays.util';
 import { HolidayBannerComponent } from '../../shared/components/holiday-banner/holiday-banner';
-import { LeaveBalanceCardComponent } from '../../shared/components/leave-balance-card/leave-balance-card';
 import { TimeInputComponent } from '../../shared/components/time-input/time-input';
 import { WorkEntryType } from '../../shared/models/index';
 
-describe('DashboardComponent.goToSettings', () => {
-  it('navigiert zu /settings', () => {
-    const navigate = vi.fn();
-    TestBed.overrideComponent(DashboardComponent, { set: { template: '', imports: [] } });
-    TestBed.configureTestingModule({
-      providers: [
-        { provide: DashboardService, useValue: {} },
-        { provide: OpenEntryService, useValue: createFakeOpenEntry() },
-        { provide: LeaveBalanceService, useValue: {} },
-        { provide: Router, useValue: { navigate } },
-        { provide: MatDialog, useValue: {} },
-        { provide: MatSnackBar, useValue: {} },
-        { provide: TranslateService, useValue: {} },
-      ],
-    });
-    TestBed.createComponent(DashboardComponent).componentInstance.goToSettings();
-    expect(navigate).toHaveBeenCalledWith(['/settings']);
-  });
-});
-
 @Component({ selector: 'app-holiday-banner', template: '<div class="stub-banner">{{ holiday() }}</div>' })
 class HolidayBannerStub { readonly holiday = input.required<GermanHoliday>(); }
-@Component({ selector: 'app-leave-balance-card', template: '' })
-class LeaveCardStub {
-  readonly report = input<unknown>();
-  readonly state = input<unknown>();
-  readonly editable = input<boolean>();
-  readonly localOnly = input<boolean>();
-  readonly retry = output<void>();
-  readonly editEntitlement = output<void>();
-}
 @Component({ selector: 'app-time-input', template: '' })
 class TimeInputStub {
   readonly label = input<string>();
@@ -69,8 +38,8 @@ describe('DashboardComponent Feiertags-Banner', () => {
     holiday.set(null);
     isLoading.set(false);
     TestBed.overrideComponent(DashboardComponent, {
-      remove: { imports: [HolidayBannerComponent, LeaveBalanceCardComponent, TimeInputComponent] },
-      add: { imports: [HolidayBannerStub, LeaveCardStub, TimeInputStub] },
+      remove: { imports: [HolidayBannerComponent, TimeInputComponent] },
+      add: { imports: [HolidayBannerStub, TimeInputStub] },
     });
     TestBed.configureTestingModule({
       providers: [
@@ -83,8 +52,6 @@ describe('DashboardComponent Feiertags-Banner', () => {
           workEntry: signal({ id: 'x', date: new Date(2026, 9, 3), breaks: [], isManuallyEntered: false, type: WorkEntryType.Work }),
         } },
         { provide: OpenEntryService, useValue: createFakeOpenEntry() },
-        { provide: LeaveBalanceService, useValue: {
-          currentYearReport: signal(null), currentYearState: signal('loading'), refresh: vi.fn() } },
         { provide: Router, useValue: { navigate: vi.fn() } },
         { provide: MatDialog, useValue: {} },
         { provide: MatSnackBar, useValue: {} },
@@ -159,8 +126,8 @@ describe('DashboardComponent Banner für offene Einträge (#385)', () => {
     fake = createFakeOpenEntry();
     fake.entries.set({ '2026-10-02': friEntry, '2026-10-01': { ...friEntry, id: '2026-10-01' } });
     TestBed.overrideComponent(DashboardComponent, {
-      remove: { imports: [HolidayBannerComponent, LeaveBalanceCardComponent, TimeInputComponent] },
-      add: { imports: [HolidayBannerStub, LeaveCardStub, TimeInputStub] },
+      remove: { imports: [HolidayBannerComponent, TimeInputComponent] },
+      add: { imports: [HolidayBannerStub, TimeInputStub] },
     });
     TestBed.configureTestingModule({
       providers: [
@@ -173,8 +140,6 @@ describe('DashboardComponent Banner für offene Einträge (#385)', () => {
           workEntry: signal({ id: 'x', date: new Date(2026, 9, 3), breaks: [], isManuallyEntered: false, type: WorkEntryType.Work }),
         } },
         { provide: OpenEntryService, useValue: fake },
-        { provide: LeaveBalanceService, useValue: {
-          currentYearReport: signal(null), currentYearState: signal('loading'), refresh: vi.fn() } },
         { provide: Router, useValue: { navigate: vi.fn() } },
         { provide: MatDialog, useValue: { open: dialogOpen } },
         { provide: MatSnackBar, useValue: { open: snackOpen } },

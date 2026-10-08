@@ -48,7 +48,7 @@ class _NoOpenEntriesViewModel extends OpenEntryViewModel {
 
 void main() {
   for (final width in [600.0, 1400.0]) {
-    testWidgets('kompakte Resturlaub-Karte ohne Login sichtbar (Breite $width)',
+    testWidgets('Resturlaub-Karte steht nicht im Dashboard (Breite $width)',
         (tester) async {
       final view = tester.view;
       view.physicalSize = Size(width, 1600);
@@ -74,8 +74,11 @@ void main() {
       ));
       await tester.pump();
 
-      expect(find.text('Resturlaub'), findsOneWidget);
-      expect(find.text('18 von 30 Tagen'), findsOneWidget);
+      // Die Karte schob Zeiteingabe und Start-Button unter den sichtbaren Bereich;
+      // Resturlaub steht in den Einstellungen und in den Berichten (Jahr).
+      expect(find.text('Resturlaub'), findsNothing);
+      expect(find.text('18 von 30 Tagen'), findsNothing);
+      expect(find.byType(DashboardScreen), findsOneWidget);
     });
   }
 }
