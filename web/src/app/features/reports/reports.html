@@ -245,7 +245,7 @@
                   <mat-icon>chevron_left</mat-icon>
                 </button>
                 <div class="week-label">
-                  <span class="kw-label">KW {{ svc.weeklyReport().weekNumber }}</span>
+                  <span class="kw-label">{{ 'reports.calendarWeek' | translate: { number: svc.weeklyReport().weekNumber } }}</span>
                   <span class="week-range">
                     {{ svc.weeklyReport().start | date:'d. MMM' }} –
                     {{ svc.weeklyReport().end | date:'d. MMM yyyy' }}
@@ -420,7 +420,7 @@
               <div class="week-overview" role="list" [attr.aria-label]="'reports.weekOverviewTitle' | translate">
                 @for (week of svc.monthlyReport().weeks; track week.weekNumber) {
                   <div class="week-overview-row" role="listitem">
-                    <span class="kw-badge">KW {{ week.weekNumber }}</span>
+                    <span class="kw-badge">{{ 'reports.calendarWeek' | translate: { number: week.weekNumber } }}</span>
                     <span class="week-overview-duration">{{ formatDuration(week.totalWorked) }}</span>
                   </div>
                 }

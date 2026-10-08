@@ -221,8 +221,78 @@ async function installFakeBackend(page: Page, user: TestUser, state: FakeBackend
       return json((await fsGet(doc)) ?? {});
     }
 
+    const report = path.match(/^\/reports\/(daily|weekly|monthly|yearly)\/(\d+)(?:\/(\d+))?(?:\/(\d+))?$/);
+    if (report) return json(await buildReport(user.uid, pid, report[1], Number(report[2]), Number(report[3]), Number(report[4])));
+
     return json({ message: `E2E-Fake-Backend kennt ${req.method()} ${path} nicht` }, 501);
   });
+}
+
+// ── Berichte (vereinfachte Rechnung, nur für die Darstellung; die kanonische Rechenlogik testet das Backend) ──────
+
+const HOUR = 3_600_000;
+const pad = (n: number) => String(n).padStart(2, '0');
+
+/** Montag der ISO-Woche, in der `d` liegt (lokal). */
+function mondayOf(d: Date): Date {
+  const m = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  m.setDate(m.getDate() - ((m.getDay() + 6) % 7));
+  return m;
+}
+
+/** ISO-8601-Wochennummer. */
+function isoWeek(d: Date): number {
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  t.setUTCDate(t.getUTCDate() + 4 - (t.getUTCDay() || 7));
+  const y0 = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
+  return Math.ceil(((t.getTime() - y0.getTime()) / 86_400_000 + 1) / 7);
+}
+
+async function workedMsOn(uid: string, pid: string, day: Date): Promise<number> {
+  const doc = await fsGet(`${scoped(uid, 'work_entries', pid)}/${day.getFullYear()}-${pad(day.getMonth() + 1)}`);
+  const e = (doc?.['days'] as Record<string, Record<string, unknown>> | undefined)?.[String(day.getDate())];
+  const start = e?.['workStart'], end = e?.['workEnd'];
+  return start instanceof Date && end instanceof Date ? end.getTime() - start.getTime() : 0;
+}
+
+async function buildReport(uid: string, pid: string, kind: string, y: number, m: number, d: number): Promise<unknown> {
+  if (kind === 'daily') {
+    const worked = await workedMsOn(uid, pid, new Date(y, m - 1, d));
+    return { targetMs: 8 * HOUR, workedMs: worked, overtimeMs: worked - 8 * HOUR };
+  }
+  if (kind === 'weekly') {
+    const monday = mondayOf(new Date(y, m - 1, d));
+    const days = await Promise.all([0, 1, 2, 3, 4, 5, 6].map(async i => {
+      const day = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
+      return { date: day.toISOString(), workedMs: await workedMsOn(uid, pid, day) };
+    }));
+    const total = days.reduce((a, x) => a + x.workedMs, 0);
+    const workDays = days.filter(x => x.workedMs > 0).length;
+    return {
+      weekNumber: isoWeek(monday), start: monday.toISOString(),
+      end: new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6).toISOString(),
+      totalWorkedMs: total, totalBreaksMs: 0, workDays, avgPerDayMs: workDays ? total / workDays : 0,
+      overtimeMs: total - workDays * 8 * HOUR, days,
+    };
+  }
+  if (kind === 'monthly') {
+    const count = new Date(y, m, 0).getDate();
+    const days = await Promise.all(Array.from({ length: count }, async (_, i) => {
+      const day = new Date(y, m - 1, i + 1);
+      return { date: day.toISOString(), workedMs: await workedMsOn(uid, pid, day) };
+    }));
+    const weeks = new Map<number, number>();
+    for (const x of days) weeks.set(isoWeek(new Date(x.date)), (weeks.get(isoWeek(new Date(x.date))) ?? 0) + x.workedMs);
+    const total = days.reduce((a, x) => a + x.workedMs, 0);
+    const workDays = days.filter(x => x.workedMs > 0).length;
+    return {
+      month: new Date(y, m - 1, 1).toISOString(), totalWorkedMs: total, totalBreaksMs: 0, workDays,
+      avgPerDayMs: workDays ? total / workDays : 0, avgPerWeekMs: weeks.size ? total / weeks.size : 0,
+      monthlyOvertimeMs: total - workDays * 8 * HOUR, totalOvertimeMs: 0,
+      weeks: [...weeks].map(([weekNumber, totalWorkedMs]) => ({ weekNumber, totalWorkedMs })), days,
+    };
+  }
+  return { year: y, vacationDaysPerYear: 30, vacationDaysTaken: 0, vacationDaysRemaining: 30, sickDays: 0 };
 }
 
 async function seedEntryRaw(uid: string, pid: string, date: Date, dto: EntryDto): Promise<void> {

@@ -3,10 +3,11 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { TranslatePipe } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-time-input',
-  imports: [MatFormFieldModule, MatInputModule, MatIconModule, MatButtonModule],
+  imports: [MatFormFieldModule, MatInputModule, MatIconModule, MatButtonModule, TranslatePipe],
   templateUrl: './time-input.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

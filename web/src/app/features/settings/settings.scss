@@ -21,12 +21,14 @@
   width: 100%;
   max-width: 1100px;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  // minmax(0, 1fr): `1fr` hat sonst ein implizites Minimum von `auto` und die Spalte wächst mit langem Inhalt
+  // (z. B. E-Mail-Adresse) über den Bildschirmrand hinaus.
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 48px;
   align-items: start;
 
   @media (max-width: 900px) {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 8px;
   }
 }

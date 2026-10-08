@@ -82,6 +82,7 @@
     "repentanceDay": "Repentance and Prayer Day"
   },
   "reports": {
+    "calendarWeek": "CW {{number}}",
     "loading": "Loading reports...",
     "tabDaily": "Daily",
     "tabWeekly": "Weekly",
@@ -295,6 +296,7 @@
     }
   },
   "shared": {
+    "timeInputClearAria": "Clear {{label}}",
     "editEntryTitleEdit": "Edit entry",
     "editEntryTitleNew": "New entry",
     "editEntryTypeLabel": "Type",

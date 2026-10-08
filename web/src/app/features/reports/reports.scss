@@ -39,6 +39,25 @@
   ::ng-deep .mat-mdc-tab-body-content {
     overflow: hidden auto;
   }
+
+  // Vier Tabs (Täglich, Wöchentlich, Monatlich, Jahr) müssen auch auf 320-375 px ohne Blätterpfeile passen.
+  @media (max-width: 600px) {
+    ::ng-deep .mdc-tab {
+      min-width: 0;
+      padding: 0 8px;
+    }
+  }
+
+  @media (max-width: 360px) {
+    ::ng-deep .mdc-tab {
+      padding: 0 4px;
+    }
+
+    ::ng-deep .mdc-tab__text-label {
+      font-size: 0.8125rem;
+      letter-spacing: 0;
+    }
+  }
 }
 
 // ── Shared tab content ─────────────────────────────────────────────────────────
@@ -569,7 +588,9 @@
 
 .weekly-layout,
 .monthly-layout {
-  padding: 24px;
+  // Kein eigenes Padding: der umgebende `.tab-content` liefert es bereits (sonst doppelter Rand, auf 375 px nur
+  // 270 px Inhaltsbreite).
+  padding: 0;
   max-width: 900px;
   margin: 0 auto;
   box-sizing: border-box;
