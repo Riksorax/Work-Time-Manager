@@ -2,8 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart' show TimeOfDay;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_work_time/core/providers/clock_provider.dart';
+import 'package:flutter_work_time/core/providers/providers.dart';
 import 'package:flutter_work_time/domain/entities/break_entity.dart';
 import 'package:flutter_work_time/domain/entities/work_entry_entity.dart';
+import 'package:flutter_work_time/domain/usecases/toggle_break.dart';
 import 'package:logger/logger.dart';
 
 import '../../support/dashboard_harness.dart';
@@ -279,6 +282,36 @@ void main() {
         expect(h.state.totalOvertime, stateBefore.totalOvertime);
       }, setUp: prep(e.value.seed), profiles: true);
     }
+  });
+
+  // `before` wird synchron in `_beginAction` festgehalten: aendert sich der
+  // State waehrend des `await toggleBreak.call` (hier per Reload), schreibt die
+  // Kompensation trotzdem den Eintrag vor der Aktion.
+  group('E5b before vor dem Zwischen-await', () {
+    final toggleGate = <Completer<void>>[];
+    scenario(
+        'startOrStopBreak: Kompensation schreibt den Eintrag von vor dem '
+        'await',
+        at(17), (h) {
+      toggleGate.clear();
+      h.boot();
+      h.overtime.failSaveOvertime = true;
+      final r = tap(h, h.vm.startOrStopBreak);
+      expect(toggleGate, hasLength(1));
+
+      h.work.store[moKey] = entryOf(mo, start: at(9), end: at(16));
+      h.act(h.vm.reloadAfterRetroClose);
+      expect(h.state.workEntry.workStart, at(9));
+
+      toggleGate.single.complete();
+      h.async.flushMicrotasks();
+      expect(r.value(), isFalse);
+      expect(h.work.saved.last, finished);
+      expect(h.work.store[moKey], finished);
+    }, setUp: prep(finished), profiles: true, overrides: [
+      toggleBreakUseCaseProvider.overrideWith(
+          (ref) => _GatedToggleBreak(ref.watch(clockProvider), toggleGate)),
+    ]);
   });
 
   group('E6 lastUpdated-Kopplung', () {
@@ -632,4 +665,19 @@ void main() {
       expect(tap(h, h.vm.startOrStopTimer).value(), isTrue);
     }, setUp: prep(running), profiles: true);
   });
+}
+
+class _GatedToggleBreak extends ToggleBreak {
+  _GatedToggleBreak(DateTime Function() clock, this.gates)
+      : super(clock: clock);
+
+  final List<Completer<void>> gates;
+
+  @override
+  Future<WorkEntryEntity> call(WorkEntryEntity currentEntry) async {
+    final gate = Completer<void>();
+    gates.add(gate);
+    await gate.future;
+    return super.call(currentEntry);
+  }
 }
