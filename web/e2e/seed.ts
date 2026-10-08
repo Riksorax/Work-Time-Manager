@@ -27,7 +27,8 @@ export async function freezeTime(page: Page, now: Date = FIXED_NOW): Promise<voi
 /** Schreibt Einträge vor dem App-Start in den localStorage (nur beim ersten Laden, Neuladen behält App-Stand). */
 export async function seedEntries(page: Page, entries: SeedEntry[]): Promise<void> {
   await page.addInitScript((list: SeedEntry[]) => {
-    if (localStorage.getItem('e2e_seeded') !== null) return;
+    if (window.top !== window) return; // nur das Hauptdokument (Frames ohne Speicherzugriff werfen sonst)
+    try { if (localStorage.getItem('e2e_seeded') !== null) return; } catch { return; }
     const months = new Map<string, { days: Record<string, unknown> }>();
     for (const e of list) {
       const [y, m, d] = e.day.split('-').map(Number);

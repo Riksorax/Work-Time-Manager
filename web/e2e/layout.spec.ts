@@ -64,7 +64,19 @@ test.describe('Einstellungen bei 320 px', () => {
     for (let i = 0; i < await titles.count(); i++) {
       const clipped = await titles.nth(i).evaluate(e => e.scrollWidth > e.clientWidth + 1);
       expect(clipped, `Titel ${i}: ${await titles.nth(i).innerText()}`).toBe(false);
+      // Ein auf (fast) 0 px zusammengedrückter Titel ist nicht „abgeschnitten", aber ebenso unlesbar (Chromium).
+      const width = (await titles.nth(i).boundingBox())!.width;
+      expect(width, `Titel ${i} sichtbar breit: ${await titles.nth(i).innerText()}`).toBeGreaterThanOrEqual(40);
     }
+  });
+
+  test('Sprachumschalter liegt innerhalb der Zeile', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 700 });
+    await gotoReady(page, '/settings');
+    const item = await page.locator('.language-section .mdc-list-item').boundingBox();
+    const group = await page.locator('.language-section mat-button-toggle-group').boundingBox();
+    expect(group!.x).toBeGreaterThanOrEqual(item!.x);
+    expect(group!.x + group!.width).toBeLessThanOrEqual(item!.x + item!.width + 1);
   });
 
   test('Chevron der Listenzeilen ist eine 24-px-Icon-Schrift und damit sichtbar', async ({ page }) => {

@@ -12,9 +12,14 @@ export const VIEWPORTS = [320, 375, 768, 1024, 1440].map(width => ({ width, heig
 /** Schreibt Sprache und Theme in localStorage, bevor die App bootet. */
 export async function seedPreferences(page: Page, lang: Lang, theme: Theme): Promise<void> {
   await page.addInitScript(([l, t]) => {
-    // Nur beim ersten Laden setzen, damit Neuladen die App-Auswahl prüft.
-    if (localStorage.getItem('locale') === null) localStorage.setItem('locale', l);
-    if (localStorage.getItem('theme') === null) localStorage.setItem('theme', t);
+    // Init-Skripte laufen in jedem Frame. In Frames ohne Speicherzugriff (z. B. ein sandboxed about:blank-Frame, in
+    // mobile-chrome der Fall) wirft schon das Lesen von `localStorage` und landet als Konsolenfehler im Test.
+    if (window.top !== window) return;
+    try {
+      // Nur beim ersten Laden setzen, damit Neuladen die App-Auswahl prüft.
+      if (localStorage.getItem('locale') === null) localStorage.setItem('locale', l);
+      if (localStorage.getItem('theme') === null) localStorage.setItem('theme', t);
+    } catch { /* kein Speicherzugriff in diesem Dokument */ }
   }, [lang, theme]);
 }
 

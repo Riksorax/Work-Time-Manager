@@ -178,6 +178,36 @@
   }
 }
 
+// Sprachauswahl auf schmalen Viewports: Die Umschalter (~190 px) lassen neben Icon und Titel keinen Platz. Der Titel schrumpfte
+// auf ~11 px (in Chromium unsichtbar, in Firefox abgeschnitten) und die Gruppe ragte über den Rand. Die Umschalter wandern
+// deshalb in eine eigene Zeile unter Icon und Titel.
+@media (max-width: 400px) {
+  .language-section ::ng-deep .mat-mdc-list-item.mdc-list-item {
+    flex-wrap: wrap;
+    row-gap: 8px;
+    height: auto;
+    min-height: 56px;
+    padding-block: 8px;
+  }
+
+  .language-section ::ng-deep .mdc-list-item__content {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .language-section mat-button-toggle-group {
+    flex: 1 1 100%;
+    margin-inline: 0;
+    // Der Trailing-Slot ignoriert das Zeilen-Padding: die Umschalter bündig mit dem Zeileninhalt halten.
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .language-section ::ng-deep .mat-mdc-list-item.mdc-list-item {
+    padding-inline: 16px;
+  }
+}
+
 // button mat-list-item: Browser-Defaults zurücksetzen
 button[mat-list-item] {
   border: none;
