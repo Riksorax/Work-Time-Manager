@@ -4,9 +4,10 @@ import localeDe from '@angular/common/locales/de';
 import { provideRouter, withNavigationErrorHandler } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
+import { MAT_DIALOG_DEFAULT_OPTIONS, MatDialogConfig } from '@angular/material/dialog';
 import { initializeApp, provideFirebaseApp } from '@angular/fire/app';
-import { getAuth, provideAuth } from '@angular/fire/auth';
-import { getFirestore, provideFirestore } from '@angular/fire/firestore';
+import { connectAuthEmulator, getAuth, provideAuth, signInWithEmailAndPassword } from '@angular/fire/auth';
+import { connectFirestoreEmulator, getFirestore, provideFirestore } from '@angular/fire/firestore';
 import { provideTranslateService } from '@ngx-translate/core';
 import { provideTranslateHttpLoader } from '@ngx-translate/http-loader';
 import * as Sentry from '@sentry/angular';
@@ -48,9 +49,28 @@ export const appConfig: ApplicationConfig = {
     })),
     provideHttpClient(withInterceptors([authInterceptor])),
     provideAnimationsAsync(),
+    // Material-Standard ist 80vw; auf 320 px bleiben dann nur ~208 px Inhaltsbreite. Die Dialog-Mindestbreiten
+    // (`min(Npx, calc(95vw - 48px))`) rechnen mit diesem Wert. Die übrigen Standardwerte (u. a. `role: 'dialog'`)
+    // müssen mitgegeben werden, ein reines `{ maxWidth }` ersetzt sie komplett.
+    { provide: MAT_DIALOG_DEFAULT_OPTIONS, useValue: { ...new MatDialogConfig(), maxWidth: '95vw' } },
     provideFirebaseApp(() => initializeApp(environment.firebase)),
-    provideAuth(() => getAuth()),
-    provideFirestore(() => getFirestore()),
+    provideAuth(() => {
+      const auth = getAuth();
+      // Nur im E2E-Build (`--configuration e2e`, #429): Auth-Emulator plus Anmelde-Hook für Playwright.
+      if ('useEmulators' in environment && environment.useEmulators) {
+        connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
+        (window as unknown as Record<string, unknown>)['__e2eSignIn'] =
+          (email: string, password: string) => signInWithEmailAndPassword(auth, email, password).then(() => undefined);
+      }
+      return auth;
+    }),
+    provideFirestore(() => {
+      const firestore = getFirestore();
+      if ('useEmulators' in environment && environment.useEmulators) {
+        connectFirestoreEmulator(firestore, '127.0.0.1', 8080);
+      }
+      return firestore;
+    }),
     // Reihenfolge wichtig: provideTranslateService() registriert selbst einen
     // TranslateNoOpLoader-Fallback für TranslateLoader - der HTTP-Loader muss
     // danach stehen, damit sein Provider für denselben Token gewinnt (Angular

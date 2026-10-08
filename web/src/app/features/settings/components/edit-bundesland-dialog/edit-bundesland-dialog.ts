@@ -30,7 +30,7 @@ export interface EditBundeslandDialogResult { bundesland: Bundesland | null; }
     </mat-dialog-actions>
   `,
   styles: [`
-    .options { display: flex; flex-direction: column; min-width: 260px; }
+    .options { display: flex; flex-direction: column; min-width: min(260px, calc(95vw - 48px)); }
     mat-dialog-content { padding-top: 8px; }
   `],
 })

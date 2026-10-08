@@ -21,7 +21,7 @@ Integrationsbranch ist `develop`; PRs gehen gegen `develop`, nur Release-Branche
 | Plattform | Aus | Checks (wie CI) |
 |---|---|---|
 | Mobile | `mobile/` | `dart format --set-exit-if-changed lib test && flutter analyze --no-fatal-infos && dart run custom_lint && flutter test` |
-| Web | `web/` | `npm test -- --watch=false && npm run build -- --configuration production` |
+| Web | `web/` | `npm test -- --watch=false && npm run build -- --configuration production` (UI-/E2E-Tests zusätzlich: `npm run e2e`, Details `web/CLAUDE.md`) |
 | Backend | `server/` | `dotnet build WorkTimeManager.slnx -c Release && dotnet test WorkTimeManager.slnx -c Release` |
 | Cloud Functions | `web/functions/` | `npm run build && npm test` (Installation: `npm install --legacy-peer-deps` — reines npm ohne den Flag lässt Arborist bei vitest 4 abstürzen) |
 
@@ -29,7 +29,7 @@ Integrationsbranch ist `develop`; PRs gehen gegen `develop`, nur Release-Branche
 
 | Workflow | Trigger | Jobs |
 |---|---|---|
-| `ci.yml` | PRs und Push auf alle Branches außer `main` | Flutter Analyze & Test, Angular Test & Build, Cloud Functions Build & Test, .NET Build & Test |
+| `ci.yml` | PRs und Push auf alle Branches außer `main` | Flutter Analyze & Test, Angular Test & Build, Web UI-Tests (Playwright, je Browser), Cloud Functions Build & Test, .NET Build & Test |
 | `flutter-production.yml` | Push auf `main` oder `workflow_dispatch` | Android AAB → Google Play (Closed Testing Track `<Version> <Charakter>`, ab 1.6 `<Major>.<Minor> <Charakter>`) |
 | `deploy-angular.yml` | Push auf `main` oder `workflow_dispatch` | Angular Build → Docker Hub → Hetzner |
 | `deploy-api.yml` | Push auf `main` oder `workflow_dispatch` | .NET Build & Test → Docker Hub → Hetzner |

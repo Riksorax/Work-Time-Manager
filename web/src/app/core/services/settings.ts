@@ -7,6 +7,7 @@ import { WorkProfileService } from './work-profile';
 import { DEFAULT_SETTINGS, UserSettings } from '../../shared/models';
 import { normalizeBundesland } from '../../shared/utils/bundesland.util';
 import { normalizeVacationDays } from '../../shared/utils/vacation-days.util';
+import { normalizeWorkdays } from '../../shared/utils/workdays.util';
 import { profileIdForApi, profileScopedPath } from '../../shared/utils/work-profile-path.util';
 
 const LS_KEY = 'user_settings';
@@ -26,9 +27,11 @@ function migrateWorkdays(raw: Partial<UserSettings> & { workdaysPerWeek?: number
 
 /** Merged Rohdaten (Firestore/localStorage) mit Defaults und normalisiert den Urlaubsanspruch. */
 function mergeSettings(raw: Partial<UserSettings> & { workdaysPerWeek?: number }): UserSettings {
+  const merged = { ...DEFAULT_SETTINGS, ...migrateWorkdays(raw) };
   return {
-    ...DEFAULT_SETTINGS,
-    ...migrateWorkdays(raw),
+    ...merged,
+    // Heilt bereits gespeicherte Duplikate ([1,1,2,2,…], Fehler im Arbeitstage-Dialog), die das tägliche Soll verfälschten.
+    workdays: normalizeWorkdays(merged.workdays),
     vacationDaysPerYear: normalizeVacationDays(raw.vacationDaysPerYear),
     bundesland: normalizeBundesland(raw.bundesland),
   };

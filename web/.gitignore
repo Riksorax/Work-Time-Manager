@@ -42,3 +42,11 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
+
+# Playwright (#429)
+/test-results
+/playwright-report
+/blob-report
+/firestore-debug.log
+/ui-debug.log
+/firebase-debug.log

@@ -11,7 +11,7 @@
   @if (showClear() && value() != null) {
     <button matSuffix mat-icon-button
             (click)="onClear()"
-            [attr.aria-label]="label() + ' entfernen'">
+            [attr.aria-label]="'shared.timeInputClearAria' | translate: { label: label() }">
       <mat-icon>clear</mat-icon>
     </button>
   } @else {

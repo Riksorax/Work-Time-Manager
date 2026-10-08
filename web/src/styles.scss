@@ -86,3 +86,11 @@ body {
 .spacer {
   flex: 1 1 auto;
 }
+
+// Dialoge: Material setzt das obere Padding des Inhalts nach dem Titel auf 0. Das Label des ersten Outline-Feldes
+// ragt dann über die Oberkante des scrollenden Inhalts und wird abgeschnitten („Typ“, „Stunden pro Woche“).
+// Die Klasse steht doppelt, damit die Regel (Spezifität) die Material-Regel `.mat-mdc-dialog-title + .mat-mdc-dialog-content`
+// sicher schlägt, egal in welcher Reihenfolge die Stylesheets geladen werden.
+.mat-mdc-dialog-container .mat-mdc-dialog-title + .mat-mdc-dialog-content.mat-mdc-dialog-content {
+  padding-top: 8px;
+}

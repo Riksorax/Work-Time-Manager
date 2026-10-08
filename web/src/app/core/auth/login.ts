@@ -183,7 +183,6 @@ import { DataSyncService } from '../services/data-sync';
       font-size: 0.75rem;
       color: var(--mat-sys-on-surface-variant);
       text-align: center;
-      opacity: 0.7;
     }
 
     .legal-links {

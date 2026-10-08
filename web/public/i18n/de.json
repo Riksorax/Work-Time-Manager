@@ -82,6 +82,7 @@
     "repentanceDay": "Buß- und Bettag"
   },
   "reports": {
+    "calendarWeek": "KW {{number}}",
     "loading": "Lade Berichte...",
     "tabDaily": "Täglich",
     "tabWeekly": "Wöchentlich",
@@ -295,6 +296,7 @@
     }
   },
   "shared": {
+    "timeInputClearAria": "{{label}} entfernen",
     "editEntryTitleEdit": "Eintrag bearbeiten",
     "editEntryTitleNew": "Neuer Eintrag",
     "editEntryTypeLabel": "Typ",
