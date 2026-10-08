@@ -44,7 +44,7 @@ void main() {
       h.writeLog.where((e) => e.startsWith(prefix)).length;
 
   group('stopRunningForSwitch', () {
-    scenario('S1 Erfolg: Saldo vor Eintrag, Timer aus, kein Wechsel', at(17),
+    scenario('S1 Erfolg: Eintrag vor Saldo, Timer aus, kein Wechsel', at(17),
         (h) {
       h.boot();
       expect(h.async.periodicTimerCount, 1);
@@ -52,9 +52,9 @@ void main() {
 
       expect(r.value(), isTrue);
       expect(h.writeLog, [
+        'A:entry:$moKey:08:00-17:00',
         'A:overtime:135',
         'A:lastUpdate',
-        'A:entry:$moKey:08:00-17:00',
       ]);
       expect(h.state.workEntry.workEnd, isNotNull);
       expect(h.async.periodicTimerCount, 0);
@@ -94,7 +94,7 @@ void main() {
           const Duration(minutes: 45));
     }, setUp: prep(), profiles: true);
 
-    scenario('S3 Saldo-Fehler: false, Timer laeuft weiter, kein Eintrag-Write',
+    scenario('S3 Saldo-Fehler: false, Timer laeuft weiter, Eintrag kompensiert',
         at(17), (h) {
       h.boot();
       h.overtime.failSaveOvertime = true;
@@ -103,7 +103,25 @@ void main() {
       expect(r.value(), isFalse);
       expect(h.state.workEntry.workEnd, isNull);
       expect(h.async.periodicTimerCount, 1);
-      expect(h.writeLog.where((e) => e.contains(':entry:')), isEmpty);
+      // #412: Eintrag neu, dann Kompensation auf den Vorzustand.
+      expect(
+          h.writeLog, ['A:entry:$moKey:08:00-17:00', 'A:entry:$moKey:08:00--']);
+      expect(h.work.store[moKey], running);
+    }, setUp: prep(), profiles: true);
+
+    scenario(
+        'E18 Eintrag-Fehler: false, Timer laeuft weiter, nichts geschrieben',
+        at(17), (h) {
+      h.boot();
+      h.work.failSaves = true;
+      final r = run(h, () => h.vm.stopRunningForSwitch('default'));
+
+      expect(r.value(), isFalse);
+      expect(h.state.workEntry.workEnd, isNull);
+      expect(h.async.periodicTimerCount, 1);
+      expect(h.writeLog, isEmpty);
+      expect(h.overtime.saveOvertimeCalls, 0);
+      expect(h.container.read(activeWorkProfileIdProvider), isNull);
     }, setUp: prep(), profiles: true);
 
     scenario('S4 nicht laufend (beendet): true ohne Writes', at(17), (h) {
@@ -145,7 +163,8 @@ void main() {
       expect(r.done(), isTrue);
       expect(r.value(), isTrue);
       expect(h.state.workEntry.workEnd, isNotNull);
-      expect(h.writeLog.last, 'A:entry:$moKey:08:00-17:00');
+      expect(h.writeLog.first, 'A:entry:$moKey:08:00-17:00');
+      expect(h.writeLog.last, 'A:lastUpdate');
     }, setUp: prep(), profiles: true);
 
     scenario('S8 Vortag ueber Mitternacht: Stop am Starttag, Reinit', at(23),
@@ -170,10 +189,11 @@ void main() {
   // Stop beim Wechsel und laufende Schreibaktion (#413): der Switch wartet auf
   // die Aktion, statt parallel zu stoppen.
   group('stopRunningForSwitch und Reentranz-Sperre (#413)', () {
+    // Reihenfolge seit #412: Eintrag vor Saldo.
     final stopWrites = [
+      'A:entry:$moKey:08:00-17:00',
       'A:overtime:135',
       'A:lastUpdate',
-      'A:entry:$moKey:08:00-17:00',
     ];
 
     void releaseAll(Harness h) {
@@ -198,7 +218,8 @@ void main() {
 
       expect(r.done(), isFalse);
       expect(h.overtime.pendingOvertimeSaves, hasLength(1));
-      expect(h.writeLog, isEmpty);
+      // #412: der Eintrag steht im Hold-Fenster schon im Log.
+      expect(h.writeLog, ['A:entry:$moKey:08:00-17:00']);
 
       releaseAll(h);
       expect(stop.value(), isTrue);

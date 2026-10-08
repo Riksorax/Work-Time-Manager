@@ -42,6 +42,14 @@ class FakeWorkRepository implements WorkRepository {
   bool failReads = false;
   bool failSaves = false;
 
+  /// Anzahl der `saveWorkEntry`-Aufrufe (auch der scheiternden, Zaehlung vor
+  /// dem Hold), 1-basiert (#412).
+  int saveCalls = 0;
+
+  /// Nummern (1-basiert) der `saveWorkEntry`-Aufrufe, die nach dem Hold werfen
+  /// sollen, z. B. `{2}` fuer "nur der zweite Aufruf" (#412). Default: keiner.
+  final Set<int> failSaveCalls = {};
+
   /// Wenn gesetzt, wartet jeder `getWorkEntry`-Aufruf auf einen Completer.
   /// Der Completer wird in [pendingReads] abgelegt.
   bool holdReads = false;
@@ -71,13 +79,14 @@ class FakeWorkRepository implements WorkRepository {
   @override
   Future<void> saveWorkEntry(WorkEntryEntity entry) async {
     final key = dayKey(entry.date);
+    final callNo = ++saveCalls;
     log.add('save:$key');
     if (holdSaves) {
       final c = Completer<void>();
       pendingSaves.add(c);
       await c.future;
     }
-    if (failSaves) throw Exception('offline');
+    if (failSaves || failSaveCalls.contains(callNo)) throw Exception('offline');
     saved.add(entry);
     store[key] = entry;
     if (label != null) {
@@ -155,6 +164,9 @@ class FakeOvertimeRepository implements OvertimeRepository {
   /// `{2}` für "nur der zweite Aufruf" (#410). Default: keiner.
   final Set<int> failSaveOvertimeCalls = {};
 
+  /// Wenn gesetzt, wirft `saveLastUpdateDate` (schreibt dann nichts, #412).
+  bool failSaveLastUpdate = false;
+
   @override
   Duration getOvertime() => stored;
 
@@ -186,6 +198,7 @@ class FakeOvertimeRepository implements OvertimeRepository {
 
   @override
   Future<void> saveLastUpdateDate(DateTime date) async {
+    if (failSaveLastUpdate) throw Exception('offline');
     lastUpdate = date;
     if (label != null) writeLog?.add('$label:lastUpdate');
   }
