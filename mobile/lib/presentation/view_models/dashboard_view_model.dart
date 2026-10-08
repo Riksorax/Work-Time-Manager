@@ -682,8 +682,12 @@ class DashboardViewModel extends Notifier<DashboardState> {
     // Eine laufende Schreibaktion (Stop, Pause, Autosave-Wartezeit ...) zu Ende
     // laufen lassen, statt parallel zu stoppen (#413). Danach **kein** `await`
     // mehr bis `startOrStopTimer()`: dessen Wrapper setzt die Sperre synchron.
-    while (_actionDone != null) {
-      await _actionDone!.future;
+    // Ein bereits beendeter Completer beendet die Schleife (sonst Endlosschleife
+    // über Microtasks, falls je einer stehen bliebe).
+    for (var done = _actionDone;
+        done != null && !done.isCompleted;
+        done = _actionDone) {
+      await done.future;
       if (!ref.mounted) return false;
     }
 
