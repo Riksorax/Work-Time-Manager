@@ -1,6 +1,11 @@
 :host {
-  --color-overtime-positive: #4CAF50;
+  // Hell: dunkleres Grün für AA-Kontrast (>= 4.5:1) auf der hellen Fläche.
+  --color-overtime-positive: #2E7D32;
   --color-delete: #C62828;
+}
+
+:host-context(.dark-theme) {
+  --color-overtime-positive: #4CAF50;
 }
 
 .loading-state {
@@ -60,7 +65,7 @@
     font-size: 0.875rem;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    opacity: 0.6;
+    color: var(--mat-sys-on-surface-variant);
     margin: 0 0 8px;
   }
 
@@ -181,7 +186,7 @@
   .empty-hint {
     text-align: center;
     padding: 24px;
-    opacity: 0.45;
+    color: var(--mat-sys-on-surface-variant);
     margin: 0;
   }
 }

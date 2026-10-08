@@ -13,7 +13,16 @@ npm ci --legacy-peer-deps                     # Install
 npm start                                     # Dev-Server http://localhost:4200
 npm test -- --watch=false                     # Unit-Tests (Vitest); ohne --watch=false hängt der Runner
 npm run build -- --configuration production   # wie CI
+npm run e2e                                   # UI-/E2E-Tests (Playwright, #429), startet `ng serve` selbst
+npm run e2e:chromium                          # nur Chromium (lokal ist nur dieser Browser vorinstalliert)
 ```
+
+**UI-/E2E-Tests (`web/e2e/`, #429):** Playwright, Projekte `chromium`, `firefox`, `webkit`, `edge`,
+`mobile-chrome`, `mobile-safari` (in CI je ein Matrix-Job). Die App läuft ohne Konto im localStorage-Modus,
+es werden weder Firebase noch Backend benötigt. `fixtures.ts` setzt Sprache/Theme vor dem Boot. Geprüft werden
+Laden ohne Konsolenfehler (je DE/EN, hell/dunkel), horizontaler Überlauf bei 320–1440 px, axe (WCAG A/AA,
+serious/critical, nur Chromium) und Kernabläufe (Timer, Pausen, Navigation, Theme, Sprache). Neue Seiten in
+`PAGES` ergänzen. Kontrast: Sekundärtext nie per `opacity`, sondern über `--mat-sys-on-surface-variant`.
 
 ## Architektur (`web/src/app/`)
 

@@ -108,6 +108,54 @@ jobs:
           rm -rf .angular/cache
           npm run build -- --configuration production --delete-output-path
 
+  e2e:
+    name: Web UI-Tests (Playwright, ${{ matrix.project }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [chromium, firefox, webkit, edge, mobile-chrome, mobile-safari]
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      # Edge kommt als eigener Kanal, die übrigen Projekte nutzen die
+      # Playwright-eigenen Browser (#429).
+      - name: Install browser
+        run: |
+          if [ "${{ matrix.project }}" = "edge" ]; then
+            npx playwright install --with-deps msedge
+          elif [ "${{ matrix.project }}" = "firefox" ]; then
+            npx playwright install --with-deps firefox
+          elif [ "${{ matrix.project }}" = "webkit" ] || [ "${{ matrix.project }}" = "mobile-safari" ]; then
+            npx playwright install --with-deps webkit
+          else
+            npx playwright install --with-deps chromium
+          fi
+
+      - name: UI-Tests
+        run: npx playwright test --project=${{ matrix.project }}
+
+      - name: Bericht hochladen
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ matrix.project }}
+          path: web/playwright-report
+          retention-days: 7
+
   functions:
     name: Cloud Functions Build & Test
     runs-on: ubuntu-latest
