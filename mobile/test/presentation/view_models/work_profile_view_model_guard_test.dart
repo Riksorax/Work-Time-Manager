@@ -94,10 +94,11 @@ void main() {
       final r = run(h, calls);
       expect(r.result(), ProfileSwitchGuardResult.allowed);
       expect(calls, hasLength(1));
+      // Reihenfolge seit #412: Eintrag vor Saldo.
       expect(h.writeLog, [
+        'A:entry:$moKey:08:00-17:00',
         'A:overtime:135',
         'A:lastUpdate',
-        'A:entry:$moKey:08:00-17:00',
       ]);
     }, setUp: prep(), profiles: true);
 
@@ -117,7 +118,21 @@ void main() {
       h.overtime.failSaveOvertime = true;
       final r = run(h, []);
       expect(r.result(), ProfileSwitchGuardResult.saveFailed);
-      expect(entryWrites(h), 0);
+      // #412: Eintrag neu + Kompensation auf den Vorzustand.
+      expect(entryWrites(h), 2);
+      expect(h.writeLog.last, 'A:entry:$moKey:08:00--');
+      expect(h.async.periodicTimerCount, 1);
+      expect(h.state.workEntry.workEnd, isNull);
+    }, setUp: prep(), profiles: true);
+
+    scenario(
+        'E19 Eintrag-Fehler: saveFailed, nichts geschrieben, Profil bleibt',
+        at(17), (h) {
+      h.boot();
+      h.work.failSaves = true;
+      final r = run(h, []);
+      expect(r.result(), ProfileSwitchGuardResult.saveFailed);
+      expect(h.writeLog, isEmpty);
       expect(h.async.periodicTimerCount, 1);
       expect(h.state.workEntry.workEnd, isNull);
     }, setUp: prep(), profiles: true);

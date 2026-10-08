@@ -86,10 +86,11 @@ void main() {
       h.switchProfile('B');
       releaseSaldo(h);
 
+      // Reihenfolge seit #412: Eintrag vor Saldo.
       expect(h.writeLog, [
+        'A:entry:$moKey:08:00-17:00',
         'A:overtime:135',
         'A:lastUpdate',
-        'A:entry:$moKey:08:00-17:00',
       ]);
       expect(h.workB.store[moKey], entryB);
       expect(h.workB.saved, isEmpty);
@@ -257,7 +258,9 @@ void main() {
       h.work.holdSaves = true;
       h.act(h.vm.startOrStopTimer);
       expect(h.work.pendingSaves, hasLength(1));
-      expect(h.writeLog, ['A:overtime:135', 'A:lastUpdate']);
+      // #412: der Eintrag-Write kommt zuerst (gehalten), noch kein Saldo.
+      expect(h.writeLog, isEmpty);
+      expect(h.overtime.saveOvertimeCalls, 0);
 
       h.switchProfile('B');
       expect(h.async.periodicTimerCount, 1);
@@ -266,7 +269,11 @@ void main() {
       h.work.pendingSaves.single.complete();
       h.async.flushMicrotasks();
 
-      expect(h.writeLog.last, 'A:entry:$moKey:08:00-17:00');
+      expect(h.writeLog, [
+        'A:entry:$moKey:08:00-17:00',
+        'A:overtime:135',
+        'A:lastUpdate',
+      ]);
       expect(count(h, 'B:'), 0);
       expect(h.state.workEntry.workStart, at(9));
       expect(h.async.periodicTimerCount, 1);
@@ -356,8 +363,12 @@ void main() {
       h.async.flushMicrotasks();
 
       expect(error, isNull);
-      expect(h.writeLog, isEmpty);
-      expect(h.work.saved, isEmpty);
+      // #412: Eintrag neu, dann Kompensation auf den Vorzustand.
+      expect(h.writeLog, [
+        'A:entry:$moKey:08:00-16:30',
+        'A:entry:$moKey:08:00-17:00',
+      ]);
+      expect(h.work.saved.last, finishedA);
       expect(h.state.workEntry, finishedA);
     }, setUp: prep(a: finishedA), profiles: true);
 
@@ -369,10 +380,11 @@ void main() {
       h.dispose();
       releaseSaldo(h);
 
+      // Reihenfolge seit #412: Eintrag vor Saldo.
       expect(h.writeLog, [
+        'A:entry:$moKey:08:00-17:00',
         'A:overtime:135',
         'A:lastUpdate',
-        'A:entry:$moKey:08:00-17:00',
       ]);
     }, setUp: prep(), profiles: true);
 
@@ -386,8 +398,10 @@ void main() {
       h.overtime.failSaveOvertime = true;
       releaseSaldo(h);
 
-      expect(h.writeLog, isEmpty);
-      expect(h.work.saved, isEmpty);
+      // #412: Eintrag neu + Kompensation, keine Folgeschritte.
+      expect(
+          h.writeLog, ['A:entry:$moKey:08:00-17:00', 'A:entry:$moKey:08:00--']);
+      expect(h.work.saved, hasLength(2));
     }, setUp: prep(), profiles: true);
   });
 

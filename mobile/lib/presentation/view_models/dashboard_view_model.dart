@@ -26,7 +26,10 @@ import '../state/dashboard_state.dart';
 /// nach einem `await` per `ref.read` auf, landet der Write im neuen Profil. Die
 /// Repos sind an ihr Profil gebunden, also schreibt die Aktion Eintrag **und**
 /// Saldo über diese Objekte immer in das Profil des Aktionsbeginns. [gen] ist
-/// der `_initGen` zu diesem Zeitpunkt (Überholungsprüfung).
+/// der `_initGen` zu diesem Zeitpunkt (Überholungsprüfung). [before] ist der
+/// Eintrag vor der Aktion (Vorzustand für die Kompensation, #412); er wird
+/// synchron festgehalten, weil manche Aktionen (`startOrStopBreak`) danach noch
+/// ein `await` haben.
 class _ActionCtx {
   const _ActionCtx({
     required this.gen,
@@ -34,6 +37,7 @@ class _ActionCtx {
     required this.overtimeRepository,
     required this.settingsRepository,
     required this.now,
+    required this.before,
   });
 
   final int gen;
@@ -41,6 +45,7 @@ class _ActionCtx {
   final OvertimeRepository overtimeRepository;
   final SettingsRepository settingsRepository;
   final DateTime Function() now;
+  final WorkEntryEntity before;
 }
 
 class DashboardViewModel extends Notifier<DashboardState> {
@@ -367,6 +372,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
         overtimeRepository: ref.read(overtimeRepositoryProvider),
         settingsRepository: ref.read(settingsRepositoryProvider),
         now: ref.read(clockProvider),
+        before: state.workEntry,
       );
 
   /// Stellt vor einer Schreibaktion sicher, dass das Dashboard den aktuellen
@@ -671,7 +677,8 @@ class DashboardViewModel extends Notifier<DashboardState> {
   /// Stoppt und speichert einen laufenden Timer vor einem Profilwechsel (#388)
   /// über den normalen Stop-Pfad ([startOrStopTimer]). Liefert `true`, wenn
   /// danach nichts mehr läuft (gestoppt oder nie gelaufen), sonst `false`
-  /// (Saldo-Fehler, Profil nicht mehr [fromProfileId], Stop ohne Wirkung).
+  /// (Eintrag- oder Saldo-Fehler, Profil nicht mehr [fromProfileId], Stop ohne
+  /// Wirkung; seit #412 verhindert auch ein Eintrag-Fehler den Wechsel).
   /// Wechselt selbst nie das Profil.
   Future<bool> stopRunningForSwitch(String fromProfileId) async {
     // Nie auf dem Platzhalter arbeiten: laufenden Ladelauf abwarten.
@@ -750,7 +757,16 @@ class DashboardViewModel extends Notifier<DashboardState> {
     return _recalculateStateAndSave(updatedEntry, ctx: ctx);
   }
 
-  /// Berechnet den State neu und speichert (Saldo, dann Eintrag).
+  /// Berechnet den State neu und speichert.
+  ///
+  /// Reihenfolge bei Aktionen mit Saldo-Block (nach der Aktion sind Start und
+  /// Ende gesetzt): **Eintrag -> Saldo -> State -> Timer -> ggf. Reinit** (#412).
+  /// Nur der Eintrag ist rückrollbar (der Saldo-Write setzt `lastUpdated`), der
+  /// nicht rückrollbare Schritt kommt ans Ende. Scheitert der Eintrag-Write
+  /// (auch per Timeout), ist nichts geschrieben; scheitert der Saldo, wird der
+  /// Eintrag best-effort auf [_ActionCtx.before] zurückgeschrieben
+  /// ([_compensateEntry]). Aktionen ohne Saldo-Block bleiben optimistisch:
+  /// State zuerst, Eintrag-Fehler geschluckt (#336), der Autosave heilt.
   ///
   /// Mit `save: true` ist [ctx] Pflicht: alle Writes laufen über die dort
   /// festgehaltenen Objekte, also im Profil des Aktionsbeginns. Wurde die
@@ -758,10 +774,10 @@ class DashboardViewModel extends Notifier<DashboardState> {
   /// Writes trotzdem vollständig ausgeführt; nur State, Timer und Reinit
   /// entfallen (#388).
   ///
-  /// Ergebnis: `false`, wenn der Saldo nicht gespeichert werden konnte (dann
-  /// ist nichts geschrieben, State und Timer sind unverändert, #402), sonst
-  /// `true`. Ein Fehler beim Eintrag-Write bleibt wie bisher geschluckt (#336,
-  /// Teilfehler siehe #412) und liefert `true`.
+  /// Ergebnis: `false`, wenn bei einer Aktion mit Saldo-Block der Eintrag oder
+  /// der Saldo nicht gespeichert werden konnte (dann ist nichts zurückgeblieben,
+  /// State und Timer sind unverändert, #402/#412), sonst `true`. Bei Aktionen
+  /// ohne Saldo-Block bleibt ein Eintrag-Write-Fehler geschluckt (#336).
   Future<bool> _recalculateStateAndSave(WorkEntryEntity updatedEntry,
       {bool save = true, _ActionCtx? ctx}) async {
     assert(!save || ctx != null, 'save: true braucht den Aktionskontext');
@@ -771,6 +787,8 @@ class DashboardViewModel extends Notifier<DashboardState> {
     Duration? dailyOvertime;
     bool? isExtraDay;
     var saved = false;
+    // Eintrag schon im Saldo-Zweig geschrieben (Eintrag vor Saldo, #412).
+    var entryWritten = false;
 
     Duration? newGrossWorkDuration;
     if (updatedEntry.workStart != null && updatedEntry.workEnd != null) {
@@ -800,6 +818,24 @@ class DashboardViewModel extends Notifier<DashboardState> {
             '[Dashboard] Speichere Overtime: Base=$base, Daily=$dailyOvertime, NewTotal=$newTotalOvertime');
 
         final actionCtx = ctx!;
+        // 1. Eintrag (rückrollbar). Fehler/Timeout: nichts geschrieben, State
+        // und Timer bleiben, `false` (auch bei überholter Aktion; nichts wird
+        // weitergeworfen). Nur `runtimeType` loggen, keine Eintragsinhalte.
+        try {
+          await actionCtx.saveWorkEntry
+              .call(updatedEntry)
+              .timeout(_writeTimeout);
+          entryWritten = true;
+          logger.i('[Dashboard] WorkEntry erfolgreich gespeichert');
+        } catch (e, st) {
+          logger.e(
+              '[Dashboard] Eintrag nicht gespeichert (${e.runtimeType})'
+              '${overtaken() ? ', Aktion überholt' : ''}',
+              stackTrace: st);
+          return false;
+        }
+
+        // 2. Saldo.
         final saldo = newTotalOvertime;
         // Nach einem Timeout läuft die Schließung weiter: sie darf
         // lastUpdate/Warnung nicht mehr nachholen (ein bereits gesendeter
@@ -826,8 +862,10 @@ class DashboardViewModel extends Notifier<DashboardState> {
               '[Dashboard] Saldo nicht gespeichert (${e.runtimeType})'
               '${overtaken() ? ', Aktion überholt' : ''}',
               stackTrace: st);
+          await _compensateEntry(actionCtx);
           return false;
         }
+        saved = true;
       }
     } else {
       newActualWorkDuration = null;
@@ -855,7 +893,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
       );
     }
 
-    if (save) {
+    if (save && !entryWritten) {
       logger.i(
           '[Dashboard] Speichere WorkEntry: ${updatedEntry.id}, Start: ${updatedEntry.workStart}, End: ${updatedEntry.workEnd}');
       try {
@@ -891,6 +929,20 @@ class DashboardViewModel extends Notifier<DashboardState> {
       }
     }
     return true;
+  }
+
+  /// Schreibt den Eintrag vor der Aktion ([_ActionCtx.before]) zurück, nachdem
+  /// der Saldo nicht gespeichert werden konnte (#412). Best-effort: ein Fehler
+  /// oder Timeout wird nur geloggt (`runtimeType`, keine Inhalte), nie
+  /// weitergeworfen. Fasst `lastUpdated` nie an und läuft über die `ctx`-Objekte
+  /// auch bei überholter Aktion im Profil des Aktionsbeginns zu Ende.
+  Future<void> _compensateEntry(_ActionCtx ctx) async {
+    try {
+      await ctx.saveWorkEntry.call(ctx.before).timeout(_writeTimeout);
+    } catch (e) {
+      logger.e(
+          '[Dashboard] Eintrag-Kompensation fehlgeschlagen (${e.runtimeType})');
+    }
   }
 
   /// Prüft nach jedem Speichern des Gleitzeitsaldos, ob ein konfigurierter

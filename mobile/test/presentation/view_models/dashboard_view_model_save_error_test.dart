@@ -45,11 +45,14 @@ void main() {
     h.async.flushMicrotasks();
   }
 
+  // Reihenfolge seit #412: Eintrag vor Saldo.
   final stopWrites = [
+    'A:entry:$moKey:08:00-17:00',
     'A:overtime:135',
     'A:lastUpdate',
-    'A:entry:$moKey:08:00-17:00',
   ];
+  // Saldo-Fehler (#412): Eintrag neu, dann Kompensation auf den Vorzustand.
+  final entryAlt = 'A:entry:$moKey:08:00--';
 
   group('Stop-Pfad bei Saldo-Fehler', () {
     scenario(
@@ -64,8 +67,9 @@ void main() {
       expect(h.state.workEntry.workStart, at(8));
       expect(h.state.workEntry.workEnd, isNull);
       expect(h.async.periodicTimerCount, 1);
-      expect(h.writeLog, isEmpty);
-      expect(h.work.saved, isEmpty);
+      // #412: Eintrag geschrieben und auf den Vorzustand kompensiert.
+      expect(h.writeLog, ['A:entry:$moKey:08:00-17:00', entryAlt]);
+      expect(h.work.store[moKey], running);
     }, setUp: prep(running), profiles: true);
 
     scenario('S-2 Timer laeuft weiter, Autosave schreibt den laufenden Eintrag',
@@ -96,7 +100,8 @@ void main() {
       go(h, errors, h.vm.startOrStopTimer);
 
       expect(errors, isEmpty);
-      expect(h.writeLog, stopWrites);
+      expect(
+          h.writeLog, ['A:entry:$moKey:08:00-17:00', entryAlt, ...stopWrites]);
       expect(h.state.workEntry.workEnd, at(17));
       expect(h.async.periodicTimerCount, 0);
     }, setUp: prep(running), profiles: true);
@@ -184,7 +189,9 @@ void main() {
     };
 
     for (final e in actions.entries) {
-      scenario('${e.key}: kein Wurf, State und Timer unveraendert, kein Write',
+      scenario(
+          '${e.key}: kein Wurf, State und Timer unveraendert, Eintrag '
+          'kompensiert',
           at(17), (h) {
         h.boot();
         final stateBefore = h.state;
@@ -197,8 +204,11 @@ void main() {
         expect(h.state.workEntry, stateBefore.workEntry);
         expect(h.state.totalOvertime, stateBefore.totalOvertime);
         expect(h.async.periodicTimerCount, timers);
-        expect(h.writeLog, isEmpty);
-        expect(h.work.saved, isEmpty);
+        // #412: Eintrag neu, dann Vorzustand; kein Saldo-/lastUpdate-Write.
+        expect(h.writeLog.where((l) => !l.contains(':entry:')), isEmpty);
+        expect(h.work.saved, hasLength(2));
+        expect(h.work.saved[1], e.value.seed);
+        expect(h.work.store[moKey], e.value.seed);
       }, setUp: prep(e.value.seed), profiles: true);
     }
   });
@@ -246,8 +256,9 @@ void main() {
       expect(errors, isEmpty);
       expect(h.state.workEntry, stateB.workEntry);
       expect(h.async.periodicTimerCount, 0);
-      expect(h.writeLog, isEmpty);
-      expect(h.work.saved, isEmpty);
+      // #412: Eintrag neu + Kompensation in A (Profil des Aktionsbeginns).
+      expect(h.writeLog, ['A:entry:$moKey:08:00-17:00', entryAlt]);
+      expect(h.work.store[moKey], running);
       expect(h.workB.saved, isEmpty);
     }, setUp: (h) {
       prep(running)(h);
@@ -318,11 +329,13 @@ void main() {
     }, setUp: prep(finishedWithBreak), profiles: true);
 
     scenario(
-        'Eintrag-Write scheitert nach Saldo: bleibt true (#412 offen)', at(17),
-        (h) {
+        'Eintrag-Write scheitert (vor dem Saldo, #412): false, nichts '
+        'geschrieben',
+        at(17), (h) {
       h.boot();
       h.work.failSaves = true;
-      expect(result(h, h.vm.startOrStopTimer), isTrue);
+      expect(result(h, h.vm.startOrStopTimer), isFalse);
+      expect(h.writeLog, isEmpty);
     }, setUp: prep(running), profiles: true);
 
     scenario('ueberholte Aktion mit gespeichertem Saldo: true', at(17), (h) {

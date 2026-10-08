@@ -7,6 +7,7 @@ import 'package:flutter_work_time/domain/entities/break_entity.dart';
 import 'package:flutter_work_time/domain/entities/bundesland.dart';
 import 'package:flutter_work_time/domain/entities/settings_entity.dart';
 import 'package:flutter_work_time/domain/entities/user_entity.dart';
+import 'package:flutter_work_time/domain/entities/work_entry_entity.dart';
 import 'package:flutter_work_time/l10n/app_localizations.dart';
 import 'package:flutter_work_time/presentation/screens/dashboard_screen.dart';
 import 'package:flutter_work_time/presentation/state/leave_balance_state.dart';
@@ -106,7 +107,25 @@ void main() {
         expect(find.text(text), findsOneWidget);
         expect(find.text(stop), findsOneWidget, reason: 'Eintrag laeuft noch');
         expect(overtime.savedOvertimes, isEmpty);
+        // #412: Eintrag neu, dann Kompensation auf den laufenden Vorzustand.
+        expect(work.saved, hasLength(2));
+        expect(work.saved.last.workEnd, isNull);
+        await unmount(tester);
+      });
+
+      testWidgets('E20 Stop bei Eintrag-Fehler: Snackbar, nichts geschrieben',
+          (tester) async {
+        work.failSaves = true;
+        await pump(tester, locale);
+
+        await tester.tap(find.text(stop));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        expect(find.text(text), findsOneWidget);
+        expect(find.text(stop), findsOneWidget, reason: 'Eintrag laeuft noch');
         expect(work.saved, isEmpty);
+        expect(overtime.saveOvertimeCalls, 0);
         await unmount(tester);
       });
 
@@ -202,8 +221,9 @@ void main() {
         start: DateTime(2026, 10, 5, 12),
         end: DateTime(2026, 10, 5, 12, 30));
 
+    late WorkEntryEntity seeded;
     void seedFinished({bool withBreak = false}) {
-      work.store[dayKey(mo)] = entryOf(mo,
+      seeded = work.store[dayKey(mo)] = entryOf(mo,
           start: DateTime(2026, 10, 5, 8),
           end: end,
           breaks: withBreak ? [b1] : const []);
@@ -214,7 +234,9 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
       expect(find.text(_en), findsOneWidget);
       expect(overtime.savedOvertimes, isEmpty);
-      expect(work.saved, isEmpty);
+      // #412: Eintrag neu, dann Kompensation auf den Vorzustand.
+      expect(work.saved, hasLength(2));
+      expect(work.saved.last, seeded);
       await unmount(tester);
     }
 

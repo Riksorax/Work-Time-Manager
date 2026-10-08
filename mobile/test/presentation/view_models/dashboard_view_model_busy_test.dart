@@ -44,11 +44,14 @@ void main() {
         h.overtimeB.stored = const Duration(minutes: 30);
       };
 
+  // Reihenfolge seit #412: Eintrag vor Saldo.
   final stopWrites = [
+    'A:entry:$moKey:08:00-17:00',
     'A:overtime:135',
     'A:lastUpdate',
-    'A:entry:$moKey:08:00-17:00',
   ];
+  // Saldo-Fehler (#412): Eintrag neu, dann Kompensation auf den Vorzustand.
+  final entryAlt = 'A:entry:$moKey:08:00--';
 
   /// Startet [f], flusht Microtasks und liefert das (ggf. noch offene)
   /// Ergebnis. Ein Wurf landet in `error()`.
@@ -145,7 +148,8 @@ void main() {
       h.overtime.failSaveOvertime = false;
       final r2 = tap(h, h.vm.startOrStopTimer);
       expect(r2.value(), isTrue);
-      expect(h.writeLog, stopWrites);
+      expect(
+          h.writeLog, ['A:entry:$moKey:08:00-17:00', entryAlt, ...stopWrites]);
     }, setUp: prep(running), profiles: true);
 
     scenario(
@@ -210,8 +214,9 @@ void main() {
       expect(r2.done(), isTrue);
       expect(r2.value(), isTrue);
       expect(h.state.workEntry.breaks, isEmpty);
-      expect(h.writeLog, isEmpty);
-      expect(h.work.saved, isEmpty);
+      // #412: der Eintrag steht im Hold-Fenster schon im Log, die Pause fehlt.
+      expect(h.writeLog, ['A:entry:$moKey:08:00-17:00']);
+      expect(h.work.saved.single.breaks.where((b) => b.end == null), isEmpty);
 
       releaseAll(h);
       expect(r1.value(), isTrue);
@@ -529,7 +534,8 @@ void main() {
       h.boot();
       h.work.failSaves = true;
       final r = tap(h, h.vm.startOrStopTimer);
-      expect(r.value(), isTrue);
+      // #412: Eintrag-Fehler beim Stop liefert false.
+      expect(r.value(), isFalse);
       expect(h.state.isSaving, isFalse);
     }, setUp: prep(running), profiles: true);
   });
@@ -543,8 +549,9 @@ void main() {
       tap(h, h.vm.startOrStopTimer);
 
       h.tick(const Duration(seconds: 6));
-      expect(h.work.log.where((e) => e.startsWith('save:')), isEmpty);
-      expect(h.work.saved, isEmpty);
+      // #412: nur der Eintrag-Write der Aktion, kein Autosave im Fenster.
+      expect(h.work.log.where((e) => e.startsWith('save:')), hasLength(1));
+      expect(h.work.saved.single.workEnd, isNotNull);
 
       releaseAll(h);
     }, setUp: prep(running), profiles: true);
@@ -556,17 +563,19 @@ void main() {
       h.overtime.holdSaveOvertime = true;
       final r = tap(h, h.vm.startOrStopTimer);
       h.tick(const Duration(seconds: 6));
-      expect(h.work.saved, isEmpty);
+      // #412: nur der Eintrag-Write der Aktion, kein Autosave im Fenster.
+      expect(h.work.saved, hasLength(1));
 
       h.overtime.failSaveOvertime = true;
       releaseAll(h);
       expect(r.value(), isFalse);
       expect(h.async.periodicTimerCount, 1);
-      expect(h.work.saved, isEmpty);
+      // Aktion: Eintrag neu + Kompensation, noch kein Autosave.
+      expect(h.work.saved, hasLength(2));
 
       h.tick();
-      expect(h.work.saved, hasLength(1));
-      expect(h.work.saved.single.workEnd, isNull);
+      expect(h.work.saved, hasLength(3));
+      expect(h.work.saved.last.workEnd, isNull);
     }, setUp: prep(running), profiles: true);
 
     scenario('B10 Aktion wartet auf einen laufenden Autosave', at(17), (h) {
@@ -629,7 +638,8 @@ void main() {
       expect(h.async.periodicTimerCount, 1);
       expect(h.writeLog.where((e) => e.contains(':overtime:')), isEmpty);
       expect(h.writeLog.where((e) => e.contains('lastUpdate')), isEmpty);
-      expect(h.work.saved.where((e) => e.workEnd != null), isEmpty);
+      // #412: Eintrag neu, dann direkt die Kompensation (Vorzustand).
+      expect(h.writeLog, ['A:entry:$moKey:08:00-17:00', entryAlt]);
 
       final errors = events
           .where((e) => e.level == Level.error)
@@ -645,7 +655,7 @@ void main() {
       h.async.flushMicrotasks();
       expect(h.writeLog, contains('A:overtime:135'));
       expect(h.writeLog.where((e) => e.contains('lastUpdate')), isEmpty);
-      expect(h.work.saved.where((e) => e.workEnd != null), isEmpty);
+      expect(h.work.saved, hasLength(2));
       expect(h.state.workEntry.workEnd, isNull);
 
       // Wiederholen schreibt vollstaendig.
@@ -658,10 +668,8 @@ void main() {
       expect(h.state.workEntry.workEnd, isNotNull);
     }, setUp: prep(running), profiles: true);
 
-    scenario(
-        'T2 Eintrag-Timeout beim Stop: wie Eintrag-Fehler, true '
-        '(PR 2 aendert dies)',
-        at(17), (h) {
+    scenario('T2 Eintrag-Timeout beim Stop: wie Eintrag-Fehler, false', at(17),
+        (h) {
       h.boot();
       h.work.holdSaves = true;
       final r = tap(h, h.vm.startOrStopTimer);
@@ -670,11 +678,12 @@ void main() {
 
       h.tick(const Duration(seconds: 30));
       expect(r.done(), isTrue);
-      expect(r.value(), isTrue);
-      expect(h.state.workEntry.workEnd, isNotNull);
-      expect(h.async.periodicTimerCount, 0);
+      expect(r.value(), isFalse);
+      expect(h.state.workEntry.workEnd, isNull);
+      expect(h.async.periodicTimerCount, 1);
       expect(h.state.isSaving, isFalse);
       expect(h.work.saved, isEmpty);
+      expect(h.overtime.saveOvertimeCalls, 0);
 
       releaseAll(h);
     }, setUp: prep(running), profiles: true);
@@ -695,9 +704,9 @@ void main() {
       expect(r.done(), isTrue);
       expect(r.value(), isTrue);
       expect(h.writeLog, hasLength(3));
-      expect(h.writeLog[0], startsWith('A:overtime:'));
-      expect(h.writeLog[1], 'A:lastUpdate');
-      expect(h.writeLog[2], startsWith('A:entry:$moKey:08:00-17:'));
+      expect(h.writeLog[0], startsWith('A:entry:$moKey:08:00-17:'));
+      expect(h.writeLog[1], startsWith('A:overtime:'));
+      expect(h.writeLog[2], 'A:lastUpdate');
 
       releaseAll(h);
     }, setUp: prep(running), profiles: true);
