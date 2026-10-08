@@ -1,8 +1,9 @@
 Das ist neu:
-• Abstürze behoben: Benachrichtigungen, Timer speichern ohne Internet, Account löschen, Texteingaben
-• Mit englischer App-Sprache jetzt auch Erinnerungen, Warnungen und Biometrie-Dialog auf Englisch
-• Pausen-Namen in deiner App-Sprache
-• PDF-Export in der App-Sprache
-• Zusätzliches Profil ohne Premium: direkt der Kauf-Dialog
-• Arbeitszeit-Profile in Berichten korrekt
-• Übersetzungen verbessert und Texte einheitlich im Du-Stil
+• Urlaubskontingent und Resturlaub
+• Feiertage im Dashboard, Bundesland je Profil einstellbar
+• App-Sperre: PIN zurücksetzen, Schutz vor wiederholtem PIN-Raten
+• Vergessener Timer: Hinweis mit Beenden, Später oder Fortsetzen
+• Profilwechsel mit laufendem Timer fragt nach
+• Zuverlässigeres Speichern beim Stoppen, kein doppeltes Auslösen beim Doppeltippen
+• Richtige Kalenderwoche und Feiertage bei Zeitumstellung
+• Dashboard folgt dem Tageswechsel um Mitternacht
