@@ -60,6 +60,19 @@ class DashboardViewModel extends Notifier<DashboardState> {
   /// `state.workEntry` nur ein Platzhalter und darf nie gespeichert werden.
   bool _loadedOk = false;
 
+  /// Reentranz-Sperre der Schreibaktionen (#413): läuft eine Aktion, werden
+  /// weitere still verworfen (siehe [_runAction]).
+  bool _busy = false;
+
+  /// Besitzer des Flags: nur die Aktion mit dem aktuellen Token gibt es frei.
+  /// Ein Rebuild (Profilwechsel) vergibt ein neues Token, damit eine alte,
+  /// spät endende Aktion das Flag einer neuen nicht löscht.
+  Object _actionToken = Object();
+
+  /// Wird beendet, wenn die laufende Aktion fertig oder überholt ist (nie mit
+  /// Fehler). [stopRunningForSwitch] wartet darauf.
+  Completer<void>? _actionDone;
+
   /// Die aktuelle Zeit aus [clockProvider] (Tests injizieren eine Fake-Uhr).
   DateTime _now() => ref.read(clockProvider)();
 
@@ -76,6 +89,10 @@ class DashboardViewModel extends Notifier<DashboardState> {
     ref.watch(settingsRepositoryProvider);
 
     _loadedOk = false;
+    // Profilwechsel/Rebuild: eine alte Aktion besitzt das Flag nicht mehr.
+    _busy = false;
+    _actionToken = Object();
+    _actionDone = null;
     ref.listen<DateTime>(todayProvider, (previous, next) {
       if (previous != next) _onDayChange();
     });
@@ -85,6 +102,8 @@ class DashboardViewModel extends Notifier<DashboardState> {
       _autoSaveTimer?.cancel();
       _autoSaveTimer = null;
       _initGen++;
+      final done = _actionDone;
+      if (done != null && !done.isCompleted) done.complete();
     });
 
     // Start initial load
@@ -271,6 +290,8 @@ class DashboardViewModel extends Notifier<DashboardState> {
         initialOvertime: initialOvertime,
         dailyOvertime: initialDailyOvertime,
         isExtraDay: isExtraDay,
+        // Ein Reinit mitten in einer Aktion darf die UI nicht entsperren.
+        isSaving: _busy,
       );
       _loadedOk = true;
       await _recalculateStateAndSave(workEntry, save: false);
@@ -283,6 +304,39 @@ class DashboardViewModel extends Notifier<DashboardState> {
       if (!stale()) {
         _loadedOk = false;
         state = state.copyWith(isLoading: false);
+      }
+    }
+  }
+
+  /// Serialisiert Schreibaktionen (#413): läuft bereits eine, wird [body]
+  /// still verworfen und `true` geliefert (kein Fehler, kein State-Update).
+  ///
+  /// Das Flag wird **synchron als erste Anweisung** gesetzt, noch vor
+  /// `_ensureCurrentDay` im Body: so kann auch ein Tap im Ladefenster nicht
+  /// mit einem zweiten überlappen. `false` nur, wenn das ViewModel nicht mehr
+  /// aktiv ist. Exceptions aus [body] werden unverändert weitergereicht; das
+  /// Flag ist danach frei. Freigegeben wird nur, solange das Token noch das
+  /// aktuelle ist (Rebuild, siehe [_actionToken]).
+  Future<bool> _runAction(Future<bool> Function() body) async {
+    if (!ref.mounted) return false;
+    if (_busy) {
+      logger.i('[Dashboard] Schreibaktion verworfen: andere Aktion läuft');
+      return true;
+    }
+    final token = Object();
+    _actionToken = token;
+    _busy = true;
+    _actionDone = Completer<void>();
+    state = state.copyWith(isSaving: true);
+    try {
+      return await body();
+    } finally {
+      if (identical(token, _actionToken)) {
+        _busy = false;
+        final done = _actionDone;
+        _actionDone = null;
+        if (done != null && !done.isCompleted) done.complete();
+        if (ref.mounted) state = state.copyWith(isSaving: false);
       }
     }
   }
@@ -547,7 +601,10 @@ class DashboardViewModel extends Notifier<DashboardState> {
     });
   }
 
-  Future<bool> startOrStopTimer() async {
+  Future<bool> startOrStopTimer() =>
+      _runAction(() => _startOrStopTimerBody());
+
+  Future<bool> _startOrStopTimerBody() async {
     if (!await _ensureCurrentDay()) return false;
     final ctx = _beginAction();
     final now = roundToMinute(_now());
@@ -616,7 +673,10 @@ class DashboardViewModel extends Notifier<DashboardState> {
   }
 
   /// Startet eine komplett neue Session (Start, End und Pausen zurücksetzen)
-  Future<bool> startNewSession() async {
+  Future<bool> startNewSession() =>
+      _runAction(() => _startNewSessionBody());
+
+  Future<bool> _startNewSessionBody() async {
     if (!await _ensureCurrentDay()) return false;
     final ctx = _beginAction();
     final now = roundToMinute(_now());
@@ -637,7 +697,10 @@ class DashboardViewModel extends Notifier<DashboardState> {
   }
 
   /// Neue Session mit Pausen behalten (nur Start und Endzeit zurücksetzen)
-  Future<bool> startNewSessionKeepBreaks() async {
+  Future<bool> startNewSessionKeepBreaks() =>
+      _runAction(() => _startNewSessionKeepBreaksBody());
+
+  Future<bool> _startNewSessionKeepBreaksBody() async {
     if (!await _ensureCurrentDay()) return false;
     final ctx = _beginAction();
     final now = roundToMinute(_now());
@@ -818,7 +881,10 @@ class DashboardViewModel extends Notifier<DashboardState> {
     }
   }
 
-  Future<bool> setManualStartTime(TimeOfDay time) async {
+  Future<bool> setManualStartTime(TimeOfDay time) =>
+      _runAction(() => _setManualStartTimeBody(time));
+
+  Future<bool> _setManualStartTimeBody(TimeOfDay time) async {
     if (!await _ensureCurrentDay()) return false;
     final ctx = _beginAction();
     final oldDate = state.workEntry.workStart ?? state.workEntry.date;
@@ -849,7 +915,10 @@ class DashboardViewModel extends Notifier<DashboardState> {
     return ok;
   }
 
-  Future<bool> setManualEndTime(TimeOfDay time) async {
+  Future<bool> setManualEndTime(TimeOfDay time) =>
+      _runAction(() => _setManualEndTimeBody(time));
+
+  Future<bool> _setManualEndTimeBody(TimeOfDay time) async {
     if (!await _ensureCurrentDay()) return false;
     final ctx = _beginAction();
     final oldDate = state.workEntry.workEnd ??
@@ -882,7 +951,10 @@ class DashboardViewModel extends Notifier<DashboardState> {
     return ok;
   }
 
-  Future<bool> clearEndTime() async {
+  Future<bool> clearEndTime() =>
+      _runAction(() => _clearEndTimeBody());
+
+  Future<bool> _clearEndTimeBody() async {
     if (!await _ensureCurrentDay()) return false;
     final ctx = _beginAction();
     logger.i('[Dashboard] Entferne Endzeit...');
@@ -905,7 +977,10 @@ class DashboardViewModel extends Notifier<DashboardState> {
     return ok;
   }
 
-  Future<bool> startOrStopBreak() async {
+  Future<bool> startOrStopBreak() =>
+      _runAction(() => _startOrStopBreakBody());
+
+  Future<bool> _startOrStopBreakBody() async {
     if (!await _ensureCurrentDay()) return false;
     final ctx = _beginAction();
     final toggleBreak = ref.read(toggleBreakUseCaseProvider);
@@ -913,7 +988,10 @@ class DashboardViewModel extends Notifier<DashboardState> {
     return _recalculateStateAndSave(updatedEntry, ctx: ctx);
   }
 
-  Future<bool> deleteBreak(String breakId) async {
+  Future<bool> deleteBreak(String breakId) =>
+      _runAction(() => _deleteBreakBody(breakId));
+
+  Future<bool> _deleteBreakBody(String breakId) async {
     if (!await _ensureCurrentDay()) return false;
     final ctx = _beginAction();
     final updatedBreaks =
@@ -922,7 +1000,10 @@ class DashboardViewModel extends Notifier<DashboardState> {
     return _recalculateStateAndSave(updatedEntry, ctx: ctx);
   }
 
-  Future<bool> updateBreak(BreakEntity breakEntity) async {
+  Future<bool> updateBreak(BreakEntity breakEntity) =>
+      _runAction(() => _updateBreakBody(breakEntity));
+
+  Future<bool> _updateBreakBody(BreakEntity breakEntity) async {
     if (!await _ensureCurrentDay()) return false;
     final ctx = _beginAction();
     final updatedBreaks = state.workEntry.breaks.map((b) {
