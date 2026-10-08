@@ -3,6 +3,7 @@ import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/materia
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { normalizeWorkdays } from '../../../../shared/utils/workdays.util';
 
 export interface EditWorkdaysDialogData   { currentDays: number[]; }
 export interface EditWorkdaysDialogResult { days: number[]; }
@@ -46,21 +47,23 @@ export class EditWorkdaysDialogComponent {
   private  readonly translate  = inject(TranslateService);
 
   protected readonly weekdayLabels: string[] = this.translate.instant('common.weekdaysShort');
-  protected readonly selectedDays = signal<number[]>([...this.data.currentDays]);
+  protected readonly selectedDays = signal<number[]>(normalizeWorkdays(this.data.currentDays));
 
   isSelected(day: number): boolean {
     return this.selectedDays().includes(day);
   }
 
+  /**
+   * Idempotent: `mat-chip-option` meldet `selectionChange` auch für die per `[selected]` vorbelegten Chips. Ein
+   * reines Anhängen verdoppelte so beim Speichern alle bisherigen Tage ([1,1,2,2,…]) und ließ das tägliche Soll schrumpfen.
+   */
   toggle(day: number, selected: boolean): void {
-    this.selectedDays.update(days =>
-      selected ? [...days, day] : days.filter(d => d !== day)
-    );
+    this.selectedDays.update(days => normalizeWorkdays(selected ? [...days, day] : days.filter(d => d !== day)));
   }
 
   submit(): void {
     if (this.selectedDays().length === 0) return;
-    const days = [...this.selectedDays()].sort((a, b) => a - b);
+    const days = normalizeWorkdays(this.selectedDays());
     this.dialogRef.close({ days } satisfies EditWorkdaysDialogResult);
   }
 }

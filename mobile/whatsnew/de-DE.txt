@@ -1,9 +1,6 @@
 Das ist neu:
-• Urlaubskontingent und Resturlaub
-• Feiertage im Dashboard, Bundesland je Profil einstellbar
-• App-Sperre: PIN zurücksetzen, Schutz vor wiederholtem PIN-Raten
-• Vergessener Timer: Hinweis mit Beenden, Später oder Fortsetzen
-• Profilwechsel mit laufendem Timer fragt nach
-• Zuverlässigeres Speichern beim Stoppen, kein doppeltes Auslösen beim Doppeltippen
-• Richtige Kalenderwoche und Feiertage bei Zeitumstellung
-• Dashboard folgt dem Tageswechsel um Mitternacht
+• Fehlerbehebungen und kleine Verbesserungen
+• Überarbeitete Darstellung der Web-Version auf kleinen Bildschirmen
+• Korrektur bei den Arbeitstagen in den Einstellungen der Web-Version
+
+Die Android-App selbst bleibt unverändert.

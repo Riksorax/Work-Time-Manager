@@ -1,6 +1,11 @@
 :host {
-  --color-overtime-positive: #4CAF50;
+  // Hell: dunkleres Grün für AA-Kontrast (>= 4.5:1) auf der hellen Fläche.
+  --color-overtime-positive: #2E7D32;
   --color-delete: #C62828;
+}
+
+:host-context(.dark-theme) {
+  --color-overtime-positive: #4CAF50;
 }
 
 .loading-state {
@@ -60,7 +65,7 @@
     font-size: 0.875rem;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    opacity: 0.6;
+    color: var(--mat-sys-on-surface-variant);
     margin: 0 0 8px;
   }
 
@@ -96,12 +101,20 @@
   flex-direction: column;
   gap: 12px;
 
+  // Beide Werte stehen bündig am rechten Rand; der Anpassen-Button sitzt neben dem Label statt in einer reservierten
+  // Spalte rechts (die ließ die Werte 40 px vor dem Rand von Karten und Eingabefeldern enden).
   .stat-row {
-    position: relative;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding-right: 40px; // Platz für absolut positionierten Button
+    gap: 12px;
+
+    .stat-label-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      min-width: 0;
+    }
 
     .stat-label {
       font-size: 0.95rem;
@@ -115,10 +128,13 @@
     }
 
     .adjust-btn {
-      position: absolute;
-      right: -4px;
-      top: 50%;
-      transform: translateY(-50%);
+      // Kompakter, damit die Zeile nicht höher wird als die ohne Button.
+      --mdc-icon-button-state-layer-size: 32px;
+      width: 32px;
+      height: 32px;
+      padding: 4px;
+      margin-block: -4px;
+      flex-shrink: 0;
     }
   }
 
@@ -181,7 +197,7 @@
   .empty-hint {
     text-align: center;
     padding: 24px;
-    opacity: 0.45;
+    color: var(--mat-sys-on-surface-variant);
     margin: 0;
   }
 }

@@ -113,16 +113,17 @@ interface EntryFormValue {
     </mat-dialog-actions>
   `,
   styles: [`
-    .edit-form { display: flex; flex-direction: column; gap: 8px; min-width: 400px; padding-top: 8px; }
-    .time-row { display: flex; gap: 16px; }
+    .edit-form { display: flex; flex-direction: column; gap: 8px; min-width: min(400px, calc(95vw - 48px)); padding-top: 8px; }
+    .time-row { display: flex; flex-wrap: wrap; gap: 0 16px; }
+    .time-row mat-form-field { flex: 1 1 120px; }
     .section-header {
       display: flex; justify-content: space-between; align-items: center; margin: 16px 0 4px;
       h3 { margin: 0; font-size: 1rem; }
     }
     .section-divider { margin: 8px 0; }
-    .break-row { display: flex; gap: 8px; align-items: center; }
-    .flex-2 { flex: 2; }
-    .flex-1 { flex: 1; }
+    .break-row { display: flex; flex-wrap: wrap; gap: 0 8px; align-items: center; }
+    .flex-2 { flex: 2 1 100%; }
+    .flex-1 { flex: 1 1 100px; }
   `],
 })
 export class EditEntryDialogComponent {

@@ -76,7 +76,7 @@ export interface QuickEntryDialogResult {
   `,
   styles: [`
     .full-width { width: 100%; }
-    mat-dialog-content { display: flex; flex-direction: column; gap: 8px; min-width: 280px; }
+    mat-dialog-content { padding-top: 8px; display: flex; flex-direction: column; gap: 8px; min-width: min(280px, calc(95vw - 48px)); }
   `],
 })
 export class QuickEntryDialogComponent {

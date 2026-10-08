@@ -198,6 +198,9 @@ function toKey(d: Date): string {
       bottom: 6px;
       opacity: 0.6;
     }
+    @media (max-width: 360px) {
+      .entry-dot { bottom: 2px; }
+    }
     .calendar-day.selected .entry-dot {
       background-color: var(--mat-sys-on-primary);
     }

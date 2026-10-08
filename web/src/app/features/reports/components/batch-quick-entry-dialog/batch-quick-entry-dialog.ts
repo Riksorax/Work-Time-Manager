@@ -85,7 +85,7 @@ export interface BatchQuickEntryDialogResult {
   styles: [`
     .full-width { width: 100%; }
     mat-chip-set { margin-bottom: 16px; display: flex; flex-wrap: wrap; gap: 4px; }
-    mat-dialog-content { display: flex; flex-direction: column; min-width: 300px; max-width: 480px; }
+    mat-dialog-content { display: flex; flex-direction: column; min-width: min(300px, calc(95vw - 48px)); max-width: 480px; }
     .form-fields { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
   `],
 })

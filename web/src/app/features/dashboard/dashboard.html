@@ -41,18 +41,20 @@
           </div>
 
           <div class="stat-row">
-            <span class="stat-label">{{ 'dashboard.overtimeTotalLabel' | translate }}</span>
+            <span class="stat-label-group">
+              <span class="stat-label">{{ 'dashboard.overtimeTotalLabel' | translate }}</span>
+              <button mat-icon-button
+                      class="adjust-btn"
+                      (click)="openAdjustOvertimeDialog()"
+                      [attr.aria-label]="'dashboard.adjustOvertimeAria' | translate"
+                      [matTooltip]="'dashboard.adjustOvertimeAria' | translate">
+                <mat-icon>tune</mat-icon>
+              </button>
+            </span>
             <span class="stat-value"
                   [style.color]="(svc.totalOvertime() ?? 0) >= 0 ? 'var(--color-overtime-positive)' : 'var(--mat-sys-error)'">
               {{ formatOvertime(svc.totalOvertime()) }}
             </span>
-            <button mat-icon-button
-                    class="adjust-btn"
-                    (click)="openAdjustOvertimeDialog()"
-                    [attr.aria-label]="'dashboard.adjustOvertimeAria' | translate"
-                    [matTooltip]="'dashboard.adjustOvertimeAria' | translate">
-              <mat-icon>tune</mat-icon>
-            </button>
           </div>
 
           @if (svc.isTimerRunning() && svc.expectedEndTime()) {

@@ -21,12 +21,14 @@
   width: 100%;
   max-width: 1100px;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  // minmax(0, 1fr): `1fr` hat sonst ein implizites Minimum von `auto` und die Spalte wächst mit langem Inhalt
+  // (z. B. E-Mail-Adresse) über den Bildschirmrand hinaus.
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 48px;
   align-items: start;
 
   @media (max-width: 900px) {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 8px;
   }
 }
@@ -149,6 +151,61 @@
 
 .config-section {
   padding: 8px 0;
+}
+
+// Titel dürfen umbrechen statt mit „…“ abgeschnitten zu werden (auf 320 px sind „Soll-Arbeitsstunden“ und
+// „Urlaubsanspruch pro Jahr“ sonst nicht lesbar); die Zeilenhöhe wächst dann mit.
+.settings-content ::ng-deep {
+  .mdc-list-item__primary-text {
+    white-space: normal;
+    // Lange Einzelwörter („Benachrichtigungen“) passen auf 320 px nicht neben Icon und Chevron: trennen statt abschneiden.
+    hyphens: auto;
+    overflow-wrap: anywhere;
+  }
+
+  // Der Trailing-Slot der Liste überschreibt Schrift und Größe des Icons (Inter, 11 px): der Chevron wird dann als
+  // unsichtbarer Rohtext in einer 24-px-Box abgeschnitten. Icon-Schrift und -Größe zurücksetzen.
+  mat-icon.mdc-list-item__end {
+    font-family: 'Material Icons';
+    font-size: 24px;
+    align-self: center;
+  }
+
+  .mat-mdc-list-item.mdc-list-item--with-two-lines {
+    height: auto;
+    min-height: 64px;
+    padding-block: 8px;
+  }
+}
+
+// Sprachauswahl auf schmalen Viewports: Die Umschalter (~190 px) lassen neben Icon und Titel keinen Platz. Der Titel schrumpfte
+// auf ~11 px (in Chromium unsichtbar, in Firefox abgeschnitten) und die Gruppe ragte über den Rand. Die Umschalter wandern
+// deshalb in eine eigene Zeile unter Icon und Titel.
+@media (max-width: 400px) {
+  .language-section ::ng-deep .mat-mdc-list-item.mdc-list-item {
+    flex-wrap: wrap;
+    row-gap: 8px;
+    height: auto;
+    min-height: 56px;
+    padding-block: 8px;
+  }
+
+  .language-section ::ng-deep .mdc-list-item__content {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .language-section mat-button-toggle-group {
+    flex: 1 1 100%;
+    margin-inline: 0;
+    // Der Trailing-Slot ignoriert das Zeilen-Padding: die Umschalter bündig mit dem Zeileninhalt halten.
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .language-section ::ng-deep .mat-mdc-list-item.mdc-list-item {
+    padding-inline: 16px;
+  }
 }
 
 // button mat-list-item: Browser-Defaults zurücksetzen

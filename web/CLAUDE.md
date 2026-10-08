@@ -13,7 +13,25 @@ npm ci --legacy-peer-deps                     # Install
 npm start                                     # Dev-Server http://localhost:4200
 npm test -- --watch=false                     # Unit-Tests (Vitest); ohne --watch=false hängt der Runner
 npm run build -- --configuration production   # wie CI
+npm run e2e                                   # UI-/E2E-Tests (Playwright, #429), startet `ng serve` selbst
+npm run e2e:chromium                          # nur Chromium (lokal ist nur dieser Browser vorinstalliert)
 ```
+
+**UI-/E2E-Tests (`web/e2e/`, #429):** Playwright, Projekte `chromium`, `firefox`, `webkit`, `edge`,
+`mobile-chrome`, `mobile-safari` (in CI je ein Matrix-Job). Die App läuft ohne Konto im localStorage-Modus,
+es werden weder Firebase noch Backend benötigt. `fixtures.ts` setzt Sprache/Theme vor dem Boot. Geprüft werden
+Laden ohne Konsolenfehler (je DE/EN, hell/dunkel), horizontaler Überlauf bei 320–1440 px, axe (WCAG A/AA,
+serious/critical, nur Chromium) und Kernabläufe (Timer, Pausen, Navigation, Theme, Sprache). Neue Seiten in
+`PAGES` ergänzen. Testdaten: `e2e/seed.ts` schreibt Einträge im `WorkEntryService`-localStorage-Format vor dem App-Start
+(`seedEntries`, `workDay`, `openDay`) und friert die Uhr auf einen festen Tag (`freezeTime`, 2026-03-18), damit nichts
+vom Ausführungsdatum abhängt. Abgedeckt: Kalender per Tastatur und Mehrfachauswahl (#377), Banner „Offene Einträge" (#385).
+Tests mit Konto (`e2e/account.ts`, `profiles.spec.ts`: Profilwechsel #380/#388, Timer-Dialog, Anlegen/Löschen) laufen nur in
+Chromium und nur mit `E2E_EMULATORS=1 npm run e2e:chromium` (Java 21; die Config startet Auth- und Firestore-Emulator über
+`npx firebase-tools`, Projekt `demo-e2e`). Die App wird dafür mit `ng serve --configuration e2e` gebaut
+(`environment.e2e.ts`: Emulator-Hosts, `apiUrl` `http://localhost:5100`; `app.config.ts` verbindet die Emulatoren nur, wenn
+`useEmulators` gesetzt ist, und legt `window.__e2eSignIn` ab). Die .NET-API wird durch ein Fake-Backend (`page.route`) ersetzt,
+das in dieselben Firestore-Dokumente schreibt, die die App per `onSnapshot` liest. Jeder Test legt einen eigenen Nutzer an.
+Kontrast: Sekundärtext nie per `opacity`, sondern über `--mat-sys-on-surface-variant`.
 
 ## Architektur (`web/src/app/`)
 
