@@ -104,6 +104,9 @@
   @media (max-width: 900px) {
     flex: none;
     width: 100%;
+    // Die Kalenderzellen sind quadratisch: auf voller Breite (z. B. 768 px) wären die Zeilen ~95 px hoch.
+    max-width: 440px;
+    align-self: center;
   }
 }
 
@@ -477,6 +480,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
 }
 
 .summary-label {

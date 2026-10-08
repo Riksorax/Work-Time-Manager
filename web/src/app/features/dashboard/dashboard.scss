@@ -106,6 +106,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 12px;
     padding-right: 40px; // Platz für absolut positionierten Button
 
     .stat-label {

@@ -153,6 +153,31 @@
   padding: 8px 0;
 }
 
+// Titel dürfen umbrechen statt mit „…“ abgeschnitten zu werden (auf 320 px sind „Soll-Arbeitsstunden“ und
+// „Urlaubsanspruch pro Jahr“ sonst nicht lesbar); die Zeilenhöhe wächst dann mit.
+.settings-content ::ng-deep {
+  .mdc-list-item__primary-text {
+    white-space: normal;
+    // Lange Einzelwörter („Benachrichtigungen“) passen auf 320 px nicht neben Icon und Chevron: trennen statt abschneiden.
+    hyphens: auto;
+    overflow-wrap: anywhere;
+  }
+
+  // Der Trailing-Slot der Liste überschreibt Schrift und Größe des Icons (Inter, 11 px): der Chevron wird dann als
+  // unsichtbarer Rohtext in einer 24-px-Box abgeschnitten. Icon-Schrift und -Größe zurücksetzen.
+  mat-icon.mdc-list-item__end {
+    font-family: 'Material Icons';
+    font-size: 24px;
+    align-self: center;
+  }
+
+  .mat-mdc-list-item.mdc-list-item--with-two-lines {
+    height: auto;
+    min-height: 64px;
+    padding-block: 8px;
+  }
+}
+
 // button mat-list-item: Browser-Defaults zurücksetzen
 button[mat-list-item] {
   border: none;
