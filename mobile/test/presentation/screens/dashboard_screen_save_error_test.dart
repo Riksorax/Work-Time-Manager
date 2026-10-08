@@ -127,6 +127,71 @@ void main() {
     });
   }
 
+  // Reentranz-Sperre (#413): waehrend eines Writes sind alle Schreib-Eingaben
+  // deaktiviert, ein weiterer Tap bleibt ohne Wirkung und ohne Snackbar.
+  for (final (locale, stop, addBreak, endBreak, startLabel, errText) in [
+    (
+      'de',
+      'Zeiterfassung beenden',
+      'Pause hinzufügen',
+      'Pause beenden',
+      'Startzeit',
+      _de
+    ),
+    ('en', 'Stop time tracking', 'Add break', 'End break', 'Start time', _en),
+  ]) {
+    group('Sperre waehrend des Speicherns ($locale)', () {
+      testWidgets('Buttons und Felder deaktiviert, danach wieder aktiv',
+          (tester) async {
+        work.holdSaves = true;
+        await pump(tester, locale);
+        ElevatedButton button(String label) => tester
+            .widget<ElevatedButton>(find.widgetWithText(ElevatedButton, label));
+        expect(button(stop).onPressed, isNotNull);
+        expect(button(addBreak).onPressed, isNotNull);
+
+        await tester.tap(find.text(addBreak));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        expect(work.pendingSaves, hasLength(1));
+        expect(button(stop).onPressed, isNull);
+        expect(button(endBreak).onPressed, isNull);
+        expect(
+            tester
+                .widget<TextField>(find.widgetWithText(TextField, startLabel))
+                .enabled,
+            isFalse);
+        final delete = tester
+            .widget<IconButton>(find.widgetWithIcon(IconButton, Icons.delete));
+        expect(delete.onPressed, isNull);
+
+        // Weitere Taps bleiben ohne Wirkung und ohne Snackbar.
+        await tester.tap(find.text(stop), warnIfMissed: false);
+        await tester.tap(find.text(endBreak), warnIfMissed: false);
+        await tester.pump();
+        expect(work.pendingSaves, hasLength(1));
+        expect(find.byType(SnackBar), findsNothing);
+        expect(find.text(errText), findsNothing);
+
+        work.holdSaves = false;
+        work.pendingSaves.single.complete();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        expect(button(stop).onPressed, isNotNull);
+        expect(button(endBreak).onPressed, isNotNull);
+        expect(
+            tester
+                .widget<TextField>(find.widgetWithText(TextField, startLabel))
+                .enabled,
+            isTrue);
+        expect(find.byType(SnackBar), findsNothing);
+        await unmount(tester);
+      });
+    });
+  }
+
   // Weitere Aktionen des Dashboards mit Saldo-Block (Aufrufer im Screen):
   // Saldo-Fehler zeigt die Snackbar, der Eintrag bleibt unveraendert.
   group('weitere Aktionen bei Saldo-Fehler', () {

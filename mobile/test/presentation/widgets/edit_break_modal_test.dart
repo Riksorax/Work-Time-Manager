@@ -449,6 +449,51 @@ void main() {
       expect(newEnd, isNull);
     });
   });
+  group('EditBreakModal waehrend einer Schreibaktion (#413)', () {
+    Widget createSubject({required bool isSaving}) => ProviderScope(
+          overrides: [
+            dashboardViewModelProvider
+                .overrideWith(() => _SavingDashboardViewModel(isSaving)),
+          ],
+          child: MaterialApp(
+            locale: const Locale('de'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: EditBreakModal(
+                breakEntity: BreakEntity(
+                  id: 'b1',
+                  name: 'Pause 1',
+                  start: DateTime(2024, 1, 15, 12, 0),
+                  end: DateTime(2024, 1, 15, 12, 30),
+                ),
+              ),
+            ),
+          ),
+        );
+
+    testWidgets('isSaving: Speichern deaktiviert, Abbrechen aktiv',
+        (tester) async {
+      await tester.pumpWidget(createSubject(isSaving: true));
+      await tester.pump();
+
+      final save = tester.widget<ElevatedButton>(
+          find.widgetWithText(ElevatedButton, 'Speichern'));
+      final cancel = tester
+          .widget<TextButton>(find.widgetWithText(TextButton, 'Abbrechen'));
+      expect(save.onPressed, isNull);
+      expect(cancel.onPressed, isNotNull);
+    });
+
+    testWidgets('ohne isSaving: Speichern aktiv', (tester) async {
+      await tester.pumpWidget(createSubject(isSaving: false));
+      await tester.pump();
+
+      final save = tester.widget<ElevatedButton>(
+          find.widgetWithText(ElevatedButton, 'Speichern'));
+      expect(save.onPressed, isNotNull);
+    });
+  });
 }
 
 class FakeDashboardViewModel extends DashboardViewModel {
@@ -472,4 +517,13 @@ class FakeDashboardViewModel extends DashboardViewModel {
     lastUpdatedBreak = breakEntity;
     return updateResult;
   }
+}
+
+class _SavingDashboardViewModel extends FakeDashboardViewModel {
+  _SavingDashboardViewModel(this._isSaving);
+
+  final bool _isSaving;
+
+  @override
+  DashboardState build() => super.build().copyWith(isSaving: _isSaving);
 }

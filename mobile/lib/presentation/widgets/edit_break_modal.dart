@@ -135,6 +135,11 @@ class _EditBreakModalState extends ConsumerState<EditBreakModal> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    // Läuft eine Schreibaktion, würde ein Update verworfen und das Modal
+    // trotzdem schließen: Speichern erst danach möglich (#413).
+    final isSaving = ref.watch(dashboardViewModelProvider.select(
+      (s) => s.isSaving,
+    ));
     return AlertDialog(
       title: Text(l10n.editBreakTitle),
       content: Column(
@@ -174,7 +179,7 @@ class _EditBreakModalState extends ConsumerState<EditBreakModal> {
           child: Text(l10n.cancel),
         ),
         ElevatedButton(
-          onPressed: _saveChanges,
+          onPressed: isSaving ? null : _saveChanges,
           child: Text(l10n.save),
         ),
       ],

@@ -167,6 +167,84 @@ void main() {
     }, setUp: prep(entryOf(mo, start: at(22))), profiles: true);
   });
 
+  // Stop beim Wechsel und laufende Schreibaktion (#413): der Switch wartet auf
+  // die Aktion, statt parallel zu stoppen.
+  group('stopRunningForSwitch und Reentranz-Sperre (#413)', () {
+    final stopWrites = [
+      'A:overtime:135',
+      'A:lastUpdate',
+      'A:entry:$moKey:08:00-17:00',
+    ];
+
+    void releaseAll(Harness h) {
+      h.work.holdSaves = false;
+      h.overtime.holdSaveOvertime = false;
+      for (final c in [
+        ...h.work.pendingSaves,
+        ...h.overtime.pendingOvertimeSaves
+      ]) {
+        if (!c.isCompleted) c.complete();
+      }
+      h.async.flushMicrotasks();
+    }
+
+    scenario(
+        'B12a wartet auf einen laufenden Stop, stoppt nicht doppelt', at(17),
+        (h) {
+      h.boot();
+      h.overtime.holdSaveOvertime = true;
+      final stop = run(h, h.vm.startOrStopTimer);
+      final r = run(h, () => h.vm.stopRunningForSwitch('default'));
+
+      expect(r.done(), isFalse);
+      expect(h.overtime.pendingOvertimeSaves, hasLength(1));
+      expect(h.writeLog, isEmpty);
+
+      releaseAll(h);
+      expect(stop.value(), isTrue);
+      expect(r.done(), isTrue);
+      expect(r.value(), isTrue);
+      expect(h.writeLog, stopWrites);
+      expect(h.overtime.saveOvertimeCalls, 1);
+    }, setUp: prep(), profiles: true);
+
+    scenario('B12b wartet auf eine laufende Pause, stoppt danach', at(17), (h) {
+      h.boot();
+      h.work.holdSaves = true;
+      final pause = run(h, h.vm.startOrStopBreak);
+      final r = run(h, () => h.vm.stopRunningForSwitch('default'));
+      expect(r.done(), isFalse);
+      expect(h.work.pendingSaves, hasLength(1));
+      h.work.holdSaves = false;
+
+      h.work.pendingSaves.single.complete();
+      h.async.flushMicrotasks();
+      expect(pause.value(), isTrue);
+      expect(r.done(), isTrue);
+      expect(r.value(), isTrue);
+      expect(h.state.workEntry.workEnd, isNotNull);
+      expect(h.vm.isTimerRunning, isFalse);
+    }, setUp: prep(), profiles: true);
+
+    scenario(
+        'B12c Profilwechsel waehrend des Wartens: false, kein Haengen', at(17),
+        (h) {
+      h.boot();
+      h.overtime.holdSaveOvertime = true;
+      run(h, h.vm.startOrStopTimer);
+      final r = run(h, () => h.vm.stopRunningForSwitch('default'));
+      expect(r.done(), isFalse);
+
+      h.switchProfile('B');
+      expect(r.done(), isTrue);
+      expect(r.value(), isFalse);
+      expect(count(h, 'B:'), 0);
+
+      releaseAll(h);
+      expect(count(h, 'B:'), 0);
+    }, setUp: prep(), profiles: true);
+  });
+
   group('isTimerRunning', () {
     scenario('S9 false beim Laden, true laufend, false nach Stop', at(17), (h) {
       h.work.holdReads = true;

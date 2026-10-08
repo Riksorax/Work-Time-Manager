@@ -349,6 +349,55 @@ void main() {
     }, setUp: (h) => h.seed(friOpen()), profiles: true);
   });
 
+  group('Fortsetzen und Reentranz-Sperre (#413)', () {
+    void releaseReads(Harness h) {
+      h.work.holdReads = false;
+      for (final c in h.work.pendingReads.toList()) {
+        if (!c.isCompleted) c.complete();
+      }
+      h.async.flushMicrotasks();
+    }
+
+    scenario('B13a laeuft ein Start-Tap in der Ladeluecke: false ohne Pin-Read',
+        satMorning, (h) {
+      h.work.holdReads = true;
+      h.boot();
+      h.act(h.vm.startOrStopTimer);
+      expect(h.state.isSaving, isTrue);
+      final readsBefore = h.work.pendingReads.length;
+
+      bool? out;
+      h.act(() async => out = await h.vm.resumePastEntry(friOpen()));
+      expect(out, isFalse, reason: 'sofort, vor der Freigabe der Reads');
+      expect(h.work.pendingReads, hasLength(readsBefore));
+
+      releaseReads(h);
+      expect(h.state.workEntry.date, sat);
+      expect(h.state.workEntry.workStart, isNotNull);
+      expect(h.work.saved.where((e) => e.date == fri), isEmpty);
+    }, setUp: (h) => h.seed(friOpen()), profiles: true);
+
+    scenario(
+        'B13b Start-Tap im Wartefenster von resumePastEntry: false, kein Pin',
+        satMorning, (h) {
+      h.work.holdReads = true;
+      h.boot();
+      bool? out;
+      h.act(() async => out = await h.vm.resumePastEntry(friOpen()));
+      expect(out, isNull, reason: 'wartet auf den Ladelauf');
+      h.act(h.vm.startOrStopTimer);
+
+      releaseReads(h);
+      expect(out, isFalse);
+      expect(h.state.workEntry.date, sat);
+      expect(h.state.workEntry.workStart, isNotNull);
+      expect(h.state.workEntry.workEnd, isNull);
+      expect(h.work.saved, hasLength(1));
+      expect(h.work.saved.single.date, sat);
+      expect(h.async.periodicTimerCount, 1);
+    }, setUp: (h) => h.seed(friOpen()), profiles: true);
+  });
+
   group('Start/Stop-Tap während des Pinnens', () {
     // Befund (Plan Schritt 2): `dashboard_screen.dart` sperrt Start/Stop NICHT
     // über `state.isLoading` (kein Treffer im Screen). `isLoading` während des
