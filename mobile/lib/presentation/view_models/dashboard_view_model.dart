@@ -73,6 +73,14 @@ class DashboardViewModel extends Notifier<DashboardState> {
   /// Fehler). [stopRunningForSwitch] wartet darauf.
   Completer<void>? _actionDone;
 
+  /// Der laufende Autosave (Aktionen warten darauf, damit er den frischen
+  /// Eintrag nie überholt; siehe [_runAction]). Räumt sich bei Identität ab.
+  Future<void>? _autoSaveRun;
+
+  /// Obergrenze je Write-Block: ein nie zurückkehrender Write sperrt das
+  /// Dashboard höchstens so lange (#413).
+  static const _writeTimeout = Duration(seconds: 30);
+
   /// Die aktuelle Zeit aus [clockProvider] (Tests injizieren eine Fake-Uhr).
   DateTime _now() => ref.read(clockProvider)();
 
@@ -93,6 +101,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
     _busy = false;
     _actionToken = Object();
     _actionDone = null;
+    _autoSaveRun = null;
     ref.listen<DateTime>(todayProvider, (previous, next) {
       if (previous != next) _onDayChange();
     });
@@ -329,6 +338,9 @@ class DashboardViewModel extends Notifier<DashboardState> {
     _actionDone = Completer<void>();
     state = state.copyWith(isSaving: true);
     try {
+      // Ein laufender Autosave (max. 30 s) endet vor jedem Write der Aktion.
+      final autoSave = _autoSaveRun;
+      if (autoSave != null) await autoSave;
       return await body();
     } finally {
       if (identical(token, _actionToken)) {
@@ -463,11 +475,16 @@ class DashboardViewModel extends Notifier<DashboardState> {
         );
         _recalculateOvertime();
 
-        // Auto-Save alle 30 Sekunden
+        // Auto-Save alle 30 Sekunden, nie überlappend mit einer Aktion. Läuft
+        // gerade eine, bleibt der Zähler >= 30 (Retry im nächsten Tick).
         _tickCounter++;
-        if (_tickCounter >= 30) {
+        if (_tickCounter >= 30 && !_busy && _autoSaveRun == null) {
           _tickCounter = 0;
-          unawaited(_autoSave());
+          late final Future<void> run;
+          run = _autoSave().whenComplete(() {
+            if (identical(_autoSaveRun, run)) _autoSaveRun = null;
+          });
+          _autoSaveRun = run;
         }
       });
     } else {
@@ -494,7 +511,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
     logger.i('[Dashboard] Auto-Save: Speichere aktuellen Stand');
     try {
       final saveWorkEntry = ref.read(saveWorkEntryUseCaseProvider);
-      await saveWorkEntry.call(state.workEntry);
+      await saveWorkEntry.call(state.workEntry).timeout(_writeTimeout);
       logger.i('[Dashboard] Auto-Save erfolgreich');
     } catch (e) {
       logger.e('[Dashboard] Auto-Save Fehler: $e');
@@ -769,13 +786,24 @@ class DashboardViewModel extends Notifier<DashboardState> {
             '[Dashboard] Speichere Overtime: Base=$base, Daily=$dailyOvertime, NewTotal=$newTotalOvertime');
 
         final actionCtx = ctx!;
-        try {
-          await actionCtx.overtimeRepository.saveOvertime(newTotalOvertime);
+        final saldo = newTotalOvertime;
+        // Nach einem Timeout läuft die Schließung weiter: sie darf
+        // lastUpdate/Warnung nicht mehr nachholen (ein bereits gesendeter
+        // saveOvertime ist nicht abbrechbar, Wiederholen ist idempotent).
+        var timedOut = false;
+        Future<void> writeSaldo() async {
+          await actionCtx.overtimeRepository.saveOvertime(saldo);
+          if (timedOut) return;
           await actionCtx.overtimeRepository
               .saveLastUpdateDate(actionCtx.now());
-          await _checkOvertimeWarning(
-              newTotalOvertime, actionCtx.settingsRepository);
+          if (timedOut) return;
+          await _checkOvertimeWarning(saldo, actionCtx.settingsRepository);
+        }
+
+        try {
+          await writeSaldo().timeout(_writeTimeout);
         } catch (e, st) {
+          timedOut = true;
           // Vor dem State-Update und vor jedem Timer-Eingriff: State, Timer und
           // Eintrag bleiben unverändert, nichts wird weitergeworfen (sonst
           // landet es als fatal in Crashlytics, #402). Der Saldo ist absolut,
@@ -817,7 +845,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
       logger.i(
           '[Dashboard] Speichere WorkEntry: ${updatedEntry.id}, Start: ${updatedEntry.workStart}, End: ${updatedEntry.workEnd}');
       try {
-        await ctx!.saveWorkEntry.call(updatedEntry);
+        await ctx!.saveWorkEntry.call(updatedEntry).timeout(_writeTimeout);
         saved = true;
         logger.i('[Dashboard] WorkEntry erfolgreich gespeichert');
       } catch (e, st) {

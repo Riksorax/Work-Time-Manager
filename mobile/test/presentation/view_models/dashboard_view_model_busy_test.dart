@@ -9,6 +9,7 @@ import 'package:flutter_work_time/domain/entities/work_entry_entity.dart';
 import 'package:flutter_work_time/domain/usecases/toggle_break.dart';
 import 'package:flutter_work_time/presentation/state/dashboard_state.dart';
 import 'package:flutter_work_time/presentation/view_models/dashboard_view_model.dart';
+import 'package:logger/logger.dart';
 
 import '../../support/dashboard_harness.dart';
 import '../../support/fake_repositories.dart';
@@ -525,6 +526,187 @@ void main() {
       final r = tap(h, h.vm.startOrStopTimer);
       expect(r.value(), isTrue);
       expect(h.state.isSaving, isFalse);
+    }, setUp: prep(running), profiles: true);
+  });
+
+  group('B9/B10 Autosave und Aktion', () {
+    scenario('B9a Autosave im Aktionsfenster uebersprungen', at(17), (h) {
+      h.boot();
+      // Fenster t=25..55 s (Saldo-Timeout 30 s): der 30. Tick liegt darin.
+      h.tick(const Duration(seconds: 25));
+      h.overtime.holdSaveOvertime = true;
+      tap(h, h.vm.startOrStopTimer);
+
+      h.tick(const Duration(seconds: 6));
+      expect(h.work.log.where((e) => e.startsWith('save:')), isEmpty);
+      expect(h.work.saved, isEmpty);
+
+      releaseAll(h);
+    }, setUp: prep(running), profiles: true);
+
+    scenario('B9b Zaehler bleibt erhalten: Retry im naechsten Tick', at(17),
+        (h) {
+      h.boot();
+      h.tick(const Duration(seconds: 25));
+      h.overtime.holdSaveOvertime = true;
+      final r = tap(h, h.vm.startOrStopTimer);
+      h.tick(const Duration(seconds: 6));
+      expect(h.work.saved, isEmpty);
+
+      h.overtime.failSaveOvertime = true;
+      releaseAll(h);
+      expect(r.value(), isFalse);
+      expect(h.async.periodicTimerCount, 1);
+      expect(h.work.saved, isEmpty);
+
+      h.tick();
+      expect(h.work.saved, hasLength(1));
+      expect(h.work.saved.single.workEnd, isNull);
+    }, setUp: prep(running), profiles: true);
+
+    scenario('B10 Aktion wartet auf einen laufenden Autosave', at(17), (h) {
+      h.boot();
+      h.work.holdSaves = true;
+      h.tick(const Duration(seconds: 30));
+      expect(h.work.pendingSaves, hasLength(1));
+      final autosave = h.work.pendingSaves.single;
+      h.work.holdSaves = false;
+      h.tick(const Duration(seconds: 2));
+
+      final r = tap(h, h.vm.startOrStopTimer);
+      expect(r.done(), isFalse);
+      expect(h.overtime.saveOvertimeCalls, 0);
+      expect(h.writeLog, isEmpty);
+      expect(h.state.isSaving, isTrue);
+
+      autosave.complete();
+      h.async.flushMicrotasks();
+      expect(r.value(), isTrue);
+      expect(h.writeLog.first, 'A:entry:$moKey:08:00--');
+      final saldoAt = h.writeLog.indexWhere((e) => e.contains(':overtime:'));
+      expect(saldoAt, greaterThan(0));
+      expect(h.writeLog.where((e) => e.contains(':overtime:')), hasLength(1));
+      expect(h.state.isSaving, isFalse);
+    }, setUp: prep(running), profiles: true);
+  });
+
+  group('B11 Timeouts (30 s je Write)', () {
+    scenario('T1 Saldo-Timeout: false, State unveraendert, spaeter Saldo ohne '
+        'Folgeschritte', at(17), (h) {
+      h.boot();
+      h.overtime.holdSaveOvertime = true;
+      final events = <LogEvent>[];
+      Logger.addLogListener(events.add);
+      late final ({
+        bool? Function() value,
+        bool Function() done,
+        Object? Function() error
+      }) r1;
+      try {
+        r1 = tap(h, h.vm.startOrStopTimer);
+        h.tick(const Duration(seconds: 29));
+        expect(r1.done(), isFalse);
+        expect(h.state.isSaving, isTrue);
+        final r2 = tap(h, h.vm.startOrStopTimer);
+        expect(r2.value(), isTrue);
+        expect(h.overtime.pendingOvertimeSaves, hasLength(1));
+
+        h.tick();
+      } finally {
+        Logger.removeLogListener(events.add);
+      }
+      expect(r1.done(), isTrue);
+      expect(r1.value(), isFalse);
+      expect(h.state.isSaving, isFalse);
+      expect(h.state.workEntry.workEnd, isNull);
+      expect(h.async.periodicTimerCount, 1);
+      expect(h.writeLog.where((e) => e.contains(':overtime:')), isEmpty);
+      expect(h.writeLog.where((e) => e.contains('lastUpdate')), isEmpty);
+      expect(h.work.saved.where((e) => e.workEnd != null), isEmpty);
+
+      final errors = events
+          .where((e) => e.level == Level.error)
+          .map((e) => '${e.message} ${e.error}')
+          .join(' ');
+      expect(errors, contains('TimeoutException'));
+      expect(errors, isNot(contains('2026-10-05')));
+
+      // Der haengende Saldo-Write landet spaeter (nicht abbrechbar), schreibt
+      // aber weder lastUpdate noch den Eintrag nach.
+      h.overtime.holdSaveOvertime = false;
+      h.overtime.pendingOvertimeSaves.single.complete();
+      h.async.flushMicrotasks();
+      expect(h.writeLog, contains('A:overtime:135'));
+      expect(h.writeLog.where((e) => e.contains('lastUpdate')), isEmpty);
+      expect(h.work.saved.where((e) => e.workEnd != null), isEmpty);
+      expect(h.state.workEntry.workEnd, isNull);
+
+      // Wiederholen schreibt vollstaendig.
+      final r3 = tap(h, h.vm.startOrStopTimer);
+      expect(r3.value(), isTrue);
+      expect(h.overtime.saveOvertimeCalls, 2);
+      expect(h.writeLog, contains('A:lastUpdate'));
+      expect(h.writeLog.any((e) => e.startsWith('A:entry:$moKey:08:00-17:')),
+          isTrue);
+      expect(h.state.workEntry.workEnd, isNotNull);
+    }, setUp: prep(running), profiles: true);
+
+    scenario('T2 Eintrag-Timeout beim Stop: wie Eintrag-Fehler, true '
+        '(PR 2 aendert dies)', at(17), (h) {
+      h.boot();
+      h.work.holdSaves = true;
+      final r = tap(h, h.vm.startOrStopTimer);
+      expect(h.work.pendingSaves, hasLength(1));
+      expect(r.done(), isFalse);
+
+      h.tick(const Duration(seconds: 30));
+      expect(r.done(), isTrue);
+      expect(r.value(), isTrue);
+      expect(h.state.workEntry.workEnd, isNotNull);
+      expect(h.async.periodicTimerCount, 0);
+      expect(h.state.isSaving, isFalse);
+      expect(h.work.saved, isEmpty);
+
+      releaseAll(h);
+    }, setUp: prep(running), profiles: true);
+
+    scenario('T3 Autosave-Timeout gibt die wartende Aktion frei', at(17), (h) {
+      h.boot();
+      h.work.holdSaves = true;
+      h.tick(const Duration(seconds: 30));
+      expect(h.work.pendingSaves, hasLength(1));
+      h.work.holdSaves = false;
+
+      h.tick(const Duration(seconds: 5));
+      final r = tap(h, h.vm.startOrStopTimer);
+      expect(r.done(), isFalse);
+      expect(h.overtime.saveOvertimeCalls, 0);
+
+      h.tick(const Duration(seconds: 25));
+      expect(r.done(), isTrue);
+      expect(r.value(), isTrue);
+      expect(h.writeLog, hasLength(3));
+      expect(h.writeLog[0], startsWith('A:overtime:'));
+      expect(h.writeLog[1], 'A:lastUpdate');
+      expect(h.writeLog[2], startsWith('A:entry:$moKey:08:00-17:'));
+
+      releaseAll(h);
+    }, setUp: prep(running), profiles: true);
+
+    scenario('T4 Grenze exakt 30 s', at(17), (h) {
+      h.boot();
+      h.overtime.holdSaveOvertime = true;
+      final r = tap(h, h.vm.startOrStopTimer);
+
+      h.tick(const Duration(seconds: 29));
+      expect(r.done(), isFalse);
+      expect(h.state.isSaving, isTrue);
+
+      h.tick();
+      expect(r.done(), isTrue);
+      expect(h.state.isSaving, isFalse);
+
+      releaseAll(h);
     }, setUp: prep(running), profiles: true);
   });
 }
