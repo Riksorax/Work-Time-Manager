@@ -1,0 +1,115 @@
+name: GitHub Release
+
+# Legt nach dem Release-Merge den Tag und das GitHub Release an.
+# Version und Charakter stammen aus main (mobile/pubspec.yaml, RELEASE_NAMES.md),
+# die Beschreibung aus mobile/whatsnew/de-DE.txt plus Link auf den Release-PR.
+# Läuft idempotent: existiert das Release schon, passiert nichts.
+#
+# Nachträglich anlegen (z. B. für ein bereits ausgeliefertes Release):
+#   workflow_dispatch mit `version` und optional `target` (Commit auf main).
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version, z. B. 1.6.2 (leer = Version aus pubspec.yaml)'
+        required: false
+        type: string
+      target:
+        description: 'Commit auf main, auf den der Tag zeigt (leer = Kopf von main)'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  release:
+    name: Tag und GitHub Release anlegen
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Ziel-Commit bestimmen
+        id: target
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_TARGET: ${{ inputs.target }}
+        run: |
+          if [ -n "$INPUT_TARGET" ]; then
+            SHA="$INPUT_TARGET"
+          elif [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            SHA=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
+          else
+            SHA="$GITHUB_SHA"
+          fi
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.target.outputs.sha }}
+
+      - name: Version und Charakter lesen
+        id: info
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          VERSION="$INPUT_VERSION"
+          if [ -z "$VERSION" ]; then
+            VERSION=$(sed -n 's/^version: *\([0-9][0-9.]*\).*/\1/p' mobile/pubspec.yaml | head -1)
+          fi
+          if [ -z "$VERSION" ]; then
+            echo "::error::Keine Version in mobile/pubspec.yaml gefunden."
+            exit 1
+          fi
+
+          # Zeile "| 1.6.2 | Saix | 2026-10-08 |" aus RELEASE_NAMES.md
+          CHARACTER=$(awk -F'|' -v v="$VERSION" '
+            { gsub(/^ +| +$/, "", $2); gsub(/^ +| +$/, "", $3) }
+            $2 == v { print $3; exit }' RELEASE_NAMES.md)
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "character=$CHARACTER" >> "$GITHUB_OUTPUT"
+          echo "Version: $VERSION — Charakter: ${CHARACTER:-<keiner>}"
+
+      - name: Release anlegen
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.info.outputs.version }}
+          CHARACTER: ${{ steps.info.outputs.character }}
+          SHA: ${{ steps.target.outputs.sha }}
+        run: |
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            echo "Release $VERSION existiert bereits — nichts zu tun."
+            exit 0
+          fi
+
+          TITLE="Release $VERSION"
+          if [ -n "$CHARACTER" ] && [ "$CHARACTER" != "—" ]; then
+            TITLE="$TITLE ($CHARACTER)"
+          fi
+
+          # Release-PR (Titel "Release <Version> (<Charakter>)") für den Link im Text
+          PR_URL=$(gh pr list --state merged --base main \
+            --search "Release $VERSION in:title" \
+            --json url,title --jq "[.[] | select(.title | startswith(\"Release $VERSION\"))][0].url // empty")
+
+          {
+            echo "## Änderungen"
+            echo
+            cat mobile/whatsnew/de-DE.txt
+            echo
+            if [ -n "$PR_URL" ]; then
+              echo
+              echo "Alle enthaltenen Änderungen: $PR_URL"
+            fi
+          } > release-notes.md
+
+          # Nur ein Tag mit diesem Namen für genau diesen Commit anlegen.
+          gh release create "$VERSION" \
+            --target "$SHA" \
+            --title "$TITLE" \
+            --notes-file release-notes.md

@@ -33,6 +33,7 @@ Integrationsbranch ist `develop`; PRs gehen gegen `develop`, nur Release-Branche
 | `flutter-production.yml` | Push auf `main` oder `workflow_dispatch` | Android AAB → Google Play (Closed Testing Track `<Version> <Charakter>`, ab 1.6 `<Major>.<Minor> <Charakter>`) |
 | `deploy-angular.yml` | Push auf `main` oder `workflow_dispatch` | Angular Build → Docker Hub → Hetzner |
 | `deploy-api.yml` | Push auf `main` oder `workflow_dispatch` | .NET Build & Test → Docker Hub → Hetzner |
+| `github-release.yml` | Push auf `main` oder `workflow_dispatch` | Tag `<Version>` und GitHub Release (Text aus `mobile/whatsnew/de-DE.txt`) |
 | `version-bump.yml` | Push auf `release/v*` | Version in `mobile/pubspec.yaml`, Charakter in `RELEASE_NAMES.md` |
 
 Details der Deploy-Workflows, Uptime-Monitoring und benötigte Secrets: `CONTRIBUTING.md`, „Deployment“.

@@ -54,10 +54,14 @@ Konflikte.
 ## Nach dem Merge (ansagen bzw. mit Freigabe ausführen)
 1. Deploy-Workflows beobachten: `flutter-production.yml`, `deploy-api.yml`, `deploy-angular.yml`.
    Die Smoke-Tests am Ende von API- und Web-Deploy müssen grün sein.
-2. `main` zurück nach `develop` mergen:
+2. GitHub Release prüfen: `github-release.yml` legt Tag `<Version>` (ohne `v`) und das Release
+   `Release <Version> (<Charakter>)` an (Text aus `mobile/whatsnew/de-DE.txt` plus Link auf den
+   Release-PR). Fehlt es danach (`list_releases`), den Workflow per `actions_run_trigger`
+   (`workflow_dispatch`, Input `version`) starten.
+3. `main` zurück nach `develop` mergen:
    ```bash
    git fetch origin
    git checkout develop && git merge --no-ff origin/main -m "Merge branch 'main' into develop (Version <Version> zurückmergen)"
    git push origin develop
    ```
-3. Release-Branch löschen: `git push origin --delete release/v<Version>-<Charakter>`.
+4. Release-Branch löschen: `git push origin --delete release/v<Version>-<Charakter>`.

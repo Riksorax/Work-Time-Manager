@@ -121,9 +121,14 @@ Mit Claude Code: `/release <Version> <Charakter>`.
 5. **PR** `release/v…` → `main` mit Titel `Release <Version> (<Charakter>)`, als
    **Merge-Commit** (nicht Squash, sonst trennt sich die Historie von `main` und `develop`).
 6. **Deploy** startet automatisch (siehe unten).
-7. **Zurückmergen:** `main` nach `develop` mergen,
+7. **GitHub Release:** `github-release.yml` läuft beim Push auf `main` und legt Tag `<Version>`
+   (ohne `v`, wie `1.1.0`) und das Release `Release <Version> (<Charakter>)` an. Die
+   Beschreibung ist `mobile/whatsnew/de-DE.txt` plus Link auf den Release-PR. Der Workflow
+   ist idempotent; nachträglich oder bei einem Fehler: Actions → „GitHub Release“ →
+   *Run workflow* (`version` und optional `target` = Commit auf `main`).
+8. **Zurückmergen:** `main` nach `develop` mergen,
    Commit `Merge branch 'main' into develop (Version <Version> zurückmergen)`.
-8. Release-Branch löschen.
+9. Release-Branch löschen.
 
 **Versionsregel ab 1.6:** `x.y.0` bringt neue Funktionen, jede Patch-Version (`x.y.1`, `x.y.2`, ...)
 enthält nur Bugfixes. Treten nach einem Release Fehler auf, steigt die Version auf `x.y.1`; ein
@@ -144,6 +149,7 @@ Jeder Push auf `main` startet:
 | `flutter-production.yml` | Android-AAB im geschlossenen Test-Track (`<Version> <Charakter>`, ab 1.6 `<Major>.<Minor> <Charakter>`) | Play Console |
 | `deploy-api.yml` | Image `riksorax/work-time-manager-api`, Deploy auf Hetzner | Smoke-Test `https://api.work-time-manager.app/health` |
 | `deploy-angular.yml` | Image `riksorax/work-time-manager-web`, Deploy auf Hetzner | Smoke-Test `https://work-time-manager.app/` |
+| `github-release.yml` | Tag `<Version>` und GitHub Release | Tab „Releases“ im Repo |
 
 Die Smoke-Tests laufen als letzter Schritt der Deploy-Workflows. Schlagen sie fehl,
 ist der Workflow rot. Dauerhafte Überwachung übernimmt Uptime-Kuma unter
