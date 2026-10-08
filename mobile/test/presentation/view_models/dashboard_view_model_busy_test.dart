@@ -112,8 +112,9 @@ void main() {
       expect(h.overtime.saveOvertimeCalls, 0);
     }, setUp: prep(empty), profiles: true);
 
-    scenario('B2 Doppel-Stop: genau ein Saldo-/Eintrag-Write, danach frei',
-        at(17), (h) {
+    scenario(
+        'B2 Doppel-Stop: genau ein Saldo-/Eintrag-Write, danach frei', at(17),
+        (h) {
       h.boot();
       h.overtime.holdSaveOvertime = true;
       final r1 = tap(h, h.vm.startOrStopTimer);
@@ -147,8 +148,9 @@ void main() {
       expect(h.writeLog, stopWrites);
     }, setUp: prep(running), profiles: true);
 
-    scenario('B3b Flag frei nach Wurf im Body, Wurf erreicht den Aufrufer',
-        at(17), (h) {
+    scenario(
+        'B3b Flag frei nach Wurf im Body, Wurf erreicht den Aufrufer', at(17),
+        (h) {
       h.boot();
       final r1 = tap(h, h.vm.startOrStopBreak);
       expect(r1.done(), isTrue);
@@ -159,8 +161,8 @@ void main() {
       expect(r2.value(), isTrue);
       expect(h.writeLog, stopWrites);
     }, setUp: prep(running), profiles: true, overrides: [
-      toggleBreakUseCaseProvider
-          .overrideWith((ref) => _ThrowingToggleBreak(ref.watch(clockProvider))),
+      toggleBreakUseCaseProvider.overrideWith(
+          (ref) => _ThrowingToggleBreak(ref.watch(clockProvider))),
     ]);
 
     scenario('B4 Pause/Pause: eine Pause, ein Write', at(17), (h) {
@@ -219,8 +221,8 @@ void main() {
     scenario('B6 manuelle Endzeit + Stop: genau ein Saldo-Write', at(17), (h) {
       h.boot();
       h.overtime.holdSaveOvertime = true;
-      final r1 =
-          tap(h, () => h.vm.setManualEndTime(const TimeOfDay(hour: 16, minute: 0)));
+      final r1 = tap(
+          h, () => h.vm.setManualEndTime(const TimeOfDay(hour: 16, minute: 0)));
       final r2 = tap(h, h.vm.startOrStopTimer);
 
       expect(h.overtime.pendingOvertimeSaves, hasLength(1));
@@ -378,8 +380,9 @@ void main() {
       expect(h.writeLog.where((e) => e.startsWith('B:entry')), hasLength(1));
     }, setUp: prep(running), profiles: true);
 
-    scenario('b: Wechsel mitten in der Aktion, Start in B sofort moeglich',
-        at(17), (h) {
+    scenario(
+        'b: Wechsel mitten in der Aktion, Start in B sofort moeglich', at(17),
+        (h) {
       h.boot();
       h.overtime.holdSaveOvertime = true;
       tap(h, h.vm.startOrStopTimer);
@@ -395,7 +398,8 @@ void main() {
   });
 
   group('B15 Tageswechsel', () {
-    scenario('a: Reinit in _ensureCurrentDay behaelt die Sperre', at(23, 59, 50),
+    scenario(
+        'a: Reinit in _ensureCurrentDay behaelt die Sperre', at(23, 59, 50),
         (h) {
       h.boot();
       h.clock.jumpTo(DateTime(2026, 10, 6, 0, 0, 10));
@@ -431,8 +435,9 @@ void main() {
       expect(h.state.isSaving, isFalse);
     }, setUp: prep(empty), profiles: true);
 
-    scenario('b: Stop eines Vortags, Reinit haelt die Sperre bis zum Ende',
-        at(23), (h) {
+    scenario(
+        'b: Stop eines Vortags, Reinit haelt die Sperre bis zum Ende', at(23),
+        (h) {
       h.boot();
       final seen = <DashboardState>[];
       h.container.listen(dashboardViewModelProvider, (_, n) => seen.add(n));
@@ -591,8 +596,10 @@ void main() {
   });
 
   group('B11 Timeouts (30 s je Write)', () {
-    scenario('T1 Saldo-Timeout: false, State unveraendert, spaeter Saldo ohne '
-        'Folgeschritte', at(17), (h) {
+    scenario(
+        'T1 Saldo-Timeout: false, State unveraendert, spaeter Saldo ohne '
+        'Folgeschritte',
+        at(17), (h) {
       h.boot();
       h.overtime.holdSaveOvertime = true;
       final events = <LogEvent>[];
@@ -651,8 +658,10 @@ void main() {
       expect(h.state.workEntry.workEnd, isNotNull);
     }, setUp: prep(running), profiles: true);
 
-    scenario('T2 Eintrag-Timeout beim Stop: wie Eintrag-Fehler, true '
-        '(PR 2 aendert dies)', at(17), (h) {
+    scenario(
+        'T2 Eintrag-Timeout beim Stop: wie Eintrag-Fehler, true '
+        '(PR 2 aendert dies)',
+        at(17), (h) {
       h.boot();
       h.work.holdSaves = true;
       final r = tap(h, h.vm.startOrStopTimer);

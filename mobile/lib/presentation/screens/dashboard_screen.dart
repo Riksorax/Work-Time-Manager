@@ -43,6 +43,9 @@ class DashboardScreen extends ConsumerWidget {
     final dashboardState = ref.watch(dashboardViewModelProvider);
     final dashboardViewModel = ref.read(dashboardViewModelProvider.notifier);
     final workEntry = dashboardState.workEntry;
+    // Eine Schreibaktion läuft (#413): Schreib-Eingaben sind deaktiviert, der
+    // VM-Guard verwirft weitere Aufrufe ohnehin still.
+    final isSaving = dashboardState.isSaving;
     final use24HourFormat =
         ref.watch(settingsViewModelProvider).value?.settings.use24HourFormat ??
             true;
@@ -126,6 +129,7 @@ class DashboardScreen extends ConsumerWidget {
               _TimeInputField(
                 label: l10n.startTimeLabel,
                 initialValue: workEntry.workStart,
+                enabled: !isSaving,
                 use24HourFormat: use24HourFormat,
                 onTimeSelected: (time) => reportDashboardSave(
                     context, dashboardViewModel.setManualStartTime(time)),
@@ -134,27 +138,30 @@ class DashboardScreen extends ConsumerWidget {
               _TimeInputField(
                 label: l10n.endTimeLabel,
                 initialValue: workEntry.workEnd,
-                enabled: workEntry.workStart != null,
+                enabled: workEntry.workStart != null && !isSaving,
                 use24HourFormat: use24HourFormat,
                 onTimeSelected: (time) => reportDashboardSave(
                     context, dashboardViewModel.setManualEndTime(time)),
-                onClear: workEntry.workEnd != null
+                onClear: workEntry.workEnd != null && !isSaving
                     ? () => reportDashboardSave(
                         context, dashboardViewModel.clearEndTime())
                     : null,
               ),
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: () {
-                  // Wenn Arbeit bereits beendet wurde, zeige Bestätigungsdialog
-                  if (workEntry.workStart != null &&
-                      workEntry.workEnd != null) {
-                    _showRestartDialog(context, dashboardViewModel);
-                  } else {
-                    reportDashboardSave(
-                        context, dashboardViewModel.startOrStopTimer());
-                  }
-                },
+                onPressed: isSaving
+                    ? null
+                    : () {
+                        // Wenn Arbeit bereits beendet wurde, zeige
+                        // Bestätigungsdialog
+                        if (workEntry.workStart != null &&
+                            workEntry.workEnd != null) {
+                          _showRestartDialog(context, dashboardViewModel);
+                        } else {
+                          reportDashboardSave(
+                              context, dashboardViewModel.startOrStopTimer());
+                        }
+                      },
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
@@ -172,8 +179,10 @@ class DashboardScreen extends ConsumerWidget {
                   use24HourFormat),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: () => reportDashboardSave(
-                    context, dashboardViewModel.startOrStopBreak()),
+                onPressed: isSaving
+                    ? null
+                    : () => reportDashboardSave(
+                        context, dashboardViewModel.startOrStopBreak()),
                 child: Text(isBreakRunning ? l10n.stopBreak : l10n.addBreak),
               ),
             ],
@@ -317,6 +326,7 @@ class DashboardScreen extends ConsumerWidget {
   Widget _buildBreaksSection(BuildContext context, WidgetRef ref,
       List<BreakEntity> breaks, bool use24HourFormat) {
     final dashboardViewModel = ref.read(dashboardViewModelProvider.notifier);
+    final isSaving = ref.watch(dashboardViewModelProvider).isSaving;
     final l10n = AppLocalizations.of(context);
 
     return Column(
@@ -375,8 +385,10 @@ class DashboardScreen extends ConsumerWidget {
                     ),
                     IconButton(
                       icon: Icon(Icons.delete, color: Colors.red.shade700),
-                      onPressed: () => reportDashboardSave(
-                          context, dashboardViewModel.deleteBreak(b.id)),
+                      onPressed: isSaving
+                          ? null
+                          : () => reportDashboardSave(
+                              context, dashboardViewModel.deleteBreak(b.id)),
                     ),
                   ],
                 ),

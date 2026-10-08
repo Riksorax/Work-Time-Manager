@@ -377,7 +377,8 @@ void main() {
       expect(h.work.saved.where((e) => e.date == fri), isEmpty);
     }, setUp: (h) => h.seed(friOpen()), profiles: true);
 
-    scenario('B13b Start-Tap im Wartefenster von resumePastEntry: false, kein Pin',
+    scenario(
+        'B13b Start-Tap im Wartefenster von resumePastEntry: false, kein Pin',
         satMorning, (h) {
       h.work.holdReads = true;
       h.boot();

@@ -622,8 +622,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
     });
   }
 
-  Future<bool> startOrStopTimer() =>
-      _runAction(() => _startOrStopTimerBody());
+  Future<bool> startOrStopTimer() => _runAction(() => _startOrStopTimerBody());
 
   Future<bool> _startOrStopTimerBody() async {
     if (!await _ensureCurrentDay()) return false;
@@ -702,8 +701,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
   }
 
   /// Startet eine komplett neue Session (Start, End und Pausen zurücksetzen)
-  Future<bool> startNewSession() =>
-      _runAction(() => _startNewSessionBody());
+  Future<bool> startNewSession() => _runAction(() => _startNewSessionBody());
 
   Future<bool> _startNewSessionBody() async {
     if (!await _ensureCurrentDay()) return false;
@@ -991,8 +989,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
     return ok;
   }
 
-  Future<bool> clearEndTime() =>
-      _runAction(() => _clearEndTimeBody());
+  Future<bool> clearEndTime() => _runAction(() => _clearEndTimeBody());
 
   Future<bool> _clearEndTimeBody() async {
     if (!await _ensureCurrentDay()) return false;
@@ -1017,8 +1014,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
     return ok;
   }
 
-  Future<bool> startOrStopBreak() =>
-      _runAction(() => _startOrStopBreakBody());
+  Future<bool> startOrStopBreak() => _runAction(() => _startOrStopBreakBody());
 
   Future<bool> _startOrStopBreakBody() async {
     if (!await _ensureCurrentDay()) return false;

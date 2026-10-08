@@ -188,8 +188,9 @@ void main() {
       h.async.flushMicrotasks();
     }
 
-    scenario('B12a wartet auf einen laufenden Stop, stoppt nicht doppelt',
-        at(17), (h) {
+    scenario(
+        'B12a wartet auf einen laufenden Stop, stoppt nicht doppelt', at(17),
+        (h) {
       h.boot();
       h.overtime.holdSaveOvertime = true;
       final stop = run(h, h.vm.startOrStopTimer);
@@ -225,8 +226,9 @@ void main() {
       expect(h.vm.isTimerRunning, isFalse);
     }, setUp: prep(), profiles: true);
 
-    scenario('B12c Profilwechsel waehrend des Wartens: false, kein Haengen',
-        at(17), (h) {
+    scenario(
+        'B12c Profilwechsel waehrend des Wartens: false, kein Haengen', at(17),
+        (h) {
       h.boot();
       h.overtime.holdSaveOvertime = true;
       run(h, h.vm.startOrStopTimer);
