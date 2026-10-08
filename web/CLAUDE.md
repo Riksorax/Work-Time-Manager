@@ -22,7 +22,11 @@ npm run e2e:chromium                          # nur Chromium (lokal ist nur dies
 es werden weder Firebase noch Backend benötigt. `fixtures.ts` setzt Sprache/Theme vor dem Boot. Geprüft werden
 Laden ohne Konsolenfehler (je DE/EN, hell/dunkel), horizontaler Überlauf bei 320–1440 px, axe (WCAG A/AA,
 serious/critical, nur Chromium) und Kernabläufe (Timer, Pausen, Navigation, Theme, Sprache). Neue Seiten in
-`PAGES` ergänzen. Kontrast: Sekundärtext nie per `opacity`, sondern über `--mat-sys-on-surface-variant`.
+`PAGES` ergänzen. Testdaten: `e2e/seed.ts` schreibt Einträge im `WorkEntryService`-localStorage-Format vor dem App-Start
+(`seedEntries`, `workDay`, `openDay`) und friert die Uhr auf einen festen Tag (`freezeTime`, 2026-03-18), damit nichts
+vom Ausführungsdatum abhängt. Abgedeckt: Kalender per Tastatur und Mehrfachauswahl (#377), Banner „Offene Einträge" (#385).
+Noch offen: Profilwechsel (#380/#388) braucht ein Konto (Auth + Firestore-Reads) und ist daher nicht im localStorage-Modus testbar.
+Kontrast: Sekundärtext nie per `opacity`, sondern über `--mat-sys-on-surface-variant`.
 
 ## Architektur (`web/src/app/`)
 
