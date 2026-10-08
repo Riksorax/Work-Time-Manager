@@ -58,6 +58,7 @@ lädt den Inhalt beim Play-Upload automatisch als Änderungsprotokoll mit hoch.
 
 | Version | Charakter | Datum |
 | --- | --- | --- |
+| 1.6.0 | Saix | 2026-10-08 |
 | 1.5.2 | Xaldin | 2026-10-01 |
 | 1.5.1 | Xigbar | 2026-10-01 |
 | 1.5.0 | Lexaeus | 2026-09-30 |
@@ -100,7 +101,6 @@ Einige Einträge sind alternative Identitäten derselben Figur (Lea/Axel,
 Isa/Saix). Ist eine Variante vergeben, sollte die andere nicht mehr
 verwendet werden, auch wenn die Prüfung sie formal durchlässt.
 
-- Saix
 - Isa
 - Lea
 - Eraqus
