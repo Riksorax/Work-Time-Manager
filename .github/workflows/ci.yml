@@ -145,7 +145,16 @@ jobs:
             npx playwright install --with-deps chromium
           fi
 
+      # Tests mit Konto (Profilwechsel u. a.) laufen nur in Chromium gegen die Firebase-Emulatoren (Java 21 nötig).
+      - uses: actions/setup-java@v4
+        if: matrix.project == 'chromium'
+        with:
+          distribution: temurin
+          java-version: '21'
+
       - name: UI-Tests
+        env:
+          E2E_EMULATORS: ${{ matrix.project == 'chromium' && '1' || '0' }}
         run: npx playwright test --project=${{ matrix.project }}
 
       - name: Bericht hochladen

@@ -10,6 +10,8 @@ import { defineConfig, devices } from '@playwright/test';
  * `npm run e2e -- --project=chromium`.
  */
 const port = 4200;
+// Tests mit Konto (#429) brauchen die Firebase-Emulatoren (Java + firebase-tools); nur in Chromium, siehe e2e/account.ts.
+const withEmulators = process.env['E2E_EMULATORS'] === '1';
 
 export default defineConfig({
   testDir: './e2e',
@@ -33,10 +35,24 @@ export default defineConfig({
     { name: 'mobile-chrome', use: { ...devices['Pixel 7'] } },
     { name: 'mobile-safari', use: { ...devices['iPhone 14'] } },
   ],
-  webServer: {
-    command: `npx ng serve --port ${port}`,
-    url: `http://localhost:${port}`,
-    reuseExistingServer: !process.env['CI'],
-    timeout: 180_000,
-  },
+  webServer: [
+    {
+      // E2E-Build: Firebase-Emulatoren statt echtem Backend (environment.e2e.ts).
+      command: `npx ng serve --configuration e2e --port ${port}`,
+      url: `http://localhost:${port}`,
+      reuseExistingServer: !process.env['CI'],
+      timeout: 180_000,
+    },
+    ...(withEmulators
+      ? [{
+          command: 'npx --yes firebase-tools@14.27.0 emulators:start --only auth,firestore --project demo-e2e',
+          // Auth startet vor Firestore; ein übrig gebliebener Firestore-Prozess täuscht sonst „läuft schon" vor.
+          url: 'http://127.0.0.1:9099',
+          reuseExistingServer: !process.env['CI'],
+          timeout: 180_000,
+          // SIGTERM lässt die Firebase-CLI die Emulatoren (Java-Prozess) sauber beenden.
+          gracefulShutdown: { signal: 'SIGTERM' as const, timeout: 15_000 },
+        }]
+      : []),
+  ],
 });
