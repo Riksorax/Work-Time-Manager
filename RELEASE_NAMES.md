@@ -58,6 +58,7 @@ lädt den Inhalt beim Play-Upload automatisch als Änderungsprotokoll mit hoch.
 
 | Version | Charakter | Datum |
 | --- | --- | --- |
+| 1.6.2 | Saix | 2026-10-08 |
 | 1.6.1 | Saix | 2026-10-08 |
 | 1.6.0 | Saix | 2026-10-08 |
 | 1.5.2 | Xaldin | 2026-10-01 |
