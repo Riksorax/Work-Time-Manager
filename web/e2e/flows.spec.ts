@@ -40,12 +40,16 @@ test.describe('Resturlaub', () => {
     await expect(page.locator('app-leave-balance-card')).toBeVisible();
   });
 
-  test('Start-Button liegt auf dem Handy ohne Scrollen im sichtbaren Bereich', async ({ page }) => {
-    await page.setViewportSize({ width: 375, height: 667 });
+  test('Start-Button liegt auf dem Handy ohne Scrollen über der unteren Navigation', async ({ page }) => {
+    // 375x812: übliche Handy-Größe. In der Android-Emulation (mobile-chrome) liegt der Button ~85 px tiefer als in
+    // Desktop-Chromium (Text-Skalierung), bei 667 px Höhe verdeckt ihn dort die Navigation, daher nicht 667.
+    // Mit der Resturlaub-Karte lag er bei 893 (Chromium) bzw. 977 px (mobile-chrome), also unter jedem Handy-Bildschirm.
+    await page.setViewportSize({ width: 375, height: 812 });
     await seedPreferences(page, 'de', 'light');
     await gotoReady(page, '/dashboard');
-    const box = await page.getByRole('button', { name: 'Zeiterfassung starten' }).boundingBox();
-    expect(box!.y + box!.height).toBeLessThanOrEqual(667 - 64); // über der unteren Navigation
+    const button = await page.getByRole('button', { name: 'Zeiterfassung starten' }).boundingBox();
+    const nav = await page.locator('nav.bottom-nav').boundingBox();
+    expect(button!.y + button!.height).toBeLessThanOrEqual(nav!.y);
   });
 });
 
