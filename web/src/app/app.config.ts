@@ -4,6 +4,7 @@ import localeDe from '@angular/common/locales/de';
 import { provideRouter, withNavigationErrorHandler } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
+import { MAT_DIALOG_DEFAULT_OPTIONS, MatDialogConfig } from '@angular/material/dialog';
 import { initializeApp, provideFirebaseApp } from '@angular/fire/app';
 import { connectAuthEmulator, getAuth, provideAuth, signInWithEmailAndPassword } from '@angular/fire/auth';
 import { connectFirestoreEmulator, getFirestore, provideFirestore } from '@angular/fire/firestore';
@@ -48,6 +49,10 @@ export const appConfig: ApplicationConfig = {
     })),
     provideHttpClient(withInterceptors([authInterceptor])),
     provideAnimationsAsync(),
+    // Material-Standard ist 80vw; auf 320 px bleiben dann nur ~208 px Inhaltsbreite. Die Dialog-Mindestbreiten
+    // (`min(Npx, calc(95vw - 48px))`) rechnen mit diesem Wert. Die übrigen Standardwerte (u. a. `role: 'dialog'`)
+    // müssen mitgegeben werden, ein reines `{ maxWidth }` ersetzt sie komplett.
+    { provide: MAT_DIALOG_DEFAULT_OPTIONS, useValue: { ...new MatDialogConfig(), maxWidth: '95vw' } },
     provideFirebaseApp(() => initializeApp(environment.firebase)),
     provideAuth(() => {
       const auth = getAuth();

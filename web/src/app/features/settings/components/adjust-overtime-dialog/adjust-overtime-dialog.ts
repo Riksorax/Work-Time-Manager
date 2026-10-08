@@ -70,12 +70,14 @@ export type    AdjustOvertimeDialogResult   = { overtimeMs: number } | 'reset';
   styles: [`
     .hint-text  { margin: 0 0 16px; font-size: 0.875rem; color: var(--mat-sys-on-surface-variant); }
     .sign-row   { display: flex; gap: 8px; margin-bottom: 16px; }
+    // Gleich breit und umbrechbar, sonst ragt das Icon auf 320 px über den Rand und der Text quetscht sich.
+    .sign-row button { flex: 1 1 0; min-width: 0; padding-inline: 8px; white-space: normal; line-height: 1.2; }
     .sign-row button.active { background: var(--mat-sys-secondary-container); color: var(--mat-sys-on-secondary-container); }
     .time-fields { display: flex; gap: 12px; }
     .time-fields mat-form-field { flex: 1; min-width: 0; }
     mat-dialog-actions { display: flex; align-items: center; }
     .spacer { flex: 1; }
-    mat-dialog-content { min-width: 300px; }
+    mat-dialog-content { min-width: min(300px, calc(95vw - 48px)); }
   `],
 })
 export class AdjustOvertimeDialogComponent {

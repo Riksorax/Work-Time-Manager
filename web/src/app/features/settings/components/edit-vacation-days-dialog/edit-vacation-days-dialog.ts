@@ -35,7 +35,7 @@ export interface EditVacationDaysDialogResult { days: number; }
     </mat-dialog-actions>
   `,
   styles: [`
-    .full-width { width: 100%; min-width: 260px; }
+    .full-width { width: 100%; min-width: min(260px, calc(95vw - 48px)); }
     mat-dialog-content { padding-top: 8px; }
   `],
 })

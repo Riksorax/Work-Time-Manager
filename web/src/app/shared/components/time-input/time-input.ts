@@ -9,6 +9,12 @@ import { TranslatePipe } from '@ngx-translate/core';
   selector: 'app-time-input',
   imports: [MatFormFieldModule, MatInputModule, MatIconModule, MatButtonModule, TranslatePipe],
   templateUrl: './time-input.html',
+  // `time-input.scss` ist in keiner Komponente eingebunden, `.time-field { width: 100% }` galt daher nie: das Feld blieb
+  // ~240 px breit, während Karten und Hauptbutton die volle Breite nutzen. Das Host-Element ist ein Custom-Element (inline).
+  styles: [`
+    :host { display: block; }
+    .time-field { width: 100%; }
+  `],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TimeInputComponent {

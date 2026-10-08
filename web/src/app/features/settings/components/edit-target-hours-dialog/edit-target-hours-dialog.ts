@@ -33,7 +33,7 @@ export interface EditTargetHoursDialogResult { hours: number; }
       </button>
     </mat-dialog-actions>
   `,
-  styles: [`.full-width { width: 100%; min-width: 260px; } mat-dialog-content { padding-top: 8px; }`],
+  styles: [`.full-width { width: 100%; min-width: min(260px, calc(95vw - 48px)); } mat-dialog-content { padding-top: 8px; }`],
 })
 export class EditTargetHoursDialogComponent {
   protected readonly data      = inject<EditTargetHoursDialogData>(MAT_DIALOG_DATA);

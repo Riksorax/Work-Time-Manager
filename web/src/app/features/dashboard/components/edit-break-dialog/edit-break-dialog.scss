@@ -3,7 +3,7 @@
   flex-direction: column;
   gap: 16px; // Flutter: SizedBox(height: 16)
   padding-top: 8px;
-  min-width: 280px;
+  min-width: min(280px, calc(95vw - 48px));
 
   mat-form-field {
     width: 100%;
