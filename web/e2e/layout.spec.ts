@@ -62,7 +62,12 @@ test.describe('Einstellungen bei 320 px', () => {
     const titles = page.locator('.mdc-list-item__primary-text');
     expect(await titles.count()).toBeGreaterThan(0);
     for (let i = 0; i < await titles.count(); i++) {
-      const clipped = await titles.nth(i).evaluate(e => e.scrollWidth > e.clientWidth + 1);
+      // Der Titel selbst ist ein `inline`-Element (clientWidth immer 0, scrollWidth = Textbreite): geprüft wird der
+      // umgebende Block, der den Text per `overflow: hidden` abschneiden würde.
+      const clipped = await titles.nth(i).evaluate(e => {
+        const box = (e.closest('.mdc-list-item__content') ?? e) as HTMLElement;
+        return box.scrollWidth > box.clientWidth + 1;
+      });
       expect(clipped, `Titel ${i}: ${await titles.nth(i).innerText()}`).toBe(false);
       // Ein auf (fast) 0 px zusammengedrückter Titel ist nicht „abgeschnitten", aber ebenso unlesbar (Chromium).
       const width = (await titles.nth(i).boundingBox())!.width;
