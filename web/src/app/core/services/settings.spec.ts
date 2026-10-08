@@ -48,6 +48,21 @@ describe('SettingsService (anonym) - vacationDaysPerYear', () => {
   });
 });
 
+describe('SettingsService (anonym) - workdays', () => {
+  beforeEach(() => localStorage.clear());
+  afterEach(() => localStorage.clear());
+
+  it('heilt gespeicherte Duplikate und sortiert (Fehler im Arbeitstage-Dialog)', async () => {
+    localStorage.setItem('user_settings', JSON.stringify({ workdays: [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6] }));
+    expect((await firstValueFrom(setup().getSettings())).workdays).toEqual([1, 2, 3, 4, 5, 6]);
+  });
+
+  it('lässt eine gültige Liste unverändert', async () => {
+    localStorage.setItem('user_settings', JSON.stringify({ workdays: [2, 4] }));
+    expect((await firstValueFrom(setup().getSettings())).workdays).toEqual([2, 4]);
+  });
+});
+
 describe('SettingsService - bundesland', () => {
   beforeEach(() => localStorage.clear());
   afterEach(() => localStorage.clear());

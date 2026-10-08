@@ -21,6 +21,22 @@ test('Dashboard: Label und Wert der Überstunden stoßen bei 320 px nicht aneina
   }
 });
 
+test('Dashboard: Überstunden-Werte stehen bündig am rechten Rand, der Anpassen-Button neben dem Label', async ({ page }) => {
+  for (const width of [320, 768]) {
+    await page.setViewportSize({ width, height: 800 });
+    await gotoReady(page, '/dashboard');
+    const section = await page.locator('.overtime-stats').boundingBox();
+    const values = page.locator('.overtime-stats .stat-value');
+    for (let i = 0; i < await values.count(); i++) {
+      const box = await values.nth(i).boundingBox();
+      expect(section!.x + section!.width - (box!.x + box!.width), `${width}px, Wert ${i}`).toBeLessThanOrEqual(1);
+    }
+    const label = await page.locator('.stat-label-group .stat-label').boundingBox();
+    const button = await page.locator('.stat-label-group .adjust-btn').boundingBox();
+    expect(button!.x, `${width}px`).toBeGreaterThanOrEqual(label!.x + label!.width);
+  }
+});
+
 test('Kalender: Eintrags-Punkt berührt die Ziffer bei 320 px nicht', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 700 });
   await gotoReady(page, '/reports');

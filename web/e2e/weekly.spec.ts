@@ -32,6 +32,8 @@ test.describe('Wochenauswahl', () => {
 
   test('Vor/Zurück wechselt genau eine Woche und fragt den Server mit dem passenden Tag', async ({ page, account }) => {
     await openWeekly(page, account);
+    // Bis der Bericht geladen ist, steht dort „KW 0" (leerer Bericht): erst darauf warten.
+    await expect.poll(() => kwOf(page)).toBeGreaterThan(0);
     const kw = await kwOf(page);
     const before = account.backend.calls.filter(c => c.startsWith('GET /reports/weekly/')).length;
 
@@ -85,4 +87,32 @@ test.describe('Layout mit Konto', () => {
     const box = await page.locator('.week-nav').boundingBox();
     expect(box!.width).toBeGreaterThanOrEqual(375 - 2 * 32);
   });
+});
+
+test.describe('Paywall (Wochen-Tab ohne Premium)', () => {
+  for (const width of [320, 375, 768]) {
+    test(`Overlay ist bei ${width}px vollständig sichtbar, Buttons einzeilig`, async ({ page, account }) => {
+      await page.setViewportSize({ width, height: 800 });
+      await account.signIn({ path: '/reports' });
+      await page.getByRole('tab', { name: 'Wöchentlich' }).click();
+      // Der Tab-Wechsel schiebt den Inhalt 200 ms lang ein: erst messen, wenn er an seinem Platz steht.
+      await expect(page.locator('.mat-mdc-tab-body-active .premium-gate')).toBeVisible();
+      await expect.poll(async () => (await page.locator('.premium-overlay').boundingBox())!.x).toBeLessThan(width);
+      await page.waitForTimeout(300);
+      const gate = await page.locator('.premium-gate').boundingBox();
+      const overlay = await page.locator('.premium-overlay').boundingBox();
+      expect(gate, 'Gate sichtbar').not.toBeNull();
+      // Das Overlay (Icon bis Button) darf nicht höher sein als der sichtbare Bereich des Gates.
+      expect(overlay!.y).toBeGreaterThanOrEqual(gate!.y - 1);
+      expect(overlay!.y + overlay!.height).toBeLessThanOrEqual(gate!.y + gate!.height + 1);
+      const icon = await page.locator('.premium-icon').boundingBox();
+      expect(icon!.y).toBeGreaterThanOrEqual(gate!.y);
+      expect(icon!.height, 'Icon nicht zusammengedrückt').toBeGreaterThanOrEqual(48);
+      for (const button of await page.locator('.premium-actions button').all()) {
+        const box = await button.boundingBox();
+        expect(box!.height, 'Button einzeilig (Material-Höhe 40 px)').toBeLessThanOrEqual(48);
+        expect(box!.x + box!.width).toBeLessThanOrEqual(width);
+      }
+    });
+  }
 });

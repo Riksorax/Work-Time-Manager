@@ -101,13 +101,20 @@
   flex-direction: column;
   gap: 12px;
 
+  // Beide Werte stehen bündig am rechten Rand; der Anpassen-Button sitzt neben dem Label statt in einer reservierten
+  // Spalte rechts (die ließ die Werte 40 px vor dem Rand von Karten und Eingabefeldern enden).
   .stat-row {
-    position: relative;
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 12px;
-    padding-right: 40px; // Platz für absolut positionierten Button
+
+    .stat-label-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      min-width: 0;
+    }
 
     .stat-label {
       font-size: 0.95rem;
@@ -121,10 +128,13 @@
     }
 
     .adjust-btn {
-      position: absolute;
-      right: -4px;
-      top: 50%;
-      transform: translateY(-50%);
+      // Kompakter, damit die Zeile nicht höher wird als die ohne Button.
+      --mdc-icon-button-state-layer-size: 32px;
+      width: 32px;
+      height: 32px;
+      padding: 4px;
+      margin-block: -4px;
+      flex-shrink: 0;
     }
   }
 

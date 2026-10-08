@@ -13,6 +13,7 @@ import { WebPremiumService } from '../../core/services/web-premium';
 import { LeaveBalanceService } from '../../core/services/leave-balance';
 import { DashboardService } from '../dashboard/dashboard.service';
 import { Bundesland, DEFAULT_SETTINGS, UserSettings } from '../../shared/models/index';
+import { normalizeWorkdays } from '../../shared/utils/workdays.util';
 
 @Injectable({ providedIn: 'root' })
 export class SettingsPageService {
@@ -113,7 +114,7 @@ export class SettingsPageService {
 
   async setWorkdays(days: number[]): Promise<void> {
     const current = this.settings();
-    await this.coreSettings.saveSettings({ ...current, workdays: days });
+    await this.coreSettings.saveSettings({ ...current, workdays: normalizeWorkdays(days) });
   }
 
   async setOvertime(ms: number): Promise<void> {
