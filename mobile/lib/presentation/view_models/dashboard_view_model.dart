@@ -159,9 +159,13 @@ class DashboardViewModel extends Notifier<DashboardState> {
   /// [_ActionCtx]; Überholung (Profilwechsel) läuft über `_initGen`.
   Future<bool> resumePastEntry(WorkEntryEntity entry) async {
     if (!ref.mounted) return false;
+    // Läuft eine Schreibaktion (z. B. ein Start-Tap in der Ladelücke), wird
+    // nicht gepinnt (#413): Prüfung vor und nach dem Warten auf den Ladelauf.
+    if (_busy) return false;
     final pending = _initRun;
     if (pending != null) await pending;
     if (!ref.mounted) return false;
+    if (_busy) return false;
 
     // Ab hier synchron bis `_init` (kein Start-Tap kann dazwischen laufen).
     final now = _now();
@@ -675,6 +679,14 @@ class DashboardViewModel extends Notifier<DashboardState> {
     final pending = _initRun;
     if (state.isLoading && pending != null) await pending;
     if (!ref.mounted) return false;
+
+    // Eine laufende Schreibaktion (Stop, Pause, Autosave-Wartezeit ...) zu Ende
+    // laufen lassen, statt parallel zu stoppen (#413). Danach **kein** `await`
+    // mehr bis `startOrStopTimer()`: dessen Wrapper setzt die Sperre synchron.
+    while (_actionDone != null) {
+      await _actionDone!.future;
+      if (!ref.mounted) return false;
+    }
 
     final active = ref.read(activeWorkProfileIdProvider) ??
         WorkProfileEntity.defaultProfileId;
