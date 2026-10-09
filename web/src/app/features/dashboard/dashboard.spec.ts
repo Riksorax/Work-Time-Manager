@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import { Component, input, output, signal } from '@angular/core';
+import { Component, computed, input, output, signal } from '@angular/core';
+import { By } from '@angular/platform-browser';
 import { ComponentFixture } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -16,7 +17,7 @@ import en from '../../../../public/i18n/en.json';
 import { GermanHoliday } from '../../shared/utils/german-holidays.util';
 import { HolidayBannerComponent } from '../../shared/components/holiday-banner/holiday-banner';
 import { TimeInputComponent } from '../../shared/components/time-input/time-input';
-import { WorkEntryType } from '../../shared/models/index';
+import { WorkEntry, WorkEntryType } from '../../shared/models/index';
 
 @Component({ selector: 'app-holiday-banner', template: '<div class="stub-banner">{{ holiday() }}</div>' })
 class HolidayBannerStub { readonly holiday = input.required<GermanHoliday>(); }
@@ -45,7 +46,7 @@ describe('DashboardComponent Feiertags-Banner', () => {
       providers: [
         provideTranslateService(),
         { provide: DashboardService, useValue: {
-          isLoading, holidayToday: holiday, isLoggedIn: signal(false),
+          isLoading, holidayToday: holiday, isLoggedIn: signal(false), isSaving: signal(false),
           netDuration: signal(0), grossDuration: signal(0), dailyOvertime: signal(0), totalOvertime: signal(0),
           isTimerRunning: signal(false), isBreakRunning: signal(false), expectedEndTime: signal(null),
           expectedEndTotalZero: signal(null), breaks: signal([]),
@@ -133,7 +134,7 @@ describe('DashboardComponent Banner für offene Einträge (#385)', () => {
       providers: [
         provideTranslateService({ fallbackLang: 'de' }),
         { provide: DashboardService, useValue: {
-          isLoading, holidayToday: holiday, isLoggedIn: signal(false), startOrStopTimer: startOrStop,
+          isLoading, holidayToday: holiday, isLoggedIn: signal(false), isSaving: signal(false), startOrStopTimer: startOrStop,
           netDuration: signal(0), grossDuration: signal(0), dailyOvertime: signal(0), totalOvertime: signal(0),
           isTimerRunning: signal(false), isBreakRunning: signal(false), expectedEndTime: signal(null),
           expectedEndTotalZero: signal(null), breaks: signal([]),
@@ -429,3 +430,141 @@ describe('DashboardComponent Banner für offene Einträge (#385)', () => {
   });
 });
 
+describe('DashboardComponent Sperre während einer Schreibaktion (#426, W19)', () => {
+  const isSaving = signal(false);
+  const runningEntry = (): WorkEntry => ({
+    id: '2026-10-05', date: new Date(2026, 9, 5), workStart: new Date(2026, 9, 5, 8, 0), breaks: [
+      { id: 'b1', name: 'Pause 1', start: new Date(2026, 9, 5, 9, 0), end: new Date(2026, 9, 5, 9, 15), isAutomatic: false },
+    ], isManuallyEntered: false, type: WorkEntryType.Work,
+  });
+  const workEntry = signal<WorkEntry>(runningEntry());
+  let fixture: ComponentFixture<DashboardComponent>;
+  let startOrStop: ReturnType<typeof vi.fn>;
+  let breakAction: ReturnType<typeof vi.fn>;
+  let dialogOpen: ReturnType<typeof vi.fn>;
+
+  const el = (): HTMLElement => fixture.nativeElement;
+  const mainBtn = (): HTMLButtonElement => el().querySelector<HTMLButtonElement>('.main-action-btn')!;
+  const breakBtn = (): HTMLButtonElement => el().querySelector<HTMLButtonElement>('.section-header button')!;
+  const editBtn = (): HTMLButtonElement => el().querySelector<HTMLButtonElement>('.break-actions button:not(.delete-btn)')!;
+  const deleteBtn = (): HTMLButtonElement => el().querySelector<HTMLButtonElement>('.break-actions .delete-btn')!;
+  const adjustBtn = (): HTMLButtonElement => el().querySelector<HTMLButtonElement>('.adjust-btn')!;
+  const timeInputs = (): TimeInputStub[] =>
+    fixture.debugElement.queryAll(By.directive(TimeInputStub)).map(d => d.componentInstance as TimeInputStub);
+  /** Interaktiv deaktiviert: `aria-disabled="true"`, aber kein `disabled`-Attribut (Fokus bleibt). */
+  const interactivelyDisabled = (b: HTMLElement): boolean => b.getAttribute('aria-disabled') === 'true' && !b.hasAttribute('disabled');
+  const inactive = (b: HTMLElement): boolean => b.getAttribute('aria-disabled') !== 'true' && !b.hasAttribute('disabled');
+
+  beforeEach(() => {
+    isSaving.set(false);
+    workEntry.set(runningEntry());
+    startOrStop = vi.fn().mockResolvedValue(undefined);
+    breakAction = vi.fn().mockResolvedValue(undefined);
+    dialogOpen = vi.fn(() => ({ afterClosed: () => of(undefined) }));
+    TestBed.overrideComponent(DashboardComponent, {
+      remove: { imports: [HolidayBannerComponent, TimeInputComponent] },
+      add: { imports: [HolidayBannerStub, TimeInputStub] },
+    });
+    TestBed.configureTestingModule({
+      providers: [
+        provideTranslateService({ fallbackLang: 'de' }),
+        { provide: DashboardService, useValue: {
+          isLoading: signal(false), holidayToday: signal(null), isLoggedIn: signal(false), isSaving,
+          startOrStopTimer: startOrStop, startOrStopBreak: breakAction,
+          netDuration: signal(0), grossDuration: signal(0), dailyOvertime: signal(0), totalOvertime: signal(0),
+          isTimerRunning: signal(true), isBreakRunning: signal(false), expectedEndTime: signal(null),
+          expectedEndTotalZero: signal(null), breaks: computed(() => workEntry().breaks), workEntry,
+        } },
+        { provide: OpenEntryService, useValue: createFakeOpenEntry() },
+        { provide: Router, useValue: { navigate: vi.fn() } },
+        { provide: MatDialog, useValue: { open: dialogOpen } },
+        { provide: MatSnackBar, useValue: { open: vi.fn() } },
+      ],
+    });
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('de', de);
+    translate.use('de');
+    fixture = TestBed.createComponent(DashboardComponent);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    fixture.nativeElement.remove();
+    TestBed.resetTestingModule();
+  });
+
+  it('ohne laufende Aktion ist alles aktiv', () => {
+    expect(inactive(mainBtn())).toBe(true);
+    expect(inactive(breakBtn())).toBe(true);
+    expect(editBtn().disabled).toBe(false);
+    expect(deleteBtn().disabled).toBe(false);
+    expect(adjustBtn().disabled).toBe(false);
+    expect(timeInputs().map(t => t.disabled())).toEqual([false, false]);
+  });
+
+  it('während einer Aktion sind Haupt- und Pausen-Button interaktiv deaktiviert, die übrigen Elemente echt deaktiviert', () => {
+    isSaving.set(true);
+    fixture.detectChanges();
+    expect(interactivelyDisabled(mainBtn())).toBe(true);
+    expect(interactivelyDisabled(breakBtn())).toBe(true);
+    expect(editBtn().disabled).toBe(true);
+    expect(deleteBtn().disabled).toBe(true);
+    expect(adjustBtn().disabled).toBe(true);
+    expect(timeInputs().map(t => t.disabled())).toEqual([true, true]);
+  });
+
+  it('das Ende-Zeitfeld bleibt ohne Startzeit auch ohne Aktion deaktiviert', () => {
+    workEntry.update(e => ({ ...e, workStart: undefined }));
+    fixture.detectChanges();
+    expect(timeInputs().map(t => t.disabled())).toEqual([false, true]);
+  });
+
+  it('aria-label und Text der Buttons ändern sich nicht (kein Spinner, keine neue Optik)', () => {
+    const snap = (): string[] => [mainBtn(), breakBtn(), editBtn(), deleteBtn(), adjustBtn()]
+      .map(b => `${b.getAttribute('aria-label')}|${b.textContent!.trim()}`);
+    const before = snap();
+    isSaving.set(true);
+    fixture.detectChanges();
+    expect(snap()).toEqual(before);
+  });
+
+  it('der Fokus bleibt auf dem Haupt-Button, wenn er interaktiv deaktiviert wird', () => {
+    mainBtn().focus();
+    expect(document.activeElement).toBe(mainBtn());
+    isSaving.set(true);
+    fixture.detectChanges();
+    expect(document.activeElement).toBe(mainBtn());
+  });
+
+  it('Klick auf den interaktiv deaktivierten Haupt-Button feuert den Handler (Material fängt Klicks bei <button> nicht ab); der Service verwirft', () => {
+    isSaving.set(true);
+    fixture.detectChanges();
+    mainBtn().click();
+    expect(startOrStop).toHaveBeenCalledTimes(1);
+    expect(dialogOpen).not.toHaveBeenCalled(); // verworfener Tap liefert undefined, kein Restart-Dialog
+  });
+
+  it('Klick auf das deaktivierte Bearbeiten-Icon öffnet keinen Dialog', () => {
+    isSaving.set(true);
+    fixture.detectChanges();
+    editBtn().click();
+    adjustBtn().click();
+    expect(dialogOpen).not.toHaveBeenCalled();
+  });
+
+  it('nach Ende der Aktion ist alles wieder aktiv', () => {
+    isSaving.set(true);
+    fixture.detectChanges();
+    isSaving.set(false);
+    fixture.detectChanges();
+    expect(inactive(mainBtn())).toBe(true);
+    expect(inactive(breakBtn())).toBe(true);
+    expect(editBtn().disabled).toBe(false);
+    expect(deleteBtn().disabled).toBe(false);
+    expect(adjustBtn().disabled).toBe(false);
+    expect(timeInputs().map(t => t.disabled())).toEqual([false, false]);
+    editBtn().click();
+    expect(dialogOpen).toHaveBeenCalledTimes(1);
+  });
+});

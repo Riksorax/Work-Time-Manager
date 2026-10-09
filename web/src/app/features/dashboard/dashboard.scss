@@ -175,6 +175,14 @@
       background-color: var(--mat-sys-primary);
       color: var(--mat-sys-on-primary);
     }
+
+    // Reentranz-Sperre (#426): die Klassen oben überschreiben die Material-Disabled-Farben, ohne diese Regel wäre die
+    // interaktive Deaktivierung (nur `aria-disabled`) während des Schreibens nicht sichtbar. Nicht über die Klasse
+    // `mat-mdc-button-disabled-interactive` selektieren: Material setzt sie schon bei `disabledInteractive` allein.
+    &[aria-disabled='true'] {
+      background-color: var(--mat-button-filled-disabled-container-color, color-mix(in srgb, var(--mat-sys-on-surface) 12%, transparent));
+      color: var(--mat-button-filled-disabled-label-text-color, color-mix(in srgb, var(--mat-sys-on-surface) 38%, transparent));
+    }
   }
 }
 
