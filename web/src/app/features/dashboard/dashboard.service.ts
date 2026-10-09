@@ -438,8 +438,12 @@ export class DashboardService {
    * Eintrag inzwischen beendet/älter als 24 h/nicht lesbar, überholt (Profil-/Tages-/Login-Wechsel).
    */
   async resumePastEntry(entry: WorkEntry, pid: string): Promise<boolean> {
+    // Läuft eine Schreibaktion (#426), wird nicht gepinnt: ein `_init` würde ihren Zustand zurücksetzen. Zweimal geprüft:
+    // sofort (kein Warten auf einen Ladelauf) und nach der Ladelücke (die Aktion kann in der Lücke begonnen haben).
+    if (this._busy) return false;
     // Auf laufende Ladeläufe warten; danach läuft Prüfung bis `_init` synchron (keine Lücke bis `_initGen`++).
     while (this._initRun !== null) await this._initRun;
+    if (this._busy) return false;
     this.todayService.refresh();
     if (pid !== this._loadedProfileId || pid !== this.workProfile.activeProfileId()) return false;
     if (!this.todayIsEmpty()) return false;
@@ -551,6 +555,13 @@ export class DashboardService {
   async stopRunningTimerForSwitch(from: string): Promise<boolean> {
     // Lädt gerade (Reload-Wechsel): erst abwarten, nie auf dem Lade-Platzhalter arbeiten.
     while (this._s().status === 'loading' && this._initRun !== null) await this._initRun;
+    // Läuft eine Schreibaktion, deren Ende abwarten (nie rejected) und danach mit frischem Zustand stoppen (#426).
+    // Zwischen dieser Schleife und `_runAction` darf KEIN `await` stehen: sonst könnte ein zweiter Stop dazwischenfahren.
+    while (this._actionDone) await this._actionDone.promise;
+    return this._runAction(() => this._stopRunningTimerForSwitchBody(from), false);
+  }
+
+  private async _stopRunningTimerForSwitchBody(from: string): Promise<boolean> {
     // Der Dialog war offen: das Profil kann sich nicht-interaktiv geändert haben.
     if (this._loadedProfileId !== from || this.workProfile.activeProfileId() !== from) return false;
     // Der Timer kann in der Zwischenzeit manuell gestoppt worden sein.

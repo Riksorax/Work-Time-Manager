@@ -560,4 +560,144 @@ describe('DashboardService Reentranz-Sperre (#426)', () => {
       expect(h.svc.isSaving()).toBe(false);
     });
   });
+
+  // ─── Schritt A5: Profilwechsel-Guard und „Fortsetzen“ ──────────────────────────────────────────────────
+  describe('stopRunningTimerForSwitch und resumePastEntry (W15, W16)', () => {
+    const settled = (p: Promise<unknown>): { value?: unknown; error?: unknown; done: boolean } => {
+      const r: { value?: unknown; error?: unknown; done: boolean } = { done: false };
+      p.then(v => { r.value = v; r.done = true; }, e => { r.error = e; r.done = true; });
+      return r;
+    };
+
+    it('W15a Läuft ein Stop, wartet der Guard-Stop darauf: danach true und genau ein Stop (kein doppelter Saldo)', async () => {
+      const alone = await aloneCounts(s => s.startOrStopTimer());
+      const h = setup();
+      await settle();
+      h.world.hold('saveEntry');
+
+      const stop = h.svc.startOrStopTimer();
+      await settle();
+      const sw = settled(h.svc.stopRunningTimerForSwitch(A));
+      await settle();
+      expect(sw.done).toBe(false); // wartet auf die laufende Aktion
+      expect(h.world.calls.saveEntry).toBe(1);
+
+      h.world.releaseAll();
+      await stop;
+      await settle();
+      expect(sw.done).toBe(true);
+      expect(sw.value).toBe(true);
+      expect(countsOf(h.world)).toEqual(alone);
+      expect(h.svc.isSaving()).toBe(false);
+    });
+
+    it('W15b Läuft eine Pause-Aktion (Timer läuft weiter), wartet der Guard-Stop und stoppt danach genau einmal', async () => {
+      const h = setup();
+      await settle();
+      h.world.hold('saveEntry');
+
+      const pause = h.svc.startOrStopBreak();
+      await settle();
+      const sw = settled(h.svc.stopRunningTimerForSwitch(A));
+      await settle();
+      expect(sw.done).toBe(false);
+      expect(h.world.calls.saveEntry).toBe(1);
+
+      h.world.releaseAll();
+      await pause;
+      await settle();
+      expect(sw.value).toBe(true);
+      expect(h.svc.isTimerRunning()).toBe(false);
+      // Reihenfolge: erst die Pause (Eintrag ohne Ende), dann der Stop (mit Ende)
+      const entries = h.world.log.filter(l => l.startsWith('entry:'));
+      expect(entries[0]).toBe('entry:default:08:00-');
+      expect(entries[1]).toBe('entry:default:08:00-12:00');
+      expect(h.world.entryWrites().length).toBe(2);
+    });
+
+    it('W15c Profilwechsel während des Wartens: false, kein Hängen, keine Writes in B', async () => {
+      const h = setup();
+      await settle();
+      h.world.hold('saveEntry');
+
+      const stop = h.svc.startOrStopTimer();
+      await settle();
+      const sw = settled(h.svc.stopRunningTimerForSwitch(A));
+      await settle();
+      expect(sw.done).toBe(false);
+
+      h.profile.set(B);
+      await settle();
+      expect(sw.done).toBe(true);
+      expect(sw.value).toBe(false);
+      const bData = (): unknown[] => h.world.writes.filter(w => w.pid === B && w.kind !== 'lastUpdate');
+      expect(bData()).toEqual([]);
+
+      h.world.releaseAll();
+      await stop;
+      await settle();
+      // Eintrag und Saldo der überholten A-Aktion landen in A. (`saveLastUpdateDate` kennt kein Profil-Argument und
+      // schreibt immer ins aktive Profil — Bestandsverhalten aus #380, nicht Teil von #426.)
+      expect(bData()).toEqual([]);
+      expect(h.svc.isSaving()).toBe(false);
+    });
+
+    describe('resumePastEntry', () => {
+      const SUN_START = new Date(2026, 9, 4, 20, 0, 0);
+      const sunday = (): WorkEntry => worldEntry(new Date(2026, 9, 4), { workStart: SUN_START });
+
+      /** Ladefenster: der Login-Wechsel startet einen Ladelauf, dessen Entry-Read hängt. */
+      async function loadingWindow(h: Harness): Promise<void> {
+        h.world.hold('getTodayEntry');
+        h.user.set({ uid: 'u2' });
+        TestBed.tick();
+        await settle();
+        expect(h.svc.isLoading()).toBe(true);
+      }
+
+      it('W16c Wächter: ohne laufende Aktion wird der Vortag wie bisher fortgesetzt', async () => {
+        const h = setup({ aEntry: sunday() });
+        await settle();
+        expect(await h.svc.resumePastEntry(sunday(), A)).toBe(true);
+        expect(h.world.calls.getMonth).toBe(1);
+      });
+
+      it('W16a Läuft eine Aktion, liefert resumePastEntry sofort false (auch während eines Ladelaufs), ohne Pin-Read', async () => {
+        const h = setup({ aEntry: sunday() });
+        await settle();
+        await loadingWindow(h);
+        const action = settled(h.svc.deleteBreak('x')); // Sperre gesetzt, wartet auf den Ladelauf
+
+        const resume = settled(h.svc.resumePastEntry(sunday(), A));
+        await settle();
+        expect(resume.done).toBe(true); // wartet nicht auf den Ladelauf
+        expect(resume.value).toBe(false);
+        expect(h.world.calls.getMonth).toBe(0);
+
+        h.world.releaseAll();
+        await settle();
+        expect(action.done).toBe(true);
+        expect(h.world.calls.getMonth).toBe(0);
+      });
+
+      it('W16b Wird eine Aktion während der Ladelücke gestartet, liefert resumePastEntry danach false, ohne Pin-Read', async () => {
+        const h = setup({ aEntry: sunday() });
+        await settle();
+        await loadingWindow(h);
+
+        const resume = settled(h.svc.resumePastEntry(sunday(), A)); // wartet auf den Ladelauf
+        await settle();
+        expect(resume.done).toBe(false);
+        const action = settled(h.svc.deleteBreak('x')); // setzt die Sperre in der Ladelücke
+
+        h.world.releaseAll();
+        await settle();
+        expect(resume.done).toBe(true);
+        expect(resume.value).toBe(false);
+        expect(h.world.calls.getMonth).toBe(0);
+        await settle();
+        expect(action.done).toBe(true);
+      });
+    });
+  });
 });
