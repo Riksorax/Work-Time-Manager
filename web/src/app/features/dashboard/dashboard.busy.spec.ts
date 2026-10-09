@@ -81,6 +81,13 @@ async function aloneCounts(
   return c;
 }
 
+/**
+ * Ursache eines Schreibfehlers: ab Block B (#426) wirft eine Aktion mit Saldo-Block einen `DashboardSaveError` mit dem
+ * ursprünglichen Fehler als `cause`; Block A reicht ihn unverändert weiter. Der Helfer macht die Timeout-Tests für
+ * beide Stände gültig, ohne Block B zu importieren.
+ */
+const rootCause = (e: unknown): unknown => (e instanceof Error && e.cause !== undefined ? e.cause : e);
+
 const countsOf = (w: DashboardWorld) => ({ entry: w.entryWrites().length, overtime: w.overtimeWrites().length, lastUpdate: w.lastUpdateWrites().length });
 
 describe('DashboardService Reentranz-Sperre (#426)', () => {
@@ -495,9 +502,10 @@ describe('DashboardService Reentranz-Sperre (#426)', () => {
 
         await vi.advanceTimersByTimeAsync(1_000);
         expect(stop.done).toBe(true);
-        expect(stop.error).toBeInstanceOf(PromiseTimeoutError);
+        expect(rootCause(stop.error)).toBeInstanceOf(PromiseTimeoutError);
         expect(h.svc.isSaving()).toBe(false);
-        expect(vi.getTimerCount()).toBe(1); // nur der Mitternachts-Timer, kein Timeout-Timer übrig
+        // Mitternachts-Timer (+ Sekundentakt, falls die Anzeige zurückgenommen wurde, Block B), kein Timeout-Timer übrig
+        expect(vi.getTimerCount()).toBe(h.svc.isTimerRunning() ? 2 : 1);
       });
 
       it('(b) Eintrag-Block: bei 29 s noch gesperrt, bei 30 s Rejection mit PromiseTimeoutError, danach frei', async () => {
@@ -514,10 +522,10 @@ describe('DashboardService Reentranz-Sperre (#426)', () => {
 
         await vi.advanceTimersByTimeAsync(1_000);
         expect(stop.done).toBe(true);
-        expect(stop.error).toBeInstanceOf(PromiseTimeoutError);
+        expect(rootCause(stop.error)).toBeInstanceOf(PromiseTimeoutError);
         expect(h.svc.isSaving()).toBe(false);
         expect(h.world.overtimeWrites().length).toBe(0); // nach dem Eintrag-Fehler kein Saldo
-        expect(vi.getTimerCount()).toBe(1);
+        expect(vi.getTimerCount()).toBe(h.svc.isTimerRunning() ? 2 : 1);
       });
 
       it('(c) Autosave-Timeout: ein wartender Stop läuft nach höchstens 30 s weiter', async () => {
@@ -546,7 +554,7 @@ describe('DashboardService Reentranz-Sperre (#426)', () => {
       h.world.hold('saveOvertime');
       const stop = settled(h.svc.startOrStopTimer());
       await vi.advanceTimersByTimeAsync(30_000);
-      expect(stop.error).toBeInstanceOf(PromiseTimeoutError);
+      expect(rootCause(stop.error)).toBeInstanceOf(PromiseTimeoutError);
       const stateBefore = h.svc.workEntry();
       const counts = countsOf(h.world);
 

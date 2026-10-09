@@ -18,12 +18,14 @@ import {
 } from '../../domain/utils/overtime.utils';
 import { canResumeOpenEntry, localDateFromEntryId } from '../../domain/utils/open-entry.utils';
 import { withTimeout } from '../../shared/utils/promise-timeout.util';
+import { DashboardSaveError } from './dashboard-save-error';
 
 /**
  * Kontext einer Schreibaktion (#380): Profil und `_init`-Generation zum Aktionsbeginn. Alle Writes der Aktion gehen
  * explizit an `pid` (nie „das gerade aktive Profil"); nach jedem `await` verhindert `gen` zustandsändernde Folgeschritte.
+ * `beforeState` (#426): Zustand vor der Aktion, Grundlage für Rücknahme und Kompensation bei Speicherfehlern.
  */
-interface ActionCtx { pid: string; gen: number }
+interface ActionCtx { pid: string; gen: number; beforeState: DashboardState }
 
 interface DashboardState {
   status: 'loading' | 'ready';
@@ -258,7 +260,7 @@ export class DashboardService {
 
   /** Kontext (Profil + Generation) für eine Schreibaktion; synchron zusammen mit dem gelesenen Eintrag erfassen. */
   private _ctx(): ActionCtx {
-    return { pid: this._loadedProfileId, gen: this._initGen };
+    return { pid: this._loadedProfileId, gen: this._initGen, beforeState: this._s() };
   }
 
   private _uid(): string | null {
@@ -512,7 +514,8 @@ export class DashboardService {
   // ─── Stop-Logik (Stop-Button und Profilwechsel, #380) ──────────────────────────────────────────────────
   /**
    * Beendet den laufenden Timer: Pflichtpausen, Eintrag und Saldo werden in das festgehaltene Profil geschrieben.
-   * Wirft bei Speicherfehlern (der Zustand ist dann schon gesetzt, Rollback macht der Aufrufer).
+   * Wirft bei Speicherfehlern einen `DashboardSaveError`; der Zustand ist dann bereits zurückgenommen (und bei einem
+   * Saldo-Fehler der Eintrag kompensiert), siehe `_recalculateState`.
    * `reinitAfterMidnight`: nach einem Lauf über Mitternacht auf den neuen Tag umschalten (Stop-Button); der Profilwechsel
    * lädt ohnehin neu und braucht das nicht.
    */
@@ -523,9 +526,9 @@ export class DashboardService {
     if (!hasRunningBreak && updated.type === WorkEntryType.Work) {
       updated = calculateAndApplyBreaks(updated);
     }
-    const totalMs = await this._recalculateState(updated, true, ctx);
-    // Saldo mit dem VOR dem ersten await eingefrorenen Wert und dem festgehaltenen Profil (auch nach Überholung).
-    await this._saveOvertime(ctx.pid, totalMs);
+    // Eintrag und Saldo (einmal, #426: der frühere zweite Saldo-Write mit demselben absoluten Wert entfällt) schreibt
+    // `_recalculateState` mit dem VOR dem ersten await eingefrorenen Wert und dem festgehaltenen Profil (auch nach Überholung).
+    await this._recalculateState(updated, true, ctx);
     if (!opts.reinitAfterMidnight || !this._isCurrent(ctx)) return;
     // Über Mitternacht gelaufen: der Eintrag gehört zum Starttag, die Anzeige wechselt auf den neuen Tag.
     this.todayService.refresh();
@@ -864,12 +867,55 @@ export class DashboardService {
 
     if (save) {
       const pid = ctx?.pid ?? this._loadedProfileId;
-      await withTimeout(this.workSvc.saveEntry(entry, pid), this._writeTimeoutMs);
-      if (entry.workEnd && actualWorkMs !== null && totalMs !== null) {
-        await this._saveOvertime(pid, totalMs);
+      const hasSaldoBlock = !!entry.workEnd && actualWorkMs !== null && totalMs !== null;
+      if (!hasSaldoBlock || !ctx) {
+        // Aktionen ohne Saldo-Block (Start, Pause, Ende löschen, Neue Session): optimistisch, ein Fehler wird unverändert
+        // weitergereicht (kein Rollback, kein DashboardSaveError).
+        await withTimeout(this.workSvc.saveEntry(entry, pid), this._writeTimeoutMs);
+      } else {
+        // Aktion mit Saldo-Block: der Zustand ist optimistisch gesetzt; scheitert ein Write, wird er zurückgenommen.
+        try {
+          await withTimeout(this.workSvc.saveEntry(entry, pid), this._writeTimeoutMs);
+        } catch (e) {
+          // Nichts geschrieben: kein Saldo, keine Kompensation.
+          this._rollback(ctx);
+          throw new DashboardSaveError(e);
+        }
+        try {
+          await this._saveOvertime(pid, totalMs);
+        } catch (e) {
+          // Eintrag liegt neu vor, der Saldo nicht: Anzeige zurück (synchron, vor dem nächsten await), dann den
+          // Eintrag best-effort auf den Vorzustand zurückschreiben (nie `lastUpdated`).
+          this._rollback(ctx);
+          await this._compensateEntry(ctx);
+          throw new DashboardSaveError(e);
+        }
       }
     }
     return totalMs;
+  }
+
+  /**
+   * Nimmt den optimistisch gesetzten Zustand zurück (nur wenn die Aktion nicht überholt wurde: bei einem Profil-/Reinit-
+   * Wechsel gehört der Zustand schon dem neuen Lauf). Die Rechnung läuft gegen den aktuellen Einstellungs-Cache, ein
+   * laufender Eintrag bekommt seinen Timer zurück.
+   */
+  private _rollback(ctx: ActionCtx): void {
+    if (!this._isCurrent(ctx)) return;
+    this._s.set(ctx.beforeState);
+    this._recalculateOvertime();
+    this._startTimerIfNeeded();
+  }
+
+  /**
+   * Schreibt den Vorzustand des Eintrags best-effort zurück (30-s-Timeout, Fehler still: der Aufrufer meldet den
+   * ursprünglichen Saldo-Fehler). Läuft über `ctx.pid`, auch nach einem Profilwechsel. `lastUpdated` bleibt unberührt.
+   * Misslingt auch das (Doppelfehler), heilt bei einem laufenden Eintrag der Autosave, sonst die nächste Aktion.
+   */
+  private async _compensateEntry(ctx: ActionCtx): Promise<void> {
+    try {
+      await withTimeout(this.workSvc.saveEntry(ctx.beforeState.workEntry, ctx.pid), this._writeTimeoutMs);
+    } catch { /* best effort */ }
   }
 
   /**
