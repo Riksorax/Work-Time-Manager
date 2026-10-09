@@ -78,6 +78,18 @@ Jede Phase läuft als Subagent in eigenem Kontext und übergibt ihr Ergebnis üb
 Betrifft ein Issue mehrere Plattformen, plant der Subagent `cross-platform-coordinator` den
 gemeinsamen Vertrag und die Reihenfolge Backend → Web → Mobile.
 
+## Agent-Standard (Obsidian-Vault)
+
+Die Agents und Commands in `.claude/` stammen aus dem projektübergreifenden Standard im Vault
+`Riksorax/obsidian-vault` (Ordner `_Claude/`, Doku `03_Resources/Agent-Standard.md`). Dieses Repo ist die
+Herkunft und trägt die Projektanpassungen; `.claude/standard.lock` hält fest, welcher Stand je Datei
+installiert wurde. Abweichungen vom Standard sind gewollt (Firestore, Hybrid-Repositories, Premium,
+Profile) und werden nicht „zurückgesetzt“. `release.md` und `hooks/session-start.sh` sind
+projektspezifisch und nicht Teil des Standards.
+
+Änderungen an `.claude/` bleiben Projektsache. Taugt eine Änderung auch für andere Projekte, sie im Vault
+über `sync.sh promote` bzw. `add` zurückholen und dabei Projektspezifisches entfernen.
+
 ## Fehler-Monitoring (Crashlytics/Sentry/Uptime-Kuma) → Issue → Fix
 
 Crashlytics (Mobile), Sentry (Web über `SENTRY_DSN_WEB`, Backend über `SENTRY_DSN_API` — zwei
