@@ -305,6 +305,34 @@ nicht serialisiert. Jetzt gilt:
   echten Flush: nur Deferred-Gates und `advanceTimersByTimeAsync`; ein Test mit offenem Gate gibt es vor Testende frei
   (`afterEach`: `releaseAll()`, dann `vi.getTimerCount()` == 0).
 
+#### Fehler beim Speichern / Kompensation (#426 B)
+
+Web-Pendant zu Mobile #412 („Fehler beim Speichern (#402)“). Gilt für Aktionen mit Saldo-Block (= `_recalculateState` mit `save` und
+gesetztem `workEnd`: Stop, `setManualEndTime`, sowie `setManualStartTime`/`updateBreak`/`deleteBreak` auf bereits beendetem Eintrag):
+- **Ablauf:** Der Zustand wird wie bisher sofort optimistisch gesetzt, `ActionCtx.beforeState` hält den Zustand vor der Aktion (in `_ctx()`
+  synchron erfasst). Scheitert der **Eintrag**-Write (Fehler oder 30-s-Timeout): nichts geschrieben, `_rollback(ctx)`, `DashboardSaveError`.
+  Scheitert der **Saldo**-Block: `_rollback(ctx)` (synchron), dann `_compensateEntry(ctx)` (`saveEntry(beforeState.workEntry, ctx.pid)`
+  best-effort mit eigenem 30-s-Timeout, Fehler still, nie `saveLastUpdateDate`), dann `DashboardSaveError`; geworfen wird nie der
+  Kompensationsfehler. `_rollback` fasst State/Timer nur an, wenn die Aktion nicht überholt wurde (`_isCurrent`); die Kompensation läuft
+  über `ctx.pid` auch nach einem Profilwechsel. Nach einem Fehler gibt es keinen Mitternachts-Reinit.
+- **Abweichung zu Mobile:** Mobile schreibt Eintrag -> Saldo -> *dann* den State. Das Web setzt den State vor dem `await` (der Stop hält den
+  Timer vorher an, ein späterer State-Wechsel würde die Anzeige um die API-Latenz verzögern und den Timer weiterlaufen lassen) und nimmt ihn
+  bei Fehlern per Snapshot zurück; das Endergebnis (Daten und Anzeige = Vorzustand) ist identisch.
+- **Meldeweg:** Der Service wirft die typisierte Rejection `DashboardSaveError` (`dashboard-save-error.ts`, `cause` = ursprünglicher
+  Fehler bzw. `PromiseTimeoutError`, keine Eintragswerte in der Meldung); Signaturen unverändert. `DashboardComponent.guarded()` umschließt
+  alle Schreibaufrufe, fängt **nur** diesen Typ, zeigt die Snackbar `dashboard.saveError` und reicht die Ursache an den globalen
+  `ErrorHandler` (Sentry). Andere Fehler laufen unverändert weiter, verworfene Taps und `'restart-dialog'` bleiben ohne Meldung.
+  `stopRunningTimerForSwitch` fängt jede Rejection und liefert `false`; die Meldung kommt weiter von `ProfileSwitchConfirmService`
+  (`switchSaveFailed`), es gibt keine zweite Snackbar.
+- **Aktionen ohne Saldo-Block** (Start, Pause auf laufendem Eintrag, `clearEndTime`, `startNewSession`) bleiben optimistisch: Rohfehler
+  wird weitergereicht, kein Rollback, keine Meldung (Offline-Start soll nicht anders reagieren). Ein `_ensureCurrentDay`-Abbruch bleibt still.
+- **Der frühere zweite Saldo-Write in `_stopRunning`** (identischer absoluter Wert) ist entfallen; der Stop schreibt den Saldo einmal.
+  Worst Case einer Aktion mit Kompensation: Autosave 30 + Eintrag 30 + Saldo 30 + Kompensation 30 s.
+- **Grenzen:** Doppelfehler (Saldo plus Kompensation) lässt Daten und Anzeige auseinanderlaufen: bei laufendem Eintrag heilt der Autosave
+  innerhalb von 30 s, bei geschlossenem Eintrag bleibt Eintrag neu/Saldo alt bis zur nächsten Aktion. Ein Eintrag-Write, der wirft, obwohl
+  er serverseitig landete (mehrdeutiger Fehler), wird nicht kompensiert. Mehrgeräte-Konflikte bleiben.
+- **Tests:** `dashboard.compensation.spec.ts` (C1-C12), `dashboard.spec.ts` (S1-S5), `core/i18n-dashboard-save.spec.ts`.
+
 ### Dark Mode
 
 `ThemeService` verwaltet Hell/Dunkel. `app.ts` appliziert beim Start via `applyStoredTheme()` + `effect()` die Klasse `.dark-theme` auf `<html>`. SCSS-Override in `styles.scss` überschreibt dann das Angular Material M3-Theme.
