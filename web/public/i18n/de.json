@@ -60,7 +60,8 @@
     "openEntryEndDialogConfirm": "Eintrag beenden",
     "openEntrySaveError": "Eintrag konnte nicht beendet werden.",
     "openEntryContinue": "Fortsetzen",
-    "openEntryContinueSemantics": "Eintrag vom {{date}} fortsetzen"
+    "openEntryContinueSemantics": "Eintrag vom {{date}} fortsetzen",
+    "saveError": "Speichern fehlgeschlagen. Bitte prüfe deine Verbindung und versuche es erneut."
   },
   "holidays": {
     "newYear": "Neujahr",
