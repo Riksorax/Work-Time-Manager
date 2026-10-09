@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
@@ -73,6 +75,71 @@ void main() {
                 profileId: null, keepLastUpdated: false))
             .called(1);
         expect(repository.getOvertime(), overtime);
+      });
+    });
+
+    group('Fehler beim Schreiben (#427)', () {
+      test(
+          'saveOvertime: Cache bleibt beim alten Wert, wenn der Write scheitert',
+          () async {
+        const alt = Duration(hours: 2);
+        const neu = Duration(hours: 7);
+        when(mockDataSource.saveOvertime(any, any,
+                profileId: anyNamed('profileId'),
+                keepLastUpdated: anyNamed('keepLastUpdated')))
+            .thenAnswer((_) async {});
+        await repository.saveOvertime(alt);
+
+        when(mockDataSource.saveOvertime(any, any,
+                profileId: anyNamed('profileId'),
+                keepLastUpdated: anyNamed('keepLastUpdated')))
+            .thenThrow(Exception('write failed'));
+
+        await expectLater(repository.saveOvertime(neu), throwsException);
+
+        expect(repository.getOvertime(), alt);
+      });
+
+      test('saveOvertime: Cache wird erst nach Abschluss des Writes gesetzt',
+          () async {
+        const alt = Duration(hours: 2);
+        const neu = Duration(hours: 7);
+        when(mockDataSource.saveOvertime(any, any,
+                profileId: anyNamed('profileId'),
+                keepLastUpdated: anyNamed('keepLastUpdated')))
+            .thenAnswer((_) async {});
+        await repository.saveOvertime(alt);
+
+        final hold = Completer<void>();
+        when(mockDataSource.saveOvertime(any, any,
+                profileId: anyNamed('profileId'),
+                keepLastUpdated: anyNamed('keepLastUpdated')))
+            .thenAnswer((_) => hold.future);
+
+        final pending = repository.saveOvertime(neu);
+        expect(repository.getOvertime(), alt);
+
+        hold.complete();
+        await pending;
+        expect(repository.getOvertime(), neu);
+      });
+
+      test('saveLastUpdateDate: Cache bleibt beim alten Wert bei Fehler',
+          () async {
+        final alt = DateTime.utc(2026, 1, 10);
+        final neu = DateTime.utc(2026, 1, 11);
+        when(mockDataSource.saveLastOvertimeUpdate(any, any,
+                profileId: anyNamed('profileId')))
+            .thenAnswer((_) async {});
+        await repository.saveLastUpdateDate(alt);
+
+        when(mockDataSource.saveLastOvertimeUpdate(any, any,
+                profileId: anyNamed('profileId')))
+            .thenThrow(Exception('write failed'));
+
+        await expectLater(repository.saveLastUpdateDate(neu), throwsException);
+
+        expect(repository.getLastUpdateDate(), alt);
       });
     });
 
