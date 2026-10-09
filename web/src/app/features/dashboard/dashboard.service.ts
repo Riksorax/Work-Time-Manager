@@ -117,6 +117,8 @@ export class DashboardService {
   readonly expectedEndTime      = computed(() => this._s().expectedEndTime);
   readonly expectedEndTotalZero = computed(() => this._s().expectedEndTotalZero);
   readonly breaks          = computed(() => this._s().workEntry.breaks);
+  /** Platzhalter bis Schritt A3 (Reentranz-Sperre #426): konstant `false`. */
+  readonly isSaving        = signal(false).asReadonly();
 
   /** Letzter `_initInner` ist fehlerfrei durchgelaufen (nach einem Fehler ist `status` ebenfalls `ready`, #385). */
   private readonly _loadOk = signal(false);
