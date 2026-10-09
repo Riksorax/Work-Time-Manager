@@ -17,6 +17,7 @@ import {
   calculateInitialOvertime,
 } from '../../domain/utils/overtime.utils';
 import { canResumeOpenEntry, localDateFromEntryId } from '../../domain/utils/open-entry.utils';
+import { withTimeout } from '../../shared/utils/promise-timeout.util';
 
 /**
  * Kontext einer Schreibaktion (#380): Profil und `_init`-Generation zum Aktionsbeginn. Alle Writes der Aktion gehen
@@ -152,6 +153,10 @@ export class DashboardService {
   private _actionToken: object = {};
   /** Wird aufgelöst (nie rejected), wenn die laufende Aktion fertig ist; `stopRunningTimerForSwitch` wartet darauf. */
   private _actionDone: { promise: Promise<void>; resolve: () => void } | null = null;
+  /** Laufender Autosave (nie rejected). Eine Aktion wartet darauf, bevor sie schreibt, ein Autosave startet nie während einer Aktion. */
+  private _autoSaveRun: Promise<void> | null = null;
+  /** Obergrenze je Write-Block. Literal und kein importierter Wert (Vite-SSR-Falle, web/CLAUDE.md „Test-Falle“). */
+  private readonly _writeTimeoutMs = 30_000;
   /** Letzter Wert, den `activeProfileId$` geliefert hat (das Observable hinkt dem Signal hinterher). */
   private _lastObservedProfileId: string | undefined;
   /** Der letzte `_init` lief im Lag-Fenster (Signal schon neu, Observable noch alt): Einstellungen evtl. vom alten Profil. */
@@ -226,6 +231,9 @@ export class DashboardService {
     this._actionDone = done;
     this._saving.set(true);
     try {
+      // Ein laufender Autosave schreibt zuerst zu Ende (durch seinen Timeout beschränkt): er überholt den frischen
+      // Eintrag der Aktion nie. Kein `await` davor — Prüfung und Setzen der Sperre bleiben synchron.
+      if (this._autoSaveRun) await this._autoSaveRun;
       return await body();
     } finally {
       // Nur freigeben, wenn die Sperre noch dieser Aktion gehört (ein Profilwechsel hat sie sonst schon ersetzt).
@@ -241,6 +249,7 @@ export class DashboardService {
   private _resetActionLock(): void {
     this._actionToken = {};
     this._busy = false;
+    this._autoSaveRun = null;
     const done = this._actionDone;
     this._actionDone = null;
     done?.resolve();
@@ -720,9 +729,14 @@ export class DashboardService {
     const subscription = sub.subscribe(() => {
       this._tick();
       this._autoSaveTick++;
-      if (this._autoSaveTick >= 30) {
+      // Nie während einer Aktion oder eines laufenden Autosaves; der Zähler bleibt dann stehen (>= 30) und der nächste
+      // Tick versucht es erneut (kein 30-s-Loch).
+      if (this._autoSaveTick >= 30 && !this._busy && this._autoSaveRun === null) {
         this._autoSaveTick = 0;
-        void this._autoSave();
+        const run: Promise<void> = this._autoSave().finally(() => {
+          if (this._autoSaveRun === run) this._autoSaveRun = null;
+        });
+        this._autoSaveRun = run;
       }
     });
     this._timerUnsub = () => subscription.unsubscribe();
@@ -751,7 +765,9 @@ export class DashboardService {
     // Lag-Fenster eines Profilwechsels (Signal neu, Reinit noch nicht gelaufen) gehört der Eintrag noch dorthin.
     const entry = this._s().workEntry;
     if (!entry.workStart) return;
-    try { await this.workSvc.saveEntry(entry, this._loadedProfileId); } catch { /* silent */ }
+    try {
+      await withTimeout(this.workSvc.saveEntry(entry, this._loadedProfileId), this._writeTimeoutMs);
+    } catch { /* silent */ }
   }
 
   // ─── Overtime Calculation ─────────────────────────────────────────────────
@@ -837,7 +853,7 @@ export class DashboardService {
 
     if (save) {
       const pid = ctx?.pid ?? this._loadedProfileId;
-      await this.workSvc.saveEntry(entry, pid);
+      await withTimeout(this.workSvc.saveEntry(entry, pid), this._writeTimeoutMs);
       if (entry.workEnd && actualWorkMs !== null && totalMs !== null) {
         await this._saveOvertime(pid, totalMs);
       }
@@ -845,11 +861,24 @@ export class DashboardService {
     return totalMs;
   }
 
-  /** Schreibt den Saldo in das festgehaltene Profil, mit dem übergebenen (nicht nach einem `await` neu gelesenen) Wert. */
+  /**
+   * Schreibt den Saldo in das festgehaltene Profil, mit dem übergebenen (nicht nach einem `await` neu gelesenen) Wert.
+   * Saldo und `lastUpdated` sind EIN Write-Block mit 30-s-Timeout. Nach dem Timeout holt die weiterlaufende Schließung
+   * `saveLastUpdateDate` nicht mehr nach; ein bereits gesendeter Saldo ist nicht abbrechbar („unbekannter Ausgang“,
+   * Wiederholen überschreibt ihn, der Saldo ist absolut).
+   */
   private async _saveOvertime(pid: string, ms: number | null): Promise<void> {
     if (ms === null) return;
-    await this.overtimeSvc.saveOvertime(ms, pid);
-    await this.overtimeSvc.saveLastUpdateDate(new Date());
+    let timedOut = false;
+    try {
+      await withTimeout((async () => {
+        await this.overtimeSvc.saveOvertime(ms, pid);
+        if (!timedOut) await this.overtimeSvc.saveLastUpdateDate(new Date());
+      })(), this._writeTimeoutMs);
+    } catch (e) {
+      timedOut = true;
+      throw e;
+    }
   }
 
   /** Läuft noch derselbe Zustand wie zum Aktionsbeginn (kein Profil-/Reinit-Überholer)? */

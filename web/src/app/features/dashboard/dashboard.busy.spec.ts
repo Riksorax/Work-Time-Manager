@@ -7,6 +7,7 @@ import { createFakeWorkProfile, FakeWorkProfile } from '../../shared/testing/wor
 import {
   DashboardWorld, WORLD_A as A, WORLD_B as B, dashboardWorldProviders, worldEntry,
 } from '../../shared/testing/dashboard-world-fake';
+import { PromiseTimeoutError } from '../../shared/utils/promise-timeout.util';
 import { WorkEntry } from '../../shared/models/index';
 
 // ─── Reentranz-Sperre im Dashboard (#426, Web-Pendant zu Mobile #413) ─────────────────────────────────────
@@ -401,6 +402,161 @@ describe('DashboardService Reentranz-Sperre (#426)', () => {
       h.world.releaseAll();
       await r;
       await settle();
+      expect(h.svc.isSaving()).toBe(false);
+    });
+  });
+
+  // ─── Schritt A4: Autosave serialisieren, Timeouts ───────────────────────────────────────────────────────
+  describe('Autosave und Timeouts (W10-W14)', () => {
+    /** Ergebnis einer Aktion abfangen, damit eine Rejection nie unbehandelt bleibt. */
+    const settled = (p: Promise<unknown>): { value?: unknown; error?: unknown; done: boolean } => {
+      const r: { value?: unknown; error?: unknown; done: boolean } = { done: false };
+      p.then(v => { r.value = v; r.done = true; }, e => { r.error = e; r.done = true; });
+      return r;
+    };
+
+    it('W10 Der Autosave wird übersprungen, solange eine Aktion läuft', async () => {
+      const h = setup();
+      await vi.advanceTimersByTimeAsync(20_000); // Autosave-Zähler bei 20
+      h.world.hold('saveEntry');
+
+      const p = h.svc.startOrStopBreak(); // Timer läuft weiter, Eintrag-Write hängt
+      await settle();
+      expect(h.world.calls.saveEntry).toBe(1);
+      await vi.advanceTimersByTimeAsync(11_000); // Zähler läuft über 30
+      expect(h.world.calls.saveEntry).toBe(1); // kein Autosave im Fenster
+      expect(h.svc.isSaving()).toBe(true);
+
+      h.world.releaseAll();
+      await p;
+    });
+
+    it('W11 Der Zähler bleibt erhalten: der Autosave läuft im nächsten Tick, nicht erst 30 s später', async () => {
+      const h = setup();
+      await vi.advanceTimersByTimeAsync(20_000);
+      h.world.hold('saveEntry');
+      const p = h.svc.startOrStopBreak();
+      await vi.advanceTimersByTimeAsync(11_000);
+      expect(h.world.calls.saveEntry).toBe(1);
+      h.world.releaseAll();
+      await p;
+      await settle();
+      expect(h.world.calls.saveEntry).toBe(1);
+
+      await vi.advanceTimersByTimeAsync(1_000); // nächster Tick
+      expect(h.world.calls.saveEntry).toBe(2);
+      await vi.advanceTimersByTimeAsync(29_000); // danach wieder normaler 30-s-Takt
+      expect(h.world.calls.saveEntry).toBe(2);
+      await vi.advanceTimersByTimeAsync(1_000);
+      expect(h.world.calls.saveEntry).toBe(3);
+    });
+
+    it('W12 Eine Aktion wartet auf einen laufenden Autosave: Reihenfolge Autosave-Eintrag, Stop-Eintrag, Saldo', async () => {
+      const h = setup();
+      await settle();
+      h.world.hold('saveEntry');
+      await vi.advanceTimersByTimeAsync(30_000); // Autosave hängt im Eintrag-Write
+      expect(h.world.calls.saveEntry).toBe(1);
+
+      const p = h.svc.startOrStopTimer();
+      await settle();
+      expect(h.svc.isSaving()).toBe(true);
+      expect(h.world.calls.saveEntry).toBe(1); // der Stop wartet, schreibt noch nichts
+      expect(h.world.overtimeWrites().length).toBe(0);
+
+      h.world.hold('saveEntry', false);
+      h.world.release('saveEntry', 0); // Autosave fertig
+      await p;
+      await settle();
+
+      expect(h.world.log.filter(l => !l.startsWith('lastUpdate'))[0]).toBe('entry:default:08:00-'); // Autosave
+      const stopEntry = h.world.log.findIndex(l => l === 'entry:default:08:00-12:00');
+      const overtime = h.world.log.findIndex(l => l.startsWith('overtime:default:'));
+      expect(stopEntry).toBeGreaterThan(0);
+      expect(overtime).toBeGreaterThan(stopEntry);
+    });
+
+    describe('W13 Timeouts je Write-Block (30 s)', () => {
+      it('(a) Saldo-Block: bei 29 s noch gesperrt, bei 30 s Rejection mit PromiseTimeoutError, danach frei', async () => {
+        const h = setup();
+        await settle();
+        h.world.hold('saveOvertime');
+        const stop = settled(h.svc.startOrStopTimer());
+        await settle();
+        expect(h.world.pending('saveOvertime')).toBe(1);
+
+        await vi.advanceTimersByTimeAsync(29_000);
+        expect(stop.done).toBe(false);
+        expect(h.svc.isSaving()).toBe(true);
+        const tap = settled(h.svc.startOrStopTimer());
+        await settle();
+        expect(tap.done).toBe(true); // verworfen
+        expect(tap.value).toBeUndefined();
+
+        await vi.advanceTimersByTimeAsync(1_000);
+        expect(stop.done).toBe(true);
+        expect(stop.error).toBeInstanceOf(PromiseTimeoutError);
+        expect(h.svc.isSaving()).toBe(false);
+        expect(vi.getTimerCount()).toBe(1); // nur der Mitternachts-Timer, kein Timeout-Timer übrig
+      });
+
+      it('(b) Eintrag-Block: bei 29 s noch gesperrt, bei 30 s Rejection mit PromiseTimeoutError, danach frei', async () => {
+        const h = setup();
+        await settle();
+        h.world.hold('saveEntry');
+        const stop = settled(h.svc.startOrStopTimer());
+        await settle();
+        expect(h.world.pending('saveEntry')).toBe(1);
+
+        await vi.advanceTimersByTimeAsync(29_000);
+        expect(stop.done).toBe(false);
+        expect(h.svc.isSaving()).toBe(true);
+
+        await vi.advanceTimersByTimeAsync(1_000);
+        expect(stop.done).toBe(true);
+        expect(stop.error).toBeInstanceOf(PromiseTimeoutError);
+        expect(h.svc.isSaving()).toBe(false);
+        expect(h.world.overtimeWrites().length).toBe(0); // nach dem Eintrag-Fehler kein Saldo
+        expect(vi.getTimerCount()).toBe(1);
+      });
+
+      it('(c) Autosave-Timeout: ein wartender Stop läuft nach höchstens 30 s weiter', async () => {
+        const h = setup();
+        await settle();
+        h.world.hold('saveEntry');
+        await vi.advanceTimersByTimeAsync(30_000); // Autosave-Write hängt (Timeout bei +30 s)
+        const stop = settled(h.svc.startOrStopTimer());
+        await vi.advanceTimersByTimeAsync(29_999);
+        expect(h.world.calls.saveEntry).toBe(1);
+        expect(stop.done).toBe(false);
+
+        await vi.advanceTimersByTimeAsync(1);
+        expect(h.world.calls.saveEntry).toBe(2); // Autosave aufgegeben, der Stop schreibt jetzt
+        h.world.releaseAll();
+        await settle();
+        expect(stop.done).toBe(true);
+        expect(stop.error).toBeUndefined();
+        expect(h.svc.isSaving()).toBe(false);
+      });
+    });
+
+    it('W14 Ein nach dem Timeout spät landender Saldo-Write löst weder lastUpdate noch einen Folgeschritt aus', async () => {
+      const h = setup();
+      await settle();
+      h.world.hold('saveOvertime');
+      const stop = settled(h.svc.startOrStopTimer());
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect(stop.error).toBeInstanceOf(PromiseTimeoutError);
+      const stateBefore = h.svc.workEntry();
+      const counts = countsOf(h.world);
+
+      h.world.release('saveOvertime'); // der aufgegebene Write landet doch
+      await settle();
+      await vi.advanceTimersByTimeAsync(5_000);
+
+      expect(h.world.lastUpdateWrites().length).toBe(0);
+      expect(countsOf(h.world)).toEqual(counts);
+      expect(h.svc.workEntry()).toBe(stateBefore);
       expect(h.svc.isSaving()).toBe(false);
     });
   });
