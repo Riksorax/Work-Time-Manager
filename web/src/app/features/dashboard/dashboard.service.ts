@@ -117,8 +117,12 @@ export class DashboardService {
   readonly expectedEndTime      = computed(() => this._s().expectedEndTime);
   readonly expectedEndTotalZero = computed(() => this._s().expectedEndTotalZero);
   readonly breaks          = computed(() => this._s().workEntry.breaks);
-  /** Platzhalter bis Schritt A3 (Reentranz-Sperre #426): konstant `false`. */
-  readonly isSaving        = signal(false).asReadonly();
+  /**
+   * Eine Schreibaktion läuft (Reentranz-Sperre #426): Spiegel von `_busy` für die UI. Bewusst nicht in `DashboardState`:
+   * `_initInner` setzt den Zustand zurück, ein Reinit mitten in der Aktion darf die UI nicht entsperren.
+   */
+  private readonly _saving     = signal(false);
+  readonly isSaving        = this._saving.asReadonly();
 
   /** Letzter `_initInner` ist fehlerfrei durchgelaufen (nach einem Fehler ist `status` ebenfalls `ready`, #385). */
   private readonly _loadOk = signal(false);
@@ -142,6 +146,12 @@ export class DashboardService {
   private _initRun: Promise<void> | null = null;
   /** Profil, dessen Daten gerade im Dashboard stehen (#380). Wird synchron zu Beginn jedes `_init` gesetzt. */
   private _loadedProfileId = '';
+  /** Reentranz-Sperre (#426): synchron lesbare Wahrheit; `_saving` spiegelt sie für die UI. */
+  private _busy = false;
+  /** Besitz der Sperre: nur die Aktion mit dem aktuellen Token gibt sie frei (Profilwechsel setzt ein neues). */
+  private _actionToken: object = {};
+  /** Wird aufgelöst (nie rejected), wenn die laufende Aktion fertig ist; `stopRunningTimerForSwitch` wartet darauf. */
+  private _actionDone: { promise: Promise<void>; resolve: () => void } | null = null;
   /** Letzter Wert, den `activeProfileId$` geliefert hat (das Observable hinkt dem Signal hinterher). */
   private _lastObservedProfileId: string | undefined;
   /** Der letzte `_init` lief im Lag-Fenster (Signal schon neu, Observable noch alt): Einstellungen evtl. vom alten Profil. */
@@ -199,6 +209,42 @@ export class DashboardService {
   private _onProfileChange(id: string): void {
     if (id === this._loadedProfileId && !this._settingsMaybeStale) return;
     void this._init(this._uid());
+  }
+
+  /**
+   * Serialisiert Schreibaktionen (#426, Web-Pendant zu Mobile #413): läuft schon eine, wird der Aufruf still verworfen
+   * (`discarded`, kein Fehler, kein Zustand). Prüfen und Setzen der Sperre geschehen synchron, vor dem ersten `await`.
+   * Fehler des Bodys erreichen den Aufrufer unverändert; die Sperre ist danach frei.
+   */
+  private async _runAction<T>(body: () => Promise<T>, discarded: T): Promise<T> {
+    if (this._busy) return discarded;
+    const token = {};
+    this._actionToken = token;
+    this._busy = true;
+    let resolve!: () => void;
+    const done = { promise: new Promise<void>(r => { resolve = r; }), resolve };
+    this._actionDone = done;
+    this._saving.set(true);
+    try {
+      return await body();
+    } finally {
+      // Nur freigeben, wenn die Sperre noch dieser Aktion gehört (ein Profilwechsel hat sie sonst schon ersetzt).
+      if (this._actionToken === token) {
+        this._busy = false;
+        this._actionDone = null;
+        this._saving.set(false);
+      }
+      done.resolve();
+    }
+  }
+
+  private _resetActionLock(): void {
+    this._actionToken = {};
+    this._busy = false;
+    const done = this._actionDone;
+    this._actionDone = null;
+    done?.resolve();
+    this._saving.set(false);
   }
 
   /** Kontext (Profil + Generation) für eine Schreibaktion; synchron zusammen mit dem gelesenen Eintrag erfassen. */
@@ -262,6 +308,9 @@ export class DashboardService {
     // entsteht. Ein Profilwechsel ist nie ein stiller Tageswechsel (kein dayChange-Pfad, Ladezustand).
     const pid = this.workProfile.activeProfileId();
     const profileChanged = pid !== this._loadedProfileId;
+    // Echter Profilwechsel: die Sperre gehört dem alten Profil, ein Tap im neuen darf nicht verworfen werden, nur weil
+    // dort ein Write hängt. Tageswechsel/Login/Retro-Close/Resume lösen sie nie (Aktion schreibt im Profil zu Ende).
+    if (profileChanged) this._resetActionLock();
     this._loadedProfileId = pid;
     this._settingsMaybeStale = this._lastObservedProfileId !== undefined && this._lastObservedProfileId !== pid;
     const dayChange = !!opts.dayChange && !profileChanged;
@@ -425,7 +474,11 @@ export class DashboardService {
   }
 
   // ─── Flow 2+3: Timer starten / stoppen ─────────────────────────────────────
-  async startOrStopTimer(): Promise<'restart-dialog' | void> {
+  startOrStopTimer(): Promise<'restart-dialog' | void> {
+    return this._runAction(() => this._startOrStopTimerBody(), undefined);
+  }
+
+  private async _startOrStopTimerBody(): Promise<'restart-dialog' | void> {
     if (!(await this._ensureCurrentDay())) return;
     const e = this._s().workEntry;
     const ctx = this._ctx();
@@ -509,7 +562,11 @@ export class DashboardService {
   }
 
   // ─── Flow 5: Restart Session ────────────────────────────────────────────────
-  async startNewSession(keepBreaks: boolean): Promise<void> {
+  startNewSession(keepBreaks: boolean): Promise<void> {
+    return this._runAction(() => this._startNewSessionBody(keepBreaks), undefined);
+  }
+
+  private async _startNewSessionBody(keepBreaks: boolean): Promise<void> {
     if (!(await this._ensureCurrentDay())) return;
     const e = this._s().workEntry;
     const ctx = this._ctx();
@@ -525,7 +582,11 @@ export class DashboardService {
   }
 
   // ─── Flow 6: Pause starten/stoppen ──────────────────────────────────────────
-  async startOrStopBreak(): Promise<void> {
+  startOrStopBreak(): Promise<void> {
+    return this._runAction(() => this._startOrStopBreakBody(), undefined);
+  }
+
+  private async _startOrStopBreakBody(): Promise<void> {
     if (!(await this._ensureCurrentDay())) return;
     const e = this._s().workEntry;
     const ctx = this._ctx();
@@ -548,7 +609,11 @@ export class DashboardService {
   }
 
   // ─── Flow 7: Manuelle Startzeit ──────────────────────────────────────────────
-  async setManualStartTime(timeStr: string): Promise<void> {
+  setManualStartTime(timeStr: string): Promise<void> {
+    return this._runAction(() => this._setManualStartTimeBody(timeStr), undefined);
+  }
+
+  private async _setManualStartTimeBody(timeStr: string): Promise<void> {
     if (!(await this._ensureCurrentDay())) return;
     const e = this._s().workEntry;
     const ctx = this._ctx();
@@ -562,7 +627,11 @@ export class DashboardService {
   }
 
   // ─── Flow 8: Manuelle Endzeit ─────────────────────────────────────────────
-  async setManualEndTime(timeStr: string): Promise<void> {
+  setManualEndTime(timeStr: string): Promise<void> {
+    return this._runAction(() => this._setManualEndTimeBody(timeStr), undefined);
+  }
+
+  private async _setManualEndTimeBody(timeStr: string): Promise<void> {
     if (!(await this._ensureCurrentDay())) return;
     const e = this._s().workEntry;
     const ctx = this._ctx();
@@ -574,7 +643,11 @@ export class DashboardService {
     await this._recalculateState(updated, true, ctx);
   }
 
-  async clearEndTime(): Promise<void> {
+  clearEndTime(): Promise<void> {
+    return this._runAction(() => this._clearEndTimeBody(), undefined);
+  }
+
+  private async _clearEndTimeBody(): Promise<void> {
     if (!(await this._ensureCurrentDay())) return;
     const e = this._s().workEntry;
     const ctx = this._ctx();
@@ -584,7 +657,11 @@ export class DashboardService {
   }
 
   // ─── Flow 9: Pause bearbeiten ─────────────────────────────────────────────
-  async updateBreak(updated: Break): Promise<void> {
+  updateBreak(updated: Break): Promise<void> {
+    return this._runAction(() => this._updateBreakBody(updated), undefined);
+  }
+
+  private async _updateBreakBody(updated: Break): Promise<void> {
     if (!(await this._ensureCurrentDay())) return;
     const e = this._s().workEntry;
     const ctx = this._ctx();
@@ -598,7 +675,11 @@ export class DashboardService {
   }
 
   // ─── Flow 10: Pause löschen ───────────────────────────────────────────────
-  async deleteBreak(id: string): Promise<void> {
+  deleteBreak(id: string): Promise<void> {
+    return this._runAction(() => this._deleteBreakBody(id), undefined);
+  }
+
+  private async _deleteBreakBody(id: string): Promise<void> {
     if (!(await this._ensureCurrentDay())) return;
     const e = this._s().workEntry;
     const ctx = this._ctx();
