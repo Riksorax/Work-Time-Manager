@@ -85,6 +85,7 @@ shared/
 ├── utils/
 │   ├── german-holidays.util.ts  Pure — gesetzliche Feiertage je Bundesland (#279), Port von Mobile `german_holidays.dart`
 │   ├── bundesland.util.ts       Pure — isBundesland / normalizeBundesland
+│   ├── promise-timeout.util.ts  Pure (#426) — `withTimeout(promise, ms)` + `PromiseTimeoutError`, Timer immer mit `clearTimeout`
 │   ├── calendar-keyboard.util.ts  Pure — Kalender-Tastenlogik (#377): `isCalendarNavKey`, `nextFocusDate`, `rangeKeys`, `rangeDiff`
 │   └── work-profile-path.util.ts  Pure — `profileScopedPath` (Firestore-Pfad je Profil), `profileIdForApi` (Profil-ID → API-Form, `'default'` → `undefined`, #380)
 └── models/index.ts        WorkEntry, WorkEntryType, Break, UserSettings, UserProfile, WorkProfile
@@ -254,6 +255,55 @@ neuesten offenen Eintrag vor heute (Ursache und Mobile-Vorlage: PR #405). Ohne N
   `DashboardService.updateInitialOvertime` („kein lastUpdated-Update“) trifft eingeloggt ebenfalls nicht zu.)
 - **A11y:** Textblock `role="status"`, Buttons per `aria-describedby` auf den Titel, einmalige polite `LiveAnnouncer`-Ansage je
   Eintrag, nach dem Entfall Fokus auf den nächsten Banner bzw. den Anker `p.timer-label` (`tabindex="-1"`, kein Zusatztext).
+
+### Reentranz-Sperre (#426)
+
+Web-Pendant zu Mobile #413 (`mobile/CLAUDE.md`, „Reentranz-Sperre (#413)“). Überlappende Schreibaktionen im `DashboardService`
+(Doppel-Start, Doppel-Stop, Tap im Ladefenster, Tap während des Autosaves, Stop parallel zum Profil-Guard) wurden vorher
+nicht serialisiert. Jetzt gilt:
+- **Verwerfen statt Queue:** `_runAction(body, discarded)` umschließt `startOrStopTimer`, `startNewSession`, `startOrStopBreak`,
+  `setManualStartTime`, `setManualEndTime`, `clearEndTime`, `updateBreak`, `deleteBreak` (Rumpf in `_xxxBody`) und
+  `stopRunningTimerForSwitch`. Läuft schon eine Aktion, liefert der zweite Aufruf sofort `undefined` (bei
+  `stopRunningTimerForSwitch` `false`): kein Fehler, kein Zustand, kein zweiter Restart-Dialog. Prüfen und Setzen der Sperre
+  geschehen **synchron vor dem ersten `await`** (`_busy`); Fehler des Bodys erreichen den Aufrufer unverändert, die Sperre ist danach frei.
+- **Besitz über ein Token** (`_actionToken`): das `finally` gibt die Sperre nur frei, wenn sie noch der eigenen Aktion gehört.
+  `_initInner` setzt sie **nur bei echtem Profilwechsel** zurück (`profileChanged`): ein Tap im neuen Profil wird nicht verworfen,
+  nur weil im alten ein Write hängt, und die alte Aktion löscht die neue Sperre nie. Tageswechsel, Login/Logout, Retro-Close und
+  „Fortsetzen“ lösen sie nicht (die Aktion schreibt im Profil des Aktionsbeginns zu Ende).
+- **`isSaving`** ist ein eigenes Signal im Service (`_saving`, Spiegel von `_busy`), **nicht** in `DashboardState`: ein Reinit
+  mitten in der Aktion darf die UI nicht entsperren.
+- **Autosave:** startet nie während einer Aktion oder eines laufenden Autosaves (`_autoSaveRun`); der Zähler bleibt dann stehen
+  und der nächste Tick versucht es erneut (kein 30-s-Loch). Eine Aktion wartet vor ihren Writes auf einen laufenden Autosave
+  (er überholt den frischen Eintrag nie).
+- **Timeouts je Write-Block, 30 s** (`withTimeout` aus `shared/utils/promise-timeout.util.ts`, `PromiseTimeoutError`): Eintrag-Write
+  (`_recalculateState`), Saldo-Block (`saveOvertime` + `saveLastUpdateDate` als EIN Block, lokales `timedOut`-Flag: nach dem
+  Timeout wird `lastUpdated` nicht mehr nachgeholt) und Autosave (still). Ein Timeout ist ein Schreibfehler (Rejection). Ein
+  aufgegebener Write ist nicht abbrechbar und kann später landen („unbekannter Ausgang“; der Saldo ist absolut, Wiederholen
+  überschreibt; keine Heilung nach spätem Landen). Das Timeout-Limit ist ein Literal-Feld (`_writeTimeoutMs = 30_000`), keine
+  importierte Konstante (Vite-SSR-Falle, siehe „Test-Falle“). Worst Case einer Stop-Aktion: Autosave 30 + Eintrag 30 + Saldo 30 + Saldo (Duplikat, siehe unten) 30 s.
+- **`stopRunningTimerForSwitch`** wartet auf `_actionDone` (nie rejected) und läuft danach **ohne weiteres `await`** in
+  `_runAction(body, false)` (ein `await` dazwischen wäre ein Fenster für einen Doppel-Stop). **`resumePastEntry`** liefert `false`,
+  solange eine Aktion läuft (Prüfung vor und nach der Ladelücke), ohne Pin-Read.
+- **Nicht gesperrt:** `updateInitialOvertime` (eine Nutzereingabe der Settings-Seite darf nicht still verworfen werden; das
+  Dashboard-Icon „Überstunden anpassen“ ist bei `isSaving` deaktiviert), `reloadAfterRetroClose`, `_onDayChange`, `_init`.
+- **UI:** `dashboard.html` bindet `svc.isSaving()`: Haupt- und Pausen-Button mit `[disabled]` + `[disabledInteractive]="true"`
+  (`aria-disabled`, Fokus bleibt; **Material fängt Klicks bei `<button>` nicht ab**, der Handler feuert, der Service verwirft: nur dort
+  einsetzen, wo ein verworfener Aufruf folgenlos ist), alle übrigen Elemente (Zeitfelder, Clear-Button im `TimeInputComponent`,
+  Pause bearbeiten/löschen, „Überstunden anpassen“) mit reinem `[disabled]`. Kein Spinner, keine neuen Texte. Eine SCSS-Regel auf
+  `[aria-disabled='true']` macht den Haupt-Button sichtbar deaktiviert (`.running`/`:not(.running)` überschreiben sonst die
+  Material-Disabled-Farben; nicht über die Klasse `mat-mdc-button-disabled-interactive` selektieren, Material setzt sie schon bei
+  `disabledInteractive` allein).
+- **Verhaltensänderung (Z1):** Das `change`-Event eines `<input type="time">` feuert beim Verlassen des Feldes, also vor dem folgenden
+  Klick: Beginnt dadurch ein Write, wird ein sofort folgender Klick (Pause/Stop) bei API-Latenz verworfen (Buttons sichtbar deaktiviert).
+- **Grenzen:** Lesezugriffe (`_ensureCurrentDay`, `_initInner`, `reloadAfterRetroClose`) haben keinen Timeout (ein dort hängender Read
+  sperrt weiter, Folge-Taps werden aber verworfen); das Speichern des Edit-Pausen-Dialogs ist nicht gesperrt (ein vor der Aktion
+  geöffneter Dialog kann sein Ergebnis verlieren, extrem selten); ein verworfener Tap ist nur an den deaktivierten Elementen
+  erkennbar; die Race tritt nur eingeloggt (API-Latenz) auf, Absicherung ausschließlich über Unit-Tests mit Deferred-Gates.
+  `OpenEntryCloseService` hat einen eigenen Lock (kein globaler Mutex).
+- **Tests:** `dashboard.busy.spec.ts` (W1-W17), `shared/testing/dashboard-world-fake.ts` (Welt mit Hold/Release/Fail je Zugriffsart,
+  gemeinsames Log; ohne `vi`, `tsconfig.app.json` kompiliert es mit), `dashboard.spec.ts` (W19), `time-input.spec.ts`. Specs ohne
+  echten Flush: nur Deferred-Gates und `advanceTimersByTimeAsync`; ein Test mit offenem Gate gibt es vor Testende frei
+  (`afterEach`: `releaseAll()`, dann `vi.getTimerCount()` == 0).
 
 ### Dark Mode
 

@@ -615,6 +615,27 @@ describe('DashboardService Reentranz-Sperre (#426)', () => {
       expect(h.world.entryWrites().length).toBe(2);
     });
 
+    it('W15d Eine Folgeaktion direkt nach dem Ende der laufenden Aktion drängt sich nicht vor den wartenden Guard-Stop', async () => {
+      const h = setup();
+      await settle();
+      h.world.hold('saveEntry');
+
+      const stop = h.svc.startOrStopTimer();
+      await settle();
+      const sw = settled(h.svc.stopRunningTimerForSwitch(A));
+      await settle();
+      let follow: Promise<unknown> | undefined;
+      // Im selben Microtask-Schub wie das Ende der Aktion: kein `await` zwischen Warteschleife und Sperre im Guard-Stop.
+      void stop.then(() => { follow = h.svc.startOrStopBreak(); });
+
+      h.world.releaseAll();
+      await settle();
+      expect(follow).toBeDefined();
+      expect(await follow).toBeUndefined(); // verworfen: der Guard-Stop hält die Sperre
+      expect(sw.value).toBe(true);
+      expect(h.svc.isTimerRunning()).toBe(false);
+    });
+
     it('W15c Profilwechsel während des Wartens: false, kein Hängen, keine Writes in B', async () => {
       const h = setup();
       await settle();
