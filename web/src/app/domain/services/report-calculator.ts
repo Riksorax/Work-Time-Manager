@@ -23,10 +23,6 @@ function keyToDate(key: string): Date {
   return new Date(y, m - 1, d);
 }
 
-function startOfDay(d: Date): Date {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-}
-
 export function isSameDayRc(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear()
     && a.getMonth() === b.getMonth()
