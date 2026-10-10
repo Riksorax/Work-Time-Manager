@@ -23,6 +23,7 @@ import { RestartSessionDialogComponent, RestartSessionDialogResult } from './com
 import { AdjustOvertimeDialogComponent, AdjustOvertimeDialogResult } from '../settings/components/adjust-overtime-dialog/adjust-overtime-dialog';
 import { TimeInputComponent } from '../../shared/components/time-input/time-input';
 import { Break } from '../../shared/models/index';
+import { entryDay } from '../../shared/utils/entry-day.util';
 import { LanguageService } from '../../core/services/language';
 import { formatEntryDay, formatHm } from '../../domain/utils/open-entry.utils';
 import { OpenEntryBannerComponent } from '../../shared/components/open-entry-banner/open-entry-banner';
@@ -226,7 +227,7 @@ export class DashboardComponent {
     const entry = this.svc.workEntry();
     const ref = this.dialog.open<EditBreakDialogComponent, EditBreakDialogData, EditBreakDialogResult>(
       EditBreakDialogComponent,
-      { data: { break: b, entryDate: entry.date } }
+      { data: { break: b, entryDate: entryDay(entry) } }
     );
     ref.afterClosed().subscribe(async result => {
       if (result) await this.guarded(() => this.svc.updateBreak(result.updated));

@@ -1,5 +1,6 @@
 import { WorkEntry } from '../../shared/models';
 import { getIsoWeekBounds } from '../../shared/utils/iso-week.util';
+import { entryDay, entryDayKey } from '../../shared/utils/entry-day.util';
 
 /** ISO-Wochentag (1 = Montag, 7 = Sonntag) für ein Datum. */
 function isoWeekday(d: Date): number {
@@ -18,7 +19,7 @@ export function getEffectiveDailyTarget(
 export function getEffectiveWorkDays(entries: WorkEntry[], workdays: number[]): number {
   const uniqueDays = new Map<string, Date>();
   for (const e of entries) {
-    if (e.workStart) uniqueDays.set(toDateKey(e.date), e.date);
+    if (e.workStart) uniqueDays.set(entryDayKey(e), entryDay(e));
   }
   return [...uniqueDays.values()].filter(d => workdays.includes(isoWeekday(d))).length;
 }
@@ -27,7 +28,7 @@ export function getWeekEntriesForDate(date: Date, monthlyEntries: WorkEntry[]): 
   const { start: startOfWeek, end: endOfWeek } = getIsoWeekBounds(date);
 
   return monthlyEntries.filter(e => {
-    const ed = startOfDay(e.date);
+    const ed = entryDay(e);
     return ed >= startOfWeek && ed <= endOfWeek;
   });
 }
@@ -45,14 +46,6 @@ export function calculateInitialOvertime(
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
-
-function toDateKey(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-function startOfDay(d: Date): Date {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-}
 
 export function isSameDay(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear()

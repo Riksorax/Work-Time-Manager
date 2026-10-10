@@ -8,7 +8,8 @@ import { AuthService }      from '../../core/auth/auth';
 import { TodayService }     from '../../core/services/today';
 import { ProfileSwitchRequest, WorkProfileService } from '../../core/services/work-profile';
 import { ProfileSwitchConfirmService } from '../../shared/components/work-profile-switcher/profile-switch-confirm';
-import { GermanHoliday, getGermanHolidayIds, toDateKey } from '../../shared/utils/german-holidays.util';
+import { GermanHoliday, getGermanHolidayIds } from '../../shared/utils/german-holidays.util';
+import { entryDay, entryDayKey } from '../../shared/utils/entry-day.util';
 import { DEFAULT_SETTINGS, WorkEntry, WorkEntryType, Break } from '../../shared/models';
 import { calculateAndApplyBreaks } from '../../domain/services/break-calculator';
 import { nowToMinute, roundToMinute, roundMsToMinute } from '../../shared/utils/time-precision.util';
@@ -292,13 +293,13 @@ export class DashboardService {
   private _isCurrentDay(): boolean {
     const e = this._s().workEntry;
     if (!!e.workStart && !e.workEnd) return true;
-    return toDateKey(e.date) === this.todayService.today();
+    return entryDayKey(e) === this.todayService.today();
   }
 
   private _onDayChange(day: string): void {
     const e = this._s().workEntry;
     if (!!e.workStart && !e.workEnd) return; // laufender Timer: nichts anfassen
-    if (toDateKey(e.date) === day && this._s().status === 'ready') return;
+    if (entryDayKey(e) === day && this._s().status === 'ready') return;
     void this._init(this._uid(), { dayChange: true });
   }
 
@@ -357,7 +358,7 @@ export class DashboardService {
       // 4. Effektives Tagessoll berechnen
       const weeklyMs          = settings.weeklyTargetHours * 60 * 60 * 1000;
       const regularDailyMs    = settings.workdays.length > 0 ? roundMsToMinute(weeklyMs / settings.workdays.length) : 0;
-      const targetDailyMs     = getEffectiveDailyTarget(workEntry.date, settings.workdays, regularDailyMs);
+      const targetDailyMs     = getEffectiveDailyTarget(entryDay(workEntry), settings.workdays, regularDailyMs);
       const isExtraDay        = targetDailyMs === 0;
 
       // 6. Initiales Daily Overtime berechnen
@@ -532,7 +533,7 @@ export class DashboardService {
     if (!opts.reinitAfterMidnight || !this._isCurrent(ctx)) return;
     // Über Mitternacht gelaufen: der Eintrag gehört zum Starttag, die Anzeige wechselt auf den neuen Tag.
     this.todayService.refresh();
-    if (toDateKey(updated.date) !== this.todayService.today()) {
+    if (entryDayKey(updated) !== this.todayService.today()) {
       await this._init(this._uid(), { dayChange: true });
     }
   }
@@ -640,7 +641,7 @@ export class DashboardService {
     if (!(await this._ensureCurrentDay())) return;
     const e = this._s().workEntry;
     const ctx = this._ctx();
-    let updated: WorkEntry = { ...e, workStart: this._parseTime(e.date, timeStr) };
+    let updated: WorkEntry = { ...e, workStart: this._parseTime(entryDay(e), timeStr) };
     const hasRunning = updated.breaks.some(b => !b.end);
     if (updated.workStart && updated.workEnd && !hasRunning && updated.type === WorkEntryType.Work) {
       updated = calculateAndApplyBreaks(updated);
@@ -658,7 +659,7 @@ export class DashboardService {
     if (!(await this._ensureCurrentDay())) return;
     const e = this._s().workEntry;
     const ctx = this._ctx();
-    let updated: WorkEntry = { ...e, workEnd: this._parseTime(e.date, timeStr) };
+    let updated: WorkEntry = { ...e, workEnd: this._parseTime(entryDay(e), timeStr) };
     const hasRunning = updated.breaks.some(b => !b.end);
     if (updated.workStart && updated.workEnd && !hasRunning && updated.type === WorkEntryType.Work) {
       updated = calculateAndApplyBreaks(updated);
@@ -790,7 +791,7 @@ export class DashboardService {
     if (!e.workStart) return;
 
     const settings  = this._currentSettings();
-    const targetMs  = this._targetDailyMs(settings, e.date);
+    const targetMs  = this._targetDailyMs(settings, entryDay(e));
     const manualMs  = (e.manualOvertimeMinutes ?? 0) * 60000;
     const end       = e.workEnd ?? new Date(); // gestoppt: workEnd, nie "jetzt" (#390)
     const breakMs   = this._totalBreakMs(e.breaks, end);
@@ -848,7 +849,7 @@ export class DashboardService {
       const breaks = this._totalBreakMs(entry.breaks, entry.workEnd);
       actualWorkMs = grossMs - breaks;
       const settings  = this._currentSettings();
-      const targetMs  = this._targetDailyMs(settings, entry.date);
+      const targetMs  = this._targetDailyMs(settings, entryDay(entry));
       const manualMs  = (entry.manualOvertimeMinutes ?? 0) * 60000;
       dailyMs    = actualWorkMs - targetMs + manualMs;
       const base = this._s().initialOvertimeMs ?? 0;
@@ -862,7 +863,7 @@ export class DashboardService {
       grossMs:        grossMs ?? s.grossMs,
       dailyOvertimeMs: dailyMs,
       totalOvertimeMs: totalMs,
-      isExtraDay:     dailyMs !== null ? this._targetDailyMs(this._currentSettings(), entry.date) === 0 : s.isExtraDay,
+      isExtraDay:     dailyMs !== null ? this._targetDailyMs(this._currentSettings(), entryDay(entry)) === 0 : s.isExtraDay,
     }));
 
     if (save) {

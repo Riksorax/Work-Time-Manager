@@ -5,6 +5,7 @@ import { environment } from '../../../environments/environment';
 import { Break, Bundesland, UserSettings, WorkEntry, WorkEntryType, WorkProfile } from '../../shared/models';
 import { YearlyLeaveReport } from '../../domain/models/leave.models';
 import { DailyStat, MonthlyReport, WeeklyReport } from '../../domain/models/reports.models';
+import { calendarDateFromUtcMidnight, parseEntryId } from '../../shared/utils/entry-day.util';
 import {
   roundToMinute,
   roundToMinuteOrUndefined,
@@ -165,18 +166,19 @@ export class ApiClient {
     );
   }
 
+  // Berichts-Tage kommen als UTC-Mitternacht eines Kalendertags: als lokaler Kalendertag lesen (#407).
   getWeeklyReport(year: number, month: number, day: number, profileId?: string): Observable<WeeklyReport> {
     return this.http.get<WeeklyReportDto>(`${this.base}/reports/weekly/${year}/${month}/${day}`, { params: this._params(profileId) }).pipe(
       map(dto => ({
         weekNumber: dto.weekNumber,
-        start: new Date(dto.start),
-        end: new Date(dto.end),
+        start: calendarDateFromUtcMidnight(new Date(dto.start)),
+        end: calendarDateFromUtcMidnight(new Date(dto.end)),
         totalWorked: dto.totalWorkedMs,
         totalBreaks: dto.totalBreaksMs,
         workDays: dto.workDays,
         avgPerDay: dto.avgPerDayMs,
         overtime: dto.overtimeMs,
-        days: dto.days.map(d => ({ date: new Date(d.date), worked: d.workedMs })),
+        days: dto.days.map(d => ({ date: calendarDateFromUtcMidnight(new Date(d.date)), worked: d.workedMs })),
       }))
     );
   }
@@ -184,7 +186,7 @@ export class ApiClient {
   getMonthlyReport(year: number, month: number, profileId?: string): Observable<MonthlyReport> {
     return this.http.get<MonthlyReportDto>(`${this.base}/reports/monthly/${year}/${month}`, { params: this._params(profileId) }).pipe(
       map(dto => ({
-        month: new Date(dto.month),
+        month: calendarDateFromUtcMidnight(new Date(dto.month)),
         totalWorked: dto.totalWorkedMs,
         totalBreaks: dto.totalBreaksMs,
         workDays: dto.workDays,
@@ -193,7 +195,7 @@ export class ApiClient {
         monthlyOvertime: dto.monthlyOvertimeMs,
         totalOvertime: dto.totalOvertimeMs,
         weeks: dto.weeks.map(w => ({ weekNumber: w.weekNumber, totalWorked: w.totalWorkedMs })),
-        days: dto.days.map(d => ({ date: new Date(d.date), worked: d.workedMs })),
+        days: dto.days.map(d => ({ date: calendarDateFromUtcMidnight(new Date(d.date)), worked: d.workedMs })),
       }))
     );
   }
@@ -234,7 +236,8 @@ export class ApiClient {
   private fromDto(dto: WorkEntryDto): WorkEntry {
     return {
       id: dto.id,
-      date: new Date(dto.date),
+      // Kalendertag aus der id, nie aus den lokalen Feldern der UTC-Mitternacht (#407): sonst westlich von UTC der Vortag.
+      date: parseEntryId(dto.id) ?? calendarDateFromUtcMidnight(new Date(dto.date)),
       workStart: dto.workStart ? roundToMinute(new Date(dto.workStart)) : undefined,
       workEnd: dto.workEnd ? roundToMinute(new Date(dto.workEnd)) : undefined,
       type: (dto.type as WorkEntryType) ?? WorkEntryType.Work,

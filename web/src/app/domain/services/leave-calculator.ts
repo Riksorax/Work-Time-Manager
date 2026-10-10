@@ -1,5 +1,6 @@
 import { WorkEntry, WorkEntryType } from '../../shared/models/index';
 import { YearlyLeaveReport } from '../models/leave.models';
+import { entryDay } from '../../shared/utils/entry-day.util';
 
 /**
  * Pure Jahresübersicht für Urlaub/Krankheit (anonyme Nutzer, Parität zum Backend).
@@ -13,7 +14,7 @@ export function calculateYearlyLeave(
   let vacationDaysTaken = 0;
   let sickDays = 0;
   for (const e of entries) {
-    if (e.date.getFullYear() !== year) continue;
+    if (entryDay(e).getFullYear() !== year) continue;
     if (e.type === WorkEntryType.Vacation) vacationDaysTaken++;
     else if (e.type === WorkEntryType.Sick) sickDays++;
   }

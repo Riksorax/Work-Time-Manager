@@ -103,6 +103,14 @@ jobs:
       - name: Test (TZ=Europe/Berlin)
         run: TZ=Europe/Berlin npm test -- --watch=false
 
+      # Westlich von UTC fällt UTC-Mitternacht auf den Vortag (#407); nur die Zonen-Regressionstests (*.tz.spec.ts).
+      # Ohne Treffer bricht der Builder mit Fehler ab (kein stiller Vollauf, kein grüner Leerlauf).
+      - name: Test (TZ=America/Los_Angeles, Pacific/Auckland)
+        run: |
+          for tz in America/Los_Angeles Pacific/Auckland; do
+            TZ=$tz npm test -- --watch=false --include 'src/**/*.tz.spec.ts'
+          done
+
       - name: Build check
         run: |
           rm -rf .angular/cache
