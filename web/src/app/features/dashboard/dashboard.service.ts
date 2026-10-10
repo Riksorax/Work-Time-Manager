@@ -17,12 +17,15 @@ import {
   calculateInitialOvertime,
 } from '../../domain/utils/overtime.utils';
 import { canResumeOpenEntry, localDateFromEntryId } from '../../domain/utils/open-entry.utils';
+import { withTimeout } from '../../shared/utils/promise-timeout.util';
+import { DashboardSaveError } from './dashboard-save-error';
 
 /**
  * Kontext einer Schreibaktion (#380): Profil und `_init`-Generation zum Aktionsbeginn. Alle Writes der Aktion gehen
  * explizit an `pid` (nie „das gerade aktive Profil"); nach jedem `await` verhindert `gen` zustandsändernde Folgeschritte.
+ * `beforeState` (#426): Zustand vor der Aktion, Grundlage für Rücknahme und Kompensation bei Speicherfehlern.
  */
-interface ActionCtx { pid: string; gen: number }
+interface ActionCtx { pid: string; gen: number; beforeState: DashboardState }
 
 interface DashboardState {
   status: 'loading' | 'ready';
@@ -117,6 +120,12 @@ export class DashboardService {
   readonly expectedEndTime      = computed(() => this._s().expectedEndTime);
   readonly expectedEndTotalZero = computed(() => this._s().expectedEndTotalZero);
   readonly breaks          = computed(() => this._s().workEntry.breaks);
+  /**
+   * Eine Schreibaktion läuft (Reentranz-Sperre #426): Spiegel von `_busy` für die UI. Bewusst nicht in `DashboardState`:
+   * `_initInner` setzt den Zustand zurück, ein Reinit mitten in der Aktion darf die UI nicht entsperren.
+   */
+  private readonly _saving     = signal(false);
+  readonly isSaving        = this._saving.asReadonly();
 
   /** Letzter `_initInner` ist fehlerfrei durchgelaufen (nach einem Fehler ist `status` ebenfalls `ready`, #385). */
   private readonly _loadOk = signal(false);
@@ -140,6 +149,16 @@ export class DashboardService {
   private _initRun: Promise<void> | null = null;
   /** Profil, dessen Daten gerade im Dashboard stehen (#380). Wird synchron zu Beginn jedes `_init` gesetzt. */
   private _loadedProfileId = '';
+  /** Reentranz-Sperre (#426): synchron lesbare Wahrheit; `_saving` spiegelt sie für die UI. */
+  private _busy = false;
+  /** Besitz der Sperre: nur die Aktion mit dem aktuellen Token gibt sie frei (Profilwechsel setzt ein neues). */
+  private _actionToken: object = {};
+  /** Wird aufgelöst (nie rejected), wenn die laufende Aktion fertig ist; `stopRunningTimerForSwitch` wartet darauf. */
+  private _actionDone: { promise: Promise<void>; resolve: () => void } | null = null;
+  /** Laufender Autosave (nie rejected). Eine Aktion wartet darauf, bevor sie schreibt, ein Autosave startet nie während einer Aktion. */
+  private _autoSaveRun: Promise<void> | null = null;
+  /** Obergrenze je Write-Block. Literal und kein importierter Wert (Vite-SSR-Falle, web/CLAUDE.md „Test-Falle“). */
+  private readonly _writeTimeoutMs = 30_000;
   /** Letzter Wert, den `activeProfileId$` geliefert hat (das Observable hinkt dem Signal hinterher). */
   private _lastObservedProfileId: string | undefined;
   /** Der letzte `_init` lief im Lag-Fenster (Signal schon neu, Observable noch alt): Einstellungen evtl. vom alten Profil. */
@@ -199,9 +218,49 @@ export class DashboardService {
     void this._init(this._uid());
   }
 
+  /**
+   * Serialisiert Schreibaktionen (#426, Web-Pendant zu Mobile #413): läuft schon eine, wird der Aufruf still verworfen
+   * (`discarded`, kein Fehler, kein Zustand). Prüfen und Setzen der Sperre geschehen synchron, vor dem ersten `await`.
+   * Fehler des Bodys erreichen den Aufrufer unverändert; die Sperre ist danach frei.
+   */
+  private async _runAction<T>(body: () => Promise<T>, discarded: T): Promise<T> {
+    if (this._busy) return discarded;
+    const token = {};
+    this._actionToken = token;
+    this._busy = true;
+    let resolve!: () => void;
+    const done = { promise: new Promise<void>(r => { resolve = r; }), resolve };
+    this._actionDone = done;
+    this._saving.set(true);
+    try {
+      // Ein laufender Autosave schreibt zuerst zu Ende (durch seinen Timeout beschränkt): er überholt den frischen
+      // Eintrag der Aktion nie. Kein `await` davor — Prüfung und Setzen der Sperre bleiben synchron.
+      if (this._autoSaveRun) await this._autoSaveRun;
+      return await body();
+    } finally {
+      // Nur freigeben, wenn die Sperre noch dieser Aktion gehört (ein Profilwechsel hat sie sonst schon ersetzt).
+      if (this._actionToken === token) {
+        this._busy = false;
+        this._actionDone = null;
+        this._saving.set(false);
+      }
+      done.resolve();
+    }
+  }
+
+  private _resetActionLock(): void {
+    this._actionToken = {};
+    this._busy = false;
+    this._autoSaveRun = null;
+    const done = this._actionDone;
+    this._actionDone = null;
+    done?.resolve();
+    this._saving.set(false);
+  }
+
   /** Kontext (Profil + Generation) für eine Schreibaktion; synchron zusammen mit dem gelesenen Eintrag erfassen. */
   private _ctx(): ActionCtx {
-    return { pid: this._loadedProfileId, gen: this._initGen };
+    return { pid: this._loadedProfileId, gen: this._initGen, beforeState: this._s() };
   }
 
   private _uid(): string | null {
@@ -260,6 +319,9 @@ export class DashboardService {
     // entsteht. Ein Profilwechsel ist nie ein stiller Tageswechsel (kein dayChange-Pfad, Ladezustand).
     const pid = this.workProfile.activeProfileId();
     const profileChanged = pid !== this._loadedProfileId;
+    // Echter Profilwechsel: die Sperre gehört dem alten Profil, ein Tap im neuen darf nicht verworfen werden, nur weil
+    // dort ein Write hängt. Tageswechsel/Login/Retro-Close/Resume lösen sie nie (Aktion schreibt im Profil zu Ende).
+    if (profileChanged) this._resetActionLock();
     this._loadedProfileId = pid;
     this._settingsMaybeStale = this._lastObservedProfileId !== undefined && this._lastObservedProfileId !== pid;
     const dayChange = !!opts.dayChange && !profileChanged;
@@ -378,8 +440,12 @@ export class DashboardService {
    * Eintrag inzwischen beendet/älter als 24 h/nicht lesbar, überholt (Profil-/Tages-/Login-Wechsel).
    */
   async resumePastEntry(entry: WorkEntry, pid: string): Promise<boolean> {
+    // Läuft eine Schreibaktion (#426), wird nicht gepinnt: ein `_init` würde ihren Zustand zurücksetzen. Zweimal geprüft:
+    // sofort (kein Warten auf einen Ladelauf) und nach der Ladelücke (die Aktion kann in der Lücke begonnen haben).
+    if (this._busy) return false;
     // Auf laufende Ladeläufe warten; danach läuft Prüfung bis `_init` synchron (keine Lücke bis `_initGen`++).
     while (this._initRun !== null) await this._initRun;
+    if (this._busy) return false;
     this.todayService.refresh();
     if (pid !== this._loadedProfileId || pid !== this.workProfile.activeProfileId()) return false;
     if (!this.todayIsEmpty()) return false;
@@ -423,7 +489,11 @@ export class DashboardService {
   }
 
   // ─── Flow 2+3: Timer starten / stoppen ─────────────────────────────────────
-  async startOrStopTimer(): Promise<'restart-dialog' | void> {
+  startOrStopTimer(): Promise<'restart-dialog' | void> {
+    return this._runAction(() => this._startOrStopTimerBody(), undefined);
+  }
+
+  private async _startOrStopTimerBody(): Promise<'restart-dialog' | void> {
     if (!(await this._ensureCurrentDay())) return;
     const e = this._s().workEntry;
     const ctx = this._ctx();
@@ -444,7 +514,8 @@ export class DashboardService {
   // ─── Stop-Logik (Stop-Button und Profilwechsel, #380) ──────────────────────────────────────────────────
   /**
    * Beendet den laufenden Timer: Pflichtpausen, Eintrag und Saldo werden in das festgehaltene Profil geschrieben.
-   * Wirft bei Speicherfehlern (der Zustand ist dann schon gesetzt, Rollback macht der Aufrufer).
+   * Wirft bei Speicherfehlern einen `DashboardSaveError`; der Zustand ist dann bereits zurückgenommen (und bei einem
+   * Saldo-Fehler der Eintrag kompensiert), siehe `_recalculateState`.
    * `reinitAfterMidnight`: nach einem Lauf über Mitternacht auf den neuen Tag umschalten (Stop-Button); der Profilwechsel
    * lädt ohnehin neu und braucht das nicht.
    */
@@ -455,9 +526,9 @@ export class DashboardService {
     if (!hasRunningBreak && updated.type === WorkEntryType.Work) {
       updated = calculateAndApplyBreaks(updated);
     }
-    const totalMs = await this._recalculateState(updated, true, ctx);
-    // Saldo mit dem VOR dem ersten await eingefrorenen Wert und dem festgehaltenen Profil (auch nach Überholung).
-    await this._saveOvertime(ctx.pid, totalMs);
+    // Eintrag und Saldo (einmal, #426: der frühere zweite Saldo-Write mit demselben absoluten Wert entfällt) schreibt
+    // `_recalculateState` mit dem VOR dem ersten await eingefrorenen Wert und dem festgehaltenen Profil (auch nach Überholung).
+    await this._recalculateState(updated, true, ctx);
     if (!opts.reinitAfterMidnight || !this._isCurrent(ctx)) return;
     // Über Mitternacht gelaufen: der Eintrag gehört zum Starttag, die Anzeige wechselt auf den neuen Tag.
     this.todayService.refresh();
@@ -487,6 +558,13 @@ export class DashboardService {
   async stopRunningTimerForSwitch(from: string): Promise<boolean> {
     // Lädt gerade (Reload-Wechsel): erst abwarten, nie auf dem Lade-Platzhalter arbeiten.
     while (this._s().status === 'loading' && this._initRun !== null) await this._initRun;
+    // Läuft eine Schreibaktion, deren Ende abwarten (nie rejected) und danach mit frischem Zustand stoppen (#426).
+    // Zwischen dieser Schleife und `_runAction` darf KEIN `await` stehen: sonst könnte ein zweiter Stop dazwischenfahren.
+    while (this._actionDone) await this._actionDone.promise;
+    return this._runAction(() => this._stopRunningTimerForSwitchBody(from), false);
+  }
+
+  private async _stopRunningTimerForSwitchBody(from: string): Promise<boolean> {
     // Der Dialog war offen: das Profil kann sich nicht-interaktiv geändert haben.
     if (this._loadedProfileId !== from || this.workProfile.activeProfileId() !== from) return false;
     // Der Timer kann in der Zwischenzeit manuell gestoppt worden sein.
@@ -507,7 +585,11 @@ export class DashboardService {
   }
 
   // ─── Flow 5: Restart Session ────────────────────────────────────────────────
-  async startNewSession(keepBreaks: boolean): Promise<void> {
+  startNewSession(keepBreaks: boolean): Promise<void> {
+    return this._runAction(() => this._startNewSessionBody(keepBreaks), undefined);
+  }
+
+  private async _startNewSessionBody(keepBreaks: boolean): Promise<void> {
     if (!(await this._ensureCurrentDay())) return;
     const e = this._s().workEntry;
     const ctx = this._ctx();
@@ -523,7 +605,11 @@ export class DashboardService {
   }
 
   // ─── Flow 6: Pause starten/stoppen ──────────────────────────────────────────
-  async startOrStopBreak(): Promise<void> {
+  startOrStopBreak(): Promise<void> {
+    return this._runAction(() => this._startOrStopBreakBody(), undefined);
+  }
+
+  private async _startOrStopBreakBody(): Promise<void> {
     if (!(await this._ensureCurrentDay())) return;
     const e = this._s().workEntry;
     const ctx = this._ctx();
@@ -546,7 +632,11 @@ export class DashboardService {
   }
 
   // ─── Flow 7: Manuelle Startzeit ──────────────────────────────────────────────
-  async setManualStartTime(timeStr: string): Promise<void> {
+  setManualStartTime(timeStr: string): Promise<void> {
+    return this._runAction(() => this._setManualStartTimeBody(timeStr), undefined);
+  }
+
+  private async _setManualStartTimeBody(timeStr: string): Promise<void> {
     if (!(await this._ensureCurrentDay())) return;
     const e = this._s().workEntry;
     const ctx = this._ctx();
@@ -560,7 +650,11 @@ export class DashboardService {
   }
 
   // ─── Flow 8: Manuelle Endzeit ─────────────────────────────────────────────
-  async setManualEndTime(timeStr: string): Promise<void> {
+  setManualEndTime(timeStr: string): Promise<void> {
+    return this._runAction(() => this._setManualEndTimeBody(timeStr), undefined);
+  }
+
+  private async _setManualEndTimeBody(timeStr: string): Promise<void> {
     if (!(await this._ensureCurrentDay())) return;
     const e = this._s().workEntry;
     const ctx = this._ctx();
@@ -572,7 +666,11 @@ export class DashboardService {
     await this._recalculateState(updated, true, ctx);
   }
 
-  async clearEndTime(): Promise<void> {
+  clearEndTime(): Promise<void> {
+    return this._runAction(() => this._clearEndTimeBody(), undefined);
+  }
+
+  private async _clearEndTimeBody(): Promise<void> {
     if (!(await this._ensureCurrentDay())) return;
     const e = this._s().workEntry;
     const ctx = this._ctx();
@@ -582,7 +680,11 @@ export class DashboardService {
   }
 
   // ─── Flow 9: Pause bearbeiten ─────────────────────────────────────────────
-  async updateBreak(updated: Break): Promise<void> {
+  updateBreak(updated: Break): Promise<void> {
+    return this._runAction(() => this._updateBreakBody(updated), undefined);
+  }
+
+  private async _updateBreakBody(updated: Break): Promise<void> {
     if (!(await this._ensureCurrentDay())) return;
     const e = this._s().workEntry;
     const ctx = this._ctx();
@@ -596,7 +698,11 @@ export class DashboardService {
   }
 
   // ─── Flow 10: Pause löschen ───────────────────────────────────────────────
-  async deleteBreak(id: string): Promise<void> {
+  deleteBreak(id: string): Promise<void> {
+    return this._runAction(() => this._deleteBreakBody(id), undefined);
+  }
+
+  private async _deleteBreakBody(id: string): Promise<void> {
     if (!(await this._ensureCurrentDay())) return;
     const e = this._s().workEntry;
     const ctx = this._ctx();
@@ -637,9 +743,14 @@ export class DashboardService {
     const subscription = sub.subscribe(() => {
       this._tick();
       this._autoSaveTick++;
-      if (this._autoSaveTick >= 30) {
+      // Nie während einer Aktion oder eines laufenden Autosaves; der Zähler bleibt dann stehen (>= 30) und der nächste
+      // Tick versucht es erneut (kein 30-s-Loch).
+      if (this._autoSaveTick >= 30 && !this._busy && this._autoSaveRun === null) {
         this._autoSaveTick = 0;
-        void this._autoSave();
+        const run: Promise<void> = this._autoSave().finally(() => {
+          if (this._autoSaveRun === run) this._autoSaveRun = null;
+        });
+        this._autoSaveRun = run;
       }
     });
     this._timerUnsub = () => subscription.unsubscribe();
@@ -668,7 +779,9 @@ export class DashboardService {
     // Lag-Fenster eines Profilwechsels (Signal neu, Reinit noch nicht gelaufen) gehört der Eintrag noch dorthin.
     const entry = this._s().workEntry;
     if (!entry.workStart) return;
-    try { await this.workSvc.saveEntry(entry, this._loadedProfileId); } catch { /* silent */ }
+    try {
+      await withTimeout(this.workSvc.saveEntry(entry, this._loadedProfileId), this._writeTimeoutMs);
+    } catch { /* silent */ }
   }
 
   // ─── Overtime Calculation ─────────────────────────────────────────────────
@@ -754,19 +867,75 @@ export class DashboardService {
 
     if (save) {
       const pid = ctx?.pid ?? this._loadedProfileId;
-      await this.workSvc.saveEntry(entry, pid);
-      if (entry.workEnd && actualWorkMs !== null && totalMs !== null) {
-        await this._saveOvertime(pid, totalMs);
+      const hasSaldoBlock = !!entry.workEnd && actualWorkMs !== null && totalMs !== null;
+      if (!hasSaldoBlock || !ctx) {
+        // Aktionen ohne Saldo-Block (Start, Pause, Ende löschen, Neue Session): optimistisch, ein Fehler wird unverändert
+        // weitergereicht (kein Rollback, kein DashboardSaveError).
+        await withTimeout(this.workSvc.saveEntry(entry, pid), this._writeTimeoutMs);
+      } else {
+        // Aktion mit Saldo-Block: der Zustand ist optimistisch gesetzt; scheitert ein Write, wird er zurückgenommen.
+        try {
+          await withTimeout(this.workSvc.saveEntry(entry, pid), this._writeTimeoutMs);
+        } catch (e) {
+          // Nichts geschrieben: kein Saldo, keine Kompensation.
+          this._rollback(ctx);
+          throw new DashboardSaveError(e);
+        }
+        try {
+          await this._saveOvertime(pid, totalMs);
+        } catch (e) {
+          // Eintrag liegt neu vor, der Saldo nicht: Anzeige zurück (synchron, vor dem nächsten await), dann den
+          // Eintrag best-effort auf den Vorzustand zurückschreiben (nie `lastUpdated`).
+          this._rollback(ctx);
+          await this._compensateEntry(ctx);
+          throw new DashboardSaveError(e);
+        }
       }
     }
     return totalMs;
   }
 
-  /** Schreibt den Saldo in das festgehaltene Profil, mit dem übergebenen (nicht nach einem `await` neu gelesenen) Wert. */
+  /**
+   * Nimmt den optimistisch gesetzten Zustand zurück (nur wenn die Aktion nicht überholt wurde: bei einem Profil-/Reinit-
+   * Wechsel gehört der Zustand schon dem neuen Lauf). Die Rechnung läuft gegen den aktuellen Einstellungs-Cache, ein
+   * laufender Eintrag bekommt seinen Timer zurück.
+   */
+  private _rollback(ctx: ActionCtx): void {
+    if (!this._isCurrent(ctx)) return;
+    this._s.set(ctx.beforeState);
+    this._recalculateOvertime();
+    this._startTimerIfNeeded();
+  }
+
+  /**
+   * Schreibt den Vorzustand des Eintrags best-effort zurück (30-s-Timeout, Fehler still: der Aufrufer meldet den
+   * ursprünglichen Saldo-Fehler). Läuft über `ctx.pid`, auch nach einem Profilwechsel. `lastUpdated` bleibt unberührt.
+   * Misslingt auch das (Doppelfehler), heilt bei einem laufenden Eintrag der Autosave, sonst die nächste Aktion.
+   */
+  private async _compensateEntry(ctx: ActionCtx): Promise<void> {
+    try {
+      await withTimeout(this.workSvc.saveEntry(ctx.beforeState.workEntry, ctx.pid), this._writeTimeoutMs);
+    } catch { /* best effort */ }
+  }
+
+  /**
+   * Schreibt den Saldo in das festgehaltene Profil, mit dem übergebenen (nicht nach einem `await` neu gelesenen) Wert.
+   * Saldo und `lastUpdated` sind EIN Write-Block mit 30-s-Timeout. Nach dem Timeout holt die weiterlaufende Schließung
+   * `saveLastUpdateDate` nicht mehr nach; ein bereits gesendeter Saldo ist nicht abbrechbar („unbekannter Ausgang“,
+   * Wiederholen überschreibt ihn, der Saldo ist absolut).
+   */
   private async _saveOvertime(pid: string, ms: number | null): Promise<void> {
     if (ms === null) return;
-    await this.overtimeSvc.saveOvertime(ms, pid);
-    await this.overtimeSvc.saveLastUpdateDate(new Date());
+    let timedOut = false;
+    try {
+      await withTimeout((async () => {
+        await this.overtimeSvc.saveOvertime(ms, pid);
+        if (!timedOut) await this.overtimeSvc.saveLastUpdateDate(new Date());
+      })(), this._writeTimeoutMs);
+    } catch (e) {
+      timedOut = true;
+      throw e;
+    }
   }
 
   /** Läuft noch derselbe Zustand wie zum Aktionsbeginn (kein Profil-/Reinit-Überholer)? */

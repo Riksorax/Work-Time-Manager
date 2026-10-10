@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import { Component, input, output, signal } from '@angular/core';
+import { Component, ErrorHandler, computed, input, output, signal } from '@angular/core';
+import { By } from '@angular/platform-browser';
 import { ComponentFixture } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -7,6 +8,7 @@ import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { Router } from '@angular/router';
 import { DashboardComponent } from './dashboard';
 import { DashboardService } from './dashboard.service';
+import { DashboardSaveError } from './dashboard-save-error';
 import { OpenEntryService } from './open-entry';
 import { createFakeOpenEntry, FakeOpenEntry } from '../../shared/testing/open-entry-fake';
 import { LiveAnnouncer } from '@angular/cdk/a11y';
@@ -16,7 +18,7 @@ import en from '../../../../public/i18n/en.json';
 import { GermanHoliday } from '../../shared/utils/german-holidays.util';
 import { HolidayBannerComponent } from '../../shared/components/holiday-banner/holiday-banner';
 import { TimeInputComponent } from '../../shared/components/time-input/time-input';
-import { WorkEntryType } from '../../shared/models/index';
+import { WorkEntry, WorkEntryType } from '../../shared/models/index';
 
 @Component({ selector: 'app-holiday-banner', template: '<div class="stub-banner">{{ holiday() }}</div>' })
 class HolidayBannerStub { readonly holiday = input.required<GermanHoliday>(); }
@@ -26,6 +28,7 @@ class TimeInputStub {
   readonly value = input<unknown>();
   readonly disabled = input<boolean>();
   readonly showClear = input<boolean>();
+  readonly settle = input<boolean>(false);
   readonly timeSelected = output<Date>();
 }
 
@@ -45,7 +48,7 @@ describe('DashboardComponent Feiertags-Banner', () => {
       providers: [
         provideTranslateService(),
         { provide: DashboardService, useValue: {
-          isLoading, holidayToday: holiday, isLoggedIn: signal(false),
+          isLoading, holidayToday: holiday, isLoggedIn: signal(false), isSaving: signal(false),
           netDuration: signal(0), grossDuration: signal(0), dailyOvertime: signal(0), totalOvertime: signal(0),
           isTimerRunning: signal(false), isBreakRunning: signal(false), expectedEndTime: signal(null),
           expectedEndTotalZero: signal(null), breaks: signal([]),
@@ -133,7 +136,7 @@ describe('DashboardComponent Banner für offene Einträge (#385)', () => {
       providers: [
         provideTranslateService({ fallbackLang: 'de' }),
         { provide: DashboardService, useValue: {
-          isLoading, holidayToday: holiday, isLoggedIn: signal(false), startOrStopTimer: startOrStop,
+          isLoading, holidayToday: holiday, isLoggedIn: signal(false), isSaving: signal(false), startOrStopTimer: startOrStop,
           netDuration: signal(0), grossDuration: signal(0), dailyOvertime: signal(0), totalOvertime: signal(0),
           isTimerRunning: signal(false), isBreakRunning: signal(false), expectedEndTime: signal(null),
           expectedEndTotalZero: signal(null), breaks: signal([]),
@@ -429,3 +432,319 @@ describe('DashboardComponent Banner für offene Einträge (#385)', () => {
   });
 });
 
+describe('DashboardComponent Sperre während einer Schreibaktion (#426, W19)', () => {
+  const isSaving = signal(false);
+  const runningEntry = (): WorkEntry => ({
+    id: '2026-10-05', date: new Date(2026, 9, 5), workStart: new Date(2026, 9, 5, 8, 0), breaks: [
+      { id: 'b1', name: 'Pause 1', start: new Date(2026, 9, 5, 9, 0), end: new Date(2026, 9, 5, 9, 15), isAutomatic: false },
+    ], isManuallyEntered: false, type: WorkEntryType.Work,
+  });
+  const workEntry = signal<WorkEntry>(runningEntry());
+  let fixture: ComponentFixture<DashboardComponent>;
+  let startOrStop: ReturnType<typeof vi.fn>;
+  let breakAction: ReturnType<typeof vi.fn>;
+  let dialogOpen: ReturnType<typeof vi.fn>;
+
+  const el = (): HTMLElement => fixture.nativeElement;
+  const mainBtn = (): HTMLButtonElement => el().querySelector<HTMLButtonElement>('.main-action-btn')!;
+  const breakBtn = (): HTMLButtonElement => el().querySelector<HTMLButtonElement>('.section-header button')!;
+  const editBtn = (): HTMLButtonElement => el().querySelector<HTMLButtonElement>('.break-actions button:not(.delete-btn)')!;
+  const deleteBtn = (): HTMLButtonElement => el().querySelector<HTMLButtonElement>('.break-actions .delete-btn')!;
+  const adjustBtn = (): HTMLButtonElement => el().querySelector<HTMLButtonElement>('.adjust-btn')!;
+  const timeInputs = (): TimeInputStub[] =>
+    fixture.debugElement.queryAll(By.directive(TimeInputStub)).map(d => d.componentInstance as TimeInputStub);
+  /** Interaktiv deaktiviert: `aria-disabled="true"`, aber kein `disabled`-Attribut (Fokus bleibt). */
+  const interactivelyDisabled = (b: HTMLElement): boolean => b.getAttribute('aria-disabled') === 'true' && !b.hasAttribute('disabled');
+  const inactive = (b: HTMLElement): boolean => b.getAttribute('aria-disabled') !== 'true' && !b.hasAttribute('disabled');
+
+  beforeEach(() => {
+    isSaving.set(false);
+    workEntry.set(runningEntry());
+    startOrStop = vi.fn().mockResolvedValue(undefined);
+    breakAction = vi.fn().mockResolvedValue(undefined);
+    dialogOpen = vi.fn(() => ({ afterClosed: () => of(undefined) }));
+    TestBed.overrideComponent(DashboardComponent, {
+      remove: { imports: [HolidayBannerComponent, TimeInputComponent] },
+      add: { imports: [HolidayBannerStub, TimeInputStub] },
+    });
+    TestBed.configureTestingModule({
+      providers: [
+        provideTranslateService({ fallbackLang: 'de' }),
+        { provide: DashboardService, useValue: {
+          isLoading: signal(false), holidayToday: signal(null), isLoggedIn: signal(false), isSaving,
+          startOrStopTimer: startOrStop, startOrStopBreak: breakAction,
+          netDuration: signal(0), grossDuration: signal(0), dailyOvertime: signal(0), totalOvertime: signal(0),
+          isTimerRunning: signal(true), isBreakRunning: signal(false), expectedEndTime: signal(null),
+          expectedEndTotalZero: signal(null), breaks: computed(() => workEntry().breaks), workEntry,
+        } },
+        { provide: OpenEntryService, useValue: createFakeOpenEntry() },
+        { provide: Router, useValue: { navigate: vi.fn() } },
+        { provide: MatDialog, useValue: { open: dialogOpen } },
+        { provide: MatSnackBar, useValue: { open: vi.fn() } },
+      ],
+    });
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('de', de);
+    translate.use('de');
+    fixture = TestBed.createComponent(DashboardComponent);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    fixture.nativeElement.remove();
+    TestBed.resetTestingModule();
+  });
+
+  it('ohne laufende Aktion ist alles aktiv', () => {
+    expect(inactive(mainBtn())).toBe(true);
+    expect(inactive(breakBtn())).toBe(true);
+    expect(editBtn().disabled).toBe(false);
+    expect(deleteBtn().disabled).toBe(false);
+    expect(adjustBtn().disabled).toBe(false);
+    expect(timeInputs().map(t => t.disabled())).toEqual([false, false]);
+  });
+
+  it('während einer Aktion sind Haupt- und Pausen-Button interaktiv deaktiviert, die übrigen Elemente echt deaktiviert', () => {
+    isSaving.set(true);
+    fixture.detectChanges();
+    expect(interactivelyDisabled(mainBtn())).toBe(true);
+    expect(interactivelyDisabled(breakBtn())).toBe(true);
+    expect(editBtn().disabled).toBe(true);
+    expect(deleteBtn().disabled).toBe(true);
+    expect(adjustBtn().disabled).toBe(true);
+    expect(timeInputs().map(t => t.disabled())).toEqual([true, true]);
+  });
+
+  it('beide Zeitfelder (Start, Ende) aktivieren das Entprellen (settle, Review-Fund zu #426)', () => {
+    expect(timeInputs().map(t => t.settle())).toEqual([true, true]);
+  });
+
+  it('das Ende-Zeitfeld bleibt ohne Startzeit auch ohne Aktion deaktiviert', () => {
+    workEntry.update(e => ({ ...e, workStart: undefined }));
+    fixture.detectChanges();
+    expect(timeInputs().map(t => t.disabled())).toEqual([false, true]);
+  });
+
+  it('aria-label und Text der Buttons ändern sich nicht (kein Spinner, keine neue Optik)', () => {
+    const snap = (): string[] => [mainBtn(), breakBtn(), editBtn(), deleteBtn(), adjustBtn()]
+      .map(b => `${b.getAttribute('aria-label')}|${b.textContent!.trim()}`);
+    const before = snap();
+    isSaving.set(true);
+    fixture.detectChanges();
+    expect(snap()).toEqual(before);
+  });
+
+  it('der Fokus bleibt auf dem Haupt-Button, wenn er interaktiv deaktiviert wird', () => {
+    mainBtn().focus();
+    expect(document.activeElement).toBe(mainBtn());
+    isSaving.set(true);
+    fixture.detectChanges();
+    expect(document.activeElement).toBe(mainBtn());
+  });
+
+  it('Klick auf den interaktiv deaktivierten Haupt-Button feuert den Handler (Material fängt Klicks bei <button> nicht ab); der Service verwirft', () => {
+    isSaving.set(true);
+    fixture.detectChanges();
+    mainBtn().click();
+    expect(startOrStop).toHaveBeenCalledTimes(1);
+    expect(dialogOpen).not.toHaveBeenCalled(); // verworfener Tap liefert undefined, kein Restart-Dialog
+  });
+
+  it('Klick auf das deaktivierte Bearbeiten-Icon öffnet keinen Dialog', () => {
+    isSaving.set(true);
+    fixture.detectChanges();
+    editBtn().click();
+    adjustBtn().click();
+    expect(dialogOpen).not.toHaveBeenCalled();
+  });
+
+  it('nach Ende der Aktion ist alles wieder aktiv', () => {
+    isSaving.set(true);
+    fixture.detectChanges();
+    isSaving.set(false);
+    fixture.detectChanges();
+    expect(inactive(mainBtn())).toBe(true);
+    expect(inactive(breakBtn())).toBe(true);
+    expect(editBtn().disabled).toBe(false);
+    expect(deleteBtn().disabled).toBe(false);
+    expect(adjustBtn().disabled).toBe(false);
+    expect(timeInputs().map(t => t.disabled())).toEqual([false, false]);
+    editBtn().click();
+    expect(dialogOpen).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('DashboardComponent Fehler beim Speichern (#426 B, S1-S5)', () => {
+  const workEntry = signal<WorkEntry>({
+    id: '2026-10-05', date: new Date(2026, 9, 5), workStart: new Date(2026, 9, 5, 8, 0), breaks: [
+      { id: 'b1', name: 'Pause 1', start: new Date(2026, 9, 5, 9, 0), end: new Date(2026, 9, 5, 9, 15), isAutomatic: false },
+    ], isManuallyEntered: false, type: WorkEntryType.Work,
+  });
+  type Mock = ReturnType<typeof vi.fn>;
+  let fixture: ComponentFixture<DashboardComponent>;
+  let component: DashboardComponent;
+  let translate: TranslateService;
+  let svc: Record<string, Mock>;
+  let snackOpen: Mock;
+  let handleError: Mock;
+  let dialogOpen: Mock;
+  let dialogResult: unknown;
+
+  const cause = new Error('Saldo kaputt');
+  const saveError = (): DashboardSaveError => new DashboardSaveError(cause);
+  // Nur Microtasks, kein `setTimeout` (fremder Fake-Timer im Vollauf, #392).
+  const flush = async (): Promise<void> => { for (let i = 0; i < 20; i++) await Promise.resolve(); };
+  const el = (): HTMLElement => fixture.nativeElement;
+  const mainBtn = (): HTMLButtonElement => el().querySelector<HTMLButtonElement>('.main-action-btn')!;
+  const breakBtn = (): HTMLButtonElement => el().querySelector<HTMLButtonElement>('.section-header button')!;
+  const editBtn = (): HTMLButtonElement => el().querySelector<HTMLButtonElement>('.break-actions button:not(.delete-btn)')!;
+  const deleteBtn = (): HTMLButtonElement => el().querySelector<HTMLButtonElement>('.break-actions .delete-btn')!;
+
+  beforeEach(() => {
+    dialogResult = undefined;
+    svc = {
+      startOrStopTimer: vi.fn().mockResolvedValue(undefined),
+      startNewSession: vi.fn().mockResolvedValue(undefined),
+      startOrStopBreak: vi.fn().mockResolvedValue(undefined),
+      setManualStartTime: vi.fn().mockResolvedValue(undefined),
+      setManualEndTime: vi.fn().mockResolvedValue(undefined),
+      clearEndTime: vi.fn().mockResolvedValue(undefined),
+      updateBreak: vi.fn().mockResolvedValue(undefined),
+      deleteBreak: vi.fn().mockResolvedValue(undefined),
+      stopRunningTimerForSwitch: vi.fn().mockResolvedValue(false),
+    };
+    snackOpen = vi.fn();
+    handleError = vi.fn();
+    dialogOpen = vi.fn(() => ({ afterClosed: () => of(dialogResult) }));
+    TestBed.overrideComponent(DashboardComponent, {
+      remove: { imports: [HolidayBannerComponent, TimeInputComponent] },
+      add: { imports: [HolidayBannerStub, TimeInputStub] },
+    });
+    TestBed.configureTestingModule({
+      providers: [
+        provideTranslateService({ fallbackLang: 'de' }),
+        { provide: DashboardService, useValue: {
+          ...svc,
+          isLoading: signal(false), holidayToday: signal(null), isLoggedIn: signal(false), isSaving: signal(false),
+          netDuration: signal(0), grossDuration: signal(0), dailyOvertime: signal(0), totalOvertime: signal(0),
+          isTimerRunning: signal(true), isBreakRunning: signal(false), expectedEndTime: signal(null),
+          expectedEndTotalZero: signal(null), breaks: computed(() => workEntry().breaks), workEntry,
+        } },
+        { provide: OpenEntryService, useValue: createFakeOpenEntry() },
+        { provide: Router, useValue: { navigate: vi.fn() } },
+        { provide: MatDialog, useValue: { open: dialogOpen } },
+        { provide: MatSnackBar, useValue: { open: snackOpen } },
+        { provide: ErrorHandler, useValue: { handleError } },
+      ],
+    });
+    translate = TestBed.inject(TranslateService);
+    translate.setTranslation('de', de);
+    translate.setTranslation('en', en);
+    translate.use('de');
+    fixture = TestBed.createComponent(DashboardComponent);
+    component = fixture.componentInstance;
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    fixture.nativeElement.remove();
+    TestBed.resetTestingModule();
+  });
+
+  it('S1 Snackbar bei DashboardSaveError: übersetzter Text (de/en), OK, 5 s; die Ursache geht an den ErrorHandler; der Handler rejected nicht', async () => {
+    svc['startOrStopTimer'].mockRejectedValue(saveError());
+    await expect(component.onMainAction()).resolves.toBeUndefined();
+    expect(snackOpen).toHaveBeenCalledTimes(1);
+    expect(snackOpen).toHaveBeenCalledWith(de.dashboard.saveError, 'OK', { duration: 5000 });
+    expect(handleError).toHaveBeenCalledTimes(1);
+    expect(handleError).toHaveBeenCalledWith(cause);
+
+    translate.use('en');
+    snackOpen.mockClear();
+    await component.onMainAction();
+    expect(snackOpen).toHaveBeenCalledWith(en.dashboard.saveError, 'OK', { duration: 5000 });
+  });
+
+  describe('S2 Keine Snackbar bei verworfenem Tap', () => {
+    it('undefined (verworfen): weder Snackbar noch ErrorHandler', async () => {
+      await component.onMainAction();
+      expect(snackOpen).not.toHaveBeenCalled();
+      expect(handleError).not.toHaveBeenCalled();
+      expect(dialogOpen).not.toHaveBeenCalled();
+    });
+
+    it("'restart-dialog': der Dialog öffnet wie bisher, keine Snackbar", async () => {
+      svc['startOrStopTimer'].mockResolvedValue('restart-dialog');
+      dialogResult = 'keep-breaks';
+      await component.onMainAction();
+      await flush();
+      expect(dialogOpen).toHaveBeenCalledTimes(1);
+      expect(svc['startNewSession']).toHaveBeenCalledWith(true);
+      expect(snackOpen).not.toHaveBeenCalled();
+    });
+  });
+
+  it('S3 Andere Fehler bleiben unverändert: keine Snackbar, der Handler rejected weiter, der ErrorHandler wird nicht zusätzlich gerufen', async () => {
+    const plain = new Error('Netz weg');
+    svc['startOrStopTimer'].mockRejectedValue(plain);
+    await expect(component.onMainAction()).rejects.toBe(plain);
+    svc['startOrStopBreak'].mockRejectedValue(plain);
+    await expect(component.onBreakAction()).rejects.toBe(plain);
+    expect(snackOpen).not.toHaveBeenCalled();
+    expect(handleError).not.toHaveBeenCalled();
+  });
+
+  describe('S4 Alle Handler melden einen DashboardSaveError genau einmal', () => {
+    const rows: Array<[string, string, (c: DashboardComponent, f: () => HTMLElement) => Promise<void> | void]> = [
+      ['Haupt-Button', 'startOrStopTimer', async (_c, f) => { f().querySelector<HTMLButtonElement>('.main-action-btn')!.click(); }],
+      ['Pausen-Button', 'startOrStopBreak', async (_c, f) => { f().querySelector<HTMLButtonElement>('.section-header button')!.click(); }],
+      ['Startzeit', 'setManualStartTime', c => c.onStartTimeSelected('07:30')],
+      ['Endzeit', 'setManualEndTime', c => c.onEndTimeSelected('17:00')],
+      ['Endzeit löschen', 'clearEndTime', c => c.onClearEndTime()],
+      ['Pause löschen', 'deleteBreak', async (_c, f) => { f().querySelector<HTMLButtonElement>('.break-actions .delete-btn')!.click(); }],
+      ['Pause bearbeiten (nach Dialog-Ergebnis)', 'updateBreak', async (_c, f) => {
+        dialogResult = { updated: { id: 'b1', name: 'x', start: new Date(2026, 9, 5, 9, 0), end: new Date(2026, 9, 5, 9, 20), isAutomatic: false } };
+        f().querySelector<HTMLButtonElement>('.break-actions button:not(.delete-btn)')!.click();
+      }],
+    ];
+
+    it.each(rows)('%s', async (_name, method, run) => {
+      svc[method].mockRejectedValue(saveError());
+      await run(component, el);
+      await flush();
+      expect(svc[method]).toHaveBeenCalledTimes(1);
+      expect(snackOpen).toHaveBeenCalledTimes(1);
+      expect(handleError).toHaveBeenCalledWith(cause);
+    });
+
+    it.each([['keep-breaks', true], ['discard-breaks', false]] as const)('Neue Session nach Restart-Dialog (%s)', async (choice, keep) => {
+      svc['startOrStopTimer'].mockResolvedValue('restart-dialog');
+      svc['startNewSession'].mockRejectedValue(saveError());
+      dialogResult = choice;
+      mainBtn().click();
+      await flush();
+      expect(svc['startNewSession']).toHaveBeenCalledWith(keep);
+      expect(snackOpen).toHaveBeenCalledTimes(1);
+      expect(handleError).toHaveBeenCalledWith(cause);
+    });
+  });
+
+  it('S5 Keine Doppelmeldung am Profilwechsel: ohne Rejection des Services zeigt die Komponente nichts', async () => {
+    // Guard-Pfad: stopRunningTimerForSwitch liefert false (Meldung kommt vom Wechsel-Dialog) und läuft nie über die Komponente.
+    const stopForSwitch = svc['stopRunningTimerForSwitch'] as unknown as (id: string) => Promise<boolean>;
+    expect(await stopForSwitch('default')).toBe(false);
+    await component.onMainAction();
+    await component.onBreakAction();
+    await component.onStartTimeSelected('07:30');
+    await component.onEndTimeSelected('17:00');
+    await component.onClearEndTime();
+    await component.onDeleteBreak('b1');
+    expect(snackOpen).not.toHaveBeenCalled();
+    expect(handleError).not.toHaveBeenCalled();
+    expect(breakBtn()).toBeTruthy();
+    expect(editBtn()).toBeTruthy();
+    expect(deleteBtn()).toBeTruthy();
+  });
+});
