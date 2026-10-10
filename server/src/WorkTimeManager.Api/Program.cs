@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.OpenApi;
+using WorkTimeManager.Api;
 using WorkTimeManager.Api.Endpoints;
 using WorkTimeManager.Api.Firestore;
 
@@ -12,6 +13,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.UseSentry(options =>
 {
     options.Dsn = builder.Configuration["Sentry:Dsn"] ?? "";
+    // Client-Abbrüche (Cancelled / OperationCanceled) sind keine Serverfehler (#438-#440).
+    options.SetBeforeSend(SentryEventFilter.Filter);
 });
 
 var firebaseProjectId = builder.Configuration["Firebase:ProjectId"]
