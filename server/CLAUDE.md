@@ -106,3 +106,5 @@ kein Code pro Endpunkt nötig. Aktiv nur, wenn `Sentry:Dsn` konfiguriert ist (Se
 siehe `CONTRIBUTING.md`); lokal/CI bleibt es aus. Neue Fehler landen über die Sentry-GitHub-Integration
 automatisch als Issue mit Label `bug` (siehe Root-`CLAUDE.md`, „Fehler-Monitoring") und werden von
 `/auto-bugfix` aufgegriffen.
+
+**Sentry-Filter (#438–#440):** `SentryClientCancellationFilter` (`SetBeforeSend` in `Program.cs`) verwirft Events, deren Exception-Kette eine `OperationCanceledException` oder `RpcException(Cancelled)` enthält — der Client hat den Request abgebrochen, das ist kein Serverfehler.

@@ -51,9 +51,11 @@ class FirebaseOvertimeRepositoryImpl implements OvertimeRepository {
     final rounded = roundDurationToMinute(overtime);
     logger.i(
         '[FirebaseOvertimeRepository] saveOvertime: ${rounded.inMinutes} min');
-    _cachedOvertime = rounded;
     await _dataSource.saveOvertime(_userId, rounded,
         profileId: _profileId, keepLastUpdated: keepLastUpdated);
+    // Erst nach erfolgreichem Write (#427): sonst hielte der Cache einen Saldo,
+    // der nie gespeichert wurde.
+    _cachedOvertime = rounded;
   }
 
   @override
@@ -72,9 +74,9 @@ class FirebaseOvertimeRepositoryImpl implements OvertimeRepository {
   @override
   Future<void> saveLastUpdateDate(DateTime date) async {
     logger.i('[FirebaseOvertimeRepository] saveLastUpdateDate: $date');
-    _cachedLastUpdate = date;
     await _dataSource.saveLastOvertimeUpdate(_userId, date,
         profileId: _profileId);
+    _cachedLastUpdate = date;
   }
 
   /// Lädt Daten async von Firestore und aktualisiert den Cache
