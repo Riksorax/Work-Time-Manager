@@ -9,8 +9,9 @@ import 'entry_day.dart';
 /// den **heute** laufenden Eintrag live bis "jetzt"; ein offener Eintrag vor
 /// heute (z. B. verwaister Vortag, #385) zählt 0.
 ///
-/// Der Tag des Eintrags ist der lokale Kalendertag von [WorkEntryEntity.date]
-/// (nie über UTC), "heute" der lokale Kalendertag von `now`. Der Aufrufer
+/// Der Tag des Eintrags ist `entryDay` (lokaler Kalendertag aus der Id, sonst
+/// aus [WorkEntryEntity.date]; nie über UTC, #418), "heute" der lokale
+/// Kalendertag von `now`. Der Aufrufer
 /// übergibt die Uhr (`clockProvider`), die Funktionen kennen keine eigene.
 
 bool _isOpenWorkEntry(WorkEntryEntity e) =>
