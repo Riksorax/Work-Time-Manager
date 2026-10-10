@@ -37,6 +37,44 @@ void main() {
     });
   });
 
+  // `fromDayMap` ist die Lesegrenze der Firestore-Datasource: der Tages-Key des
+  // Monatsdokuments (`days["5"]`) gewinnt immer gegen das gespeicherte `date`.
+  group('fromDayMap: Tages-Key gewinnt', () {
+    test('id und date kommen aus dem Tag, nicht aus dem Timestamp', () {
+      // Altdaten: lokale Mitternacht Berlin (04.10. 22:00Z) unter Key 5.
+      final m = WorkEntryModel.fromDayMap(
+          mapFor(DateTime.utc(2026, 10, 4, 22)), DateTime(2026, 10, 5));
+      expect(m.id, '2026-10-05');
+      expect(m.date, DateTime(2026, 10, 5));
+      expect(m.date.isUtc, isFalse);
+    });
+
+    test('abweichender UTC-Tag im Timestamp aendert den Tag nicht', () {
+      final m = WorkEntryModel.fromDayMap(
+          mapFor(DateTime.utc(2026, 10, 4)), DateTime(2026, 10, 5));
+      expect(m.id, '2026-10-05');
+      expect(m.date, DateTime(2026, 10, 5));
+    });
+
+    test('ein Zeitanteil im uebergebenen Tag wird verworfen', () {
+      final m = WorkEntryModel.fromDayMap(
+          mapFor(DateTime.utc(2026, 10, 5)), DateTime(2026, 10, 5, 13, 30));
+      expect(m.id, '2026-10-05');
+      expect(m.date, DateTime(2026, 10, 5));
+    });
+
+    test('uebrige Felder kommen unveraendert aus der Map', () {
+      final m = WorkEntryModel.fromDayMap({
+        ...mapFor(DateTime.utc(2026, 11, 1)),
+        'type': 'vacation',
+        'description': 'Urlaub',
+      }, DateTime(2026, 11, 1));
+      expect(m.type.name, 'vacation');
+      expect(m.description, 'Urlaub');
+      expect(m.date, DateTime(2026, 11, 1));
+    });
+  });
+
   group('E5 Round-Trip toMap/fromMap (Firestore-Pfad)', () {
     final days = <String, DateTime>{
       'Montag 05.10.': DateTime(2026, 10, 5),
