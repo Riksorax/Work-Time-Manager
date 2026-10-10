@@ -73,7 +73,7 @@ Jede Phase läuft als Subagent in eigenem Kontext und übergibt ihr Ergebnis üb
 | `/web-analyze` … `/web-review <nr>` | Web-Port eines Flutter-Features: Analyse → Design → Plan → Implementierung → Review |
 | `/server-implement <nr>` | Backend-Änderung |
 | `/release <Version> <Charakter>` | Release-Branch, Versionshinweise, Release-PR (ab 1.6 ein Charakter pro Minor-Linie) |
-| `/auto-bugfix` | Cron-Routine: offene `bug`-Issues automatisch analysieren, bis zum review-fertigen PR umsetzen — **mergt nicht selbst**, das bleibt ein menschlicher Schritt |
+| `/auto-bugfix` | Cron-Routine: offene `bug`-Issues automatisch analysieren, bis zum review-fertigen PR umsetzen — **mergt nicht selbst**, das bleibt ein menschlicher Schritt. Ausnahme: Crash-Issues (Crashlytics/Sentry/Uptime-Kuma) laufen als Hotfix gegen `main` mit Auto-Merge, siehe „Fehler-Monitoring“ |
 
 Betrifft ein Issue mehrere Plattformen, plant der Subagent `cross-platform-coordinator` den
 gemeinsamen Vertrag und die Reihenfolge Backend → Web → Mobile.
@@ -106,6 +106,28 @@ schließen die Lücke:
 
 Sobald ein Issue das Label `bug` trägt (egal ob manuell oder durch Sentry angelegt), greift
 `/auto-bugfix`.
+
+**Hotfix-Handling für Crash-Issues:** Stammt ein `bug`-Issue aus einer dieser drei Quellen —
+erkennbar am Marker-Kommentar `<!-- auto-monitoring:crashlytics:... -->` bzw.
+`<!-- auto-monitoring:uptime-kuma:... -->` im Body (Cloud Functions, siehe unten) oder, bei Sentry,
+an einem `sentry.io/organizations/...`-Link im Body (Sentrys eigene GitHub-Integration, kein
+eigener Marker) —, behandelt `/auto-bugfix` es als Hotfix und nicht wie ein normales Issue
+(Branch/PR gegen `develop`):
+
+- **Web/API:** Branch von `main` (nicht `develop`), PR gegen `main`. CI auf dem PR muss grün sein,
+  danach `enable_pr_auto_merge` setzen — der Merge (und damit `deploy-api.yml`/`deploy-angular.yml`)
+  läuft ohne weiteren menschlichen Schritt. Nach dem Deploy auf `main` zurück nach `develop` mergen
+  (wie in `CONTRIBUTING.md`, „Release“, Schritt „Zurückmergen“), damit `develop` den Fix enthält.
+- **Mobile:** Play-Store-Releases brauchen einen Versions-Bump und einen vorbereiteten
+  Closed-Testing-Track (`CONTRIBUTING.md`, „Hotfix / Bugfix-Release“) — das lässt sich nicht
+  gefahrlos automatisch mergen. `/auto-bugfix` bereitet den Fix als PR gegen `main` vor (Branch von
+  `main`), aktiviert aber **kein** Auto-Merge; stattdessen im Issue vermerken, dass ein Mensch
+  `/release` für den Hotfix anstoßen muss.
+- Betrifft der Crash-Fix mehrere Plattformen, gilt die Ausnahme in Schritt 4 von `/auto-bugfix`
+  weiter (nicht automatisch umsetzen, Rückfrage im Issue).
+
+Normale, manuell gemeldete `bug`-Issues (kein Marker-Kommentar) laufen weiter wie bisher gegen
+`develop`.
 
 **Cloud-Sessions:** `.claude/hooks/session-start.sh` installiert Flutter (Version aus `ci.yml`),
 das .NET-10-SDK und die npm-Pakete. `gh` gibt es dort nicht, GitHub läuft über die MCP-Tools.
