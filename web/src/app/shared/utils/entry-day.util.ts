@@ -1,5 +1,7 @@
+import { toDateKey } from './german-holidays.util';
+
 /**
- * Kalendertag eines Arbeitseintrags (#407). Reine Funktionen, kein `inject()`, keine Abhängigkeiten.
+ * Kalendertag eines Arbeitseintrags (#407). Reine Funktionen, kein `inject()`, keine Angular-Abhängigkeit.
  *
  * Alle Clients schreiben `date` als UTC-Mitternacht des lokalen Kalendertags. Beim Lesen daraus einen Zeitpunkt zu
  * machen (`new Date(iso)`, `Timestamp.toDate()`) und lokale Felder zu zerlegen, ergibt westlich von UTC den Vortag.
@@ -32,4 +34,19 @@ export function parseEntryId(id: string): Date | null {
  */
 export function calendarDateFromUtcMidnight(d: Date): Date {
   return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+}
+
+/**
+ * Kalendertag eines Eintrags als lokale Mitternacht (neues Objekt). Gültige `id` (`yyyy-MM-dd`): der Tag der `id`.
+ * Sonst (Platzhalter-Ids wie `'x'`, `crypto.randomUUID()`, Test-Mocks) die lokalen Felder von `date`, nach den
+ * Lesegrenzen ein lokales Kalenderdatum. Einzige Stelle, die den Tag eines Eintrags für Verbraucher bildet (Soll,
+ * Wochentag, KW, „ist heute?“, Tages-/Wochenfilter, Jahresgrenze); die Schreibpfade bleiben bewusst auf `date`.
+ */
+export function entryDay(entry: { id: string; date: Date }): Date {
+  return parseEntryId(entry.id) ?? new Date(entry.date.getFullYear(), entry.date.getMonth(), entry.date.getDate());
+}
+
+/** `yyyy-MM-dd` des Kalendertags eines Eintrags (siehe `entryDay`). */
+export function entryDayKey(entry: { id: string; date: Date }): string {
+  return toDateKey(entryDay(entry));
 }
