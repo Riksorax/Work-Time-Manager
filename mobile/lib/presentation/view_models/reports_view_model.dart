@@ -279,10 +279,7 @@ class ReportsViewModel extends Notifier<ReportsState> {
   DailyReportState _calculateDailyReport(DateTime date) {
     final dayToReport = DateTime(date.year, date.month, date.day);
     final entriesForDay = _monthlyEntries
-        .where((entry) =>
-            entry.date.year == dayToReport.year &&
-            entry.date.month == dayToReport.month &&
-            entry.date.day == dayToReport.day)
+        .where((entry) => entryDay(entry) == dayToReport)
         .toList();
 
     final workTime = entriesForDay.fold<Duration>(
@@ -344,9 +341,8 @@ class ReportsViewModel extends Notifier<ReportsState> {
     final endOfWeek = addCalendarDays(startOfWeek, 6);
 
     final entriesForWeek = _monthlyEntries.where((entry) {
-      // Normalize entry date to midnight for correct comparison.
-      final entryDate =
-          DateTime(entry.date.year, entry.date.month, entry.date.day);
+      // Kalendertag des Eintrags (lokale Mitternacht, #418).
+      final entryDate = entryDay(entry);
       // Check if the entry date is within the week range (inclusive).
       return !entryDate.isBefore(startOfWeek) && !entryDate.isAfter(endOfWeek);
     }).toList();
@@ -358,10 +354,8 @@ class ReportsViewModel extends Notifier<ReportsState> {
     final totalNetWorkDuration = totalWorkDuration - totalBreakDuration;
 
     // Unique Arbeitstage zählen (nicht Einträge, da mehrere Einträge pro Tag möglich)
-    final uniqueWorkDaysSet = entriesForWeek
-        .where((e) => e.workStart != null)
-        .map((e) => DateTime(e.date.year, e.date.month, e.date.day))
-        .toSet();
+    final uniqueWorkDaysSet =
+        entriesForWeek.where((e) => e.workStart != null).map(entryDay).toSet();
     final uniqueWorkDays = uniqueWorkDaysSet.length;
     final averageWorkDuration = uniqueWorkDays > 0
         ? roundDurationToMinute(Duration(
@@ -397,8 +391,9 @@ class ReportsViewModel extends Notifier<ReportsState> {
       if (entry.workStart != null &&
           entry.workEnd != null &&
           entry.effectiveWorkDuration > Duration.zero) {
-        dailyWork[entry.date] = (dailyWork[entry.date] ?? Duration.zero) +
-            entry.effectiveWorkDuration;
+        final day = entryDay(entry);
+        dailyWork[day] =
+            (dailyWork[day] ?? Duration.zero) + entry.effectiveWorkDuration;
       }
     }
 
@@ -424,9 +419,7 @@ class ReportsViewModel extends Notifier<ReportsState> {
     final totalNetWorkDuration = totalWorkDuration - totalBreakDuration;
 
     // Eindeutige Arbeitstage im Monat zählen
-    final uniqueWorkDaysSet = _monthlyEntries
-        .map((e) => DateTime(e.date.year, e.date.month, e.date.day))
-        .toSet();
+    final uniqueWorkDaysSet = _monthlyEntries.map(entryDay).toSet();
     final workDays = uniqueWorkDaysSet.length;
 
     final averageWorkDuration = workDays > 0
@@ -445,9 +438,8 @@ class ReportsViewModel extends Notifier<ReportsState> {
     final Map<int, Set<DateTime>> weekToWorkDays = {};
     for (var entry in _monthlyEntries) {
       if (entry.workStart != null) {
-        final weekNum = isoWeekNumber(entry.date);
-        final dayOnly =
-            DateTime(entry.date.year, entry.date.month, entry.date.day);
+        final dayOnly = entryDay(entry);
+        final weekNum = isoWeekNumber(dayOnly);
         weekToWorkDays.putIfAbsent(weekNum, () => {}).add(dayOnly);
       }
     }
@@ -475,12 +467,11 @@ class ReportsViewModel extends Notifier<ReportsState> {
       if (entry.workStart != null &&
           entry.workEnd != null &&
           entry.effectiveWorkDuration > Duration.zero) {
-        final dayOnly =
-            DateTime(entry.date.year, entry.date.month, entry.date.day);
+        final dayOnly = entryDay(entry);
         dailyWork[dayOnly] =
             (dailyWork[dayOnly] ?? Duration.zero) + entry.effectiveWorkDuration;
 
-        final weekNumber = isoWeekNumber(entry.date);
+        final weekNumber = isoWeekNumber(dayOnly);
         weeklyWork[weekNumber] = (weeklyWork[weekNumber] ?? Duration.zero) +
             entry.effectiveWorkDuration;
       }

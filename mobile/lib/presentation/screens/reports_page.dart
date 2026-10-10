@@ -12,6 +12,7 @@ import '../../core/services/pdf_report_service.dart';
 
 import '../../domain/entities/work_entry_extensions.dart';
 import '../../domain/utils/date_utils.dart';
+import '../../domain/utils/entry_day.dart';
 import '../../domain/utils/german_holidays.dart';
 import '../../domain/utils/iso_week.dart';
 import '../../domain/utils/open_entry_report_utils.dart';
@@ -2304,7 +2305,7 @@ class _DayEntriesBottomSheetState extends ConsumerState<DayEntriesBottomSheet> {
 
     final List<WorkEntryEntity> entriesForSheetDate = reportsState
         .dailyReportState.entries
-        .where((entry) => DateUtils.isSameDay(entry.date, widget.date))
+        .where((entry) => DateUtils.isSameDay(entryDay(entry), widget.date))
         .toList();
 
     return SafeArea(
