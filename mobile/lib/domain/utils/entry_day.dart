@@ -10,6 +10,8 @@
 /// Reine Dart-Funktionen, kein Intl.
 library;
 
+import '../entities/work_entry_entity.dart';
+
 final RegExp _entryIdPattern = RegExp(r'^\d{4}-\d{2}-\d{2}$');
 
 /// Kalendertag aus einer Eintrags-`id` im Format `yyyy-MM-dd` als lokale
@@ -38,4 +40,23 @@ DateTime? localDateFromEntryId(String id) {
 DateTime calendarDateFromUtcMidnight(DateTime d) {
   final utc = d.toUtc();
   return DateTime(utc.year, utc.month, utc.day);
+}
+
+/// Der Kalendertag von [entry] als lokale Mitternacht - die **einzige** Stelle,
+/// die den Tag eines Eintrags bildet (#418).
+///
+/// Ist `entry.id` exakt `yyyy-MM-dd`, kommt der Tag aus der Id. Sonst
+/// (Platzhalter wie `DashboardState.initial`, Tests mit Ids wie `'1'`) aus den
+/// lokalen Feldern von `entry.date`; nach den Lesegrenzen ist das ein lokales
+/// Kalenderdatum. Ein Zeitanteil in `date` wird verworfen.
+DateTime entryDay(WorkEntryEntity entry) =>
+    localDateFromEntryId(entry.id) ??
+    DateTime(entry.date.year, entry.date.month, entry.date.day);
+
+/// `yyyy-MM-dd` des Kalendertags von [entry] (siehe [entryDay]).
+String entryDayKey(WorkEntryEntity entry) {
+  final d = entryDay(entry);
+  return '${d.year.toString().padLeft(4, '0')}-'
+      '${d.month.toString().padLeft(2, '0')}-'
+      '${d.day.toString().padLeft(2, '0')}';
 }
