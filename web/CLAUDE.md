@@ -408,15 +408,17 @@ Für neue Feature-Portierungen. Das Argument ist wie bei Mobile und Backend die 
 Arbeitsdateien: `web/thoughts/<nr>-research.md`, `-ui-report.md`, `-plan.md`, `-pr.md`
 (per `.gitignore` lokal; die älteren `dashboard-*.md` stammen noch aus der Zeit der Feature-Namen).
 
-Jede Phase läuft als Subagent (`.claude/agents/web-*.md`) in eigenem Kontext.
+Jede Phase läuft als Subagent (`analyst`, `developer`, `reviewer`, `.claude/agents/`) in eigenem Kontext; Regeln und
+Checklisten stehen im Playbook `.claude/skills/playbook-angular/`, die WTM-Besonderheiten in
+`.claude/skills/playbook-projekt/references/web.md` und `design.md`.
 
 | Command | Phase |
 |---|---|
-| `/web-analyze <nr>` | Phase 1 — Issue lesen, Flutter-Feature analysieren, Feature-Ordner festlegen |
-| `/web-design <nr>` | Phase 2 — UI entwerfen (Stitch API oder manuell) |
-| `/web-plan <nr>` | Phase 3 — Implementierungsplan |
-| `/web-implement <nr>` | Phase 4 — Code schreiben (TDD) |
-| `/web-review <nr>` | Phase 5 — Review + PR |
+| `/analysieren <nr> angular` | Phase 1 — Issue lesen, Flutter-Feature analysieren, Feature-Ordner festlegen |
+| `/entwerfen <nr> angular` | Phase 2 — UI entwerfen (Stitch API oder manuell) |
+| `/planen <nr> angular` | Phase 3 — Implementierungsplan |
+| `/umsetzen <nr> angular` | Phase 4 — Code schreiben (TDD) |
+| `/reviewen <nr> angular` | Phase 5 — Review + PR |
 
 Stitch API Key in `.claude/settings.local.json`: `{ "env": { "STITCH_API_KEY": "..." } }`
 **Hinweis:** Stitch API ist aktuell nicht verfügbar (HTTP 405) — UI wird manuell nach Flutter-Vorlage designed.
