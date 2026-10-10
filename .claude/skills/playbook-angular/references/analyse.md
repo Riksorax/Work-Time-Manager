@@ -1,16 +1,12 @@
----
-name: web-analyst
-description: "Phase 1 Web: analysiert ein Flutter-Feature für die Angular-Portierung und schreibt web/thoughts/<nr>-research.md. Kein Code."
-model: sonnet
----
-# Agent: Web-Analyst (Flutter → Angular)
+# Web-Analyst (Flutter → Angular) — Referenz Phase „Analyse“
 
 ## Rolle
 Du analysierst eine Flutter-Funktion oder einen Flutter-Screen und bereitest die
 Angular-Portierung vor. Du findest Lücken, sammelst Rückfragen und lieferst ein
 vollständiges Mapping Flutter → Angular — bevor irgendetwas geplant oder gebaut wird.
 
-> Lies zuerst `web/CLAUDE.md` (Web-Architektur und Regeln) und die betroffenen Teile von `mobile/CLAUDE.md`.
+> Lies zuerst `web/CLAUDE.md` (Web-Architektur und Regeln) und die betroffenen Teile von
+> `mobile/CLAUDE.md`. Datenpfade und Rechenregeln: Root-`CLAUDE.md`.
 
 ## Flutter → Angular Konzept-Mapping
 
@@ -19,46 +15,46 @@ vollständiges Mapping Flutter → Angular — bevor irgendetwas geplant oder ge
 | `StatelessWidget` / `ConsumerWidget` | `Component` (signal-based, OnPush, ohne explizites `standalone: true`) |
 | `Riverpod Provider` | Angular `Injectable Service` + `signal()` |
 | `Riverpod Notifier` | Service mit `signal()` + `computed()` |
-| `HybridRepositoryImpl` | Service mit `authState$`-Switch (Firebase/Local) |
-| `WorkEntryEntity` | TypeScript Interface / Class in `domain/models/` |
-| `BreakCalculatorService` | Pure TypeScript Service in `domain/services/` |
-| `isPremiumProvider` | `ProfileService.isPremium` Signal (Firestore-Flag) |
+| Entity (`*Entity`) | TypeScript Interface / Class in `domain/models/` bzw. `shared/models/` |
+| Domain-Service (pure Dart) | Pure TypeScript Service in `domain/services/` |
 | `StreamSubscription` | `takeUntilDestroyed()` RxJS Operator |
 | `BuildContext` | Angular `inject()` |
 | `Navigator.push` | Angular `Router.navigate()` |
-| `SharedPreferences` | `localStorage` in den Hybrid-Core-Services (Flutter-kompatible Keys) |
-| `firebase_firestore` | Reads: `@angular/fire/firestore` (`onSnapshot` + `runInInjectionContext`); Writes: `ApiClient` → .NET-Backend |
-| `AppLocalizations` / ARB | ngx-translate, Keys in `web/public/i18n/de.json` + `en.json` |
-| `activeWorkProfileProvider` | `WorkProfileService` (`activeProfileId$`, `profileScopedPath()`) |
+| `SharedPreferences` | `localStorage` (gleiche Keys wie Flutter, damit Daten kompatibel bleiben) |
+| `firebase_firestore` | `@angular/fire/firestore` (falls das Projekt Firebase nutzt) |
+| `AppLocalizations` / ARB | ngx-translate, Keys in `public/i18n/<sprache>.json` |
 | `BottomNavigationBar` | Angular Router + `<nav>` / Angular Material Tabs |
+
+Projektspezifische Zeilen (Feature-Gates, Profile/Mandanten, Hybrid-Repositories) stehen im
+Projekt in `web/CLAUDE.md` bzw. in der Projektanpassung dieser Datei.
 
 ## Analyse-Checkliste
 
 ### Feature-Verständnis
 - [ ] Welcher Flutter-Screen / welche Funktion wird portiert?
 - [ ] Welche Dart-Klassen sind betroffen? (Entities, Repos, ViewModels)
-- [ ] Welche UI-States gibt es? (loading / data / empty / error / premium-locked)
+- [ ] Welche UI-States gibt es? (loading / data / empty / error / gesperrt)
 - [ ] Welche User-Interactions gibt es? (Tippen, Formulare, Timer)
 - [ ] Gibt es Echtzeit-Updates? (Streams → RxJS Observable / Signal)
 
 ### Domain-Layer
-- [ ] Welche Entities werden benötigt? → TypeScript Interfaces in `web/src/app/domain/models/`
-- [ ] Welche Domain-Services werden benötigt? (BreakCalculator, OvertimeUtils)
-- [ ] Welche Business-Rules gibt es? (Pflichtpausen, Überstunden-Logik)
+- [ ] Welche Entities werden benötigt? → TypeScript Interfaces
+- [ ] Welche Domain-Services werden benötigt?
+- [ ] Welche Business-Rules gibt es? Rechnet eine andere Plattform kanonisch (Root-`CLAUDE.md`)?
+      Dann an diese angleichen, nicht an die Flutter-Variante.
 
 ### Data-Layer
-- [ ] Welche Firestore Collections sind betroffen? Gibt es dafür schon eine Security Rule?
-- [ ] Gibt es den nötigen Backend-Endpunkt schon (Writes laufen im Web über `ApiClient`)? Falls nein: Backend-Arbeit einplanen (`/server-implement`)
-- [ ] Gilt das Feature pro Arbeitszeit-Profil (`profileId`)?
+- [ ] Welche Collections/Endpunkte sind betroffen? Gibt es dafür schon eine Zugriffsregel?
+- [ ] Gibt es den nötigen Backend-Endpunkt schon? Falls nein: Backend-Arbeit einplanen
+      (`/umsetzen <nr> dotnet`)
+- [ ] Gilt das Feature pro Mandant/Profil?
 - [ ] Gibt es einen Offline-Fallback? (localStorage analog zu SharedPreferences)
-- [ ] Muss ein Hybrid-Service implementiert werden (Auth-State-Switch)?
-- [ ] Welche Firebase-Operationen? (get/set/stream/delete)
+- [ ] Muss ein Hybrid-Service (Auth-State-Switch) implementiert werden?
 
 ### Presentation-Layer
-- [ ] Welche Angular Components werden benötigt?
-- [ ] Wie sieht die Component-Hierarchie aus?
+- [ ] Welche Angular Components werden benötigt, wie sieht die Hierarchie aus?
 - [ ] Welche Signals / Computed / Effects braucht der Service?
-- [ ] Welche Angular Material Components passen? (mat-card, mat-button, etc.)
+- [ ] Welche Angular Material Components passen?
 - [ ] Routing: neue Route nötig?
 
 ### Web-Spezifika (kein direktes Flutter-Äquivalent)
@@ -68,7 +64,7 @@ vollständiges Mapping Flutter → Angular — bevor irgendetwas geplant oder ge
 - [ ] PWA / Service Worker betroffen?
 
 ### Risiken
-- [ ] RevenueCat existiert nicht im Web → Premium anders lösen (Firestore-Flag)
+- [ ] In-App-Käufe gibt es im Web nicht → Gate anders lösen (z. B. Flag aus der Datenbank)
 - [ ] `kIsWeb`-Guards im Flutter-Code → im Web immer aktiv
 - [ ] Echtzeit-Timer: `setInterval` statt Flutter-Timer
 - [ ] Benachrichtigungen: Web Push API statt Flutter Local Notifications
@@ -91,7 +87,6 @@ Screens/ViewModels: [Namen]
 ## Domain-Mapping
 | Flutter Entity/Service | Angular Äquivalent | Datei |
 |---|---|---|
-| WorkEntryEntity | WorkEntry (interface) | domain/models/work-entry.model.ts |
 
 ## UI-States
 | State | Flutter-Widget | Angular-Lösung |
@@ -105,7 +100,3 @@ Screens/ViewModels: [Namen]
 ## Risiken
 - [Risiko + Lösungsvorschlag]
 ```
-
-## Rückgabe (Subagent)
-Du läufst als Subagent und kannst den Nutzer nicht direkt fragen. Offene Fragen und Freigaben gibst du an die Hauptsession zurück, sie klärt sie.
-Datei schreiben. Zurück an die Hauptsession nur: Pfad der Datei, Kurzfassung in höchstens 10 Zeilen, offene Fragen nummeriert. Den Dateiinhalt nicht wiederholen.

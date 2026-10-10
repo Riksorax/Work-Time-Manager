@@ -206,12 +206,12 @@ Rückfragen und Freigaben laufen über die Hauptsession.
 
 | Subagent | Datei | Wann verwenden |
 |---|---|---|
-| Analyst | `.claude/agents/mobile-analyst.md` | Aufgabe verstehen, hinterfragen |
-| Planner | `.claude/agents/mobile-planner.md` | Implementierungsplan erstellen |
-| Developer | `.claude/agents/mobile-developer.md` | Code schreiben, TDD |
-| Tester | `.claude/agents/mobile-tester.md` | Tests, Testlücken, CI-Checks lokal |
-| UI-Reviewer | `.claude/agents/mobile-ui-reviewer.md` | UI prüfen (Widget-Tests, lokal `flutter run`) |
-| Reviewer | `.claude/agents/mobile-reviewer.md` | Code Review, Commit, PR |
+| Analyst | `.claude/agents/analyst.md` | Aufgabe verstehen, hinterfragen (Phasen Analyse und Plan) |
+| Developer | `.claude/agents/developer.md` | Code schreiben (TDD), Tests, Testlücken, UI-Prüfung (Phasen Umsetzung und Validierung) |
+| Reviewer | `.claude/agents/reviewer.md` | Code Review, Commit, PR |
+
+Regeln und Checklisten je Phase stehen im Playbook `.claude/skills/playbook-flutter/`, die WTM-Besonderheiten in
+`.claude/skills/playbook-projekt/references/flutter.md`.
 
 Betrifft ein Issue mehrere Plattformen, zuerst `/issue <nr>` bzw. den Subagent `cross-platform-coordinator` nutzen.
 
@@ -220,10 +220,10 @@ Betrifft ein Issue mehrere Plattformen, zuerst `/issue <nr>` bzw. den Subagent `
 | Command | Phase |
 |---|---|
 | `/issue 123` | Einstieg — Issue lesen, Plattformen bestimmen, Branch anlegen |
-| `/mobile-analyze 123` | Phase 1 — Aufgabe analysieren → `mobile/thoughts/123-research.md` |
-| `/mobile-plan 123` | Phase 2 — Plan erstellen → `mobile/thoughts/123-plan.md` |
-| `/mobile-implement 123` | Phase 3 — Code schreiben (TDD) |
-| `/mobile-validate 123` | Phase 4 — Testen + UI |
-| `/mobile-review 123` | Phase 5 — Review + PR gegen `develop` |
+| `/analysieren 123 flutter` | Phase 1 — Aufgabe analysieren → `mobile/thoughts/123-research.md` |
+| `/planen 123 flutter` | Phase 2 — Plan erstellen → `mobile/thoughts/123-plan.md` |
+| `/umsetzen 123 flutter` | Phase 3 — Code schreiben (TDD) |
+| `/validieren 123 flutter` | Phase 4 — Testen + UI |
+| `/reviewen 123 flutter` | Phase 5 — Review + PR gegen `develop` |
 
 Das Argument ist die GitHub-Issue-Nummer. Branch-, Commit- und Release-Konventionen: `CONTRIBUTING.md` im Repo-Root.
