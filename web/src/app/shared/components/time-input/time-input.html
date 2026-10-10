@@ -6,10 +6,12 @@
     [value]="formattedValue()"
     [disabled]="disabled()"
     (change)="onTimeChange($event)"
+    (blur)="onBlur()"
     [attr.aria-label]="label()"
   />
   @if (showClear() && value() != null) {
     <button matSuffix mat-icon-button
+            [disabled]="disabled()"
             (click)="onClear()"
             [attr.aria-label]="'shared.timeInputClearAria' | translate: { label: label() }">
       <mat-icon>clear</mat-icon>

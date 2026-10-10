@@ -288,7 +288,7 @@ describe('DashboardService Profilwechsel mit laufendem Timer (#380, Stufe 2)', (
     expect(h.profile.activeProfileId()).toBe(B);
   });
 
-  it('Speichern des Saldos schlägt fehl: kein Wechsel, Rollback; der nächste Autosave überschreibt den Eintrag wieder laufend', async () => {
+  it('Speichern des Saldos schlägt fehl: kein Wechsel, Rollback; der Eintrag wird auf den laufenden Vorzustand kompensiert (#426)', async () => {
     const h = setup();
     await settle();
     h.world.failOvertime = true;
@@ -297,8 +297,14 @@ describe('DashboardService Profilwechsel mit laufendem Timer (#380, Stufe 2)', (
     expect(h.profile.activeProfileId()).toBe(A);
     expect(h.confirm.notifySaveFailed).toHaveBeenCalledTimes(1);
     expect(h.svc.isTimerRunning()).toBe(true);
-    expect(h.world.data[A].entries.get(toDateKey(MON()))!.workEnd).toBeDefined(); // Rest: Eintrag liegt schon beendet vor
+    // Stop-Eintrag, danach der Vorzustand (laufend): der Server-Eintrag ist nach der Kompensation nicht beendet
+    const entryWrites = writes(h.world, 'entry');
+    expect(entryWrites.length).toBe(2);
+    expect(entryWrites[0].entry!.workEnd).toBeDefined();
+    expect(entryWrites[1].entry!.workEnd).toBeUndefined();
+    expect(h.world.data[A].entries.get(toDateKey(MON()))!.workEnd).toBeUndefined();
 
+    // der laufende Eintrag bleibt auch nach dem nächsten Autosave laufend
     await vi.advanceTimersByTimeAsync(31_000);
     expect(h.world.data[A].entries.get(toDateKey(MON()))!.workEnd).toBeUndefined();
   });

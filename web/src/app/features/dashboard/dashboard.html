@@ -45,6 +45,7 @@
               <span class="stat-label">{{ 'dashboard.overtimeTotalLabel' | translate }}</span>
               <button mat-icon-button
                       class="adjust-btn"
+                      [disabled]="svc.isSaving()"
                       (click)="openAdjustOvertimeDialog()"
                       [attr.aria-label]="'dashboard.adjustOvertimeAria' | translate"
                       [matTooltip]="'dashboard.adjustOvertimeAria' | translate">
@@ -78,6 +79,8 @@
           <app-time-input
             [label]="'dashboard.startTimeLabel' | translate"
             [value]="svc.workEntry().workStart"
+            [disabled]="svc.isSaving()"
+            [settle]="true"
             (timeSelected)="onStartTimeSelected($event)"
             [attr.aria-label]="'dashboard.startTimeAria' | translate"
           />
@@ -86,7 +89,8 @@
             [label]="'dashboard.endTimeLabel' | translate"
             [value]="svc.workEntry().workEnd"
             [showClear]="true"
-            [disabled]="!svc.workEntry().workStart"
+            [disabled]="!svc.workEntry().workStart || svc.isSaving()"
+            [settle]="true"
             (timeSelected)="onEndTimeSelected($event)"
             (cleared)="onClearEndTime()"
             [attr.aria-label]="'dashboard.endTimeAria' | translate"
@@ -95,6 +99,8 @@
           <button
             mat-flat-button
             class="main-action-btn"
+            [disabled]="svc.isSaving()"
+            [disabledInteractive]="true"
             [class.running]="svc.isTimerRunning()"
             (click)="onMainAction()"
             [attr.aria-label]="(svc.isTimerRunning() ? 'dashboard.stopTimeTracking' : 'dashboard.startTimeTracking') | translate"
@@ -111,6 +117,8 @@
             <h3>{{ 'dashboard.breaksTitle' | translate }}</h3>
             @if (svc.workEntry().workStart) {
               <button mat-stroked-button (click)="onBreakAction()"
+                      [disabled]="svc.isSaving()"
+                      [disabledInteractive]="true"
                       [attr.aria-label]="(svc.isBreakRunning() ? 'dashboard.stopBreak' : 'dashboard.startBreak') | translate">
                 <mat-icon>{{ svc.isBreakRunning() ? 'stop' : 'coffee' }}</mat-icon>
                 {{ (svc.isBreakRunning() ? 'dashboard.stopBreak' : 'dashboard.startBreak') | translate }}
@@ -140,12 +148,14 @@
 
                 <div class="break-actions">
                   <button mat-icon-button
+                          [disabled]="svc.isSaving()"
                           (click)="onEditBreak(b)"
                           [attr.aria-label]="'dashboard.editBreakAria' | translate: { name: (b.name | breakName) }">
                     <mat-icon>edit</mat-icon>
                   </button>
                   <button mat-icon-button
                           class="delete-btn"
+                          [disabled]="svc.isSaving()"
                           (click)="onDeleteBreak(b.id)"
                           [attr.aria-label]="'dashboard.deleteBreakAria' | translate: { name: (b.name | breakName) }">
                     <mat-icon>delete</mat-icon>
