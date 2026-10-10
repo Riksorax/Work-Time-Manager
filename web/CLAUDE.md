@@ -86,7 +86,7 @@ shared/
 ├── utils/
 │   ├── german-holidays.util.ts  Pure — gesetzliche Feiertage je Bundesland (#279), Port von Mobile `german_holidays.dart`
 │   ├── bundesland.util.ts       Pure — isBundesland / normalizeBundesland
-│   ├── entry-day.util.ts        Pure (#407) — Kalendertag eines Eintrags: `localDateFromEntryId`, `parseEntryId` (gültige `yyyy-MM-dd`-Id oder `null`), `calendarDateFromUtcMidnight` (lokale Mitternacht aus den UTC-Feldern)
+│   ├── entry-day.util.ts        Pure (#407) — Kalendertag eines Eintrags: `entryDay(entry)`/`entryDayKey(entry)` (für Verbraucher), `localDateFromEntryId`, `parseEntryId` (gültige `yyyy-MM-dd`-Id oder `null`), `calendarDateFromUtcMidnight` (lokale Mitternacht aus den UTC-Feldern, für Lesegrenzen)
 │   ├── promise-timeout.util.ts  Pure (#426) — `withTimeout(promise, ms)` + `PromiseTimeoutError`, Timer immer mit `clearTimeout`
 │   ├── calendar-keyboard.util.ts  Pure — Kalender-Tastenlogik (#377): `isCalendarNavKey`, `nextFocusDate`, `rangeKeys`, `rangeDiff`
 │   └── work-profile-path.util.ts  Pure — `profileScopedPath` (Firestore-Pfad je Profil), `profileIdForApi` (Profil-ID → API-Form, `'default'` → `undefined`, #380)
@@ -155,7 +155,7 @@ reicht die Einstellung durch. Wochen-/Monatslisten sind nicht markiert, die Ausw
 
 `TodayService.today()` ist die einzige Quelle für „heute“ im Dashboard. Beim Wechsel gilt (Variante B):
 - **Laufender Timer** läuft über Mitternacht weiter (ein laufender Vortag kommt auch über „Fortsetzen" ins Dashboard, #385), der Eintrag bleibt am Starttag; Soll und `isExtraDay` hängen am
-  **Eintragsdatum** (`_targetDailyMs(settings, entry.date)`), nicht an „jetzt“. Autosave/Stop/Pause bleiben am Starttag.
+  **Eintragstag** (`_targetDailyMs(settings, entryDay(entry))`, #407), nicht an „jetzt“. Autosave/Stop/Pause bleiben am Starttag.
   Nach dem Stop eines Vortagseintrags schaltet das Dashboard auf den neuen, leeren Tag um.
 - **Gestoppter/leerer Eintrag** schaltet still auf den neuen Tag (`_init(uid, { dayChange: true })`, kein Speichern).
   Die Überstunden-Basis ist dann der gespeicherte Wert (ohne `calculateInitialOvertime`-Heuristik, `lastUpdated` ist nach
@@ -215,6 +215,15 @@ Kalenderpunkt, Jahresgrenze Urlaub und beim Speichern der falsche Tages-Slot. In
 - **Helfer** (`shared/utils/entry-day.util.ts`): `parseEntryId(id)` liefert die lokale Mitternacht oder `null` bei Platzhalter-Ids
   (`'x'`, `'1'`, ISO-Strings, `2026-02-30`; mit Round-Trip-Prüfung), `calendarDateFromUtcMidnight(d)` liest die **UTC**-Felder.
   Neue Lesepfade rufen diese Helfer, nie `new Date(iso)` auf einem `date`-Feld.
+- **Verbraucher: Tag eines Eintrags = `entryDay(entry)` / `entryDayKey(entry)`, nie die Felder von `entry.date`** (Defense-in-Depth
+  zusätzlich zu den Lesegrenzen). `entryDay` liefert die lokale Mitternacht (neues Objekt): gültige `id` → Tag der `id`, sonst
+  (Platzhalter-Ids wie `'x'`, `crypto.randomUUID()`, Test-Mocks) die lokalen Felder von `date`; `entryDayKey` ist der `yyyy-MM-dd`-Schlüssel.
+  Umgestellt sind `DashboardService` (`_isCurrentDay`, `_onDayChange`, Soll beim Laden, Reinit nach Mitternacht, `_parseTime`,
+  `_targetDailyMs` in `_recalculateOvertime`/`_recalculateState`), `DashboardComponent.onEditBreak` (`entryDate`), `ReportsService`
+  (`daysWithEntries`, `selectedDayEntries`), `report-calculator` (Tages-/Wochenfilter, Berichtstag-Schlüssel, KW), `overtime.utils`
+  (`getEffectiveWorkDays`, `getWeekEntriesForDate`), `leave-calculator` (Jahresgrenze); `EditEntryDialogComponent` bildet die `id` neuer
+  Einträge mit `toDateKey(date)` statt `toISOString()`. Neue Verbraucher rufen `entryDay`/`entryDayKey`. Nicht betroffen, weil lokal
+  erzeugt: `emptyEntry`, Kalenderzellen, die aus dem Backend gelieferten Berichtstage (`days[].date` der Berichte).
 - **Schreibpfade bleiben auf `date`** (`ApiClient.toDto`: UTC-Mitternacht aus den lokalen Y/M/D, `WorkEntryService._localSave`). Sie
   definieren das Speicherformat; da `date` nach der Lesegrenze korrekt ist, ändert sich das Wire-Format nicht (keine Migration).
   Zeitpunkte (`workStart`, `workEnd`, Pausen) sind echte Instants und nicht betroffen. Bereits unter dem Nachbartag überschriebene
@@ -223,7 +232,11 @@ Kalenderpunkt, Jahresgrenze Urlaub und beim Speichern der falsche Tages-Slot. In
   (`shared/testing/mapped-entries.ts`: `mapWorkEntryDtos`, `entryDto`; ohne `vi`, `tsconfig.app.json` kompiliert es mit). Direkt
   gebaute Einträge mit lokalem `date` umgehen die Lesegrenze und fanden den Fehler nie. CI führt sie zusätzlich unter
   `TZ=America/Los_Angeles` und `TZ=Pacific/Auckland` aus (`--include 'src/**/*.tz.spec.ts'`; ohne Treffer bricht der Builder mit
-  Fehler ab). `timezone-canary.tz.spec.ts` prüft, dass eine gesetzte Zone im Testlauf wirklich greift (unbekannte Zone = stiller UTC-Rückfall,
+  Fehler ab). Die Verbraucher-Tests (`*.entry-day.spec.ts`) sind zonenunabhängig: Fixture ist ein **inkonsistenter Eintrag** (`id`
+  Montag `2026-10-05`, `date` Sonntag `2026-10-04`, ebenso `2026-11-01`/`2026-10-31` und `2026-01-01`/`2025-12-31`), der eine Lesegrenze
+  simuliert, die den Vortag lieferte; sie laufen im normalen Vollauf. `isExtraDay` hat kein öffentliches Signal und wird dort über
+  den internen Zustand (`_s`) geprüft. Specs, die eine Component mit `protected readonly WorkEntryType = WorkEntryType` rendern
+  (`EditEntryDialogComponent`), treffen im Vollauf die Vite-SSR-Falle: dort ohne Template instanziieren. `timezone-canary.tz.spec.ts` prüft, dass eine gesetzte Zone im Testlauf wirklich greift (unbekannte Zone = stiller UTC-Rückfall,
   Vitest-Prozess erbt `TZ`). Behauptet wird nur über lokale Felder und `new Date(y, m, d)`, nie über absolute Zeitpunkte;
   `process` ist in der Spec-Konfiguration nicht typisiert (`globalThis.process?.env?.['TZ']`).
   Die Vollsuite läuft nur unter UTC und Berlin in CI; unter LA/Auckland ist sie grün (Stand #407), aber nicht Teil von CI.
