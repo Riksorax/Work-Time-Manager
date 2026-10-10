@@ -12,6 +12,7 @@ hier importiert:
 npm ci --legacy-peer-deps                     # Install
 npm start                                     # Dev-Server http://localhost:4200
 npm test -- --watch=false                     # Unit-Tests (Vitest); ohne --watch=false hängt der Runner
+TZ=America/Los_Angeles npm test -- --watch=false --include 'src/**/*.tz.spec.ts'   # nur die Zonen-Regressionstests (#407), analog Pacific/Auckland
 npm run build -- --configuration production   # wie CI
 npm run e2e                                   # UI-/E2E-Tests (Playwright, #429), startet `ng serve` selbst
 npm run e2e:chromium                          # nur Chromium (lokal ist nur dieser Browser vorinstalliert)
@@ -85,6 +86,7 @@ shared/
 ├── utils/
 │   ├── german-holidays.util.ts  Pure — gesetzliche Feiertage je Bundesland (#279), Port von Mobile `german_holidays.dart`
 │   ├── bundesland.util.ts       Pure — isBundesland / normalizeBundesland
+│   ├── entry-day.util.ts        Pure (#407) — Kalendertag eines Eintrags: `localDateFromEntryId`, `parseEntryId` (gültige `yyyy-MM-dd`-Id oder `null`), `calendarDateFromUtcMidnight` (lokale Mitternacht aus den UTC-Feldern)
 │   ├── promise-timeout.util.ts  Pure (#426) — `withTimeout(promise, ms)` + `PromiseTimeoutError`, Timer immer mit `clearTimeout`
 │   ├── calendar-keyboard.util.ts  Pure — Kalender-Tastenlogik (#377): `isCalendarNavKey`, `nextFocusDate`, `rangeKeys`, `rangeDiff`
 │   └── work-profile-path.util.ts  Pure — `profileScopedPath` (Firestore-Pfad je Profil), `profileIdForApi` (Profil-ID → API-Form, `'default'` → `undefined`, #380)
@@ -198,6 +200,34 @@ Das Dashboard lädt bei jedem Wechsel des Arbeitszeit-Profils (Header-Wechsler, 
   Kein Importzyklus im Quelltext (`madge --circular`: 0). Abhilfe: Wert im Constructor zuweisen oder als Argument/Ausdruck
   einbetten (`[...X]`, `signal(X)`), nie als nackte Referenz.
 
+### Kalendertag eines Eintrags (#407)
+
+Alle Clients schreiben `date` als **UTC-Mitternacht** des lokalen Kalendertags (`ApiClient.toDto`, Backend 1:1). Beim Lesen
+daraus einen Zeitpunkt zu machen (`new Date(iso)`, `Timestamp.toDate()`) und lokale Felder zu zerlegen ergibt **westlich von UTC
+(z. B. Los Angeles) den Vortag**: falsche Anzeige, Soll/Wochentag, KW, „ist heute?“ (Start/Stop/manuelle Zeiten blockiert),
+Kalenderpunkt, Jahresgrenze Urlaub und beim Speichern der falsche Tages-Slot. In UTC und östlich (Europa, Auckland) fällt das nicht auf.
+- **Vertrag:** Der Kalendertag eines Eintrags kommt aus der `id` (`yyyy-MM-dd`, bei Monatsdokumenten Monat + Tages-Key).
+  `WorkEntry.date` ist ab den **Lesegrenzen** die **lokale Mitternacht** dieses Tages (`new Date(y, m-1, d)`), nie ein UTC-Zeitpunkt.
+- **Lesegrenzen** (nur dort wird normalisiert): `ApiClient.fromDto` (`parseEntryId(dto.id)`, sonst `calendarDateFromUtcMidnight(new Date(dto.date))`),
+  `WorkEntryService._fromFirestore` (gleiche Reihenfolge; fehlen gültige `id` und `date`, liefert er `null`), die Berichts-DTOs
+  `getWeeklyReport`/`getMonthlyReport` (`start`, `end`, `month`, `days[].date`, immer UTC-Mitternacht des Backends, über
+  `calendarDateFromUtcMidnight`). localStorage (`_fromLocalJson`) und `emptyEntry` erzeugen `date` schon lokal.
+- **Helfer** (`shared/utils/entry-day.util.ts`): `parseEntryId(id)` liefert die lokale Mitternacht oder `null` bei Platzhalter-Ids
+  (`'x'`, `'1'`, ISO-Strings, `2026-02-30`; mit Round-Trip-Prüfung), `calendarDateFromUtcMidnight(d)` liest die **UTC**-Felder.
+  Neue Lesepfade rufen diese Helfer, nie `new Date(iso)` auf einem `date`-Feld.
+- **Schreibpfade bleiben auf `date`** (`ApiClient.toDto`: UTC-Mitternacht aus den lokalen Y/M/D, `WorkEntryService._localSave`). Sie
+  definieren das Speicherformat; da `date` nach der Lesegrenze korrekt ist, ändert sich das Wire-Format nicht (keine Migration).
+  Zeitpunkte (`workStart`, `workEnd`, Pausen) sind echte Instants und nicht betroffen. Bereits unter dem Nachbartag überschriebene
+  Daten werden nicht repariert.
+- **Tests:** Zonen-Regressionstests heißen `*.tz.spec.ts` und schicken UTC-Mitternachts-DTOs/-Timestamps **durch die echten Mapper**
+  (`shared/testing/mapped-entries.ts`: `mapWorkEntryDtos`, `entryDto`; ohne `vi`, `tsconfig.app.json` kompiliert es mit). Direkt
+  gebaute Einträge mit lokalem `date` umgehen die Lesegrenze und fanden den Fehler nie. CI führt sie zusätzlich unter
+  `TZ=America/Los_Angeles` und `TZ=Pacific/Auckland` aus (`--include 'src/**/*.tz.spec.ts'`; ohne Treffer bricht der Builder mit
+  Fehler ab). `timezone-canary.tz.spec.ts` prüft, dass eine gesetzte Zone im Testlauf wirklich greift (unbekannte Zone = stiller UTC-Rückfall,
+  Vitest-Prozess erbt `TZ`). Behauptet wird nur über lokale Felder und `new Date(y, m, d)`, nie über absolute Zeitpunkte;
+  `process` ist in der Spec-Konfiguration nicht typisiert (`globalThis.process?.env?.['TZ']`).
+  Die Vollsuite läuft nur unter UTC und Berlin in CI; unter LA/Auckland ist sie grün (Stand #407), aber nicht Teil von CI.
+
 ### Offene Einträge vor heute (#385)
 
 Ein über Mitternacht gelaufener Timer bleibt nach einem Reload als Eintrag mit Start und ohne Ende am Vortag stehen
@@ -208,9 +238,10 @@ neuesten offenen Eintrag vor heute (Ursache und Mobile-Vorlage: PR #405). Ohne N
   gesetzt, kein Ende, `id`-Tag < heute (`TodayService.today()`, String-Vergleich), nicht der im Dashboard angezeigte Eintrag
   (laufender Vortag, #372). Trigger: Auth (erst nach der ersten Emission), Profil, Tag, Eintragswechsel im Dashboard. Ein
   Kontext-Epoch (Nutzer/Profil) und eine Suchsequenz verwerfen überholte Ergebnisse.
-- **Tag immer aus der `id`**, nie aus `date`: `date` ist beim Web UTC-Mitternacht und ergibt westlich von UTC den Vortag. Beim
-  Zurückschreiben wird `date` auf das lokale Datum aus der `id` gesetzt (`localDateFromEntryId`). Die bestehende `date`-Nutzung
-  im Dashboard ist nicht Teil davon (#407).
+- **Tag immer aus der `id`**, nie aus `date` (bewusst weiter so, auch nach #407): Beim Zurückschreiben wird `date` auf das lokale
+  Datum aus der `id` gesetzt (`localDateFromEntryId`, kommt seit #407 aus `shared/utils/entry-day.util.ts`, `open-entry.utils.ts`
+  re-exportiert sie). Die frühere Falle (UTC-Mitternacht ergab westlich von UTC den Vortag) ist seit #407 an den Lesegrenzen
+  behoben, siehe „Kalendertag eines Eintrags (#407)“.
 - **„Später“:** blendet alle Kandidaten des aktuellen Nutzers und Profils für die Sitzung aus; Schlüssel `uid|profileId|yyyy-MM-dd`
   (ausgeloggt `anon`), nicht persistent (Reload zeigt wieder an).
 - **Beenden** (`OpenEntryCloseService`, `open-entry-close.ts`): alle Zugriffe mit dem Profil des Kandidaten (`profileId` je Aktion,
