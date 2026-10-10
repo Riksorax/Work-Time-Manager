@@ -1,5 +1,6 @@
 import '../../core/utils/time_precision.dart';
 import '../entities/work_entry_entity.dart';
+import 'entry_day.dart';
 
 /// Reine Regeln für offene Einträge in den Reports (#404).
 ///
@@ -19,7 +20,7 @@ DateTime _dayOf(DateTime d) => DateTime(d.year, d.month, d.day);
 
 /// `true`, wenn [e] offen ist und sein Tag vor dem Tag von [now] liegt.
 bool isOpenBeforeToday(WorkEntryEntity e, DateTime now) =>
-    _isOpenWorkEntry(e) && _dayOf(e.date).isBefore(_dayOf(now));
+    _isOpenWorkEntry(e) && entryDay(e).isBefore(_dayOf(now));
 
 /// Netto-Arbeitszeit eines Eintrags für die Reports-Anzeige.
 ///
@@ -36,7 +37,7 @@ Duration reportNetDuration(WorkEntryEntity e, {required DateTime now}) {
   if (workEnd != null) {
     end = workEnd;
   } else {
-    final isLive = _isOpenWorkEntry(e) && _dayOf(e.date) == _dayOf(now);
+    final isLive = _isOpenWorkEntry(e) && entryDay(e) == _dayOf(now);
     if (!isLive) return Duration.zero;
     final nowMinute = roundToMinute(now);
     end = nowMinute.isBefore(start) ? start : nowMinute;

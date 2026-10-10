@@ -2,6 +2,7 @@ import 'package:flutter_work_time/core/utils/time_precision.dart';
 
 import '../entities/work_entry_entity.dart';
 import 'date_utils.dart';
+import 'entry_day.dart';
 
 /// Bestimmt das effektive Tages-Soll für einen bestimmten Tag.
 ///
@@ -29,10 +30,8 @@ int getEffectiveWorkDays({
   required List<WorkEntryEntity> entries,
   required List<int> workdays,
 }) {
-  final uniqueDays = entries
-      .where((e) => e.workStart != null)
-      .map((e) => DateTime(e.date.year, e.date.month, e.date.day))
-      .toSet();
+  final uniqueDays =
+      entries.where((e) => e.workStart != null).map(entryDay).toSet();
   return uniqueDays.where((d) => workdays.contains(d.weekday)).length;
 }
 
@@ -48,8 +47,7 @@ List<WorkEntryEntity> getWeekEntriesForDate(
   final endOfWeek = addCalendarDays(startOfWeek, 6);
 
   return monthlyEntries.where((entry) {
-    final entryDate =
-        DateTime(entry.date.year, entry.date.month, entry.date.day);
+    final entryDate = entryDay(entry);
     return !entryDate.isBefore(startOfWeek) && !entryDate.isAfter(endOfWeek);
   }).toList();
 }
@@ -93,9 +91,9 @@ bool canResumeOpenEntry({
   final start = entry.workStart;
   if (entry.type != WorkEntryType.work || start == null) return false;
   if (entry.workEnd != null) return false;
-  final entryDay = DateTime(entry.date.year, entry.date.month, entry.date.day);
+  final day = entryDay(entry);
   final today = DateTime(now.year, now.month, now.day);
-  if (!entryDay.isBefore(today)) return false;
+  if (!day.isBefore(today)) return false;
   return now.difference(start) <= openEntryMaxNowAge;
 }
 
