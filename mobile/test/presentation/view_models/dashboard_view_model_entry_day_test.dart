@@ -42,6 +42,15 @@ void main() {
       seedMonday(h, start: DateTime(2026, 10, 5, 9));
     });
 
+    // Ladepfad: ohne Start/Ende rechnet nichts den Zusatztag nach, `_load`
+    // bestimmt `isExtraDay` allein aus dem Tag des Eintrags.
+    scenario('leerer heutiger Eintrag: Montag ist kein Zusatztag',
+        DateTime(2026, 10, 5, 12), (h) {
+      h.boot();
+      expect(h.state.workEntry.id, '2026-10-05');
+      expect(h.state.isExtraDay, isFalse);
+    }, setUp: seedMonday);
+
     scenario('beendeter heutiger Eintrag: Soll Montag, Aktionen sind erlaubt',
         DateTime(2026, 10, 5, 12), (h) {
       h.boot();
