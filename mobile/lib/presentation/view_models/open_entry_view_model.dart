@@ -10,6 +10,7 @@ import '../../core/providers/today_provider.dart';
 import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/repositories/settings_repository.dart';
 import '../../domain/usecases/close_open_work_entry.dart';
+import '../../domain/utils/entry_day.dart';
 import '../../domain/utils/overtime_utils.dart';
 import '../state/dashboard_state.dart';
 import 'dashboard_view_model.dart';
@@ -86,23 +87,19 @@ class OpenEntryViewModel extends Notifier<OpenEntryState> {
 
   static DateTime _dayOf(DateTime d) => DateTime(d.year, d.month, d.day);
 
-  static String _key(String profileId, DateTime date) {
-    final d = _dayOf(date);
-    return '$profileId|${d.year.toString().padLeft(4, '0')}-'
-        '${d.month.toString().padLeft(2, '0')}-'
-        '${d.day.toString().padLeft(2, '0')}';
-  }
+  static String _key(String profileId, WorkEntryEntity entry) =>
+      '$profileId|${entryDayKey(entry)}';
 
   /// Kalendertag des im Dashboard laufenden Eintrags, sonst `null`.
   static DateTime? _runningDay(WorkEntryEntity e) =>
-      e.workStart != null && e.workEnd == null ? _dayOf(e.date) : null;
+      e.workStart != null && e.workEnd == null ? entryDay(e) : null;
 
   /// Ist der heutige Tag im (fertig geladenen) Dashboard noch leer? Ein
   /// Urlaubs-/Krank-Eintrag von heute zählt nicht als leer.
   static bool _todayIsEmpty(DashboardState dashboard, DateTime now) {
     final e = dashboard.workEntry;
     return !dashboard.isLoading &&
-        _dayOf(e.date) == _dayOf(now) &&
+        entryDay(e) == _dayOf(now) &&
         e.type == WorkEntryType.work &&
         e.workStart == null;
   }
@@ -135,9 +132,8 @@ class OpenEntryViewModel extends Notifier<OpenEntryState> {
         // abgeschlossen und darf nicht als offener Kandidat zurückkommen.
         final previousRunning = previous?.$1;
         if (previousRunning != null && next.$1 == null) {
-          _candidates = _candidates
-              .where((e) => _dayOf(e.date) != previousRunning)
-              .toList();
+          _candidates =
+              _candidates.where((e) => entryDay(e) != previousRunning).toList();
         }
         _publish();
       },
@@ -172,8 +168,7 @@ class OpenEntryViewModel extends Notifier<OpenEntryState> {
     final profileId = _profileId;
     final visible = _candidates
         .where((e) =>
-            _dayOf(e.date) != running &&
-            !dismissed.contains(_key(profileId, e.date)))
+            entryDay(e) != running && !dismissed.contains(_key(profileId, e)))
         .toList();
     final dashboard = ref.read(dashboardViewModelProvider);
     final now = ref.read(clockProvider)();
@@ -193,7 +188,7 @@ class OpenEntryViewModel extends Notifier<OpenEntryState> {
   static Duration _targetFor(
           SettingsRepository settings, WorkEntryEntity entry) =>
       effectiveTargetForDate(
-        date: entry.date,
+        date: entryDay(entry),
         workdays: settings.getWorkdays(),
         weeklyHours: settings.getTargetWeeklyHours(),
       );
@@ -204,7 +199,7 @@ class OpenEntryViewModel extends Notifier<OpenEntryState> {
     final profileId = _profileId;
     ref
         .read(openEntryDismissedProvider.notifier)
-        .addAll(_candidates.map((e) => _key(profileId, e.date)));
+        .addAll(_candidates.map((e) => _key(profileId, e)));
   }
 
   /// Setzt den aktuellen Eintrag im Dashboard fort (Pinning, #385 PR 1b). `true`
@@ -278,9 +273,8 @@ class OpenEntryViewModel extends Notifier<OpenEntryState> {
     switch (result) {
       case CloseOpenEntryResult.closed:
       case CloseOpenEntryResult.alreadyClosed:
-        _candidates = _candidates
-            .where((e) => _dayOf(e.date) != _dayOf(entry.date))
-            .toList();
+        _candidates =
+            _candidates.where((e) => entryDay(e) != entryDay(entry)).toList();
         state = state.copyWith(busy: false);
         _publish();
         if (result == CloseOpenEntryResult.closed) {
