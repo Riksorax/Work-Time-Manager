@@ -31,6 +31,7 @@ class TimeInputStub {
   readonly value = input<unknown>();
   readonly disabled = input<boolean>();
   readonly showClear = input<boolean>();
+  readonly settle = input<boolean>(false);
   readonly timeSelected = output<Date>();
 }
 

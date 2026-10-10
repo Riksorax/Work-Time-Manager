@@ -293,14 +293,25 @@ nicht serialisiert. Jetzt gilt:
   `[aria-disabled='true']` macht den Haupt-Button sichtbar deaktiviert (`.running`/`:not(.running)` überschreiben sonst die
   Material-Disabled-Farben; nicht über die Klasse `mat-mdc-button-disabled-interactive` selektieren, Material setzt sie schon bei
   `disabledInteractive` allein).
-- **Verhaltensänderung (Z1):** Das `change`-Event eines `<input type="time">` feuert in Chromium (im Review per Playwright geprüft) nicht erst
-  beim Verlassen, sondern nach jeder gültigen Teiländerung: bei Tastatureingabe „0930“ nach den Stunden (09:00), dann nach jeder
-  Minutenziffer (09:03, 09:30), beim Picker bei der Auswahl. Jedes Event löst `setManualStartTime`/`setManualEndTime` aus. Beginnt dadurch
-  ein Write, sind die Zeitfelder (und die Buttons) bis zu seinem Ende gesperrt: bei API-Latenz gehen weitere Ziffern verloren (nach den
-  Stunden bleibt 09:00, nach der ersten Minutenziffer 09:03 stehen) und ein sofort folgender Klick (Pause/Stop) wird verworfen. Nur
-  eingeloggt. **Offen (Entscheidung nötig):** Eingaben je Zeitfeld zusammenfassen (Entprellen bzw. Commit beim Verlassen in
-  `TimeInputComponent`, das auch der Pausen-Dialog nutzt) oder für Zeitfelder „letzter Wert gewinnt“ statt Verwerfen; ein
-  Entsperren der Felder ohne eines von beiden würde verworfene Eingaben lautlos vom angezeigten Wert abkoppeln.
+- **Z1 (behoben, Review-Fund zu PR #444):** Das `change`-Event eines `<input type="time">` feuert in Chromium (per Playwright geprüft)
+  nicht erst beim Verlassen, sondern nach jeder gültigen Teiländerung (Tastatur „0930“: 09:00, 09:03, 09:30; Picker: bei Auswahl). Jedes
+  Event hätte `setManualStartTime`/`setManualEndTime` gestartet; der erste Write sperrt die Felder (`isSaving`), weitere Ziffern gingen
+  verloren und die Tastatur verlor den Fokus (nur eingeloggt, bei API-Latenz). **Lösung: Entprellen + Flush beim Verlassen, nur im
+  Dashboard.** `TimeInputComponent` hat den Opt-in-Input `settle` (boolean, Default aus):
+  - Ohne `settle` (Pausen-Dialog `edit-break-dialog.html`) unverändert: jedes `change` geht sofort als `timeSelected` hinaus.
+  - Mit `settle` (in `dashboard.html` nur die Felder Start und Ende, nicht der Clear-Button): letzter Wert gewinnt. `timeSelected` geht
+    nach 600 ms Ruhe (Literal-Feld `_settleMs`, jede Änderung startet die Ruhezeit neu) **oder sofort beim Verlassen** (`blur`, Flush)
+    genau einmal mit dem letzten Wert hinaus; ein Blur ohne neue Eingabe oder nach dem Entprell-Emit sendet nichts. Leere Werte werden
+    wie bisher ignoriert.
+  - **Sperre:** Während `disabled()` wird nie gesendet. Läuft die Ruhezeit während einer Sperre ab (oder kommt der Blur dann), bleibt der
+    Wert vorgemerkt und geht beim Entsperren hinaus (ein Entsperren vor Ablauf zieht nichts vor). Ein getippter Wert wird so nie still
+    verworfen, solange die Komponente lebt. Normalerweise tritt das nicht ein: die Sperre entsteht erst durch einen bereits
+    emittierten Write.
+  - **Destroy:** Der Timer wird über `DestroyRef` aufgeräumt, ein noch nicht gesendeter Wert verfällt ohne Emit.
+  - Folge: Die Zeitfelder lösen nicht mehr einen Write je Teiländerung aus, sondern einen nach der Ruhezeit bzw. beim Verlassen
+    (Verzögerung bis 600 ms). Tests: `time-input.spec.ts` (Fake-Timer),
+    `edit-break-dialog.spec.ts` (kein Opt-in), `dashboard.spec.ts` (Opt-in an beiden Feldern), `e2e/time-input.spec.ts` (Chromium: Tastatureingabe
+    ergibt einen Write, Blur flusht sofort).
 - **Grenzen:** Lesezugriffe (`_ensureCurrentDay`, `_initInner`, `reloadAfterRetroClose`) haben keinen Timeout (ein dort hängender Read
   sperrt weiter, Folge-Taps werden aber verworfen); das Speichern des Edit-Pausen-Dialogs ist nicht gesperrt (ein vor der Aktion
   geöffneter Dialog kann sein Ergebnis verlieren, extrem selten); ein verworfener Tap ist nur an den deaktivierten Elementen

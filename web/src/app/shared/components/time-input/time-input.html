@@ -6,6 +6,7 @@
     [value]="formattedValue()"
     [disabled]="disabled()"
     (change)="onTimeChange($event)"
+    (blur)="onBlur()"
     [attr.aria-label]="label()"
   />
   @if (showClear() && value() != null) {

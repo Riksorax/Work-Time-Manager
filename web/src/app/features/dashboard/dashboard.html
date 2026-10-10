@@ -80,6 +80,7 @@
             [label]="'dashboard.startTimeLabel' | translate"
             [value]="svc.workEntry().workStart"
             [disabled]="svc.isSaving()"
+            [settle]="true"
             (timeSelected)="onStartTimeSelected($event)"
             [attr.aria-label]="'dashboard.startTimeAria' | translate"
           />
@@ -89,6 +90,7 @@
             [value]="svc.workEntry().workEnd"
             [showClear]="true"
             [disabled]="!svc.workEntry().workStart || svc.isSaving()"
+            [settle]="true"
             (timeSelected)="onEndTimeSelected($event)"
             (cleared)="onClearEndTime()"
             [attr.aria-label]="'dashboard.endTimeAria' | translate"

@@ -28,6 +28,7 @@ class TimeInputStub {
   readonly value = input<unknown>();
   readonly disabled = input<boolean>();
   readonly showClear = input<boolean>();
+  readonly settle = input<boolean>(false);
   readonly timeSelected = output<Date>();
 }
 
@@ -513,6 +514,10 @@ describe('DashboardComponent Sperre während einer Schreibaktion (#426, W19)', (
     expect(deleteBtn().disabled).toBe(true);
     expect(adjustBtn().disabled).toBe(true);
     expect(timeInputs().map(t => t.disabled())).toEqual([true, true]);
+  });
+
+  it('beide Zeitfelder (Start, Ende) aktivieren das Entprellen (settle, Review-Fund zu #426)', () => {
+    expect(timeInputs().map(t => t.settle())).toEqual([true, true]);
   });
 
   it('das Ende-Zeitfeld bleibt ohne Startzeit auch ohne Aktion deaktiviert', () => {
