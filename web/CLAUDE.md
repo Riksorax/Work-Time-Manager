@@ -293,8 +293,14 @@ nicht serialisiert. Jetzt gilt:
   `[aria-disabled='true']` macht den Haupt-Button sichtbar deaktiviert (`.running`/`:not(.running)` überschreiben sonst die
   Material-Disabled-Farben; nicht über die Klasse `mat-mdc-button-disabled-interactive` selektieren, Material setzt sie schon bei
   `disabledInteractive` allein).
-- **Verhaltensänderung (Z1):** Das `change`-Event eines `<input type="time">` feuert beim Verlassen des Feldes, also vor dem folgenden
-  Klick: Beginnt dadurch ein Write, wird ein sofort folgender Klick (Pause/Stop) bei API-Latenz verworfen (Buttons sichtbar deaktiviert).
+- **Verhaltensänderung (Z1):** Das `change`-Event eines `<input type="time">` feuert in Chromium (im Review per Playwright geprüft) nicht erst
+  beim Verlassen, sondern nach jeder gültigen Teiländerung: bei Tastatureingabe „0930“ nach den Stunden (09:00), dann nach jeder
+  Minutenziffer (09:03, 09:30), beim Picker bei der Auswahl. Jedes Event löst `setManualStartTime`/`setManualEndTime` aus. Beginnt dadurch
+  ein Write, sind die Zeitfelder (und die Buttons) bis zu seinem Ende gesperrt: bei API-Latenz gehen weitere Ziffern verloren (nach den
+  Stunden bleibt 09:00, nach der ersten Minutenziffer 09:03 stehen) und ein sofort folgender Klick (Pause/Stop) wird verworfen. Nur
+  eingeloggt. **Offen (Entscheidung nötig):** Eingaben je Zeitfeld zusammenfassen (Entprellen bzw. Commit beim Verlassen in
+  `TimeInputComponent`, das auch der Pausen-Dialog nutzt) oder für Zeitfelder „letzter Wert gewinnt“ statt Verwerfen; ein
+  Entsperren der Felder ohne eines von beiden würde verworfene Eingaben lautlos vom angezeigten Wert abkoppeln.
 - **Grenzen:** Lesezugriffe (`_ensureCurrentDay`, `_initInner`, `reloadAfterRetroClose`) haben keinen Timeout (ein dort hängender Read
   sperrt weiter, Folge-Taps werden aber verworfen); das Speichern des Edit-Pausen-Dialogs ist nicht gesperrt (ein vor der Aktion
   geöffneter Dialog kann sein Ergebnis verlieren, extrem selten); ein verworfener Tap ist nur an den deaktivierten Elementen
