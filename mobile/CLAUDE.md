@@ -117,6 +117,14 @@ Reports, Urlaub, Insights und Jahres-Tab folgen dem Tageswechsel ebenfalls über
 - `LeaveBalanceViewModel`: lädt nur beim **Jahreswechsel** neu und verwirft dabei die Vorjahres-Bilanz (Ladezustand statt falschem Resturlaub). `leaveBalanceNowProvider` entfällt; Tests überschreiben `clockProvider`. `YearlyLeaveRows` watcht `todayProvider.select((d) => d.year)`.
 - Insights und Jahres-Tab lesen "heute"/Jahr nur beim Laden per `ref.read(todayProvider)`, ohne Listener und ohne Auto-Reload (keine Reads für Nutzer ohne Zugriff, gewähltes Jahr bleibt).
 
+### Kalendertag eines Eintrags (#418)
+
+`date` wird als **UTC-Mitternacht des lokalen Kalendertags** gespeichert (`WorkEntryModel.toMap`, `ApiClient._entryToJson`; Schreibformat unverändert). Beim Lesen darf daraus kein Zeitpunkt in lokalen Feldern werden: westlich von UTC (Los Angeles) ergäbe `.toLocal()`/`Timestamp.toDate()` den Vortag.
+
+- **Lesegrenzen-Vertrag:** Ab der Lesegrenze ist `WorkEntryEntity.date` die **lokale Mitternacht** des Kalendertags (in Europa also 00:00, nicht mehr 01:00/02:00). Der Tag kommt aus der `id` (`yyyy-MM-dd`) bzw. dem Tages-Key des Monatsdokuments, nie aus dem gespeicherten `date`. Helfer: `domain/utils/entry_day.dart` (`localDateFromEntryId` gibt bei ungültiger Id `null`, `calendarDateFromUtcMidnight` liest die UTC-Felder).
+- **Wo:** `ApiClient._entryFromJson` (Id, sonst UTC-Felder von `date`), `WorkEntryModel.fromMap` (UTC-Felder) und `WorkEntryModel.fromDayMap` (Tages-Key gewinnt; beide Lese-Aufrufer der `FirestoreDataSourceImpl`), `ReportsViewModel._dayKey` (Berichtstage des Backends). Schreibpfade bleiben auf `date`. Neue Lesegrenzen (neue Mapper, neue Datenquellen) müssen dasselbe tun.
+- **Tests:** Zonen-Regressionstests heißen `*_tz_test.dart` und rufen `registerTimezoneCanary()` (`test/support/timezone_guard.dart`) auf: `TZ` wirkt nur als Umgebungsvariable des Prozesses `flutter test` und fällt bei unbekannter Zone **still auf UTC** zurück, der Canary prüft den Januar-Offset. `test/support/api_backed_work_repository.dart` schickt UTC-Mitternachts-JSON durch den echten `ApiClient`-Mapper (Tests mit lokal gebautem `date` umgehen genau die Lesegrenze). Lokal: `TZ=America/Los_Angeles flutter test $(find test -name '*_tz_test.dart')` (ebenso `Pacific/Auckland`, `UTC`, `Europe/Berlin`). CI: Vollauf unter UTC und Berlin plus der Schritt „Test (TZ=America/Los_Angeles, Pacific/Auckland)“ nur für die `*_tz_test.dart`; die Vollsuite unter LA/Auckland ist nicht vorgesehen.
+
 ### Profilwechsel (#388)
 
 Ein Wechsel des Arbeitszeit-Profils (`activeWorkProfileIdProvider`) invalidiert Repos, UseCases und `DashboardViewModel`; die Repos sind konstruktor-gebunden an ihr Profil. Analog Web #380 (Stufe 1):
