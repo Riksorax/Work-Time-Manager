@@ -1,4 +1,4 @@
 Das ist neu:
-• Der Resturlaub steht nicht mehr auf dem Dashboard, du findest ihn weiterhin in den Einstellungen und in den Berichten
-• Zeiteingabe und Start-Button rücken auf dem Dashboard nach oben
+• Fehlerbehebung: Arbeitstage werden jetzt in jeder Zeitzone dem richtigen Kalendertag zugeordnet (zuvor konnte z. B. in Nordamerika der Vortag angezeigt werden)
+• Der Überstunden-Saldo bleibt konsistent, wenn das Speichern fehlschlägt
 • Kleine Verbesserungen

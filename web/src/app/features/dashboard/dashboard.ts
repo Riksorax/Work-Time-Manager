@@ -1,5 +1,6 @@
 import {
-  ChangeDetectionStrategy, Component, ElementRef, Injector, afterNextRender, computed, effect, inject, untracked, viewChild,
+  ChangeDetectionStrategy, Component, ElementRef, ErrorHandler, Injector, afterNextRender, computed, effect, inject,
+  untracked, viewChild,
 } from '@angular/core';
 import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { DatePipe } from '@angular/common';
@@ -16,11 +17,13 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { firstValueFrom } from 'rxjs';
 import { BreakNamePipe } from '../../shared/pipes/break-name.pipe';
 import { DashboardService } from './dashboard.service';
+import { DashboardSaveError } from './dashboard-save-error';
 import { EditBreakDialogComponent, EditBreakDialogData, EditBreakDialogResult } from './components/edit-break-dialog/edit-break-dialog';
 import { RestartSessionDialogComponent, RestartSessionDialogResult } from './components/restart-session-dialog/restart-session-dialog';
 import { AdjustOvertimeDialogComponent, AdjustOvertimeDialogResult } from '../settings/components/adjust-overtime-dialog/adjust-overtime-dialog';
 import { TimeInputComponent } from '../../shared/components/time-input/time-input';
 import { Break } from '../../shared/models/index';
+import { entryDay } from '../../shared/utils/entry-day.util';
 import { LanguageService } from '../../core/services/language';
 import { formatEntryDay, formatHm } from '../../domain/utils/open-entry.utils';
 import { OpenEntryBannerComponent } from '../../shared/components/open-entry-banner/open-entry-banner';
@@ -61,6 +64,7 @@ export class DashboardComponent {
   private  readonly translate = inject(TranslateService);
   private  readonly announcer = inject(LiveAnnouncer);
   private  readonly injector = inject(Injector);
+  private  readonly errorHandler = inject(ErrorHandler);
 
   private readonly banner = viewChild(OpenEntryBannerComponent);
   private readonly focusAnchor = viewChild<ElementRef<HTMLElement>>('focusAnchor');
@@ -173,47 +177,64 @@ export class DashboardComponent {
     });
   }
 
+  /**
+   * Umschließt jeden Schreibaufruf (#426 B): scheitert eine Aktion mit Saldo-Block (Anzeige schon zurückgenommen, Eintrag
+   * kompensiert), meldet der Service einen `DashboardSaveError`. Er zeigt die Snackbar `dashboard.saveError` und gibt die
+   * Ursache an den globalen `ErrorHandler` (Sentry) weiter. Jeder andere Fehler läuft unverändert weiter; ein verworfener
+   * Tap (`undefined`) und `'restart-dialog'` laufen durch, ohne Meldung.
+   */
+  private async guarded<T>(action: () => Promise<T>): Promise<T | undefined> {
+    try {
+      return await action();
+    } catch (e) {
+      if (!(e instanceof DashboardSaveError)) throw e;
+      this.errorHandler.handleError(e.cause ?? e);
+      this.snackBar.open(this.translate.instant('dashboard.saveError'), 'OK', { duration: 5000 });
+      return undefined;
+    }
+  }
+
   async onMainAction(): Promise<void> {
-    const result = await this.svc.startOrStopTimer();
+    const result = await this.guarded(() => this.svc.startOrStopTimer());
     if (result === 'restart-dialog') {
       const ref = this.dialog.open<RestartSessionDialogComponent, undefined, RestartSessionDialogResult>(
         RestartSessionDialogComponent
       );
       ref.afterClosed().subscribe(async choice => {
-        if (choice === 'keep-breaks')    await this.svc.startNewSession(true);
-        if (choice === 'discard-breaks') await this.svc.startNewSession(false);
+        if (choice === 'keep-breaks')    await this.guarded(() => this.svc.startNewSession(true));
+        if (choice === 'discard-breaks') await this.guarded(() => this.svc.startNewSession(false));
       });
     }
   }
 
   async onBreakAction(): Promise<void> {
-    await this.svc.startOrStopBreak();
+    await this.guarded(() => this.svc.startOrStopBreak());
   }
 
   async onStartTimeSelected(timeStr: string): Promise<void> {
-    await this.svc.setManualStartTime(timeStr);
+    await this.guarded(() => this.svc.setManualStartTime(timeStr));
   }
 
   async onEndTimeSelected(timeStr: string): Promise<void> {
-    await this.svc.setManualEndTime(timeStr);
+    await this.guarded(() => this.svc.setManualEndTime(timeStr));
   }
 
   async onClearEndTime(): Promise<void> {
-    await this.svc.clearEndTime();
+    await this.guarded(() => this.svc.clearEndTime());
   }
 
   onEditBreak(b: Break): void {
     const entry = this.svc.workEntry();
     const ref = this.dialog.open<EditBreakDialogComponent, EditBreakDialogData, EditBreakDialogResult>(
       EditBreakDialogComponent,
-      { data: { break: b, entryDate: entry.date } }
+      { data: { break: b, entryDate: entryDay(entry) } }
     );
     ref.afterClosed().subscribe(async result => {
-      if (result) await this.svc.updateBreak(result.updated);
+      if (result) await this.guarded(() => this.svc.updateBreak(result.updated));
     });
   }
 
   async onDeleteBreak(id: string): Promise<void> {
-    await this.svc.deleteBreak(id);
+    await this.guarded(() => this.svc.deleteBreak(id));
   }
 }

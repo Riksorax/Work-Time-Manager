@@ -10,6 +10,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkEntry, WorkEntryType, Break } from '../../models/index';
 import { breakNameToStore, localizedBreakName } from '../../utils/break-name.util';
+import { toDateKey } from '../../utils/german-holidays.util';
 
 interface BreakFormValue {
   id: string;
@@ -179,7 +180,7 @@ export class EditEntryDialogComponent {
     const originalNames = new Map((this.data.entry?.breaks ?? []).map(b => [b.id, b.name]));
 
     const result: Partial<WorkEntry> = {
-      id:                    this.data.entry?.id ?? date.toISOString().split('T')[0],
+      id:                    this.data.entry?.id ?? toDateKey(date),
       date,
       type:                  val.type,
       workStart:             this._parseTime(date, val.startTime),

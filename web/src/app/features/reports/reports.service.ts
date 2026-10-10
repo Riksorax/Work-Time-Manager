@@ -14,6 +14,7 @@ import { calculateDailyStat, isSameDayRc, toDateKey } from '../../domain/service
 import { DailyStat, MonthlyReport, WeeklyReport } from '../../domain/models/reports.models';
 import { Bundesland, DEFAULT_SETTINGS, WorkEntry, WorkEntryType, UserSettings } from '../../shared/models/index';
 import { addCalendarDays } from '../../shared/utils/iso-week.util';
+import { entryDay } from '../../shared/utils/entry-day.util';
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
@@ -189,12 +190,12 @@ export class ReportsService {
   // ── Computed ──────────────────────────────────────────────────────────────────
 
   readonly daysWithEntries = computed(() =>
-    [...new Set(this._monthlyEntries().map(e => e.date.getDate()))]
+    [...new Set(this._monthlyEntries().map(e => entryDay(e).getDate()))]
   );
 
   readonly selectedDayEntries = computed(() => {
     const sel = this.selectedDate();
-    return this._monthlyEntries().filter(e => isSameDayRc(e.date, sel));
+    return this._monthlyEntries().filter(e => isSameDayRc(entryDay(e), sel));
   });
 
   readonly dailyStat = computed((): DailyStat => {

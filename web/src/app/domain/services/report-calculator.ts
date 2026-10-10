@@ -10,6 +10,7 @@ import {
 } from '../models/reports.models';
 import { getIsoWeekBounds, getIsoWeekNumber } from '../../shared/utils/iso-week.util';
 import { roundMsToMinute } from '../../shared/utils/time-precision.util';
+import { entryDay, entryDayKey } from '../../shared/utils/entry-day.util';
 
 // ─── Module-level helpers (no Angular DI) ─────────────────────────────────────
 
@@ -20,10 +21,6 @@ export function toDateKey(d: Date): string {
 function keyToDate(key: string): Date {
   const [y, m, d] = key.split('-').map(Number);
   return new Date(y, m - 1, d);
-}
-
-function startOfDay(d: Date): Date {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
 export function isSameDayRc(a: Date, b: Date): boolean {
@@ -75,7 +72,7 @@ export function calculateDailyStat(
   // Effektives Tagessoll (0 wenn der Wochentag kein Vertrags-Arbeitstag ist)
   const target = settings.workdays.includes(isoWeekday(date)) ? daily : 0;
 
-  const dayEntries = monthEntries.filter(e => isSameDayRc(e.date, date));
+  const dayEntries = monthEntries.filter(e => isSameDayRc(entryDay(e), date));
   let worked = 0;
   let manualMs = 0;
 
@@ -100,7 +97,7 @@ export function calculateWeeklyReport(
   const daily = dailyTargetMs(settings);
   const { start: weekStart, end: weekEnd } = weekBounds(date);
   const weekEntries = entries.filter(e => {
-    const ed = startOfDay(e.date);
+    const ed = entryDay(e);
     return ed >= weekStart && ed <= weekEnd;
   });
 
@@ -111,7 +108,7 @@ export function calculateWeeklyReport(
   const dayMap = new Map<string, number>();
 
   for (const entry of weekEntries) {
-    const key = toDateKey(entry.date);
+    const key = entryDayKey(entry);
 
     let worked: number;
     let breaks = 0;
@@ -176,8 +173,8 @@ export function calculateMonthlyReport(
   let manualMs    = 0;
 
   for (const entry of entries) {
-    const key     = toDateKey(entry.date);
-    const weekNum = getIsoWeekNumber(entry.date);
+    const key     = entryDayKey(entry);
+    const weekNum = getIsoWeekNumber(entryDay(entry));
 
     if (!weekWorkDays.has(weekNum)) weekWorkDays.set(weekNum, new Set());
 

@@ -12,6 +12,7 @@ hier importiert:
 npm ci --legacy-peer-deps                     # Install
 npm start                                     # Dev-Server http://localhost:4200
 npm test -- --watch=false                     # Unit-Tests (Vitest); ohne --watch=false hängt der Runner
+TZ=America/Los_Angeles npm test -- --watch=false --include 'src/**/*.tz.spec.ts'   # nur die Zonen-Regressionstests (#407), analog Pacific/Auckland
 npm run build -- --configuration production   # wie CI
 npm run e2e                                   # UI-/E2E-Tests (Playwright, #429), startet `ng serve` selbst
 npm run e2e:chromium                          # nur Chromium (lokal ist nur dieser Browser vorinstalliert)
@@ -85,6 +86,8 @@ shared/
 ├── utils/
 │   ├── german-holidays.util.ts  Pure — gesetzliche Feiertage je Bundesland (#279), Port von Mobile `german_holidays.dart`
 │   ├── bundesland.util.ts       Pure — isBundesland / normalizeBundesland
+│   ├── entry-day.util.ts        Pure (#407) — Kalendertag eines Eintrags: `entryDay(entry)`/`entryDayKey(entry)` (für Verbraucher), `localDateFromEntryId`, `parseEntryId` (gültige `yyyy-MM-dd`-Id oder `null`), `calendarDateFromUtcMidnight` (lokale Mitternacht aus den UTC-Feldern, für Lesegrenzen)
+│   ├── promise-timeout.util.ts  Pure (#426) — `withTimeout(promise, ms)` + `PromiseTimeoutError`, Timer immer mit `clearTimeout`
 │   ├── calendar-keyboard.util.ts  Pure — Kalender-Tastenlogik (#377): `isCalendarNavKey`, `nextFocusDate`, `rangeKeys`, `rangeDiff`
 │   └── work-profile-path.util.ts  Pure — `profileScopedPath` (Firestore-Pfad je Profil), `profileIdForApi` (Profil-ID → API-Form, `'default'` → `undefined`, #380)
 └── models/index.ts        WorkEntry, WorkEntryType, Break, UserSettings, UserProfile, WorkProfile
@@ -152,7 +155,7 @@ reicht die Einstellung durch. Wochen-/Monatslisten sind nicht markiert, die Ausw
 
 `TodayService.today()` ist die einzige Quelle für „heute“ im Dashboard. Beim Wechsel gilt (Variante B):
 - **Laufender Timer** läuft über Mitternacht weiter (ein laufender Vortag kommt auch über „Fortsetzen" ins Dashboard, #385), der Eintrag bleibt am Starttag; Soll und `isExtraDay` hängen am
-  **Eintragsdatum** (`_targetDailyMs(settings, entry.date)`), nicht an „jetzt“. Autosave/Stop/Pause bleiben am Starttag.
+  **Eintragstag** (`_targetDailyMs(settings, entryDay(entry))`, #407), nicht an „jetzt“. Autosave/Stop/Pause bleiben am Starttag.
   Nach dem Stop eines Vortagseintrags schaltet das Dashboard auf den neuen, leeren Tag um.
 - **Gestoppter/leerer Eintrag** schaltet still auf den neuen Tag (`_init(uid, { dayChange: true })`, kein Speichern).
   Die Überstunden-Basis ist dann der gespeicherte Wert (ohne `calculateInitialOvertime`-Heuristik, `lastUpdated` ist nach
@@ -197,6 +200,47 @@ Das Dashboard lädt bei jedem Wechsel des Arbeitszeit-Profils (Header-Wechsler, 
   Kein Importzyklus im Quelltext (`madge --circular`: 0). Abhilfe: Wert im Constructor zuweisen oder als Argument/Ausdruck
   einbetten (`[...X]`, `signal(X)`), nie als nackte Referenz.
 
+### Kalendertag eines Eintrags (#407)
+
+Alle Clients schreiben `date` als **UTC-Mitternacht** des lokalen Kalendertags (`ApiClient.toDto`, Backend 1:1). Beim Lesen
+daraus einen Zeitpunkt zu machen (`new Date(iso)`, `Timestamp.toDate()`) und lokale Felder zu zerlegen ergibt **westlich von UTC
+(z. B. Los Angeles) den Vortag**: falsche Anzeige, Soll/Wochentag, KW, „ist heute?“ (Start/Stop/manuelle Zeiten blockiert),
+Kalenderpunkt, Jahresgrenze Urlaub und beim Speichern der falsche Tages-Slot. In UTC und östlich (Europa, Auckland) fällt das nicht auf.
+- **Vertrag:** Der Kalendertag eines Eintrags kommt aus der `id` (`yyyy-MM-dd`, bei Monatsdokumenten Monat + Tages-Key).
+  `WorkEntry.date` ist ab den **Lesegrenzen** die **lokale Mitternacht** dieses Tages (`new Date(y, m-1, d)`), nie ein UTC-Zeitpunkt.
+- **Lesegrenzen** (nur dort wird normalisiert): `ApiClient.fromDto` (`parseEntryId(dto.id)`, sonst `calendarDateFromUtcMidnight(new Date(dto.date))`),
+  `WorkEntryService._fromFirestore` (gleiche Reihenfolge; fehlen gültige `id` und `date`, liefert er `null`), die Berichts-DTOs
+  `getWeeklyReport`/`getMonthlyReport` (`start`, `end`, `month`, `days[].date`, immer UTC-Mitternacht des Backends, über
+  `calendarDateFromUtcMidnight`). localStorage (`_fromLocalJson`) und `emptyEntry` erzeugen `date` schon lokal.
+- **Helfer** (`shared/utils/entry-day.util.ts`): `parseEntryId(id)` liefert die lokale Mitternacht oder `null` bei Platzhalter-Ids
+  (`'x'`, `'1'`, ISO-Strings, `2026-02-30`; mit Round-Trip-Prüfung), `calendarDateFromUtcMidnight(d)` liest die **UTC**-Felder.
+  Neue Lesepfade rufen diese Helfer, nie `new Date(iso)` auf einem `date`-Feld.
+- **Verbraucher: Tag eines Eintrags = `entryDay(entry)` / `entryDayKey(entry)`, nie die Felder von `entry.date`** (Defense-in-Depth
+  zusätzlich zu den Lesegrenzen). `entryDay` liefert die lokale Mitternacht (neues Objekt): gültige `id` → Tag der `id`, sonst
+  (Platzhalter-Ids wie `'x'`, `crypto.randomUUID()`, Test-Mocks) die lokalen Felder von `date`; `entryDayKey` ist der `yyyy-MM-dd`-Schlüssel.
+  Umgestellt sind `DashboardService` (`_isCurrentDay`, `_onDayChange`, Soll beim Laden, Reinit nach Mitternacht, `_parseTime`,
+  `_targetDailyMs` in `_recalculateOvertime`/`_recalculateState`), `DashboardComponent.onEditBreak` (`entryDate`), `ReportsService`
+  (`daysWithEntries`, `selectedDayEntries`), `report-calculator` (Tages-/Wochenfilter, Berichtstag-Schlüssel, KW), `overtime.utils`
+  (`getEffectiveWorkDays`, `getWeekEntriesForDate`), `leave-calculator` (Jahresgrenze); `EditEntryDialogComponent` bildet die `id` neuer
+  Einträge mit `toDateKey(date)` statt `toISOString()`. Neue Verbraucher rufen `entryDay`/`entryDayKey`. Nicht betroffen, weil lokal
+  erzeugt: `emptyEntry`, Kalenderzellen, die aus dem Backend gelieferten Berichtstage (`days[].date` der Berichte).
+- **Schreibpfade bleiben auf `date`** (`ApiClient.toDto`: UTC-Mitternacht aus den lokalen Y/M/D, `WorkEntryService._localSave`). Sie
+  definieren das Speicherformat; da `date` nach der Lesegrenze korrekt ist, ändert sich das Wire-Format nicht (keine Migration).
+  Zeitpunkte (`workStart`, `workEnd`, Pausen) sind echte Instants und nicht betroffen. Bereits unter dem Nachbartag überschriebene
+  Daten werden nicht repariert.
+- **Tests:** Zonen-Regressionstests heißen `*.tz.spec.ts` und schicken UTC-Mitternachts-DTOs/-Timestamps **durch die echten Mapper**
+  (`shared/testing/mapped-entries.ts`: `mapWorkEntryDtos`, `entryDto`; ohne `vi`, `tsconfig.app.json` kompiliert es mit). Direkt
+  gebaute Einträge mit lokalem `date` umgehen die Lesegrenze und fanden den Fehler nie. CI führt sie zusätzlich unter
+  `TZ=America/Los_Angeles` und `TZ=Pacific/Auckland` aus (`--include 'src/**/*.tz.spec.ts'`; ohne Treffer bricht der Builder mit
+  Fehler ab). Die Verbraucher-Tests (`*.entry-day.spec.ts`) sind zonenunabhängig: Fixture ist ein **inkonsistenter Eintrag** (`id`
+  Montag `2026-10-05`, `date` Sonntag `2026-10-04`, ebenso `2026-11-01`/`2026-10-31` und `2026-01-01`/`2025-12-31`), der eine Lesegrenze
+  simuliert, die den Vortag lieferte; sie laufen im normalen Vollauf. `isExtraDay` hat kein öffentliches Signal und wird dort über
+  den internen Zustand (`_s`) geprüft. Specs, die eine Component mit `protected readonly WorkEntryType = WorkEntryType` rendern
+  (`EditEntryDialogComponent`), treffen im Vollauf die Vite-SSR-Falle: dort ohne Template instanziieren. `timezone-canary.tz.spec.ts` prüft, dass eine gesetzte Zone im Testlauf wirklich greift (unbekannte Zone = stiller UTC-Rückfall,
+  Vitest-Prozess erbt `TZ`). Behauptet wird nur über lokale Felder und `new Date(y, m, d)`, nie über absolute Zeitpunkte;
+  `process` ist in der Spec-Konfiguration nicht typisiert (`globalThis.process?.env?.['TZ']`).
+  Die Vollsuite läuft nur unter UTC und Berlin in CI; unter LA/Auckland ist sie grün (Stand #407), aber nicht Teil von CI.
+
 ### Offene Einträge vor heute (#385)
 
 Ein über Mitternacht gelaufener Timer bleibt nach einem Reload als Eintrag mit Start und ohne Ende am Vortag stehen
@@ -207,9 +251,10 @@ neuesten offenen Eintrag vor heute (Ursache und Mobile-Vorlage: PR #405). Ohne N
   gesetzt, kein Ende, `id`-Tag < heute (`TodayService.today()`, String-Vergleich), nicht der im Dashboard angezeigte Eintrag
   (laufender Vortag, #372). Trigger: Auth (erst nach der ersten Emission), Profil, Tag, Eintragswechsel im Dashboard. Ein
   Kontext-Epoch (Nutzer/Profil) und eine Suchsequenz verwerfen überholte Ergebnisse.
-- **Tag immer aus der `id`**, nie aus `date`: `date` ist beim Web UTC-Mitternacht und ergibt westlich von UTC den Vortag. Beim
-  Zurückschreiben wird `date` auf das lokale Datum aus der `id` gesetzt (`localDateFromEntryId`). Die bestehende `date`-Nutzung
-  im Dashboard ist nicht Teil davon (#407).
+- **Tag immer aus der `id`**, nie aus `date` (bewusst weiter so, auch nach #407): Beim Zurückschreiben wird `date` auf das lokale
+  Datum aus der `id` gesetzt (`localDateFromEntryId`, kommt seit #407 aus `shared/utils/entry-day.util.ts`, `open-entry.utils.ts`
+  re-exportiert sie). Die frühere Falle (UTC-Mitternacht ergab westlich von UTC den Vortag) ist seit #407 an den Lesegrenzen
+  behoben, siehe „Kalendertag eines Eintrags (#407)“.
 - **„Später“:** blendet alle Kandidaten des aktuellen Nutzers und Profils für die Sitzung aus; Schlüssel `uid|profileId|yyyy-MM-dd`
   (ausgeloggt `anon`), nicht persistent (Reload zeigt wieder an).
 - **Beenden** (`OpenEntryCloseService`, `open-entry-close.ts`): alle Zugriffe mit dem Profil des Kandidaten (`profileId` je Aktion,
@@ -254,6 +299,100 @@ neuesten offenen Eintrag vor heute (Ursache und Mobile-Vorlage: PR #405). Ohne N
   `DashboardService.updateInitialOvertime` („kein lastUpdated-Update“) trifft eingeloggt ebenfalls nicht zu.)
 - **A11y:** Textblock `role="status"`, Buttons per `aria-describedby` auf den Titel, einmalige polite `LiveAnnouncer`-Ansage je
   Eintrag, nach dem Entfall Fokus auf den nächsten Banner bzw. den Anker `p.timer-label` (`tabindex="-1"`, kein Zusatztext).
+
+### Reentranz-Sperre (#426)
+
+Web-Pendant zu Mobile #413 (`mobile/CLAUDE.md`, „Reentranz-Sperre (#413)“). Überlappende Schreibaktionen im `DashboardService`
+(Doppel-Start, Doppel-Stop, Tap im Ladefenster, Tap während des Autosaves, Stop parallel zum Profil-Guard) wurden vorher
+nicht serialisiert. Jetzt gilt:
+- **Verwerfen statt Queue:** `_runAction(body, discarded)` umschließt `startOrStopTimer`, `startNewSession`, `startOrStopBreak`,
+  `setManualStartTime`, `setManualEndTime`, `clearEndTime`, `updateBreak`, `deleteBreak` (Rumpf in `_xxxBody`) und
+  `stopRunningTimerForSwitch`. Läuft schon eine Aktion, liefert der zweite Aufruf sofort `undefined` (bei
+  `stopRunningTimerForSwitch` `false`): kein Fehler, kein Zustand, kein zweiter Restart-Dialog. Prüfen und Setzen der Sperre
+  geschehen **synchron vor dem ersten `await`** (`_busy`); Fehler des Bodys erreichen den Aufrufer unverändert, die Sperre ist danach frei.
+- **Besitz über ein Token** (`_actionToken`): das `finally` gibt die Sperre nur frei, wenn sie noch der eigenen Aktion gehört.
+  `_initInner` setzt sie **nur bei echtem Profilwechsel** zurück (`profileChanged`): ein Tap im neuen Profil wird nicht verworfen,
+  nur weil im alten ein Write hängt, und die alte Aktion löscht die neue Sperre nie. Tageswechsel, Login/Logout, Retro-Close und
+  „Fortsetzen“ lösen sie nicht (die Aktion schreibt im Profil des Aktionsbeginns zu Ende).
+- **`isSaving`** ist ein eigenes Signal im Service (`_saving`, Spiegel von `_busy`), **nicht** in `DashboardState`: ein Reinit
+  mitten in der Aktion darf die UI nicht entsperren.
+- **Autosave:** startet nie während einer Aktion oder eines laufenden Autosaves (`_autoSaveRun`); der Zähler bleibt dann stehen
+  und der nächste Tick versucht es erneut (kein 30-s-Loch). Eine Aktion wartet vor ihren Writes auf einen laufenden Autosave
+  (er überholt den frischen Eintrag nie).
+- **Timeouts je Write-Block, 30 s** (`withTimeout` aus `shared/utils/promise-timeout.util.ts`, `PromiseTimeoutError`): Eintrag-Write
+  (`_recalculateState`), Saldo-Block (`saveOvertime` + `saveLastUpdateDate` als EIN Block, lokales `timedOut`-Flag: nach dem
+  Timeout wird `lastUpdated` nicht mehr nachgeholt) und Autosave (still). Ein Timeout ist ein Schreibfehler (Rejection). Ein
+  aufgegebener Write ist nicht abbrechbar und kann später landen („unbekannter Ausgang“; der Saldo ist absolut, Wiederholen
+  überschreibt; keine Heilung nach spätem Landen). Das Timeout-Limit ist ein Literal-Feld (`_writeTimeoutMs = 30_000`), keine
+  importierte Konstante (Vite-SSR-Falle, siehe „Test-Falle“). Worst Case einer Stop-Aktion: Autosave 30 + Eintrag 30 + Saldo 30 + Saldo (Duplikat, siehe unten) 30 s.
+- **`stopRunningTimerForSwitch`** wartet auf `_actionDone` (nie rejected) und läuft danach **ohne weiteres `await`** in
+  `_runAction(body, false)` (ein `await` dazwischen wäre ein Fenster für einen Doppel-Stop). **`resumePastEntry`** liefert `false`,
+  solange eine Aktion läuft (Prüfung vor und nach der Ladelücke), ohne Pin-Read.
+- **Nicht gesperrt:** `updateInitialOvertime` (eine Nutzereingabe der Settings-Seite darf nicht still verworfen werden; das
+  Dashboard-Icon „Überstunden anpassen“ ist bei `isSaving` deaktiviert), `reloadAfterRetroClose`, `_onDayChange`, `_init`.
+- **UI:** `dashboard.html` bindet `svc.isSaving()`: Haupt- und Pausen-Button mit `[disabled]` + `[disabledInteractive]="true"`
+  (`aria-disabled`, Fokus bleibt; **Material fängt Klicks bei `<button>` nicht ab**, der Handler feuert, der Service verwirft: nur dort
+  einsetzen, wo ein verworfener Aufruf folgenlos ist), alle übrigen Elemente (Zeitfelder, Clear-Button im `TimeInputComponent`,
+  Pause bearbeiten/löschen, „Überstunden anpassen“) mit reinem `[disabled]`. Kein Spinner, keine neuen Texte. Eine SCSS-Regel auf
+  `[aria-disabled='true']` macht den Haupt-Button sichtbar deaktiviert (`.running`/`:not(.running)` überschreiben sonst die
+  Material-Disabled-Farben; nicht über die Klasse `mat-mdc-button-disabled-interactive` selektieren, Material setzt sie schon bei
+  `disabledInteractive` allein).
+- **Z1 (behoben, Review-Fund zu PR #444):** Das `change`-Event eines `<input type="time">` feuert in Chromium (per Playwright geprüft)
+  nicht erst beim Verlassen, sondern nach jeder gültigen Teiländerung (Tastatur „0930“: 09:00, 09:03, 09:30; Picker: bei Auswahl). Jedes
+  Event hätte `setManualStartTime`/`setManualEndTime` gestartet; der erste Write sperrt die Felder (`isSaving`), weitere Ziffern gingen
+  verloren und die Tastatur verlor den Fokus (nur eingeloggt, bei API-Latenz). **Lösung: Entprellen + Flush beim Verlassen, nur im
+  Dashboard.** `TimeInputComponent` hat den Opt-in-Input `settle` (boolean, Default aus):
+  - Ohne `settle` (Pausen-Dialog `edit-break-dialog.html`) unverändert: jedes `change` geht sofort als `timeSelected` hinaus.
+  - Mit `settle` (in `dashboard.html` nur die Felder Start und Ende, nicht der Clear-Button): letzter Wert gewinnt. `timeSelected` geht
+    nach 600 ms Ruhe (Literal-Feld `_settleMs`, jede Änderung startet die Ruhezeit neu) **oder sofort beim Verlassen** (`blur`, Flush)
+    genau einmal mit dem letzten Wert hinaus; ein Blur ohne neue Eingabe oder nach dem Entprell-Emit sendet nichts. Leere Werte werden
+    wie bisher ignoriert.
+  - **Sperre:** Während `disabled()` wird nie gesendet. Läuft die Ruhezeit während einer Sperre ab (oder kommt der Blur dann), bleibt der
+    Wert vorgemerkt und geht beim Entsperren hinaus (ein Entsperren vor Ablauf zieht nichts vor). Ein getippter Wert wird so nie still
+    verworfen, solange die Komponente lebt. Normalerweise tritt das nicht ein: die Sperre entsteht erst durch einen bereits
+    emittierten Write.
+  - **Destroy:** Der Timer wird über `DestroyRef` aufgeräumt, ein noch nicht gesendeter Wert verfällt ohne Emit.
+  - Folge: Die Zeitfelder lösen nicht mehr einen Write je Teiländerung aus, sondern einen nach der Ruhezeit bzw. beim Verlassen
+    (Verzögerung bis 600 ms). Tests: `time-input.spec.ts` (Fake-Timer),
+    `edit-break-dialog.spec.ts` (kein Opt-in), `dashboard.spec.ts` (Opt-in an beiden Feldern), `e2e/time-input.spec.ts` (Chromium: Tastatureingabe
+    ergibt einen Write, Blur flusht sofort).
+- **Grenzen:** Lesezugriffe (`_ensureCurrentDay`, `_initInner`, `reloadAfterRetroClose`) haben keinen Timeout (ein dort hängender Read
+  sperrt weiter, Folge-Taps werden aber verworfen); das Speichern des Edit-Pausen-Dialogs ist nicht gesperrt (ein vor der Aktion
+  geöffneter Dialog kann sein Ergebnis verlieren, extrem selten); ein verworfener Tap ist nur an den deaktivierten Elementen
+  erkennbar; die Race tritt nur eingeloggt (API-Latenz) auf, Absicherung ausschließlich über Unit-Tests mit Deferred-Gates.
+  `OpenEntryCloseService` hat einen eigenen Lock (kein globaler Mutex).
+- **Tests:** `dashboard.busy.spec.ts` (W1-W17), `shared/testing/dashboard-world-fake.ts` (Welt mit Hold/Release/Fail je Zugriffsart,
+  gemeinsames Log; ohne `vi`, `tsconfig.app.json` kompiliert es mit), `dashboard.spec.ts` (W19), `time-input.spec.ts`. Specs ohne
+  echten Flush: nur Deferred-Gates und `advanceTimersByTimeAsync`; ein Test mit offenem Gate gibt es vor Testende frei
+  (`afterEach`: `releaseAll()`, dann `vi.getTimerCount()` == 0).
+
+#### Fehler beim Speichern / Kompensation (#426 B)
+
+Web-Pendant zu Mobile #412 („Fehler beim Speichern (#402)“). Gilt für Aktionen mit Saldo-Block (= `_recalculateState` mit `save` und
+gesetztem `workEnd`: Stop, `setManualEndTime`, sowie `setManualStartTime`/`updateBreak`/`deleteBreak` auf bereits beendetem Eintrag):
+- **Ablauf:** Der Zustand wird wie bisher sofort optimistisch gesetzt, `ActionCtx.beforeState` hält den Zustand vor der Aktion (in `_ctx()`
+  synchron erfasst). Scheitert der **Eintrag**-Write (Fehler oder 30-s-Timeout): nichts geschrieben, `_rollback(ctx)`, `DashboardSaveError`.
+  Scheitert der **Saldo**-Block: `_rollback(ctx)` (synchron), dann `_compensateEntry(ctx)` (`saveEntry(beforeState.workEntry, ctx.pid)`
+  best-effort mit eigenem 30-s-Timeout, Fehler still, nie `saveLastUpdateDate`), dann `DashboardSaveError`; geworfen wird nie der
+  Kompensationsfehler. `_rollback` fasst State/Timer nur an, wenn die Aktion nicht überholt wurde (`_isCurrent`); die Kompensation läuft
+  über `ctx.pid` auch nach einem Profilwechsel. Nach einem Fehler gibt es keinen Mitternachts-Reinit.
+- **Abweichung zu Mobile:** Mobile schreibt Eintrag -> Saldo -> *dann* den State. Das Web setzt den State vor dem `await` (der Stop hält den
+  Timer vorher an, ein späterer State-Wechsel würde die Anzeige um die API-Latenz verzögern und den Timer weiterlaufen lassen) und nimmt ihn
+  bei Fehlern per Snapshot zurück; das Endergebnis (Daten und Anzeige = Vorzustand) ist identisch.
+- **Meldeweg:** Der Service wirft die typisierte Rejection `DashboardSaveError` (`dashboard-save-error.ts`, `cause` = ursprünglicher
+  Fehler bzw. `PromiseTimeoutError`, keine Eintragswerte in der Meldung); Signaturen unverändert. `DashboardComponent.guarded()` umschließt
+  alle Schreibaufrufe, fängt **nur** diesen Typ, zeigt die Snackbar `dashboard.saveError` und reicht die Ursache an den globalen
+  `ErrorHandler` (Sentry). Andere Fehler laufen unverändert weiter, verworfene Taps und `'restart-dialog'` bleiben ohne Meldung.
+  `stopRunningTimerForSwitch` fängt jede Rejection und liefert `false`; die Meldung kommt weiter von `ProfileSwitchConfirmService`
+  (`switchSaveFailed`), es gibt keine zweite Snackbar.
+- **Aktionen ohne Saldo-Block** (Start, Pause auf laufendem Eintrag, `clearEndTime`, `startNewSession`) bleiben optimistisch: Rohfehler
+  wird weitergereicht, kein Rollback, keine Meldung (Offline-Start soll nicht anders reagieren). Ein `_ensureCurrentDay`-Abbruch bleibt still.
+- **Der frühere zweite Saldo-Write in `_stopRunning`** (identischer absoluter Wert) ist entfallen; der Stop schreibt den Saldo einmal.
+  Worst Case einer Aktion mit Kompensation: Autosave 30 + Eintrag 30 + Saldo 30 + Kompensation 30 s.
+- **Grenzen:** Doppelfehler (Saldo plus Kompensation) lässt Daten und Anzeige auseinanderlaufen: bei laufendem Eintrag heilt der Autosave
+  innerhalb von 30 s, bei geschlossenem Eintrag bleibt Eintrag neu/Saldo alt bis zur nächsten Aktion. Ein Eintrag-Write, der wirft, obwohl
+  er serverseitig landete (mehrdeutiger Fehler), wird nicht kompensiert. Mehrgeräte-Konflikte bleiben.
+- **Tests:** `dashboard.compensation.spec.ts` (C1-C12), `dashboard.spec.ts` (S1-S5), `core/i18n-dashboard-save.spec.ts`.
 
 ### Dark Mode
 

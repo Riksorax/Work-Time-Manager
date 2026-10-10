@@ -1,5 +1,6 @@
 import '../entities/work_entry_entity.dart';
 import 'date_utils.dart';
+import 'entry_day.dart';
 
 /// Durchschnittliche effektive Arbeitszeit an einem Wochentag sowie die
 /// Abweichung vom Durchschnitt aller Wochentage. Siehe #134.
@@ -90,7 +91,7 @@ List<WeekdayAverage> calculateWeekdayAverages(List<WorkEntryEntity> entries) {
       continue;
     }
     byWeekday
-        .putIfAbsent(entry.date.weekday, () => [])
+        .putIfAbsent(entryDay(entry).weekday, () => [])
         .add(_effectiveDuration(entry));
   }
   if (byWeekday.isEmpty) return [];
@@ -135,7 +136,7 @@ BurnoutStatus detectOvertimeStreak({
   DateTime? maxDate;
   for (final entry in entries) {
     if (entry.type != WorkEntryType.work) continue;
-    final day = DateTime(entry.date.year, entry.date.month, entry.date.day);
+    final day = entryDay(entry);
     if (minDate == null || day.isBefore(minDate)) minDate = day;
     if (maxDate == null || day.isAfter(maxDate)) maxDate = day;
     if (_effectiveDuration(entry) > dailyTarget) {

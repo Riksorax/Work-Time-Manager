@@ -1,5 +1,6 @@
 import '../../core/utils/time_precision.dart';
 import '../entities/work_entry_entity.dart';
+import 'entry_day.dart';
 
 /// Reine Regeln für offene Einträge in den Reports (#404).
 ///
@@ -8,8 +9,9 @@ import '../entities/work_entry_entity.dart';
 /// den **heute** laufenden Eintrag live bis "jetzt"; ein offener Eintrag vor
 /// heute (z. B. verwaister Vortag, #385) zählt 0.
 ///
-/// Der Tag des Eintrags ist der lokale Kalendertag von [WorkEntryEntity.date]
-/// (nie über UTC), "heute" der lokale Kalendertag von `now`. Der Aufrufer
+/// Der Tag des Eintrags ist `entryDay` (lokaler Kalendertag aus der Id, sonst
+/// aus [WorkEntryEntity.date]; nie über UTC, #418), "heute" der lokale
+/// Kalendertag von `now`. Der Aufrufer
 /// übergibt die Uhr (`clockProvider`), die Funktionen kennen keine eigene.
 
 bool _isOpenWorkEntry(WorkEntryEntity e) =>
@@ -19,7 +21,7 @@ DateTime _dayOf(DateTime d) => DateTime(d.year, d.month, d.day);
 
 /// `true`, wenn [e] offen ist und sein Tag vor dem Tag von [now] liegt.
 bool isOpenBeforeToday(WorkEntryEntity e, DateTime now) =>
-    _isOpenWorkEntry(e) && _dayOf(e.date).isBefore(_dayOf(now));
+    _isOpenWorkEntry(e) && entryDay(e).isBefore(_dayOf(now));
 
 /// Netto-Arbeitszeit eines Eintrags für die Reports-Anzeige.
 ///
@@ -36,7 +38,7 @@ Duration reportNetDuration(WorkEntryEntity e, {required DateTime now}) {
   if (workEnd != null) {
     end = workEnd;
   } else {
-    final isLive = _isOpenWorkEntry(e) && _dayOf(e.date) == _dayOf(now);
+    final isLive = _isOpenWorkEntry(e) && entryDay(e) == _dayOf(now);
     if (!isLive) return Duration.zero;
     final nowMinute = roundToMinute(now);
     end = nowMinute.isBefore(start) ? start : nowMinute;

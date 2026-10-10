@@ -15,6 +15,7 @@ import '../../domain/repositories/overtime_repository.dart';
 import '../../domain/repositories/settings_repository.dart';
 import '../../domain/services/break_calculator_service.dart';
 import '../../domain/usecases/save_work_entry.dart';
+import '../../domain/utils/entry_day.dart';
 import '../../domain/utils/overtime_utils.dart';
 import '../../domain/utils/overtime_warning_utils.dart';
 import '../../l10n/app_localizations.dart';
@@ -141,7 +142,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
   Future<void> reloadAfterRetroClose() async {
     if (!ref.mounted) return;
     final entry = state.workEntry;
-    if (_isRunning(entry) && _dayOf(entry.date) != _dayOf(_now())) {
+    if (_isRunning(entry) && entryDay(entry) != _dayOf(_now())) {
       final gen = _initGen;
       final stored =
           await ref.read(overtimeRepositoryProvider).ensureOvertimeLoaded();
@@ -177,7 +178,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
     final today = state.workEntry;
     final todayIsEmpty = _loadedOk &&
         !state.isLoading &&
-        _dayOf(today.date) == _dayOf(now) &&
+        entryDay(today) == _dayOf(now) &&
         today.type == WorkEntryType.work &&
         today.workStart == null;
     if (!canResumeOpenEntry(
@@ -186,13 +187,13 @@ class DashboardViewModel extends Notifier<DashboardState> {
     }
 
     state = state.copyWith(isLoading: true);
-    final run = _init(dayChange: true, pinnedDate: entry.date);
+    final run = _init(dayChange: true, pinnedDate: entryDay(entry));
     final gen = _initGen;
     await run;
     if (gen != _initGen || !ref.mounted) return false;
     return _loadedOk &&
         _isRunning(state.workEntry) &&
-        _dayOf(state.workEntry.date) == _dayOf(entry.date);
+        entryDay(state.workEntry) == entryDay(entry);
   }
 
   Future<void> _init({bool dayChange = false, DateTime? pinnedDate}) {
@@ -232,7 +233,8 @@ class DashboardViewModel extends Notifier<DashboardState> {
       if (stale()) return;
 
       // Berechne dailyOvertime für den initialen Stand
-      final targetDailyHours = _getEffectiveTargetDailyHours(workEntry.date);
+      final targetDailyHours =
+          _getEffectiveTargetDailyHours(entryDay(workEntry));
       final isExtraDay = targetDailyHours == Duration.zero;
       Duration initialDailyOvertime = Duration.zero;
 
@@ -391,13 +393,13 @@ class DashboardViewModel extends Notifier<DashboardState> {
     final today = ref.read(todayProvider);
     bool current() =>
         _loadedOk &&
-        (_isRunning(state.workEntry) || _dayOf(state.workEntry.date) == today);
+        (_isRunning(state.workEntry) || entryDay(state.workEntry) == today);
     if (!current()) {
       // Tageswechsel-Basis nur, wenn wirklich ein Vortag angezeigt wird; beim
       // Retry eines fehlgeschlagenen Erstladens (Platzhalter = heute) gilt die
       // normale Heuristik (sonst wäre die Basis bei einem heute schon
       // gespeicherten Saldo falsch).
-      await _init(dayChange: _dayOf(state.workEntry.date) != today);
+      await _init(dayChange: entryDay(state.workEntry) != today);
       if (!ref.mounted) return false;
       if (!current()) return false;
     }
@@ -543,7 +545,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
     if (state.workEntry.workStart == null) return;
 
     final targetDailyHours =
-        _getEffectiveTargetDailyHours(state.workEntry.date);
+        _getEffectiveTargetDailyHours(entryDay(state.workEntry));
     final dailyOvertime = _calculateElapsedTime() - targetDailyHours;
 
     // Berechne Total = Base (initialOvertime) + Daily
@@ -805,7 +807,8 @@ class DashboardViewModel extends Notifier<DashboardState> {
           updatedEntry.workEnd!.difference(updatedEntry.workStart!) -
               breakDuration;
 
-      final targetDailyHours = _getEffectiveTargetDailyHours(updatedEntry.date);
+      final targetDailyHours =
+          _getEffectiveTargetDailyHours(entryDay(updatedEntry));
       isExtraDay = targetDailyHours == Duration.zero;
       dailyOvertime = newActualWorkDuration - targetDailyHours;
 
@@ -917,7 +920,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
     // Starttag gespeichert).
     if (saved &&
         updatedEntry.workEnd != null &&
-        _dayOf(updatedEntry.date) != _dayOf(_now())) {
+        entryDay(updatedEntry) != _dayOf(_now())) {
       // refresh() zieht todayProvider nach (Standby) und startet über den
       // Listener bereits den Reinit; sonst starten wir ihn selbst.
       final gen = _initGen;
@@ -981,7 +984,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
   Future<bool> _setManualStartTimeBody(TimeOfDay time) async {
     if (!await _ensureCurrentDay()) return false;
     final ctx = _beginAction();
-    final oldDate = state.workEntry.workStart ?? state.workEntry.date;
+    final oldDate = state.workEntry.workStart ?? entryDay(state.workEntry);
     final newStart = DateTime(
         oldDate.year, oldDate.month, oldDate.day, time.hour, time.minute);
     var updatedEntry = state.workEntry.copyWith(workStart: newStart);
@@ -1017,7 +1020,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
     final ctx = _beginAction();
     final oldDate = state.workEntry.workEnd ??
         state.workEntry.workStart ??
-        state.workEntry.date;
+        entryDay(state.workEntry);
     final newEnd = DateTime(
         oldDate.year, oldDate.month, oldDate.day, time.hour, time.minute);
     var updatedEntry = state.workEntry.copyWith(workEnd: newEnd);

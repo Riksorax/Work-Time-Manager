@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/utils/time_format.dart';
 import '../../domain/entities/work_entry_entity.dart';
+import '../../domain/utils/entry_day.dart';
 import '../../domain/utils/overtime_utils.dart';
 import '../../l10n/app_localizations.dart';
 
@@ -156,7 +157,7 @@ class _OpenEntryEndDialogState extends State<OpenEntryEndDialog> {
     final locale = Localizations.localeOf(context).toString();
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final entryDate = DateFormat.MMMEd(locale).format(widget.entry.date);
+    final entryDate = DateFormat.MMMEd(locale).format(entryDay(widget.entry));
     final end = _end;
     final expectedEnd = _suggestion.expectedEnd;
     final showExpected = expectedEnd != null &&

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../domain/entities/break_entity.dart';
 import '../../../domain/entities/work_entry_entity.dart';
+import '../../domain/utils/entry_day.dart';
 import '../../l10n/app_localizations.dart';
 import '../state/edit_work_entry_state.dart';
 import '../view_models/edit_work_entry_view_model.dart';
@@ -35,7 +36,7 @@ class EditWorkEntryModal extends ConsumerWidget {
             children: [
               Text(
                 l10n.editEntryForDate(
-                    DateFormat.yMd(locale).format(workEntry.date)),
+                    DateFormat.yMd(locale).format(entryDay(workEntry))),
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 16),
@@ -155,13 +156,9 @@ class EditWorkEntryModal extends ConsumerWidget {
               ? TimeOfDay.fromDateTime(state.newStartTime!)
               : null,
           onTimeSelected: (time) {
-            final newDateTime = DateTime(
-              state.originalEntry.date.year,
-              state.originalEntry.date.month,
-              state.originalEntry.date.day,
-              time.hour,
-              time.minute,
-            );
+            final day = entryDay(state.originalEntry);
+            final newDateTime =
+                DateTime(day.year, day.month, day.day, time.hour, time.minute);
             viewModel.setStartTime(newDateTime);
           },
         ),
@@ -173,13 +170,9 @@ class EditWorkEntryModal extends ConsumerWidget {
               ? TimeOfDay.fromDateTime(state.newEndTime!)
               : null,
           onTimeSelected: (time) {
-            final newDateTime = DateTime(
-              state.originalEntry.date.year,
-              state.originalEntry.date.month,
-              state.originalEntry.date.day,
-              time.hour,
-              time.minute,
-            );
+            final day = entryDay(state.originalEntry);
+            final newDateTime =
+                DateTime(day.year, day.month, day.day, time.hour, time.minute);
             viewModel.setEndTime(newDateTime);
           },
         ),
@@ -234,12 +227,9 @@ class EditWorkEntryModal extends ConsumerWidget {
                     dense: true,
                     selectedTime: TimeOfDay.fromDateTime(breakEntry.start),
                     onTimeSelected: (time) {
+                      final day = entryDay(workEntry);
                       final newStart = DateTime(
-                          workEntry.date.year,
-                          workEntry.date.month,
-                          workEntry.date.day,
-                          time.hour,
-                          time.minute);
+                          day.year, day.month, day.day, time.hour, time.minute);
                       // Berechne die bisherige Dauer, um die Endzeit mitzuverschieben
                       DateTime? newEnd = breakEntry.end;
                       if (breakEntry.end != null) {
@@ -260,12 +250,9 @@ class EditWorkEntryModal extends ConsumerWidget {
                         ? TimeOfDay.fromDateTime(breakEntry.end!)
                         : null,
                     onTimeSelected: (time) {
+                      final day = entryDay(workEntry);
                       final newEnd = DateTime(
-                          workEntry.date.year,
-                          workEntry.date.month,
-                          workEntry.date.day,
-                          time.hour,
-                          time.minute);
+                          day.year, day.month, day.day, time.hour, time.minute);
                       viewModel.updateBreak(breakEntry.id,
                           newStart: breakEntry.start, newEnd: newEnd);
                     },

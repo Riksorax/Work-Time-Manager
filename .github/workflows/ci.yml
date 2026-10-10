@@ -52,6 +52,21 @@ jobs:
       - name: Test (TZ=Europe/Berlin)
         run: TZ=Europe/Berlin flutter test
 
+      # Westlich von UTC fällt UTC-Mitternacht auf den Vortag (#418); nur die
+      # Zonen-Regressionstests (*_tz_test.dart), nicht die ganze Suite. Die
+      # Zone kommt ausschließlich über TZ; der Canary in jeder Datei schlägt
+      # an, falls TZ nicht wirkt (z. B. fehlende tzdata, dann liefe es still in UTC).
+      - name: Test (TZ=America/Los_Angeles, Pacific/Auckland)
+        run: |
+          files=$(find test -name '*_tz_test.dart' | sort)
+          if [ -z "$files" ]; then
+            echo "Keine *_tz_test.dart gefunden" >&2
+            exit 1
+          fi
+          for tz in America/Los_Angeles Pacific/Auckland; do
+            TZ=$tz flutter test $files
+          done
+
   web:
     name: Angular Build Check
     runs-on: ubuntu-latest
@@ -102,6 +117,14 @@ jobs:
       # Sommerzeit-Fehler (z. B. #355) sind unter UTC unsichtbar.
       - name: Test (TZ=Europe/Berlin)
         run: TZ=Europe/Berlin npm test -- --watch=false
+
+      # Westlich von UTC fällt UTC-Mitternacht auf den Vortag (#407); nur die Zonen-Regressionstests (*.tz.spec.ts).
+      # Ohne Treffer bricht der Builder mit Fehler ab (kein stiller Vollauf, kein grüner Leerlauf).
+      - name: Test (TZ=America/Los_Angeles, Pacific/Auckland)
+        run: |
+          for tz in America/Los_Angeles Pacific/Auckland; do
+            TZ=$tz npm test -- --watch=false --include 'src/**/*.tz.spec.ts'
+          done
 
       - name: Build check
         run: |

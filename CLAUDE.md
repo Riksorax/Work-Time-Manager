@@ -21,7 +21,7 @@ Integrationsbranch ist `develop`; PRs gehen gegen `develop`, nur Release-Branche
 | Plattform | Aus | Checks (wie CI) |
 |---|---|---|
 | Mobile | `mobile/` | `dart format --set-exit-if-changed lib test && flutter analyze --no-fatal-infos && dart run custom_lint && flutter test` |
-| Web | `web/` | `npm test -- --watch=false && npm run build -- --configuration production` (UI-/E2E-Tests zusätzlich: `npm run e2e`, Details `web/CLAUDE.md`) |
+| Web | `web/` | `npm test -- --watch=false && npm run build -- --configuration production` (UI-/E2E-Tests zusätzlich: `npm run e2e`; CI fährt außerdem die Zonen-Regressionstests `*.tz.spec.ts` unter `TZ=America/Los_Angeles` und `Pacific/Auckland`, Details `web/CLAUDE.md`) |
 | Backend | `server/` | `dotnet build WorkTimeManager.slnx -c Release && dotnet test WorkTimeManager.slnx -c Release` |
 | Cloud Functions | `web/functions/` | `npm run build && npm test` (Installation: `npm install --legacy-peer-deps` — reines npm ohne den Flag lässt Arborist bei vitest 4 abstürzen) |
 
@@ -33,6 +33,7 @@ Integrationsbranch ist `develop`; PRs gehen gegen `develop`, nur Release-Branche
 | `flutter-production.yml` | Push auf `main` oder `workflow_dispatch` | Android AAB → Google Play (Closed Testing Track `<Version> <Charakter>`, ab 1.6 `<Major>.<Minor> <Charakter>`) |
 | `deploy-angular.yml` | Push auf `main` oder `workflow_dispatch` | Angular Build → Docker Hub → Hetzner |
 | `deploy-api.yml` | Push auf `main` oder `workflow_dispatch` | .NET Build & Test → Docker Hub → Hetzner |
+| `github-release.yml` | Push auf `main` oder `workflow_dispatch` | Tag `<Version>` und GitHub Release (Text aus `mobile/whatsnew/de-DE.txt`) |
 | `version-bump.yml` | Push auf `release/v*` | Version in `mobile/pubspec.yaml`, Charakter in `RELEASE_NAMES.md` |
 
 Details der Deploy-Workflows, Uptime-Monitoring und benötigte Secrets: `CONTRIBUTING.md`, „Deployment“.
@@ -72,10 +73,22 @@ Jede Phase läuft als Subagent in eigenem Kontext und übergibt ihr Ergebnis üb
 | `/web-analyze` … `/web-review <nr>` | Web-Port eines Flutter-Features: Analyse → Design → Plan → Implementierung → Review |
 | `/server-implement <nr>` | Backend-Änderung |
 | `/release <Version> <Charakter>` | Release-Branch, Versionshinweise, Release-PR (ab 1.6 ein Charakter pro Minor-Linie) |
-| `/auto-bugfix` | Cron-Routine: offene `bug`-Issues automatisch analysieren, bis zum review-fertigen PR umsetzen — **mergt nicht selbst**, das bleibt ein menschlicher Schritt |
+| `/auto-bugfix` | Cron-Routine: offene `bug`-Issues automatisch analysieren, bis zum review-fertigen PR umsetzen — **mergt nicht selbst**, das bleibt ein menschlicher Schritt. Ausnahme: Crash-Issues (Crashlytics/Sentry/Uptime-Kuma) laufen als Hotfix gegen `main` mit Auto-Merge, siehe „Fehler-Monitoring“ |
 
 Betrifft ein Issue mehrere Plattformen, plant der Subagent `cross-platform-coordinator` den
 gemeinsamen Vertrag und die Reihenfolge Backend → Web → Mobile.
+
+## Agent-Standard (Obsidian-Vault)
+
+Die Agents und Commands in `.claude/` stammen aus dem projektübergreifenden Standard im Vault
+`Riksorax/obsidian-vault` (Ordner `_Claude/`, Doku `03_Resources/Agent-Standard.md`). Dieses Repo ist die
+Herkunft und trägt die Projektanpassungen; `.claude/standard.lock` hält fest, welcher Stand je Datei
+installiert wurde. Abweichungen vom Standard sind gewollt (Firestore, Hybrid-Repositories, Premium,
+Profile) und werden nicht „zurückgesetzt“. `release.md` und `hooks/session-start.sh` sind
+projektspezifisch und nicht Teil des Standards.
+
+Änderungen an `.claude/` bleiben Projektsache. Taugt eine Änderung auch für andere Projekte, sie im Vault
+über `sync.sh promote` bzw. `add` zurückholen und dabei Projektspezifisches entfernen.
 
 ## Fehler-Monitoring (Crashlytics/Sentry/Uptime-Kuma) → Issue → Fix
 
@@ -93,6 +106,28 @@ schließen die Lücke:
 
 Sobald ein Issue das Label `bug` trägt (egal ob manuell oder durch Sentry angelegt), greift
 `/auto-bugfix`.
+
+**Hotfix-Handling für Crash-Issues:** Stammt ein `bug`-Issue aus einer dieser drei Quellen —
+erkennbar am Marker-Kommentar `<!-- auto-monitoring:crashlytics:... -->` bzw.
+`<!-- auto-monitoring:uptime-kuma:... -->` im Body (Cloud Functions, siehe unten) oder, bei Sentry,
+an einem `sentry.io/organizations/...`-Link im Body (Sentrys eigene GitHub-Integration, kein
+eigener Marker) —, behandelt `/auto-bugfix` es als Hotfix und nicht wie ein normales Issue
+(Branch/PR gegen `develop`):
+
+- **Web/API:** Branch von `main` (nicht `develop`), PR gegen `main`. CI auf dem PR muss grün sein,
+  danach `enable_pr_auto_merge` setzen — der Merge (und damit `deploy-api.yml`/`deploy-angular.yml`)
+  läuft ohne weiteren menschlichen Schritt. Nach dem Deploy auf `main` zurück nach `develop` mergen
+  (wie in `CONTRIBUTING.md`, „Release“, Schritt „Zurückmergen“), damit `develop` den Fix enthält.
+- **Mobile:** Play-Store-Releases brauchen einen Versions-Bump und einen vorbereiteten
+  Closed-Testing-Track (`CONTRIBUTING.md`, „Hotfix / Bugfix-Release“) — das lässt sich nicht
+  gefahrlos automatisch mergen. `/auto-bugfix` bereitet den Fix als PR gegen `main` vor (Branch von
+  `main`), aktiviert aber **kein** Auto-Merge; stattdessen im Issue vermerken, dass ein Mensch
+  `/release` für den Hotfix anstoßen muss.
+- Betrifft der Crash-Fix mehrere Plattformen, gilt die Ausnahme in Schritt 4 von `/auto-bugfix`
+  weiter (nicht automatisch umsetzen, Rückfrage im Issue).
+
+Normale, manuell gemeldete `bug`-Issues (kein Marker-Kommentar) laufen weiter wie bisher gegen
+`develop`.
 
 **Cloud-Sessions:** `.claude/hooks/session-start.sh` installiert Flutter (Version aus `ci.yml`),
 das .NET-10-SDK und die npm-Pakete. `gh` gibt es dort nicht, GitHub läuft über die MCP-Tools.

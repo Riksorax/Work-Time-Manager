@@ -5,6 +5,7 @@ import '../entities/work_entry_entity.dart';
 import '../repositories/overtime_repository.dart';
 import '../repositories/work_repository.dart';
 import '../services/break_calculator_service.dart';
+import '../utils/entry_day.dart';
 import '../utils/overtime_utils.dart';
 
 /// Ergebnis von [CloseOpenWorkEntry].
@@ -53,8 +54,6 @@ class CloseOpenWorkEntry {
   CloseOpenWorkEntry(this._workRepository, this._overtimeRepository,
       {DateTime Function() clock = DateTime.now})
       : _clock = clock;
-
-  static DateTime _dayOf(DateTime d) => DateTime(d.year, d.month, d.day);
 
   /// [dailyTarget] ist das Soll am Datum von [entry].
   Future<CloseOpenEntryResult> call({
@@ -129,11 +128,11 @@ class CloseOpenWorkEntry {
       isValidOpenEntryEnd(entry: entry, end: workEnd, now: _clock());
 
   Future<WorkEntryEntity?> _readFresh(WorkEntryEntity entry) async {
-    final day = _dayOf(entry.date);
+    final day = entryDay(entry);
     final entries =
         await _workRepository.getWorkEntriesForMonth(day.year, day.month);
     for (final e in entries) {
-      if (_dayOf(e.date) == day) return e;
+      if (entryDay(e) == day) return e;
     }
     return null;
   }

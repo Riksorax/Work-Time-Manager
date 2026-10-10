@@ -302,9 +302,8 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
       final dayData = monthData['days']?[dayKey];
 
       if (dayData != null) {
-        final entry = WorkEntryModel.fromMap(dayData)
-            .copyWith(id: WorkEntryModel.generateId(date));
-        return entry;
+        // Tag aus dem Key (`dayKey`), nicht aus dem gespeicherten date (#418).
+        return WorkEntryModel.fromDayMap(dayData, date);
       }
     }
     return null;
@@ -344,8 +343,7 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
             try {
               final dayData = entry.value as Map<String, dynamic>;
               final entryDate = DateTime(year, month, int.parse(entry.key));
-              return WorkEntryModel.fromMap(dayData)
-                  .copyWith(id: WorkEntryModel.generateId(entryDate));
+              return WorkEntryModel.fromDayMap(dayData, entryDate);
             } catch (e) {
               logger.w(
                   '[Firestore] Fehler beim Parsen eines Eintrags (Tag ${entry.key}): $e');
