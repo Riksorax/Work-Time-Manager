@@ -11,6 +11,7 @@ import '../../core/providers/today_provider.dart';
 import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/services/break_calculator_service.dart';
 import '../../domain/utils/date_utils.dart';
+import '../../domain/utils/entry_day.dart';
 import '../../domain/utils/iso_week.dart';
 import '../../domain/utils/overtime_utils.dart';
 import '../state/monthly_report_state.dart';
@@ -115,10 +116,10 @@ class ReportsViewModel extends Notifier<ReportsState> {
   Duration _msDur(dynamic v) =>
       Duration(milliseconds: (v as num?)?.toInt() ?? 0);
 
-  DateTime _dayKey(String iso) {
-    final d = DateTime.parse(iso).toLocal();
-    return DateTime(d.year, d.month, d.day);
-  }
+  /// Berichtstage des Backends (`days[].date`) sind immer UTC-Mitternacht des
+  /// Kalendertags; `.toLocal()` ergäbe westlich von UTC den Vortag (#418).
+  DateTime _dayKey(String iso) =>
+      calendarDateFromUtcMidnight(DateTime.parse(iso));
 
   /// Tages-Rohsummen lokal, Überstunden aus dem Backend.
   DailyReportState _dailyWithApiOvertime(
