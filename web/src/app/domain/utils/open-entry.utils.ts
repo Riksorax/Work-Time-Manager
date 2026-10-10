@@ -1,6 +1,10 @@
 import { Break, UserSettings, WorkEntry, WorkEntryType } from '../../shared/models';
 import { roundMsToMinute, roundToMinute } from '../../shared/utils/time-precision.util';
+import { localDateFromEntryId } from '../../shared/utils/entry-day.util';
 import { getEffectiveDailyTarget } from './overtime.utils';
+
+// Die Definition lebt seit #407 in der gemeinsamen Util; der Re-Export hält alle bisherigen Importe stabil.
+export { localDateFromEntryId };
 
 /**
  * Reine Funktionen für das nachträgliche Beenden offener Einträge vor heute (#385).
@@ -22,12 +26,6 @@ export interface OpenEntryEndSuggestion {
   suggestedIsNow: boolean;
   /** „Jetzt" ist erlaubt (Alter <= 24 h). */
   nowAllowed: boolean;
-}
-
-/** Lokales Datum (Mitternacht) aus einer Eintrags-`id` `yyyy-MM-dd`. */
-export function localDateFromEntryId(id: string): Date {
-  const [y, m, d] = id.split('-').map(Number);
-  return new Date(y, m - 1, d);
 }
 
 /**

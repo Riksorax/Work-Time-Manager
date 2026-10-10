@@ -5,6 +5,7 @@ import { environment } from '../../../environments/environment';
 import { Break, Bundesland, UserSettings, WorkEntry, WorkEntryType, WorkProfile } from '../../shared/models';
 import { YearlyLeaveReport } from '../../domain/models/leave.models';
 import { DailyStat, MonthlyReport, WeeklyReport } from '../../domain/models/reports.models';
+import { calendarDateFromUtcMidnight, parseEntryId } from '../../shared/utils/entry-day.util';
 import {
   roundToMinute,
   roundToMinuteOrUndefined,
@@ -234,7 +235,8 @@ export class ApiClient {
   private fromDto(dto: WorkEntryDto): WorkEntry {
     return {
       id: dto.id,
-      date: new Date(dto.date),
+      // Kalendertag aus der id, nie aus den lokalen Feldern der UTC-Mitternacht (#407): sonst westlich von UTC der Vortag.
+      date: parseEntryId(dto.id) ?? calendarDateFromUtcMidnight(new Date(dto.date)),
       workStart: dto.workStart ? roundToMinute(new Date(dto.workStart)) : undefined,
       workEnd: dto.workEnd ? roundToMinute(new Date(dto.workEnd)) : undefined,
       type: (dto.type as WorkEntryType) ?? WorkEntryType.Work,

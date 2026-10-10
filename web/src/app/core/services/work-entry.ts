@@ -12,6 +12,7 @@ import { WorkEntry, WorkEntryType, Break } from '../../shared/models';
 import { Observable, combineLatest, of, switchMap } from 'rxjs';
 import { roundToMinute, roundToMinuteOrUndefined } from '../../shared/utils/time-precision.util';
 import { profileIdForApi, profileScopedPath } from '../../shared/utils/work-profile-path.util';
+import { calendarDateFromUtcMidnight, parseEntryId } from '../../shared/utils/entry-day.util';
 
 // localStorage Keys — identisch zu Flutter LocalWorkRepositoryImpl
 const LS_PREFIX = 'local_work_entries_';
@@ -163,9 +164,14 @@ export class WorkEntryService {
       const ts = (v: unknown) => v ? (v as Timestamp).toDate() : undefined;
       // Zeitstempel minutengenau normalisieren (Altdaten können Sekunden enthalten)
       const tsMin = (v: unknown) => roundToMinuteOrUndefined(ts(v));
+      // Kalendertag aus der id (Tages-Key), nie aus den lokalen Feldern der gespeicherten UTC-Mitternacht (#407).
+      // Ohne gültige id bleibt nur das gespeicherte `date` (UTC-Felder); fehlt auch das, ist der Eintrag unlesbar (-> catch).
+      const storedDate = ts(data['date']);
+      const date = parseEntryId(id) ?? (storedDate ? calendarDateFromUtcMidnight(storedDate) : null);
+      if (!date) throw new Error(`Kein Kalendertag für Eintrag ${id}`);
       return {
         id,
-        date:                  ts(data['date'])!,
+        date,
         workStart:             tsMin(data['workStart']),
         workEnd:               tsMin(data['workEnd']),
         type:                  (data['type'] as WorkEntryType) ?? WorkEntryType.Work,

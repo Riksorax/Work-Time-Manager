@@ -4,6 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ApiClient } from './api-client';
 import { DEFAULT_SETTINGS } from '../../shared/models';
 import { YearlyLeaveReport } from '../../domain/models/leave.models';
+import { toDateKey } from '../../shared/utils/german-holidays.util';
 
 describe('ApiClient.getYearlyLeave', () => {
   let api: ApiClient;
@@ -138,9 +139,11 @@ describe('ApiClient.getWorkEntriesForMonth (#385)', () => {
     const p = api.getWorkEntriesForMonth(2026, 10);
     http.expectOne(r => r.url.endsWith('/api/work-entries/2026/10')).flush([dto]);
     const [e] = await p;
-    // `date` ist UTC-Mitternacht; lokal kann das der Vortag sein. Maßgeblich ist die id.
+    // `date` ist UTC-Mitternacht; lokal kann das der Vortag sein. Maßgeblich ist die id (#407): `date` ist die lokale
+    // Mitternacht dieses Tages, in jeder Zone.
     expect(e.id).toBe('2026-10-02');
-    expect(e.date.getTime()).toBe(Date.UTC(2026, 9, 2));
+    expect(toDateKey(e.date)).toBe('2026-10-02');
+    expect(e.date.getTime()).toBe(new Date(2026, 9, 2).getTime());
   });
 });
 
