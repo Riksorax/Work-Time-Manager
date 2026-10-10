@@ -6,6 +6,7 @@ import '../../core/providers/clock_provider.dart';
 import '../../core/utils/time_format.dart';
 import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/usecases/close_open_work_entry.dart';
+import '../../domain/utils/entry_day.dart';
 import '../../l10n/app_localizations.dart';
 import '../view_models/open_entry_view_model.dart';
 import '../view_models/settings_view_model.dart';
@@ -32,7 +33,7 @@ class OpenEntryBanner extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    final date = DateFormat.MMMEd(locale).format(entry.date);
+    final date = DateFormat.MMMEd(locale).format(entryDay(entry));
     final time = formatTime(entry.workStart!, use24HourFormat: use24HourFormat);
     final title = l10n.openEntryBannerTitle(date, time);
     final more =

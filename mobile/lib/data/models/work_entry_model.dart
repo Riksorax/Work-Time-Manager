@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/entities/break_entity.dart';
+import '../../domain/utils/entry_day.dart';
 import 'break_model.dart';
 
 class WorkEntryModel extends WorkEntryEntity {
@@ -50,7 +51,9 @@ class WorkEntryModel extends WorkEntryEntity {
   factory WorkEntryModel.fromMap(Map<String, dynamic> map) {
     return WorkEntryModel(
       id: '', // Die ID ist nicht Teil der Map, sie wird vom Aufrufer gesetzt.
-      date: (map['date'] as Timestamp).toDate(),
+      // Gegenstück zu toMap: gespeichert wird die UTC-Mitternacht des
+      // Kalendertags, gelesen wird daraus wieder die lokale Mitternacht (#418).
+      date: calendarDateFromUtcMidnight((map['date'] as Timestamp).toDate()),
       workStart:
           roundToMinuteOrNull((map['workStart'] as Timestamp?)?.toDate()),
       workEnd: roundToMinuteOrNull((map['workEnd'] as Timestamp?)?.toDate()),
@@ -70,6 +73,18 @@ class WorkEntryModel extends WorkEntryEntity {
               orElse: () => WorkEntryType.work,
             )
           : WorkEntryType.work,
+    );
+  }
+
+  /// Liest einen Tageseintrag aus dem `days`-Feld eines Monatsdokuments.
+  ///
+  /// Der Tag kommt aus dem Tages-Key ([day]), nie aus dem gespeicherten `date`
+  /// (immun gegen Altdaten mit anderem Zeitanteil): `id` und `date` (lokale
+  /// Mitternacht) werden aus [day] gebildet (#418).
+  factory WorkEntryModel.fromDayMap(Map<String, dynamic> map, DateTime day) {
+    return WorkEntryModel.fromMap(map).copyWith(
+      id: generateId(day),
+      date: DateTime(day.year, day.month, day.day),
     );
   }
 

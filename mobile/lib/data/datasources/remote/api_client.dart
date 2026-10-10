@@ -8,6 +8,7 @@ import 'package:flutter_work_time/core/config/api_config.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
 import '../../../domain/entities/break_entity.dart';
 import '../../../domain/entities/work_entry_entity.dart';
+import '../../../domain/utils/entry_day.dart';
 import '../../models/work_entry_model.dart';
 import 'package:flutter_work_time/core/utils/time_precision.dart';
 
@@ -185,7 +186,12 @@ class ApiClient {
 
   WorkEntryModel _entryFromJson(Map<String, dynamic> j) => WorkEntryModel(
         id: j['id'] as String,
-        date: DateTime.parse(j['date'] as String).toLocal(),
+        // `date` ist die UTC-Mitternacht des Kalendertags (Backend: Offset 0,
+        // `...Z` oder `...+00:00`). Der Tag kommt aus der Id (`yyyy-MM-dd`),
+        // sonst aus den UTC-Feldern von `date` - nie über `.toLocal()`: westlich
+        // von UTC wäre das der Vortag (#418). Ergebnis: lokale Mitternacht.
+        date: localDateFromEntryId(j['id'] as String) ??
+            calendarDateFromUtcMidnight(DateTime.parse(j['date'] as String)),
         // Minutengenau normalisieren — Altdaten können Sekunden enthalten.
         workStart: j['workStart'] != null
             ? roundToMinute(DateTime.parse(j['workStart'] as String).toLocal())

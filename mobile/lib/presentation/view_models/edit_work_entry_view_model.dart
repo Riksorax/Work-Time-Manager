@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../../domain/entities/break_entity.dart';
 import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/utils/date_utils.dart';
+import '../../domain/utils/entry_day.dart';
 import '../state/edit_work_entry_state.dart';
 import 'reports_view_model.dart';
 
@@ -40,7 +41,7 @@ class EditWorkEntryViewModel extends Notifier<EditWorkEntryState> {
     // nicht am heutigen Tag.
     final now = nowToMinute();
     final start = state.newStartTime ??
-        combineDateAndTime(entry.date, now.hour, now.minute);
+        combineDateAndTime(entryDay(entry), now.hour, now.minute);
     final newBreak = BreakEntity(
       id: _uuid.v4(),
       name: 'Pause #${state.breaks.length + 1}',

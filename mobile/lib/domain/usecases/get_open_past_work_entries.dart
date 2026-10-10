@@ -2,6 +2,7 @@ import 'package:flutter_work_time/core/utils/logger.dart';
 
 import '../entities/work_entry_entity.dart';
 import '../repositories/work_repository.dart';
+import '../utils/entry_day.dart';
 
 /// Findet offene Arbeitseinträge vor heute (#385): `workStart != null`,
 /// `workEnd == null`, Typ `work`, Kalendertag vor heute.
@@ -33,7 +34,7 @@ class GetOpenPastWorkEntries {
         final entries =
             await _repository.getWorkEntriesForMonth(month.year, month.month);
         result.addAll(entries.where((e) {
-          final day = _dayOf(e.date);
+          final day = entryDay(e);
           return e.type == WorkEntryType.work &&
               e.workStart != null &&
               e.workEnd == null &&
@@ -48,7 +49,7 @@ class GetOpenPastWorkEntries {
             stackTrace: st);
       }
     }
-    result.sort((a, b) => _dayOf(b.date).compareTo(_dayOf(a.date)));
+    result.sort((a, b) => entryDay(b).compareTo(entryDay(a)));
     return result;
   }
 }

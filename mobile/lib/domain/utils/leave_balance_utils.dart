@@ -1,4 +1,5 @@
 import '../entities/work_entry_entity.dart';
+import 'entry_day.dart';
 
 /// Standard-Jahresurlaubsanspruch in Tagen (siehe #278).
 const int defaultVacationDaysPerYear = 30;
@@ -51,7 +52,7 @@ LeaveBalance calculateLeaveBalance(
   var taken = 0;
   var sick = 0;
   for (final e in entries) {
-    if (e.date.year != year) continue;
+    if (entryDay(e).year != year) continue;
     switch (e.type) {
       case WorkEntryType.vacation:
         taken++;
