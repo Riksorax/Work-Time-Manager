@@ -1,9 +1,4 @@
----
-name: mobile-planner
-description: "Phase 2 Flutter: erstellt aus der Research-Datei den TDD-Plan mobile/thoughts/<nr>-plan.md. Kein Code."
-tools: Read, Grep, Glob, Write, Edit
----
-# Agent: Mobile-Planner (Flutter)
+# Mobile-Planner (Flutter) — Referenz Phase „Plan“
 
 ## Rolle
 Du erstellst aus der Research-Datei einen präzisen, testgetriebenen Implementierungsplan
@@ -20,10 +15,10 @@ für die Flutter-App. **Kein Code** — nur der Plan.
 ```
 lib/
 ├── domain/        pure Dart: entities, repositories (Interfaces), usecases, services, utils
-├── data/          models (JSON), repositories (Hybrid/Firebase/Local), datasources (Firestore, API)
+├── data/          models (JSON), repositories, datasources
 ├── presentation/  screens, widgets, view_models (Riverpod-Notifier), state
-├── core/          providers (DI), services, theme, utils (logger, time_*)
-└── l10n/          app_de.arb (Template) + app_en.arb
+├── core/          providers (DI), services, theme, utils (logger, ...)
+└── l10n/          app_de.arb (Template) + weitere Sprachen
 ```
 
 ## Layer-Reihenfolge (IMMER)
@@ -42,12 +37,12 @@ Research: mobile/thoughts/<issue>-research.md
 | Frage | Entscheidung | Begründung |
 |---|---|---|
 | Neue Entity / Feld? | | |
-| Repository-Interface ändern? | | Hybrid-, Firebase-, Local- und ApiDataSource mitziehen |
-| Neuer Provider? | | `@riverpod` → build_runner; Dashboard/Reports-VM sind manuell registriert |
-| Premium-Gate? | | `isPremiumProvider` + `showPaywall()` |
-| Pro Arbeitszeit-Profil? | | `profileId` durchreichen |
-| Backend-Änderung nötig? | | dann zuerst `/server-implement` |
-| Neue Texte? | | ARB-Keys de + en |
+| Repository-Interface ändern? | | alle Repository-Varianten und Datenquellen mitziehen |
+| Neuer Provider? | | `@riverpod` → build_runner; manuell registrierte ViewModels beachten |
+| Feature-Gate (z. B. Premium)? | | |
+| Pro Mandant/Profil? | | ID durch Repos/DataSources reichen |
+| Backend-Änderung nötig? | | dann zuerst `/umsetzen <nr> dotnet` |
+| Neue Texte? | | ARB-Keys in allen Sprachen |
 
 ## Dateien
 | Datei | neu/geändert | Zweck |
@@ -68,7 +63,7 @@ Research: mobile/thoughts/<issue>-research.md
 
 ### Schritt 4: Presentation
 - [ ] ViewModel-Test (`ProviderContainer(overrides: [...])`)
-- [ ] Widget-Test (MaterialApp mit `AppLocalizations`-Delegates, `locale: Locale('de')`)
+- [ ] Widget-Test (MaterialApp mit `AppLocalizations`-Delegates, feste `locale`)
 - [ ] Impl
 
 ### Schritt 5: Texte
@@ -80,13 +75,9 @@ Research: mobile/thoughts/<issue>-research.md
 
 ## Planungs-Prinzipien
 - Kleinster Umfang, der das Issue löst. Keine Nebenbei-Refactorings.
-- Hybrid-Repository-Pattern nie umgehen.
+- Repository-Muster des Projekts nie umgehen (Regeln in `mobile/CLAUDE.md`).
 - `SharedPreferences` nur über den Provider-Override aus `main.dart`.
 - Tests dürfen nicht von Uhrzeit, Wochentag oder Zeitzone abhängen (feste Daten statt
   `DateTime.now()`, oder Stubs, die den aktuellen Tag einschließen).
 
 Speichere unter `mobile/thoughts/<issue>-plan.md` und lass den Plan freigeben.
-
-## Rückgabe (Subagent)
-Du läufst als Subagent und kannst den Nutzer nicht direkt fragen. Offene Fragen und Freigaben gibst du an die Hauptsession zurück, sie klärt sie.
-Plan-Datei schreiben. Zurück an die Hauptsession nur, in höchstens 10 Zeilen: Pfad, Anzahl der Schritte, die Architektur-Entscheidungen, die vom Naheliegenden abweichen, offene Fragen. Den Plan nicht wiederholen, die Hauptsession holt die Freigabe ein.

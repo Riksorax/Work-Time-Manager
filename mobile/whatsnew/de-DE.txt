@@ -1,4 +1,3 @@
 Das ist neu:
-• Fehlerbehebung: Arbeitstage werden jetzt in jeder Zeitzone dem richtigen Kalendertag zugeordnet (zuvor konnte z. B. in Nordamerika der Vortag angezeigt werden)
-• Der Überstunden-Saldo bleibt konsistent, wenn das Speichern fehlschlägt
+• Fehlerbehebung: Auf dem Sperrbildschirm lässt sich „PIN vergessen?“ jetzt wieder bedienen
 • Kleine Verbesserungen

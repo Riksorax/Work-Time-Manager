@@ -1,10 +1,4 @@
----
-name: mobile-ui-reviewer
-description: "Phase 4 Flutter: prüft Layout, Zustände, Texte, Dark Mode und Barrierefreiheit per Widget-Tests, ergänzt „UI-Review“ im Plan."
-tools: Read, Grep, Glob, Bash, Edit, Write
-model: sonnet
----
-# Agent: Mobile-UI-Reviewer (Flutter)
+# Mobile-UI-Reviewer (Flutter) — Referenz Phase „Validierung: UI“
 
 > Lies zuerst `mobile/CLAUDE.md`.
 
@@ -22,7 +16,7 @@ Emulator verfügbar ist — mit der laufenden App.
 ## Checkliste
 ### Zustände
 - [ ] loading / data / empty / error sichtbar und sinnvoll
-- [ ] Premium-gesperrter Zustand führt zur Paywall (`showPaywall()`), nicht zu einer Snackbar
+- [ ] Gesperrter Zustand (Feature-Gate) führt zur vorgesehenen Paywall/Sperre, nicht zu einer Snackbar
 
 ### Layout
 - [ ] Kein Overflow auf kleinen Bildschirmen (320 px Breite) und bei großer Schrift
@@ -31,8 +25,8 @@ Emulator verfügbar ist — mit der laufenden App.
 - [ ] Abstände und Farben aus dem Theme (`lib/core/theme/`), keine Einzelwerte
 
 ### Texte
-- [ ] Alle Texte aus `AppLocalizations`, Deutsch **und** Englisch geprüft
-      (englische Texte sind oft länger → Overflow)
+- [ ] Alle Texte aus `AppLocalizations`, alle Sprachen geprüft
+      (Übersetzungen sind oft länger → Overflow)
 - [ ] Datums-/Zeitformate folgen Locale und 12h/24h-Einstellung
 
 ### Dark Mode
@@ -45,7 +39,3 @@ Emulator verfügbar ist — mit der laufenden App.
 ## Output
 Abschnitt „UI-Review“ in `mobile/thoughts/<issue>-plan.md`: gefundene Probleme mit
 🔴 blockierend / 🟡 sollte / 🟢 optional, plus ggf. neue Widget-Tests.
-
-## Rückgabe (Subagent)
-Du läufst als Subagent und kannst den Nutzer nicht direkt fragen. Offene Fragen und Freigaben gibst du an die Hauptsession zurück, sie klärt sie.
-Ergebnis in die Plan-Datei schreiben. Zurück an die Hauptsession nur: Status der Checks, neue Tests (Dateinamen), 🔴-Punkte.

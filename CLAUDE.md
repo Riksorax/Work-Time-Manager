@@ -63,15 +63,17 @@ angleichen, nicht umgekehrt.
 
 Einstieg für jede Aufgabe: `/issue <nr>` — liest das Issue, bestimmt die Plattformen, legt den
 Branch an und wählt den Workflow. Commands in `.claude/commands/`, Subagents in `.claude/agents/`.
-Jede Phase läuft als Subagent in eigenem Kontext und übergibt ihr Ergebnis über
-`<plattform>/thoughts/<nr>-*.md`; in die Hauptsession kommt nur eine Kurzfassung zurück.
+Drei Phasen-Agents (`analyst`, `developer`, `reviewer`) laufen als Subagents in eigenem Kontext und übergeben ihr Ergebnis über
+`<plattform>/thoughts/<nr>-*.md`; in die Hauptsession kommt nur eine Kurzfassung zurück. Das Stack-Wissen laden sie aus den
+Playbooks `.claude/skills/playbook-<flutter|angular|dotnet>/`, die Besonderheiten dieses Projekts aus
+`.claude/skills/playbook-projekt/` (geht den Stack-Playbooks vor).
 
 | Command | Zweck |
 |---|---|
 | `/issue <nr>` | Issue einordnen, Branch anlegen, Workflow wählen |
-| `/mobile-analyze` … `/mobile-review <nr>` | Flutter: Analyse → Plan → Implementierung → Validierung → Review |
-| `/web-analyze` … `/web-review <nr>` | Web-Port eines Flutter-Features: Analyse → Design → Plan → Implementierung → Review |
-| `/server-implement <nr>` | Backend-Änderung |
+| `/analysieren` → `/planen` → `/umsetzen` → `/validieren` → `/reviewen` `<nr> flutter` | Flutter: Analyse → Plan → Umsetzung → Validierung → Review |
+| `/analysieren` → `/entwerfen` → `/planen` → `/umsetzen` → `/reviewen` `<nr> angular` | Web-Port eines Flutter-Features: Analyse → UI-Design → Plan → Umsetzung → Review |
+| `/umsetzen <nr> dotnet` | Backend-Änderung (Vertrag zuerst, kein eigener Analyse-/Plan-Zyklus) |
 | `/release <Version> <Charakter>` | Release-Branch, Versionshinweise, Release-PR (ab 1.6 ein Charakter pro Minor-Linie) |
 | `/auto-bugfix` | Cron-Routine: offene `bug`-Issues automatisch analysieren, bis zum review-fertigen PR umsetzen — **mergt nicht selbst**, das bleibt ein menschlicher Schritt. Ausnahme: Crash-Issues (Crashlytics/Sentry/Uptime-Kuma) laufen als Hotfix gegen `main` mit Auto-Merge, siehe „Fehler-Monitoring“ |
 
@@ -80,15 +82,17 @@ gemeinsamen Vertrag und die Reihenfolge Backend → Web → Mobile.
 
 ## Agent-Standard (Obsidian-Vault)
 
-Die Agents und Commands in `.claude/` stammen aus dem projektübergreifenden Standard im Vault
+Die Agents, Befehle und Stack-Playbooks in `.claude/` stammen aus dem projektübergreifenden Standard im Vault
 `Riksorax/obsidian-vault` (Ordner `_Claude/`, Doku `03_Resources/Agent-Standard.md`). Dieses Repo ist die
-Herkunft und trägt die Projektanpassungen; `.claude/standard.lock` hält fest, welcher Stand je Datei
-installiert wurde. Abweichungen vom Standard sind gewollt (Firestore, Hybrid-Repositories, Premium,
-Profile) und werden nicht „zurückgesetzt“. `release.md` und `hooks/session-start.sh` sind
-projektspezifisch und nicht Teil des Standards.
+Herkunft des Standards. `.claude/standard.lock` hält fest, welcher Stand je Datei installiert wurde.
 
-Änderungen an `.claude/` bleiben Projektsache. Taugt eine Änderung auch für andere Projekte, sie im Vault
-über `sync.sh promote` bzw. `add` zurückholen und dabei Projektspezifisches entfernen.
+**Projektspezifisches steht nicht in den Standard-Dateien**, sondern im Projekt-Playbook
+`.claude/skills/playbook-projekt/` (Hybrid-Repositories, Arbeitszeit-Profile, Premium, Rechenlogik, Konventionen,
+Design-System) und in dieser Datei. `release.md` und `hooks/session-start.sh` sind projektspezifisch und nicht Teil des
+Standards; die `session-start.d`-Skripte des Standards sind bewusst nicht installiert (dieses Repo nutzt den eigenen Hook).
+
+Taugt eine Änderung an `.claude/` auch für andere Projekte, sie im Vault über `sync.sh promote` bzw. `add`
+zurückholen und dabei Projektspezifisches entfernen. Neue Standard-Versionen: `sync.sh update`, danach `git diff` und CI prüfen.
 
 ## Fehler-Monitoring (Crashlytics/Sentry/Uptime-Kuma) → Issue → Fix
 

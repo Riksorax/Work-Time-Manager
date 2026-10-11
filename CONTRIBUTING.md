@@ -39,9 +39,9 @@ passenden Workflow.
 
 | Plattform | Workflow |
 |---|---|
-| Mobile | `/mobile-analyze` → `/mobile-plan` → `/mobile-implement` → `/mobile-validate` → `/mobile-review` |
-| Web (Flutter-Port) | `/web-analyze` → `/web-design` → `/web-plan` → `/web-implement` → `/web-review` |
-| Backend | `/server-implement` |
+| Mobile | `/analysieren` → `/planen` → `/umsetzen` → `/validieren` → `/reviewen` (jeweils `<nr> flutter`) |
+| Web (Flutter-Port) | `/analysieren` → `/entwerfen` → `/planen` → `/umsetzen` → `/reviewen` (jeweils `<nr> angular`) |
+| Backend | `/umsetzen <nr> dotnet` |
 | mehrere | Cross-Platform-Coordinator (`.claude/agents/cross-platform-coordinator.md`): Backend zuerst, dann Web, dann Mobile, ein PR pro Plattform |
 
 Lokale Checks entsprechen der CI (`.github/workflows/ci.yml`):
@@ -263,8 +263,9 @@ die Einführung stoppen und einen Hotfix mit höherer Version veröffentlichen.
 |---|---|
 | `CLAUDE.md` | Überblick, Firestore-Datenpfade, übergreifende Regeln (wird immer geladen) |
 | `mobile/CLAUDE.md`, `web/CLAUDE.md` (+ `web/AGENTS.md`), `server/CLAUDE.md` | Plattformregeln, werden erst beim Arbeiten im Ordner geladen |
-| `.claude/agents/` | Subagents: `mobile-*`, `web-*`, `server-developer`, `cross-platform-coordinator` — laufen in eigenem Kontext |
-| `.claude/commands/` | `/issue`, `/release`, `/mobile-*`, `/web-*`, `/server-implement` |
+| `.claude/agents/` | Subagents: `analyst`, `developer`, `reviewer`, `cross-platform-coordinator` — laufen in eigenem Kontext |
+| `.claude/commands/` | `/issue`, `/release`, `/auto-bugfix`, `/analysieren`, `/planen`, `/entwerfen`, `/umsetzen`, `/validieren`, `/reviewen` |
+| `.claude/skills/` | Playbooks: `playbook-flutter`, `-angular`, `-dotnet` (Agent-Standard aus dem Vault) und `playbook-projekt` (WTM-Besonderheiten) |
 | `.claude/hooks/session-start.sh` | Installiert die Toolchains in Cloud-Sessions |
 
 In Cloud-Sessions gibt es kein `gh`. PRs und Issues laufen dort über die GitHub-MCP-Tools.
