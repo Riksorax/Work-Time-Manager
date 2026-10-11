@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers/app_lock_provider.dart';
-import '../../core/utils/app_navigator.dart';
 import '../../domain/utils/app_lock_lockout.dart';
 import '../../l10n/app_localizations.dart';
 import 'forgot_pin_dialog.dart';
@@ -105,14 +104,13 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen>
 
   /// PIN vergessen (siehe #288): erst Identität prüfen, dann neue PIN samt
   /// neuem Code setzen. Die alte PIN bleibt bis zum erfolgreichen Setzen
-  /// unverändert gültig. Der Screen liegt oberhalb des Navigators, daher
-  /// kommen die Dialoge über [navigatorKey].
+  /// unverändert gültig. Der Screen läuft in einem eigenen Navigator
+  /// (`AppLockLayer`, #450); die Dialoge öffnen über seinen Kontext, nie über
+  /// den globalen `navigatorKey` (der Dialog läge sonst hinter der Sperre).
   Future<void> _forgotPin() async {
-    final verified =
-        await ForgotPinDialog.show(navigatorKey.currentContext ?? context);
+    final verified = await ForgotPinDialog.show(context);
     if (!verified || !mounted) return;
-    final done =
-        await PinSetupDialog.show(navigatorKey.currentContext ?? context);
+    final done = await PinSetupDialog.show(context);
     if (!done || !mounted) return;
     FocusScope.of(context).unfocus();
     _unlock();
