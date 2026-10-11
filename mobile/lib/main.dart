@@ -25,7 +25,7 @@ import 'firebase_options.dart';
 import 'l10n/app_localizations.dart';
 import 'presentation/view_models/settings_view_model.dart';
 import 'presentation/view_models/theme_view_model.dart';
-import 'presentation/widgets/app_lock_screen.dart';
+import 'presentation/widgets/app_lock_layer.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -215,12 +215,7 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
         return MediaQuery(
           data: MediaQuery.of(context)
               .copyWith(alwaysUse24HourFormat: use24HourFormat),
-          child: Stack(
-            children: [
-              child!,
-              if (isLocked) const AppLockScreen(),
-            ],
-          ),
+          child: AppLockLayer(isLocked: isLocked, child: child!),
         );
       },
       home: const HomeScreen(),
