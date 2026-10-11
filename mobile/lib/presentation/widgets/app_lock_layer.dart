@@ -33,7 +33,9 @@ class _AppLockNavigator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Einzige Route, kein Zurück: die Sperre lässt sich nicht wegnavigieren.
+    // Einzige Route im eigenen Navigator. `canPop: false` ist nur eine
+    // Absicherung: Die Android-Zurück-Taste wirkt weiterhin auf den
+    // App-Navigator unter der Sperre (Stand wie vor #450, nicht verändert).
     return PopScope(
       canPop: false,
       // Der HeroController des App-Navigators darf nicht geteilt werden.
