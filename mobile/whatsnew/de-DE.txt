@@ -1,3 +1,3 @@
 Das ist neu:
-• Fehlerbehebung: Auf dem Sperrbildschirm lässt sich „PIN vergessen?“ jetzt wieder bedienen
-• Kleine Verbesserungen
+• Fehlerbehebung: Die App stürzt nicht mehr ab, wenn die Abo-Verwaltung (RevenueCat) nicht bereit ist
+• Premium-Funktionen werden in diesem Fall sauber deaktiviert statt die App zu beenden
