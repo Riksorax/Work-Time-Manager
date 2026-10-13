@@ -21,6 +21,7 @@ import 'core/providers/providers.dart';
 import 'core/services/notification_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/utils/app_navigator.dart';
+import 'core/utils/revenuecat_state.dart';
 import 'firebase_options.dart';
 import 'l10n/app_localizations.dart';
 import 'presentation/view_models/settings_view_model.dart';
@@ -78,7 +79,13 @@ Future<void> main() async {
             : null;
 
     if (activeKey != null) {
-      await Purchases.configure(PurchasesConfiguration(activeKey));
+      try {
+        await Purchases.configure(PurchasesConfiguration(activeKey));
+        revenueCatConfigured = true;
+      } catch (e, stackTrace) {
+        logger.e('RevenueCat-Konfiguration fehlgeschlagen',
+            error: e, stackTrace: stackTrace);
+      }
     } else {
       logger.w(
           'RevenueCat nicht initialisiert – kein API-Key via --dart-define übergeben.');

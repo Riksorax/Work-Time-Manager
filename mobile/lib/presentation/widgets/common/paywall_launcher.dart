@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 
+import '../../../core/utils/revenuecat_state.dart';
 import '../../../l10n/app_localizations.dart';
 
 /// Zeigt die RevenueCat-Paywall in einem Fullscreen-Modal an. Gemeinsam
 /// genutzt von allen Stellen, an denen ein Premium-Feature (Berichte,
 /// zusätzliche Arbeitszeit-Profile, ...) direkt zum Kauf führen soll.
-const _rcAndroidKey = String.fromEnvironment('RC_ANDROID_KEY');
-
 void showPaywall(BuildContext context) {
-  // Im lokalen Test ohne gültigen RC-Key kein Paywall öffnen
-  if (_rcAndroidKey.isEmpty) {
+  // Ohne konfiguriertes RevenueCat (fehlender/ungültiger Key) keine Paywall
+  if (!revenueCatConfigured) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
