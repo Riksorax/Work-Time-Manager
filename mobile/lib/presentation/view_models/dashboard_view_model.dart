@@ -630,7 +630,52 @@ class DashboardViewModel extends Notifier<DashboardState> {
     });
   }
 
-  Future<bool> startOrStopTimer() => _runAction(() => _startOrStopTimerBody());
+  /// Start/Stop des Timers. Nach einem erfolgreichen **Stop** (Ende eines
+  /// Arbeitstags) wird einmalig die Store-Bewertung angefragt, falls fällig
+  /// (siehe [_maybeRequestReview]).
+  Future<bool> startOrStopTimer() async {
+    final wasRunning = ref.mounted && isTimerRunning;
+    final ok = await _startOrStopTimer();
+    if (ok && wasRunning && ref.mounted && !isTimerRunning) {
+      unawaited(_maybeRequestReview());
+    }
+    return ok;
+  }
+
+  /// Start/Stop ohne Bewertungsanfrage (Profilwechsel, [stopRunningForSwitch]).
+  Future<bool> _startOrStopTimer() => _runAction(() => _startOrStopTimerBody());
+
+  /// Läuft gerade eine Prüfung der Bewertungsanfrage? Verhindert, dass zwei
+  /// kurz aufeinanderfolgende Stopps beide anfragen.
+  bool _reviewCheckRunning = false;
+
+  /// Fragt höchstens einmal die Store-Bewertung an (Android, In-App-Review).
+  /// Läuft nur an dieser ruhigen Stelle (Timer gerade gestoppt), nie beim
+  /// App-Start oder nach einem Fehler. Wirft nie und blockiert die UI nicht.
+  /// Das Flag wird **vor** dem Aufruf gesetzt, weil Google die Anzeige
+  /// begrenzt und ein Aufruf sie nicht garantiert.
+  Future<void> _maybeRequestReview() async {
+    if (_reviewCheckRunning) return;
+    _reviewCheckRunning = true;
+    try {
+      final requester = ref.read(reviewRequesterProvider);
+      // Zuerst die billige Plattformprüfung: auf iOS/Web (und ohne Play
+      // Services) entstehen so keine Lesezugriffe auf die Einträge.
+      if (!await requester.isAvailable()) return;
+      if (!ref.mounted) return;
+      final shouldRequest = ref.read(shouldRequestReviewUseCaseProvider);
+      if (!await shouldRequest(isTimerRunning: isTimerRunning)) return;
+      // Zwischenzeitlich neu gestarteter Timer: nicht stören.
+      if (!ref.mounted || isTimerRunning) return;
+      await shouldRequest.markRequested();
+      await requester.requestReview();
+    } catch (e, st) {
+      logger.e('[Review] Bewertungsanfrage fehlgeschlagen (${e.runtimeType})',
+          stackTrace: st);
+    } finally {
+      _reviewCheckRunning = false;
+    }
+  }
 
   Future<bool> _startOrStopTimerBody() async {
     if (!await _ensureCurrentDay()) return false;
@@ -706,7 +751,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
 
     if (!isTimerRunning) return true;
 
-    final ok = await startOrStopTimer();
+    final ok = await _startOrStopTimer();
     if (!ok || !ref.mounted) return false;
     // `startOrStopTimer` liefert auch `true`, ohne zu stoppen (z. B. wenn
     // `_ensureCurrentDay` abbricht): Wirkung am State prüfen.

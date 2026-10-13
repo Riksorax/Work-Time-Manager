@@ -68,6 +68,7 @@ dependencies:
   # PIN-/Biometrie-Sperre (#223)
   local_auth: ^3.0.2
   crypto: ^3.0.6
+  in_app_review: ^2.0.12
 
 dependency_overrides:
   meta: ^1.17.0

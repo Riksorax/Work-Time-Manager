@@ -13,12 +13,14 @@ import '../../core/utils/logger.dart';
 import '../../data/datasources/remote/api_client.dart';
 import '../../data/datasources/remote/api_data_source.dart';
 import '../../data/datasources/remote/firestore_datasource.dart';
+import '../../data/services/in_app_review_requester.dart';
 import '../../data/repositories/auth_repository_impl.dart';
 import '../../data/repositories/hybrid_overtime_repository_impl.dart';
 import '../../data/repositories/hybrid_work_repository_impl.dart';
 import '../../data/repositories/local_overtime_repository_impl.dart';
 import '../../data/repositories/local_work_repository_impl.dart';
 import '../../data/repositories/firebase_overtime_repository_impl.dart';
+import '../../data/repositories/review_prompt_repository_impl.dart';
 import '../../data/repositories/settings_repository_impl.dart';
 import '../../data/repositories/weekly_reflection_repository_impl.dart';
 import '../../data/repositories/work_profile_repository_impl.dart';
@@ -27,10 +29,12 @@ import '../../domain/entities/user_entity.dart';
 import '../../domain/entities/work_profile_entity.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../domain/repositories/overtime_repository.dart';
+import '../../domain/repositories/review_prompt_repository.dart';
 import '../../domain/repositories/settings_repository.dart';
 import '../../domain/repositories/weekly_reflection_repository.dart';
 import '../../domain/repositories/work_profile_repository.dart';
 import '../../domain/repositories/work_repository.dart';
+import '../../domain/services/review_requester.dart';
 import '../../domain/usecases/close_open_work_entry.dart';
 import '../../domain/usecases/delete_account.dart';
 import '../../domain/usecases/reauthenticate.dart';
@@ -42,6 +46,7 @@ import '../../domain/usecases/get_work_entries_for_month.dart';
 import '../../domain/usecases/overtime_usecases.dart';
 import '../../domain/usecases/save_work_entry.dart';
 import '../../domain/usecases/set_theme_mode.dart';
+import '../../domain/usecases/should_request_review.dart';
 import '../../domain/usecases/sign_in_with_google.dart';
 import '../../domain/usecases/sign_out.dart';
 import '../../domain/usecases/start_or_stop_timer.dart';
@@ -113,6 +118,11 @@ VersionService versionService(Ref ref) {
 NotificationService notificationService(Ref ref) {
   return NotificationService();
 }
+
+/// Store-Bewertungsabfrage (nur Android aktiv), hinter einer Abstraktion, damit
+/// Tests sie überschreiben können.
+@riverpod
+ReviewRequester reviewRequester(Ref ref) => InAppReviewRequester();
 
 //==============================================================================
 // REPOSITORIES
@@ -334,6 +344,20 @@ SetThemeMode setThemeModeUseCase(Ref ref) {
 @riverpod
 GetTodayWorkEntry getTodayWorkEntryUseCase(Ref ref) {
   return GetTodayWorkEntry(ref.watch(workRepositoryProvider),
+      clock: ref.watch(clockProvider));
+}
+
+/// Lokaler Zustand der einmaligen Bewertungsanfrage (SharedPreferences, ohne
+/// Login-/Profilbezug).
+@riverpod
+ReviewPromptRepository reviewPromptRepository(Ref ref) {
+  return ReviewPromptRepositoryImpl(ref.watch(sharedPreferencesProvider));
+}
+
+@riverpod
+ShouldRequestReviewUseCase shouldRequestReviewUseCase(Ref ref) {
+  return ShouldRequestReviewUseCase(ref.watch(reviewPromptRepositoryProvider),
+      ref.watch(workRepositoryProvider),
       clock: ref.watch(clockProvider));
 }
 

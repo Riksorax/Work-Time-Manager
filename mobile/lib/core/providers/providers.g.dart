@@ -438,6 +438,54 @@ final class NotificationServiceProvider extends $FunctionalProvider<
 String _$notificationServiceHash() =>
     r'cda5ea9d196dce85bee56839a4a0f035021752e3';
 
+/// Store-Bewertungsabfrage (nur Android aktiv), hinter einer Abstraktion, damit
+/// Tests sie überschreiben können.
+
+@ProviderFor(reviewRequester)
+const reviewRequesterProvider = ReviewRequesterProvider._();
+
+/// Store-Bewertungsabfrage (nur Android aktiv), hinter einer Abstraktion, damit
+/// Tests sie überschreiben können.
+
+final class ReviewRequesterProvider extends $FunctionalProvider<ReviewRequester,
+    ReviewRequester, ReviewRequester> with $Provider<ReviewRequester> {
+  /// Store-Bewertungsabfrage (nur Android aktiv), hinter einer Abstraktion, damit
+  /// Tests sie überschreiben können.
+  const ReviewRequesterProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'reviewRequesterProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$reviewRequesterHash();
+
+  @$internal
+  @override
+  $ProviderElement<ReviewRequester> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  ReviewRequester create(Ref ref) {
+    return reviewRequester(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(ReviewRequester value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<ReviewRequester>(value),
+    );
+  }
+}
+
+String _$reviewRequesterHash() => r'2506a7e51758e6abaac3b1a4a3f10adbe8b61748';
+
 @ProviderFor(authRepository)
 const authRepositoryProvider = AuthRepositoryProvider._();
 
@@ -1136,6 +1184,103 @@ final class GetTodayWorkEntryUseCaseProvider extends $FunctionalProvider<
 
 String _$getTodayWorkEntryUseCaseHash() =>
     r'dde53bb0a8325b8881666a6679c270f95af3e460';
+
+/// Lokaler Zustand der einmaligen Bewertungsanfrage (SharedPreferences, ohne
+/// Login-/Profilbezug).
+
+@ProviderFor(reviewPromptRepository)
+const reviewPromptRepositoryProvider = ReviewPromptRepositoryProvider._();
+
+/// Lokaler Zustand der einmaligen Bewertungsanfrage (SharedPreferences, ohne
+/// Login-/Profilbezug).
+
+final class ReviewPromptRepositoryProvider extends $FunctionalProvider<
+    ReviewPromptRepository,
+    ReviewPromptRepository,
+    ReviewPromptRepository> with $Provider<ReviewPromptRepository> {
+  /// Lokaler Zustand der einmaligen Bewertungsanfrage (SharedPreferences, ohne
+  /// Login-/Profilbezug).
+  const ReviewPromptRepositoryProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'reviewPromptRepositoryProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$reviewPromptRepositoryHash();
+
+  @$internal
+  @override
+  $ProviderElement<ReviewPromptRepository> $createElement(
+          $ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  ReviewPromptRepository create(Ref ref) {
+    return reviewPromptRepository(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(ReviewPromptRepository value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<ReviewPromptRepository>(value),
+    );
+  }
+}
+
+String _$reviewPromptRepositoryHash() =>
+    r'8e5b93d501c46d55370b95580b30fc3d60e12178';
+
+@ProviderFor(shouldRequestReviewUseCase)
+const shouldRequestReviewUseCaseProvider =
+    ShouldRequestReviewUseCaseProvider._();
+
+final class ShouldRequestReviewUseCaseProvider extends $FunctionalProvider<
+    ShouldRequestReviewUseCase,
+    ShouldRequestReviewUseCase,
+    ShouldRequestReviewUseCase> with $Provider<ShouldRequestReviewUseCase> {
+  const ShouldRequestReviewUseCaseProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'shouldRequestReviewUseCaseProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$shouldRequestReviewUseCaseHash();
+
+  @$internal
+  @override
+  $ProviderElement<ShouldRequestReviewUseCase> $createElement(
+          $ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  ShouldRequestReviewUseCase create(Ref ref) {
+    return shouldRequestReviewUseCase(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(ShouldRequestReviewUseCase value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<ShouldRequestReviewUseCase>(value),
+    );
+  }
+}
+
+String _$shouldRequestReviewUseCaseHash() =>
+    r'e4b7295dfbb62466349ff5931eec8696b5507bb0';
 
 @ProviderFor(getOpenPastWorkEntriesUseCase)
 const getOpenPastWorkEntriesUseCaseProvider =

@@ -1,3 +1,5 @@
+import 'dart:async' show unawaited;
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
@@ -18,6 +20,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'core/providers/app_lock_provider.dart';
 import 'core/providers/providers.dart';
+import 'core/providers/today_provider.dart';
 import 'core/services/notification_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/utils/app_navigator.dart';
@@ -170,6 +173,18 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _recordFirstUse();
+  }
+
+  /// Hält den Tag der Erstnutzung für die einmalige Bewertungsanfrage fest
+  /// (lokal, unabhängig vom Login). Ein Fehler darf den Start nie stören.
+  void _recordFirstUse() {
+    try {
+      unawaited(ref
+          .read(reviewPromptRepositoryProvider)
+          .saveFirstUseDateIfAbsent(ref.read(todayProvider))
+          .catchError((_) {}));
+    } catch (_) {}
   }
 
   @override
