@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase;
 import 'package:flutter/foundation.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import '../../core/utils/logger.dart';
+import '../../core/utils/revenuecat_state.dart';
 import '../../domain/entities/user_entity.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../datasources/remote/firestore_datasource.dart';
@@ -14,10 +15,7 @@ class AuthRepositoryImpl implements AuthRepository {
   AuthRepositoryImpl(this._dataSource);
 
   /// Implementiert den Stream, der auf An- und Abmeldeereignisse lauscht.
-  static const _rcAndroidKey = String.fromEnvironment('RC_ANDROID_KEY');
-  static const _rcIosKey = String.fromEnvironment('RC_IOS_KEY');
-  static bool get _isRcInitialized =>
-      !kIsWeb && (_rcAndroidKey.isNotEmpty || _rcIosKey.isNotEmpty);
+  static bool get _isRcInitialized => !kIsWeb && revenueCatConfigured;
 
   @override
   Stream<UserEntity?> get authStateChanges {

@@ -3,6 +3,7 @@ import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_work_time/core/providers/providers.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
+import 'package:flutter_work_time/core/utils/revenuecat_state.dart';
 
 bool _hasActivePremium(CustomerInfo info) {
   return info.entitlements.all['work_time_manager_premium']?.isActive ??
@@ -14,7 +15,7 @@ bool _hasActivePremium(CustomerInfo info) {
 
 // Provider für den aktuellen CustomerInfo (Abo-Status)
 final customerInfoProvider = StreamProvider<CustomerInfo>((ref) {
-  if (kIsWeb) return const Stream.empty();
+  if (kIsWeb || !revenueCatConfigured) return const Stream.empty();
 
   return Stream<CustomerInfo>.multi((controller) {
     void syncToFirestore(CustomerInfo info) {
@@ -73,7 +74,7 @@ final isPremiumProvider = Provider<bool>((ref) {
 
 // Hilfsfunktion zum Initialisieren (kann beim App-Start aufgerufen werden)
 Future<void> refreshCustomerInfo(WidgetRef ref) async {
-  if (!kIsWeb) {
+  if (!kIsWeb && revenueCatConfigured) {
     try {
       await Purchases.getCustomerInfo();
     } catch (e, stackTrace) {
@@ -129,7 +130,7 @@ final maxWorkProfileCountProvider = Provider<int>((ref) {
 /// `purchases_flutter` bietet dafür keine eigene statische Methode - der
 /// Link steckt direkt als Feld in [CustomerInfo.managementURL].
 Future<String?> getSubscriptionManagementUrl() async {
-  if (kIsWeb) return null;
+  if (kIsWeb || !revenueCatConfigured) return null;
   try {
     final info = await Purchases.getCustomerInfo();
     if (info.managementURL == null) {
