@@ -38,7 +38,7 @@ else
     BASE_URL="https://storage.googleapis.com/flutter_infra_release/releases"
     ARCHIVE=$(curl -fsSL "$BASE_URL/releases_linux.json" \
       | jq -r --arg v "$FLUTTER_VERSION" \
-          '.releases[] | select(.version == $v and .channel == "stable") | .archive' \
+          '.releases[] | select(.version == $v) | .archive' \
       | head -n1)
     if [ -z "$ARCHIVE" ]; then
       log "Flutter $FLUTTER_VERSION nicht in releases_linux.json gefunden."
