@@ -634,6 +634,18 @@
   "@paywallUnavailable": {
     "description": "Fehlermeldung, wenn die Premium-Paywall lokal ohne RevenueCat-Key aufgerufen wird."
   },
+  "paywallRestoreSuccess": "Dein Premium-Abo wurde wiederhergestellt.",
+  "@paywallRestoreSuccess": {
+    "description": "Snackbar nach \"Abo wiederherstellen\" in der Paywall, wenn ein aktives Abo gefunden wurde."
+  },
+  "paywallRestoreNothingFound": "Es wurde kein aktives Abo für dieses Google-Konto gefunden.",
+  "@paywallRestoreNothingFound": {
+    "description": "Dialog nach \"Abo wiederherstellen\" in der Paywall, wenn kein aktives Abo gefunden wurde."
+  },
+  "paywallRestoreError": "Das Abo konnte nicht wiederhergestellt werden. Bitte prüfe deine Internetverbindung und versuche es erneut.",
+  "@paywallRestoreError": {
+    "description": "Dialog nach \"Abo wiederherstellen\" in der Paywall, wenn die Wiederherstellung fehlschlägt."
+  },
   "tabDaily": "Täglich",
   "@tabDaily": { "description": "Tab-Beschriftung für die Tagesansicht der Berichte." },
   "tabWeekly": "Wöchentlich",
