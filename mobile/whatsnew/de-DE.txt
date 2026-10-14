@@ -1,3 +1,3 @@
 Das ist neu:
-• Fehlerbehebung: Die App stürzt nicht mehr ab, wenn die Abo-Verwaltung (RevenueCat) nicht bereit ist
-• Premium-Funktionen werden in diesem Fall sauber deaktiviert statt die App zu beenden
+• Fehlerbehebung: „Abo wiederherstellen“ in der Paywall meldet jetzt, ob ein Abo gefunden wurde, kein Abo vorhanden ist oder ein Fehler auftrat
+• Verbesserung: Updates über Google Play werden nach dem Download kontrolliert installiert, das soll Abstürze nach einem Update verhindern

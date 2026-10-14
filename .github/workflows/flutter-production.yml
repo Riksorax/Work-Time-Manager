@@ -91,6 +91,23 @@ jobs:
           channel: 'stable'
           cache: true
 
+      # Ein RevenueCat-Test-Store-Key (`test_...`) lässt im Release-Build
+      # Purchases.configure scheitern und die App abstürzen (#454, #455).
+      - name: Check RevenueCat key
+        env:
+          RC_ANDROID_KEY: ${{ secrets.RC_ANDROID_PROD_KEY }}
+        run: |
+          if [ -z "$RC_ANDROID_KEY" ]; then
+            echo "::error::Secret RC_ANDROID_PROD_KEY ist leer oder fehlt – ohne Key startet RevenueCat nicht."
+            exit 1
+          fi
+          case "$RC_ANDROID_KEY" in
+            test_*)
+              echo "::error::RC_ANDROID_PROD_KEY ist ein Test-Store-Key (test_...). Für den Release-Build den Play-Store-Key (goog_...) aus dem RevenueCat-Dashboard hinterlegen."
+              exit 1
+              ;;
+          esac
+
       - name: Install dependencies
         run: flutter pub get
 
@@ -133,6 +150,16 @@ jobs:
           path: mobile/build/app/outputs/bundle/release/app-release.aab
           if-no-files-found: error
           retention-days: 30
+
+      # Die Play Console bietet die mapping.txt nur zum Hochladen/Löschen an. Zum
+      # Auflösen obfuskierter Namen (z. B. `z2` in #453) hier als Artefakt ablegen.
+      - name: Upload R8 mapping Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: work-time-manager-mapping-${{ github.run_number }}
+          path: mobile/build/app/outputs/mapping/release/mapping.txt
+          if-no-files-found: warn
+          retention-days: 90
 
       # Nur beim echten Release über main hochladen. Ein manueller Testlauf
       # (workflow_dispatch) baut das AAB, veröffentlicht es aber nicht.
