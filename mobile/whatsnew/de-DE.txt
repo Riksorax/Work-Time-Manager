@@ -1,3 +1,2 @@
 Das ist neu:
-• Fehlerbehebung: „Abo wiederherstellen“ in der Paywall meldet jetzt, ob ein Abo gefunden wurde, kein Abo vorhanden ist oder ein Fehler auftrat
-• Verbesserung: Updates über Google Play werden nach dem Download kontrolliert installiert, das soll Abstürze nach einem Update verhindern
+• Fehlerbehebung: Absturz beim Start der App auf einigen Geräten mit Android 12 und 13 behoben (Update der App-Grundlage Flutter)
