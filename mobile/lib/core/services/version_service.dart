@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:in_app_update/in_app_update.dart';
@@ -65,25 +67,75 @@ class VersionService {
   }
 
   /// Startet den Android In-App-Update Flow (falls verfügbar)
+  ///
+  /// Ein flexibles Update wird nach dem Download sofort installiert
+  /// (kontrollierter Neustart der App). Ohne `completeFlexibleUpdate` würde
+  /// Play es irgendwann im Hintergrund einspielen, während noch ein alter
+  /// Prozess läuft (#453).
   Future<bool> startAndroidInAppUpdate({bool immediate = false}) async {
     if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return false;
 
+    StreamSubscription<InstallStatus>? installSubscription;
     try {
       final updateInfo = await InAppUpdate.checkForUpdate();
+
+      // Update aus einer früheren Sitzung bereits geladen, aber nicht installiert.
+      if (updateInfo.installStatus == InstallStatus.downloaded) {
+        await InAppUpdate.completeFlexibleUpdate();
+        return true;
+      }
 
       if (updateInfo.updateAvailability == UpdateAvailability.updateAvailable) {
         if (immediate) {
           await InAppUpdate.performImmediateUpdate();
         } else {
-          await InAppUpdate.startFlexibleUpdate();
+          // Vor dem Start abonnieren, damit kein Status verpasst wird.
+          installSubscription = completeFlexibleUpdateWhenDownloaded(
+            InAppUpdate.installUpdateListener,
+            InAppUpdate.completeFlexibleUpdate,
+          );
+          final result = await InAppUpdate.startFlexibleUpdate();
+          if (result != AppUpdateResult.success) {
+            await installSubscription.cancel();
+            return false;
+          }
         }
         return true;
       }
     } catch (e) {
+      await installSubscription?.cancel();
       logger.e('Fehler beim Android In-App-Update: $e');
     }
 
     return false;
+  }
+
+  /// Installiert ein flexibles Update, sobald [installStatus] `downloaded`
+  /// meldet, und beendet das Abonnement bei jedem Endstatus.
+  @visibleForTesting
+  static StreamSubscription<InstallStatus> completeFlexibleUpdateWhenDownloaded(
+    Stream<InstallStatus> installStatus,
+    Future<void> Function() completeFlexibleUpdate,
+  ) {
+    late final StreamSubscription<InstallStatus> subscription;
+    subscription = installStatus.listen((status) async {
+      switch (status) {
+        case InstallStatus.downloaded:
+          await subscription.cancel();
+          try {
+            await completeFlexibleUpdate();
+          } catch (e) {
+            logger.e('Flexibles Update konnte nicht installiert werden: $e');
+          }
+        case InstallStatus.installed ||
+              InstallStatus.failed ||
+              InstallStatus.canceled:
+          await subscription.cancel();
+        default:
+          break;
+      }
+    });
+    return subscription;
   }
 
   /// Öffnet den Store zum Update
