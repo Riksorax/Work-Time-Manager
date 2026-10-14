@@ -134,6 +134,16 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+      # Die Play Console bietet die mapping.txt nur zum Hochladen/Löschen an. Zum
+      # Auflösen obfuskierter Namen (z. B. `z2` in #453) hier als Artefakt ablegen.
+      - name: Upload R8 mapping Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: work-time-manager-mapping-${{ github.run_number }}
+          path: mobile/build/app/outputs/mapping/release/mapping.txt
+          if-no-files-found: warn
+          retention-days: 90
+
       # Nur beim echten Release über main hochladen. Ein manueller Testlauf
       # (workflow_dispatch) baut das AAB, veröffentlicht es aber nicht.
       - name: Upload to Google Play (Closed Testing)
