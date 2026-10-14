@@ -84,11 +84,12 @@ jobs:
       # mit demselben SDK laufen, gegen das die Tests in CI grün sind.
       # Die exakten Overrides für test_api/test_core in mobile/pubspec.yaml sind
       # an die test_api-Version dieses SDKs gekoppelt und beim Anheben mitzuziehen.
+      # Vorübergehend Beta 3.49.0-0.2.pre wegen flutter/flutter#192231 (siehe ci.yml, #453).
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.47.1'
-          channel: 'stable'
+          flutter-version: '3.49.0-0.2.pre'
+          channel: 'beta'
           cache: true
 
       # Ein RevenueCat-Test-Store-Key (`test_...`) lässt im Release-Build
