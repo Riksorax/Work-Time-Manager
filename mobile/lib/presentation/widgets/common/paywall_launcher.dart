@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 
+import '../../../core/utils/logger.dart';
 import '../../../core/utils/revenuecat_state.dart';
 import '../../../l10n/app_localizations.dart';
 
@@ -20,6 +21,9 @@ void showPaywall(BuildContext context) {
     return;
   }
 
+  final messenger = ScaffoldMessenger.of(context);
+  final l10n = AppLocalizations.of(context);
+
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
@@ -34,7 +38,40 @@ void showPaywall(BuildContext context) {
         onDismiss: () {
           if (Navigator.of(ctx).canPop()) Navigator.of(ctx).pop();
         },
+        // Ohne diese Callbacks bleibt "Abo wiederherstellen" stumm.
+        onRestoreCompleted: (customerInfo) {
+          if (!ctx.mounted) return;
+          if (customerInfo.entitlements.active.isNotEmpty) {
+            Navigator.of(ctx).pop();
+            messenger.showSnackBar(
+              SnackBar(content: Text(l10n.paywallRestoreSuccess)),
+            );
+          } else {
+            _showRestoreDialog(ctx, l10n.paywallRestoreNothingFound);
+          }
+        },
+        onRestoreError: (error) {
+          logger.w('Abo wiederherstellen fehlgeschlagen: ${error.message}');
+          if (!ctx.mounted) return;
+          _showRestoreDialog(ctx, l10n.paywallRestoreError);
+        },
       ),
+    ),
+  );
+}
+
+/// Meldung über der Paywall (ein Snackbar läge hinter dem Bottom Sheet).
+void _showRestoreDialog(BuildContext context, String message) {
+  showDialog<void>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      content: Text(message),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(),
+          child: Text(MaterialLocalizations.of(ctx).okButtonLabel),
+        ),
+      ],
     ),
   );
 }
