@@ -23,7 +23,7 @@ Integrationsbranch ist `develop`; PRs gehen gegen `develop`, nur Release-Branche
 | Mobile | `mobile/` | `dart format --output=none --set-exit-if-changed lib test && flutter analyze --no-fatal-infos && dart run custom_lint && flutter test` (CI fährt `flutter test` zusätzlich unter `TZ=Europe/Berlin` und die Zonen-Regressionstests `*_tz_test.dart` unter `TZ=America/Los_Angeles` und `Pacific/Auckland`) |
 | Web | `web/` | `npm test -- --watch=false && npm run build -- --configuration production` (Installation wie in der CI: `npm ci --legacy-peer-deps`; UI-/E2E-Tests zusätzlich: `npm run e2e`; CI fährt `npm test` zusätzlich unter `TZ=Europe/Berlin` und die Zonen-Regressionstests `*.tz.spec.ts` unter `TZ=America/Los_Angeles` und `Pacific/Auckland`, Details `web/CLAUDE.md`) |
 | Backend | `server/` | `dotnet build WorkTimeManager.slnx -c Release && dotnet test WorkTimeManager.slnx -c Release` |
-| Cloud Functions | `web/functions/` | `npm run build && npm test` (Installation: `npm install --legacy-peer-deps` — reines npm ohne den Flag lässt Arborist bei vitest 4 abstürzen) |
+| Cloud Functions | `web/functions/` | `npm run build && npm test` (Installation wie in der CI: `npm ci --legacy-peer-deps` — reines npm ohne den Flag lässt Arborist bei vitest 4 abstürzen) |
 
 ## CI/CD
 
