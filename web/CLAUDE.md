@@ -93,28 +93,11 @@ shared/
 └── models/index.ts        WorkEntry, WorkEntryType, Break, UserSettings, UserProfile, WorkProfile
 ```
 
-### Feature-Services (Pattern)
-
-Jedes Feature hat einen eigenen `*.service.ts` der Core-Services aggregiert:
-
-| Feature-Service | Aggregiert |
-|---|---|
-| `DashboardService` | WorkEntryService, OvertimeService, SettingsService, TodayService, AuthService, WorkProfileService |
-| `OpenEntryService` | AuthService, WorkProfileService, TodayService, WorkEntryService, SettingsService, DashboardService, OpenEntryCloseService |
-| `OpenEntryCloseService` | WorkEntryService, OvertimeService, SettingsService |
-| `ReportsService` | WorkEntryService, SettingsService, ProfileService, AuthService, OvertimeService, LeaveBalanceService |
-| `SettingsPageService` | SettingsService, AuthService, ProfileService, OvertimeService, ThemeService, DataSyncService, LeaveBalanceService, WorkProfileService |
-
 ### Key Angular-Regeln
 
-- **Kein `standalone: true`** — Default in Angular v20+, nie explizit setzen
-- **Signals-first**: `signal()` + `computed()` + `effect()`, öffentliche Signals via `.asReadonly()`
-- **`inject()` statt Constructor-Parameter**
-- **`@if` / `@for`** statt `*ngIf` / `*ngFor`
-- **`ChangeDetectionStrategy.OnPush`** bei allen Components
+Allgemeine Regeln (Signals, `inject()`, `@if`/`@for`, OnPush, kein `standalone: true`, kein `CommonModule`) stehen in `AGENTS.md`.
+
 - **Kein `color="primary/warn/accent"`** auf Material-Buttons (M3-deprecated)
-- **Premium-Gate**: `ProfileService.isPremium` — kein RevenueCat (Web nutzt Firestore-Flag)
-- **Kein `CommonModule`** — nur spezifische Imports (`DatePipe`, `AsyncPipe` etc.)
 
 ### Firebase / AngularFire-Regeln (kritisch)
 
@@ -393,32 +376,3 @@ gesetztem `workEnd`: Stop, `setManualEndTime`, sowie `setManualStartTime`/`updat
   innerhalb von 30 s, bei geschlossenem Eintrag bleibt Eintrag neu/Saldo alt bis zur nächsten Aktion. Ein Eintrag-Write, der wirft, obwohl
   er serverseitig landete (mehrdeutiger Fehler), wird nicht kompensiert. Mehrgeräte-Konflikte bleiben.
 - **Tests:** `dashboard.compensation.spec.ts` (C1-C12), `dashboard.spec.ts` (S1-S5), `core/i18n-dashboard-save.spec.ts`.
-
-### Dark Mode
-
-`ThemeService` verwaltet Hell/Dunkel. `app.ts` appliziert beim Start via `applyStoredTheme()` + `effect()` die Klasse `.dark-theme` auf `<html>`. SCSS-Override in `styles.scss` überschreibt dann das Angular Material M3-Theme.
-
-### Daten-Synchronisation
-
-`DataSyncService.syncAll()` liest alle localStorage-Einträge (via `WorkEntryService.getAllLocalEntries()` + `LS_KEYS`-Index) und schreibt sie nach Firebase. Wird manuell aus den Einstellungen getriggert.
-
-## Web-Port-Workflow (5 Phasen)
-
-Für neue Feature-Portierungen. Das Argument ist wie bei Mobile und Backend die GitHub-Issue-Nummer.
-Arbeitsdateien: `web/thoughts/<nr>-research.md`, `-ui-report.md`, `-plan.md`, `-pr.md`
-(per `.gitignore` lokal; die älteren `dashboard-*.md` stammen noch aus der Zeit der Feature-Namen).
-
-Jede Phase läuft als Subagent (`analyst`, `developer`, `reviewer`, `.claude/agents/`) in eigenem Kontext; Regeln und
-Checklisten stehen im Playbook `.claude/skills/playbook-angular/`, die WTM-Besonderheiten in
-`.claude/skills/playbook-projekt/references/web.md` und `design.md`.
-
-| Command | Phase |
-|---|---|
-| `/analysieren <nr> angular` | Phase 1 — Issue lesen, Flutter-Feature analysieren, Feature-Ordner festlegen |
-| `/entwerfen <nr> angular` | Phase 2 — UI entwerfen (Stitch API oder manuell) |
-| `/planen <nr> angular` | Phase 3 — Implementierungsplan |
-| `/umsetzen <nr> angular` | Phase 4 — Code schreiben (TDD) |
-| `/reviewen <nr> angular` | Phase 5 — Review + PR |
-
-Stitch API Key in `.claude/settings.local.json`: `{ "env": { "STITCH_API_KEY": "..." } }`
-**Hinweis:** Stitch API ist aktuell nicht verfügbar (HTTP 405) — UI wird manuell nach Flutter-Vorlage designed.
