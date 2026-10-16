@@ -82,17 +82,13 @@ gemeinsamen Vertrag und die Reihenfolge Backend → Web → Mobile.
 
 ## Agent-Standard (Obsidian-Vault)
 
-Die Agents, Befehle und Stack-Playbooks in `.claude/` stammen aus dem projektübergreifenden Standard im Vault
-`Riksorax/obsidian-vault` (Ordner `_Claude/`, Doku `03_Resources/Agent-Standard.md`). Dieses Repo ist die
-Herkunft des Standards. `.claude/standard.lock` hält fest, welcher Stand je Datei installiert wurde.
+`.claude/` stammt aus dem Agent-Standard im Vault `Riksorax/obsidian-vault` (Ordner `_Claude/`); dieses Repo ist die
+Herkunft des Standards. Änderungen mit `sync.sh promote` bzw. `update` abgleichen; `.claude/standard.lock` und
+`standard.env` gehören ins Repo.
 
-**Projektspezifisches steht nicht in den Standard-Dateien**, sondern im Projekt-Playbook
-`.claude/skills/playbook-projekt/` (Hybrid-Repositories, Arbeitszeit-Profile, Premium, Rechenlogik, Konventionen,
-Design-System) und in dieser Datei. `release.md` und `hooks/session-start.sh` sind projektspezifisch und nicht Teil des
-Standards; die `session-start.d`-Skripte des Standards sind bewusst nicht installiert (dieses Repo nutzt den eigenen Hook).
-
-Taugt eine Änderung an `.claude/` auch für andere Projekte, sie im Vault über `sync.sh promote` bzw. `add`
-zurückholen und dabei Projektspezifisches entfernen. Neue Standard-Versionen: `sync.sh update`, danach `git diff` und CI prüfen.
+**Projektspezifisch, nicht im Standard:** das Projekt-Playbook `.claude/skills/playbook-projekt/` (Hybrid-Repositories,
+Arbeitszeit-Profile, Premium, Rechenlogik, Konventionen, Design-System), `release.md` und `hooks/session-start.sh`. Die
+`session-start.d`-Skripte des Standards sind bewusst nicht installiert (dieses Repo nutzt den eigenen Hook).
 
 ## Fehler-Monitoring (Crashlytics/Sentry/Uptime-Kuma) → Issue → Fix
 
