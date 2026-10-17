@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ApiClient } from './api-client';
-import { DEFAULT_SETTINGS } from '../../shared/models';
+import { DEFAULT_SETTINGS, WorkEntry, WorkEntryType } from '../../shared/models';
 import { YearlyLeaveReport } from '../../domain/models/leave.models';
 import { toDateKey } from '../../shared/utils/german-holidays.util';
 
@@ -183,5 +183,53 @@ describe('ApiClient.saveOvertimeMs (#385, keepLastUpdated)', () => {
   it('keepLastUpdated: false / leere Option sendet das Feld nicht', () => {
     expect('keepLastUpdated' in put(60_000, undefined, { keepLastUpdated: false }).body).toBe(false);
     expect('keepLastUpdated' in put(60_000, undefined, {}).body).toBe(false);
+  });
+});
+
+describe('ApiClient: isHomeOffice (#277)', () => {
+  let api: ApiClient;
+  let http: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting()] });
+    api = TestBed.inject(ApiClient);
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => http.verify());
+
+  const entry = (isHomeOffice?: boolean): WorkEntry => ({
+    id: '2026-06-05', date: new Date(2026, 5, 5), breaks: [], isManuallyEntered: false,
+    type: WorkEntryType.Work, isHomeOffice,
+  });
+
+  function putBody(e: WorkEntry): Record<string, unknown> {
+    void api.saveWorkEntry(e);
+    const req = http.expectOne(r => r.url.endsWith('/work-entries'));
+    req.flush({});
+    return req.request.body as Record<string, unknown>;
+  }
+
+  it.each([[true], [false]])('toDto sendet %s explizit', v => {
+    expect(putBody(entry(v))['isHomeOffice']).toBe(v);
+  });
+
+  it('toDto sendet bei undefined null (nicht false)', () => {
+    expect(putBody(entry(undefined))['isHomeOffice']).toBeNull();
+  });
+
+  it.each([
+    [{ isHomeOffice: true }, true],
+    [{ isHomeOffice: false }, false],
+    [{ isHomeOffice: null }, false],
+    [{}, false],
+  ])('fromDto %j -> %s', async (extra, expected) => {
+    const p = api.getWorkEntriesForMonth(2026, 6);
+    http.expectOne(r => r.url.endsWith('/api/work-entries/2026/6')).flush([{
+      id: '2026-06-05', date: '2026-06-05T00:00:00Z', workStart: null, workEnd: null, type: 'work',
+      isManuallyEntered: false, manualOvertimeMinutes: null, description: null, breaks: [], ...extra,
+    }]);
+    const [e] = await p;
+    expect(e.isHomeOffice).toBe(expected);
   });
 });
