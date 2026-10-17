@@ -90,7 +90,7 @@ public sealed class WorkEntryRepository(FirestoreDb db)
             },
         };
         await MonthDoc(uid, entry.Date.Year, entry.Date.Month, profileId)
-            .SetAsync(update, SetOptions.MergeAll, ct);
+            .SetAsync(update, SetOptions.MergeFields(FirestoreMappings.DayMergeFields(entry, dayKey)), ct);
     }
 
     public async Task DeleteAsync(
