@@ -51,6 +51,8 @@ dependencies:
   in_app_update: ^4.2.5
   url_launcher: ^6.3.2
   flutter_local_notifications: ^19.5.0
+  # App-Icon-Shortcuts (Ein-/Ausstempeln, #274), nur Android genutzt
+  quick_actions: ^1.1.1
   timezone: ^0.10.1
   logger: ^2.6.2
   flutter_timezone: ^5.0.1
