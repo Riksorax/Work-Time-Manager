@@ -4,6 +4,7 @@ import 'package:timezone/timezone.dart' as tz;
 
 import '../../l10n/app_localizations.dart';
 import '../view_models/settings_view_model.dart';
+import 'common/sheet_insets.dart';
 
 void showEditTimezoneModal(
     BuildContext context, String? currentTimezoneOverride) {
@@ -49,7 +50,9 @@ class _EditTimezoneModalState extends ConsumerState<EditTimezoneModal> {
       expand: false,
       builder: (context, scrollController) {
         return Padding(
-          padding: const EdgeInsets.all(24.0),
+          // Unten kein Rand: die Liste scrollt bis zur Kante und hält ihren
+          // letzten Eintrag selbst frei von der Navigationsleiste (#468).
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -68,6 +71,8 @@ class _EditTimezoneModalState extends ConsumerState<EditTimezoneModal> {
               Expanded(
                 child: ListView.builder(
                   controller: scrollController,
+                  padding: EdgeInsets.only(
+                      bottom: 24 + bottomSheetBottomInset(context)),
                   itemCount: filtered.length + 1,
                   itemBuilder: (context, index) {
                     if (index == 0) {

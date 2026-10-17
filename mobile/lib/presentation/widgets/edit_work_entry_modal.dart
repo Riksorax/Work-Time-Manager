@@ -8,6 +8,7 @@ import '../../domain/utils/entry_day.dart';
 import '../../l10n/app_localizations.dart';
 import '../state/edit_work_entry_state.dart';
 import '../view_models/edit_work_entry_view_model.dart';
+import 'common/sheet_insets.dart';
 
 class EditWorkEntryModal extends ConsumerWidget {
   final WorkEntryEntity workEntry;
@@ -27,7 +28,9 @@ class EditWorkEntryModal extends ConsumerWidget {
       initialChildSize: 0.9,
       builder: (_, controller) {
         return Container(
-          padding: const EdgeInsets.all(16.0),
+          // Unten zusätzlich Navigationsleiste bzw. Tastatur (#468).
+          padding: EdgeInsets.fromLTRB(
+              16.0, 16.0, 16.0, 16.0 + bottomSheetBottomInset(context)),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),

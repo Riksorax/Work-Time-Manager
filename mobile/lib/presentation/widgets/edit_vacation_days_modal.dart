@@ -5,17 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/utils/leave_balance_utils.dart';
 import '../../l10n/app_localizations.dart';
 import '../view_models/settings_view_model.dart';
+import 'common/sheet_insets.dart';
 
 void showEditVacationDaysModal(BuildContext context, int currentDays) {
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
-    builder: (context) => Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: EditVacationDaysModal(currentDays: currentDays),
-    ),
+    builder: (context) => EditVacationDaysModal(currentDays: currentDays),
   );
 }
 
@@ -69,7 +65,9 @@ class _EditVacationDaysModalState extends ConsumerState<EditVacationDaysModal> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Padding(
-      padding: const EdgeInsets.all(24.0),
+      // Tastatur bzw. Navigationsleiste (Edge-to-Edge, #468).
+      padding: const EdgeInsets.all(24.0)
+          .copyWith(bottom: 24.0 + bottomSheetBottomInset(context)),
       child: Form(
         key: _formKey,
         child: Column(

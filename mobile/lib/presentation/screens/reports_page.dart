@@ -33,6 +33,7 @@ import '../view_models/settings_view_model.dart';
 import '../view_models/yearly_report_view_model.dart';
 import '../view_models/auth_view_model.dart';
 import '../widgets/common/loading_indicator.dart';
+import '../widgets/common/sheet_insets.dart';
 import '../widgets/edit_work_entry_modal.dart';
 import '../widgets/quick_entry_dialog.dart';
 import '../widgets/batch_quick_entry_dialog.dart';
@@ -2308,7 +2309,11 @@ class _DayEntriesBottomSheetState extends ConsumerState<DayEntriesBottomSheet> {
         .where((entry) => DateUtils.isSameDay(entryDay(entry), widget.date))
         .toList();
 
+    // Nur oben absichern: unten scrollt die Liste bis zur Kante und hält ihren
+    // letzten Eintrag selbst von der Navigationsleiste frei (Edge-to-Edge, #468).
+    final bottomInset = bottomSheetBottomInset(context);
     return SafeArea(
+      bottom: false,
       child: DraggableScrollableSheet(
         expand: false,
         initialChildSize: 0.7,
@@ -2403,6 +2408,7 @@ class _DayEntriesBottomSheetState extends ConsumerState<DayEntriesBottomSheet> {
                   Expanded(
                     child: ListView.builder(
                       controller: controller,
+                      padding: EdgeInsets.only(bottom: bottomInset),
                       itemCount: entriesForSheetDate.length,
                       itemBuilder: (ctx, index) {
                         final entry = entriesForSheetDate[index];
