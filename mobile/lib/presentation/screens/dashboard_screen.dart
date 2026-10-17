@@ -144,6 +144,23 @@ class DashboardScreen extends ConsumerWidget {
                         context, dashboardViewModel.clearEndTime())
                     : null,
               ),
+              // Home-Office-Schalter (#277), nur bei Typ Arbeit; während einer
+              // laufenden Aktion gesperrt wie die übrigen Eingaben.
+              if (workEntry.type == WorkEntryType.work)
+                Semantics(
+                  container: true,
+                  hint: l10n.homeOfficeToggleDashboardSemantics,
+                  child: SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    secondary: const Icon(Icons.home_outlined),
+                    title: Text(l10n.homeOfficeToggleLabel),
+                    value: workEntry.isHomeOffice,
+                    onChanged: isSaving
+                        ? null
+                        : (value) => reportDashboardSave(
+                            context, dashboardViewModel.setHomeOffice(value)),
+                  ),
+                ),
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: isSaving

@@ -125,6 +125,7 @@ WorkEntryEntity entryOf(
   DateTime? start,
   DateTime? end,
   List<BreakEntity> breaks = const [],
+  bool isHomeOffice = false,
 }) =>
     WorkEntryEntity(
       id: dayKey(day),
@@ -132,6 +133,7 @@ WorkEntryEntity entryOf(
       workStart: start,
       workEnd: end,
       breaks: breaks,
+      isHomeOffice: isHomeOffice,
     );
 
 /// Test-Ersatz für den echten Notifier: kein Auth/Prefs, `setActiveProfile`

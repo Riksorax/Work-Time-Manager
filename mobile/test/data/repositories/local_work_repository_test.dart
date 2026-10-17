@@ -100,5 +100,41 @@ void main() {
       final afterClear = await repository.getAllLocalEntries();
       expect(afterClear, isEmpty);
     });
+
+    group('isHomeOffice (#277)', () {
+      // Der lokale Pfad ist nicht profilbezogen (kein profileId-Parameter).
+      test('Roundtrip behaelt true und false', () async {
+        await repository.saveWorkEntry(WorkEntryEntity(
+            id: '2026-06-05',
+            date: DateTime(2026, 6, 5),
+            workStart: DateTime(2026, 6, 5, 8),
+            isHomeOffice: true));
+        await repository.saveWorkEntry(WorkEntryEntity(
+            id: '2026-06-06',
+            date: DateTime(2026, 6, 6),
+            workStart: DateTime(2026, 6, 6, 8)));
+        expect(
+            (await repository.getWorkEntry(DateTime(2026, 6, 5))).isHomeOffice,
+            isTrue);
+        expect(
+            (await repository.getWorkEntry(DateTime(2026, 6, 6))).isHomeOffice,
+            isFalse);
+        final month = await repository.getWorkEntriesForMonth(2026, 6);
+        expect(month.where((e) => e.isHomeOffice).map((e) => e.id),
+            ['2026-06-05']);
+      });
+
+      test('Altdaten ohne Feld ergeben false', () async {
+        SharedPreferences.setMockInitialValues({
+          'local_work_entries_2026_06':
+              '{"days":{"5":{"workStart":"2026-06-05T08:00:00.000","type":"work"}}}',
+        });
+        final p = await SharedPreferences.getInstance();
+        final repo = LocalWorkRepositoryImpl(p);
+        final e = await repo.getWorkEntry(DateTime(2026, 6, 5));
+        expect(e.workStart, isNotNull);
+        expect(e.isHomeOffice, isFalse);
+      });
+    });
   });
 }

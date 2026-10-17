@@ -170,6 +170,8 @@ class ApiClient {
         'workStart': m.workStart?.toUtc().toIso8601String(),
         'workEnd': m.workEnd?.toUtc().toIso8601String(),
         'type': m.type.name,
+        // Immer mitsenden (true/false): Mobile kennt das Feld (#277).
+        'isHomeOffice': m.isHomeOffice,
         'isManuallyEntered': m.isManuallyEntered,
         'manualOvertimeMinutes': m.manualOvertime?.inMinutes,
         'description': m.description,
@@ -221,5 +223,6 @@ class ApiClient {
           (e) => e.name == j['type'],
           orElse: () => WorkEntryType.work,
         ),
+        isHomeOffice: (j['isHomeOffice'] as bool?) ?? false,
       );
 }
