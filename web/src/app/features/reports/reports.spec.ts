@@ -6,6 +6,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { Router } from '@angular/router';
+import { of } from 'rxjs';
 import { ReportsComponent } from './reports';
 import { ReportsService } from './reports.service';
 import { LeaveBalanceService } from '../../core/services/leave-balance';
@@ -32,6 +33,30 @@ describe('ReportsComponent.goToSettings', () => {
     });
     TestBed.createComponent(ReportsComponent).componentInstance.goToSettings();
     expect(navigate).toHaveBeenCalledWith(['/settings']);
+  });
+});
+
+describe('ReportsComponent.openQuickEntryDialog: Home-Office unangetastet (#277)', () => {
+  it('der Schnelleintrag setzt isHomeOffice nicht (undefined)', async () => {
+    const saveEntry = vi.fn().mockResolvedValue(undefined);
+    TestBed.overrideComponent(ReportsComponent, { set: { template: '', imports: [] } });
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: ReportsService, useValue: { selectedDate: () => new Date(2026, 5, 5), saveEntry } },
+        { provide: LeaveBalanceService, useValue: {} },
+        { provide: Router, useValue: { navigate: vi.fn() } },
+        { provide: MatDialog, useValue: { open: () => ({ afterClosed: () => of({ type: 'work', startTime: '08:00', endTime: '16:00' }) }) } },
+        { provide: MatSnackBar, useValue: {} },
+        { provide: TranslateService, useValue: {} },
+        { provide: WebPremiumService, useValue: {
+          isRestoring: signal(false), isPurchasing: signal(false), isConfigured: signal(false) } },
+      ],
+    });
+    TestBed.createComponent(ReportsComponent).componentInstance.openQuickEntryDialog();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(saveEntry).toHaveBeenCalledTimes(1);
+    expect((saveEntry.mock.calls[0][0] as WorkEntry).isHomeOffice).toBeUndefined();
   });
 });
 
@@ -71,6 +96,7 @@ describe('ReportsComponent - Mehrfachauswahl-Toggle (#377)', () => {
       isMultiSelectActive,
       selectedDates: signal(new Set<string>()),
       daysWithEntries: signal<number[]>([]),
+      homeOfficeDays: signal<number[]>([]),
       bundesland: signal(null),
       dailyStat: signal<DailyStat>({ target: 0, worked: 0, overtime: 0 }),
       selectedDayEntries: signal<WorkEntry[]>([]),

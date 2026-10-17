@@ -96,6 +96,17 @@
             [attr.aria-label]="'dashboard.endTimeAria' | translate"
           />
 
+          @if (isWorkType()) {
+            <mat-slide-toggle
+              class="home-office-toggle"
+              [checked]="!!svc.workEntry().isHomeOffice"
+              [disabled]="svc.isSaving()"
+              (change)="onHomeOfficeChange($event.checked)"
+              [attr.aria-label]="'dashboard.homeOfficeToggleAria' | translate">
+              {{ 'shared.homeOfficeLabel' | translate }}
+            </mat-slide-toggle>
+          }
+
           <button
             mat-flat-button
             class="main-action-btn"

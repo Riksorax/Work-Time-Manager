@@ -193,6 +193,13 @@ export class ReportsService {
     [...new Set(this._monthlyEntries().map(e => entryDay(e).getDate()))]
   );
 
+  /** Tage des Monats mit Home-Office (#277): nur Typ Arbeit, Flag bei Urlaub/Krank/Feiertag zählt nicht. */
+  readonly homeOfficeDays = computed(() =>
+    [...new Set(this._monthlyEntries()
+      .filter(e => e.type === WorkEntryType.Work && e.isHomeOffice === true)
+      .map(e => entryDay(e).getDate()))]
+  );
+
   readonly selectedDayEntries = computed(() => {
     const sel = this.selectedDate();
     return this._monthlyEntries().filter(e => isSameDayRc(entryDay(e), sel));
