@@ -94,6 +94,58 @@ void main() {
       expect(model.id, '2023-10-26');
       expect(model.workStart, isNull);
       expect(model.breaks, isEmpty);
+      expect(model.isHomeOffice, isFalse);
+    });
+
+    group('isHomeOffice (#277)', () {
+      Map<String, dynamic> baseMap() => {
+            'date': Timestamp.fromDate(DateTime.utc(2026, 6, 5)),
+            'type': 'work',
+          };
+
+      test('toMap schreibt true und false immer', () {
+        expect(
+            WorkEntryModel(id: '1', date: date, isHomeOffice: true)
+                .toMap()['isHomeOffice'],
+            isTrue);
+        final off = WorkEntryModel(id: '1', date: date).toMap();
+        expect(off.containsKey('isHomeOffice'), isTrue);
+        expect(off['isHomeOffice'], isFalse);
+      });
+
+      test('fromMap ohne Feld oder null ergibt false, sonst den Wert', () {
+        expect(WorkEntryModel.fromMap(baseMap()).isHomeOffice, isFalse);
+        expect(
+            WorkEntryModel.fromMap({...baseMap(), 'isHomeOffice': null})
+                .isHomeOffice,
+            isFalse);
+        expect(
+            WorkEntryModel.fromMap({...baseMap(), 'isHomeOffice': true})
+                .isHomeOffice,
+            isTrue);
+        expect(
+            WorkEntryModel.fromMap({...baseMap(), 'isHomeOffice': false})
+                .isHomeOffice,
+            isFalse);
+      });
+
+      test('fromEntity und copyWith tragen das Flag', () {
+        final entity = WorkEntryEntity(
+            id: '2026-06-05', date: DateTime(2026, 6, 5), isHomeOffice: true);
+        final model = WorkEntryModel.fromEntity(entity);
+        expect(model.isHomeOffice, isTrue);
+        expect(model.copyWith().isHomeOffice, isTrue);
+        expect(model.copyWith(isHomeOffice: false).isHomeOffice, isFalse);
+      });
+
+      test('fromDayMap-Roundtrip behaelt das Flag', () {
+        final day = DateTime(2026, 6, 5);
+        final map =
+            WorkEntryModel(id: '2026-06-05', date: day, isHomeOffice: true)
+                .toMap();
+        final back = WorkEntryModel.fromDayMap(map, day);
+        expect(back.isHomeOffice, isTrue);
+      });
     });
   });
 }

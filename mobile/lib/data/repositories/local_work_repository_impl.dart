@@ -56,6 +56,7 @@ class LocalWorkRepositoryImpl implements WorkRepository {
               orElse: () => WorkEntryType.work,
             )
           : WorkEntryType.work,
+      isHomeOffice: data['isHomeOffice'] as bool? ?? false,
     );
   }
 
@@ -71,6 +72,7 @@ class LocalWorkRepositoryImpl implements WorkRepository {
       'description': entry.description,
       'isManuallyEntered': entry.isManuallyEntered,
       'type': entry.type.name,
+      'isHomeOffice': entry.isHomeOffice,
     };
   }
 
