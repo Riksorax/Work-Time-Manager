@@ -8,6 +8,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { NgOptimizedImage } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { TranslatePipe } from '@ngx-translate/core';
 import { map } from 'rxjs';
@@ -27,6 +28,7 @@ import { WorkProfileSwitcherComponent } from '../../shared/components/work-profi
     MatButtonModule,
     MatDividerModule,
     MatTooltipModule,
+    NgOptimizedImage,
     TranslatePipe,
     WorkProfileSwitcherComponent,
   ],
