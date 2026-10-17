@@ -36,13 +36,6 @@ flutter build apk \
 
 ## Architecture
 
-The app follows **Clean Architecture** with three layers:
-
-- `lib/domain/` — pure Dart: entities, repository interfaces, use cases, domain services
-- `lib/data/` — implementations: models (JSON mapping), repository impls, datasources
-- `lib/presentation/` — Flutter UI: screens, view models (Riverpod Notifiers), state classes, widgets
-- `lib/core/` — cross-cutting: providers wiring, theme, logger, services (notifications, version)
-
 ### Dependency Injection & State Management
 
 **Riverpod** is used throughout, with two registration styles depending on the layer:
@@ -54,7 +47,7 @@ New ViewModels always follow the manual `NotifierProvider` pattern; new infrastr
 
 `lib/core/providers/today_provider.dart` (`todayProvider`, manueller `NotifierProvider<TodayNotifier, DateTime>`) ist die zentrale "heute"-Quelle (lokaler Tag, Pendant zum Web-`TodayService`): wechselt zur lokalen Mitternacht, bei `AppLifecycleState.resumed` und bei `refresh()`. Alles, was "heute" braucht (Dashboard-VM, `holidayTodayProvider`), watcht/listent diesen Provider statt eigener Timer.
 
-`SharedPreferences` is provided via an override in `main.dart` and must not be accessed directly elsewhere.
+`SharedPreferences` is provided via an override in `main.dart` and must not be accessed directly elsewhere. **Ausnahme nur für Secrets (#375):** Die App-Sperre liegt im sicheren Speicher (`flutter_secure_storage`) und kommt über `appLockStoreProvider`, ebenfalls in `main.dart` überschrieben (siehe „App-Sperre“). Alles andere bleibt in `sharedPreferencesProvider`.
 
 ### Hybrid Repository Pattern
 
@@ -74,13 +67,6 @@ Data storage switches automatically based on auth state:
 - `DataSyncService` — migrates local SharedPreferences data to Firebase when a user logs in
 - `work_entry_extensions.dart` — extension methods on `WorkEntryEntity` (e.g. effective work duration, type checks)
 - `domain/utils/overtime_utils.dart` — pure functions for overtime calculations used across view models
-
-### Screens
-
-`HomeScreen` is a bottom-nav shell with three tabs:
-1. `DashboardScreen` — live timer, breaks, daily overtime
-2. `ReportsPage` — monthly/weekly reports (some features Premium-gated)
-3. `SettingsPage` — target hours, workdays, notifications, account
 
 ### Premium / Subscriptions
 
@@ -184,50 +170,28 @@ Ein über Mitternacht gelaufener Timer bleibt nach App-Neustart als offener Eint
 
 `MaterialApp.builder` legt über `AppLockLayer` (`presentation/widgets/app_lock_layer.dart`) den `AppLockScreen` als deckende Ebene **über** den App-Navigator. Der Sperrbildschirm läuft dort in einem **eigenen Navigator** (mit `PopScope(canPop: false)` als reiner Absicherung und `HeroControllerScope.none`, der HeroController des App-Navigators ist nicht teilbar). **Bekannte Grenze:** Die Android-Zurück-Taste wirkt weiterhin auf den App-Navigator unter der Sperre (verschachtelter Navigator, `PopScope` greift dort nicht; Verhalten wie vor #450, ob das die Sperre gefährdet ist nicht untersucht). Dialoge der Sperre (`ForgotPinDialog`, `PinSetupDialog`) öffnen immer über den `BuildContext` des Sperrbildschirms, **nie über `navigatorKey`**: sie landeten sonst im Overlay des App-Navigators und damit unsichtbar hinter der Sperre. Ohne eigenen Navigator fehlt dem PIN-Feld außerdem ein Overlay (Auswahl-Overlay, vgl. #337). Neue Widgets, die aus der Sperre Dialoge/Sheets öffnen, brauchen keinen Sonderweg. Test: `app_lock_layer_test` (gleicher Aufbau wie `main.dart`, Dialoge per `hitTestable()`).
 
+**Speicher und Backup (#375).** Alle `app_lock_*`-Werte (inkl. `enabled`, PIN-/Code-Hash, Fehlversuch-Zähler, Sperrzeit, `last_seen`) liegen **nicht** mehr in den SharedPreferences, sondern im sicheren Speicher (`flutter_secure_storage` 11.2.0; Android: Keystore-gebunden). Grund: Android-Auto-Backup nimmt `FlutterSharedPreferences.xml` komplett mit und würde Hash und Zähler auf ein anderes Gerät/nach Neuinstallation tragen (Zähler zurückgesetzt, Hash offline angreifbar).
+
+- **`AppLockStore`** (`core/services/app_lock_store.dart`): synchroner In-Memory-Cache mit Write-Through in ein `AppLockBackend` (`SecureAppLockBackend`, `PrefsAppLockBackend` nur als Migrations-Fallback, `InMemoryAppLockBackend` für Web/Tests/Default). Schreiben aktualisiert den Cache **zuerst** und wartet dann auf das Backend; `AppLockService` bleibt dadurch synchron lesbar (`hasPin`, `isEnabled`, `verifyPin`, `isAppLockedProvider`). `appLockStoreProvider` (manuell, Default In-Memory) wird in `main.dart` mit dem vor `runApp` geladenen Store überschrieben: `AppLockStore.load(prefs:)` startet direkt nach `SharedPreferences.getInstance()` parallel zur Initialisierung und wird unmittelbar vor `runApp` abgewartet (Zeitlimit 8 s, wirft nie, Web sofort In-Memory), damit der erste Read von `isAppLockedProvider` schon stimmt (kein ungesperrtes Aufblitzen). Genau ein Store pro Prozess.
+- **Migration** (einmalig, idempotent; Marker `app_lock_storage_version` in den **Prefs**, bleibt im Backup): Marker fehlt und Legacy-Keys vorhanden (Update) -> in den sicheren Speicher kopieren (`enabled` zuletzt), **zurücklesen und vergleichen**, erst dann Marker setzen und Legacy-Keys löschen. **Jeder Fehler** (Exception, Mismatch, Zeitlimit, Marker nicht schreibbar): Prefs bleiben unverändert, kein Marker, der Store läuft im Fallback `PrefsAppLockBackend` (altes Verhalten, niemand wird ausgesperrt), `logger.e` nur mit `runtimeType`; der nächste Start versucht es erneut (Prefs-Werte gewinnen). Marker gesetzt: der sichere Speicher ist die Wahrheit, übrige Legacy-Keys werden entfernt. Neuinstallation/Restore (Marker fehlt ohne Legacy-Keys bzw. Marker ohne Secure-Daten): leerer Store.
+- **Nach einem Restore** (neues Gerät, Neuinstallation) gibt es **keine PIN, die Sperre ist aus**, die übrigen Einstellungen bleiben; die Sperre muss neu eingerichtet werden (Hinweis für die Release-Notes). Restrisiko: Ein Snapshot aus der Zeit **vor** dem Update (Legacy-Keys im Backup, kein Marker) wird wie ein Update migriert, bis das nächste Auto-Backup nach dem ersten Start der neuen Version die Legacy-Keys ersetzt hat.
+- **Fail-open bei unlesbarem Speicher** (bewusst): Ist der sichere Speicher im Normalbetrieb nach einem Wiederholversuch (300 ms) nicht lesbar (z. B. Keystore-Schlüssel invalidiert), startet die App mit leerem Store (Sperre aus, `logger.e`, kein Crash). Das Plugin löscht dabei per Default (`resetOnError`) die unbrauchbaren Daten, damit die Neueinrichtung wieder funktioniert; fail-closed würde dauerhaft aussperren. **Akzeptiertes Restrisiko:** Das gilt auch bei gesetztem Marker und nur *vorübergehendem* Keystore-Problem (Plugin-Default `resetOnError=true` löscht die Daten): leerer Store = Sperre aus, die PIN muss neu eingerichtet werden. Bewusst kein Verhaltenswechsel.
+- **Persistenzfehler:** `setPin`/`setPinWithRecoveryCode`/`setEnabled`/`clearPin` rollen den Cache zurück, loggen (`logger.e`, ohne Werte) und werfen weiter; `PinSetupDialog` bleibt dann offen, der Schalter in den Einstellungen springt zurück (bewusst **ohne** neuen ARB-Text). Zähler, Sperrzeit und `last_seen` behalten den Cache und werfen nicht (fail-closed im Prozess, sonst meldet `PlatformDispatcher.onError` es als fatal). Persist-before-verify (#358) gilt weiter. Scheitert in `setPinWithRecoveryCode` die PIN nach dem Code, wird der vorherige Code zurückgeschrieben (alte PIN und alter Code gelten weiter). Feuert das Migrations-Zeitlimit während des Marker-Schreibens, wartet `load` auf das Ende der Migration (`committed`-Flag) statt in den Prefs-Fallback zu gehen.
+- **Backup-Ausschluss:** `res/xml/data_extraction_rules.xml` (API 31+, `<cloud-backup>` und `<device-transfer>`) und `res/xml/backup_rules.xml` (API <= 30, `fullBackupContent`) schließen die vier Dateien des Plugins aus (`FlutterSecureStorage.xml`, `FlutterSecureKeyStorage.xml`, `FlutterSecureStorageConfiguration.xml`, `FlutterSecureStorageConfiguration:FlutterSecureStorage.xml`); `FlutterSharedPreferences.xml` bleibt im Backup. `allowBackup` bleibt Default (`true`), sonst gingen die Einstellungen verloren. Regressionstest `test/android/backup_rules_test.dart` (liest XML und Manifest, prüft nur die Liste). **Wartung:** Bei jedem Update von `flutter_secure_storage` (oder Änderung von `storageNamespace`/Optionen) die realen Dateinamen am Gerät gegenprüfen (`adb shell run-as <pkg> ls shared_prefs`) und Regeln/Test nachziehen.
+- **iOS:** `mobile/ios/` existiert nicht; bei Einführung von iOS neu bewerten (Keychain `…ThisDeviceOnly`, `NSUserDefaults` im iCloud-/iTunes-Backup).
+- **Rollback der App-Version:** Ein älterer Build findet keine Keys in den Prefs (PIN weg, Sperre aus, keine Daten verloren).
+- **Tests:** `test/support/fake_app_lock_backend.dart` (`FakeAppLockBackend` mit Fehlerinjektion `failWriteKeys`/`failDeleteKeys`/`failAllWrites`/`failReads`/`corruptKeys` und `holdReads`/`holdWrites`), `RecordingAppLockStore` in `test/helpers/app_lock_fakes.dart`, `app_lock_store_test`, `app_lock_migration_test`, `app_lock_service_test` (Gruppe „Persistenz“), `app_lock_provider_test` (Start-Race). Widget-Tests injizieren den Service weiter per `appLockServiceProvider.overrideWithValue`.
+
+### Edge-to-Edge (#468)
+
+Die App läuft auf allen Android-Versionen Edge-to-Edge (`enableEdgeToEdge()` in `main()`, `widgets/common/edge_to_edge.dart`); ab Android 15 erzwingt das System es ohnehin.
+
+- **Keine Systemleistenfarben:** nie `statusBarColor`/`navigationBarColor` setzen (ab Android 15 wirkungslos, veraltete APIs). Nur die Icon-Helligkeit: `systemOverlayStyle` im `AppBarTheme` (`AppTheme.light/darkSystemOverlayStyle`) plus `SystemBarsStyle` im `MaterialApp.builder` für Seiten ohne `AppBar`.
+- **Seitliche Insets zentral:** `HorizontalSafeInsets` im `builder` (nur links/rechts, innerhalb der App-Sperre-Ebene). Screens brauchen dafür kein eigenes `SafeArea`; oben/unten regeln `AppBar`/`BottomNavigationBar`/Sheets.
+- **Bottom Sheets:** unten immer `bottomSheetBottomInset(context)` (`widgets/common/sheet_insets.dart`, Maximum aus Tastatur und Navigationsleiste, keine Summe) statt `MediaQuery.viewInsets`. `useSafeArea` genügt unten nicht. Der Helfer gehört ins Sheet-Widget selbst (nicht in den `show*`-Builder), damit Widget-Tests ihn erfassen; Referenz `test/presentation/widgets/sheet_edge_to_edge_test.dart`.
+- **Seitenstreifen:** `HorizontalSafeInsets` hinterlegt die Streifen hinter den Insets mit `scaffoldBackgroundColor` (sonst scheint im Querformat das System-Fensterbild durch, z. B. heller Streifen bei System hell + App dunkel).
+- **Offen (Gerätetest):** Paywall auf doppelte Polsterung (Screen-`SafeArea` plus `HorizontalSafeInsets`/Sheet-Inset) prüfen, ohne Gerät nicht verifizierbar.
+
 ### Code Generation
 
 Files ending in `.g.dart` are generated — do not edit them manually. Regenerate with `dart run build_runner build`. Mock files (`*.mocks.dart`) are generated by `mockito` and also must not be edited manually.
-
----
-
-## Workflow-Regeln (IMMER einhalten)
-
-1. **Niemals direkt coden ohne Phase 1 + 2 abgeschlossen** — auch bei kleinen Tasks
-2. **Context bei ~60% → `/clear` → Fortschritt aus `thoughts/`-Datei laden**
-3. **Tests vor Implementation schreiben (TDD)** — Tests dürfen nicht von Datum, Wochentag oder Zeitzone abhängen
-4. **Nach `@riverpod`-Änderungen immer `dart run build_runner build` ausführen**
-5. **Keine direkten Änderungen an `*.g.dart` oder `*.mocks.dart`**
-6. **`SharedPreferences` nur über den `main.dart`-Override — nie direkt**
-7. **Premium-Features immer hinter `isPremiumProvider` absichern**
-8. **Hybrid-Repository-Pattern nicht umgehen — immer über HybridImpl gehen**
-9. **Alle User-Strings über `AppLocalizations.of(context)`** — ARB-Keys in `lib/l10n/app_de.arb` (+ Übersetzung in `app_en.arb`) ergänzen, nie deutschen Text hart codieren. Nach ARB-Änderungen `flutter gen-l10n` ausführen
-
-## Agenten-Übersicht
-
-Die Agents liegen im Repo-Root unter `.claude/agents/` und sind Subagents: Die Commands starten sie
-über das Agent-Tool, jeder läuft in eigenem Kontext und gibt nur eine Kurzfassung zurück.
-Rückfragen und Freigaben laufen über die Hauptsession.
-
-| Subagent | Datei | Wann verwenden |
-|---|---|---|
-| Analyst | `.claude/agents/analyst.md` | Aufgabe verstehen, hinterfragen (Phasen Analyse und Plan) |
-| Developer | `.claude/agents/developer.md` | Code schreiben (TDD), Tests, Testlücken, UI-Prüfung (Phasen Umsetzung und Validierung) |
-| Reviewer | `.claude/agents/reviewer.md` | Code Review, Commit, PR |
-
-Regeln und Checklisten je Phase stehen im Playbook `.claude/skills/playbook-flutter/`, die WTM-Besonderheiten in
-`.claude/skills/playbook-projekt/references/flutter.md`.
-
-Betrifft ein Issue mehrere Plattformen, zuerst `/issue <nr>` bzw. den Subagent `cross-platform-coordinator` nutzen.
-
-## Slash Commands
-
-| Command | Phase |
-|---|---|
-| `/issue 123` | Einstieg — Issue lesen, Plattformen bestimmen, Branch anlegen |
-| `/analysieren 123 flutter` | Phase 1 — Aufgabe analysieren → `mobile/thoughts/123-research.md` |
-| `/planen 123 flutter` | Phase 2 — Plan erstellen → `mobile/thoughts/123-plan.md` |
-| `/umsetzen 123 flutter` | Phase 3 — Code schreiben (TDD) |
-| `/validieren 123 flutter` | Phase 4 — Testen + UI |
-| `/reviewen 123 flutter` | Phase 5 — Review + PR gegen `develop` |
-
-Das Argument ist die GitHub-Issue-Nummer. Branch-, Commit- und Release-Konventionen: `CONTRIBUTING.md` im Repo-Root.

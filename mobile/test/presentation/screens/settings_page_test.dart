@@ -18,10 +18,13 @@ import 'package:flutter_work_time/presentation/view_models/theme_view_model.dart
 import 'package:flutter_work_time/presentation/widgets/add_adjustment_modal.dart';
 import 'package:flutter_work_time/domain/usecases/sign_out.dart';
 import 'package:flutter_work_time/domain/usecases/delete_account.dart';
+import 'package:flutter_work_time/core/providers/app_lock_provider.dart';
 import 'package:flutter_work_time/core/providers/providers.dart';
+import 'package:flutter_work_time/core/services/app_lock_store.dart';
 import 'package:flutter_work_time/core/providers/subscription_provider.dart';
 import 'package:flutter_work_time/l10n/app_localizations.dart';
 
+import '../../support/fake_app_lock_backend.dart';
 import 'settings_page_test.mocks.dart';
 
 // Helper abstract class to verify interactions
@@ -88,10 +91,13 @@ void main() {
     required ThemeViewModel themeViewModel,
     required AsyncValue<UserEntity?> authState,
     bool isPremium = false,
+    AppLockStore? lockStore,
   }) {
     return ProviderScope(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
+        if (lockStore != null)
+          appLockStoreProvider.overrideWithValue(lockStore),
         settingsViewModelProvider.overrideWith(() => settingsViewModel),
         leaveBalanceViewModelProvider.overrideWith(_FakeLeaveViewModel.new),
         themeViewModelProvider.overrideWith(() => themeViewModel),
@@ -762,6 +768,81 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('PIN festlegen'), findsOneWidget);
+    });
+
+    testWidgets(
+        'Persistenzfehler beim Aktivieren: Schalter springt zurück, kein Absturz (#375)',
+        (tester) async {
+      final backend = FakeAppLockBackend()..failAllWrites = true;
+      final lockStore =
+          AppLockStore(backend, initial: {'app_lock_pin_hash': 'salt:hash'});
+      final settingsViewModel = FakeSettingsViewModel(
+        initialState: const AsyncValue.data(SettingsState(
+          settings: SettingsEntity(),
+          overtimeBalance: Duration.zero,
+        )),
+        actions: mockActions,
+      );
+      final themeViewModel = FakeThemeViewModel(
+        initialState: ThemeMode.system,
+        actions: mockActions,
+      );
+
+      await tester.pumpWidget(createSubject(
+        settingsViewModel: settingsViewModel,
+        themeViewModel: themeViewModel,
+        authState: const AsyncValue.data(null),
+        lockStore: lockStore,
+      ));
+
+      await tester.scrollUntilVisible(
+          find.text('PIN-/Biometrie-Sperre'), 500.0);
+      final tileFinder =
+          find.widgetWithText(SwitchListTile, 'PIN-/Biometrie-Sperre');
+      tester.widget<SwitchListTile>(tileFinder).onChanged!(true);
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(tester.widget<SwitchListTile>(tileFinder).value, isFalse);
+      expect(lockStore.getBool('app_lock_enabled'), isNull);
+    });
+
+    testWidgets('Persistenzfehler beim Deaktivieren: Schalter bleibt an (#375)',
+        (tester) async {
+      final backend = FakeAppLockBackend();
+      final lockStore = AppLockStore(backend, initial: {
+        'app_lock_pin_hash': 'salt:hash',
+        'app_lock_enabled': 'true',
+      });
+      backend.failAllWrites = true;
+      final settingsViewModel = FakeSettingsViewModel(
+        initialState: const AsyncValue.data(SettingsState(
+          settings: SettingsEntity(),
+          overtimeBalance: Duration.zero,
+        )),
+        actions: mockActions,
+      );
+      final themeViewModel = FakeThemeViewModel(
+        initialState: ThemeMode.system,
+        actions: mockActions,
+      );
+
+      await tester.pumpWidget(createSubject(
+        settingsViewModel: settingsViewModel,
+        themeViewModel: themeViewModel,
+        authState: const AsyncValue.data(null),
+        lockStore: lockStore,
+      ));
+
+      await tester.scrollUntilVisible(
+          find.text('PIN-/Biometrie-Sperre'), 500.0);
+      final tileFinder =
+          find.widgetWithText(SwitchListTile, 'PIN-/Biometrie-Sperre');
+      tester.widget<SwitchListTile>(tileFinder).onChanged!(false);
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(tester.widget<SwitchListTile>(tileFinder).value, isTrue);
     });
   });
 }

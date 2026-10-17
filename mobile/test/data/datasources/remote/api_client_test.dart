@@ -170,4 +170,46 @@ void main() {
       expect(body(), {'minutes': 30});
     });
   });
+
+  group('ApiClient — isHomeOffice (#277)', () {
+    Map<String, dynamic> sentJson() =>
+        jsonDecode(http_.lastBody! as String) as Map<String, dynamic>;
+
+    Future<void> save(bool flag) async {
+      http_.nextResponse = http.Response('', 204);
+      await api.saveWorkEntry(WorkEntryModel(
+        id: '2026-06-05',
+        date: DateTime(2026, 6, 5),
+        isHomeOffice: flag,
+      ));
+    }
+
+    test('PUT sendet isHomeOffice true und false immer mit', () async {
+      await save(true);
+      expect(sentJson()['isHomeOffice'], isTrue);
+      await save(false);
+      expect(sentJson().containsKey('isHomeOffice'), isTrue);
+      expect(sentJson()['isHomeOffice'], isFalse);
+    });
+
+    Future<bool> read(Map<String, dynamic> extra) async {
+      http_.nextResponse = http.Response(
+          jsonEncode({
+            'id': '2026-06-05',
+            'date': '2026-06-05T00:00:00Z',
+            'type': 'work',
+            ...extra,
+          }),
+          200);
+      final e = await api.getWorkEntry(2026, 6, 5);
+      return e!.isHomeOffice;
+    }
+
+    test('GET liest true, false, null und fehlendes Feld', () async {
+      expect(await read({'isHomeOffice': true}), isTrue);
+      expect(await read({'isHomeOffice': false}), isFalse);
+      expect(await read({'isHomeOffice': null}), isFalse);
+      expect(await read({}), isFalse);
+    });
+  });
 }

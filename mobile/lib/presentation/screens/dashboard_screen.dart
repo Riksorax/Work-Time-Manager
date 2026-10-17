@@ -9,6 +9,7 @@ import '../../l10n/app_localizations.dart';
 import '../utils/break_name_localizer.dart';
 import '../view_models/dashboard_view_model.dart';
 import '../view_models/settings_view_model.dart';
+import '../view_models/timer_action_view_model.dart';
 import '../widgets/common/dashboard_save_feedback.dart';
 import '../widgets/common/responsive_center.dart';
 import '../widgets/edit_break_modal.dart';
@@ -41,6 +42,17 @@ class DashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final dashboardState = ref.watch(dashboardViewModelProvider);
     final dashboardViewModel = ref.read(dashboardViewModelProvider.notifier);
+    // Timer-Aktion von außen (Notification-Button, Shortcut, #274) ist
+    // fehlgeschlagen: Snackbar wie bei einem fehlgeschlagenen Tap, einmalig.
+    // Auch ein Hinweis, der vor dem ersten Frame dieses Screens anstand.
+    if (ref.watch(timerActionFailurePendingProvider)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
+        if (!ref.read(timerActionFailurePendingProvider)) return;
+        ref.read(timerActionFailurePendingProvider.notifier).state = false;
+        reportDashboardSave(context, Future.value(false));
+      });
+    }
     final workEntry = dashboardState.workEntry;
     // Eine Schreibaktion läuft (#413): Schreib-Eingaben sind deaktiviert, der
     // VM-Guard verwirft weitere Aufrufe ohnehin still.
@@ -144,6 +156,23 @@ class DashboardScreen extends ConsumerWidget {
                         context, dashboardViewModel.clearEndTime())
                     : null,
               ),
+              // Home-Office-Schalter (#277), nur bei Typ Arbeit; während einer
+              // laufenden Aktion gesperrt wie die übrigen Eingaben.
+              if (workEntry.type == WorkEntryType.work)
+                Semantics(
+                  container: true,
+                  hint: l10n.homeOfficeToggleDashboardSemantics,
+                  child: SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    secondary: const Icon(Icons.home_outlined),
+                    title: Text(l10n.homeOfficeToggleLabel),
+                    value: workEntry.isHomeOffice,
+                    onChanged: isSaving
+                        ? null
+                        : (value) => reportDashboardSave(
+                            context, dashboardViewModel.setHomeOffice(value)),
+                  ),
+                ),
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: isSaving

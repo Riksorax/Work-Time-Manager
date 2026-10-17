@@ -17,6 +17,8 @@ export interface SeedEntry {
   end?: string;
   type?: 'work' | 'vacation' | 'sick' | 'holiday';
   breaks?: SeedBreak[];
+  /** Home-Office-Tag (#277), fehlend = nicht gesetzt. */
+  isHomeOffice?: boolean;
 }
 
 /** Friert die Uhr ein (läuft danach weiter) und muss VOR `page.goto` aufgerufen werden. */
@@ -41,6 +43,7 @@ export async function seedEntries(page: Page, entries: SeedEntry[]): Promise<voi
         isManuallyEntered: false,
         manualOvertimeMinutes: null,
         description: null,
+        ...(e.isHomeOffice === undefined ? {} : { isHomeOffice: e.isHomeOffice }),
         breaks: (e.breaks ?? []).map((b, i) => ({
           id: `b${i}`, name: b.name, isAutomatic: false, start: b.start, end: b.end ?? null,
         })),
@@ -54,9 +57,10 @@ export async function seedEntries(page: Page, entries: SeedEntry[]): Promise<voi
 }
 
 /** Abgeschlossener Arbeitstag 08:00–16:30 mit 30 min Pause. */
-export function workDay(day: string): SeedEntry {
+export function workDay(day: string, opts: { isHomeOffice?: boolean } = {}): SeedEntry {
   return {
     day,
+    ...opts,
     start: `${day}T08:00:00+01:00`,
     end: `${day}T16:30:00+01:00`,
     breaks: [{ name: 'Pause', start: `${day}T12:00:00+01:00`, end: `${day}T12:30:00+01:00` }],

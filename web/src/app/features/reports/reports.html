@@ -28,6 +28,7 @@
             <app-calendar
               [selectedDate]="svc.selectedDate()"
               [daysWithEntries]="svc.daysWithEntries()"
+              [homeOfficeDays]="svc.homeOfficeDays()"
               [bundesland]="svc.bundesland()"
               [multiSelectedDates]="svc.selectedDates()"
               [multiSelectActive]="svc.isMultiSelectActive()"
@@ -130,6 +131,12 @@
                             [attr.aria-label]="'reports.entryTypeAria' | translate: { type: entryTypeLabel(entry.type) }">
                         {{ entryTypeLabel(entry.type) }}
                       </span>
+                      @if (entry.type === 'work' && entry.isHomeOffice) {
+                        <span class="home-office-chip">
+                          <mat-icon aria-hidden="true">home</mat-icon>
+                          {{ 'shared.homeOfficeChip' | translate }}
+                        </span>
+                      }
                       <div class="entry-actions">
                         <button mat-icon-button
                                 (click)="openEditDialog(entry)"

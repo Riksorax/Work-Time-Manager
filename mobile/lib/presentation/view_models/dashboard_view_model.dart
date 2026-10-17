@@ -18,6 +18,7 @@ import '../../domain/usecases/save_work_entry.dart';
 import '../../domain/utils/entry_day.dart';
 import '../../domain/utils/overtime_utils.dart';
 import '../../domain/utils/overtime_warning_utils.dart';
+import '../../domain/utils/timer_action.dart';
 import '../../l10n/app_localizations.dart';
 import '../state/dashboard_state.dart';
 
@@ -713,6 +714,77 @@ class DashboardViewModel extends Notifier<DashboardState> {
     return !_isRunning(state.workEntry);
   }
 
+  /// Führt eine Timer-Aktion von außen aus (Notification-Button, App-Shortcut,
+  /// #274): zustandsbewusst und idempotent über den **normalen** Start/Stop-Pfad
+  /// ([startOrStopTimer]), also mit Auto-Pausen, Saldo und allen Invarianten
+  /// (#402/#412/#413/#388/#379).
+  ///
+  /// Wartet auf den Ladelauf und auf eine laufende Schreibaktion (wie
+  /// [stopRunningForSwitch]) und entscheidet erst danach auf dem geladenen State
+  /// (nie auf dem Platzhalter). Zwischen Entscheidung und [startOrStopTimer]
+  /// liegt kein `await`: dessen Wrapper setzt die Sperre synchron.
+  ///
+  /// `notApplicable`, wenn der Zustand nicht passt oder das Profil beim Warten
+  /// wechselte (dann wird nichts geschrieben); `failed`, wenn das Dashboard nicht
+  /// ladbar ist oder der Stop nicht gespeichert werden konnte.
+  Future<TimerActionResult> performTimerAction(TimerAction action) async {
+    if (!ref.mounted) return TimerActionResult.failed;
+    final fromProfile = ref.read(activeWorkProfileIdProvider) ??
+        WorkProfileEntity.defaultProfileId;
+    String activeProfile() =>
+        ref.read(activeWorkProfileIdProvider) ??
+        WorkProfileEntity.defaultProfileId;
+
+    // Tag aktualisieren (löst bei Tageswechsel einen Reinit aus) und den
+    // laufenden Ladelauf abwarten.
+    ref.read(todayProvider.notifier).refresh();
+    final initial = _initRun;
+    if (initial != null) await initial;
+
+    // Ladelauf und Schreibaktion zu Ende laufen lassen; ein Reinit nach einer
+    // Aktion (z. B. Stop eines Vortags) wird mit abgewartet. Begrenzt, damit ein
+    // dauerhaft ladender State nie endlos wartet.
+    for (var i = 0;; i++) {
+      if (!ref.mounted || i > 10) return TimerActionResult.failed;
+      final run = _initRun;
+      if (state.isLoading && run != null) {
+        await run;
+        continue;
+      }
+      final done = _actionDone;
+      if (done != null && !done.isCompleted) {
+        await done.future;
+        continue;
+      }
+      break;
+    }
+
+    // Ab hier synchron bis `startOrStopTimer()`.
+    if (activeProfile() != fromProfile) return TimerActionResult.notApplicable;
+    if (!_loadedOk || state.isLoading) return TimerActionResult.failed;
+    final entry = state.workEntry;
+    if (!_isRunning(entry) && entryDay(entry) != ref.read(todayProvider)) {
+      // Veralteter Tag (Reinit gescheitert): nie darauf entscheiden.
+      return TimerActionResult.failed;
+    }
+    if (decideTimerAction(action, entry) == TimerDecision.notApplicable) {
+      return TimerActionResult.notApplicable;
+    }
+
+    final ok = await startOrStopTimer();
+    if (!ref.mounted) return TimerActionResult.failed;
+    if (!ok) return TimerActionResult.failed;
+    // Profil wechselte während des Schreibens: die Writes liefen im Profil des
+    // Aktionsbeginns zu Ende, der State gehört schon zum neuen Profil.
+    if (activeProfile() != fromProfile) return TimerActionResult.applied;
+    // `startOrStopTimer` liefert auch `true` ohne Wirkung: am State prüfen.
+    final effective = switch (action) {
+      TimerAction.start => _isRunning(state.workEntry),
+      TimerAction.stop => !_isRunning(state.workEntry),
+    };
+    return effective ? TimerActionResult.applied : TimerActionResult.failed;
+  }
+
   /// Startet eine komplett neue Session (Start, End und Pausen zurücksetzen)
   Future<bool> startNewSession() => _runAction(() => _startNewSessionBody());
 
@@ -730,6 +802,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
       isManuallyEntered: false,
       description: state.workEntry.description,
       type: state.workEntry.type,
+      isHomeOffice: state.workEntry.isHomeOffice,
     );
     logger.i(
         '[Dashboard] Komplett neue Session gestartet um $now (Start, End, Pausen zurückgesetzt)');
@@ -754,6 +827,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
       isManuallyEntered: false,
       description: state.workEntry.description,
       type: state.workEntry.type,
+      isHomeOffice: state.workEntry.isHomeOffice,
     );
     logger.i('[Dashboard] Neue Session gestartet um $now (Pausen behalten)');
     return _recalculateStateAndSave(updatedEntry, ctx: ctx);
@@ -978,6 +1052,25 @@ class DashboardViewModel extends Notifier<DashboardState> {
     }
   }
 
+  /// Setzt das Home-Office-Flag des aktuellen Eintrags (#277). Ohne
+  /// `workStart` wird nur der State geändert (der Start schreibt das Flag
+  /// mit); sonst speichert die Aktion den Eintrag, ohne Timer oder Pausen
+  /// anzufassen.
+  Future<bool> setHomeOffice(bool value) =>
+      _runAction(() => _setHomeOfficeBody(value));
+
+  Future<bool> _setHomeOfficeBody(bool value) async {
+    if (!await _ensureCurrentDay()) return false;
+    final ctx = _beginAction();
+    final updatedEntry = state.workEntry.copyWith(isHomeOffice: value);
+    if (updatedEntry.workStart == null) {
+      if (!ref.mounted || ctx.gen != _initGen) return true;
+      state = state.copyWith(workEntry: updatedEntry);
+      return true;
+    }
+    return _recalculateStateAndSave(updatedEntry, ctx: ctx);
+  }
+
   Future<bool> setManualStartTime(TimeOfDay time) =>
       _runAction(() => _setManualStartTimeBody(time));
 
@@ -1066,6 +1159,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
       isManuallyEntered: state.workEntry.isManuallyEntered,
       description: state.workEntry.description,
       type: state.workEntry.type,
+      isHomeOffice: state.workEntry.isHomeOffice,
     );
 
     final ok = await _recalculateStateAndSave(updatedEntry, ctx: ctx);

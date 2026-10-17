@@ -238,3 +238,32 @@ jobs:
 
       - name: Test
         run: dotnet test WorkTimeManager.slnx --no-build --configuration Release
+
+  # Branding-Pipeline (#437): die eingecheckten Logo-Assets müssen zu branding/src/*.svg passen.
+  # Läuft immer (wenige Sekunden), damit auch ein von Hand geänderter Zielasset auffällt.
+  branding:
+    name: Branding Drift-Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: branding
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: branding/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test
+        run: npm test
+
+      # Erzeugt alle Assets neu und vergleicht Pixel (Toleranz 1 je Kanal) mit dem Repo.
+      # Bei Fehlschlag lokal "npm run export" im Ordner branding/ ausführen und committen.
+      - name: Drift-Check
+        run: npm run check

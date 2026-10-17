@@ -108,9 +108,9 @@ class AppInfoPage extends ConsumerWidget {
         width: 100,
         height: 100,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
+          shape: BoxShape.circle,
           image: const DecorationImage(
-            image: AssetImage('assets/icon/WorkTimeManagerLogo.png'),
+            image: AssetImage('assets/icon/app_logo_256.png'),
             fit: BoxFit.cover,
           ),
           boxShadow: [

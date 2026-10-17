@@ -20,8 +20,26 @@ internal static class FirestoreMappings
         IsManuallyEntered = day.IsManuallyEntered,
         ManualOvertimeMinutes = day.ManualOvertimeMinutes,
         Description = day.Description,
+        IsHomeOffice = day.IsHomeOffice ?? false,
         Breaks = day.Breaks.Select(ToDto).ToList(),
     };
+
+    /// <summary>
+    /// Feldpfade (<c>days.{dayKey}.{feld}</c>) für <c>SetOptions.MergeFields</c> beim Speichern eines Tages.
+    /// <c>isHomeOffice</c> ist nur enthalten, wenn der Client es gesendet hat (<c>true</c>/<c>false</c>);
+    /// bei <c>null</c> (alte Clients) bleibt ein gespeicherter Wert unangetastet (MergeAll würde <c>null</c>
+    /// schreiben). Siehe #277.
+    /// </summary>
+    public static string[] DayMergeFields(WorkEntryDto dto, string dayKey)
+    {
+        var fields = new List<string>
+        {
+            "date", "workStart", "workEnd", "type", "isManuallyEntered",
+            "manualOvertimeMinutes", "description", "breaks",
+        };
+        if (dto.IsHomeOffice is not null) fields.Add("isHomeOffice");
+        return fields.Select(f => $"days.{dayKey}.{f}").ToArray();
+    }
 
     private static BreakDto ToDto(BreakData b) => new()
     {
@@ -41,6 +59,7 @@ internal static class FirestoreMappings
         IsManuallyEntered = dto.IsManuallyEntered,
         ManualOvertimeMinutes = dto.ManualOvertimeMinutes,
         Description = dto.Description,
+        IsHomeOffice = dto.IsHomeOffice,
         Breaks = dto.Breaks.Select(ToDocument).ToList(),
     };
 

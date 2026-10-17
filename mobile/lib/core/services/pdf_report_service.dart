@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
+import '../../domain/utils/home_office_stats.dart';
 import '../../domain/utils/iso_week.dart';
 import '../../l10n/app_localizations.dart';
 
@@ -243,6 +244,111 @@ class PdfReportService {
         for (final m in months)
           [m.$1, '${m.$4}', _fmtDuration(m.$2), _fmtSignedDuration(m.$3)],
       ],
+    );
+  }
+
+  pw.Widget _homeOfficeYearTable(
+    List<(String month, int homeOffice, int office, double? ratio)> months, {
+    required AppLocalizations l10n,
+    required String locale,
+  }) {
+    return pw.TableHelper.fromTextArray(
+      headers: [
+        l10n.pdfMonthColumn,
+        l10n.pdfHomeOfficeDaysLabel,
+        l10n.pdfOfficeDaysLabel,
+        l10n.pdfHomeOfficeRatioLabel,
+      ],
+      cellAlignments: {
+        0: pw.Alignment.centerLeft,
+        1: pw.Alignment.centerRight,
+        2: pw.Alignment.centerRight,
+        3: pw.Alignment.centerRight,
+      },
+      cellPadding: const pw.EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+      data: [
+        for (final m in months)
+          [m.$1, '${m.$2}', '${m.$3}', formatHomeOfficeRatio(m.$4, locale)],
+      ],
+    );
+  }
+
+  pw.Widget _homeOfficeDayList(
+    List<DateTime> dates, {
+    required AppLocalizations l10n,
+    required String locale,
+  }) {
+    if (dates.isEmpty) return pw.Text(l10n.pdfHomeOfficeNoDays);
+    final fmt = DateFormat.yMMMEd(locale);
+    return pw.TableHelper.fromTextArray(
+      headerCount: 0,
+      cellAlignments: {0: pw.Alignment.centerLeft},
+      cellPadding: const pw.EdgeInsets.symmetric(vertical: 3, horizontal: 8),
+      data: [
+        for (final d in dates) [fmt.format(d)],
+      ],
+    );
+  }
+
+  /// Exportiert die Home-Office-Auswertung als PDF (siehe #282).
+  ///
+  /// Genau eines von [homeOfficeDates] (Monatslayout mit Tagesliste) und
+  /// [perMonth] (Jahreslayout mit Monatstabelle) ist gesetzt. Die Zählregel
+  /// liegt in `calculateHomeOfficeStats`; der Service formatiert nur.
+  Future<void> exportHomeOfficeReport({
+    required AppLocalizations l10n,
+    required String locale,
+    required String periodLabel,
+    required String fileSuffix,
+    required int homeOfficeDays,
+    required int officeDays,
+    required int totalWorkDays,
+    required double? ratio,
+    List<DateTime>? homeOfficeDates,
+    List<(String month, int homeOffice, int office, double? ratio)>? perMonth,
+  }) async {
+    assert(
+      (homeOfficeDates == null) != (perMonth == null),
+      'Genau eines von homeOfficeDates und perMonth muss gesetzt sein.',
+    );
+    final doc = pw.Document(theme: await _loadTheme());
+    doc.addPage(
+      pw.MultiPage(
+        build: (context) => [
+          _header(l10n.pdfHomeOfficeReportTitle, periodLabel),
+          _summaryTable([
+            (l10n.pdfHomeOfficeDaysLabel, '$homeOfficeDays'),
+            (l10n.pdfOfficeDaysLabel, '$officeDays'),
+            (l10n.pdfHomeOfficeTotalDaysLabel, '$totalWorkDays'),
+            (
+              l10n.pdfHomeOfficeRatioLabel,
+              formatHomeOfficeRatio(ratio, locale)
+            ),
+          ]),
+          pw.SizedBox(height: 20),
+          if (homeOfficeDates != null) ...[
+            pw.Text(l10n.pdfHomeOfficeDayListTitle,
+                style:
+                    pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 8),
+            _homeOfficeDayList(homeOfficeDates, l10n: l10n, locale: locale),
+          ] else ...[
+            pw.Text(l10n.pdfMonthlyOverviewTitle,
+                style:
+                    pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 8),
+            _homeOfficeYearTable(perMonth!, l10n: l10n, locale: locale),
+          ],
+          pw.SizedBox(height: 20),
+          pw.Text(l10n.pdfHomeOfficeCountNote,
+              style: const pw.TextStyle(fontSize: 9)),
+        ],
+      ),
+    );
+
+    await Printing.sharePdf(
+      bytes: await doc.save(),
+      filename: 'Home-Office-Auswertung_$fileSuffix.pdf',
     );
   }
 

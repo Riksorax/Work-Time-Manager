@@ -1,4 +1,4 @@
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_work_time/core/services/app_lock_store.dart';
 
 /// Veränderbare Uhr für die App-Sperre (liefert UTC).
 class FakeClock {
@@ -18,67 +18,26 @@ class FakeMonotonic {
   void advance(Duration d) => current += d;
 }
 
-/// Delegiert an echte (Mock-)Prefs und protokolliert die Aufrufreihenfolge.
-/// [throwOnGetString] simuliert einen Hard-Kill beim Lesen des Hashs.
-class RecordingSharedPreferences implements SharedPreferences {
-  final SharedPreferences inner;
+/// Store mit Aufrufprotokoll (Reihenfolge von Lesen und Schreiben).
+/// [throwOnGetString] simuliert einen Hard-Kill beim Lesen des Hashs. Eine
+/// verzögerte Persistenz (z. B. für Doppeltipp-Tests) lässt sich über
+/// `FakeAppLockBackend.holdWrites` simulieren.
+class RecordingAppLockStore extends AppLockStore {
   final List<String> log = [];
   final String? throwOnGetString;
 
-  /// Optional: verzögert setInt (z. B. für Doppeltipp-Tests).
-  Future<void>? setIntDelay;
-
-  RecordingSharedPreferences(this.inner, {this.throwOnGetString});
+  RecordingAppLockStore(super.backend, {super.initial, this.throwOnGetString});
 
   @override
   String? getString(String key) {
     log.add('getString:$key');
     if (key == throwOnGetString) throw StateError('hard kill');
-    return inner.getString(key);
+    return super.getString(key);
   }
 
   @override
-  int? getInt(String key) => inner.getInt(key);
-
-  @override
-  bool? getBool(String key) => inner.getBool(key);
-
-  @override
-  Object? get(String key) => inner.get(key);
-
-  @override
-  Set<String> getKeys() => inner.getKeys();
-
-  @override
-  bool containsKey(String key) => inner.containsKey(key);
-
-  @override
-  Future<bool> setInt(String key, int value) async {
+  Future<void> setInt(String key, int value, {bool rollbackOnError = false}) {
     log.add('setInt:$key=$value');
-    final delay = setIntDelay;
-    if (delay != null) await delay;
-    return inner.setInt(key, value);
+    return super.setInt(key, value, rollbackOnError: rollbackOnError);
   }
-
-  @override
-  Future<bool> setString(String key, String value) {
-    log.add('setString:$key');
-    return inner.setString(key, value);
-  }
-
-  @override
-  Future<bool> setBool(String key, bool value) {
-    log.add('setBool:$key');
-    return inner.setBool(key, value);
-  }
-
-  @override
-  Future<bool> remove(String key) {
-    log.add('remove:$key');
-    return inner.remove(key);
-  }
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) =>
-      throw UnimplementedError('${invocation.memberName}');
 }

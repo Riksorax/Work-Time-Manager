@@ -36,7 +36,7 @@ Firestore-Integrationstests übersprungen (`SkippableFact`) — das ist erwartet
 | GET | `/api/me` | UID des Tokens |
 | GET | `/api/work-entries/{year}/{month}` | Einträge eines Monats |
 | GET | `/api/work-entries/{year}/{month}/{day}` | Einzeleintrag (404 wenn fehlt) |
-| PUT | `/api/work-entries` | Eintrag speichern (merge in days-Map) |
+| PUT | `/api/work-entries` | Eintrag speichern (merge in days-Map, `isHomeOffice` nur wenn gesetzt) |
 | DELETE | `/api/work-entries/{year}/{month}/{day}` | Tag löschen |
 | GET / PUT | `/api/overtime` | Gleitzeit-Saldo lesen/speichern (`minutes`, PUT optional `keepLastUpdated`, #406) |
 | GET / PUT | `/api/settings` | Einstellungen lesen/speichern |
@@ -54,6 +54,8 @@ Firestore-Integrationstests übersprungen (`SkippableFact`) — das ist erwartet
 **Urlaubsanspruch (#278):** `SettingsDto.vacationDaysPerYear` (0–366, sonst 400; fehlt im Dokument: 30). Im `PUT /api/settings` optional: fehlt das Feld (alte Clients), bleibt der gespeicherte Wert erhalten (`SettingsMergeFields` lässt es aus dem Merge aus).
 
 **Bundesland (#279):** `SettingsDto.bundesland` (`string?`, Dart-Enum-Name der 16 Bundesländer, z. B. `nordrheinWestfalen`; Whitelist in `FirestoreMappings.Bundeslaender`, exakte Schreibweise). Gilt je Profil in `settings/current`, kein neuer Pfad. GET: Wert oder `null` (nicht ausgewählt). PUT: `null`/fehlend lässt den gespeicherten Wert unangetastet (alte Clients), `""` löscht das Feld (`FieldValue.Delete`), ungültiger Wert ergibt 400. Das Backend kennt keine Feiertagslogik.
+
+**Home-Office (#277):** `WorkEntryDto.isHomeOffice` (`bool?`) ↔ `days.{d}.isHomeOffice` (bool, Root und `profiles/{id}`, kein neuer Pfad, keine Rules/Migration). GET liefert immer `true`/`false` (fehlendes Feld = `false`). PUT: `true`/`false` wird geschrieben (`false` überschreibt ein gespeichertes `true`), `null`/fehlend (alte Clients) lässt den gespeicherten Wert unangetastet: `WorkEntryRepository.SaveAsync` schreibt per `SetOptions.MergeFields(FirestoreMappings.DayMergeFields(...))` statt `MergeAll`, die Feldliste enthält `days.{d}.isHomeOffice` nur bei gesetztem Flag. Neue `DayData`-Felder müssen in `DayMergeFields` ergänzt werden (Drift-Test). Der Server validiert nicht nach Typ; Clients ignorieren das Flag bei `vacation/sick/holiday`. Keine Report-/Rechenlogik-Änderung. Deploy-Reihenfolge: API vor Clients.
 
 **Multi-Profile (`profileId`, siehe #239):** `work-entries`/`overtime`/`settings`/`reports`-Endpunkte akzeptieren optional `?profileId=...` (Query-Parameter). Fehlt er oder ist er `"default"`, wird der bestehende, nicht migrierte Pfad verwendet — vollständig abwärtskompatibel für bestehende Clients ohne den Parameter.
 

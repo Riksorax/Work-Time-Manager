@@ -6,6 +6,7 @@ import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter_work_time/core/services/notification_service.dart';
 import 'package:flutter_work_time/domain/utils/overtime_warning_utils.dart';
+import 'package:flutter_work_time/domain/utils/timer_action.dart';
 import 'package:flutter_work_time/l10n/app_localizations.dart';
 import 'package:flutter/widgets.dart' show Locale;
 
@@ -280,6 +281,202 @@ void main() {
 
     test('Jahreswechsel: Mi 31.12.2025 -> Do 01.01.2026', () {
       expectAt(nextWeeklyOccurrence(at(2025, 12, 31), 4, 8, 0), 2026, 1, 1, 1);
+    });
+  });
+
+  // Timer-Aktionen in Erinnerungen (#274): Buttons je Reminder-Check und
+  // Routing der Notification-Antworten.
+  group('Timer-Aktionen (#274)', () {
+    Future<List<AndroidNotificationAction>?> scheduleAndGetActions({
+      required bool start,
+      required bool end,
+      bool breaks = false,
+      AppLocalizations? l10n,
+    }) async {
+      await notificationService.scheduleDailyReminder(
+        time: '09:00',
+        days: [1],
+        checkWorkStart: start,
+        checkWorkEnd: end,
+        checkBreaks: breaks,
+        l10n: l10n ?? de,
+      );
+      final details = verify(mockNotificationsPlugin.zonedSchedule(
+        any,
+        any,
+        any,
+        any,
+        captureAny, // NotificationDetails
+        androidScheduleMode: anyNamed('androidScheduleMode'),
+        matchDateTimeComponents: anyNamed('matchDateTimeComponents'),
+        payload: anyNamed('payload'),
+      )).captured.single as NotificationDetails;
+      return details.android!.actions;
+    }
+
+    test('checkWorkStart -> genau die Action timer_start', () async {
+      final actions = await scheduleAndGetActions(start: true, end: false);
+      expect(actions!.map((a) => a.id), ['timer_start']);
+      expect(actions.single.title, 'Einstempeln');
+    });
+
+    test('checkWorkEnd -> genau die Action timer_stop', () async {
+      final actions = await scheduleAndGetActions(start: false, end: true);
+      expect(actions!.map((a) => a.id), ['timer_stop']);
+      expect(actions.single.title, 'Ausstempeln');
+    });
+
+    test('beide Checks -> beide Actions in fester Reihenfolge', () async {
+      final actions = await scheduleAndGetActions(start: true, end: true);
+      expect(actions!.map((a) => a.id), ['timer_start', 'timer_stop']);
+    });
+
+    test('nur Pausen oder generisch -> keine Actions', () async {
+      expect(
+          await scheduleAndGetActions(start: false, end: false, breaks: true),
+          anyOf(isNull, isEmpty));
+    });
+
+    test('Titel kommen aus der uebergebenen Sprache (en)', () async {
+      final actions =
+          await scheduleAndGetActions(start: true, end: true, l10n: en);
+      expect(actions!.map((a) => a.title), ['Clock in', 'Clock out']);
+    });
+
+    test('Actions oeffnen die App und schliessen die Notification', () async {
+      final actions = await scheduleAndGetActions(start: true, end: true);
+      for (final a in actions!) {
+        expect(a.showsUserInterface, isTrue);
+        expect(a.cancelNotification, isTrue);
+      }
+    });
+
+    group('Antwort-Routing', () {
+      final received = <TimerAction>[];
+      final taps = <String>[];
+      late void Function(NotificationResponse) handler;
+
+      setUp(() async {
+        received.clear();
+        taps.clear();
+        notificationService.resetForTest();
+        await notificationService.initialize(
+          onNotificationTap: taps.add,
+          onTimerAction: received.add,
+        );
+        handler = verify(mockNotificationsPlugin.initialize(
+          any,
+          onDidReceiveNotificationResponse:
+              captureAnyNamed('onDidReceiveNotificationResponse'),
+          onDidReceiveBackgroundNotificationResponse:
+              anyNamed('onDidReceiveBackgroundNotificationResponse'),
+        )).captured.single as void Function(NotificationResponse);
+      });
+
+      NotificationResponse response({String? actionId, String? payload}) =>
+          NotificationResponse(
+            notificationResponseType: actionId == null
+                ? NotificationResponseType.selectedNotification
+                : NotificationResponseType.selectedNotificationAction,
+            actionId: actionId,
+            payload: payload,
+          );
+
+      test('timer_start ruft onTimerAction, nicht den Payload-Callback', () {
+        handler(response(actionId: 'timer_start', payload: 'open_dashboard'));
+        expect(received, [TimerAction.start]);
+        expect(taps, isEmpty);
+      });
+
+      test('timer_stop ruft onTimerAction(stop)', () {
+        handler(response(actionId: 'timer_stop', payload: 'open_dashboard'));
+        expect(received, [TimerAction.stop]);
+        expect(taps, isEmpty);
+      });
+
+      test('Payload open_dashboard ohne actionId wie bisher', () {
+        handler(response(payload: 'open_dashboard'));
+        expect(taps, ['open_dashboard']);
+        expect(received, isEmpty);
+      });
+
+      test('unbekannte actionId wird ignoriert (kein Crash)', () {
+        handler(response(actionId: 'gibt_es_nicht', payload: 'open_dashboard'));
+        expect(received, isEmpty);
+        expect(taps, isEmpty);
+      });
+
+      test('leere actionId zaehlt als normaler Tap', () {
+        handler(response(actionId: '', payload: 'open_dashboard'));
+        expect(taps, ['open_dashboard']);
+        expect(received, isEmpty);
+      });
+    });
+  });
+
+  group('launchTimerAction', () {
+    test('liest die Start-Details des Plugins', () async {
+      when(mockNotificationsPlugin.getNotificationAppLaunchDetails())
+          .thenAnswer((_) async => const NotificationAppLaunchDetails(
+                true,
+                notificationResponse: NotificationResponse(
+                  notificationResponseType:
+                      NotificationResponseType.selectedNotificationAction,
+                  actionId: 'timer_stop',
+                ),
+              ));
+      expect(await notificationService.launchTimerAction(), TimerAction.stop);
+    });
+
+    test('Plugin-Fehler wird geschluckt (null, kein Crash)', () async {
+      when(mockNotificationsPlugin.getNotificationAppLaunchDetails())
+          .thenThrow(Exception('plugin'));
+      expect(await notificationService.launchTimerAction(), isNull);
+    });
+  });
+
+  group('timerActionFromLaunchDetails', () {
+    NotificationAppLaunchDetails details({
+      required bool launched,
+      String? actionId,
+    }) =>
+        NotificationAppLaunchDetails(
+          launched,
+          notificationResponse: NotificationResponse(
+            notificationResponseType:
+                NotificationResponseType.selectedNotificationAction,
+            actionId: actionId,
+          ),
+        );
+
+    test('null und nicht gestartet -> null', () {
+      expect(timerActionFromLaunchDetails(null), isNull);
+      expect(
+          timerActionFromLaunchDetails(
+              details(launched: false, actionId: 'timer_start')),
+          isNull);
+    });
+
+    test('Kaltstart ueber Action -> TimerAction', () {
+      expect(
+          timerActionFromLaunchDetails(
+              details(launched: true, actionId: 'timer_start')),
+          TimerAction.start);
+      expect(
+          timerActionFromLaunchDetails(
+              details(launched: true, actionId: 'timer_stop')),
+          TimerAction.stop);
+    });
+
+    test('Kaltstart ueber normalen Tap oder unbekannte Action -> null', () {
+      expect(timerActionFromLaunchDetails(details(launched: true)), isNull);
+      expect(
+          timerActionFromLaunchDetails(details(launched: true, actionId: 'x')),
+          isNull);
+      expect(
+          timerActionFromLaunchDetails(
+              const NotificationAppLaunchDetails(true)),
+          isNull);
     });
   });
 }

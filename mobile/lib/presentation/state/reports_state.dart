@@ -11,6 +11,10 @@ class ReportsState extends Equatable {
   final DateTime? selectedDay;
   final DateTime? selectedMonth;
   final Map<DateTime, List<WorkEntryEntity>> workEntries;
+
+  /// Kalendertage (lokale Mitternacht) des gewählten Monats mit Typ Arbeit und
+  /// Home-Office-Flag (#277), für die Kalendermarkierung.
+  final Set<DateTime> homeOfficeDays;
   final ReportType reportType;
 
   // Report data
@@ -27,6 +31,7 @@ class ReportsState extends Equatable {
     this.selectedDay,
     this.selectedMonth,
     required this.workEntries,
+    this.homeOfficeDays = const {},
     this.reportType = ReportType.daily,
     this.dailyReportState = DailyReportState.initial,
     this.weeklyReportState = WeeklyReportState.initial,
@@ -54,6 +59,7 @@ class ReportsState extends Equatable {
     DateTime? selectedDay,
     DateTime? selectedMonth,
     Map<DateTime, List<WorkEntryEntity>>? workEntries,
+    Set<DateTime>? homeOfficeDays,
     ReportType? reportType,
     DailyReportState? dailyReportState,
     WeeklyReportState? weeklyReportState,
@@ -67,6 +73,7 @@ class ReportsState extends Equatable {
       selectedDay: selectedDay ?? this.selectedDay,
       selectedMonth: selectedMonth ?? this.selectedMonth,
       workEntries: workEntries ?? this.workEntries,
+      homeOfficeDays: homeOfficeDays ?? this.homeOfficeDays,
       reportType: reportType ?? this.reportType,
       dailyReportState: dailyReportState ?? this.dailyReportState,
       weeklyReportState: weeklyReportState ?? this.weeklyReportState,
@@ -83,6 +90,7 @@ class ReportsState extends Equatable {
         selectedDay,
         selectedMonth,
         workEntries,
+        homeOfficeDays,
         reportType,
         dailyReportState,
         weeklyReportState,

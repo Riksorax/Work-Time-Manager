@@ -2,20 +2,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_work_time/core/providers/app_lock_provider.dart';
 import 'package:flutter_work_time/core/providers/clock_provider.dart';
-import 'package:flutter_work_time/core/providers/providers.dart';
+import 'package:flutter_work_time/core/services/app_lock_store.dart';
 import 'package:flutter_work_time/domain/utils/app_lock_lockout.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../helpers/app_lock_fakes.dart';
 
 void main() {
   test('appLockServiceProvider nutzt clockProvider für die Sperre', () async {
-    SharedPreferences.setMockInitialValues({});
-    final prefs = await SharedPreferences.getInstance();
+    final store = AppLockStore.inMemory();
     final clock = FakeClock();
 
     ProviderContainer create() => ProviderContainer(overrides: [
-          sharedPreferencesProvider.overrideWithValue(prefs),
+          appLockStoreProvider.overrideWithValue(store),
           clockProvider.overrideWithValue(clock.call),
         ]);
 
@@ -40,5 +38,38 @@ void main() {
     expect(await restarted.syncLockout(), const Duration(seconds: 3));
     clock.advance(const Duration(seconds: 3));
     expect(await restarted.syncLockout(), Duration.zero);
+  });
+
+  group('isAppLockedProvider (Start-Race, #375)', () {
+    ProviderContainer create(AppLockStore? store) {
+      final container = ProviderContainer(overrides: [
+        if (store != null) appLockStoreProvider.overrideWithValue(store),
+      ]);
+      addTearDown(container.dispose);
+      return container;
+    }
+
+    test('mit vorab befülltem Store ist schon der erste Read gesperrt', () {
+      final store = AppLockStore.inMemory({
+        'app_lock_enabled': 'true',
+        'app_lock_pin_hash': 'salt:hash',
+      });
+      expect(create(store).read(isAppLockedProvider), isTrue);
+    });
+
+    test('ohne Override gilt der In-Memory-Default: nicht gesperrt', () {
+      expect(create(null).read(isAppLockedProvider), isFalse);
+      expect(create(null).read(appLockServiceProvider).hasPin, isFalse);
+    });
+
+    test('enabled ohne PIN (Restore-Fall) sperrt nicht', () {
+      final store = AppLockStore.inMemory({'app_lock_enabled': 'true'});
+      expect(create(store).read(isAppLockedProvider), isFalse);
+    });
+
+    test('PIN ohne enabled sperrt nicht', () {
+      final store = AppLockStore.inMemory({'app_lock_pin_hash': 'salt:hash'});
+      expect(create(store).read(isAppLockedProvider), isFalse);
+    });
   });
 }
