@@ -15,7 +15,6 @@ import 'package:flutter_work_time/presentation/view_models/leave_balance_view_mo
 import 'package:flutter_work_time/presentation/view_models/open_entry_view_model.dart';
 import 'package:flutter_work_time/presentation/view_models/settings_view_model.dart';
 
-import '../../support/dashboard_harness.dart';
 import '../../support/fake_repositories.dart';
 
 // Home-Office-Schalter im Dashboard (#277). Feste Daten: Mo 2026-10-05,
