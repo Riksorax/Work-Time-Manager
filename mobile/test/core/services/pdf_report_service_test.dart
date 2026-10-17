@@ -1,69 +1,11 @@
-import 'dart:typed_data';
-
-import 'package:flutter/rendering.dart' show Rect;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:pdf/pdf.dart';
-import 'package:plugin_platform_interface/plugin_platform_interface.dart';
-import 'package:printing/printing.dart';
-import 'package:printing/src/interface.dart';
+import 'package:printing/src/interface.dart' show PrintingPlatform;
 import 'package:flutter_work_time/core/services/pdf_report_service.dart';
 import 'package:flutter_work_time/l10n/app_localizations_de.dart';
 import 'package:flutter_work_time/l10n/app_localizations_en.dart';
 
-/// Fängt den plattformspezifischen `sharePdf`-Aufruf ab, damit die Tests
-/// ohne echten Share-Dialog laufen (siehe #297: PDF-Export folgt jetzt der
-/// App-Sprache statt fest Deutsch zu sein).
-class _FakePrintingPlatform extends PrintingPlatform
-    with MockPlatformInterfaceMixin {
-  Uint8List? lastBytes;
-  String? lastFilename;
-
-  @override
-  Future<bool> sharePdf(
-    Uint8List bytes,
-    String filename,
-    Rect bounds,
-    String? subject,
-    String? body,
-    List<String>? emails,
-  ) async {
-    lastBytes = bytes;
-    lastFilename = filename;
-    return true;
-  }
-
-  @override
-  Future<PrintingInfo> info() => throw UnimplementedError();
-
-  @override
-  Future<bool> layoutPdf(
-    Printer? printer,
-    LayoutCallback onLayout,
-    String name,
-    PdfPageFormat format,
-    bool dynamicLayout,
-    bool usePrinterSettings,
-    OutputType outputType,
-    bool forceCustomPrintPaper,
-  ) =>
-      throw UnimplementedError();
-
-  @override
-  Future<List<Printer>> listPrinters() => throw UnimplementedError();
-
-  @override
-  Future<Printer?> pickPrinter(Rect bounds) => throw UnimplementedError();
-
-  @override
-  Future<Uint8List> convertHtml(
-          String html, String? baseUrl, PdfPageFormat format) =>
-      throw UnimplementedError();
-
-  @override
-  Stream<PdfRaster> raster(Uint8List document, List<int>? pages, double dpi) =>
-      throw UnimplementedError();
-}
+import '../../support/fake_printing_platform.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -73,11 +15,11 @@ void main() {
     await initializeDateFormatting('en', null);
   });
 
-  late _FakePrintingPlatform fakePlatform;
+  late FakePrintingPlatform fakePlatform;
   late PdfReportService service;
 
   setUp(() {
-    fakePlatform = _FakePrintingPlatform();
+    fakePlatform = FakePrintingPlatform();
     PrintingPlatform.instance = fakePlatform;
     service = PdfReportService();
   });
