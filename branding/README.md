@@ -6,7 +6,7 @@ Ergebnis committen.
 
 > **Stand: Interim.** Die `logo*.svg` sind ein Nachbau des bisherigen Motivs (Uhr, Zahnrad, Pfeil, Verlauf
 > Dunkelblau → Türkis), keine Neugestaltung. Das Aussehen entspricht dem bisherigen Logo
-> (`mobile/assets/icon/WorkTimeManagerLogo.png`).
+> (früher `mobile/assets/icon/WorkTimeManagerLogo.png`, inzwischen gelöscht; die Quelle ist jetzt `src/`).
 
 ## Aufruf
 
@@ -74,10 +74,17 @@ Quelle der Wahrheit ist `lib/targets.mjs`; ein Test stellt sicher, dass jede Dat
 | `store/icon-512.png` | 512², 32 Bit | `icon-store.svg` | Play-Store-Icon (Upload manuell) |
 | `store/feature-graphic.png` | 1024 × 500, ohne Alpha | `feature-graphic.svg` | Play-Store-Feature-Graphic (Upload manuell) |
 
-Noch nicht verdrahtet: Manifest, `index.html`, `nginx.conf`, Sidenav/Login (Web) sowie `pubspec.yaml`,
-`notification_service.dart` und `keep.xml` (Mobile) folgen in eigenen Änderungen. Die Android-Mipmaps und
-`mipmap-anydpi-v26/launcher_icon.xml` erzeugt nicht dieses Skript, sondern `dart run flutter_launcher_icons`
-aus den `adaptive_*`-Dateien (im Ordner `mobile/`).
+Verdrahtet sind die Assets in Web (Manifest, `index.html`, `nginx.conf`, Sidenav/Login) und Mobile
+(`pubspec.yaml`, `notification_service.dart`, `keep.xml`); siehe die Branches `feature/437-web-wiring` und
+`feature/437-mobile-wiring`. Die Android-Mipmaps und `mipmap-anydpi-v26/launcher_icon.xml` erzeugt nicht dieses
+Skript, sondern `dart run flutter_launcher_icons` aus den `adaptive_*`-Dateien (im Ordner `mobile/`).
+
+**Hinweise beim Logo-Tausch:**
+
+- Die Cache-Version `?v=170` in `web/src/index.html`, `web/public/manifest.json`,
+  `branding/test/web-wiring.test.mjs` und `web/e2e/branding.spec.ts` gleichzeitig anheben.
+- `dart run flutter_launcher_icons` fügt `<inset>` wieder ein. `mipmap-anydpi-v26/launcher_icon.xml` danach von
+  Hand korrigieren (kein `<inset>`).
 
 ## Gestaltungsregeln
 
