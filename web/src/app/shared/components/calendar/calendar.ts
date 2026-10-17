@@ -218,6 +218,9 @@ function toKey(d: Date): string {
       line-height: 12px;
       color: var(--mat-sys-primary);
     }
+    @media (max-width: 360px) {
+      .home-office-icon { top: 0; right: 0; width: 10px; height: 10px; font-size: 10px; line-height: 10px; }
+    }
     .calendar-day.selected .home-office-icon {
       color: var(--mat-sys-on-primary);
     }
