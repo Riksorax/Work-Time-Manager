@@ -195,4 +195,124 @@ void main() {
     expect(find.byTooltip('German Unity Day'), findsNothing);
     expect(find.byTooltip('Tag der Deutschen Einheit'), findsNothing);
   });
+
+  // Home-Office-Markierung (#277): Haus-Icon im Kalender plus Semantics-Suffix,
+  // Chip in der Tagesliste. Feste Daten (Sa 2026-10-03, Mo 2026-10-05).
+  Future<void> pumpHomeOffice(
+    WidgetTester tester, {
+    required Locale locale,
+    Set<DateTime> homeOfficeDays = const {},
+    List<WorkEntryEntity> entries = const [],
+  }) async {
+    final fakeState = ReportsState(
+      isLoading: false,
+      focusedDay: DateTime(2026, 10, 5),
+      selectedDay: DateTime(2026, 10, 5),
+      selectedMonth: DateTime(2026, 10),
+      workEntries: const {},
+      homeOfficeDays: homeOfficeDays,
+      dailyReportState: DailyReportState(
+        entries: entries,
+        workTime: Duration.zero,
+        breakTime: Duration.zero,
+        totalTime: Duration.zero,
+        overtime: Duration.zero,
+      ),
+    );
+
+    tester.view.physicalSize = const Size(800, 3000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          isPremiumProvider.overrideWithValue(false),
+          settingsViewModelProvider.overrideWith(() => FakeSettingsViewModel()),
+          reportsViewModelProvider
+              .overrideWith(() => FakeReportsViewModel(fakeState)),
+        ],
+        child: MaterialApp(
+          locale: locale,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const ReportsPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+  }
+
+  WorkEntryEntity homeEntry({
+    bool homeOffice = true,
+    WorkEntryType type = WorkEntryType.work,
+  }) =>
+      WorkEntryEntity(
+        id: '2026-10-05',
+        date: DateTime(2026, 10, 5),
+        workStart: DateTime(2026, 10, 5, 8),
+        workEnd: DateTime(2026, 10, 5, 16),
+        type: type,
+        isHomeOffice: homeOffice,
+      );
+
+  for (final (locale, suffix) in [
+    ('de', ', Home-Office-Tag'),
+    ('en', ', home office day'),
+  ]) {
+    testWidgets('Kalender: Home-Office-Tag zeigt Icon und Semantics ($locale)',
+        (tester) async {
+      final handle = tester.ensureSemantics();
+      await pumpHomeOffice(tester,
+          locale: Locale(locale), homeOfficeDays: {DateTime(2026, 10, 5)});
+
+      expect(find.byKey(const ValueKey('homeOfficeDayIcon')), findsOneWidget);
+      expect(
+          find.bySemanticsLabel(RegExp(RegExp.escape(suffix))), findsOneWidget);
+      handle.dispose();
+    });
+
+    testWidgets(
+        'Kalender: Tag ohne Flag zeigt weder Icon noch Suffix ($locale)',
+        (tester) async {
+      final handle = tester.ensureSemantics();
+      await pumpHomeOffice(tester, locale: Locale(locale));
+
+      expect(find.byKey(const ValueKey('homeOfficeDayIcon')), findsNothing);
+      expect(
+          find.bySemanticsLabel(RegExp(RegExp.escape(suffix))), findsNothing);
+      handle.dispose();
+    });
+  }
+
+  testWidgets('Tagesliste: Chip bei Home-Office-Eintrag (de und en)',
+      (tester) async {
+    await pumpHomeOffice(tester,
+        locale: const Locale('de'), entries: [homeEntry()]);
+    expect(find.widgetWithText(Chip, 'Home-Office'), findsOneWidget);
+  });
+
+  testWidgets('Tagesliste: Chip englisch', (tester) async {
+    await pumpHomeOffice(tester,
+        locale: const Locale('en'), entries: [homeEntry()]);
+    expect(find.widgetWithText(Chip, 'Home office'), findsOneWidget);
+  });
+
+  testWidgets('Tagesliste: kein Chip ohne Flag oder bei Typ Urlaub',
+      (tester) async {
+    await pumpHomeOffice(tester,
+        locale: const Locale('de'), entries: [homeEntry(homeOffice: false)]);
+    expect(find.byType(Chip), findsNothing);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('Tagesliste: kein Chip bei Typ Urlaub trotz Flag',
+      (tester) async {
+    await pumpHomeOffice(tester,
+        locale: const Locale('de'),
+        entries: [homeEntry(type: WorkEntryType.vacation)]);
+    expect(find.byType(Chip), findsNothing);
+  });
 }
