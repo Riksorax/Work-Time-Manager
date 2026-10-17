@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Von flutter_launcher_icons erzeugt, danach von Hand angepasst (#437): kein <inset>.
+<!-- Von flutter_launcher_icons erzeugt, danach von Hand angepasst (#437): kein Inset-Element.
      Die Foreground-/Monochrome-Quellen (branding/) liegen schon in der 108-dp-Safe-Zone;
      der Paket-Standard (16 % Inset) würde das Motiv ein zweites Mal verkleinern.
      Nach einem erneuten `dart run flutter_launcher_icons` die Insets wieder entfernen. -->

@@ -66,5 +66,7 @@ void main() {
     expect(xml, contains('<monochrome'));
     expect(xml, contains('<foreground'));
     expect(xml, contains('<background'));
+    // flutter_launcher_icons fügt <inset> wieder ein; das Icon wirkt dann zu klein.
+    expect(xml, isNot(contains('<inset')));
   });
 }
