@@ -3,17 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../view_models/settings_view_model.dart';
+import 'common/sheet_insets.dart';
 
 void showEditTargetHoursModal(BuildContext context, double currentHours) {
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
-    builder: (context) => Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: EditTargetHoursModal(currentHours: currentHours),
-    ),
+    builder: (context) => EditTargetHoursModal(currentHours: currentHours),
   );
 }
 
@@ -62,7 +58,9 @@ class _EditTargetHoursModalState extends ConsumerState<EditTargetHoursModal> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Padding(
-      padding: const EdgeInsets.all(24.0),
+      // Tastatur bzw. Navigationsleiste (Edge-to-Edge, #468).
+      padding: const EdgeInsets.all(24.0)
+          .copyWith(bottom: 24.0 + bottomSheetBottomInset(context)),
       child: Form(
         key: _formKey,
         child: Column(
