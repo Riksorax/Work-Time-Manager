@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_work_time/core/providers/app_lock_provider.dart';
 import 'package:flutter_work_time/core/providers/providers.dart';
 import 'package:flutter_work_time/core/providers/widget_sync_provider.dart';
+import 'package:flutter_work_time/core/services/app_lock_service.dart';
 import 'package:flutter_work_time/core/services/home_widget_gateway.dart';
 import 'package:flutter_work_time/domain/entities/break_entity.dart';
 import 'package:flutter_work_time/domain/entities/user_entity.dart';
@@ -36,6 +37,18 @@ class FakeGateway implements HomeWidgetGateway {
   Map<String, Object?> get last => saves.last;
 }
 
+/// App-Sperre ohne SharedPreferences; [configured] = aktiviert mit PIN.
+class FakeLockService extends Fake implements AppLockService {
+  FakeLockService({required this.configured});
+  final bool configured;
+
+  @override
+  bool get isEnabled => configured;
+
+  @override
+  bool get hasPin => configured;
+}
+
 class Sync {
   Sync(this.h, this.gateway, this.auth, this.locked);
   final Harness h;
@@ -54,6 +67,7 @@ void widgetScenario(
   void Function(Sync s) body, {
   void Function(Harness h)? setUp,
   bool lockedAtStart = false,
+  bool lockConfigured = false,
 }) {
   test(name, () {
     fakeAsync((async) {
@@ -64,6 +78,8 @@ void widgetScenario(
         homeWidgetGatewayProvider.overrideWithValue(gateway),
         authStateProvider.overrideWith((ref) => auth.stream),
         isAppLockedProvider.overrideWith((ref) => lockedAtStart),
+        appLockServiceProvider
+            .overrideWithValue(FakeLockService(configured: lockConfigured)),
       ]);
       setUp?.call(h);
       body(Sync(h, gateway, auth, lockedAtStart));
@@ -76,8 +92,12 @@ void widgetScenario(
   });
 }
 
-void startSync(Sync s) {
+/// Startet den Sync. Ohne Auth-Wert schreibt der Sync nichts (die
+/// Repositories fallen davor auf den lokalen Speicher zurueck), daher schickt
+/// der Helper standardmaessig einen; `withAuth: false` schaltet das ab.
+void startSync(Sync s, {bool withAuth = true}) {
   s.h.container.listen(widgetSyncProvider, (_, __) {});
+  if (withAuth) s.auth.add(const UserEntity(id: 'u0'));
   s.h.boot();
   s.flush();
 }
@@ -150,9 +170,20 @@ void main() {
   });
 
   group('Auth und Profil', () {
+    widgetScenario('kein Write vor erstem Auth-Wert, danach genau einer', at(8),
+        (s) {
+      startSync(s, withAuth: false);
+      expect(s.gateway.saves, isEmpty);
+
+      s.auth.add(const UserEntity(id: 'u1'));
+      s.flush();
+      expect(s.gateway.saves, hasLength(1));
+      expect(s.gateway.last['status'], 'notStarted');
+    });
+
     widgetScenario('Logout leert den Snapshot, erster Auth-Wert nicht', at(8),
         (s) {
-      startSync(s);
+      startSync(s, withAuth: false);
       s.auth.add(const UserEntity(id: 'u1'));
       s.flush();
       expect(s.gateway.events.contains('clear'), isFalse);
@@ -186,15 +217,19 @@ void main() {
       startSync(s);
       expect(s.gateway.last['locked'], false);
 
+      expect(s.gateway.last['workStartMs'], at(7, 30).millisecondsSinceEpoch);
+
       s.h.container.read(isAppLockedProvider.notifier).state = true;
       s.flush();
       expect(s.gateway.last['locked'], true);
       expect(s.gateway.last['status'], 'running');
-      expect(s.gateway.last['workStartMs'], at(7, 30).millisecondsSinceEpoch);
+      expect(s.gateway.last['workStartMs'], isNull);
+      expect(s.gateway.last['netMinutes'], 0);
 
       s.h.container.read(isAppLockedProvider.notifier).state = false;
       s.flush();
       expect(s.gateway.last['locked'], false);
+      expect(s.gateway.last['workStartMs'], at(7, 30).millisecondsSinceEpoch);
     }, setUp: (h) => h.seed(entryOf(mo, start: at(7, 30))));
 
     widgetScenario('gesperrt beim Start: erster Write ist locked', at(8), (s) {
@@ -202,6 +237,30 @@ void main() {
       expect(s.gateway.saves, hasLength(1));
       expect(s.gateway.last['locked'], true);
     }, lockedAtStart: true);
+
+    widgetScenario(
+        'Sperre konfiguriert: nie Zeiten, auch nicht entsperrt', at(8), (s) {
+      startSync(s);
+      expect(s.gateway.saves, isNotEmpty);
+      for (final save in s.gateway.saves) {
+        expect(save['locked'], true);
+        expect(save['status'], 'running');
+        expect(save['workStartMs'], isNull);
+        expect(save['pauseStartMs'], isNull);
+        expect(save['netMinutes'], 0);
+      }
+
+      s.h.container.read(isAppLockedProvider.notifier).state = false;
+      s.h.tick(const Duration(minutes: 5));
+      s.h.act(s.h.vm.startOrStopBreak);
+      expect(s.gateway.last['locked'], true);
+      expect(s.gateway.last['status'], 'paused');
+      expect(s.gateway.last['workStartMs'], isNull);
+      expect(s.gateway.last['pauseStartMs'], isNull);
+      expect(s.gateway.last['netMinutes'], 0);
+    },
+        setUp: (h) => h.seed(entryOf(mo, start: at(7, 30))),
+        lockConfigured: true);
 
     widgetScenario('Sperre ohne geladenen Stand schreibt nichts', at(8), (s) {
       s.h.work.holdReads = true;

@@ -21,8 +21,14 @@ part 'widget_sync_provider.g.dart';
 ///   Pausenstart, Netto-Minute, Tag, Sperre), nicht jede Sekunde.
 /// - Logout/Nutzerwechsel und Profilwechsel leeren den Snapshot sofort; der
 ///   neue Ladelauf des Dashboards schreibt danach den neuen Stand.
-/// - Bei aktiver App-Sperre traegt der Snapshot `locked`, die Zeiten blendet
-///   die native Seite aus.
+/// - Vor dem ersten Auth-Wert wird nichts geschrieben (die Repositories fallen
+///   davor auf den lokalen Speicher zurueck); mit dem Wert wird neu gepusht.
+/// - Ist die App-Sperre aktiviert (PIN eingerichtet und aktiv, nicht nur
+///   gerade gesperrt), werden nie Zeiten geschrieben: nur Status und
+///   `locked: true`. So bleiben auch bei beendetem Dart-Prozess keine Zeiten
+///   im Klartext im Widget. Die Konfiguration wird bei jedem Push gelesen;
+///   Aenderungen greifen spaetestens beim naechsten Push (z. B. Wechsel in den
+///   Hintergrund, der die Sperre setzt).
 @Riverpod(keepAlive: true)
 void widgetSync(Ref ref) {
   final gateway = ref.watch(homeWidgetGatewayProvider);
@@ -67,7 +73,11 @@ void widgetSync(Ref ref) {
   void pushSnapshot() {
     final snapshot = lastSnapshot;
     if (snapshot == null) return;
-    write(widgetSnapshotToMap(snapshot, locked: ref.read(isAppLockedProvider)));
+    if (!ref.read(authStateProvider).hasValue) return;
+    final service = ref.read(appLockServiceProvider);
+    final lockActive =
+        ref.read(isAppLockedProvider) || (service.isEnabled && service.hasPin);
+    write(widgetSnapshotToMap(snapshot, locked: lockActive));
   }
 
   // Mehrere State-Aenderungen in einem Mikrotask-Durchlauf (z. B. Ladelauf und
@@ -106,6 +116,7 @@ void widgetSync(Ref ref) {
     userKnown = true;
     knownUserId = userId;
     if (changed) clear();
+    schedulePush();
   });
 
   ref.listen(activeWorkProfileIdProvider, (prev, next) {

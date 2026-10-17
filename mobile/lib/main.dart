@@ -209,7 +209,9 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     final isLocked = !kIsWeb && ref.watch(isAppLockedProvider);
     // Siehe #276: haelt das Android-Status-Widget aktuell (auf anderen
     // Plattformen ein No-op, auf Web gar nicht erst gestartet).
-    if (!kIsWeb) ref.watch(widgetSyncProvider);
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      ref.watch(widgetSyncProvider);
+    }
 
     return MaterialApp(
       navigatorKey: navigatorKey,

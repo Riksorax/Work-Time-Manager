@@ -24,7 +24,7 @@ void main() {
       });
     });
 
-    test('pausiert: pauseStartMs gesetzt, locked getrennt vom Snapshot', () {
+    test('pausiert: pauseStartMs gesetzt', () {
       const s = TimerSnapshot(
         status: TimerStatus.paused,
         dayKey: '2026-10-05',
@@ -32,10 +32,28 @@ void main() {
         pauseStartMs: 2000,
         netMinutes: 10,
       );
-      final m = widgetSnapshotToMap(s, locked: true);
+      final m = widgetSnapshotToMap(s, locked: false);
       expect(m['status'], 'paused');
       expect(m['pauseStartMs'], 2000);
-      expect(m['locked'], true);
+      expect(m['locked'], false);
+    });
+
+    test('locked: nur Status, Tag und locked, keine Zeiten', () {
+      const s = TimerSnapshot(
+        status: TimerStatus.paused,
+        dayKey: '2026-10-05',
+        workStartMs: 1000,
+        pauseStartMs: 2000,
+        netMinutes: 10,
+      );
+      expect(widgetSnapshotToMap(s, locked: true), {
+        'status': 'paused',
+        'workStartMs': null,
+        'pauseStartMs': null,
+        'netMinutes': 0,
+        'dayKey': '2026-10-05',
+        'locked': true,
+      });
     });
 
     test('nicht gestartet und gestoppt', () {

@@ -20,18 +20,23 @@ const widgetKeyLocked = 'locked';
 /// Status `none` = Snapshot geleert (Logout/Profilwechsel).
 const widgetStatusNone = 'none';
 
-/// Serialisiert [snapshot] fuer das Widget. [locked] (App-Sperre) kommt nicht
-/// aus dem Snapshot; `pauseStartMs` ist nur bei `paused` gesetzt.
+/// Serialisiert [snapshot] fuer das Widget. [locked] (App-Sperre aktiv) kommt
+/// nicht aus dem Snapshot; `pauseStartMs` ist nur bei `paused` gesetzt.
+///
+/// Bei [locked] werden nie Zeiten geschrieben (nur Status, Tag und
+/// `locked: true`): die Werte stuenden sonst im Klartext in den
+/// Widget-Preferences, auch wenn der Dart-Prozess nicht mehr laeuft.
 Map<String, Object?> widgetSnapshotToMap(
   TimerSnapshot snapshot, {
   required bool locked,
 }) =>
     {
       widgetKeyStatus: snapshot.status.name,
-      widgetKeyWorkStartMs: snapshot.workStartMs,
-      widgetKeyPauseStartMs:
-          snapshot.status == TimerStatus.paused ? snapshot.pauseStartMs : null,
-      widgetKeyNetMinutes: snapshot.netMinutes,
+      widgetKeyWorkStartMs: locked ? null : snapshot.workStartMs,
+      widgetKeyPauseStartMs: !locked && snapshot.status == TimerStatus.paused
+          ? snapshot.pauseStartMs
+          : null,
+      widgetKeyNetMinutes: locked ? 0 : snapshot.netMinutes,
       widgetKeyDayKey: snapshot.dayKey,
       widgetKeyLocked: locked,
     };
