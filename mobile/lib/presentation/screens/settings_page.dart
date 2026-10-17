@@ -745,7 +745,7 @@ class SettingsPage extends ConsumerWidget {
 
 /// PIN-/Biometrie-Sperre der App (siehe #223). Eigenes
 /// [ConsumerStatefulWidget], da der Aktivierungsstatus direkt aus
-/// [AppLockService]/SharedPreferences kommt und nicht über
+/// [AppLockService] (sicherer Speicher) kommt und nicht über
 /// [settingsViewModelProvider] läuft (rein lokale, geräteweite Einstellung
 /// ohne Firestore-Sync).
 class _AppLockSection extends ConsumerStatefulWidget {
@@ -783,17 +783,22 @@ class _AppLockSectionState extends ConsumerState<_AppLockSection> {
 
   Future<void> _onToggle(
       BuildContext context, bool value, AppLockService service) async {
-    if (value) {
-      if (!service.hasPin) {
-        final success = await PinSetupDialog.show(context);
-        if (!success) return;
+    try {
+      if (value) {
+        if (!service.hasPin) {
+          final success = await PinSetupDialog.show(context);
+          if (!success) return;
+        }
+        await service.setEnabled(true);
+      } else {
+        await service.setEnabled(false);
       }
-      await service.setEnabled(true);
-    } else {
-      await service.setEnabled(false);
+    } catch (_) {
+      // Persistenzfehler (#375): der Service hat geloggt und zurückgerollt;
+      // der Rebuild unten lässt den Schalter auf den alten Wert springen.
     }
-    // Provider selbst ist nicht reaktiv (synchrone SharedPreferences-Reads) -
-    // setState erzwingt einen Rebuild dieses Abschnitts nach der Änderung.
+    // Provider selbst ist nicht reaktiv (synchrone Store-Reads) - setState
+    // erzwingt einen Rebuild dieses Abschnitts nach der Änderung.
     if (mounted) setState(() {});
   }
 }

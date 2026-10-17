@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Backup-Regeln ab Android 12 (API 31+), siehe #375.
+
+    Die Dateien von flutter_secure_storage (App-Sperre: PIN-Hash, Fehlversuch-
+    Zähler) dürfen weder ins Cloud-Backup noch in die Gerät-zu-Gerät-
+    Übertragung: Der Keystore-Schlüssel wird nie gesichert, ein
+    zurückgespielter Datensatz wäre unlesbar und würde Sperr-Werte auf ein
+    anderes Gerät tragen. Alles andere (u. a. FlutterSharedPreferences.xml mit
+    den Einstellungen) bleibt im Backup.
+
+    Die Dateinamen stammen aus flutter_secure_storage 11.2.0 (Standard-Namen,
+    kein storageNamespace). Bei einem Plugin-Update gegenprüfen (siehe
+    mobile/CLAUDE.md, Abschnitt App-Sperre); test/android/backup_rules_test.dart
+    schützt nur diese Liste.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="FlutterSecureStorage.xml"/>
+        <exclude domain="sharedpref" path="FlutterSecureKeyStorage.xml"/>
+        <exclude domain="sharedpref" path="FlutterSecureStorageConfiguration.xml"/>
+        <exclude domain="sharedpref" path="FlutterSecureStorageConfiguration:FlutterSecureStorage.xml"/>
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="FlutterSecureStorage.xml"/>
+        <exclude domain="sharedpref" path="FlutterSecureKeyStorage.xml"/>
+        <exclude domain="sharedpref" path="FlutterSecureStorageConfiguration.xml"/>
+        <exclude domain="sharedpref" path="FlutterSecureStorageConfiguration:FlutterSecureStorage.xml"/>
+    </device-transfer>
+</data-extraction-rules>
