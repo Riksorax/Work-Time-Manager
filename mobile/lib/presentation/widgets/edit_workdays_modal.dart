@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/utils/weekday_labels.dart';
 import '../../l10n/app_localizations.dart';
 import '../view_models/settings_view_model.dart';
+import 'common/sheet_insets.dart';
 
 void showEditWorkdaysModal(BuildContext context, List<int> currentWorkdays) {
   showModalBottomSheet(
@@ -46,7 +47,7 @@ class _EditWorkdaysModalState extends ConsumerState<EditWorkdaysModal> {
     final l10n = AppLocalizations.of(context);
     final locale = Localizations.localeOf(context).toString();
     return Padding(
-      padding: MediaQuery.of(context).viewInsets,
+      padding: EdgeInsets.only(bottom: bottomSheetBottomInset(context)),
       child: Container(
         padding: const EdgeInsets.all(24.0),
         child: Column(

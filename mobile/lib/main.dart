@@ -27,9 +27,13 @@ import 'l10n/app_localizations.dart';
 import 'presentation/view_models/settings_view_model.dart';
 import 'presentation/view_models/theme_view_model.dart';
 import 'presentation/widgets/app_lock_layer.dart';
+import 'presentation/widgets/common/edge_to_edge.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Edge-to-Edge auf allen Android-Versionen (#468), vor dem ersten Frame.
+  await enableEdgeToEdge();
 
   // SharedPreferences früh laden, damit eine manuelle Zeitzone-Überschreibung
   // (siehe #221) schon vor der Zeitzone-Initialisierung verfügbar ist.
@@ -222,7 +226,13 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
         return MediaQuery(
           data: MediaQuery.of(context)
               .copyWith(alwaysUse24HourFormat: use24HourFormat),
-          child: AppLockLayer(isLocked: isLocked, child: child!),
+          child: SystemBarsStyle(
+            child: AppLockLayer(
+              isLocked: isLocked,
+              // Die Sperre sichert sich selbst ab (eigener SafeArea).
+              child: HorizontalSafeInsets(child: child!),
+            ),
+          ),
         );
       },
       home: const HomeScreen(),
