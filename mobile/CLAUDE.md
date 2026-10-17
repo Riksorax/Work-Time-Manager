@@ -177,6 +177,8 @@ Die App läuft auf allen Android-Versionen Edge-to-Edge (`enableEdgeToEdge()` in
 - **Keine Systemleistenfarben:** nie `statusBarColor`/`navigationBarColor` setzen (ab Android 15 wirkungslos, veraltete APIs). Nur die Icon-Helligkeit: `systemOverlayStyle` im `AppBarTheme` (`AppTheme.light/darkSystemOverlayStyle`) plus `SystemBarsStyle` im `MaterialApp.builder` für Seiten ohne `AppBar`.
 - **Seitliche Insets zentral:** `HorizontalSafeInsets` im `builder` (nur links/rechts, innerhalb der App-Sperre-Ebene). Screens brauchen dafür kein eigenes `SafeArea`; oben/unten regeln `AppBar`/`BottomNavigationBar`/Sheets.
 - **Bottom Sheets:** unten immer `bottomSheetBottomInset(context)` (`widgets/common/sheet_insets.dart`, Maximum aus Tastatur und Navigationsleiste, keine Summe) statt `MediaQuery.viewInsets`. `useSafeArea` genügt unten nicht. Der Helfer gehört ins Sheet-Widget selbst (nicht in den `show*`-Builder), damit Widget-Tests ihn erfassen; Referenz `test/presentation/widgets/sheet_edge_to_edge_test.dart`.
+- **Seitenstreifen:** `HorizontalSafeInsets` hinterlegt die Streifen hinter den Insets mit `scaffoldBackgroundColor` (sonst scheint im Querformat das System-Fensterbild durch, z. B. heller Streifen bei System hell + App dunkel).
+- **Offen (Gerätetest):** Paywall auf doppelte Polsterung (Screen-`SafeArea` plus `HorizontalSafeInsets`/Sheet-Inset) prüfen, ohne Gerät nicht verifizierbar.
 
 ### Code Generation
 

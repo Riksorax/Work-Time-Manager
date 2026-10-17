@@ -103,5 +103,25 @@ void main() {
       expect(inner.left, 0);
       expect(inner.right, 0);
     });
+
+    testWidgets('hinterlegt die seitlichen Streifen mit der Scaffold-Farbe',
+        (tester) async {
+      await tester.pumpWidget(host(
+        theme: AppTheme.darkTheme,
+        media: landscape,
+        child: const HorizontalSafeInsets(child: SizedBox.expand()),
+      ));
+      final expected = AppTheme.darkTheme.scaffoldBackgroundColor;
+      final box = find.descendant(
+        of: find.byType(HorizontalSafeInsets),
+        matching: find.byType(ColoredBox),
+      );
+      expect(box, findsWidgets);
+      final outer = tester.widget<ColoredBox>(box.first);
+      expect(outer.color, expected);
+      // Die Flaeche reicht ueber die volle Breite, auch hinter den Insets.
+      expect(tester.getRect(box.first).left, 0);
+      expect(tester.getRect(box.first).right, 800);
+    });
   });
 }

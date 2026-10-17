@@ -39,7 +39,9 @@ class SystemBarsStyle extends StatelessWidget {
 /// es den Screens (`AppBar`, `BottomNavigationBar`, Sheets) überlassen.
 ///
 /// `SafeArea` verbraucht die seitlichen Insets für die Kinder, ein
-/// Screen-`SafeArea` rückt nicht doppelt ein.
+/// Screen-`SafeArea` rückt nicht doppelt ein. Die Streifen hinter den Insets
+/// werden mit der Scaffold-Farbe des App-Themes gemalt; sonst schiene das
+/// Fenster-Hintergrundbild (System-Theme) durch.
 class HorizontalSafeInsets extends StatelessWidget {
   const HorizontalSafeInsets({super.key, required this.child});
 
@@ -47,6 +49,9 @@ class HorizontalSafeInsets extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(top: false, bottom: false, child: child);
+    return ColoredBox(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      child: SafeArea(top: false, bottom: false, child: child),
+    );
   }
 }
