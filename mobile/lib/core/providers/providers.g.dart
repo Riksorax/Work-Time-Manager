@@ -1568,3 +1568,54 @@ final class GetLastOvertimeUpdateUseCaseProvider extends $FunctionalProvider<
 
 String _$getLastOvertimeUpdateUseCaseHash() =>
     r'1acfcd3c1c348feed234c9692ed3dba1b77418ee';
+
+/// Schnittstelle zum Home-Screen-Widget (#276). Nur Android hat ein Widget;
+/// sonst (Web, iOS, Desktop) ein No-op. Im Test überschreibbar.
+
+@ProviderFor(homeWidgetGateway)
+const homeWidgetGatewayProvider = HomeWidgetGatewayProvider._();
+
+/// Schnittstelle zum Home-Screen-Widget (#276). Nur Android hat ein Widget;
+/// sonst (Web, iOS, Desktop) ein No-op. Im Test überschreibbar.
+
+final class HomeWidgetGatewayProvider extends $FunctionalProvider<
+    HomeWidgetGateway,
+    HomeWidgetGateway,
+    HomeWidgetGateway> with $Provider<HomeWidgetGateway> {
+  /// Schnittstelle zum Home-Screen-Widget (#276). Nur Android hat ein Widget;
+  /// sonst (Web, iOS, Desktop) ein No-op. Im Test überschreibbar.
+  const HomeWidgetGatewayProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'homeWidgetGatewayProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$homeWidgetGatewayHash();
+
+  @$internal
+  @override
+  $ProviderElement<HomeWidgetGateway> $createElement(
+          $ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  HomeWidgetGateway create(Ref ref) {
+    return homeWidgetGateway(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(HomeWidgetGateway value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<HomeWidgetGateway>(value),
+    );
+  }
+}
+
+String _$homeWidgetGatewayHash() => r'9414bb0888bbdd744a08c30ac4da9846c49faaa1';

@@ -18,6 +18,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'core/providers/app_lock_provider.dart';
 import 'core/providers/providers.dart';
+import 'core/providers/widget_sync_provider.dart';
 import 'core/services/notification_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/utils/app_navigator.dart';
@@ -206,6 +207,9 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     final localeCode =
         ref.watch(settingsViewModelProvider).value?.settings.locale ?? 'de';
     final isLocked = !kIsWeb && ref.watch(isAppLockedProvider);
+    // Siehe #276: haelt das Android-Status-Widget aktuell (auf anderen
+    // Plattformen ein No-op, auf Web gar nicht erst gestartet).
+    if (!kIsWeb) ref.watch(widgetSyncProvider);
 
     return MaterialApp(
       navigatorKey: navigatorKey,
