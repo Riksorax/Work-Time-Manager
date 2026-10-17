@@ -1,20 +1,23 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_work_time/core/services/app_lock_service.dart';
+import 'package:flutter_work_time/core/services/app_lock_store.dart';
 import 'package:flutter_work_time/domain/utils/app_lock_lockout.dart';
 import 'package:flutter_work_time/domain/utils/pin_hash.dart';
 import 'package:local_auth/local_auth.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
 import '../../helpers/app_lock_fakes.dart';
+import '../../support/fake_app_lock_backend.dart';
 
 void main() {
-  late SharedPreferences prefs;
+  late FakeAppLockBackend backend;
+  late AppLockStore store;
   late AppLockService service;
 
-  setUp(() async {
-    SharedPreferences.setMockInitialValues({});
-    prefs = await SharedPreferences.getInstance();
-    service = AppLockService(prefs: prefs, localAuth: LocalAuthentication());
+  setUp(() {
+    backend = FakeAppLockBackend();
+    store = AppLockStore(backend);
+    service = AppLockService(store: store, localAuth: LocalAuthentication());
   });
 
   test('setPin/verifyPin', () async {
@@ -25,19 +28,18 @@ void main() {
   });
 
   test('Legacy-PIN (Salt in separatem Key) bleibt verifizierbar', () async {
-    SharedPreferences.setMockInitialValues({
+    store = AppLockStore(backend, initial: {
       'app_lock_pin_salt': 'salt',
       'app_lock_pin_hash': hashPin('1234', 'salt'),
     });
-    prefs = await SharedPreferences.getInstance();
-    service = AppLockService(prefs: prefs, localAuth: LocalAuthentication());
+    service = AppLockService(store: store, localAuth: LocalAuthentication());
     expect(service.verifyPin('1234'), isTrue);
     expect(service.verifyPin('0000'), isFalse);
   });
 
   test('setPin schreibt Salt und Hash atomar in einen Wert', () async {
     await service.setPin('1234');
-    expect(prefs.getKeys().where((k) => k.contains('salt')), isEmpty);
+    expect(backend.data.keys.where((k) => k.contains('salt')), isEmpty);
   });
 
   test('clearPin entfernt PIN, lässt isEnabled unverändert', () async {
@@ -68,8 +70,8 @@ void main() {
 
     test('kein Klartext in den Prefs', () async {
       await service.setPinWithRecoveryCode('4711', 'ABCDEFGHJKLMNPQR');
-      for (final key in prefs.getKeys()) {
-        final v = prefs.get(key).toString();
+      for (final key in backend.data.keys) {
+        final v = backend.data[key]!;
         expect(v.contains('ABCDEFGHJKLMNPQR'), isFalse);
         if (key != 'app_lock_enabled') expect(v, isNot('4711'));
       }
@@ -116,8 +118,8 @@ void main() {
     late FakeClock clock;
     late FakeMonotonic mono;
 
-    AppLockService build([SharedPreferences? p]) => AppLockService(
-          prefs: p ?? prefs,
+    AppLockService build([AppLockStore? s]) => AppLockService(
+          store: s ?? store,
           localAuth: LocalAuthentication(),
           now: clock.call,
           monotonic: mono.call,
@@ -151,7 +153,7 @@ void main() {
       expect(((await wrong()) as AttemptWrong).remaining, sec300);
       wait(sec300);
       expect(((await wrong()) as AttemptWrong).remaining, sec300);
-      expect(prefs.getInt(failedKey), 8);
+      expect(store.getInt(failedKey), 8);
     });
 
     test('während der Sperre wird auch die richtige PIN abgelehnt', () async {
@@ -161,7 +163,7 @@ void main() {
       final r = await service.attemptPin('1234');
       expect(r, isA<AttemptLocked>());
       expect((r as AttemptLocked).remaining, sec5);
-      expect(prefs.getInt(failedKey), 3);
+      expect(store.getInt(failedKey), 3);
     });
 
     test('parallel gestartet: richtige PIN nach der sperrenden wird abgelehnt',
@@ -175,7 +177,7 @@ void main() {
       expect(results[2], isA<AttemptWrong>());
       expect((results[2] as AttemptWrong).remaining, sec5);
       expect(results[3], isA<AttemptLocked>());
-      expect(prefs.getInt(failedKey), 3);
+      expect(store.getInt(failedKey), 3);
     });
 
     test('parallele falsche Versuche: Zähler entspricht der Versuchszahl',
@@ -185,7 +187,7 @@ void main() {
       ]);
       expect(results.whereType<AttemptWrong>().length, 3);
       expect(results.whereType<AttemptLocked>().length, 1);
-      expect(prefs.getInt(failedKey), 3);
+      expect(store.getInt(failedKey), 3);
       expect(service.remainingLockout, sec5);
     });
 
@@ -195,8 +197,8 @@ void main() {
       }
       wait(sec5);
       expect(await service.attemptPin('1234'), isA<AttemptSuccess>());
-      expect(prefs.getInt(failedKey), isNull);
-      expect(prefs.getInt(untilKey), isNull);
+      expect(store.getInt(failedKey), isNull);
+      expect(store.getInt(untilKey), isNull);
       expect(service.remainingLockout, Duration.zero);
     });
 
@@ -206,12 +208,12 @@ void main() {
       }
       wait(sec5);
       await service.syncLockout();
-      expect(prefs.getInt(failedKey), 3);
+      expect(store.getInt(failedKey), 3);
     });
 
     test('Persist-before-verify: Zähler wird vor dem Hash-Lesen geschrieben',
         () async {
-      final rec = RecordingSharedPreferences(prefs);
+      final rec = RecordingAppLockStore(backend, initial: backend.data);
       final s = build(rec);
       await s.attemptPin('0000');
       final write = rec.log.indexOf('setInt:$failedKey=1');
@@ -221,12 +223,14 @@ void main() {
     });
 
     test('Hard-Kill beim Verifizieren verliert den Versuch nicht', () async {
-      final rec = RecordingSharedPreferences(prefs,
-          throwOnGetString: 'app_lock_pin_hash');
+      final rec = RecordingAppLockStore(backend,
+          initial: backend.data, throwOnGetString: 'app_lock_pin_hash');
       final s = build(rec);
       await expectLater(s.attemptPin('0000'), throwsStateError);
+      // Neustart: neuer Store aus dem, was im Backend steht
+      store = AppLockStore(backend, initial: backend.data);
       final restarted = build();
-      expect(prefs.getInt(failedKey), 1);
+      expect(backend.data[failedKey], '1');
       await restarted.attemptPin('0000');
       await restarted.attemptPin('0000');
       expect(restarted.remainingLockout, sec5);
@@ -252,25 +256,25 @@ void main() {
       await wrong();
       expect(await service.attemptRecoveryCode('ABCDEFGHJKLMNPQR'),
           isA<AttemptSuccess>());
-      expect(prefs.getInt(failedKey), isNull);
+      expect(store.getInt(failedKey), isNull);
     });
 
     test('ohne gesetzte PIN zählt der Versuch trotzdem', () async {
       await service.clearPin();
       final r = await service.attemptPin('1234');
       expect(r, isA<AttemptWrong>());
-      expect(prefs.getInt(failedKey), 1);
+      expect(store.getInt(failedKey), 1);
     });
 
     group('Reset-Punkte', () {
       Future<void> seed() async {
-        await prefs.setInt(failedKey, 7);
-        await prefs.setInt(untilKey, clock().millisecondsSinceEpoch + 100000);
+        await store.setInt(failedKey, 7);
+        await store.setInt(untilKey, clock().millisecondsSinceEpoch + 100000);
       }
 
       void expectReset() {
-        expect(prefs.getInt(failedKey), isNull);
-        expect(prefs.getInt(untilKey), isNull);
+        expect(store.getInt(failedKey), isNull);
+        expect(store.getInt(untilKey), isNull);
         expect(service.remainingLockout, Duration.zero);
       }
 
@@ -295,17 +299,17 @@ void main() {
       test('setEnabled ändert nichts', () async {
         await seed();
         await service.setEnabled(false);
-        expect(prefs.getInt(failedKey), 7);
-        expect(prefs.getInt(untilKey), isNotNull);
+        expect(store.getInt(failedKey), 7);
+        expect(store.getInt(untilKey), isNotNull);
       });
 
       test('resetAttempts behält lastSeen', () async {
         await wrong();
-        final seen = prefs.getInt(lastSeenKey);
+        final seen = store.getInt(lastSeenKey);
         expect(seen, isNotNull);
         await service.resetAttempts();
-        expect(prefs.getInt(failedKey), isNull);
-        expect(prefs.getInt(lastSeenKey), seen);
+        expect(store.getInt(failedKey), isNull);
+        expect(store.getInt(lastSeenKey), seen);
       });
     });
 
@@ -351,11 +355,11 @@ void main() {
           () async {
         await lockWith(5);
         final t = clock();
-        expect(prefs.getInt(failedKey), 5);
+        expect(store.getInt(failedKey), 5);
         final restarted = build();
         clock.set(t.subtract(const Duration(minutes: 10)));
         expect(await restarted.syncLockout(), sec30);
-        expect(prefs.getInt(lastSeenKey),
+        expect(store.getInt(lastSeenKey),
             t.subtract(const Duration(minutes: 10)).millisecondsSinceEpoch);
         clock.advance(const Duration(seconds: 10));
         expect(await restarted.syncLockout(), const Duration(seconds: 20));
@@ -393,30 +397,176 @@ void main() {
       test('UTC und Lokalzeit liefern identische gespeicherte Werte', () async {
         final utc = DateTime.utc(2026, 3, 1, 10);
         final a = AppLockService(
-            prefs: prefs,
+            store: store,
             localAuth: LocalAuthentication(),
             now: () => utc,
             monotonic: mono.call);
         await a.attemptPin('0000');
-        final first = prefs.getInt(lastSeenKey);
-        SharedPreferences.setMockInitialValues({});
-        final prefs2 = await SharedPreferences.getInstance();
+        final first = store.getInt(lastSeenKey);
+        final store2 = AppLockStore.inMemory();
         final b = AppLockService(
-            prefs: prefs2,
+            store: store2,
             localAuth: LocalAuthentication(),
             now: () => utc.toLocal(),
             monotonic: mono.call);
         await b.attemptPin('0000');
-        expect(prefs2.getInt(lastSeenKey), first);
+        expect(store2.getInt(lastSeenKey), first);
       });
 
       test('fehlende Keys: keine Sperre, kein Fehler', () async {
-        SharedPreferences.setMockInitialValues({});
-        final fresh = await SharedPreferences.getInstance();
-        final s = build(fresh);
+        final s = build(AppLockStore.inMemory());
         expect(s.remainingLockout, Duration.zero);
         expect(await s.syncLockout(), Duration.zero);
       });
+    });
+  });
+  group('Persistenz (#375)', () {
+    const pinKey = 'app_lock_pin_hash';
+    const recoveryKey = 'app_lock_recovery_code_hash';
+    const enabledKey = 'app_lock_enabled';
+    const failedKey = 'app_lock_failed_attempts';
+    const untilKey = 'app_lock_locked_until_ms';
+    const lastSeenKey = 'app_lock_last_seen_ms';
+    const saltKey = 'app_lock_pin_salt';
+
+    late FakeClock clock;
+    late FakeMonotonic mono;
+
+    AppLockService build(AppLockStore s) => AppLockService(
+          store: s,
+          localAuth: LocalAuthentication(),
+          now: clock.call,
+          monotonic: mono.call,
+        );
+
+    setUp(() {
+      clock = FakeClock();
+      mono = FakeMonotonic();
+      service = build(store);
+    });
+
+    test('setPin schreibt in das Backend, kein Klartext', () async {
+      await service.setPin('1234');
+      expect(backend.data[pinKey], isNotNull);
+      expect(backend.data.values.any((v) => v.contains('1234')), isFalse);
+    });
+
+    test('setPin mit fehlschlagendem Backend: Exception, hasPin unverändert',
+        () async {
+      backend.failAllWrites = true;
+      await expectLater(service.setPin('1234'), throwsStateError);
+      expect(service.hasPin, isFalse);
+      expect(service.verifyPin('1234'), isFalse);
+    });
+
+    test('setPin-Fehler behält die alte PIN', () async {
+      await service.setPin('1111');
+      backend.failWriteKeys.add(pinKey);
+      await expectLater(service.setPin('2222'), throwsStateError);
+      expect(service.verifyPin('1111'), isTrue);
+      expect(service.verifyPin('2222'), isFalse);
+    });
+
+    test('setEnabled mit fehlschlagendem Backend: Exception, Cache zurück',
+        () async {
+      await service.setEnabled(false);
+      backend.failAllWrites = true;
+      await expectLater(service.setEnabled(true), throwsStateError);
+      expect(service.isEnabled, isFalse);
+    });
+
+    test('clearPin mit fehlschlagendem Backend: Exception, PIN bleibt',
+        () async {
+      await service.setPin('1234');
+      backend.failDeleteKeys.add(pinKey);
+      await expectLater(service.clearPin(), throwsStateError);
+      expect(service.hasPin, isTrue);
+      expect(service.verifyPin('1234'), isTrue);
+    });
+
+    test('clearPin entfernt Hash, Salt und Zähler im Backend', () async {
+      await service.setPin('1234');
+      await store.setString(saltKey, 'legacy');
+      await store.setInt(failedKey, 4);
+      await store.setInt(untilKey, 123);
+      await service.clearPin();
+      expect(backend.data.containsKey(pinKey), isFalse);
+      expect(backend.data.containsKey(saltKey), isFalse);
+      expect(backend.data.containsKey(failedKey), isFalse);
+      expect(backend.data.containsKey(untilKey), isFalse);
+    });
+
+    test('setPinWithRecoveryCode schreibt erst den Code, dann die PIN',
+        () async {
+      await service.setPinWithRecoveryCode('1234', 'ABCDEFGHJKLMNPQR');
+      final writes = backend.writes;
+      expect(writes.indexOf('write:$recoveryKey'),
+          lessThan(writes.indexOf('write:$pinKey')));
+    });
+
+    test('setPinWithRecoveryCode: Code-Fehler lässt alles unverändert',
+        () async {
+      await service.setPinWithRecoveryCode('1111', 'AAAAAAAAAAAAAAAA');
+      backend.failWriteKeys.add(recoveryKey);
+      await expectLater(
+          service.setPinWithRecoveryCode('2222', 'BBBBBBBBBBBBBBBB'),
+          throwsStateError);
+      expect(service.verifyPin('1111'), isTrue);
+      expect(service.verifyRecoveryCode('AAAAAAAAAAAAAAAA'), isTrue);
+    });
+
+    test('setPinWithRecoveryCode: PIN-Fehler nach dem Code, alte PIN gilt',
+        () async {
+      await service.setPinWithRecoveryCode('1111', 'AAAAAAAAAAAAAAAA');
+      backend.failWriteKeys.add(pinKey);
+      await expectLater(
+          service.setPinWithRecoveryCode('2222', 'BBBBBBBBBBBBBBBB'),
+          throwsStateError);
+      expect(service.verifyPin('1111'), isTrue);
+      expect(service.verifyPin('2222'), isFalse);
+    });
+
+    test('Zähler-Persistenz scheitert: kein Wurf, Versuch zählt und sperrt',
+        () async {
+      await service.setPin('1234');
+      backend.failAllWrites = true;
+      for (var i = 0; i < 2; i++) {
+        expect(await service.attemptPin('0000'), isA<AttemptWrong>());
+      }
+      final third = await service.attemptPin('0000');
+      expect(third, isA<AttemptWrong>());
+      expect((third as AttemptWrong).remaining, const Duration(seconds: 5));
+      expect(store.getInt(failedKey), 3);
+      expect(await service.attemptPin('1234'), isA<AttemptLocked>());
+    });
+
+    test('Persist-before-verify: verify läuft erst nach den Schreibvorgängen',
+        () async {
+      await service.setPin('1234');
+      final rec = RecordingAppLockStore(backend, initial: {
+        ...backend.data,
+        lastSeenKey: '${clock().millisecondsSinceEpoch}',
+      });
+      final s = build(rec);
+      final hold = Completer<void>();
+      backend.holdWrites = hold;
+
+      final attempt = s.attemptPin('1234');
+      for (var i = 0; i < 5; i++) {
+        await Future<void>.delayed(Duration.zero);
+      }
+      expect(rec.log, contains('setInt:$failedKey=1'));
+      expect(rec.log, isNot(contains('getString:$pinKey')),
+          reason: 'verify darf nicht vor dem Abschluss der Writes laufen');
+
+      hold.complete();
+      expect(await attempt, isA<AttemptSuccess>());
+      expect(rec.log, contains('getString:$pinKey'));
+    });
+
+    test('enabled liegt im Backend und nicht in den Prefs', () async {
+      await service.setEnabled(true);
+      expect(backend.data[enabledKey], 'true');
     });
   });
 }
