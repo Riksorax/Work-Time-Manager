@@ -158,7 +158,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: work-time-manager-mapping-${{ github.run_number }}
-          path: mobile/build/app/outputs/mapping/release/mapping.txt
+          path: |
+            mobile/build/app/outputs/mapping/release/mapping.txt
+            mobile/build/app/outputs/mapping/release/configuration.txt
+            mobile/build/app/outputs/mapping/release/seeds.txt
+            mobile/build/app/outputs/mapping/release/usage.txt
           if-no-files-found: warn
           retention-days: 90
 
