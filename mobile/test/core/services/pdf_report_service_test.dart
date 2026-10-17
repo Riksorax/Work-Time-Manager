@@ -108,6 +108,88 @@ void main() {
     }
   });
 
+  group('Home-Office-Auswertung (#282)', () {
+    List<(String, int, int, double?)> twelveMonths() => [
+          for (var m = 1; m <= 12; m++)
+            ('Monat $m', m % 3, 20 - (m % 3), m % 3 / 20),
+        ];
+
+    test('Monatslayout: Dateiname und PDF-Bytes', () async {
+      await service.exportHomeOfficeReport(
+        l10n: AppLocalizationsDe(),
+        locale: 'de',
+        periodLabel: 'Juni 2026',
+        fileSuffix: '2026-06',
+        homeOfficeDays: 2,
+        officeDays: 6,
+        totalWorkDays: 8,
+        ratio: 0.25,
+        homeOfficeDates: [DateTime(2026, 6, 3), DateTime(2026, 6, 9)],
+      );
+
+      expect(fakePlatform.lastFilename, 'Home-Office-Auswertung_2026-06.pdf');
+      expect(fakePlatform.lastBytes, isNotEmpty);
+      expect(String.fromCharCodes(fakePlatform.lastBytes!.take(4)), '%PDF');
+    });
+
+    test('Monatslayout mit leerer Tagesliste und ratio null', () async {
+      await service.exportHomeOfficeReport(
+        l10n: AppLocalizationsDe(),
+        locale: 'de',
+        periodLabel: 'Juni 2026',
+        fileSuffix: '2026-06',
+        homeOfficeDays: 0,
+        officeDays: 0,
+        totalWorkDays: 0,
+        ratio: null,
+        homeOfficeDates: const [],
+      );
+
+      expect(String.fromCharCodes(fakePlatform.lastBytes!.take(4)), '%PDF');
+    });
+
+    for (final locale in ['de', 'en']) {
+      test('Jahreslayout: Dateiname und PDF-Bytes (locale=$locale)', () async {
+        await service.exportHomeOfficeReport(
+          l10n: locale == 'de' ? AppLocalizationsDe() : AppLocalizationsEn(),
+          locale: locale,
+          periodLabel: '2026',
+          fileSuffix: '2026',
+          homeOfficeDays: 12,
+          officeDays: 228,
+          totalWorkDays: 240,
+          ratio: 0.05,
+          perMonth: twelveMonths(),
+        );
+
+        expect(fakePlatform.lastFilename, 'Home-Office-Auswertung_2026.pdf');
+        expect(String.fromCharCodes(fakePlatform.lastBytes!.take(4)), '%PDF');
+      });
+    }
+
+    test('genau eines von homeOfficeDates/perMonth ist Pflicht', () async {
+      Future<void> call(
+              {List<DateTime>? dates,
+              List<(String, int, int, double?)>? months}) =>
+          service.exportHomeOfficeReport(
+            l10n: AppLocalizationsDe(),
+            locale: 'de',
+            periodLabel: 'x',
+            fileSuffix: 'x',
+            homeOfficeDays: 0,
+            officeDays: 0,
+            totalWorkDays: 0,
+            ratio: null,
+            homeOfficeDates: dates,
+            perMonth: months,
+          );
+
+      await expectLater(call(), throwsA(isA<AssertionError>()));
+      await expectLater(call(dates: const [], months: twelveMonths()),
+          throwsA(isA<AssertionError>()));
+    });
+  });
+
   group('PdfReportService folgt der App-Sprache (#297)', () {
     for (final locale in ['de', 'en']) {
       final l10n = locale == 'de' ? AppLocalizationsDe() : AppLocalizationsEn();
