@@ -18,8 +18,9 @@ import java.util.Locale
  *
  * Wird nur von der App aktualisiert (Dart schreibt den Snapshot per `home_widget`
  * und löst [onUpdate] aus). Die Schlüssel müssen zu `home_widget_gateway.dart`
- * passen. Tipp auf das Widget öffnet die App. Ein Snapshot mit `locked` (aktive
- * App-Sperre) zeigt nur den Status, keine Zeiten.
+ * passen. Tipp auf das Widget öffnet die App. Ein Snapshot mit `locked` (App-Sperre
+ * aktiviert) enthält keine Zeiten; das Widget zeigt dann "App gesperrt" (bei
+ * "nicht gestartet" nur den Status).
  *
  * Die Logik ist bewusst klein gehalten (nicht automatisiert testbar).
  */
