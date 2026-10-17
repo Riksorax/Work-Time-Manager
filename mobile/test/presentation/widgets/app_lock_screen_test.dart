@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_work_time/core/providers/app_lock_provider.dart';
 import 'package:flutter_work_time/core/providers/providers.dart';
 import 'package:flutter_work_time/core/services/app_lock_service.dart';
+import 'package:flutter_work_time/core/services/app_lock_store.dart';
 import 'package:flutter_work_time/core/utils/app_navigator.dart';
 import 'package:flutter_work_time/domain/entities/user_entity.dart';
 import 'package:flutter_work_time/domain/usecases/reauthenticate.dart';
@@ -18,6 +19,7 @@ import 'package:flutter_work_time/l10n/app_localizations.dart';
 import 'package:flutter_work_time/presentation/widgets/app_lock_screen.dart';
 
 import '../../helpers/app_lock_fakes.dart';
+import '../../support/fake_app_lock_backend.dart';
 
 class _FakeLocalAuth extends Fake implements LocalAuthentication {
   _FakeLocalAuth(this.result);
@@ -39,6 +41,8 @@ class _FakeLocalAuth extends Fake implements LocalAuthentication {
 
 void main() {
   late SharedPreferences prefs;
+  late FakeAppLockBackend backend;
+  late AppLockStore store;
   late AppLockService service;
   late MockAuthRepository repo;
   late ProviderContainer container;
@@ -47,10 +51,12 @@ void main() {
     repo = MockAuthRepository();
     SharedPreferences.setMockInitialValues({});
     prefs = await SharedPreferences.getInstance();
+    backend = FakeAppLockBackend();
+    store = AppLockStore(backend);
     // Echte LocalAuthentication: Ohne Plattform-Kanal wirft sie beim Aufruf
     // eine MissingPluginException, die AppLockService.isBiometricAvailable
     // bereits abfängt und als "nicht verfügbar" behandelt.
-    service = AppLockService(prefs: prefs, localAuth: LocalAuthentication());
+    service = AppLockService(store: store, localAuth: LocalAuthentication());
     await service.setPin('1234');
     await service.setEnabled(true);
   });
@@ -231,8 +237,8 @@ void main() {
     late FakeMonotonic mono;
     const failedKey = 'app_lock_failed_attempts';
 
-    AppLockService build(SharedPreferences p) => AppLockService(
-          prefs: p,
+    AppLockService build(AppLockStore p) => AppLockService(
+          store: p,
           localAuth: LocalAuthentication(),
           now: clock.call,
           monotonic: mono.call,
@@ -241,7 +247,7 @@ void main() {
     setUp(() async {
       clock = FakeClock();
       mono = FakeMonotonic();
-      service = build(prefs);
+      service = build(store);
       await service.setPin('1234');
       await service.setEnabled(true);
     });
@@ -326,14 +332,14 @@ void main() {
       await tester.pump();
       await tryPin(tester, '1234');
       expect(container.read(isAppLockedProvider), isFalse);
-      expect(prefs.getInt(failedKey), isNull);
+      expect(store.getInt(failedKey), isNull);
     });
 
     testWidgets('Enter während der Sperre ändert nichts', (tester) async {
       await lockOut(tester);
       await tester.testTextInput.receiveAction(TextInputAction.done);
       await tester.pump();
-      expect(prefs.getInt(failedKey), 3);
+      expect(store.getInt(failedKey), 3);
       expect(container.read(isAppLockedProvider), isTrue);
       await tick(tester, const Duration(seconds: 5));
     });
@@ -343,7 +349,7 @@ void main() {
       for (var i = 0; i < 3; i++) {
         await service.attemptPin('0000');
       }
-      service = build(prefs); // "Neustart"
+      service = build(store); // "Neustart"
       clock.advance(const Duration(seconds: 2));
       await tester.pumpWidget(createSubject());
       expect(find.text('Zu viele Fehlversuche. Versuche es in 00:03 erneut.'),
@@ -358,7 +364,7 @@ void main() {
       for (var i = 0; i < 3; i++) {
         await service.attemptPin('0000');
       }
-      service = build(prefs);
+      service = build(store);
       clock.advance(const Duration(minutes: -10));
       await tester.pumpWidget(createSubject());
       await tester.pump();
@@ -369,7 +375,7 @@ void main() {
     });
 
     testWidgets('Persist-before-verify im UI', (tester) async {
-      final rec = RecordingSharedPreferences(prefs);
+      final rec = RecordingAppLockStore(backend, initial: backend.data);
       service = build(rec);
       await tester.pumpWidget(createSubject());
       await tester.pump();
@@ -381,10 +387,9 @@ void main() {
     });
 
     testWidgets('Doppeltipp zählt nur einen Versuch', (tester) async {
-      final rec = RecordingSharedPreferences(prefs);
       final gate = Completer<void>();
-      rec.setIntDelay = gate.future;
-      service = build(rec);
+      backend.holdWrites = gate;
+      service = build(store);
       await tester.pumpWidget(createSubject());
       await tester.pump();
       await tester.enterText(find.byType(TextField), '0000');
@@ -396,7 +401,7 @@ void main() {
       gate.complete();
       await tester.pump();
       await tester.pump();
-      expect(prefs.getInt(failedKey), 1);
+      expect(store.getInt(failedKey), 1);
     });
 
     testWidgets('Biometrie-Erfolg setzt Zähler zurück und entsperrt',
@@ -405,27 +410,27 @@ void main() {
         await service.attemptPin('0000');
       }
       service = AppLockService(
-          prefs: prefs,
+          store: store,
           localAuth: _FakeLocalAuth(true),
           now: clock.call,
           monotonic: mono.call);
       await tester.pumpWidget(createSubject());
       await tester.pump();
       await tester.pump();
-      expect(prefs.getInt(failedKey), isNull);
+      expect(store.getInt(failedKey), isNull);
       expect(container.read(isAppLockedProvider), isFalse);
     });
 
     testWidgets('Biometrie-Fehlschlag zählt nicht', (tester) async {
       service = AppLockService(
-          prefs: prefs,
+          store: store,
           localAuth: _FakeLocalAuth(false),
           now: clock.call,
           monotonic: mono.call);
       await tester.pumpWidget(createSubject());
       await tester.pump();
       await tester.pump();
-      expect(prefs.getInt(failedKey), isNull);
+      expect(store.getInt(failedKey), isNull);
       expect(container.read(isAppLockedProvider), isTrue);
     });
 

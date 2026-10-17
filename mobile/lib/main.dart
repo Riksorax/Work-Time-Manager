@@ -18,6 +18,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'core/providers/app_lock_provider.dart';
 import 'core/providers/providers.dart';
+import 'core/services/app_lock_store.dart';
 import 'core/services/notification_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/utils/app_navigator.dart';
@@ -34,6 +35,13 @@ Future<void> main() async {
   // SharedPreferences früh laden, damit eine manuelle Zeitzone-Überschreibung
   // (siehe #221) schon vor der Zeitzone-Initialisierung verfügbar ist.
   final prefs = await SharedPreferences.getInstance();
+
+  // App-Sperre (#375): Sperr-Werte liegen im sicheren Speicher (Ausnahme zur
+  // Prefs-Regel, nur für Secrets). Der Ladevorgang samt Migration läuft
+  // parallel zur restlichen Initialisierung und wird unmittelbar vor `runApp`
+  // abgewartet, damit der erste Build den Sperrzustand schon kennt. `load`
+  // wirft nie und hat ein Zeitlimit.
+  final lockStoreFuture = AppLockStore.load(prefs: prefs);
 
   // Initialize timezone
   tz_data.initializeTimeZones();
@@ -148,10 +156,13 @@ Future<void> main() async {
     );
   }
 
+  final lockStore = await lockStoreFuture;
+
   runApp(
     ProviderScope(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
+        appLockStoreProvider.overrideWithValue(lockStore),
       ],
       child: const MyApp(),
     ),

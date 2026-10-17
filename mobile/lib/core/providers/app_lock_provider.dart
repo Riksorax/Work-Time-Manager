@@ -4,15 +4,22 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:local_auth/local_auth.dart';
 
 import '../services/app_lock_service.dart';
+import '../services/app_lock_store.dart';
 import 'clock_provider.dart';
-import 'providers.dart';
 
 final localAuthProvider =
     Provider<LocalAuthentication>((ref) => LocalAuthentication());
 
+/// Speicher der App-Sperre (siehe #375). Wird in `main.dart` mit dem vor
+/// `runApp` geladenen Store überschrieben (Ausnahme zur Regel „Prefs nur über
+/// den Override“, gilt nur für Secrets); der Default ist ein leerer
+/// In-Memory-Store (Web, Tests ohne Override).
+final appLockStoreProvider =
+    Provider<AppLockStore>((ref) => AppLockStore.inMemory());
+
 final appLockServiceProvider = Provider<AppLockService>((ref) {
   return AppLockService(
-    prefs: ref.watch(sharedPreferencesProvider),
+    store: ref.watch(appLockStoreProvider),
     localAuth: ref.watch(localAuthProvider),
     now: ref.watch(clockProvider),
   );

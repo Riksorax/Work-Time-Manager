@@ -4,7 +4,7 @@ import 'dart:math';
 import 'package:crypto/crypto.dart';
 
 /// Erzeugt einen SHA-256-Hash einer PIN mit Salt, damit die PIN nicht im
-/// Klartext in SharedPreferences liegt (siehe #223).
+/// Klartext im Speicher der App-Sperre liegt (siehe #223, #375).
 ///
 /// Reine Funktion ohne Seiteneffekte - der Salt wird separat generiert und
 /// gespeichert (siehe [generateSalt]).

@@ -71,8 +71,15 @@ class _PinSetupDialogState extends ConsumerState<PinSetupDialog> {
 
   Future<void> _onFinish() async {
     final service = ref.read(appLockServiceProvider);
-    await service.setPinWithRecoveryCode(
-        _firstPinController.text, _recoveryCode!);
+    try {
+      await service.setPinWithRecoveryCode(
+          _firstPinController.text, _recoveryCode!);
+    } catch (_) {
+      // Persistenzfehler (#375): der Service hat geloggt und zurückgerollt.
+      // Der Dialog bleibt offen, es wurde nichts gesetzt; der Nutzer kann
+      // erneut bestätigen oder abbrechen.
+      return;
+    }
     if (mounted) Navigator.of(context).pop(true);
   }
 
