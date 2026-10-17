@@ -320,6 +320,90 @@ public class RepositoryIntegrationTests(FirestoreEmulatorFixture fixture)
         Assert.Equal(secondProfileEntry.WorkStart, Assert.Single(secondMonth).WorkStart);
     }
 
+    // ── Home-Office (#277) ─────────────────────────────────────────────────
+
+    private static WorkEntryDto HoEntry(bool? homeOffice, int startHour = 8) => new()
+    {
+        Id = "2026-06-05",
+        Date = new DateTimeOffset(2026, 6, 5, 0, 0, 0, TimeSpan.Zero),
+        WorkStart = new DateTimeOffset(2026, 6, 5, startHour, 0, 0, TimeSpan.Zero),
+        IsHomeOffice = homeOffice,
+    };
+
+    [SkippableFact]
+    public async Task WorkEntry_HomeOffice_RoundTrips()
+    {
+        RequireEmulator();
+        var repo = new WorkEntryRepository(fixture.Db!);
+        var uid = NewUid();
+
+        await repo.SaveAsync(uid, HoEntry(true), null, Ct);
+
+        var day = await repo.GetDayAsync(uid, 2026, 6, 5, null, Ct);
+        Assert.True(day!.IsHomeOffice);
+    }
+
+    [SkippableFact]
+    public async Task WorkEntry_PutWithoutHomeOffice_KeepsStoredTrue()
+    {
+        RequireEmulator();
+        var repo = new WorkEntryRepository(fixture.Db!);
+        var uid = NewUid();
+        await repo.SaveAsync(uid, HoEntry(true), null, Ct);
+
+        await repo.SaveAsync(uid, HoEntry(null, startHour: 9), null, Ct);
+
+        var day = await repo.GetDayAsync(uid, 2026, 6, 5, null, Ct);
+        Assert.True(day!.IsHomeOffice);
+        Assert.Equal(new DateTimeOffset(2026, 6, 5, 9, 0, 0, TimeSpan.Zero), day.WorkStart);
+    }
+
+    [SkippableFact]
+    public async Task WorkEntry_PutHomeOfficeFalse_OverwritesTrue()
+    {
+        RequireEmulator();
+        var repo = new WorkEntryRepository(fixture.Db!);
+        var uid = NewUid();
+        await repo.SaveAsync(uid, HoEntry(true), null, Ct);
+
+        await repo.SaveAsync(uid, HoEntry(false), null, Ct);
+
+        var day = await repo.GetDayAsync(uid, 2026, 6, 5, null, Ct);
+        Assert.False(day!.IsHomeOffice);
+    }
+
+    [SkippableFact]
+    public async Task WorkEntry_LegacyDocumentWithoutField_ReadsFalse_AndStaysFieldFreeAfterPutWithoutField()
+    {
+        RequireEmulator();
+        var repo = new WorkEntryRepository(fixture.Db!);
+        var uid = NewUid();
+        await repo.SaveAsync(uid, HoEntry(null), null, Ct);
+
+        var day = await repo.GetDayAsync(uid, 2026, 6, 5, null, Ct);
+        Assert.False(day!.IsHomeOffice);
+
+        var snapshot = await fixture.Db!.Collection("users").Document(uid)
+            .Collection("work_entries").Document("2026-06").GetSnapshotAsync(Ct);
+        var days = snapshot.GetValue<Dictionary<string, object>>("days");
+        var dayMap = Assert.IsType<Dictionary<string, object>>(days["5"]);
+        Assert.False(dayMap.ContainsKey("isHomeOffice"));
+    }
+
+    [SkippableFact]
+    public async Task WorkEntry_HomeOffice_IsIsolatedPerProfile()
+    {
+        RequireEmulator();
+        var repo = new WorkEntryRepository(fixture.Db!);
+        var uid = NewUid();
+
+        await repo.SaveAsync(uid, HoEntry(true), null, Ct);
+        await repo.SaveAsync(uid, HoEntry(false), "second", Ct);
+
+        Assert.True((await repo.GetDayAsync(uid, 2026, 6, 5, null, Ct))!.IsHomeOffice);
+        Assert.False((await repo.GetDayAsync(uid, 2026, 6, 5, "second", Ct))!.IsHomeOffice);
+    }
+
     [SkippableFact]
     public async Task Overtime_DifferentProfiles_AreIsolated()
     {

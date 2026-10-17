@@ -70,6 +70,19 @@ class EditWorkEntryModal extends ConsumerWidget {
                   child: ListView(
                     controller: controller,
                     children: [
+                      // Eigenes Material: der Container mit Dekoration oben
+                      // würde sonst den Ink-Effekt der ListTile verdecken.
+                      Material(
+                        type: MaterialType.transparency,
+                        child: SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          secondary: const Icon(Icons.home_outlined),
+                          title: Text(l10n.homeOfficeToggleLabel),
+                          value: state.isHomeOffice,
+                          onChanged: viewModel.setHomeOffice,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
                       _buildTimeSection(context, state, viewModel),
                       const SizedBox(height: 24),
                       _buildBreaksSection(context, state, viewModel),

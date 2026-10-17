@@ -178,6 +178,7 @@ export class WorkEntryService {
         isManuallyEntered:     (data['isManuallyEntered'] as boolean) ?? false,
         manualOvertimeMinutes: (data['manualOvertimeMinutes'] as number) ?? undefined,
         description:           data['description'] as string | undefined,
+        isHomeOffice:          (data['isHomeOffice'] as boolean) ?? false,
         breaks: ((data['breaks'] as Record<string, unknown>[]) ?? []).map(b => ({
           id:          (b['id'] as string) || `break-${b['start']}`,
           name:        (b['name'] as string) || 'Pause',
@@ -228,7 +229,13 @@ export class WorkEntryService {
       try { month = JSON.parse(raw); } catch { /* use default */ }
     }
     month.days ??= {};
-    month.days[dayKey] = this._toLocalJson(entry);
+    const json = this._toLocalJson(entry);
+    // undefined = unangetastet (#277): ein vorhandenes Flag des Tages bleibt (Schnelleintrag/Batch)
+    if (entry.isHomeOffice === undefined) {
+      const previous = (month.days[dayKey] as Record<string, unknown> | undefined)?.['isHomeOffice'];
+      if (typeof previous === 'boolean') json['isHomeOffice'] = previous;
+    }
+    month.days[dayKey] = json;
     localStorage.setItem(monthKey, JSON.stringify(month));
     this._addToIndex(monthKey);
   }
@@ -258,6 +265,7 @@ export class WorkEntryService {
       isManuallyEntered:     entry.isManuallyEntered,
       manualOvertimeMinutes: entry.manualOvertimeMinutes ?? null,
       description:           entry.description ?? null,
+      isHomeOffice:          entry.isHomeOffice ?? false,
       breaks: entry.breaks.map(b => ({
         id: b.id, name: b.name, isAutomatic: b.isAutomatic,
         start: roundToMinute(b.start).toISOString(),
@@ -279,6 +287,7 @@ export class WorkEntryService {
         isManuallyEntered:     (data['isManuallyEntered'] as boolean) ?? false,
         manualOvertimeMinutes: (data['manualOvertimeMinutes'] as number) ?? undefined,
         description:           data['description'] as string | undefined,
+        isHomeOffice:          (data['isHomeOffice'] as boolean) ?? false,
         breaks: ((data['breaks'] as Record<string, unknown>[]) ?? []).map(b => ({
           id:          b['id'] as string,
           name:        b['name'] as string,

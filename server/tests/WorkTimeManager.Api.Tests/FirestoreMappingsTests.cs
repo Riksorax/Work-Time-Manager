@@ -23,6 +23,7 @@ public class FirestoreMappingsTests
             IsManuallyEntered = true,
             ManualOvertimeMinutes = 42,
             Description = "Test",
+            IsHomeOffice = true,
             Breaks =
             [
                 new BreakData
@@ -47,12 +48,89 @@ public class FirestoreMappingsTests
         Assert.True(roundTripped.IsManuallyEntered);
         Assert.Equal(42, roundTripped.ManualOvertimeMinutes);
         Assert.Equal("Test", roundTripped.Description);
+        Assert.True(roundTripped.IsHomeOffice);
         var b = Assert.Single(roundTripped.Breaks);
         Assert.Equal("b1", b.Id);
         Assert.Equal("Mittag", b.Name);
         Assert.True(b.IsAutomatic);
         Assert.Equal(original.Breaks[0].Start, b.Start);
         Assert.Equal(original.Breaks[0].End, b.End);
+    }
+
+    // ── Home-Office (#277) ──────────────────────────────────────────────────
+
+    private static readonly Timestamp HoDate =
+        Timestamp.FromDateTimeOffset(new DateTimeOffset(2026, 6, 5, 0, 0, 0, TimeSpan.Zero));
+
+    [Fact]
+    public void WorkEntry_MissingHomeOffice_MapsToFalse()
+    {
+        var dto = FirestoreMappings.ToDto(new DayData { Date = HoDate, IsHomeOffice = null }, "2026-06-05");
+        Assert.False(dto.IsHomeOffice);
+    }
+
+    [Fact]
+    public void WorkEntry_StoredHomeOfficeTrue_MapsToTrue()
+    {
+        var dto = FirestoreMappings.ToDto(new DayData { Date = HoDate, IsHomeOffice = true }, "2026-06-05");
+        Assert.True(dto.IsHomeOffice);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    [InlineData(null)]
+    public void WorkEntry_ToDocument_PassesHomeOfficeThrough(bool? value)
+    {
+        var dto = new WorkEntryDto { Id = "2026-06-05", Date = HoDate.ToDateTimeOffset(), IsHomeOffice = value };
+        Assert.Equal(value, FirestoreMappings.ToDocument(dto).IsHomeOffice);
+    }
+
+    private static WorkEntryDto HoDto(bool? value) =>
+        new() { Id = "2026-06-05", Date = HoDate.ToDateTimeOffset(), IsHomeOffice = value };
+
+    [Fact]
+    public void DayMergeFields_WithoutHomeOffice_OmitsHomeOfficePath()
+    {
+        var fields = FirestoreMappings.DayMergeFields(HoDto(null), "5");
+
+        Assert.DoesNotContain("days.5.isHomeOffice", fields);
+        Assert.Contains("days.5.date", fields);
+        Assert.Contains("days.5.workStart", fields);
+        Assert.Contains("days.5.breaks", fields);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void DayMergeFields_WithHomeOfficeTrueOrFalse_IncludesPath(bool value)
+    {
+        var fields = FirestoreMappings.DayMergeFields(HoDto(value), "5");
+        Assert.Contains("days.5.isHomeOffice", fields);
+    }
+
+    [Fact]
+    public void DayMergeFields_UsesDayKeyWithoutLeadingZero()
+    {
+        var dto = HoDto(true);
+        var key = FirestoreMappings.DayKey(dto.Date);
+        Assert.Equal("5", key);
+        Assert.Contains("days.5.isHomeOffice", FirestoreMappings.DayMergeFields(dto, key));
+    }
+
+    [Fact]
+    public void DayMergeFields_CoversAllDayDataProperties_ExceptHomeOffice()
+    {
+        var expected = typeof(DayData).GetProperties()
+            .Select(p => p.GetCustomAttributes(typeof(FirestorePropertyAttribute), false)
+                .Cast<FirestorePropertyAttribute>().Single().Name ?? p.Name)
+            .Where(n => n != "isHomeOffice")
+            .Select(n => $"days.5.{n}")
+            .OrderBy(n => n, StringComparer.Ordinal);
+
+        var actual = FirestoreMappings.DayMergeFields(HoDto(null), "5").OrderBy(n => n, StringComparer.Ordinal);
+
+        Assert.Equal(expected, actual);
     }
 
     [Theory]

@@ -12,6 +12,13 @@ public sealed record WorkEntryDto
     public bool IsManuallyEntered { get; init; }
     public int? ManualOvertimeMinutes { get; init; }
     public string? Description { get; init; }
+
+    /// <summary>
+    /// Home-Office-Tag (#277). GET liefert immer <c>true</c>/<c>false</c>. Im PUT bedeutet
+    /// <c>null</c>/fehlend (alte Clients): gespeicherten Wert nicht anfassen.
+    /// </summary>
+    public bool? IsHomeOffice { get; init; }
+
     public IReadOnlyList<BreakDto> Breaks { get; init; } = Array.Empty<BreakDto>();
 }
 

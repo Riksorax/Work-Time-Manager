@@ -23,6 +23,18 @@ test.describe('Kalender (#377)', () => {
     await expect(cell(page, '2026-03-12')).not.toHaveClass(/has-entry/);
   });
 
+  test('markiert Home-Office-Tage mit Icon und aria-label (#277)', async ({ page }) => {
+    await seedPreferences(page, 'de', 'light');
+    await freezeTime(page);
+    await seedEntries(page, [workDay('2026-03-10', { isHomeOffice: true }), workDay('2026-03-11')]);
+    await gotoReady(page, '/reports');
+    await expect(page.getByRole('grid')).toBeVisible();
+    await expect(cell(page, '2026-03-10').locator('.home-office-icon')).toBeVisible();
+    await expect(cell(page, '2026-03-10')).toHaveAttribute('aria-label', /Eintrag vorhanden, Home-Office-Tag$/);
+    await expect(cell(page, '2026-03-11').locator('.home-office-icon')).toHaveCount(0);
+    await expect(cell(page, '2026-03-11')).not.toHaveAttribute('aria-label', /Home-Office/);
+  });
+
   test('Pfeiltasten bewegen den Fokus, Enter wählt den Tag', async ({ page }) => {
     await openReports(page);
     await cell(page, '2026-03-10').focus();

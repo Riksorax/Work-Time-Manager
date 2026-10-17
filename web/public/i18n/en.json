@@ -61,6 +61,7 @@
     "openEntrySaveError": "Could not end the entry.",
     "openEntryContinue": "Continue",
     "openEntryContinueSemantics": "Continue entry from {{date}}",
+    "homeOfficeToggleAria": "Toggle home office for today",
     "saveError": "Saving failed. Please check your connection and try again."
   },
   "holidays": {
@@ -327,6 +328,10 @@
     "calendarMultiSelectOffAria": "Multi-select ended",
     "calendarSelectedCountAria": "Selected days: {{count}}",
     "calendarHasEntryAria": "{{label}}, entry available",
+    "homeOfficeLabel": "Worked from home",
+    "homeOfficeDayAria": "Home office day",
+    "calendarHomeOfficeAria": "{{label}}, home office day",
+    "homeOfficeChip": "Home office",
     "newProfileTitle": "New profile",
     "profileNameLabel": "Name (e.g. employer)",
     "profileNameAria": "Profile name",
