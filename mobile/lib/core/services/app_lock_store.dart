@@ -121,6 +121,11 @@ Map<String, String> _readLegacy(SharedPreferences prefs) {
 
 class _CancelToken {
   bool cancelled = false;
+
+  /// Die Migration schreibt gerade den Marker (oder hat ihn geschrieben): ab
+  /// hier ist der sichere Speicher die Wahrheit, ein Abbruch ist nicht mehr
+  /// möglich und `load` muss das Ende der Migration abwarten.
+  bool committed = false;
 }
 
 /// Synchron lesbarer Speicher der App-Sperre (siehe #375).
@@ -219,14 +224,26 @@ class AppLockStore {
     if (isWeb ?? kIsWeb) return AppLockStore.inMemory();
     final backend = secure ?? SecureAppLockBackend();
     final token = _CancelToken();
+    final inner = _loadInner(prefs, backend, token, retryDelay);
     try {
-      return await _loadInner(prefs, backend, token, retryDelay)
-          .timeout(timeout);
+      return await inner.timeout(timeout);
     } catch (e) {
       // Zeitlimit (oder ein unerwarteter Fehler): eine noch laufende
       // Migration darf danach nichts mehr an den Prefs ändern.
       token.cancelled = true;
       logger.e('AppLockStore.load abgebrochen (${e.runtimeType})');
+      if (token.committed) {
+        // Der Marker ist (oder wird gerade) geschrieben: der nächste Start
+        // läse den sicheren Speicher, ein Prefs-Fallback würde neue Werte
+        // verlieren. Die Migration ist dann nur noch Rücklese-frei und kurz.
+        try {
+          return await inner;
+        } catch (_) {
+          // fällt unten in den Fallback
+        }
+      } else {
+        inner.ignore();
+      }
       return prefs.containsKey(AppLockKeys.storageVersion)
           ? AppLockStore(backend)
           : AppLockStore(PrefsAppLockBackend(prefs),
@@ -316,7 +333,15 @@ class AppLockStore {
     }
 
     if (token.cancelled) throw StateError('Migration abgebrochen');
-    await _setMarker(prefs);
+    // Synchron zur Prüfung oben (kein await dazwischen): ab hier gilt der
+    // sichere Speicher, auch wenn das Zeitlimit während des Schreibens feuert.
+    token.committed = true;
+    try {
+      await _setMarker(prefs);
+    } catch (_) {
+      token.committed = false;
+      rethrow;
+    }
     await _removeLegacy(prefs, legacy.keys, token);
     return {for (final k in legacy.keys) k: back[k]!};
   }

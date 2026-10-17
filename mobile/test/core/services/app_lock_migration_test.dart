@@ -16,10 +16,15 @@ class _FlakyPrefs implements SharedPreferences {
   final Set<String> falseOnSet = {};
   bool throwOnRemove = false;
 
+  /// Hält `setInt` auf den Marker an, bis der Completer beendet ist.
+  Completer<void>? holdMarkerSet;
+
   _FlakyPrefs(this.inner);
 
   @override
   Future<bool> setInt(String key, int value) async {
+    final hold = holdMarkerSet;
+    if (hold != null && key == _marker) await hold.future;
     if (throwOnSet.contains(key)) throw StateError('set failed');
     if (falseOnSet.contains(key)) return false;
     return inner.setInt(key, value);
@@ -276,6 +281,28 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 30));
       expectPrefsUntouched(prefs);
       expect(prefs.getInt(_marker), isNull);
+    });
+
+    test(
+        'Zeitlimit feuert während des Marker-Schreibens: Store bleibt auf dem '
+        'sicheren Speicher (neue PIN geht nicht verloren)', () async {
+      final prefs = _FlakyPrefs(await prefsWith(_legacyValues()));
+      final hold = Completer<void>();
+      prefs.holdMarkerSet = hold;
+      Future<void>.delayed(const Duration(milliseconds: 150), hold.complete);
+
+      final store =
+          await load(prefs, timeout: const Duration(milliseconds: 50));
+
+      expect(prefs.getInt(_marker), 1);
+      expect(store.getBool(_enabled), isTrue);
+      await store.setString(_pinHash, 'neu:hash');
+      expect(backend.data[_pinHash], 'neu:hash');
+
+      // Nächster Start: der sichere Speicher gewinnt, übrige Legacy-Keys gehen.
+      final next = await load(prefs);
+      expect(next.getString(_pinHash), 'neu:hash');
+      expect(_lockKeys(prefs), {_marker});
     });
 
     test('Marker kann nicht gesetzt werden (Exception): Fallback', () async {
