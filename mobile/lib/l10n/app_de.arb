@@ -1289,5 +1289,13 @@
   "timerActionStart": "Einstempeln",
   "@timerActionStart": {"description": "Beschriftung der Aktion zum Einstempeln: Button in der Erinnerungs-Benachrichtigung und App-Icon-Shortcut (Android). Startet den Timer des heutigen Tages."},
   "timerActionStop": "Ausstempeln",
-  "@timerActionStop": {"description": "Beschriftung der Aktion zum Ausstempeln: Button in der Erinnerungs-Benachrichtigung und App-Icon-Shortcut (Android). Beendet den laufenden Timer."}
+  "@timerActionStop": {"description": "Beschriftung der Aktion zum Ausstempeln: Button in der Erinnerungs-Benachrichtigung und App-Icon-Shortcut (Android). Beendet den laufenden Timer."},
+  "homeOfficeToggleLabel": "Von zu Hause gearbeitet",
+  "@homeOfficeToggleLabel": {"description": "Beschriftung des Home-Office-Schalters im Bearbeiten-Dialog und im Dashboard (#277): markiert den Tag als Home-Office-Tag."},
+  "homeOfficeChipLabel": "Home-Office",
+  "@homeOfficeChipLabel": {"description": "Kurzes Label (Chip) in der Tagesliste der Auswertung für einen Home-Office-Tag (#277)."},
+  "homeOfficeSemanticSuffix": ", Home-Office-Tag",
+  "@homeOfficeSemanticSuffix": {"description": "Suffix für das Semantics-Label eines Kalendertags, der als Home-Office-Tag markiert ist (#277). Wird an das Tageslabel angehängt, daher mit führendem Komma."},
+  "homeOfficeToggleDashboardSemantics": "Home-Office für heute umschalten",
+  "@homeOfficeToggleDashboardSemantics": {"description": "Semantics-Label des Home-Office-Schalters im Dashboard (#277), für Screenreader."}
 }

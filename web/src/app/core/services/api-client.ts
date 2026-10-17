@@ -26,6 +26,7 @@ interface WorkEntryDto {
   isManuallyEntered: boolean;
   manualOvertimeMinutes: number | null;
   description: string | null;
+  isHomeOffice?: boolean | null;
   breaks: BreakDto[];
 }
 interface BreakDto {
@@ -223,6 +224,8 @@ export class ApiClient {
       isManuallyEntered: entry.isManuallyEntered ?? false,
       manualOvertimeMinutes: entry.manualOvertimeMinutes ?? null,
       description: entry.description ?? null,
+      // undefined -> null: Backend lässt ein gespeichertes Flag dann unangetastet (#277)
+      isHomeOffice: entry.isHomeOffice ?? null,
       breaks: entry.breaks.map(b => ({
         id: b.id,
         name: b.name,
@@ -244,6 +247,7 @@ export class ApiClient {
       isManuallyEntered: dto.isManuallyEntered ?? false,
       manualOvertimeMinutes: dto.manualOvertimeMinutes ?? undefined,
       description: dto.description ?? undefined,
+      isHomeOffice: dto.isHomeOffice ?? false,
       breaks: (dto.breaks ?? []).map((b): Break => ({
         id: b.id,
         name: b.name,

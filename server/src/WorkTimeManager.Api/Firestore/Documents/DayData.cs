@@ -27,6 +27,10 @@ public sealed class DayData
     [FirestoreProperty("description")]
     public string? Description { get; set; }
 
+    /// <summary>Home-Office-Flag (#277). <c>null</c> = im Dokument nicht gesetzt (gilt als <c>false</c>).</summary>
+    [FirestoreProperty("isHomeOffice")]
+    public bool? IsHomeOffice { get; set; }
+
     [FirestoreProperty("breaks")]
     public List<BreakData> Breaks { get; set; } = new();
 }

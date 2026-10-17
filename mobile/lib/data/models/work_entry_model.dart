@@ -19,6 +19,7 @@ class WorkEntryModel extends WorkEntryEntity {
     super.description,
     super.isManuallyEntered,
     super.type,
+    super.isHomeOffice,
   });
 
   static String generateId(DateTime date) =>
@@ -45,6 +46,7 @@ class WorkEntryModel extends WorkEntryEntity {
       description: entity.description,
       isManuallyEntered: entity.isManuallyEntered,
       type: entity.type,
+      isHomeOffice: entity.isHomeOffice,
     );
   }
 
@@ -73,6 +75,7 @@ class WorkEntryModel extends WorkEntryEntity {
               orElse: () => WorkEntryType.work,
             )
           : WorkEntryType.work,
+      isHomeOffice: map['isHomeOffice'] as bool? ?? false,
     );
   }
 
@@ -112,6 +115,7 @@ class WorkEntryModel extends WorkEntryEntity {
       'description': description,
       'isManuallyEntered': isManuallyEntered,
       'type': type.name,
+      'isHomeOffice': isHomeOffice,
     };
   }
 
@@ -130,6 +134,7 @@ class WorkEntryModel extends WorkEntryEntity {
     String? description,
     bool? isManuallyEntered,
     WorkEntryType? type,
+    bool? isHomeOffice,
   }) {
     return WorkEntryModel(
       id: id ?? this.id,
@@ -141,6 +146,7 @@ class WorkEntryModel extends WorkEntryEntity {
       description: description ?? this.description,
       isManuallyEntered: isManuallyEntered ?? this.isManuallyEntered,
       type: type ?? this.type,
+      isHomeOffice: isHomeOffice ?? this.isHomeOffice,
     );
   }
 }

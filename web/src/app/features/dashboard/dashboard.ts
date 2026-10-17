@@ -11,6 +11,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -22,7 +23,7 @@ import { EditBreakDialogComponent, EditBreakDialogData, EditBreakDialogResult } 
 import { RestartSessionDialogComponent, RestartSessionDialogResult } from './components/restart-session-dialog/restart-session-dialog';
 import { AdjustOvertimeDialogComponent, AdjustOvertimeDialogResult } from '../settings/components/adjust-overtime-dialog/adjust-overtime-dialog';
 import { TimeInputComponent } from '../../shared/components/time-input/time-input';
-import { Break } from '../../shared/models/index';
+import { Break, WorkEntryType } from '../../shared/models/index';
 import { entryDay } from '../../shared/utils/entry-day.util';
 import { LanguageService } from '../../core/services/language';
 import { formatEntryDay, formatHm } from '../../domain/utils/open-entry.utils';
@@ -44,6 +45,7 @@ import { HolidayBannerComponent } from '../../shared/components/holiday-banner/h
     MatDividerModule,
     MatIconModule,
     MatProgressSpinnerModule,
+    MatSlideToggleModule,
     MatTooltipModule,
     TimeInputComponent,
     HolidayBannerComponent,
@@ -65,6 +67,9 @@ export class DashboardComponent {
   private  readonly announcer = inject(LiveAnnouncer);
   private  readonly injector = inject(Injector);
   private  readonly errorHandler = inject(ErrorHandler);
+
+  /** Home-Office-Toggle nur bei Typ Arbeit (#277); computed statt Klassenfeld mit Enum (Vite-SSR-Falle). */
+  protected readonly isWorkType = computed(() => this.svc.workEntry().type === WorkEntryType.Work);
 
   private readonly banner = viewChild(OpenEntryBannerComponent);
   private readonly focusAnchor = viewChild<ElementRef<HTMLElement>>('focusAnchor');
@@ -205,6 +210,10 @@ export class DashboardComponent {
         if (choice === 'discard-breaks') await this.guarded(() => this.svc.startNewSession(false));
       });
     }
+  }
+
+  async onHomeOfficeChange(checked: boolean): Promise<void> {
+    await this.guarded(() => this.svc.setHomeOffice(checked));
   }
 
   async onBreakAction(): Promise<void> {

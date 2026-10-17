@@ -802,6 +802,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
       isManuallyEntered: false,
       description: state.workEntry.description,
       type: state.workEntry.type,
+      isHomeOffice: state.workEntry.isHomeOffice,
     );
     logger.i(
         '[Dashboard] Komplett neue Session gestartet um $now (Start, End, Pausen zurückgesetzt)');
@@ -826,6 +827,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
       isManuallyEntered: false,
       description: state.workEntry.description,
       type: state.workEntry.type,
+      isHomeOffice: state.workEntry.isHomeOffice,
     );
     logger.i('[Dashboard] Neue Session gestartet um $now (Pausen behalten)');
     return _recalculateStateAndSave(updatedEntry, ctx: ctx);
@@ -1050,6 +1052,25 @@ class DashboardViewModel extends Notifier<DashboardState> {
     }
   }
 
+  /// Setzt das Home-Office-Flag des aktuellen Eintrags (#277). Ohne
+  /// `workStart` wird nur der State geändert (der Start schreibt das Flag
+  /// mit); sonst speichert die Aktion den Eintrag, ohne Timer oder Pausen
+  /// anzufassen.
+  Future<bool> setHomeOffice(bool value) =>
+      _runAction(() => _setHomeOfficeBody(value));
+
+  Future<bool> _setHomeOfficeBody(bool value) async {
+    if (!await _ensureCurrentDay()) return false;
+    final ctx = _beginAction();
+    final updatedEntry = state.workEntry.copyWith(isHomeOffice: value);
+    if (updatedEntry.workStart == null) {
+      if (!ref.mounted || ctx.gen != _initGen) return true;
+      state = state.copyWith(workEntry: updatedEntry);
+      return true;
+    }
+    return _recalculateStateAndSave(updatedEntry, ctx: ctx);
+  }
+
   Future<bool> setManualStartTime(TimeOfDay time) =>
       _runAction(() => _setManualStartTimeBody(time));
 
@@ -1138,6 +1159,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
       isManuallyEntered: state.workEntry.isManuallyEntered,
       description: state.workEntry.description,
       type: state.workEntry.type,
+      isHomeOffice: state.workEntry.isHomeOffice,
     );
 
     final ok = await _recalculateStateAndSave(updatedEntry, ctx: ctx);

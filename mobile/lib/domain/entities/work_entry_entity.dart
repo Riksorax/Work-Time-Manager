@@ -22,6 +22,10 @@ class WorkEntryEntity extends Equatable {
   final String? description; // Added
   final WorkEntryType type;
 
+  /// Home-Office-Tag (#277). Nur bei [WorkEntryType.work] relevant; fehlt das
+  /// Feld in gespeicherten Daten, gilt `false`.
+  final bool isHomeOffice;
+
   const WorkEntryEntity({
     required this.id,
     required this.date,
@@ -32,6 +36,7 @@ class WorkEntryEntity extends Equatable {
     this.isManuallyEntered = false,
     this.description, // Added
     this.type = WorkEntryType.work,
+    this.isHomeOffice = false,
   });
 
   /// Die gesamte Pausenzeit für diesen Arbeitseintrag.
@@ -69,6 +74,7 @@ class WorkEntryEntity extends Equatable {
     bool? isManuallyEntered,
     String? description, // Added
     WorkEntryType? type,
+    bool? isHomeOffice,
   }) {
     return WorkEntryEntity(
       id: id ?? this.id,
@@ -80,6 +86,7 @@ class WorkEntryEntity extends Equatable {
       isManuallyEntered: isManuallyEntered ?? this.isManuallyEntered,
       description: description ?? this.description, // Added
       type: type ?? this.type,
+      isHomeOffice: isHomeOffice ?? this.isHomeOffice,
     );
   }
 
@@ -94,5 +101,6 @@ class WorkEntryEntity extends Equatable {
         isManuallyEntered,
         description, // Added
         type,
+        isHomeOffice,
       ];
 }

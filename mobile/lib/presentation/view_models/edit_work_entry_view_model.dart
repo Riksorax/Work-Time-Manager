@@ -28,6 +28,10 @@ class EditWorkEntryViewModel extends Notifier<EditWorkEntryState> {
     state = state.copyWith(type: type);
   }
 
+  void setHomeOffice(bool value) {
+    state = state.copyWith(isHomeOffice: value);
+  }
+
   void setStartTime(DateTime startTime) {
     state = state.copyWith(newStartTime: roundToMinute(startTime));
   }
@@ -87,6 +91,10 @@ class EditWorkEntryViewModel extends Notifier<EditWorkEntryState> {
       workEnd: isStandardWork ? state.newEndTime : null,
       breaks: isStandardWork ? state.breaks : [],
       type: state.type,
+      // Nur bei Typ Arbeit relevant; sonst bleibt der Originalwert (#277).
+      isHomeOffice: isStandardWork
+          ? state.isHomeOffice
+          : state.originalEntry.isHomeOffice,
       // ManuallyEntered ist true, wenn wir hier speichern.
       isManuallyEntered: true,
     );
