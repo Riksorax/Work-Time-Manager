@@ -97,7 +97,7 @@ class NotificationService {
     _onTimerActionCallback = onTimerAction;
 
     const androidSettings =
-        AndroidInitializationSettings('@mipmap/launcher_icon');
+        AndroidInitializationSettings('@drawable/ic_notification');
     const initSettings = InitializationSettings(
       android: androidSettings,
     );

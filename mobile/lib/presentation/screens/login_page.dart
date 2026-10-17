@@ -51,8 +51,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   ),
                   child: ClipOval(
                     child: Image.asset(
-                      'assets/icon/WorkTimeManagerLogo.png',
+                      'assets/icon/app_logo_256.png',
                       fit: BoxFit.cover,
+                      excludeFromSemantics: true,
                     ),
                   ),
                 ),
