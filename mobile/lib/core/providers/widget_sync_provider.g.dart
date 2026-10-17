@@ -17,8 +17,14 @@ part of 'widget_sync_provider.dart';
 ///   Pausenstart, Netto-Minute, Tag, Sperre), nicht jede Sekunde.
 /// - Logout/Nutzerwechsel und Profilwechsel leeren den Snapshot sofort; der
 ///   neue Ladelauf des Dashboards schreibt danach den neuen Stand.
-/// - Bei aktiver App-Sperre traegt der Snapshot `locked`, die Zeiten blendet
-///   die native Seite aus.
+/// - Vor dem ersten Auth-Wert wird nichts geschrieben (die Repositories fallen
+///   davor auf den lokalen Speicher zurueck); mit dem Wert wird neu gepusht.
+/// - Ist die App-Sperre aktiviert (PIN eingerichtet und aktiv, nicht nur
+///   gerade gesperrt), werden nie Zeiten geschrieben: nur Status und
+///   `locked: true`. So bleiben auch bei beendetem Dart-Prozess keine Zeiten
+///   im Klartext im Widget. Die Konfiguration wird bei jedem Push gelesen;
+///   Aenderungen greifen spaetestens beim naechsten Push (z. B. Wechsel in den
+///   Hintergrund, der die Sperre setzt).
 
 @ProviderFor(widgetSync)
 const widgetSyncProvider = WidgetSyncProvider._();
@@ -32,8 +38,14 @@ const widgetSyncProvider = WidgetSyncProvider._();
 ///   Pausenstart, Netto-Minute, Tag, Sperre), nicht jede Sekunde.
 /// - Logout/Nutzerwechsel und Profilwechsel leeren den Snapshot sofort; der
 ///   neue Ladelauf des Dashboards schreibt danach den neuen Stand.
-/// - Bei aktiver App-Sperre traegt der Snapshot `locked`, die Zeiten blendet
-///   die native Seite aus.
+/// - Vor dem ersten Auth-Wert wird nichts geschrieben (die Repositories fallen
+///   davor auf den lokalen Speicher zurueck); mit dem Wert wird neu gepusht.
+/// - Ist die App-Sperre aktiviert (PIN eingerichtet und aktiv, nicht nur
+///   gerade gesperrt), werden nie Zeiten geschrieben: nur Status und
+///   `locked: true`. So bleiben auch bei beendetem Dart-Prozess keine Zeiten
+///   im Klartext im Widget. Die Konfiguration wird bei jedem Push gelesen;
+///   Aenderungen greifen spaetestens beim naechsten Push (z. B. Wechsel in den
+///   Hintergrund, der die Sperre setzt).
 
 final class WidgetSyncProvider extends $FunctionalProvider<void, void, void>
     with $Provider<void> {
@@ -46,8 +58,14 @@ final class WidgetSyncProvider extends $FunctionalProvider<void, void, void>
   ///   Pausenstart, Netto-Minute, Tag, Sperre), nicht jede Sekunde.
   /// - Logout/Nutzerwechsel und Profilwechsel leeren den Snapshot sofort; der
   ///   neue Ladelauf des Dashboards schreibt danach den neuen Stand.
-  /// - Bei aktiver App-Sperre traegt der Snapshot `locked`, die Zeiten blendet
-  ///   die native Seite aus.
+  /// - Vor dem ersten Auth-Wert wird nichts geschrieben (die Repositories fallen
+  ///   davor auf den lokalen Speicher zurueck); mit dem Wert wird neu gepusht.
+  /// - Ist die App-Sperre aktiviert (PIN eingerichtet und aktiv, nicht nur
+  ///   gerade gesperrt), werden nie Zeiten geschrieben: nur Status und
+  ///   `locked: true`. So bleiben auch bei beendetem Dart-Prozess keine Zeiten
+  ///   im Klartext im Widget. Die Konfiguration wird bei jedem Push gelesen;
+  ///   Aenderungen greifen spaetestens beim naechsten Push (z. B. Wechsel in den
+  ///   Hintergrund, der die Sperre setzt).
   const WidgetSyncProvider._()
       : super(
           from: null,
@@ -81,4 +99,4 @@ final class WidgetSyncProvider extends $FunctionalProvider<void, void, void>
   }
 }
 
-String _$widgetSyncHash() => r'8f073a55ee95c3ba27b1b9fc19e3c61f42ad19a5';
+String _$widgetSyncHash() => r'5bbf8bdd5b41ccdedd94cb11cc7c236997d05987';
