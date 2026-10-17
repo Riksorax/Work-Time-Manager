@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { NgOptimizedImage } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -11,15 +12,15 @@ import { DataSyncService } from '../services/data-sync';
 
 @Component({
   selector: 'app-login',
-  imports: [MatButtonModule, MatCardModule, MatDividerModule, MatIconModule, MatProgressSpinnerModule],
+  imports: [NgOptimizedImage, MatButtonModule, MatCardModule, MatDividerModule, MatIconModule, MatProgressSpinnerModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="login-container">
       <div class="login-card">
 
         <!-- Logo -->
-        <div class="logo-wrapper" aria-hidden="true">
-          <mat-icon class="logo-icon">schedule</mat-icon>
+        <div class="logo-wrapper">
+          <img class="logo-icon" ngSrc="logo.svg" width="80" height="80" alt="" priority />
         </div>
 
         <!-- Titel -->
@@ -94,10 +95,8 @@ import { DataSyncService } from '../services/data-sync';
     }
 
     .logo-wrapper {
-      width: 88px;
-      height: 88px;
-      border-radius: 50%;
-      background: var(--mat-sys-primary-container);
+      width: 80px;
+      height: 80px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -105,10 +104,9 @@ import { DataSyncService } from '../services/data-sync';
     }
 
     .logo-icon {
-      font-size: 44px;
-      width: 44px;
-      height: 44px;
-      color: var(--mat-sys-on-primary-container);
+      display: block;
+      width: 80px;
+      height: 80px;
     }
 
     .app-title {
