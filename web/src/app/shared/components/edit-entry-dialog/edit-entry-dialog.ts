@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, Signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormArray } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -7,6 +8,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkEntry, WorkEntryType, Break } from '../../models/index';
 import { breakNameToStore, localizedBreakName } from '../../utils/break-name.util';
@@ -24,6 +26,7 @@ interface EntryFormValue {
   startTime: string;
   endTime: string;
   manualOvertimeMinutes: number | null;
+  isHomeOffice: boolean;
   breaks: BreakFormValue[];
 }
 
@@ -38,6 +41,7 @@ interface EntryFormValue {
     MatIconModule,
     MatInputModule,
     MatSelectModule,
+    MatSlideToggleModule,
     TranslatePipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -54,6 +58,12 @@ interface EntryFormValue {
             <mat-option [value]="WorkEntryType.Holiday">{{ 'shared.entryTypeHoliday' | translate }}</mat-option>
           </mat-select>
         </mat-form-field>
+
+        @if (showHomeOffice()) {
+          <mat-slide-toggle formControlName="isHomeOffice" class="home-office-toggle">
+            {{ 'shared.homeOfficeLabel' | translate }}
+          </mat-slide-toggle>
+        }
 
         <div class="time-row">
           <mat-form-field appearance="outline">
@@ -115,6 +125,7 @@ interface EntryFormValue {
   `,
   styles: [`
     .edit-form { display: flex; flex-direction: column; gap: 8px; min-width: min(400px, calc(95vw - 48px)); padding-top: 8px; }
+    .home-office-toggle { margin-bottom: 8px; }
     .time-row { display: flex; flex-wrap: wrap; gap: 0 16px; }
     .time-row mat-form-field { flex: 1 1 120px; }
     .section-header {
@@ -135,6 +146,8 @@ export class EditEntryDialogComponent {
 
   protected readonly WorkEntryType = WorkEntryType;
   readonly form: FormGroup;
+  /** Home-Office-Toggle nur bei Typ Arbeit (#277). */
+  readonly showHomeOffice: Signal<boolean>;
 
   private readonly translateKey = (key: string, params?: Record<string, unknown>): string =>
     this.translate.instant(key, params);
@@ -146,6 +159,7 @@ export class EditEntryDialogComponent {
       startTime:             [this._formatTime(entry?.workStart)],
       endTime:               [this._formatTime(entry?.workEnd)],
       manualOvertimeMinutes: [entry?.manualOvertimeMinutes ?? null],
+      isHomeOffice:          [entry?.isHomeOffice ?? false],
       breaks: this.fb.array(
         (entry?.breaks ?? []).map(b => this.fb.group({
           id:    [b.id],
@@ -156,6 +170,8 @@ export class EditEntryDialogComponent {
         }))
       ),
     });
+    const type = toSignal(this.form.controls['type'].valueChanges, { initialValue: this.form.value.type as WorkEntryType });
+    this.showHomeOffice = computed(() => type() === WorkEntryType.Work);
   }
 
   get breaks(): FormArray { return this.form.get('breaks') as FormArray; }
@@ -187,6 +203,10 @@ export class EditEntryDialogComponent {
       workEnd:               this._parseTime(date, val.endTime),
       manualOvertimeMinutes: val.manualOvertimeMinutes ?? undefined,
       isManuallyEntered:     true,
+      // Bei anderen Typen bleibt das Original erhalten (Toggle ausgeblendet), ohne Original false
+      isHomeOffice:          val.type === WorkEntryType.Work
+        ? val.isHomeOffice
+        : (this.data.entry?.isHomeOffice ?? false),
       breaks: val.breaks.map((b): Break => ({
         id:          b.id,
         // Unverändert gelassene Standardnamen nicht als übersetzten Freitext speichern
