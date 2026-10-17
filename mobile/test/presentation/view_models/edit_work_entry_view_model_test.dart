@@ -159,6 +159,54 @@ void main() {
       expect(captured.isManuallyEntered, true);
     });
 
+    group('isHomeOffice (#277)', () {
+      WorkEntryEntity capture() =>
+          verify(mockCallback.call(captureAny)).captured.single
+              as WorkEntryEntity;
+
+      test('Initialzustand kommt vom Eintrag, setHomeOffice aendert den State',
+          () {
+        final entry = initialEntry.copyWith(isHomeOffice: true);
+        expect(
+            container.read(editWorkEntryViewModelProvider(entry)).isHomeOffice,
+            isTrue);
+        container
+            .read(editWorkEntryViewModelProvider(entry).notifier)
+            .setHomeOffice(false);
+        expect(
+            container.read(editWorkEntryViewModelProvider(entry)).isHomeOffice,
+            isFalse);
+      });
+
+      test('saveChanges uebergibt das Flag bei Typ Arbeit', () async {
+        final vm = container
+            .read(editWorkEntryViewModelProvider(initialEntry).notifier);
+        vm.setHomeOffice(true);
+        await vm.saveChanges();
+        expect(capture().isHomeOffice, isTrue);
+      });
+
+      test('saveChanges ohne Aenderung laesst das Flag gleich', () async {
+        final entry = initialEntry.copyWith(isHomeOffice: true);
+        await container
+            .read(editWorkEntryViewModelProvider(entry).notifier)
+            .saveChanges();
+        expect(capture().isHomeOffice, isTrue);
+      });
+
+      test('bei Typ Urlaub bleibt der Originalwert', () async {
+        final entry = initialEntry.copyWith(isHomeOffice: true);
+        final vm =
+            container.read(editWorkEntryViewModelProvider(entry).notifier);
+        vm.setType(WorkEntryType.vacation);
+        vm.setHomeOffice(false);
+        await vm.saveChanges();
+        final saved = capture();
+        expect(saved.type, WorkEntryType.vacation);
+        expect(saved.isHomeOffice, isTrue);
+      });
+    });
+
     test('saveChanges should not save if work start is missing for type work',
         () async {
       final entryWithoutStart =
