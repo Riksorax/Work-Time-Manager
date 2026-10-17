@@ -445,6 +445,38 @@ void main() {
       service = build(store);
     });
 
+    test(
+        'setPinWithRecoveryCode: scheitert setPin, bleiben alte PIN und alter '
+        'Code gültig', () async {
+      await service.setPinWithRecoveryCode('1234', 'ABCDEFGHJKLMNPQR');
+      final oldRecovery = backend.data[recoveryKey];
+      backend.failWriteKeys.add(pinKey);
+
+      await expectLater(
+          service.setPinWithRecoveryCode('9999', 'ZZZZ2222YYYY3333'),
+          throwsA(isA<StateError>()));
+
+      expect(service.verifyPin('1234'), isTrue);
+      expect(service.verifyPin('9999'), isFalse);
+      expect(service.verifyRecoveryCode('ABCDEFGHJKLMNPQR'), isTrue);
+      expect(service.verifyRecoveryCode('ZZZZ2222YYYY3333'), isFalse);
+      expect(store.getString(recoveryKey), oldRecovery);
+      expect(backend.data[recoveryKey], oldRecovery);
+    });
+
+    test(
+        'setPinWithRecoveryCode: scheitert setPin ohne vorherigen Code, bleibt '
+        'kein neuer Code zurück', () async {
+      backend.failWriteKeys.add(pinKey);
+
+      await expectLater(
+          service.setPinWithRecoveryCode('9999', 'ZZZZ2222YYYY3333'),
+          throwsA(isA<StateError>()));
+
+      expect(service.hasRecoveryCode, isFalse);
+      expect(backend.data.containsKey(recoveryKey), isFalse);
+    });
+
     test('setPin schreibt in das Backend, kein Klartext', () async {
       await service.setPin('1234');
       expect(backend.data[pinKey], isNotNull);

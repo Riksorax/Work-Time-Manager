@@ -118,14 +118,23 @@ class AppLockService {
   ///
   /// Reihenfolge: erst der Code (neuer Wert, einzelner Schreibvorgang), dann
   /// die PIN. Bei einem Abbruch dazwischen gilt weiter die alte PIN; ein
-  /// Salt/Hash-Mismatch (Aussperrung) ist ausgeschlossen.
+  /// Salt/Hash-Mismatch (Aussperrung) ist ausgeschlossen. Scheitert `setPin`,
+  /// wird der vorherige Code wiederhergestellt (alte PIN + alter Code gelten).
   Future<void> setPinWithRecoveryCode(String pin, String recoveryCode) async {
     final codeSalt = generateSalt();
     final code = normalizeRecoveryCode(recoveryCode);
+    final previousCode = _store.getString(_recoveryHashKey);
     await _persist(() => _store.setString(
         _recoveryHashKey, '$codeSalt:${hashPin(code, codeSalt)}',
         rollbackOnError: true));
-    await setPin(pin);
+    try {
+      await setPin(pin);
+    } catch (_) {
+      await _persistQuietly(() => previousCode == null
+          ? _store.remove(_recoveryHashKey)
+          : _store.setString(_recoveryHashKey, previousCode));
+      rethrow;
+    }
   }
 
   bool verifyRecoveryCode(String input) {
