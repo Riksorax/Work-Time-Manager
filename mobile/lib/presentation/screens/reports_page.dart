@@ -280,6 +280,12 @@ class DailyReportView extends ConsumerWidget {
                     DateTime(currentMonth.year, currentMonth.month + 1, 1));
               },
               daysWithEntries: daysWithEntriesInMonth,
+              homeOfficeDays: reportsState.homeOfficeDays
+                  .where((date) =>
+                      date.year == selectedMonth.year &&
+                      date.month == selectedMonth.month)
+                  .map((date) => date.day)
+                  .toSet(),
             ),
           ],
         );
@@ -488,6 +494,19 @@ class DailyReportView extends ConsumerWidget {
                             )
                           ],
                         ),
+                        if (!isSpecialType && displayEntry.isHomeOffice)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Chip(
+                                avatar:
+                                    const Icon(Icons.home_outlined, size: 18),
+                                label: Text(l10n.homeOfficeChipLabel),
+                                visualDensity: VisualDensity.compact,
+                              ),
+                            ),
+                          ),
                         if (!isSpecialType ||
                             displayEntry.workStart != null ||
                             displayEntry.workEnd != null) ...[
@@ -1818,12 +1837,16 @@ class _Calendar extends ConsumerStatefulWidget {
   final VoidCallback? onNextMonthTapped;
   final Set<int>? daysWithEntries;
 
+  /// Tage des angezeigten Monats mit Home-Office-Markierung (#277).
+  final Set<int> homeOfficeDays;
+
   const _Calendar({
     required this.selectedDate,
     required this.onDateSelected,
     this.onPreviousMonthTapped,
     this.onNextMonthTapped,
     this.daysWithEntries,
+    this.homeOfficeDays = const {},
   });
 
   @override
@@ -2162,8 +2185,31 @@ class _CalendarState extends ConsumerState<_Calendar> {
                       );
                     }
 
+                    final isHomeOffice = widget.homeOfficeDays.contains(day);
+                    if (isHomeOffice) {
+                      // Haus-Icon statt nur Farbe (#277); Semantics-Suffix unten.
+                      dayWidget = Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          dayWidget,
+                          Positioned(
+                            top: 2,
+                            right: 2,
+                            child: Icon(
+                              Icons.home,
+                              key: const ValueKey('homeOfficeDayIcon'),
+                              size: 12,
+                              color: isSelected || isMultiSelected
+                                  ? Colors.white70
+                                  : Theme.of(context).colorScheme.secondary,
+                            ),
+                          ),
+                        ],
+                      );
+                    }
+
                     final semanticLabel =
-                        '${DateFormat('EEEE, d. MMMM yyyy', locale).format(date)}${holidayName != null ? l10n.holidaySemanticSuffix(holidayName) : ''}';
+                        '${DateFormat('EEEE, d. MMMM yyyy', locale).format(date)}${holidayName != null ? l10n.holidaySemanticSuffix(holidayName) : ''}${isHomeOffice ? l10n.homeOfficeSemanticSuffix : ''}';
                     return Semantics(
                       label: semanticLabel,
                       button: true,

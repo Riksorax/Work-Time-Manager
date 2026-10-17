@@ -80,12 +80,20 @@ class ReportsViewModel extends Notifier<ReportsState> {
       dailyReportState: _calculateDailyReport(day),
       weeklyReportState: _calculateWeeklyReport(day),
       monthlyReportState: _calculateMonthlyReport(),
+      homeOfficeDays: _calculateHomeOfficeDays(),
     );
     // Eingeloggt: server-berechnete Werte (zentrale, korrigierte Logik) laden und
     // die lokalen überschreiben. Schlägt der Abruf fehl (401/offline), bleibt der
     // lokale Fallback bestehen.
     unawaited(_loadReportsFromApi(day));
   }
+
+  /// Tage der geladenen Monatseinträge mit Typ Arbeit und Home-Office-Flag
+  /// (#277). Tag über [entryDay] (#418), nicht über `entry.date`.
+  Set<DateTime> _calculateHomeOfficeDays() => {
+        for (final e in _monthlyEntries)
+          if (e.type == WorkEntryType.work && e.isHomeOffice) entryDay(e),
+      };
 
   Future<void> _loadReportsFromApi(DateTime day) async {
     try {

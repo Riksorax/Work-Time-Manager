@@ -72,11 +72,12 @@ function toKey(d: Date): string {
                 @let holidayName = holiday ? ('holidays.' + holiday | translate) : '';
                 @let ariaDate = day.date | date:'EEEE, d. MMMM yyyy';
                 @let ariaDay = holiday ? ('shared.calendarHolidayAria' | translate: { date: ariaDate, name: holidayName }) : ariaDate;
+                @let ariaEntry = hasEntry(day.date) ? ('shared.calendarHasEntryAria' | translate: { label: ariaDay }) : ariaDay;
                 <div
                   class="calendar-day"
                   role="gridcell"
                   [attr.data-date]="dayKey(day.date)"
-                  [attr.aria-label]="hasEntry(day.date) ? ('shared.calendarHasEntryAria' | translate: { label: ariaDay }) : ariaDay"
+                  [attr.aria-label]="isHomeOffice(day.date) ? ('shared.calendarHomeOfficeAria' | translate: { label: ariaEntry }) : ariaEntry"
                   [matTooltip]="holidayName"
                   [matTooltipDisabled]="holiday === null"
                   [class.holiday]="holiday !== null"
@@ -91,6 +92,9 @@ function toKey(d: Date): string {
                   <span class="day-number">{{ day.date.getDate() }}</span>
                   @if (hasEntry(day.date)) {
                     <div class="entry-dot" aria-hidden="true"></div>
+                  }
+                  @if (isHomeOffice(day.date)) {
+                    <mat-icon class="home-office-icon" aria-hidden="true">home</mat-icon>
                   }
                 </div>
               } @else {
@@ -204,11 +208,32 @@ function toKey(d: Date): string {
     .calendar-day.selected .entry-dot {
       background-color: var(--mat-sys-on-primary);
     }
+    .home-office-icon {
+      position: absolute;
+      top: 3px;
+      right: 3px;
+      width: 12px;
+      height: 12px;
+      font-size: 12px;
+      line-height: 12px;
+      color: var(--mat-sys-primary);
+    }
+    @media (max-width: 360px) {
+      .home-office-icon { top: 0; right: 0; width: 10px; height: 10px; font-size: 10px; line-height: 10px; }
+    }
+    .calendar-day.selected .home-office-icon {
+      color: var(--mat-sys-on-primary);
+    }
+    .calendar-day.multi-selected .home-office-icon {
+      color: var(--mat-sys-on-secondary-container);
+    }
   `]
 })
 export class CalendarComponent {
   readonly selectedDate       = input.required<Date>();
   readonly daysWithEntries    = input<number[]>([]);
+  /** Tage des angezeigten Monats mit Home-Office (nur Typ Arbeit, #277): Haus-Icon und Aria-Zusatz. */
+  readonly homeOfficeDays     = input<number[]>([]);
   readonly multiSelectedDates = input<Set<string>>(new Set());
   /** Bundesland für die Feiertags-Markierung (null = keine Markierung). Siehe #371. */
   readonly bundesland         = input<Bundesland | null>(null);
@@ -342,6 +367,10 @@ export class CalendarComponent {
 
   hasEntry(date: Date): boolean {
     return this.daysWithEntries().includes(date.getDate());
+  }
+
+  isHomeOffice(date: Date): boolean {
+    return this.homeOfficeDays().includes(date.getDate());
   }
 
   isMultiSelected(date: Date): boolean {

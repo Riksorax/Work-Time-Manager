@@ -23,6 +23,11 @@ export interface WorkEntry {
   isManuallyEntered: boolean;
   description?: string;
   type: WorkEntryType;
+  /**
+   * Home-Office-Tag (#277). Beim Lesen fehlend = `false`, nur bei Typ Arbeit relevant. Beim Schreiben bedeutet
+   * `undefined` "unangetastet" (bestehendes Flag bleibt), `false` löscht es explizit.
+   */
+  isHomeOffice?: boolean;
 }
 
 export interface UserSettings {

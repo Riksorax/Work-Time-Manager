@@ -424,5 +424,9 @@
   "reportsEntryIncompleteHint": "No end recorded – this entry is not counted in the reports.",
   "switchWhileRunningTitle": "Time tracking is running",
   "switchWhileRunningText": "Time tracking is still running in profile \"{from}\". It will be stopped and saved before you switch to profile \"{to}\".",
-  "stopAndSwitchButton": "Stop and switch"
+  "stopAndSwitchButton": "Stop and switch",
+  "homeOfficeToggleLabel": "Worked from home",
+  "homeOfficeChipLabel": "Home office",
+  "homeOfficeSemanticSuffix": ", home office day",
+  "homeOfficeToggleDashboardSemantics": "Toggle home office for today"
 }

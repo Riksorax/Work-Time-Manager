@@ -192,6 +192,32 @@ void main() {
       });
     });
 
+    test('homeOfficeDays: nur Typ Arbeit mit Flag, Tag aus entryDay (#277)',
+        () async {
+      WorkEntryEntity e(int d, {bool ho = true, WorkEntryType? type}) =>
+          WorkEntryEntity(
+            id: '2026-08-${d.toString().padLeft(2, '0')}',
+            date: DateTime(2026, 8, d),
+            workStart: DateTime(2026, 8, d, 8),
+            workEnd: DateTime(2026, 8, d, 16),
+            type: type ?? WorkEntryType.work,
+            isHomeOffice: ho,
+          );
+      when(mockWorkRepository.getWorkEntriesForMonth(2026, 8))
+          .thenAnswer((_) async => [
+                e(3),
+                e(4, ho: false),
+                e(5, type: WorkEntryType.vacation),
+              ]);
+      final viewModel = container.read(reportsViewModelProvider.notifier);
+      await Future.delayed(Duration.zero);
+      viewModel.selectDate(DateTime(2026, 8, 15));
+      await Future.delayed(Duration.zero);
+
+      expect(container.read(reportsViewModelProvider).homeOfficeDays,
+          {DateTime(2026, 8, 3)});
+    });
+
     test('should calculate daily report correctly', () async {
       final date = DateTime(2023, 10, 26);
       final entry = WorkEntryEntity(

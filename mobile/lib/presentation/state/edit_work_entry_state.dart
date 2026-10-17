@@ -9,6 +9,7 @@ class EditWorkEntryState extends Equatable {
   final DateTime? newEndTime;
   final List<BreakEntity> breaks;
   final WorkEntryType type;
+  final bool isHomeOffice;
 
   const EditWorkEntryState({
     required this.originalEntry,
@@ -16,6 +17,7 @@ class EditWorkEntryState extends Equatable {
     this.newEndTime,
     required this.breaks,
     required this.type,
+    this.isHomeOffice = false,
   });
 
   factory EditWorkEntryState.fromWorkEntry(WorkEntryEntity entry) {
@@ -25,6 +27,7 @@ class EditWorkEntryState extends Equatable {
       newEndTime: entry.workEnd,
       breaks: entry.breaks,
       type: entry.type,
+      isHomeOffice: entry.isHomeOffice,
     );
   }
 
@@ -33,6 +36,7 @@ class EditWorkEntryState extends Equatable {
     DateTime? newEndTime,
     List<BreakEntity>? breaks,
     WorkEntryType? type,
+    bool? isHomeOffice,
   }) {
     return EditWorkEntryState(
       originalEntry: originalEntry,
@@ -40,10 +44,11 @@ class EditWorkEntryState extends Equatable {
       newEndTime: newEndTime ?? this.newEndTime,
       breaks: breaks ?? this.breaks,
       type: type ?? this.type,
+      isHomeOffice: isHomeOffice ?? this.isHomeOffice,
     );
   }
 
   @override
   List<Object?> get props =>
-      [originalEntry, newStartTime, newEndTime, breaks, type];
+      [originalEntry, newStartTime, newEndTime, breaks, type, isHomeOffice];
 }

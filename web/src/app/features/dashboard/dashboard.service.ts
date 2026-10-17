@@ -680,6 +680,27 @@ export class DashboardService {
     if (this._isCurrent(ctx)) this._startTimerIfNeeded();
   }
 
+  // ─── Home-Office-Flag (#277) ───────────────────────────────────────────────
+  /**
+   * Schaltet das Home-Office-Flag des angezeigten Eintrags. Ohne `workStart` gibt es noch keinen Eintrag: dann nur
+   * Zustand, das Flag wird mit dem nächsten Speichern (Start) mitgeschrieben; so entsteht kein Tag ohne Zeiten.
+   */
+  setHomeOffice(value: boolean): Promise<void> {
+    return this._runAction(() => this._setHomeOfficeBody(value), undefined);
+  }
+
+  private async _setHomeOfficeBody(value: boolean): Promise<void> {
+    if (!(await this._ensureCurrentDay())) return;
+    const e = this._s().workEntry;
+    const ctx = this._ctx();
+    const updated: WorkEntry = { ...e, isHomeOffice: value };
+    if (!e.workStart) {
+      this._s.update(s => ({ ...s, workEntry: updated }));
+      return;
+    }
+    await this._recalculateState(updated, true, ctx);
+  }
+
   // ─── Flow 9: Pause bearbeiten ─────────────────────────────────────────────
   updateBreak(updated: Break): Promise<void> {
     return this._runAction(() => this._updateBreakBody(updated), undefined);
