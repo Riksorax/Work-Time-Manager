@@ -1,3 +1,5 @@
+import 'dart:async' show unawaited;
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
@@ -16,9 +18,12 @@ import 'dart:io' show Platform;
 
 import 'package:flutter_localizations/flutter_localizations.dart';
 
+import 'domain/utils/timer_action.dart';
 import 'core/providers/app_lock_provider.dart';
 import 'core/providers/providers.dart';
 import 'core/services/notification_service.dart';
+import 'core/services/shortcut_service.dart';
+import 'core/services/timer_action_inbox.dart';
 import 'core/theme/app_theme.dart';
 import 'core/utils/app_navigator.dart';
 import 'core/utils/revenuecat_state.dart';
@@ -26,8 +31,18 @@ import 'firebase_options.dart';
 import 'l10n/app_localizations.dart';
 import 'presentation/view_models/settings_view_model.dart';
 import 'presentation/view_models/theme_view_model.dart';
+import 'presentation/view_models/timer_action_view_model.dart';
 import 'presentation/widgets/app_lock_layer.dart';
 import 'presentation/widgets/common/edge_to_edge.dart';
+
+/// Wie der Tap auf eine Erinnerung: zum Dashboard (HomeScreen, Index 0).
+/// Beim Kaltstart gibt es den Navigator noch nicht, dann ist das Dashboard
+/// ohnehin die Startseite.
+void _openDashboard() {
+  navigatorKey.currentState?.pushReplacement(
+    MaterialPageRoute(builder: (context) => const HomeScreen(initialIndex: 0)),
+  );
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -105,19 +120,37 @@ Future<void> main() async {
         kWebRecaptchaSiteKey.isEmpty ? null : kWebRecaptchaSiteKey,
   );
 
+  // Timer-Aktionen von außen (Notification-Buttons, App-Shortcuts, #274):
+  // die Callbacks feuern vor dem Widget-Baum und legen die Aktion in den
+  // Briefkasten; das TimerActionViewModel führt sie nach Auth/Entsperren aus.
+  final inbox = TimerActionInbox.instance;
+  void onTimerAction(TimerAction action) {
+    inbox.push(action);
+    _openDashboard();
+  }
+
   // Initialize notification service with deep-link callback
   final notificationService = NotificationService();
   await notificationService.initialize(
     onNotificationTap: (payload) {
       if (payload == 'open_dashboard') {
-        // Navigate to dashboard (HomeScreen with index 0)
-        navigatorKey.currentState?.pushReplacement(
-          MaterialPageRoute(
-              builder: (context) => const HomeScreen(initialIndex: 0)),
-        );
+        _openDashboard();
       }
     },
+    onTimerAction: onTimerAction,
   );
+
+  // Kaltstart über einen Notification-Button: das Plugin ruft den Callback dann
+  // nicht auf, die Aktion steckt in den Start-Details.
+  final launchAction = await notificationService.launchTimerAction();
+  if (launchAction != null) inbox.push(launchAction);
+
+  // App-Icon-Shortcuts (nur Android; Kaltstart-Shortcut kommt direkt nach
+  // `initialize` an den Handler).
+  final shortcutService = ShortcutService();
+  await shortcutService.initialize(onTimerAction);
+  await shortcutService.setShortcuts(
+      lookupAppLocalizations(Locale(prefs.getString('locale') ?? 'de')));
 
   // Request notification permissions
   await notificationService.requestPermissions();
@@ -156,6 +189,7 @@ Future<void> main() async {
     ProviderScope(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
+        shortcutServiceProvider.overrideWithValue(shortcutService),
       ],
       child: const MyApp(),
     ),
@@ -206,6 +240,19 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     final localeCode =
         ref.watch(settingsViewModelProvider).value?.settings.locale ?? 'de';
     final isLocked = !kIsWeb && ref.watch(isAppLockedProvider);
+    // Timer-Aktionen von außen (#274): hält das ViewModel am Leben, das sie
+    // nach Auth und Entsperren ausführt.
+    ref.watch(timerActionViewModelProvider);
+    // Shortcut-Labels folgen der App-Sprache (nie `watch`: kein Neuaufbau).
+    ref.listen<String>(
+      settingsViewModelProvider.select((s) => s.value?.settings.locale ?? 'de'),
+      (previous, next) {
+        if (previous == next) return;
+        unawaited(ref
+            .read(shortcutServiceProvider)
+            .setShortcuts(lookupAppLocalizations(Locale(next))));
+      },
+    );
 
     return MaterialApp(
       navigatorKey: navigatorKey,

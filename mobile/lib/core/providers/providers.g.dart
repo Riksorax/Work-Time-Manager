@@ -438,6 +438,104 @@ final class NotificationServiceProvider extends $FunctionalProvider<
 String _$notificationServiceHash() =>
     r'cda5ea9d196dce85bee56839a4a0f035021752e3';
 
+/// Briefkasten für Timer-Aktionen von außen (Notification-Button, Shortcut,
+/// #274). Prozessweites Singleton, weil die Plugin-Callbacks vor dem
+/// Widget-Baum feuern; im Test überschreibbar.
+
+@ProviderFor(timerActionInbox)
+const timerActionInboxProvider = TimerActionInboxProvider._();
+
+/// Briefkasten für Timer-Aktionen von außen (Notification-Button, Shortcut,
+/// #274). Prozessweites Singleton, weil die Plugin-Callbacks vor dem
+/// Widget-Baum feuern; im Test überschreibbar.
+
+final class TimerActionInboxProvider extends $FunctionalProvider<
+    TimerActionInbox,
+    TimerActionInbox,
+    TimerActionInbox> with $Provider<TimerActionInbox> {
+  /// Briefkasten für Timer-Aktionen von außen (Notification-Button, Shortcut,
+  /// #274). Prozessweites Singleton, weil die Plugin-Callbacks vor dem
+  /// Widget-Baum feuern; im Test überschreibbar.
+  const TimerActionInboxProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'timerActionInboxProvider',
+          isAutoDispose: false,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$timerActionInboxHash();
+
+  @$internal
+  @override
+  $ProviderElement<TimerActionInbox> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  TimerActionInbox create(Ref ref) {
+    return timerActionInbox(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(TimerActionInbox value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<TimerActionInbox>(value),
+    );
+  }
+}
+
+String _$timerActionInboxHash() => r'362a5e83cc486bf5ccffd0d6c82c76494285bfc4';
+
+/// App-Icon-Shortcuts „Einstempeln“/„Ausstempeln“ (#274, nur Android).
+
+@ProviderFor(shortcutService)
+const shortcutServiceProvider = ShortcutServiceProvider._();
+
+/// App-Icon-Shortcuts „Einstempeln“/„Ausstempeln“ (#274, nur Android).
+
+final class ShortcutServiceProvider extends $FunctionalProvider<ShortcutService,
+    ShortcutService, ShortcutService> with $Provider<ShortcutService> {
+  /// App-Icon-Shortcuts „Einstempeln“/„Ausstempeln“ (#274, nur Android).
+  const ShortcutServiceProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'shortcutServiceProvider',
+          isAutoDispose: false,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$shortcutServiceHash();
+
+  @$internal
+  @override
+  $ProviderElement<ShortcutService> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  ShortcutService create(Ref ref) {
+    return shortcutService(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(ShortcutService value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<ShortcutService>(value),
+    );
+  }
+}
+
+String _$shortcutServiceHash() => r'6d96e1bd51bc4ec3b55e6a463315b28199275232';
+
 @ProviderFor(authRepository)
 const authRepositoryProvider = AuthRepositoryProvider._();
 
