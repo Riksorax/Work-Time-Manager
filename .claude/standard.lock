@@ -1,5 +1,5 @@
 # Agent-Standard: installierte Stände (sha256 modul pfad). Nicht von Hand ändern.
-# Quelle: Vault-Ordner _Claude/, Stand 3182522
+# Quelle: Vault-Ordner _Claude/, Stand 36e38c1
 21030bcf723ace39c2107ce8bebe50af7e6a97d8b0b75582fbb1737cf828c78e core agents/analyst.md
 fe478aad17aaa3d89fec2fd43031958fe9e297a898c7fc5d36829f22f3f8ff1f core agents/cross-platform-coordinator.md
 0a136dbd79943cbc23785581d42a069c87072c3a9fb5de777ff0816c2ab619c5 core agents/developer.md

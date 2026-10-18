@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_work_time/core/providers/app_lock_provider.dart';
 import 'package:flutter_work_time/core/providers/providers.dart';
 import 'package:flutter_work_time/core/services/app_lock_service.dart';
+import 'package:flutter_work_time/core/services/app_lock_store.dart';
 import 'package:flutter_work_time/domain/entities/user_entity.dart';
 import 'package:flutter_work_time/l10n/app_localizations.dart';
 import 'package:flutter_work_time/presentation/view_models/auth_view_model.dart';
@@ -18,9 +19,12 @@ import 'package:flutter_work_time/domain/usecases/reauthenticate.dart';
 import 'package:mockito/mockito.dart';
 
 import '../../helpers/app_lock_fakes.dart';
+import '../../support/fake_app_lock_backend.dart';
 
 void main() {
   late SharedPreferences prefs;
+  late FakeAppLockBackend backend;
+  late AppLockStore store;
   late AppLockService service;
   late MockAuthRepository repo;
   bool? result;
@@ -28,7 +32,9 @@ void main() {
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     prefs = await SharedPreferences.getInstance();
-    service = AppLockService(prefs: prefs, localAuth: LocalAuthentication());
+    backend = FakeAppLockBackend();
+    store = AppLockStore(backend);
+    service = AppLockService(store: store, localAuth: LocalAuthentication());
     repo = MockAuthRepository();
     result = null;
   });
@@ -185,7 +191,7 @@ void main() {
     const failedKey = 'app_lock_failed_attempts';
 
     AppLockService build() => AppLockService(
-          prefs: prefs,
+          store: store,
           localAuth: LocalAuthentication(),
           now: clock.call,
           monotonic: mono.call,
@@ -272,7 +278,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
       expect(result, isTrue);
-      expect(prefs.getInt(failedKey), 3);
+      expect(store.getInt(failedKey), 3);
     });
 
     testWidgets('richtiger Code nach Ablauf liefert true und setzt zurück',
@@ -287,15 +293,14 @@ void main() {
       await submit(tester, 'ABCDEFGHJKLMNPQR');
       await tester.pumpAndSettle();
       expect(result, isTrue);
-      expect(prefs.getInt(failedKey), isNull);
+      expect(store.getInt(failedKey), isNull);
     });
 
     testWidgets('Doppeltipp zählt nur einen Versuch', (tester) async {
-      final rec = RecordingSharedPreferences(prefs);
       final gate = Completer<void>();
-      rec.setIntDelay = gate.future;
+      backend.holdWrites = gate;
       service = AppLockService(
-          prefs: rec,
+          store: store,
           localAuth: LocalAuthentication(),
           now: clock.call,
           monotonic: mono.call);
@@ -308,7 +313,7 @@ void main() {
       gate.complete();
       await tester.pump();
       await tester.pump();
-      expect(prefs.getInt(failedKey), 1);
+      expect(store.getInt(failedKey), 1);
     });
   });
 }

@@ -6,6 +6,7 @@ import 'package:flutter_work_time/core/utils/logger.dart';
 import 'package:flutter_work_time/core/utils/time_format.dart';
 import 'package:intl/intl.dart';
 import '../../core/providers/clock_provider.dart';
+import '../../core/providers/providers.dart' show workRepositoryProvider;
 import '../../core/providers/subscription_provider.dart';
 import '../../core/providers/today_provider.dart';
 import '../../core/services/pdf_report_service.dart';
@@ -14,6 +15,7 @@ import '../../domain/entities/work_entry_extensions.dart';
 import '../../domain/utils/date_utils.dart';
 import '../../domain/utils/entry_day.dart';
 import '../../domain/utils/german_holidays.dart';
+import '../../domain/utils/home_office_stats.dart';
 import '../../domain/utils/iso_week.dart';
 import '../../domain/utils/open_entry_report_utils.dart';
 import '../../domain/utils/weekday_labels.dart';
@@ -33,6 +35,7 @@ import '../view_models/settings_view_model.dart';
 import '../view_models/yearly_report_view_model.dart';
 import '../view_models/auth_view_model.dart';
 import '../widgets/common/loading_indicator.dart';
+import '../widgets/common/sheet_insets.dart';
 import '../widgets/edit_work_entry_modal.dart';
 import '../widgets/quick_entry_dialog.dart';
 import '../widgets/batch_quick_entry_dialog.dart';
@@ -279,6 +282,12 @@ class DailyReportView extends ConsumerWidget {
                     DateTime(currentMonth.year, currentMonth.month + 1, 1));
               },
               daysWithEntries: daysWithEntriesInMonth,
+              homeOfficeDays: reportsState.homeOfficeDays
+                  .where((date) =>
+                      date.year == selectedMonth.year &&
+                      date.month == selectedMonth.month)
+                  .map((date) => date.day)
+                  .toSet(),
             ),
           ],
         );
@@ -487,6 +496,19 @@ class DailyReportView extends ConsumerWidget {
                             )
                           ],
                         ),
+                        if (!isSpecialType && displayEntry.isHomeOffice)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Chip(
+                                avatar:
+                                    const Icon(Icons.home_outlined, size: 18),
+                                label: Text(l10n.homeOfficeChipLabel),
+                                visualDensity: VisualDensity.compact,
+                              ),
+                            ),
+                          ),
                         if (!isSpecialType ||
                             displayEntry.workStart != null ||
                             displayEntry.workEnd != null) ...[
@@ -1043,6 +1065,98 @@ Future<void> _exportYearlyReportPdf({
   }
 }
 
+/// Exportiert die Home-Office-Auswertung eines Monats als PDF (siehe #282).
+/// Liest den Monat über das Repository des aktiven Profils; die Zählregel
+/// liegt in `calculateHomeOfficeStats`.
+Future<void> _exportHomeOfficeMonthPdf({
+  required BuildContext context,
+  required WidgetRef ref,
+  required DateTime month,
+}) async {
+  final messenger = ScaffoldMessenger.of(context);
+  final l10n = AppLocalizations.of(context);
+  final locale = Localizations.localeOf(context).toString();
+  final repository = ref.read(workRepositoryProvider);
+  try {
+    final entries =
+        await repository.getWorkEntriesForMonth(month.year, month.month);
+    final stats = calculateHomeOfficeStats(entries);
+    await _pdfReportService.exportHomeOfficeReport(
+      l10n: l10n,
+      locale: locale,
+      periodLabel: DateFormat.yMMMM(locale).format(month),
+      fileSuffix: DateFormat('yyyy-MM').format(month),
+      homeOfficeDays: stats.homeOfficeDays,
+      officeDays: stats.officeDays,
+      totalWorkDays: stats.totalDays,
+      ratio: stats.ratio,
+      homeOfficeDates: stats.homeOfficeDates,
+    );
+  } catch (e) {
+    logger.e('[PDF-Export] Home-Office-Auswertung fehlgeschlagen: $e');
+    if (context.mounted) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).pdfExportFailed('$e')),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+}
+
+/// Exportiert die Home-Office-Auswertung eines Jahres als PDF (siehe #282).
+/// Lädt die 12 Monate parallel.
+Future<void> _exportHomeOfficeYearPdf({
+  required BuildContext context,
+  required WidgetRef ref,
+  required int year,
+}) async {
+  final messenger = ScaffoldMessenger.of(context);
+  final l10n = AppLocalizations.of(context);
+  final locale = Localizations.localeOf(context).toString();
+  final repository = ref.read(workRepositoryProvider);
+  try {
+    final entriesPerMonth = await Future.wait([
+      for (var m = 1; m <= 12; m++) repository.getWorkEntriesForMonth(year, m),
+    ]);
+    final total = calculateHomeOfficeStats([
+      for (final entries in entriesPerMonth) ...entries,
+    ]);
+    final perMonth = <(String, int, int, double?)>[];
+    for (var m = 1; m <= 12; m++) {
+      final stats = calculateHomeOfficeStats(entriesPerMonth[m - 1]);
+      perMonth.add((
+        DateFormat.MMMM(locale).format(DateTime(year, m)),
+        stats.homeOfficeDays,
+        stats.officeDays,
+        stats.ratio,
+      ));
+    }
+    await _pdfReportService.exportHomeOfficeReport(
+      l10n: l10n,
+      locale: locale,
+      periodLabel: '$year',
+      fileSuffix: '$year',
+      homeOfficeDays: total.homeOfficeDays,
+      officeDays: total.officeDays,
+      totalWorkDays: total.totalDays,
+      ratio: total.ratio,
+      perMonth: perMonth,
+    );
+  } catch (e) {
+    logger.e('[PDF-Export] Home-Office-Auswertung fehlgeschlagen: $e');
+    if (context.mounted) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).pdfExportFailed('$e')),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+}
+
 class MonthlyReportView extends ConsumerWidget {
   const MonthlyReportView({super.key});
 
@@ -1163,15 +1277,29 @@ class MonthlyReportView extends ConsumerWidget {
 
         monthChildren.add(Align(
           alignment: Alignment.centerRight,
-          child: TextButton.icon(
-            onPressed: () => _exportMonthlyReportPdf(
-              context: context,
-              month: DateTime(selectedMonth.year, selectedMonth.month),
-              monthlyReport: monthlyReport,
-              monthlyOvertime: monthlyOvertimeLocal,
-            ),
-            icon: const Icon(Icons.picture_as_pdf_outlined),
-            label: Text(l10n.exportAsPdfButton),
+          child: Wrap(
+            alignment: WrapAlignment.end,
+            children: [
+              TextButton.icon(
+                onPressed: () => _exportMonthlyReportPdf(
+                  context: context,
+                  month: DateTime(selectedMonth.year, selectedMonth.month),
+                  monthlyReport: monthlyReport,
+                  monthlyOvertime: monthlyOvertimeLocal,
+                ),
+                icon: const Icon(Icons.picture_as_pdf_outlined),
+                label: Text(l10n.exportAsPdfButton),
+              ),
+              TextButton.icon(
+                onPressed: () => _exportHomeOfficeMonthPdf(
+                  context: context,
+                  ref: ref,
+                  month: DateTime(selectedMonth.year, selectedMonth.month),
+                ),
+                icon: const Icon(Icons.home_work_outlined),
+                label: Text(l10n.exportHomeOfficePdfButton),
+              ),
+            ],
           ),
         ));
 
@@ -1463,13 +1591,27 @@ class _YearlyReportViewState extends ConsumerState<YearlyReportView> {
           ),
           Align(
             alignment: Alignment.centerRight,
-            child: TextButton.icon(
-              onPressed: () => _exportYearlyReportPdf(
-                context: context,
-                yearlyReport: yearlyState,
-              ),
-              icon: const Icon(Icons.picture_as_pdf_outlined),
-              label: Text(l10n.exportAsPdfButton),
+            child: Wrap(
+              alignment: WrapAlignment.end,
+              children: [
+                TextButton.icon(
+                  onPressed: () => _exportYearlyReportPdf(
+                    context: context,
+                    yearlyReport: yearlyState,
+                  ),
+                  icon: const Icon(Icons.picture_as_pdf_outlined),
+                  label: Text(l10n.exportAsPdfButton),
+                ),
+                TextButton.icon(
+                  onPressed: () => _exportHomeOfficeYearPdf(
+                    context: context,
+                    ref: ref,
+                    year: yearlyState.year,
+                  ),
+                  icon: const Icon(Icons.home_work_outlined),
+                  label: Text(l10n.exportHomeOfficePdfButton),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 8),
@@ -1817,12 +1959,16 @@ class _Calendar extends ConsumerStatefulWidget {
   final VoidCallback? onNextMonthTapped;
   final Set<int>? daysWithEntries;
 
+  /// Tage des angezeigten Monats mit Home-Office-Markierung (#277).
+  final Set<int> homeOfficeDays;
+
   const _Calendar({
     required this.selectedDate,
     required this.onDateSelected,
     this.onPreviousMonthTapped,
     this.onNextMonthTapped,
     this.daysWithEntries,
+    this.homeOfficeDays = const {},
   });
 
   @override
@@ -2161,8 +2307,31 @@ class _CalendarState extends ConsumerState<_Calendar> {
                       );
                     }
 
+                    final isHomeOffice = widget.homeOfficeDays.contains(day);
+                    if (isHomeOffice) {
+                      // Haus-Icon statt nur Farbe (#277); Semantics-Suffix unten.
+                      dayWidget = Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          dayWidget,
+                          Positioned(
+                            top: 2,
+                            right: 2,
+                            child: Icon(
+                              Icons.home,
+                              key: const ValueKey('homeOfficeDayIcon'),
+                              size: 12,
+                              color: isSelected || isMultiSelected
+                                  ? Colors.white70
+                                  : Theme.of(context).colorScheme.secondary,
+                            ),
+                          ),
+                        ],
+                      );
+                    }
+
                     final semanticLabel =
-                        '${DateFormat('EEEE, d. MMMM yyyy', locale).format(date)}${holidayName != null ? l10n.holidaySemanticSuffix(holidayName) : ''}';
+                        '${DateFormat('EEEE, d. MMMM yyyy', locale).format(date)}${holidayName != null ? l10n.holidaySemanticSuffix(holidayName) : ''}${isHomeOffice ? l10n.homeOfficeSemanticSuffix : ''}';
                     return Semantics(
                       label: semanticLabel,
                       button: true,
@@ -2308,7 +2477,11 @@ class _DayEntriesBottomSheetState extends ConsumerState<DayEntriesBottomSheet> {
         .where((entry) => DateUtils.isSameDay(entryDay(entry), widget.date))
         .toList();
 
+    // Nur oben absichern: unten scrollt die Liste bis zur Kante und hält ihren
+    // letzten Eintrag selbst von der Navigationsleiste frei (Edge-to-Edge, #468).
+    final bottomInset = bottomSheetBottomInset(context);
     return SafeArea(
+      bottom: false,
       child: DraggableScrollableSheet(
         expand: false,
         initialChildSize: 0.7,
@@ -2403,6 +2576,7 @@ class _DayEntriesBottomSheetState extends ConsumerState<DayEntriesBottomSheet> {
                   Expanded(
                     child: ListView.builder(
                       controller: controller,
+                      padding: EdgeInsets.only(bottom: bottomInset),
                       itemCount: entriesForSheetDate.length,
                       itemBuilder: (ctx, index) {
                         final entry = entriesForSheetDate[index];

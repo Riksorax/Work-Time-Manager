@@ -24,8 +24,8 @@
 }
 
 .sidenav-logo {
-  color: var(--mat-sys-primary);
-  font-size: 28px;
+  display: block;
+  flex-shrink: 0;
   width: 28px;
   height: 28px;
 }

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- updatePeriodMillis=0: das Widget wird nur von der App aktualisiert (#276). -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_description"
+    android:initialLayout="@layout/status_widget"
+    android:minWidth="180dp"
+    android:minHeight="70dp"
+    android:minResizeWidth="110dp"
+    android:minResizeHeight="40dp"
+    android:previewLayout="@layout/status_widget"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellHeight="1"
+    android:targetCellWidth="3"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen" />

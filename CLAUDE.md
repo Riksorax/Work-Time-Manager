@@ -9,9 +9,9 @@ Claude in dem Ordner arbeitet).
 
 Monorepo einer deutschen Arbeitszeit-App:
 
-- `mobile/` — Flutter-App (primär, produktiv). Clean Architecture, Riverpod, Hybrid-Repositories. → `mobile/CLAUDE.md`
-- `web/` — Angular-Port der Flutter-App, gleiches Firebase-Backend. → `web/CLAUDE.md`
-- `server/` — .NET-10-Backend-API, Firebase-Auth + Firestore, kanonische Rechenlogik. → `server/CLAUDE.md`
+- `mobile/` — Flutter-App (primär, produktiv) → `mobile/CLAUDE.md`
+- `web/` — Angular-Port der Flutter-App, Cloud Functions unter `web/functions/` → `web/CLAUDE.md`
+- `server/` — .NET-10-Backend-API, kanonische Rechenlogik → `server/CLAUDE.md`
 
 **Arbeitsablauf** (Branches, Commits, PRs, Release, Deployment inkl. Secrets, Rollback): `CONTRIBUTING.md`.
 Integrationsbranch ist `develop`; PRs gehen gegen `develop`, nur Release-Branches gegen `main`.
@@ -20,29 +20,20 @@ Integrationsbranch ist `develop`; PRs gehen gegen `develop`, nur Release-Branche
 
 | Plattform | Aus | Checks (wie CI) |
 |---|---|---|
-| Mobile | `mobile/` | `dart format --set-exit-if-changed lib test && flutter analyze --no-fatal-infos && dart run custom_lint && flutter test` |
-| Web | `web/` | `npm test -- --watch=false && npm run build -- --configuration production` (UI-/E2E-Tests zusätzlich: `npm run e2e`; CI fährt außerdem die Zonen-Regressionstests `*.tz.spec.ts` unter `TZ=America/Los_Angeles` und `Pacific/Auckland`, Details `web/CLAUDE.md`) |
+| Mobile | `mobile/` | `dart format --output=none --set-exit-if-changed lib test && flutter analyze --no-fatal-infos && dart run custom_lint && flutter test` (CI fährt `flutter test` zusätzlich unter `TZ=Europe/Berlin` und die Zonen-Regressionstests `*_tz_test.dart` unter `TZ=America/Los_Angeles` und `Pacific/Auckland`) |
+| Web | `web/` | `npm test -- --watch=false && npm run build -- --configuration production` (Installation wie in der CI: `npm ci --legacy-peer-deps`; UI-/E2E-Tests zusätzlich: `npm run e2e`; CI fährt `npm test` zusätzlich unter `TZ=Europe/Berlin` und die Zonen-Regressionstests `*.tz.spec.ts` unter `TZ=America/Los_Angeles` und `Pacific/Auckland`, Details `web/CLAUDE.md`) |
 | Backend | `server/` | `dotnet build WorkTimeManager.slnx -c Release && dotnet test WorkTimeManager.slnx -c Release` |
-| Cloud Functions | `web/functions/` | `npm run build && npm test` (Installation: `npm install --legacy-peer-deps` — reines npm ohne den Flag lässt Arborist bei vitest 4 abstürzen) |
+| Cloud Functions | `web/functions/` | `npm run build && npm test` (Installation wie in der CI: `npm ci --legacy-peer-deps` — reines npm ohne den Flag lässt Arborist bei vitest 4 abstürzen) |
 
 ## CI/CD
 
-| Workflow | Trigger | Jobs |
-|---|---|---|
-| `ci.yml` | PRs und Push auf alle Branches außer `main` | Flutter Analyze & Test, Angular Test & Build, Web UI-Tests (Playwright, je Browser), Cloud Functions Build & Test, .NET Build & Test |
-| `flutter-production.yml` | Push auf `main` oder `workflow_dispatch` | Android AAB → Google Play (Closed Testing Track `<Version> <Charakter>`, ab 1.6 `<Major>.<Minor> <Charakter>`) |
-| `deploy-angular.yml` | Push auf `main` oder `workflow_dispatch` | Angular Build → Docker Hub → Hetzner |
-| `deploy-api.yml` | Push auf `main` oder `workflow_dispatch` | .NET Build & Test → Docker Hub → Hetzner |
-| `github-release.yml` | Push auf `main` oder `workflow_dispatch` | Tag `<Version>` und GitHub Release (Text aus `mobile/whatsnew/de-DE.txt`) |
-| `version-bump.yml` | Push auf `release/v*` | Version in `mobile/pubspec.yaml`, Charakter in `RELEASE_NAMES.md` |
-
-Details der Deploy-Workflows, Uptime-Monitoring und benötigte Secrets: `CONTRIBUTING.md`, „Deployment“.
+Workflows, Trigger und Secrets: `.github/workflows/` und `CONTRIBUTING.md`, „Deployment“. Ein Push auf `main` deployt.
 
 ## Firestore-Datenpfade (Flutter-kanonisch, gilt für alle Plattformen)
 
 | Daten | Pfad | Felder |
 |---|---|---|
-| Arbeitseintrag | `users/{uid}/work_entries/{yyyy-MM}` | `days: { "5": { date, workStart, workEnd, breaks, ... } }` |
+| Arbeitseintrag | `users/{uid}/work_entries/{yyyy-MM}` | `days: { "5": { date, workStart, workEnd, breaks, isHomeOffice, ... } }` |
 | Pause (in Eintrag) | (eingebettet in days-Map) | `{ name, start, end }` — Flutter ignoriert `id`/`isAutomatic` |
 | Gleitzeit | `users/{uid}/overtime/balance` | `minutes` (int), `lastUpdated` (Timestamp) |
 | Einstellungen | `users/{uid}/settings/current` | nur Web — Flutter nutzt SharedPreferences |
@@ -61,59 +52,31 @@ angleichen, nicht umgekehrt.
 
 ## Claude-Code-Workflows
 
-Einstieg für jede Aufgabe: `/issue <nr>` — liest das Issue, bestimmt die Plattformen, legt den
-Branch an und wählt den Workflow. Commands in `.claude/commands/`, Subagents in `.claude/agents/`.
-Drei Phasen-Agents (`analyst`, `developer`, `reviewer`) laufen als Subagents in eigenem Kontext und übergeben ihr Ergebnis über
-`<plattform>/thoughts/<nr>-*.md`; in die Hauptsession kommt nur eine Kurzfassung zurück. Das Stack-Wissen laden sie aus den
-Playbooks `.claude/skills/playbook-<flutter|angular|dotnet>/`, die Besonderheiten dieses Projekts aus
-`.claude/skills/playbook-projekt/` (geht den Stack-Playbooks vor).
-
-| Command | Zweck |
-|---|---|
-| `/issue <nr>` | Issue einordnen, Branch anlegen, Workflow wählen |
-| `/analysieren` → `/planen` → `/umsetzen` → `/validieren` → `/reviewen` `<nr> flutter` | Flutter: Analyse → Plan → Umsetzung → Validierung → Review |
-| `/analysieren` → `/entwerfen` → `/planen` → `/umsetzen` → `/reviewen` `<nr> angular` | Web-Port eines Flutter-Features: Analyse → UI-Design → Plan → Umsetzung → Review |
-| `/umsetzen <nr> dotnet` | Backend-Änderung (Vertrag zuerst, kein eigener Analyse-/Plan-Zyklus) |
-| `/release <Version> <Charakter>` | Release-Branch, Versionshinweise, Release-PR (ab 1.6 ein Charakter pro Minor-Linie) |
-| `/auto-bugfix` | Cron-Routine: offene `bug`-Issues automatisch analysieren, bis zum review-fertigen PR umsetzen — **mergt nicht selbst**, das bleibt ein menschlicher Schritt. Ausnahme: Crash-Issues (Crashlytics/Sentry/Uptime-Kuma) laufen als Hotfix gegen `main` mit Auto-Merge, siehe „Fehler-Monitoring“ |
-
-Betrifft ein Issue mehrere Plattformen, plant der Subagent `cross-platform-coordinator` den
-gemeinsamen Vertrag und die Reihenfolge Backend → Web → Mobile.
+Einstieg für jede Aufgabe: `/issue <nr>` (ordnet ein, legt den Branch an, nennt die passende Befehlskette). Die Phasen-Agents
+(`analyst`, `developer`, `reviewer`) übergeben ihr Ergebnis über `<plattform>/thoughts/<nr>-*.md`; das Stack-Wissen laden sie aus
+`.claude/skills/playbook-<flutter|angular|dotnet>/`, die Besonderheiten dieses Projekts aus `.claude/skills/playbook-projekt/`
+(geht den Stack-Playbooks vor). Issues über mehrere Plattformen plant der Subagent `cross-platform-coordinator`
+(Backend → Web → Mobile). `/auto-bugfix` mergt nie selbst, Ausnahme: Crash-Hotfix, siehe „Fehler-Monitoring“.
 
 ## Agent-Standard (Obsidian-Vault)
 
-Die Agents, Befehle und Stack-Playbooks in `.claude/` stammen aus dem projektübergreifenden Standard im Vault
-`Riksorax/obsidian-vault` (Ordner `_Claude/`, Doku `03_Resources/Agent-Standard.md`). Dieses Repo ist die
-Herkunft des Standards. `.claude/standard.lock` hält fest, welcher Stand je Datei installiert wurde.
+`.claude/` stammt aus dem Agent-Standard im Vault `Riksorax/obsidian-vault` (Ordner `_Claude/`); dieses Repo ist die
+Herkunft des Standards. Änderungen mit `sync.sh promote` bzw. `update` abgleichen; `.claude/standard.lock` und
+`standard.env` gehören ins Repo.
 
-**Projektspezifisches steht nicht in den Standard-Dateien**, sondern im Projekt-Playbook
-`.claude/skills/playbook-projekt/` (Hybrid-Repositories, Arbeitszeit-Profile, Premium, Rechenlogik, Konventionen,
-Design-System) und in dieser Datei. `release.md` und `hooks/session-start.sh` sind projektspezifisch und nicht Teil des
-Standards; die `session-start.d`-Skripte des Standards sind bewusst nicht installiert (dieses Repo nutzt den eigenen Hook).
-
-Taugt eine Änderung an `.claude/` auch für andere Projekte, sie im Vault über `sync.sh promote` bzw. `add`
-zurückholen und dabei Projektspezifisches entfernen. Neue Standard-Versionen: `sync.sh update`, danach `git diff` und CI prüfen.
+**Projektspezifisch, nicht im Standard:** das Projekt-Playbook `.claude/skills/playbook-projekt/` (Hybrid-Repositories,
+Arbeitszeit-Profile, Premium, Rechenlogik, Konventionen, Design-System), `release.md` und `hooks/session-start.sh`. Die
+`session-start.d`-Skripte des Standards sind bewusst nicht installiert (dieses Repo nutzt den eigenen Hook).
 
 ## Fehler-Monitoring (Crashlytics/Sentry/Uptime-Kuma) → Issue → Fix
 
-Crashlytics (Mobile), Sentry (Web über `SENTRY_DSN_WEB`, Backend über `SENTRY_DSN_API` — zwei
-getrennte Sentry-Projekte, gleiche Organisation) und Uptime-Kuma (`CONTRIBUTING.md`, „Deployment“)
-sind für sich reine Beobachtung — sie legen von sich aus **kein** GitHub-Issue an. Zwei Brücken
-schließen die Lücke:
-
-- **Sentry** über seine eigene GitHub-Integration (einmal pro Organisation eingerichtet, gilt für
-  alle Sentry-Projekte, je Projekt eine eigene Alert-Regel mit Label `bug`, Konfiguration in
-  Sentry, kein Code hier).
-- **Crashlytics und Uptime-Kuma** über eigene Firebase Cloud Functions unter `web/functions/`
-  (siehe #322, Details in `CONTRIBUTING.md`, „Crashlytics-/Uptime-Kuma-Brücke“) — legen ebenfalls
-  ein Issue mit Label `bug` an, dedupliziert über einen Marker-Kommentar im Body.
-
-Sobald ein Issue das Label `bug` trägt (egal ob manuell oder durch Sentry angelegt), greift
-`/auto-bugfix`.
+Crashlytics, Sentry und Uptime-Kuma legen über Brücken Issues mit Label `bug` an (Sentry über seine GitHub-Integration,
+Crashlytics und Uptime-Kuma über Cloud Functions unter `web/functions/`, siehe `CONTRIBUTING.md`, „Crashlytics-/Uptime-Kuma-Brücke“).
+Sobald ein Issue das Label `bug` trägt (egal ob manuell oder automatisch angelegt), greift `/auto-bugfix`.
 
 **Hotfix-Handling für Crash-Issues:** Stammt ein `bug`-Issue aus einer dieser drei Quellen —
 erkennbar am Marker-Kommentar `<!-- auto-monitoring:crashlytics:... -->` bzw.
-`<!-- auto-monitoring:uptime-kuma:... -->` im Body (Cloud Functions, siehe unten) oder, bei Sentry,
+`<!-- auto-monitoring:uptime-kuma:... -->` im Body (Cloud Functions) oder, bei Sentry,
 an einem `sentry.io/organizations/...`-Link im Body (Sentrys eigene GitHub-Integration, kein
 eigener Marker) —, behandelt `/auto-bugfix` es als Hotfix und nicht wie ein normales Issue
 (Branch/PR gegen `develop`):
@@ -133,19 +96,12 @@ eigener Marker) —, behandelt `/auto-bugfix` es als Hotfix und nicht wie ein no
 Normale, manuell gemeldete `bug`-Issues (kein Marker-Kommentar) laufen weiter wie bisher gegen
 `develop`.
 
-**Cloud-Sessions:** `.claude/hooks/session-start.sh` installiert Flutter (Version aus `ci.yml`),
-das .NET-10-SDK und die npm-Pakete. `gh` gibt es dort nicht, GitHub läuft über die MCP-Tools.
+**Cloud-Sessions:** `.claude/hooks/session-start.sh` installiert die Toolchains. `gh` gibt es dort nicht, GitHub läuft über die MCP-Tools.
 
 ## Key Rules (Gesamt)
 
-- `*.g.dart` / `*.mocks.dart` nicht editieren — generiert.
-- `dart run build_runner build` nach `@Riverpod`-Änderungen.
 - **Texte / i18n (#221):** Deutsch ist die Referenzsprache, Englisch wird mitgepflegt. Flutter: ARB (`mobile/lib/l10n/app_de.arb` + `app_en.arb`), nie hart kodiert. Web: ngx-translate (`web/public/i18n/de.json` + `en.json`) für neue Texte; ältere Web-Texte sind teils noch hart kodiert. Rechtstexte (Impressum/Datenschutz/AGB) bleiben nur Deutsch.
 - Premium-Features hinter `isPremiumProvider` (Flutter) bzw. `ProfileService.isPremium` (Web).
 - Hybrid-Layer nie umgehen — immer über `WorkEntryService` / `OvertimeService`.
 - **Firestore Security Rules:** Neue Firestore-Pfade brauchen eine Regel in `web/firestore.rules`. Die Rules werden **nicht** automatisch deployt (`CONTRIBUTING.md`, „Deployment“).
 - **Tests** dürfen nicht von Datum, Wochentag oder Zeitzone abhängen.
-- **Branch-Hygiene**: Das Repo löscht Remote-Branches nach dem Merge automatisch (GitHub-Einstellung
-  „Automatically delete head branches"). Nur falls das für einen Branch ausbleibt (z. B. bei
-  manuell zusammengeführten PRs), manuell nachziehen: GitHub-Button "Delete branch" bzw.
-  `git push origin --delete <branch>` — keine bereits gemergten `claude/*`-/`feature/*`-/`release/*`-Branches stehen lassen.

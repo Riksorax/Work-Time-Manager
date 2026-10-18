@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_work_time/core/providers/app_lock_provider.dart';
 import 'package:flutter_work_time/core/providers/providers.dart';
 import 'package:flutter_work_time/core/services/app_lock_service.dart';
+import 'package:flutter_work_time/core/services/app_lock_store.dart';
 import 'package:flutter_work_time/core/utils/app_navigator.dart';
 import 'package:flutter_work_time/domain/entities/user_entity.dart';
 import 'package:flutter_work_time/domain/usecases/reauthenticate.dart';
@@ -17,6 +18,7 @@ import 'package:flutter_work_time/presentation/widgets/app_lock_screen.dart';
 import 'package:flutter_work_time/presentation/widgets/forgot_pin_dialog.dart';
 
 import '../../domain/usecases/auth_usecases_test.mocks.dart';
+import '../../support/fake_app_lock_backend.dart';
 
 class _FakeLocalAuth extends Fake implements LocalAuthentication {
   @override
@@ -36,6 +38,8 @@ class _FakeLocalAuth extends Fake implements LocalAuthentication {
 /// App-Navigator. Dialoge von dort müssen sichtbar und bedienbar sein.
 void main() {
   late SharedPreferences prefs;
+  late FakeAppLockBackend backend;
+  late AppLockStore store;
   late AppLockService service;
   late MockAuthRepository repo;
   late ProviderContainer container;
@@ -45,7 +49,9 @@ void main() {
     when(repo.reauthenticate()).thenAnswer((_) async => true);
     SharedPreferences.setMockInitialValues({});
     prefs = await SharedPreferences.getInstance();
-    service = AppLockService(prefs: prefs, localAuth: LocalAuthentication());
+    backend = FakeAppLockBackend();
+    store = AppLockStore(backend);
+    service = AppLockService(store: store, localAuth: LocalAuthentication());
     await service.setPin('1234');
     await service.setEnabled(true);
   });
@@ -169,7 +175,7 @@ void main() {
 
   testWidgets('Entsperren per Biometrie entfernt die Sperre ohne Fehler',
       (tester) async {
-    service = AppLockService(prefs: prefs, localAuth: _FakeLocalAuth());
+    service = AppLockService(store: store, localAuth: _FakeLocalAuth());
     await tester.pumpWidget(createSubject());
     await tester.pumpAndSettle();
 

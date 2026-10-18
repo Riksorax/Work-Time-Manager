@@ -1,0 +1,18 @@
+{
+  "name": "worktimemanager-branding",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Branding-Pipeline: SVG-Master nach PNG/ICO/SVG-Assets (Android, Web, Play Store)",
+  "scripts": {
+    "export": "node export.mjs",
+    "check": "node export.mjs --check",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@resvg/resvg-js": "2.6.2"
+  }
+}

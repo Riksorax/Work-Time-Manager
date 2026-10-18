@@ -4,6 +4,7 @@ import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 import '../../../core/utils/logger.dart';
 import '../../../core/utils/revenuecat_state.dart';
 import '../../../l10n/app_localizations.dart';
+import 'sheet_insets.dart';
 
 /// Zeigt die RevenueCat-Paywall in einem Fullscreen-Modal an. Gemeinsam
 /// genutzt von allen Stellen, an denen ein Premium-Feature (Berichte,
@@ -34,27 +35,32 @@ void showPaywall(BuildContext context) {
         color: Theme.of(ctx).scaffoldBackgroundColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      child: PaywallView(
-        onDismiss: () {
-          if (Navigator.of(ctx).canPop()) Navigator.of(ctx).pop();
-        },
-        // Ohne diese Callbacks bleibt "Abo wiederherstellen" stumm.
-        onRestoreCompleted: (customerInfo) {
-          if (!ctx.mounted) return;
-          if (customerInfo.entitlements.active.isNotEmpty) {
-            Navigator.of(ctx).pop();
-            messenger.showSnackBar(
-              SnackBar(content: Text(l10n.paywallRestoreSuccess)),
-            );
-          } else {
-            _showRestoreDialog(ctx, l10n.paywallRestoreNothingFound);
-          }
-        },
-        onRestoreError: (error) {
-          logger.w('Abo wiederherstellen fehlgeschlagen: ${error.message}');
-          if (!ctx.mounted) return;
-          _showRestoreDialog(ctx, l10n.paywallRestoreError);
-        },
+      // `useSafeArea` sichert nur oben ab; unten hält der Abstand die Paywall
+      // frei von der Navigationsleiste (Edge-to-Edge, #468).
+      child: Padding(
+        padding: EdgeInsets.only(bottom: bottomSheetBottomInset(ctx)),
+        child: PaywallView(
+          onDismiss: () {
+            if (Navigator.of(ctx).canPop()) Navigator.of(ctx).pop();
+          },
+          // Ohne diese Callbacks bleibt "Abo wiederherstellen" stumm.
+          onRestoreCompleted: (customerInfo) {
+            if (!ctx.mounted) return;
+            if (customerInfo.entitlements.active.isNotEmpty) {
+              Navigator.of(ctx).pop();
+              messenger.showSnackBar(
+                SnackBar(content: Text(l10n.paywallRestoreSuccess)),
+              );
+            } else {
+              _showRestoreDialog(ctx, l10n.paywallRestoreNothingFound);
+            }
+          },
+          onRestoreError: (error) {
+            logger.w('Abo wiederherstellen fehlgeschlagen: ${error.message}');
+            if (!ctx.mounted) return;
+            _showRestoreDialog(ctx, l10n.paywallRestoreError);
+          },
+        ),
       ),
     ),
   );

@@ -1,0 +1,14 @@
+<!-- Logo B (Issue #437): Uhr + Zahnrad-Badge, Geometrie per Skript berechnet. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="32 32 960 960">
+  <title>Work Time Manager</title>
+  <defs>
+    <linearGradient id="gd" x1="0.15" y1="0.05" x2="0.85" y2="0.95"><stop offset="0" stop-color="#1e88e5"/><stop offset="1" stop-color="#0d47a1"/></linearGradient>
+    <linearGradient id="gb" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#26c6da"/><stop offset="1" stop-color="#00a58e"/></linearGradient>
+    <mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024"><rect width="1024" height="1024" fill="#fff"/><circle cx="690" cy="690" r="240" fill="#000"/></mask>
+  </defs>
+  <circle cx="512" cy="512" r="480" fill="url(#gd)"/>
+  <g mask="url(#cut)"><circle cx="470" cy="470" r="276" fill="none" stroke="#fff" stroke-width="84"/></g>
+  <g><path d="M470 270L470 470L570 470" fill="none" stroke="#fff" stroke-width="76" stroke-linecap="round" stroke-linejoin="round"/><circle cx="470" cy="470" r="52" fill="#fff"/></g>
+  <circle cx="690" cy="690" r="205" fill="url(#gb)"/>
+  <path d="M665.98 581.63L669.68 545.42L710.32 545.42L714.02 581.63A111 111 0 0 1 749.64 596.38L777.86 573.4L806.6 602.14L783.62 630.36A111 111 0 0 1 798.37 665.98L834.58 669.68L834.58 710.32L798.37 714.02A111 111 0 0 1 783.62 749.64L806.6 777.86L777.86 806.6L749.64 783.62A111 111 0 0 1 714.02 798.37L710.32 834.58L669.68 834.58L665.98 798.37A111 111 0 0 1 630.36 783.62L602.14 806.6L573.4 777.86L596.38 749.64A111 111 0 0 1 581.63 714.02L545.42 710.32L545.42 669.68L581.63 665.98A111 111 0 0 1 596.38 630.36L573.4 602.14L602.14 573.4L630.36 596.38A111 111 0 0 1 665.98 581.63ZM644 690a46 46 0 1 0 92 0a46 46 0 1 0 -92 0Z" fill="#fff" fill-rule="evenodd"/>
+</svg>

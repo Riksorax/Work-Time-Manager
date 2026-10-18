@@ -229,6 +229,15 @@
   "pdfWorkTimeColumn": "Work time",
   "pdfCalendarWeekColumn": "Calendar week",
   "pdfMonthColumn": "Month",
+  "exportHomeOfficePdfButton": "Home office report (PDF)",
+  "pdfHomeOfficeReportTitle": "Home office report",
+  "pdfHomeOfficeDaysLabel": "Home office days",
+  "pdfOfficeDaysLabel": "Office days",
+  "pdfHomeOfficeTotalDaysLabel": "Work days with recorded time",
+  "pdfHomeOfficeRatioLabel": "Home office share",
+  "pdfHomeOfficeDayListTitle": "Home office days this month",
+  "pdfHomeOfficeNoDays": "No home office days in this period.",
+  "pdfHomeOfficeCountNote": "Counted are work days with recorded time. Vacation, sick days and holidays are not counted.",
   "loginRequiredMonthly": "Sign-in required for monthly reports",
   "monthlyReportsFeatureTitle": "Monthly reports",
   "monthlyReportsFeatureText": "Detailed monthly analyses with overtime tracking and vacation overview.",
@@ -424,5 +433,11 @@
   "reportsEntryIncompleteHint": "No end recorded – this entry is not counted in the reports.",
   "switchWhileRunningTitle": "Time tracking is running",
   "switchWhileRunningText": "Time tracking is still running in profile \"{from}\". It will be stopped and saved before you switch to profile \"{to}\".",
-  "stopAndSwitchButton": "Stop and switch"
+  "stopAndSwitchButton": "Stop and switch",
+  "timerActionStart": "Clock in",
+  "timerActionStop": "Clock out",
+  "homeOfficeToggleLabel": "Worked from home",
+  "homeOfficeChipLabel": "Home office",
+  "homeOfficeSemanticSuffix": ", home office day",
+  "homeOfficeToggleDashboardSemantics": "Toggle home office for today"
 }

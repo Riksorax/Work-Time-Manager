@@ -1,0 +1,21 @@
+<!-- Logo B (Issue #437): Uhr + Zahnrad-Badge, Geometrie per Skript berechnet. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="500" viewBox="0 0 1024 500">
+  <title>Work Time Manager</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1565c0"/><stop offset="1" stop-color="#0d47a1"/></linearGradient>
+    <linearGradient id="gd" x1="0.15" y1="0.05" x2="0.85" y2="0.95"><stop offset="0" stop-color="#1e88e5"/><stop offset="1" stop-color="#0d47a1"/></linearGradient>
+    <linearGradient id="gb" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#26c6da"/><stop offset="1" stop-color="#00a58e"/></linearGradient>
+    <mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024"><rect width="1024" height="1024" fill="#fff"/><circle cx="698" cy="698" r="214" fill="#000"/></mask>
+  </defs>
+  <rect width="1024" height="500" fill="url(#bg)"/>
+  <g transform="translate(60 135) scale(0.2417) translate(-32 -32)">
+  <circle cx="512" cy="512" r="480" fill="url(#gd)"/>
+  <g mask="url(#cut)"><circle cx="488" cy="488" r="262" fill="none" stroke="#fff" stroke-width="66"/><path d="M488 298L488 488L607.51 557" fill="none" stroke="#fff" stroke-width="58" stroke-linecap="round" stroke-linejoin="round"/><circle cx="488" cy="488" r="46" fill="#fff"/></g>
+  <circle cx="706" cy="706" r="188" fill="url(#gb)"/>
+  <path d="M684.79 610.32L688.46 581.23L723.54 581.23L727.21 610.32A98 98 0 0 1 758.66 623.35L781.83 605.37L806.63 630.17L788.65 653.34A98 98 0 0 1 801.68 684.79L830.77 688.46L830.77 723.54L801.68 727.21A98 98 0 0 1 788.65 758.66L806.63 781.83L781.83 806.63L758.66 788.65A98 98 0 0 1 727.21 801.68L723.54 830.77L688.46 830.77L684.79 801.68A98 98 0 0 1 653.34 788.65L630.17 806.63L605.37 781.83L623.35 758.66A98 98 0 0 1 610.32 727.21L581.23 723.54L581.23 688.46L610.32 684.79A98 98 0 0 1 623.35 653.34L605.37 630.17L630.17 605.37L653.34 623.35A98 98 0 0 1 684.79 610.32ZM666 706a40 40 0 1 0 80 0a40 40 0 1 0 -80 0Z" fill="#fff" fill-rule="evenodd"/>
+  </g>
+  <g fill="#fff" font-family="Open Sans, sans-serif">
+    <text x="330" y="232" font-size="64" font-weight="700">Work Time Manager</text>
+    <text x="330" y="292" font-size="34" font-weight="400" fill-opacity="0.92">Deine Arbeitszeit. Dein Überblick.</text>
+  </g>
+</svg>

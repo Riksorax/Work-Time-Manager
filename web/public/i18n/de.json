@@ -61,6 +61,7 @@
     "openEntrySaveError": "Eintrag konnte nicht beendet werden.",
     "openEntryContinue": "Fortsetzen",
     "openEntryContinueSemantics": "Eintrag vom {{date}} fortsetzen",
+    "homeOfficeToggleAria": "Home-Office für heute umschalten",
     "saveError": "Speichern fehlgeschlagen. Bitte prüfe deine Verbindung und versuche es erneut."
   },
   "holidays": {
@@ -327,6 +328,10 @@
     "calendarMultiSelectOffAria": "Mehrfachauswahl beendet",
     "calendarSelectedCountAria": "Ausgewählte Tage: {{count}}",
     "calendarHasEntryAria": "{{label}}, Eintrag vorhanden",
+    "homeOfficeLabel": "Von zu Hause gearbeitet",
+    "homeOfficeDayAria": "Home-Office-Tag",
+    "calendarHomeOfficeAria": "{{label}}, Home-Office-Tag",
+    "homeOfficeChip": "Home-Office",
     "newProfileTitle": "Neues Profil",
     "profileNameLabel": "Name (z.B. Arbeitgeber)",
     "profileNameAria": "Profilname",

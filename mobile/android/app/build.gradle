@@ -86,6 +86,17 @@ flutter {
     source = '../..'
 }
 
+// R8-Optimierung (#467): Die Consumer-Regel von purchases-store-amazon (transitiv
+// ueber purchases_flutter) enthaelt `-dontoptimize` und `-keep class com.amazon.** {*;}`.
+// `-dontoptimize` schaltet die R8-Optimierung fuer die ganze App ab (Play Vitals: 0 %).
+// Die App vertreibt nur ueber Google Play; das Modul enthaelt nur AmazonConfiguration,
+// die weder App noch purchases_flutter/purchases-hybrid-common nutzen. Die Amazon-Klassen
+// im Kernmodul `purchases` sind per `-dontwarn com.amazon.**` abgedeckt.
+// Der CI-Guard in .github/workflows/flutter-production.yml prueft configuration.txt.
+configurations.configureEach {
+    exclude group: 'com.revenuecat.purchases', module: 'purchases-store-amazon'
+}
+
 dependencies {
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'
 }

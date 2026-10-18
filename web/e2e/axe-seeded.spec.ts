@@ -10,6 +10,8 @@ const SCENARIOS = [
   { name: 'Dashboard mit Banner „Offene Einträge"', path: '/dashboard', entries: [openDay('2026-03-16')] },
   { name: 'Dashboard mit laufender Fortsetzen-Option', path: '/dashboard', entries: [openDay('2026-03-17', '12:00')] },
   { name: 'Reports mit Einträgen', path: '/reports', entries: [workDay('2026-03-10'), workDay('2026-03-11'), workDay('2026-03-18')] },
+  { name: 'Reports mit Home-Office-Tag', path: '/reports', entries: [workDay('2026-03-10', { isHomeOffice: true }), workDay('2026-03-18', { isHomeOffice: true })] },
+  { name: 'Dashboard mit Home-Office-Tag', path: '/dashboard', entries: [workDay('2026-03-18', { isHomeOffice: true })] },
   { name: 'Einstellungen mit Einträgen', path: '/settings', entries: [workDay('2026-03-10')] },
 ];
 

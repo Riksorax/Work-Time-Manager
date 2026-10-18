@@ -1,10 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/services/home_widget_gateway.dart';
+import '../../core/services/shortcut_service.dart';
+import '../../core/services/timer_action_inbox.dart';
 import '../../core/services/version_service.dart';
 import 'settings_sync_provider.dart';
 import 'clock_provider.dart';
@@ -113,6 +117,16 @@ VersionService versionService(Ref ref) {
 NotificationService notificationService(Ref ref) {
   return NotificationService();
 }
+
+/// Briefkasten für Timer-Aktionen von außen (Notification-Button, Shortcut,
+/// #274). Prozessweites Singleton, weil die Plugin-Callbacks vor dem
+/// Widget-Baum feuern; im Test überschreibbar.
+@Riverpod(keepAlive: true)
+TimerActionInbox timerActionInbox(Ref ref) => TimerActionInbox.instance;
+
+/// App-Icon-Shortcuts „Einstempeln“/„Ausstempeln“ (#274, nur Android).
+@Riverpod(keepAlive: true)
+ShortcutService shortcutService(Ref ref) => ShortcutService();
 
 //==============================================================================
 // REPOSITORIES
@@ -390,4 +404,14 @@ SetOvertime setOvertimeUseCase(Ref ref) {
 @riverpod
 GetLastOvertimeUpdate getLastOvertimeUpdateUseCase(Ref ref) {
   return GetLastOvertimeUpdate(ref.watch(overtimeRepositoryProvider));
+}
+
+/// Schnittstelle zum Home-Screen-Widget (#276). Nur Android hat ein Widget;
+/// sonst (Web, iOS, Desktop) ein No-op. Im Test überschreibbar.
+@riverpod
+HomeWidgetGateway homeWidgetGateway(Ref ref) {
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+    return PluginHomeWidgetGateway();
+  }
+  return const NoopHomeWidgetGateway();
 }

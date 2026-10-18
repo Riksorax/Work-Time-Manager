@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter_work_time/core/utils/logger.dart';
 import 'package:flutter_work_time/domain/utils/overtime_warning_utils.dart';
+import 'package:flutter_work_time/domain/utils/timer_action.dart';
 import 'package:flutter_work_time/l10n/app_localizations.dart';
 
 /// Nächster Zeitpunkt ab [now] (Wochentag [day], 1 = Montag ... 7 = Sonntag,
@@ -22,6 +24,40 @@ tz.TZDateTime nextWeeklyOccurrence(
   return scheduled;
 }
 
+/// Timer-Aktion, mit der die App aus einer Notification-Action kalt gestartet
+/// wurde (#274), sonst `null`. Das Plugin ruft den Response-Callback beim
+/// Kaltstart nicht auf; die Antwort steckt in den Start-Details.
+TimerAction? timerActionFromLaunchDetails(NotificationAppLaunchDetails? d) {
+  if (d == null || !d.didNotificationLaunchApp) return null;
+  return timerActionFromId(d.notificationResponse?.actionId);
+}
+
+/// Buttons einer Erinnerung (#274): „Einstempeln“ beim Start-Check,
+/// „Ausstempeln“ beim Ende-Check, in dieser Reihenfolge. Pausen-only ohne
+/// Button. Die App öffnet sich (kein Headless), die Notification wird
+/// geschlossen.
+List<AndroidNotificationAction> reminderTimerActions({
+  required bool checkWorkStart,
+  required bool checkWorkEnd,
+  required AppLocalizations l10n,
+}) =>
+    [
+      if (checkWorkStart)
+        AndroidNotificationAction(
+          timerStartActionId,
+          l10n.timerActionStart,
+          showsUserInterface: true,
+          cancelNotification: true,
+        ),
+      if (checkWorkEnd)
+        AndroidNotificationAction(
+          timerStopActionId,
+          l10n.timerActionStop,
+          showsUserInterface: true,
+          cancelNotification: true,
+        ),
+    ];
+
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
 
@@ -40,14 +76,28 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
   bool _initialized = false;
   Function(String)? _onNotificationTapCallback;
+  void Function(TimerAction)? _onTimerActionCallback;
 
-  Future<void> initialize({Function(String)? onNotificationTap}) async {
+  /// Setzt den Initialisierungszustand zurück (nur Tests: das Singleton
+  /// behält sonst Callbacks und `_initialized` über Testfälle hinweg).
+  @visibleForTesting
+  void resetForTest() {
+    _initialized = false;
+    _onNotificationTapCallback = null;
+    _onTimerActionCallback = null;
+  }
+
+  Future<void> initialize({
+    Function(String)? onNotificationTap,
+    void Function(TimerAction)? onTimerAction,
+  }) async {
     if (_initialized) return;
 
     _onNotificationTapCallback = onNotificationTap;
+    _onTimerActionCallback = onTimerAction;
 
     const androidSettings =
-        AndroidInitializationSettings('@mipmap/launcher_icon');
+        AndroidInitializationSettings('@drawable/ic_notification');
     const initSettings = InitializationSettings(
       android: androidSettings,
     );
@@ -61,6 +111,19 @@ class NotificationService {
   }
 
   void _onNotificationTapped(NotificationResponse response) {
+    final actionId = response.actionId;
+    if (actionId != null && actionId.isNotEmpty) {
+      // Button der Notification (#274): nie als normaler Tap behandeln.
+      final action = timerActionFromId(actionId);
+      if (action == null) {
+        logger
+            .w('[NotificationService] Unbekannte Action ignoriert: $actionId');
+        return;
+      }
+      logger.i('[NotificationService] Timer-Action: $actionId');
+      _onTimerActionCallback?.call(action);
+      return;
+    }
     logger.i('[NotificationService] Notification tapped: ${response.payload}');
     if (_onNotificationTapCallback != null && response.payload != null) {
       _onNotificationTapCallback!(response.payload!);
@@ -225,12 +288,31 @@ class NotificationService {
           channelDescription: l10n.notificationChannelReminderDescription,
           importance: Importance.high,
           priority: Priority.high,
+          actions: reminderTimerActions(
+            checkWorkStart: checkWorkStart,
+            checkWorkEnd: checkWorkEnd,
+            l10n: l10n,
+          ),
         ),
       ),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
       payload: 'open_dashboard',
     );
+  }
+
+  /// Antwort der Notification, mit der die App kalt gestartet wurde (#274),
+  /// falls es eine Timer-Action war. Einmal beim Start nach [initialize] lesen.
+  Future<TimerAction?> launchTimerAction() async {
+    await initialize();
+    try {
+      return timerActionFromLaunchDetails(
+          await _notifications.getNotificationAppLaunchDetails());
+    } catch (e, st) {
+      logger.e('[NotificationService] Start-Details nicht lesbar',
+          error: e, stackTrace: st);
+      return null;
+    }
   }
 
   Future<void> cancelAllNotifications() async {

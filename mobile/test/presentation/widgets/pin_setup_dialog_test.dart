@@ -6,18 +6,24 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_work_time/core/providers/app_lock_provider.dart';
 import 'package:flutter_work_time/core/providers/providers.dart';
 import 'package:flutter_work_time/core/services/app_lock_service.dart';
+import 'package:flutter_work_time/core/services/app_lock_store.dart';
 import 'package:flutter_work_time/l10n/app_localizations.dart';
 import 'package:flutter_work_time/presentation/widgets/pin_setup_dialog.dart';
+import '../../support/fake_app_lock_backend.dart';
 
 void main() {
   late SharedPreferences prefs;
+  late FakeAppLockBackend backend;
+  late AppLockStore store;
   late AppLockService service;
   bool? result;
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     prefs = await SharedPreferences.getInstance();
-    service = AppLockService(prefs: prefs, localAuth: LocalAuthentication());
+    backend = FakeAppLockBackend();
+    store = AppLockStore(backend);
+    service = AppLockService(store: store, localAuth: LocalAuthentication());
     result = null;
   });
 
@@ -157,8 +163,8 @@ void main() {
 
   testWidgets('erfolgreiches Setzen setzt den Fehlversuchszähler zurück (#358)',
       (tester) async {
-    await prefs.setInt('app_lock_failed_attempts', 7);
-    await prefs.setInt('app_lock_locked_until_ms',
+    await store.setInt('app_lock_failed_attempts', 7);
+    await store.setInt('app_lock_locked_until_ms',
         DateTime.utc(2099, 1, 1).millisecondsSinceEpoch);
     await goToCodeStep(tester, '1234');
     await tester.tap(find.byType(CheckboxListTile));
@@ -167,8 +173,31 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(result, isTrue);
-    expect(prefs.getInt('app_lock_failed_attempts'), isNull);
-    expect(prefs.getInt('app_lock_locked_until_ms'), isNull);
+    expect(store.getInt('app_lock_failed_attempts'), isNull);
+    expect(store.getInt('app_lock_locked_until_ms'), isNull);
     expect(service.remainingLockout, Duration.zero);
+  });
+
+  testWidgets(
+      'Persistenzfehler beim Abschluss: Dialog bleibt offen, nichts gesetzt (#375)',
+      (tester) async {
+    await goToCodeStep(tester, '1234');
+    backend.failAllWrites = true;
+    await tester.tap(find.byType(CheckboxListTile));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Bestätigen'));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(result, isNull, reason: 'Dialog nicht geschlossen');
+    expect(find.byType(SelectableText), findsOneWidget);
+    expect(service.hasPin, isFalse);
+
+    // Nach Behebung des Fehlers lässt sich derselbe Dialog abschließen.
+    backend.failAllWrites = false;
+    await tester.tap(find.widgetWithText(FilledButton, 'Bestätigen'));
+    await tester.pumpAndSettle();
+    expect(result, isTrue);
+    expect(service.hasPin, isTrue);
   });
 }

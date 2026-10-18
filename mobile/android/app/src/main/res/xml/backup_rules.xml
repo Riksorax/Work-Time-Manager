@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Backup-Regeln bis Android 11 (API <= 30), siehe #375. Gegenstück zu
+    data_extraction_rules.xml (API 31+), gleiche Ausschlüsse: Die Dateien von
+    flutter_secure_storage (App-Sperre) gehören nicht ins Auto-Backup, die
+    übrigen Einstellungen bleiben drin.
+-->
+<full-backup-content>
+    <exclude domain="sharedpref" path="FlutterSecureStorage.xml"/>
+    <exclude domain="sharedpref" path="FlutterSecureKeyStorage.xml"/>
+    <exclude domain="sharedpref" path="FlutterSecureStorageConfiguration.xml"/>
+    <exclude domain="sharedpref" path="FlutterSecureStorageConfiguration:FlutterSecureStorage.xml"/>
+</full-backup-content>

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 /// Die AppTheme-Klasse zentralisiert die Theme-Definitionen der Anwendung.
 ///
@@ -12,6 +13,18 @@ class AppTheme {
   // automatisch generiert werden. Dies sorgt für ein harmonisches
   // und konsistentes Farbschema. Ein Blau-Ton passt gut zu einer Business-App.
   static const _seedColor = Colors.blue;
+
+  // Edge-to-Edge (#468): Die Systemleisten sind transparent und werden von der
+  // App hinterlegt. Gesetzt wird nur die Icon-Helligkeit; `statusBarColor` und
+  // `navigationBarColor` sind unter Android 15+ wirkungslos und veraltet.
+  static const lightSystemOverlayStyle = SystemUiOverlayStyle(
+    statusBarIconBrightness: Brightness.dark,
+    systemNavigationBarIconBrightness: Brightness.dark,
+  );
+  static const darkSystemOverlayStyle = SystemUiOverlayStyle(
+    statusBarIconBrightness: Brightness.light,
+    systemNavigationBarIconBrightness: Brightness.light,
+  );
 
   // --- LIGHT THEME ---
   static final ThemeData lightTheme = ThemeData(
@@ -27,6 +40,7 @@ class AppTheme {
       centerTitle: true,
       backgroundColor:
           Colors.transparent, // Lässt die Scaffold-Farbe durchscheinen
+      systemOverlayStyle: lightSystemOverlayStyle,
     ),
     cardTheme: CardThemeData(
       elevation: 1,
@@ -62,6 +76,7 @@ class AppTheme {
       elevation: 0,
       centerTitle: true,
       backgroundColor: Colors.transparent,
+      systemOverlayStyle: darkSystemOverlayStyle,
     ),
     cardTheme: CardThemeData(
       elevation: 1,
