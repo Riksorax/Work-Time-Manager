@@ -11,36 +11,36 @@
   "lang": "de",
   "icons": [
     {
-      "src": "favicon.ico?v=170",
+      "src": "favicon.ico?v=171",
       "sizes": "16x16 32x32 48x48",
       "type": "image/x-icon"
     },
     {
-      "src": "favicon-96x96.png?v=170",
+      "src": "favicon-96x96.png?v=171",
       "sizes": "96x96",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icon-192x192.png?v=170",
+      "src": "icon-192x192.png?v=171",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icon-512x512.png?v=170",
+      "src": "icon-512x512.png?v=171",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icon-maskable-192x192.png?v=170",
+      "src": "icon-maskable-192x192.png?v=171",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "icon-maskable-512x512.png?v=170",
+      "src": "icon-maskable-512x512.png?v=171",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
@@ -52,7 +52,7 @@
   ],
   "screenshots": [
     {
-      "src": "og-image.png?v=170",
+      "src": "og-image.png?v=171",
       "sizes": "1200x630",
       "type": "image/png",
       "form_factor": "wide",
