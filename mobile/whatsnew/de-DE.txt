@@ -1,2 +1,7 @@
 Das ist neu:
-• Fehlerbehebung: Absturz beim Start der App auf einigen Geräten mit Android 12 und 13 behoben (Update der App-Grundlage Flutter)
+• Home-Office: Arbeitstage lassen sich als Home-Office markieren (Dashboard, Bearbeiten, Kalender). Premium: Home-Office-Auswertung als PDF
+• Home-Screen-Widget mit Timer-Status und Arbeitszeit (Android)
+• Ein- und Ausstempeln direkt aus der Erinnerung und per App-Icon-Shortcut
+• App-Sperre wird sicherer gespeichert
+• Anpassung an die randlose Anzeige von Android 15
+• Überarbeitete App- und Benachrichtigungs-Symbole
