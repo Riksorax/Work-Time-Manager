@@ -2,4 +2,4 @@
 <!-- R8-Resource-Shrinking entfernt Ressourcen, die nur per String (Dart) referenziert werden.
      flutter_local_notifications lädt das Icon zur Laufzeit per Name (#335, #437). -->
 <resources xmlns:tools="http://schemas.android.com/tools"
-    tools:keep="@mipmap/launcher_icon,@mipmap/ic_launcher,@drawable/ic_notification" />
+    tools:keep="@mipmap/launcher_icon,@drawable/ic_notification" />

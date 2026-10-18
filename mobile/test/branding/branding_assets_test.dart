@@ -69,4 +69,38 @@ void main() {
     // flutter_launcher_icons fügt <inset> wieder ein; das Icon wirkt dann zu klein.
     expect(xml, isNot(contains('<inset')));
   });
+
+  test('keep.xml verweist nur auf existierende Ressourcen', () {
+    final keep =
+        File('android/app/src/main/res/raw/keep.xml').readAsStringSync();
+    final match = RegExp(r'tools:keep="([^"]+)"').firstMatch(keep);
+    expect(match, isNotNull);
+    final files = Directory('android/app/src/main/res')
+        .listSync(recursive: true)
+        .whereType<File>()
+        .map((f) => f.uri.pathSegments.last)
+        .toList();
+    for (final entry in match!.group(1)!.split(',')) {
+      final ref = RegExp(r'^@(\w+)/(\w+)$').firstMatch(entry.trim());
+      expect(ref, isNotNull, reason: 'Ungültiger keep-Eintrag: $entry');
+      final name = ref!.group(2)!;
+      expect(
+        files.any((f) => f.split('.').first == name),
+        isTrue,
+        reason: 'keep.xml verweist auf fehlende Ressource: $entry',
+      );
+    }
+  });
+
+  test('Template-Rest ic_launcher ist entfernt und nirgends referenziert', () {
+    final stale = Directory('android/app/src/main/res')
+        .listSync(recursive: true)
+        .whereType<File>()
+        .where((f) => f.uri.pathSegments.last.startsWith('ic_launcher.'));
+    expect(stale, isEmpty);
+    final manifest =
+        File('android/app/src/main/AndroidManifest.xml').readAsStringSync();
+    expect(manifest, contains('@mipmap/launcher_icon'));
+    expect(manifest, isNot(contains('@mipmap/ic_launcher')));
+  });
 }

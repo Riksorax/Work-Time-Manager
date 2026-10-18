@@ -86,6 +86,32 @@ Skript, sondern `dart run flutter_launcher_icons` aus den `adaptive_*`-Dateien (
 - `dart run flutter_launcher_icons` fügt `<inset>` wieder ein. `mipmap-anydpi-v26/launcher_icon.xml` danach von
   Hand korrigieren (kein `<inset>`).
 
+## Logo-Tausch (Stufe B)
+
+Das aktuelle Logo ist ein Interim-Nachbau. Für die endgültige Gestaltung:
+
+1. Alle Motiv-SVGs in `src/` ersetzen (`logo*.svg`, `favicon.svg`, `icon-store.svg`, Logos in `og-image.svg` und
+   `feature-graphic.svg`); die Safe-Zone-Regeln unten einhalten.
+2. `cd branding && npm run export`, Ergebnis committen (`npm test && npm run check` müssen grün sein).
+3. Bei geänderten Favicon-/OG-Dateien den Cache-Parameter (`?v=...`) in `web/` anheben, siehe Hinweis zur Cache-Version oben und
+   `branding/test/web-wiring.test.mjs` und `web/e2e/branding.spec.ts`.
+4. `dart run flutter_launcher_icons` nur bei geänderter Konfiguration; danach `launcher_icon.xml` von Hand ohne `<inset>`.
+5. Die manuellen Restpunkte unten erneut abarbeiten.
+
+## Manuelle Restpunkte
+
+Diese Schritte erledigt die Pipeline nicht (Konsolen und Dienste außerhalb des Repos):
+
+- [ ] **Play Console:** `store/icon-512.png` als App-Icon und `store/feature-graphic.png` als Feature Graphic hochladen
+  (Store-Eintrag), Screenshots mit neuem Icon neu aufnehmen (`store/screenshot-brief.md`).
+- [ ] **Firebase Authentication:** Logo bzw. Absender in den E-Mail-Vorlagen (Verifizierung, Passwort-Reset) anpassen.
+- [ ] **Google-Cloud-Konsole, OAuth-Zustimmungsbildschirm:** App-Logo (120 × 120 px, `store/icon-512.png` verkleinert) hochladen.
+- [ ] **GitHub:** Social Preview (1280 × 640 px) in den Repository-Einstellungen setzen.
+- [ ] **Uptime-Kuma:** Logo der Statusseite austauschen.
+- [ ] **Sentry und Crashlytics:** Projekt-Icons optional anpassen.
+- [ ] **Link-Vorschauen:** Caches von Facebook (Sharing Debugger) und LinkedIn (Post Inspector) neu einlesen, damit `og-image` aktualisiert wird.
+- [ ] **Release:** Release-Notes-Vermerk „neues App-Icon“ (`/release`).
+
 ## Gestaltungsregeln
 
 - **Farben:** Basisfarbe `#1565C0` (App-Theme, Manifest `theme_color`), dunkler Verlauf `#1565C0 → #0D47A1`
