@@ -4,9 +4,8 @@ SVG-Master des Work-Time-Manager-Logos und die Pipeline, die daraus alle Bild-As
 Play Store erzeugt (Issue #437). Das Logo zu tauschen heißt: SVGs in `src/` ersetzen, `npm run export`,
 Ergebnis committen.
 
-> **Stand: Interim.** Die `logo*.svg` sind ein Nachbau des bisherigen Motivs (Uhr, Zahnrad, Pfeil, Verlauf
-> Dunkelblau → Türkis), keine Neugestaltung. Das Aussehen entspricht dem bisherigen Logo
-> (früher `mobile/assets/icon/WorkTimeManagerLogo.png`, inzwischen gelöscht; die Quelle ist jetzt `src/`).
+> **Stand: Logo B (Neugestaltung 1.7.0).** Flaches Bildzeichen aus Uhr und Zahnrad-Badge (Geometrie siehe
+> „Gestaltungsregeln“). Es ersetzt den Interim-Nachbau des früheren Motivs (Verlauf Dunkelblau → Türkis, Pfeil).
 
 ## Aufruf
 
@@ -31,7 +30,7 @@ Farbkanal (resvg kann je Plattform um einen Wert abweichen), SVG-Kopien werden b
 | `logo-background.svg` | Vollfläche `#1565C0` (adaptiver Hintergrund, Maskable) |
 | `logo-foreground.svg` | Motiv, verkleinert in die Safe Zone des adaptiven Icons (66-dp-Kreis des 108-dp-Rasters) |
 | `logo-monochrome.svg` | Silhouette des Motivs in gleicher Safe Zone (Themed Icon, Android 13+) |
-| `logo-notification.svg` | vereinfachte Statusleisten-Silhouette (Uhr mit Zeiger), weiß |
+| `logo-notification.svg` | vereinfachte Statusleisten-Silhouette (Uhr mit zwei Zeigern), weiß |
 | `icon-store.svg` | Quadrat `#1565C0` mit Motiv (ca. 10 % Rand): Play-Store-Icon und Apple-Touch |
 | `og-image.svg` | 1200 × 630: Logo, Name, Claim "Arbeitszeit erfassen & Überstunden berechnen – kostenlos" |
 | `feature-graphic.svg` | 1024 × 500: Logo, Name, Slogan "Deine Arbeitszeit. Dein Überblick." |
@@ -81,14 +80,14 @@ Skript, sondern `dart run flutter_launcher_icons` aus den `adaptive_*`-Dateien (
 
 **Hinweise beim Logo-Tausch:**
 
-- Die Cache-Version `?v=170` in `web/src/index.html`, `web/public/manifest.json`,
+- Die Cache-Version `?v=171` in `web/src/index.html`, `web/public/manifest.json`,
   `branding/test/web-wiring.test.mjs` und `web/e2e/branding.spec.ts` gleichzeitig anheben.
 - `dart run flutter_launcher_icons` fügt `<inset>` wieder ein. `mipmap-anydpi-v26/launcher_icon.xml` danach von
   Hand korrigieren (kein `<inset>`).
 
-## Logo-Tausch (Stufe B)
+## Logo-Tausch
 
-Das aktuelle Logo ist ein Interim-Nachbau. Für die endgültige Gestaltung:
+Für einen erneuten Tausch des Bildzeichens:
 
 1. Alle Motiv-SVGs in `src/` ersetzen (`logo*.svg`, `favicon.svg`, `icon-store.svg`, Logos in `og-image.svg` und
    `feature-graphic.svg`); die Safe-Zone-Regeln unten einhalten.
@@ -114,13 +113,25 @@ Diese Schritte erledigt die Pipeline nicht (Konsolen und Dienste außerhalb des 
 
 ## Gestaltungsregeln
 
-- **Farben:** Basisfarbe `#1565C0` (App-Theme, Manifest `theme_color`), dunkler Verlauf `#1565C0 → #0D47A1`
-  (OG, Feature Graphic). Motiv: Verlauf `#0E0A7B` (Dunkelblau) → `#52CFBA` (Türkis), Pfeil `#33689D → #3A78A8`.
-  Statusleiste: reines Weiß, Android färbt nach Alpha-Kanal.
-- **Schutzzone / Safe Zone:** Adaptiv liegt das gesamte Motiv inklusive Pfeilspitze im Kreis mit Durchmesser 66/108
+- **Farben:** Basisfarbe `#1565C0` (App-Theme, Manifest `theme_color`, adaptiver Hintergrund). Scheibe: Verlauf
+  `#1E88E5` (oben links) → `#0D47A1` (unten rechts). Zifferblatt, Zeiger und Zahnrad: Weiß `#FFFFFF`. Zahnrad-Badge:
+  Verlauf `#26C6DA` → `#00A58E` (Akzent Türkis). OG-Image und Feature Graphic: Hintergrund `#1565C0 → #0D47A1`.
+  Statusleiste: reines Weiß, Android färbt nach Alpha.
+- **Geometrie (1024er Raster):** Scheibe Mittelpunkt (512, 512), Radius 480. Zifferblatt: Mitte (488, 488), Ring Radius 262
+  und Strichstärke 66, Zeiger Strichstärke 58 mit runden Enden (Minutenzeiger 12 Uhr, Länge 190; Stundenzeiger 4 Uhr, Länge 138),
+  Mittelkappe Radius 46. Badge unten rechts: Mitte (698, 698), Radius 184, ein Freiraum (Radius 214) schneidet das Zifferblatt
+  um das Badge frei. Zahnrad: 8 Zähne, Außenradius 126, Fußradius 98, Nabenloch Radius 40. Die kleinste Struktur ist
+  größer als 24 Einheiten. Das Zahnrad ist mit einem kleinen Python-Skript berechnet (Polygon aus Zahnflanken, Fußkreis als
+  Bogen); die Datei liegt nicht im Repo, die Werte stehen in den SVG-Pfaden. Ein Aufwärtspfeil entfällt bewusst (zu viele
+  Formen bei 16 px).
+- **Aufbau je Quelle:** `logo.svg` Scheibe mit Rand 32; `favicon.svg` identisch, enger Zuschnitt (`viewBox 32 32 960 960`);
+  `logo-foreground.svg` und `logo-monochrome.svg` skalieren das Motiv mit 0,64 (Radius 307 von 312,9 erlaubten);
+  `icon-store.svg` skaliert mit 0,86 auf `#1565C0`. Die Monochrom-Silhouette ist die Scheibe mit ausgestanzten Zeigern, Ring,
+  Badge-Freiraum und Zahnrad.
+- **Schutzzone / Safe Zone:** Adaptiv liegt das gesamte Motiv im Kreis mit Durchmesser 66/108
   der Fläche. Maskable liegt im mittleren 80-%-Kreis. Beides prüfen die Tests nach.
-- **Mindestgröße:** 16 px (kleinster Favicon-Eintrag). Darunter ist das Zahnrad nicht mehr erkennbar, die Uhr bleibt lesbar.
-- **Statusleiste:** vereinfacht (Ring mit Zeiger), weil Zahnrad und Pfeil bei 24 dp nicht lesbar sind.
+- **Mindestgröße:** 16 px (kleinster Favicon-Eintrag). Darunter ist das Zahnrad nur noch ein Fleck, die Uhr bleibt lesbar.
+- **Statusleiste:** vereinfacht (Ring mit zwei Zeigern und Mittelkappe), das Zahnrad fehlt, weil es bei 24 dp nicht lesbar ist.
 - **Dark-Variante und Wortmarke:** gibt es bewusst nicht; das Kreis-Logo ist farbfest und steht auf hellem und dunklem Grund.
 
 ## Werkzeug

@@ -36,7 +36,7 @@ test('index.html: favicon.svg steht zuerst, alle Icon-Verweise und das Manifest 
   const firstIcon = await page.locator('link[rel="icon"]').first().getAttribute('href');
   expect(firstIcon).toContain('favicon.svg');
   for (const href of hrefs) {
-    expect(href, href).toContain('?v=170');
+    expect(href, href).toContain('?v=171');
     const res = await request.get(href);
     expect(res.status(), href).toBe(200);
   }
