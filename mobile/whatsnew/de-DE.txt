@@ -1,7 +1,5 @@
-Das ist neu:
-• Home-Office: Arbeitstage lassen sich als Home-Office markieren (Dashboard, Bearbeiten, Kalender). Premium: Home-Office-Auswertung als PDF
-• Home-Screen-Widget mit Timer-Status und Arbeitszeit (Android)
-• Ein- und Ausstempeln direkt aus der Erinnerung und per App-Icon-Shortcut
-• App-Sperre wird sicherer gespeichert
-• Anpassung an die randlose Anzeige von Android 15
-• Überarbeitete App- und Benachrichtigungs-Symbole
+Das ist neu in 1.7.1:
+• Verbesserte Android-Sprachunterstützung (Deutsch & Englisch) für Android 13+
+• Nativer Google-Play-Bewertungsdialog direkt in der App
+• Überarbeitete Store-Beschreibung (Deutsch & Englisch) und verbesserte Web-Verknüpfung
+• Enthält außerdem alle Neuerungen aus 1.7.0 (Home-Office-Erfassung & PDF-Auswertung, Android Home-Screen-Widget, Ein-/Ausstempeln per Shortcut)
