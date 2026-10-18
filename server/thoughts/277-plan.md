@@ -1,3 +1,5 @@
+> **Status 2026-10-18:** umgesetzt, gemergt in develop (#470)
+
 # Backend-Plan: #277 Home-Office-Flag (Free)
 Erstellt: 2026-10-16
 Research: server/thoughts/277-research.md
