@@ -1,41 +1,13 @@
-<!-- Interim-Nachbau des Bestandsmotivs (Issue #437). Wird beim Logo-Tausch durch das finale Logo ersetzt. -->
-<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="85 101 848 848">
+<!-- Logo B (Issue #437): Uhr + Zahnrad-Badge, Geometrie per Skript berechnet. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="32 32 960 960">
   <title>Work Time Manager</title>
   <defs>
-    <linearGradient id="g" gradientUnits="userSpaceOnUse" x1="-46.5" y1="18.5" x2="650.3" y2="-259">
-      <stop offset="0" stop-color="#0e0a7b"/>
-      <stop offset="0.09" stop-color="#0f0c7c"/>
-      <stop offset="0.25" stop-color="#12197f"/>
-      <stop offset="0.46" stop-color="#1f408b"/>
-      <stop offset="0.68" stop-color="#3079a0"/>
-      <stop offset="0.8" stop-color="#3d9eac"/>
-      <stop offset="0.9" stop-color="#4ec2b8"/>
-      <stop offset="1" stop-color="#52cfba"/>
-    </linearGradient>
-    <linearGradient id="ga" gradientUnits="userSpaceOnUse" x1="677" y1="325" x2="850" y2="120">
-      <stop offset="0" stop-color="#33689d"/>
-      <stop offset="1" stop-color="#3a78a8"/>
-    </linearGradient>
-    <mask id="m-disc" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024">
-      <rect width="1024" height="1024" fill="#fff"/>
-      <g fill="none" stroke="#000" stroke-width="34" stroke-linecap="round">
-        <path d="M510 250.5L510 194.5"/>
-        <path d="M791.5 521.5L847.5 521.5"/>
-        <path d="M513 805.5L513 861.5"/>
-        <path d="M231.5 529L175.5 529"/>
-      </g>
-      <path d="M509 353V524" fill="none" stroke="#000" stroke-width="36" stroke-linecap="round"/>
-      <path d="M515 521.5H707" fill="none" stroke="#000" stroke-width="41" stroke-linecap="round"/>
-      <rect x="491" y="501" width="40" height="41" fill="#000"/>
-      <path d="M624.1 655.9L627.9 626.9L672.1 626.9L675.9 655.9A100 100 0 0 1 700 665.9L723.1 648.1L754.4 679.4L736.6 702.5A100 100 0 0 1 746.6 726.6L775.6 730.4L775.6 774.6L746.6 778.4A100 100 0 0 1 736.6 802.5L754.4 825.6L723.1 856.9L700 839.1A100 100 0 0 1 675.9 849.1L672.1 878.1L627.9 878.1L624.1 849.1A100 100 0 0 1 600 839.1L576.9 856.9L545.6 825.6L563.4 802.5A100 100 0 0 1 553.4 778.4L524.4 774.6L524.4 730.4L553.4 726.6A100 100 0 0 1 563.4 702.5L545.6 679.4L576.9 648.1L600 665.9A100 100 0 0 1 624.1 655.9z" fill="#000"/>
-    </mask>
-    <mask id="m-ring" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024">
-      <rect width="1024" height="1024" fill="#fff"/>
-      <rect x="0" y="-47.5" width="320" height="95" fill="#000" transform="translate(677 325) rotate(-50.8)"/>
-    </mask>
+    <linearGradient id="gd" x1="0.15" y1="0.05" x2="0.85" y2="0.95"><stop offset="0" stop-color="#1e88e5"/><stop offset="1" stop-color="#0d47a1"/></linearGradient>
+    <linearGradient id="gb" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#26c6da"/><stop offset="1" stop-color="#00a58e"/></linearGradient>
+    <mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024"><rect width="1024" height="1024" fill="#fff"/><circle cx="698" cy="698" r="214" fill="#000"/></mask>
   </defs>
-  <circle cx="507" cy="526.5" r="327.5" fill="url(#g)" mask="url(#m-disc)"/>
-    <g mask="url(#m-ring)"><path d="M87.3 526.5a422 422 0 1 0 844 0a422 422 0 1 0 -844 0zM152.3 526.5a357 357 0 1 0 714 0a357 357 0 1 0 -714 0z" fill="url(#g)" fill-rule="evenodd" mask="url(#m-disc)"/></g>
-    <path d="M869 526.5A362 362 0 0 1 507 888.5L507 841.5A315 315 0 0 0 822 526.5z" fill="url(#g)" mask="url(#m-disc)"/>
-    <path d="M663 315L791 155L766 132L860 101L846 201L821 180L691 336Z" fill="url(#ga)"/>
+  <circle cx="512" cy="512" r="480" fill="url(#gd)"/>
+  <g mask="url(#cut)"><circle cx="488" cy="488" r="262" fill="none" stroke="#fff" stroke-width="66"/><path d="M488 298L488 488L607.51 557" fill="none" stroke="#fff" stroke-width="58" stroke-linecap="round" stroke-linejoin="round"/><circle cx="488" cy="488" r="46" fill="#fff"/></g>
+  <circle cx="698" cy="698" r="184" fill="url(#gb)"/>
+  <path d="M676.79 602.32L680.46 573.23L715.54 573.23L719.21 602.32A98 98 0 0 1 750.66 615.35L773.83 597.37L798.63 622.17L780.65 645.34A98 98 0 0 1 793.68 676.79L822.77 680.46L822.77 715.54L793.68 719.21A98 98 0 0 1 780.65 750.66L798.63 773.83L773.83 798.63L750.66 780.65A98 98 0 0 1 719.21 793.68L715.54 822.77L680.46 822.77L676.79 793.68A98 98 0 0 1 645.34 780.65L622.17 798.63L597.37 773.83L615.35 750.66A98 98 0 0 1 602.32 719.21L573.23 715.54L573.23 680.46L602.32 676.79A98 98 0 0 1 615.35 645.34L597.37 622.17L622.17 597.37L645.34 615.35A98 98 0 0 1 676.79 602.32ZM658 698a40 40 0 1 0 80 0a40 40 0 1 0 -80 0Z" fill="#fff" fill-rule="evenodd"/>
 </svg>

@@ -1,8 +1,6 @@
 <!-- Vereinfachte Silhouette (Uhr + Zeiger) für die Statusleiste, Android färbt nach Alpha. -->
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-  <defs>
-    
-  </defs>
-  <circle cx="512" cy="512" r="388" fill="none" stroke="#fff" stroke-width="84"/>
-  <path d="M512 262V512H690" fill="none" stroke="#fff" stroke-width="84" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="512" cy="512" r="380" fill="none" stroke="#fff" stroke-width="92"/>
+  <path d="M512 242L512 512L676.54 607" fill="none" stroke="#fff" stroke-width="92" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="512" cy="512" r="58" fill="#fff"/>
 </svg>
