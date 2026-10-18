@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/providers/app_review_provider.dart';
 import '../../core/providers/providers.dart' as core_providers;
+import '../../core/services/app_review_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../widgets/imprint_dialog.dart';
 import '../widgets/privacy_policy_dialog.dart';
@@ -56,11 +58,13 @@ class AppInfoPage extends ConsumerWidget {
             subtitle: Text(l10n.rateAppSubtitle),
             trailing: const Icon(Icons.open_in_new),
             onTap: () async {
-              final url = Uri.parse(
-                'https://play.google.com/store/apps/details?id=app.work_time_manager',
-              );
-              if (await canLaunchUrl(url)) {
-                await launchUrl(url, mode: LaunchMode.externalApplication);
+              try {
+                await ref.read(appReviewServiceProvider).openStoreListing();
+              } catch (_) {
+                final url = Uri.parse(AppReviewService.playStoreUrl);
+                if (await canLaunchUrl(url)) {
+                  await launchUrl(url, mode: LaunchMode.externalApplication);
+                }
               }
             },
           ),

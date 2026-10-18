@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
 import 'package:flutter_work_time/core/utils/time_precision.dart';
 
+import '../../core/providers/app_review_provider.dart';
 import '../../core/providers/clock_provider.dart';
 import '../../core/providers/providers.dart';
 import '../../core/providers/today_provider.dart';
@@ -943,6 +944,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
           return false;
         }
         saved = true;
+        await _checkInAppReview(entryDay(updatedEntry));
       }
     } else {
       newActualWorkDuration = null;
@@ -1049,6 +1051,18 @@ class DashboardViewModel extends Notifier<DashboardState> {
     } catch (e) {
       logger
           .w('[Dashboard] Überstunden-Warnung konnte nicht geprüft werden: $e');
+    }
+  }
+
+  /// Zählt abgeschlossene Arbeitstage und fragt nach Erreichen des
+  /// Schwellwerts einmalig über den nativen Google-Play-Dialog nach einer
+  /// App-Bewertung.
+  Future<void> _checkInAppReview(DateTime date) async {
+    try {
+      final appReviewService = ref.read(appReviewServiceProvider);
+      await appReviewService.recordCompletedWorkDayAndMaybeRequestReview(date);
+    } catch (e) {
+      logger.w('[Dashboard] In-App-Review konnte nicht geprüft werden: $e');
     }
   }
 

@@ -1,0 +1,11 @@
+New in Work Time Manager:
+
+⏱ Work time tracker & time clock with live timer
+☕ Automatic break calculation (ArbZG)
+📊 Real-time overtime & flextime balance
+📄 Weekly, monthly & yearly reports with PDF export
+🗓 Public holidays for all 16 German states & batch vacation entry
+👥 Multiple work profiles (main & side jobs)
+🔒 PIN & biometric app lock, Dark Mode & web sync
+
+Free to use – no sign-up required.

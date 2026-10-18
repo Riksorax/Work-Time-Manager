@@ -1,45 +1,50 @@
-Behalte deine Arbeitszeiten immer im Blick – einfach, schnell und ohne komplizierte Einrichtung.
+Behalte deine Arbeitszeit, Pausen und Überstunden jederzeit im Blick – mit der modernen App zur Arbeitszeiterfassung. Einfach als digitale Stempeluhr nutzen, Stundenzettel erstellen und dein Gleitzeitkonto automatisch berechnen lassen. Kostenlos und sofort ohne Anmeldung startklar!
 
-⏱ ARBEITSZEITERFASSUNG MIT TIMER
-Starte und stoppe deinen Arbeitstimer mit einem Tippen. Work Time Manager erfasst deine Arbeitszeiten präzise und berechnet dein Überstundensaldo automatisch in Echtzeit.
+⏱ ZEITERFASSUNG, STEMPELUHR & HOME-SCREEN-WIDGET
+Starte und stoppe deine Arbeitszeiterfassung mit nur einem Tippen wie an einer Stechuhr – direkt in der App, über das Android Home-Screen-Widget oder per App-Icon-Shortcut. Work Time Manager erfasst deine Arbeitsstunden präzise, zeigt die voraussichtliche Feierabendzeit für dein Tagessoll an und berechnet dein Überstundensaldo automatisch in Echtzeit. Vergangene Arbeitstage sowie Homeoffice-Tage kannst du jederzeit im Kalender eintragen oder bearbeiten.
 
-☕ AUTOMATISCHE PAUSENBERECHNUNG
-Pausen nach Arbeitszeitgesetz werden automatisch berechnet: 30 Minuten nach 6 Stunden, 45 Minuten nach 9 Stunden. Manuelle Pausen sind jederzeit hinzufügbar und bearbeitbar.
+☕ AUTOMATISCHE PAUSENBERECHNUNG NACH ARBZG
+Pausen nach dem deutschen Arbeitszeitgesetz (ArbZG) werden beim Stoppen automatisch abgezogen: 30 Minuten ab 6 Stunden Arbeitszeit, 45 Minuten ab 9 Stunden. Eigene Pausen lassen sich live per Pausen-Timer erfassen oder nachträglich frei anpassen.
 
-📊 ÜBERSTUNDENKONTO & BERICHTE
-Dein persönliches Überstundenkonto zeigt jederzeit, wie viel Mehrarbeit du geleistet hast oder wie viele Stunden noch nachzuholen sind. Tagesberichte sind kostenlos – Wochen- und Monatsberichte mit Premium.
+📊 ÜBERSTUNDENKONTO, GLEITZEIT & STUNDENRECHNER
+Dein persönliches Überstundenkonto und Gleitzeitkonto zeigt dir sofort den Vergleich aus Sollstunden und Ist-Stunden. Sieh auf einen Blick, wie viele Überstunden du aufgebaut hast oder ob Minusstunden bestehen. Optional warnt dich die App automatisch beim Überschreiten deiner individuellen Überstunden- oder Minusstunden-Grenze.
 
-🗓 SCHNELL-EINTRAG FÜR URLAUB & ABWESENHEITEN
-Trage Urlaub, Krankheitstage, Feiertage und Sonderzeiten mit wenigen Tippen ein – auch für mehrere Tage gleichzeitig.
+📄 STUNDENZETTEL, HOMEOFFICE-AUSWERTUNG & PDF-EXPORT
+Erstelle übersichtliche Auswertungen deiner geleisteten Arbeitsstunden:
+• Tagesberichte & Kalenderübersicht (dauerhaft kostenlos)
+• Wochenberichte, Monatsberichte & Jahresberichte (Premium)
+• PDF-Export: Exportiere deinen Stundenzettel, Arbeitszeitnachweis und die Homeoffice-Auswertung (z. B. für die Steuererklärung oder den Arbeitgeber) als sauberes PDF-Dokument
+• Produktivitäts-Insights & Wochenreflexion für einen noch besseren Überblick über deine Arbeitswoche
 
-☁️ CLOUD-SYNCHRONISATION (OPTIONAL)
-Melde dich mit deinem Google-Konto an und greife von mehreren Geräten auf deine Arbeitszeiten zu. Ohne Anmeldung werden alle Daten sicher lokal auf deinem Gerät gespeichert – kein Account nötig.
+🗓 GESETZLICHE FEIERTAGE & URLAUBSKONTO
+Wähle dein Bundesland (alle 16 deutschen Bundesländer integriert) und lasse gesetzliche Feiertage automatisch berücksichtigen. Verwalte deinen Jahresurlaub mit Resturlaub-Anzeige und trage Urlaubstage, Krankheitstage und Sonderzeiten per Schnell-Eintrag bequem für ganze Wochen auf einmal ein.
 
-⚙️ FLEXIBLE ARBEITSZEITMODELLE
-Stelle deine Soll-Arbeitszeit und Arbeitstage individuell ein. Geeignet für Vollzeit, Teilzeit, Gleitzeit und Schichtarbeit.
+👥 MEHRERE ARBEITSZEIT-PROFILE (HAUPTJOB & NEBENJOB)
+Du hast mehrere Arbeitgeber, einen Nebenjob oder getrennte Projekte? Lege separate Arbeitszeit-Profile mit eigenen Sollstunden, Arbeitstagen und getrennten Zeitkonten an (Premium).
 
-🌙 DARK MODE & MODERNES DESIGN
-Work Time Manager unterstützt den Dark Mode deines Geräts und setzt auf ein übersichtliches Material Design 3 Interface.
+💻 CLOUD-SYNC & WEB-APP FÜR DEN BROWSER
+Ohne Anmeldung werden alle Daten sicher lokal auf deinem Smartphone gespeichert. Optional kannst du dich per Google-Konto anmelden, deine Zeiterfassung verschlüsselt in der Cloud synchronisieren und nahtlos auch am PC im Browser unter work-time-manager.app nutzen.
 
-🔒 DATENSCHUTZ – MADE IN GERMANY
-Keine Datenweitergabe an Dritte. Daten werden lokal oder verschlüsselt über Firebase gespeichert. Vollständig DSGVO-konform. Account und alle Daten jederzeit in den Einstellungen löschbar.
+🔒 DATENSCHUTZ, APP-SPERRE & DARK MODE
+• DSGVO-konform: Keine Werbung, kein Datenverkauf an Dritte
+• App-Sperre: Schütze deine Arbeitszeiten optional per PIN, Fingerabdruck oder Gesichtserkennung (Biometrie)
+• Individuelles Arbeitszeitmodell: Perfekt für Vollzeit, Teilzeit, Gleitzeit, Schichtarbeit, Vertrauensarbeitszeit und Homeoffice
+• Modernes Material Design 3 mit automatischem Dark Mode
 
 ---
 
 🆓 KOSTENLOS NUTZBAR
-Timer, Pausenerfassung, Überstundenkonto und Tagesberichte sind dauerhaft kostenlos – ohne versteckte Kosten.
+Stempeluhr, Arbeitstimer, automatische Pausenberechnung, Überstundenkonto, Feiertage nach Bundesland, App-Sperre und Tagesberichte sind dauerhaft kostenlos – ohne Account-Zwang.
 
-⭐ PREMIUM
-Wochen- und Monatsberichte für detaillierte Auswertungen deiner geleisteten Arbeitsstunden.
+⭐ PREMIUM-FEATURES
+Wochen-, Monats- und Jahresberichte, PDF-Stundenzettel-Export, detaillierte Insights, Wochenreflexion sowie zusätzliche Arbeitszeit-Profile.
 
 ---
 
 Ideal für:
-• Angestellte mit Gleitzeit oder flexiblen Arbeitszeiten
-• Selbstständige und Freelancer
-• Schichtarbeiter und Teilzeitkräfte
-• Alle, die ihr Überstundenkonto im Blick behalten möchten
-
----
+• Arbeitnehmer mit Gleitzeit, Vertrauensarbeitszeit oder Schichtarbeit
+• Teilzeitkräfte, Minijobber & Werkstudenten
+• Selbstständige, Freiberufler und Handwerker
+• Alle, die ihre Arbeitszeit erfassen und Überstunden berechnen möchten
 
 Hinweis: Work Time Manager dient der persönlichen Arbeitszeitübersicht und ersetzt keine gesetzlich vorgeschriebene betriebliche Zeiterfassung.

@@ -49,6 +49,7 @@ dependencies:
   firebase_crashlytics: ^5.4.0
   package_info_plus: ^10.0.0
   in_app_update: ^4.2.5
+  in_app_review: ^2.0.10
   url_launcher: ^6.3.2
   flutter_local_notifications: ^19.5.0
   # App-Icon-Shortcuts (Ein-/Ausstempeln, #274), nur Android genutzt

@@ -7,17 +7,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <!-- SEO Primary -->
-    <meta name="description" content="Work Time Manager – kostenlose App zur Arbeitszeiterfassung. Timer starten, Pausen verwalten, Überstunden berechnen. Für Browser & Android." />
-    <meta name="keywords" content="Arbeitszeiterfassung, Zeiterfassung, Überstunden berechnen, Stempeluhr, Arbeitsstunden, Timer, kostenlos" />
+    <meta name="description" content="Work Time Manager – kostenlose App zur Arbeitszeiterfassung. Stempeluhr-Timer starten, Pausen nach ArbZG verwalten, Überstunden & Gleitzeit berechnen, Stundenzettel als PDF exportieren. Für Browser & Android." />
+    <meta name="keywords" content="Arbeitszeiterfassung, Zeiterfassung, Überstunden berechnen, Stempeluhr, Stechuhr, Stundenzettel PDF, Gleitzeitkonto, Arbeitsstunden, Pausenrechner ArbZG, Schichtarbeit, kostenlos" />
     <meta name="author" content="Frank Speulmans" />
     <meta name="robots" content="index, follow" />
+    <meta name="google-play-app" content="app-id=app.work_time_manager" />
     <link rel="canonical" href="https://work-time-manager.app/" />
 
     <!-- Open Graph (Facebook, LinkedIn, WhatsApp) -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://work-time-manager.app/" />
     <meta property="og:title" content="Work Time Manager – Arbeitszeit erfassen & Überstunden berechnen" />
-    <meta property="og:description" content="Kostenlose Arbeitszeiterfassung für Browser & Android. Timer, Pausen, Überstunden, Berichte – einfach & datenschutzkonform." />
+    <meta property="og:description" content="Kostenlose Arbeitszeiterfassung für Browser & Android. Timer, Pausen, Überstunden, PDF-Stundenzettel & Berichte – einfach & datenschutzkonform." />
     <meta property="og:image" content="https://work-time-manager.app/og-image.png?v=171" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
@@ -28,7 +29,7 @@
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Work Time Manager – Arbeitszeit erfassen" />
-    <meta name="twitter:description" content="Kostenlose Arbeitszeiterfassung für Browser & Android. Timer, Pausen, Überstunden, Berichte." />
+    <meta name="twitter:description" content="Kostenlose Arbeitszeiterfassung für Browser & Android. Timer, Pausen, Überstunden, PDF-Stundenzettel & Berichte." />
     <meta name="twitter:image" content="https://work-time-manager.app/og-image.png?v=171" />
 
     <!-- PWA / Theme -->
@@ -51,12 +52,27 @@
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "WebApplication",
+      "@type": ["WebApplication", "MobileApplication"],
       "name": "Work Time Manager",
-      "description": "Kostenlose Arbeitszeiterfassung für Browser und Android. Timer, Pausen, Überstunden berechnen und Berichte erstellen.",
+      "alternateName": "Work Time Manager: Arbeitszeit",
+      "description": "Kostenlose Arbeitszeiterfassung und Stempeluhr für Browser und Android. Arbeitszeiten per Timer erfassen, Pausen nach ArbZG automatisch berechnen, Überstundenkonto verwalten und Stundenzettel als PDF exportieren.",
       "url": "https://work-time-manager.app/",
+      "installUrl": "https://play.google.com/store/apps/details?id=app.work_time_manager",
+      "downloadUrl": "https://play.google.com/store/apps/details?id=app.work_time_manager",
+      "sameAs": [
+        "https://play.google.com/store/apps/details?id=app.work_time_manager"
+      ],
       "applicationCategory": "BusinessApplication",
       "operatingSystem": "Web, Android",
+      "inLanguage": ["de", "en"],
+      "featureList": [
+        "Arbeitszeiterfassung & Stempeluhr mit Live-Timer",
+        "Automatische Pausenberechnung nach Arbeitszeitgesetz (ArbZG)",
+        "Überstundenkonto & Gleitzeitkonto in Echtzeit",
+        "Tages-, Wochen-, Monats- und Jahresberichte mit PDF-Export",
+        "Gesetzliche Feiertage für alle 16 deutschen Bundesländer",
+        "Mehrere Arbeitszeit-Profile für Haupt- und Nebenjob"
+      ],
       "offers": {
         "@type": "Offer",
         "price": "0",
@@ -78,5 +94,13 @@
   </head>
   <body>
     <app-root></app-root>
+    <noscript>
+      <p>
+        Work Time Manager – Kostenlose Arbeitszeiterfassung, Stempeluhr &amp; Überstundenkonto.
+        <a href="https://play.google.com/store/apps/details?id=app.work_time_manager">
+          Work Time Manager im Google Play Store herunterladen
+        </a>
+      </p>
+    </noscript>
   </body>
 </html>

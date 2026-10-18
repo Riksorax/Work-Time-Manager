@@ -30,21 +30,21 @@
 **Was zeigen:** Dialog für Schnell-Eintrag, mehrere Tage selektiert (Urlaubswoche)
 **Warum:** Zeigt den Komfort gegenüber manueller Einzeleingabe
 
-### 5. Tagesbericht (kostenlos)
-**Was zeigen:** Tagesansicht mit Arbeitszeit, Pausen, Überstunden für einen Tag
-**Warum:** Zeigt den Mehrwert der Berichtsfunktion
+### 5. Berichte & PDF-Stundenzettel
+**Was zeigen:** Monats- oder Jahresbericht mit sichtbarem PDF-Export-Button / PDF-Vorschau
+**Warum:** „Stundenzettel PDF" ist eines der stärksten Such-Keywords im Play Store
 
-### 6. Wochenbericht (Premium)
-**Was zeigen:** Wochenübersicht mit Balkendiagramm oder Tabelle, Premium-Badge sichtbar
-**Warum:** Premium-Feature sichtbar machen → Conversion
+### 6. Wochenbericht & Produktivitäts-Insights (Premium)
+**Was zeigen:** Wochenübersicht mit Balkendiagramm, Insights und Wochenreflexion
+**Warum:** Premium-Mehrwert sichtbar machen → Conversion
 
-### 7. Einstellungen – Soll-Arbeitszeit
-**Was zeigen:** Einstellungsseite mit konfigurierbaren Arbeitstagen und Stunden
-**Warum:** Zeigt Flexibilität für verschiedene Arbeitszeitmodelle
+### 7. Einstellungen – Arbeitszeitmodelle, Bundesland & Profile
+**Was zeigen:** Konfigurierbare Arbeitstage/Sollstunden, Auswahl des Bundeslands für gesetzliche Feiertage & Profil-Wechsler (Haupt-/Nebenjob)
+**Warum:** Zeigt Flexibilität für Vollzeit, Teilzeit, Gleitzeit und mehrere Arbeitgeber
 
-### 8. Dark Mode (optional, guter Bonus)
+### 8. Dark Mode & Biometrie-Sperre (Bonus)
 **Was zeigen:** Dashboard im Dark Mode
-**Warum:** Viele Nutzer filtern gezielt nach Dark-Mode-Apps
+**Warum:** Viele Nutzer bevorzugen moderne Material-3-Dark-Mode-Apps
 
 ## Bildsprache & Gestaltung
 

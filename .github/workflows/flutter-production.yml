@@ -12,6 +12,11 @@ on:
         description: 'Google Play Track / Release Name (optional, überschreibt RELEASE_NAMES.md)'
         required: false
         default: ''
+      sync_store_metadata:
+        description: 'Store-Metadaten (fastlane/metadata/android) zu Google Play synchronisieren'
+        required: false
+        type: boolean
+        default: false
 
 defaults:
   run:
@@ -204,3 +209,36 @@ jobs:
           track: ${{ steps.release_name.outputs.track }}
           status: completed
           whatsNewDirectory: mobile/whatsnew
+
+      # Synchronisiert Titel, Kurz- und Langbeschreibung (de-DE & en-US) aus
+      # fastlane/metadata/android automatisch bei jedem Release auf main (oder
+      # manuell per workflow_dispatch mit sync_store_metadata=true).
+      - name: Sync Store Metadata to Google Play
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || inputs.sync_store_metadata == true
+        working-directory: .
+        env:
+          PLAY_STORE_JSON_KEY: ${{ secrets.PLAY_STORE_JSON_KEY }}
+        run: |
+          KEY_FILE="$(mktemp)"
+          trap 'rm -f "$KEY_FILE"' EXIT
+          echo "$PLAY_STORE_JSON_KEY" > "$KEY_FILE"
+          gem install fastlane --no-document
+          fastlane supply \
+            --package_name app.work_time_manager \
+            --metadata_path fastlane/metadata/android \
+            --json_key "$KEY_FILE" \
+            --skip_upload_aab true \
+            --skip_upload_apk true \
+            --skip_upload_images true \
+            --skip_upload_screenshots true \
+            --skip_upload_changelogs true || \
+          fastlane supply \
+            --package_name app.work_time_manager \
+            --metadata_path fastlane/metadata/android \
+            --json_key "$KEY_FILE" \
+            --skip_upload_aab true \
+            --skip_upload_apk true \
+            --skip_upload_images true \
+            --skip_upload_screenshots true \
+            --skip_upload_changelogs true \
+            --changes_not_sent_for_review true
