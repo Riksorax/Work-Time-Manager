@@ -1,5 +1,9 @@
 # Screenshot-Brief – Google Play Store
 
+> **Hinweis (#437):** Screenshots zeigen das neue App-Logo (Launcher-Icon, Login, Info-Seite). Vorhandene Screenshots mit
+> dem alten Icon (z. B. Launcher-Ausschnitt, Login) neu aufnehmen. Icon (`store/icon-512.png`) und Feature Graphic
+> (`store/feature-graphic.png`) stammen aus `branding/`, siehe `branding/README.md`.
+
 ## Technische Anforderungen
 - Format: PNG oder JPEG
 - Mindestgröße: 1080 × 1920 px (Portrait, 16:9 oder 9:20)
