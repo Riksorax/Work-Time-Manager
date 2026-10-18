@@ -1,5 +1,10 @@
 # Feature Graphic Brief – Google Play Store
 
+> **Stand (#437):** Die Feature Graphic und das Play-Store-Icon (512 × 512) werden aus dem Logo-Master erzeugt:
+> `store/feature-graphic.png` aus `branding/src/feature-graphic.svg`, `store/icon-512.png` aus `branding/src/icon-store.svg`
+> (`cd branding && npm run export`). Nicht von Hand ändern; Details und Logo-Tausch in `branding/README.md`.
+> Die folgenden Vorgaben beschreiben, was die erzeugte Grafik erfüllt, und gelten für jede künftige Neugestaltung.
+
 ## Technische Anforderungen
 - Größe: **1024 × 500 px** (Pflicht, exakt)
 - Format: PNG oder JPEG (kein Alpha)
@@ -37,11 +42,13 @@ Die Feature Graphic erscheint:
 - Kein Screenshot der App eingebettet (Google empfiehlt das nicht für Feature Graphic)
 - Kein weißer Hintergrund – zu wenig Kontrast zur Play Store Oberfläche
 
-## Erstellungs-Tools (kostenlos)
-- **Canva:** Template "Google Play Feature Graphic" suchen → 1024×500 einstellen
-- **Figma:** Neues Frame → 1024×500 → exportieren als PNG
-- **GIMP / Inkscape:** Kostenlos, volle Kontrolle
+## Erstellung
+Per Pipeline: SVG in `branding/src/feature-graphic.svg` anpassen, `npm run export` ausführen, Ergebnis committen.
+Der CI-Job `branding` schlägt bei Abweichung zwischen SVG und PNG fehl. Handarbeit in Canva/Figma ist nicht mehr vorgesehen.
 
 ## Datei-Ablage
-Fertige Datei bitte speichern unter:
-`store/feature-graphic.png`
+Erzeugte Dateien (eingecheckt):
+- `store/feature-graphic.png` (1024 × 500)
+- `store/icon-512.png` (512 × 512, Play-Store-Icon)
+
+Der Upload in die Play Console ist ein manueller Schritt (`branding/README.md`, „Manuelle Restpunkte“).
