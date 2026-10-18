@@ -152,6 +152,35 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+      # Diagnose (#467): zusammengefuehrte R8-Regeln samt Herkunft, Seeds und entfernter Code.
+      - name: Upload R8 diagnostics Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: work-time-manager-r8-diagnostics-${{ github.run_number }}
+          path: |
+            mobile/build/app/outputs/mapping/release/configuration.txt
+            mobile/build/app/outputs/mapping/release/seeds.txt
+            mobile/build/app/outputs/mapping/release/usage.txt
+          if-no-files-found: warn
+          retention-days: 30
+
+      # R8-Guard (#467): `-dontoptimize` in der zusammengefuehrten Konfiguration schaltet die
+      # Optimierung fuer die ganze App ab (Play Vitals: 0 %). Bekannte Quelle war die
+      # Consumer-Regel von purchases-store-amazon (transitiv ueber purchases_flutter).
+      - name: Guard - R8 optimization must not be disabled
+        run: |
+          CONFIG=build/app/outputs/mapping/release/configuration.txt
+          if [ ! -s "$CONFIG" ]; then
+            echo "::error::$CONFIG fehlt oder ist leer - R8 lief nicht (minifyEnabled?)."
+            exit 1
+          fi
+          if grep -n -E '^[[:space:]]*-dontoptimize' "$CONFIG"; then
+            echo "::error::-dontoptimize in $CONFIG - eine Consumer-Regel schaltet die R8-Optimierung ab (#467). Herkunft steht in den Kommentaren oberhalb des Treffers (Artefakt r8-diagnostics); bekannter Verursacher purchases-store-amazon (Exclude in android/app/build.gradle)."
+            exit 1
+          fi
+          echo "Kein -dontoptimize in der R8-Konfiguration."
+
       # Die Play Console bietet die mapping.txt nur zum Hochladen/Löschen an. Zum
       # Auflösen obfuskierter Namen (z. B. `z2` in #453) hier als Artefakt ablegen.
       - name: Upload R8 mapping Artifact
@@ -159,7 +188,7 @@ jobs:
         with:
           name: work-time-manager-mapping-${{ github.run_number }}
           path: mobile/build/app/outputs/mapping/release/mapping.txt
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 90
 
       # Nur beim echten Release über main hochladen. Ein manueller Testlauf
