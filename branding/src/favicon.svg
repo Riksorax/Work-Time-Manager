@@ -4,10 +4,11 @@
   <defs>
     <linearGradient id="gd" x1="0.15" y1="0.05" x2="0.85" y2="0.95"><stop offset="0" stop-color="#1e88e5"/><stop offset="1" stop-color="#0d47a1"/></linearGradient>
     <linearGradient id="gb" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#26c6da"/><stop offset="1" stop-color="#00a58e"/></linearGradient>
-    <mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024"><rect width="1024" height="1024" fill="#fff"/><circle cx="698" cy="698" r="214" fill="#000"/></mask>
+    <mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024"><rect width="1024" height="1024" fill="#fff"/><circle cx="690" cy="690" r="240" fill="#000"/></mask>
   </defs>
   <circle cx="512" cy="512" r="480" fill="url(#gd)"/>
-  <g mask="url(#cut)"><circle cx="488" cy="488" r="262" fill="none" stroke="#fff" stroke-width="66"/><path d="M488 298L488 488L607.51 557" fill="none" stroke="#fff" stroke-width="58" stroke-linecap="round" stroke-linejoin="round"/><circle cx="488" cy="488" r="46" fill="#fff"/></g>
-  <circle cx="698" cy="698" r="184" fill="url(#gb)"/>
-  <path d="M676.79 602.32L680.46 573.23L715.54 573.23L719.21 602.32A98 98 0 0 1 750.66 615.35L773.83 597.37L798.63 622.17L780.65 645.34A98 98 0 0 1 793.68 676.79L822.77 680.46L822.77 715.54L793.68 719.21A98 98 0 0 1 780.65 750.66L798.63 773.83L773.83 798.63L750.66 780.65A98 98 0 0 1 719.21 793.68L715.54 822.77L680.46 822.77L676.79 793.68A98 98 0 0 1 645.34 780.65L622.17 798.63L597.37 773.83L615.35 750.66A98 98 0 0 1 602.32 719.21L573.23 715.54L573.23 680.46L602.32 676.79A98 98 0 0 1 615.35 645.34L597.37 622.17L622.17 597.37L645.34 615.35A98 98 0 0 1 676.79 602.32ZM658 698a40 40 0 1 0 80 0a40 40 0 1 0 -80 0Z" fill="#fff" fill-rule="evenodd"/>
+  <g mask="url(#cut)"><circle cx="470" cy="470" r="276" fill="none" stroke="#fff" stroke-width="84"/></g>
+  <g><path d="M470 270L470 470L570 470" fill="none" stroke="#fff" stroke-width="76" stroke-linecap="round" stroke-linejoin="round"/><circle cx="470" cy="470" r="52" fill="#fff"/></g>
+  <circle cx="690" cy="690" r="205" fill="url(#gb)"/>
+  <path d="M665.98 581.63L669.68 545.42L710.32 545.42L714.02 581.63A111 111 0 0 1 749.64 596.38L777.86 573.4L806.6 602.14L783.62 630.36A111 111 0 0 1 798.37 665.98L834.58 669.68L834.58 710.32L798.37 714.02A111 111 0 0 1 783.62 749.64L806.6 777.86L777.86 806.6L749.64 783.62A111 111 0 0 1 714.02 798.37L710.32 834.58L669.68 834.58L665.98 798.37A111 111 0 0 1 630.36 783.62L602.14 806.6L573.4 777.86L596.38 749.64A111 111 0 0 1 581.63 714.02L545.42 710.32L545.42 669.68L581.63 665.98A111 111 0 0 1 596.38 630.36L573.4 602.14L602.14 573.4L630.36 596.38A111 111 0 0 1 665.98 581.63ZM644 690a46 46 0 1 0 92 0a46 46 0 1 0 -92 0Z" fill="#fff" fill-rule="evenodd"/>
 </svg>
