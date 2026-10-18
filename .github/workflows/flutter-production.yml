@@ -332,8 +332,20 @@ jobs:
             try {
               await syncListings(token, false);
             } catch (err) {
-              console.warn(`Standard commit failed (${err.message}), retrying with changesNotSentForReview=true...`);
-              await syncListings(token, true);
+              if (err.status === 400 && err.body && err.body.includes('changesNotSentForReview')) {
+                console.warn('Standard commit requires changesNotSentForReview=true, retrying...');
+                await syncListings(token, true);
+              } else if (err.status === 403) {
+                console.error(
+                  `::error::Google Play API 403 PERMISSION_DENIED beim Speichern der Store-Texte. ` +
+                  `Dem Service-Account (${sa.client_email}) fehlt in der Google Play Console unter ` +
+                  `"Nutzer und Berechtigungen -> App-Berechtigungen" der Haken bei ` +
+                  `"Präsenz im Play Store verwalten" (Manage store presence).`
+                );
+                process.exit(1);
+              } else {
+                throw err;
+              }
             }
           })().catch((err) => {
             console.error(err);
