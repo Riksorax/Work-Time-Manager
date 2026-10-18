@@ -12,7 +12,7 @@ const pub = (f) => join(root, 'web', 'public', f);
 const manifest = JSON.parse(readFileSync(pub('manifest.json'), 'utf8'));
 const html = readFileSync(join(root, 'web', 'src', 'index.html'), 'utf8');
 const bare = (src) => src.replace(/[?#].*$/, '');
-const CACHE_BUST = '?v=170';
+const CACHE_BUST = '?v=171';
 
 test('Manifest: jede icon-src existiert, PNG-Größen stimmen', () => {
   for (const icon of manifest.icons) {
@@ -51,7 +51,7 @@ test('index.html: favicon.svg steht vor allen anderen rel=icon-Links', () => {
   assert.match(icons[0], /image\/svg\+xml/);
 });
 
-test('index.html: alle lokalen Icon-/Bild-Verweise existieren und tragen ?v=170', () => {
+test('index.html: alle lokalen Icon-/Bild-Verweise existieren und tragen ?v=171', () => {
   const refs = [...html.matchAll(/<link rel="(?:icon|apple-touch-icon|manifest)"[^>]*href="([^"]+)"/g)].map((m) => m[1]);
   refs.push(...[...html.matchAll(/(?:og:image"|twitter:image") content="([^"]+)"/g)].map((m) => m[1]));
   assert.ok(refs.length >= 8, `zu wenige Verweise: ${refs.length}`);
@@ -62,7 +62,7 @@ test('index.html: alle lokalen Icon-/Bild-Verweise existieren und tragen ?v=170'
   }
 });
 
-test('Manifest: lokale Icon-Verweise tragen ?v=170', () => {
+test('Manifest: lokale Icon-Verweise tragen ?v=171', () => {
   for (const i of manifest.icons) assert.ok(i.src.endsWith(CACHE_BUST), i.src);
 });
 
