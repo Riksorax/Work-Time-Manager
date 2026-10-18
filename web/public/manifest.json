@@ -50,6 +50,14 @@
     "productivity",
     "business"
   ],
+  "prefer_related_applications": false,
+  "related_applications": [
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=app.work_time_manager",
+      "id": "app.work_time_manager"
+    }
+  ],
   "screenshots": [
     {
       "src": "og-image.png?v=171",

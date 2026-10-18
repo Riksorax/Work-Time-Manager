@@ -1,0 +1,44 @@
+Track your work hours, breaks, and overtime effortlessly – with a modern, easy-to-use work time tracker and digital time clock. Create timesheets, manage your flextime balance, and calculate overtime automatically. Free to use and ready immediately without sign-up!
+
+⏱ WORK TIME TRACKER & DIGITAL TIME CLOCK
+Start and stop your work timer with a single tap. Work Time Manager tracks your working hours accurately, shows your projected end-of-day time, and calculates your overtime balance in real time. Forgot to clock in? Easily add or edit start times, end times, and past workdays in the calendar at any time.
+
+☕ AUTOMATIC BREAK CALCULATION
+Statutory breaks under German labor law (ArbZG) are calculated automatically when stopping the timer: 30 minutes after 6 hours of work, 45 minutes after 9 hours. You can also track custom breaks live or edit them manually at any time.
+
+📊 OVERTIME TRACKER & FLEXTIME BALANCE
+Your personal overtime account compares target hours vs. actual hours worked at a glance. Always know how much overtime you have accumulated or how many hours remain. Optional notifications warn you when exceeding custom overtime or undertime thresholds.
+
+📄 TIMESHEETS, REPORTS & PDF EXPORT
+Generate clear reports of your working hours:
+• Daily reports & calendar overview (free forever)
+• Weekly, monthly & yearly reports (Premium)
+• PDF Export: Export and print clean PDF timesheets and work time records for your files or employer
+• Productivity insights & weekly reflection to better understand your work-life balance
+
+🗓 PUBLIC HOLIDAYS & QUICK ENTRY FOR VACATION
+Select your German federal state (all 16 states supported) to automatically account for public holidays. Log vacation days, sick leave, and special entries for single days or entire weeks at once using Batch Quick Entry.
+
+👥 MULTIPLE WORK PROFILES (MAIN JOB & SIDE JOB)
+Working multiple jobs, freelance projects, or separate employers? Create independent work profiles with their own target hours, workdays, and overtime balances (Premium).
+
+💻 CLOUD SYNC & WEB APP FOR BROWSER
+Without sign-in, all data is stored safely and locally on your device. Optionally sign in with your Google account to sync your work hours across devices and access the web app on your PC at work-time-manager.app.
+
+🔒 PRIVACY, APP LOCK & DARK MODE
+• GDPR compliant: No ads, no selling of personal data
+• App Lock: Protect your timesheet with PIN, fingerprint, or face unlock (biometrics)
+• Flexible schedules: Ideal for full-time, part-time, flextime, shift work, and remote work
+• Clean Material Design 3 interface with automatic Dark Mode
+
+---
+
+🆓 FREE FEATURES
+Time clock timer, automatic break calculation, overtime balance, public holidays by state, biometric app lock, and daily reports are permanently free – no account required.
+
+⭐ PREMIUM FEATURES
+Weekly, monthly, and yearly reports, PDF timesheet export, productivity insights, weekly reflection, and multiple work profiles.
+
+---
+
+Note: Work Time Manager is designed for personal work time tracking and does not replace legally mandated employer time-recording systems.
