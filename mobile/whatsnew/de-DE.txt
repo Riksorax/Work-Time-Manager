@@ -1,5 +1,4 @@
-Das ist neu in 1.7.2:
-• Überarbeitetes Home-Screen-Widget in vier Größen (2×1, 4×1, 2×2, 4×2) im neuen Design
-• Live-Timer, der auch bei geschlossener App weiterläuft
-• Starten, Pausieren, Fortsetzen und Beenden direkt im Widget
-• Anzeige von Feierabend, Überstunden und Tagesziel; bei aktiver App-Sperre bleiben Zeiten verborgen
+Das ist neu in 1.7.3:
+• Das Home-Screen-Widget gibt es jetzt in vier Größen, jede einzeln in der Widget-Auswahl wählbar: 2×1, 4×1, 2×2 und 4×2
+• Vorschau mit Beispielwerten direkt in der Widget-Auswahl
+• Die Größe lässt sich nach dem Platzieren weiter anpassen, das Layout passt sich automatisch an
