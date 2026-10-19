@@ -119,6 +119,36 @@ void main() {
     }, setUp: prep(), profiles: true);
   });
 
+  group('Pause und Weiter', () {
+    scenario(
+        'A0a Pause bei laufendem Timer, danach Weiter; Wiederholung nichts',
+        at(10), (h) {
+      h.boot();
+      final p = run(h, TimerAction.pause);
+      expect(p.value(), TimerActionResult.applied);
+      expect(h.state.workEntry.breaks.any((b) => b.end == null), isTrue);
+      expect(h.vm.isTimerRunning, isTrue);
+
+      final again = run(h, TimerAction.pause);
+      expect(again.value(), TimerActionResult.notApplicable);
+
+      final r = run(h, TimerAction.resume);
+      expect(r.value(), TimerActionResult.applied);
+      expect(h.state.workEntry.breaks.any((b) => b.end == null), isFalse);
+      expect(h.state.workEntry.breaks, hasLength(1));
+    }, setUp: prep(running), profiles: true);
+
+    scenario('A0b Pause/Weiter bei leerem oder gestopptem Tag: notApplicable',
+        at(17), (h) {
+      h.boot();
+      expect(
+          run(h, TimerAction.pause).value(), TimerActionResult.notApplicable);
+      expect(
+          run(h, TimerAction.resume).value(), TimerActionResult.notApplicable);
+      expect(h.work.saveCalls, 0);
+    }, setUp: prep(finished), profiles: true);
+  });
+
   group('Stop', () {
     scenario('A5 laufend: Eintrag -> Saldo, wie beim UI-Stop, applied', at(17),
         (h) {

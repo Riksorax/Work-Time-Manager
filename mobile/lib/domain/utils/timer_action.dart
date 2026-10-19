@@ -5,8 +5,9 @@ library;
 
 import '../entities/work_entry_entity.dart';
 
-/// Aktion, die von außen den Timer steuert.
-enum TimerAction { start, stop }
+/// Aktion, die von außen den Timer steuert. `pause`/`resume` kommen nur vom
+/// Widget (#276), nicht von Notification-Buttons oder App-Shortcuts.
+enum TimerAction { start, stop, pause, resume }
 
 /// Ergebnis der Entscheidung: anwenden oder (still) nichts tun.
 enum TimerDecision { apply, notApplicable }
@@ -24,16 +25,26 @@ const String timerStartActionId = 'timer_start';
 /// Notification-Action-Id bzw. Shortcut-Typ für [TimerAction.stop].
 const String timerStopActionId = 'timer_stop';
 
+/// Widget-Aktion für [TimerAction.pause] (Pause beginnen).
+const String timerPauseActionId = 'timer_pause';
+
+/// Widget-Aktion für [TimerAction.resume] (laufende Pause beenden).
+const String timerResumeActionId = 'timer_resume';
+
 /// Id (Notification-Action / Shortcut-Typ) zu einer [TimerAction].
 String timerActionId(TimerAction action) => switch (action) {
       TimerAction.start => timerStartActionId,
       TimerAction.stop => timerStopActionId,
+      TimerAction.pause => timerPauseActionId,
+      TimerAction.resume => timerResumeActionId,
     };
 
 /// [TimerAction] zu einer Id; unbekannt, leer oder `null` ergibt `null`.
 TimerAction? timerActionFromId(String? id) => switch (id) {
       timerStartActionId => TimerAction.start,
       timerStopActionId => TimerAction.stop,
+      timerPauseActionId => TimerAction.pause,
+      timerResumeActionId => TimerAction.resume,
       _ => null,
     };
 
@@ -43,9 +54,16 @@ TimerAction? timerActionFromId(String? id) => switch (id) {
 /// Arbeits-Eintrag (Typ `work`, Start gesetzt, kein Ende). Alles andere
 /// (laufend + Start, gestoppt, Urlaub/Krank/Feiertag) ist nicht anwendbar, damit
 /// ein Tipp auf „Einstempeln“ bei laufendem Timer diesen nie stoppt.
+///
+/// Pause nur bei laufendem Timer ohne offene Pause, Weiter nur bei offener
+/// Pause (jeweils Arbeits-Eintrag mit Start und ohne Ende).
 TimerDecision decideTimerAction(TimerAction action, WorkEntryEntity entry) {
   final isWork = entry.type == WorkEntryType.work;
+  final openBreak = entry.breaks.any((b) => b.end == null);
+  final running = isWork && entry.workStart != null && entry.workEnd == null;
   final applies = switch (action) {
+    TimerAction.pause => running && !openBreak,
+    TimerAction.resume => running && openBreak,
     TimerAction.start =>
       isWork && entry.workStart == null && entry.workEnd == null,
     TimerAction.stop =>

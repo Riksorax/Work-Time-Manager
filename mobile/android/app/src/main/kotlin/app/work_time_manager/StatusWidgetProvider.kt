@@ -16,12 +16,12 @@ import java.util.Locale
 
 /**
  * Status-Widget (#276): Status, Live-Timer (Netto der heutigen Arbeitszeit),
- * "Seit HH:mm" und ein Start-/Stopp-Button.
+ * "Seit HH:mm" und Start-/Pause-/Stopp-Buttons.
  *
  * Der Timer ist ein natives [android.widget.Chronometer]: er zaehlt vom
  * Snapshot (`netMinutes` zum Zeitpunkt `netAtMs`) selbststaendig weiter, auch
  * wenn die App nicht laeuft. Der Button oeffnet die App mit dem Shortcut-Extra
- * von `quick_actions` (`timer_start`/`timer_stop`); die App fuehrt die Aktion
+ * von `quick_actions` (`timer_start`/`timer_stop`/`timer_pause`/`timer_resume`); die App fuehrt die Aktion
  * nach Entsperren aus (gleicher Weg wie die App-Icon-Shortcuts, #274).
  *
  * Wird nur von der App aktualisiert (Dart schreibt den Snapshot per `home_widget`
@@ -105,25 +105,40 @@ class StatusWidgetProvider : HomeWidgetProvider() {
             views.setViewVisibility(R.id.widget_timer, View.GONE)
         }
 
-        // Start bei "nicht gestartet", Stopp bei laufend/pausiert, sonst kein Button.
-        val actionId = when (effective) {
+        // Start bei "nicht gestartet"; bei laufend/pausiert Pause bzw. Weiter plus
+        // Stopp; sonst keine Buttons.
+        val primary = when (effective) {
             "notStarted" -> "timer_start"
             "running", "paused" -> "timer_stop"
             else -> null
         }
-        if (actionId == null) {
-            views.setViewVisibility(R.id.widget_action, View.GONE)
-        } else {
-            views.setTextViewText(
-                R.id.widget_action,
-                context.getString(
-                    if (actionId == "timer_start") R.string.widget_action_start
-                    else R.string.widget_action_stop,
-                ),
-            )
-            views.setOnClickPendingIntent(R.id.widget_action, actionIntent(context, actionId))
-            views.setViewVisibility(R.id.widget_action, View.VISIBLE)
+        val secondary = when (effective) {
+            "running" -> "timer_pause"
+            "paused" -> "timer_resume"
+            else -> null
         }
+        setButton(context, views, R.id.widget_action, primary)
+        setButton(context, views, R.id.widget_pause, secondary)
+        views.setViewVisibility(
+            R.id.widget_buttons,
+            if (primary == null) View.GONE else View.VISIBLE,
+        )
+    }
+
+    private fun setButton(context: Context, views: RemoteViews, viewId: Int, actionId: String?) {
+        if (actionId == null) {
+            views.setViewVisibility(viewId, View.GONE)
+            return
+        }
+        val label = when (actionId) {
+            "timer_start" -> R.string.widget_action_start
+            "timer_stop" -> R.string.widget_action_stop
+            "timer_pause" -> R.string.widget_action_pause
+            else -> R.string.widget_action_resume
+        }
+        views.setTextViewText(viewId, context.getString(label))
+        views.setOnClickPendingIntent(viewId, actionIntent(context, actionId))
+        views.setViewVisibility(viewId, View.VISIBLE)
     }
 
     private fun setLine(views: RemoteViews, viewId: Int, text: String?) {
@@ -151,7 +166,12 @@ class StatusWidgetProvider : HomeWidgetProvider() {
         intent.putExtra("some unique action key", actionId)
         return PendingIntent.getActivity(
             context,
-            if (actionId == "timer_start") 1 else 2,
+            when (actionId) {
+                "timer_start" -> 1
+                "timer_stop" -> 2
+                "timer_pause" -> 3
+                else -> 4
+            },
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )

@@ -6,4 +6,6 @@
     <color name="widget_text_secondary">#CAC4D0</color>
     <color name="widget_button">#90CAF9</color>
     <color name="widget_button_text">#0D2B4D</color>
+    <color name="widget_button_secondary">#3A4A5E</color>
+    <color name="widget_button_secondary_text">#E6E1E5</color>
 </resources>
