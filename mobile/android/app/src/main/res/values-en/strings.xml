@@ -27,4 +27,9 @@
     <string name="widget_unlock">Unlock</string>
     <string name="widget_status_since">%1$s · since %2$s</string>
     <string name="widget_preview_sub">since 08:12 · finish ≈ 16:42</string>
+    <string name="widget_description_4x1">Bar: status, live timer and buttons in one row.</string>
+    <string name="widget_description_2x2">Progress ring with live timer and buttons.</string>
+    <string name="widget_description_2x1">Compact: status, net time and progress.</string>
+    <string name="widget_preview_status_since">Running · since 08:12</string>
+    <string name="widget_preview_of">of 8:00</string>
 </resources>

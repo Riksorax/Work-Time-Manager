@@ -3,10 +3,20 @@ import 'package:home_widget/home_widget.dart';
 import '../../domain/utils/timer_status.dart';
 import '../utils/logger.dart';
 
-/// Qualifizierter Klassenname des Android-Widget-Providers (#276). Muss zu
+/// Qualifizierter Klassenname des Android-Widget-Providers (#276, 4x2). Muss zu
 /// `StatusWidgetProvider.kt` und dem `<receiver>` im Manifest passen.
 const statusWidgetAndroidProvider =
     'app.work_time_manager.StatusWidgetProvider';
+
+/// Alle Widget-Einträge der Auswahl (4x2, 4x1, 2x2, 2x1). Jeder ist ein eigener
+/// Provider mit eigener Vorschau; jede Änderung muss alle aktualisieren. Muss zu
+/// `StatusWidgetProvider.kt` und den `<receiver>`-Einträgen im Manifest passen.
+const statusWidgetAndroidProviders = <String>[
+  statusWidgetAndroidProvider,
+  'app.work_time_manager.StatusWidget4x1Provider',
+  'app.work_time_manager.StatusWidget2x2Provider',
+  'app.work_time_manager.StatusWidget2x1Provider',
+];
 
 /// Schluessel des Snapshots (Dart -> Native). Muss zu `StatusWidgetProvider.kt`
 /// passen.
@@ -113,12 +123,13 @@ class PluginHomeWidgetGateway implements HomeWidgetGateway {
 
   @override
   Future<void> update() async {
-    try {
-      await HomeWidget.updateWidget(
-          qualifiedAndroidName: statusWidgetAndroidProvider);
-    } catch (e, st) {
-      logger.e('[HomeWidget] Aktualisieren fehlgeschlagen (${e.runtimeType})',
-          stackTrace: st);
+    for (final provider in statusWidgetAndroidProviders) {
+      try {
+        await HomeWidget.updateWidget(qualifiedAndroidName: provider);
+      } catch (e, st) {
+        logger.e('[HomeWidget] Aktualisieren fehlgeschlagen (${e.runtimeType})',
+            stackTrace: st);
+      }
     }
   }
 

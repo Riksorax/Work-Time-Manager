@@ -29,4 +29,9 @@
     <string name="widget_unlock">Entsperren</string>
     <string name="widget_status_since">%1$s · seit %2$s</string>
     <string name="widget_preview_sub">seit 08:12 · Feierabend ≈ 16:42</string>
+    <string name="widget_description_4x1">Leiste: Status, Live-Timer und Buttons in einer Zeile.</string>
+    <string name="widget_description_2x2">Fortschrittsring mit Live-Timer und Buttons.</string>
+    <string name="widget_description_2x1">Kompakt: Status, Netto-Zeit und Fortschritt.</string>
+    <string name="widget_preview_status_since">Läuft · seit 08:12</string>
+    <string name="widget_preview_of">von 8:00</string>
 </resources>
