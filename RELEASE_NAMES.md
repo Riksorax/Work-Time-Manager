@@ -58,6 +58,7 @@ lädt den Inhalt beim Play-Upload automatisch als Änderungsprotokoll mit hoch.
 
 | Version | Charakter | Datum |
 | --- | --- | --- |
+| 1.7.4 | Eraqus | 2026-10-19 |
 | 1.7.3 | Eraqus | 2026-10-19 |
 | 1.7.2 | Eraqus | 2026-10-19 |
 | 1.7.1 | Eraqus | 2026-10-18 |
