@@ -50,8 +50,9 @@
         </receiver>
         <receiver android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"
             android:exported="false" />
-        <!-- Home-Screen-Status-Widget (#276). Klassenname muss zu
-             statusWidgetAndroidProvider in home_widget_gateway.dart passen. -->
+        <!-- Home-Screen-Status-Widget (#276), vier Eintraege in der Widget-Auswahl
+             (4x2, 4x1, 2x2, 2x1). Die Klassennamen muessen zu
+             statusWidgetAndroidProviders in home_widget_gateway.dart passen. -->
         <receiver android:name=".StatusWidgetProvider"
             android:exported="true">
             <intent-filter>
@@ -60,6 +61,33 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/status_widget_info" />
+        </receiver>
+        <receiver android:name=".StatusWidget4x1Provider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/status_widget_4x1_info" />
+        </receiver>
+        <receiver android:name=".StatusWidget2x2Provider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/status_widget_2x2_info" />
+        </receiver>
+        <receiver android:name=".StatusWidget2x1Provider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/status_widget_2x1_info" />
         </receiver>
     </application>
     <!-- Required to query activities that can process text, see:
