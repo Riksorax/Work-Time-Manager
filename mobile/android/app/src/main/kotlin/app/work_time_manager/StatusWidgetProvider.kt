@@ -30,9 +30,14 @@ import java.util.Locale
  * per `home_widget`); die Schluessel muessen zu `home_widget_gateway.dart` passen.
  * Ein Snapshot mit `locked` (App-Sperre) enthaelt keine Zeiten.
  *
+ * Jede Groesse ist zusaetzlich ein eigener Eintrag in der Widget-Auswahl (eigene
+ * Unterklasse, eigene Vorschau, siehe unten); die Logik ist fuer alle gleich und
+ * waehlt das Layout weiterhin nach der tatsaechlichen Groesse. Neue Eintraege
+ * muessen in `statusWidgetAndroidProviders` (home_widget_gateway.dart) stehen.
+ *
  * Die Logik ist bewusst kompakt (nicht automatisiert testbar).
  */
-class StatusWidgetProvider : HomeWidgetProvider() {
+open class StatusWidgetProvider : HomeWidgetProvider() {
 
     override fun onUpdate(
         context: Context,
@@ -492,3 +497,12 @@ class StatusWidgetProvider : HomeWidgetProvider() {
         )
     }
 }
+
+/** Auswahl-Eintrag 4x1 (Leiste). */
+class StatusWidget4x1Provider : StatusWidgetProvider()
+
+/** Auswahl-Eintrag 2x2 (Fortschrittsring). */
+class StatusWidget2x2Provider : StatusWidgetProvider()
+
+/** Auswahl-Eintrag 2x1 (kompakt). */
+class StatusWidget2x1Provider : StatusWidgetProvider()

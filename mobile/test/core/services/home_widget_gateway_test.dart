@@ -151,9 +151,11 @@ void main() {
       final saves = calls.where((c) => c.method == 'saveWidgetData').toList();
       expect(saves.map((c) => (c.arguments as Map)['id']),
           ['status', 'netMinutes']);
-      final update = calls.singleWhere((c) => c.method == 'updateWidget');
-      expect((update.arguments as Map)['qualifiedAndroidName'],
-          statusWidgetAndroidProvider);
+      final updates = calls.where((c) => c.method == 'updateWidget');
+      expect(updates.map((c) => (c.arguments as Map)['qualifiedAndroidName']),
+          statusWidgetAndroidProviders);
+      expect(
+          statusWidgetAndroidProviders, contains(statusWidgetAndroidProvider));
     });
 
     test('clear schreibt status none und aktualisiert', () async {
