@@ -1,17 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Work Time Manager</string>
-    <string name="widget_description">Shows today\'s net work time as a live timer and starts, pauses and stops the timer.</string>
     <string name="widget_status_none">No data</string>
     <string name="widget_status_not_started">Not started</string>
     <string name="widget_status_running">Running</string>
     <string name="widget_status_paused">Paused</string>
     <string name="widget_status_stopped">Finished</string>
-    <string name="widget_since">Since %1$s</string>
     <string name="widget_locked">App locked</string>
     <string name="widget_open_hint">Open app</string>
     <string name="widget_action_start">Start</string>
-    <string name="widget_action_stop">Stop</string>
     <string name="widget_action_pause">Pause</string>
     <string name="widget_action_resume">Resume</string>
+    <string name="widget_description">Shows today\'s work time live and starts, pauses and ends the timer.</string>
+    <string name="widget_action_stop">End</string>
+    <string name="widget_today">Today</string>
+    <string name="widget_overtime">Overtime</string>
+    <string name="widget_locked_hint">Times are hidden while the app lock is active.</string>
+    <string name="widget_net_short">net</string>
+    <string name="widget_of">of %1$s</string>
+    <string name="widget_target">Goal today %1$s</string>
+    <string name="widget_since_end">since %1$s · finish ≈ %2$s</string>
+    <string name="widget_since_only">since %1$s</string>
+    <string name="widget_pause_since">Break since %1$s · %2$s</string>
+    <string name="widget_range">%1$s – %2$s · Break %3$s</string>
+    <string name="widget_day_done">Done · %1$s today</string>
+    <string name="widget_unlock">Unlock</string>
+    <string name="widget_status_since">%1$s · since %2$s</string>
 </resources>

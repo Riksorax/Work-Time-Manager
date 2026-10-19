@@ -18,6 +18,11 @@ const widgetKeyNetMinutes = 'netMinutes';
 /// Zeitpunkt (Epoch-ms), zu dem `netMinutes` galt. Das Widget zaehlt davon aus
 /// selbst weiter (Chronometer), auch wenn die App nicht laeuft.
 const widgetKeyNetAtMs = 'netAtMs';
+const widgetKeyTargetMinutes = 'targetMinutes';
+const widgetKeyBreakMinutes = 'breakMinutes';
+const widgetKeyExpectedEndMs = 'expectedEndMs';
+const widgetKeyWorkEndMs = 'workEndMs';
+const widgetKeyOvertimeMinutes = 'overtimeMinutes';
 const widgetKeyDayKey = 'dayKey';
 const widgetKeyLocked = 'locked';
 
@@ -44,6 +49,11 @@ Map<String, Object?> widgetSnapshotToMap(
           : null,
       widgetKeyNetMinutes: locked ? 0 : snapshot.netMinutes,
       widgetKeyNetAtMs: nowMs,
+      widgetKeyTargetMinutes: locked ? null : snapshot.targetMinutes,
+      widgetKeyBreakMinutes: locked ? 0 : snapshot.breakMinutes,
+      widgetKeyExpectedEndMs: locked ? null : snapshot.expectedEndMs,
+      widgetKeyWorkEndMs: locked ? null : snapshot.workEndMs,
+      widgetKeyOvertimeMinutes: locked ? null : snapshot.overtimeMinutes,
       widgetKeyDayKey: snapshot.dayKey,
       widgetKeyLocked: locked,
     };
@@ -55,6 +65,11 @@ Map<String, Object?> widgetClearedMap() => {
       widgetKeyPauseStartMs: null,
       widgetKeyNetMinutes: 0,
       widgetKeyNetAtMs: null,
+      widgetKeyTargetMinutes: null,
+      widgetKeyBreakMinutes: 0,
+      widgetKeyExpectedEndMs: null,
+      widgetKeyWorkEndMs: null,
+      widgetKeyOvertimeMinutes: null,
       widgetKeyDayKey: null,
       widgetKeyLocked: false,
     };

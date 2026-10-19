@@ -101,9 +101,15 @@ void widgetSync(Ref ref) {
 
   ref.listen(dashboardViewModelProvider, (_, next) {
     if (next.isLoading) return;
+    final net = next.actualWorkDuration ?? next.elapsedTime;
+    final dailyOvertime = next.dailyOvertime;
     lastSnapshot = buildTimerSnapshot(
       entry: next.workEntry,
-      net: next.actualWorkDuration ?? next.elapsedTime,
+      net: net,
+      // Tagessoll aus Netto und Tagessaldo (Saldo = Netto - Soll).
+      target: dailyOvertime == null ? null : net - dailyOvertime,
+      expectedEnd: next.expectedEndTime,
+      totalOvertime: next.totalOvertime,
     );
     schedulePush();
   }, fireImmediately: true);

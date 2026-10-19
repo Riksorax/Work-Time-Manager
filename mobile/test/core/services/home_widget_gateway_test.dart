@@ -20,6 +20,11 @@ void main() {
         'pauseStartMs': null,
         'netMinutes': 95,
         'netAtMs': 5000,
+        'targetMinutes': null,
+        'breakMinutes': 0,
+        'expectedEndMs': null,
+        'workEndMs': null,
+        'overtimeMinutes': null,
         'dayKey': '2026-10-05',
         'locked': false,
       });
@@ -53,9 +58,38 @@ void main() {
         'pauseStartMs': null,
         'netMinutes': 0,
         'netAtMs': 5000,
+        'targetMinutes': null,
+        'breakMinutes': 0,
+        'expectedEndMs': null,
+        'workEndMs': null,
+        'overtimeMinutes': null,
         'dayKey': '2026-10-05',
         'locked': true,
       });
+    });
+
+    test('Soll, Pausen, Feierabend und Ueberstunden gehen mit, gesperrt nicht',
+        () {
+      const s = TimerSnapshot(
+        status: TimerStatus.running,
+        dayKey: '2026-10-05',
+        workStartMs: 1000,
+        netMinutes: 342,
+        targetMinutes: 480,
+        breakMinutes: 30,
+        expectedEndMs: 9000,
+        overtimeMinutes: 750,
+      );
+      final open = widgetSnapshotToMap(s, locked: false, nowMs: 5000);
+      expect(open['targetMinutes'], 480);
+      expect(open['breakMinutes'], 30);
+      expect(open['expectedEndMs'], 9000);
+      expect(open['overtimeMinutes'], 750);
+      final locked = widgetSnapshotToMap(s, locked: true, nowMs: 5000);
+      expect(locked['targetMinutes'], isNull);
+      expect(locked['breakMinutes'], 0);
+      expect(locked['expectedEndMs'], isNull);
+      expect(locked['overtimeMinutes'], isNull);
     });
 
     test('nicht gestartet und gestoppt', () {

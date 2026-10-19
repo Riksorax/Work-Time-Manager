@@ -6,7 +6,7 @@
     android:minWidth="250dp"
     android:minHeight="110dp"
     android:minResizeWidth="110dp"
-    android:minResizeHeight="70dp"
+    android:minResizeHeight="40dp"
     android:previewLayout="@layout/status_widget"
     android:resizeMode="horizontal|vertical"
     android:targetCellHeight="2"
