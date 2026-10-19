@@ -54,8 +54,9 @@ void widgetSync(Ref ref) {
   }
 
   void write(Map<String, Object?> data) {
-    if (mapEquals(lastWritten, data)) return;
-    lastWritten = data;
+    final comparable = widgetMapWithoutClock(data);
+    if (mapEquals(lastWritten, comparable)) return;
+    lastWritten = comparable;
     enqueue(() async {
       await gateway.saveData(data);
       await gateway.update();
@@ -64,7 +65,7 @@ void widgetSync(Ref ref) {
 
   void clear() {
     lastSnapshot = null;
-    final cleared = widgetClearedMap();
+    final cleared = widgetMapWithoutClock(widgetClearedMap());
     if (mapEquals(lastWritten, cleared)) return;
     lastWritten = cleared;
     enqueue(gateway.clear);
@@ -77,7 +78,11 @@ void widgetSync(Ref ref) {
     final service = ref.read(appLockServiceProvider);
     final lockActive =
         ref.read(isAppLockedProvider) || (service.isEnabled && service.hasPin);
-    write(widgetSnapshotToMap(snapshot, locked: lockActive));
+    write(widgetSnapshotToMap(
+      snapshot,
+      locked: lockActive,
+      nowMs: DateTime.now().millisecondsSinceEpoch,
+    ));
   }
 
   // Mehrere State-Aenderungen in einem Mikrotask-Durchlauf (z. B. Ladelauf und

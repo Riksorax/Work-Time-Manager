@@ -4,4 +4,6 @@
     <color name="widget_background">#F2FFFFFF</color>
     <color name="widget_text_primary">#1C1B1F</color>
     <color name="widget_text_secondary">#49454F</color>
+    <color name="widget_button">#1565C0</color>
+    <color name="widget_button_text">#FFFFFF</color>
 </resources>

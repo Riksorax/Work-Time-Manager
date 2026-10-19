@@ -1,14 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Work Time Manager</string>
-    <string name="widget_description">Shows your work time status and today\'s net work time.</string>
+    <string name="widget_description">Shows today\'s net work time as a live timer and starts or stops the timer.</string>
     <string name="widget_status_none">No data</string>
     <string name="widget_status_not_started">Not started</string>
     <string name="widget_status_running">Running</string>
     <string name="widget_status_paused">Paused</string>
     <string name="widget_status_stopped">Finished</string>
     <string name="widget_since">Since %1$s</string>
-    <string name="widget_net">Net: %1$s</string>
     <string name="widget_locked">App locked</string>
     <string name="widget_open_hint">Open app</string>
+    <string name="widget_action_start">Start</string>
+    <string name="widget_action_stop">Stop</string>
 </resources>

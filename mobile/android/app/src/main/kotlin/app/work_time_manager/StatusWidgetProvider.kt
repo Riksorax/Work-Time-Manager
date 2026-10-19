@@ -5,6 +5,7 @@ import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.os.SystemClock
 import android.text.format.DateFormat
 import android.view.View
 import android.widget.RemoteViews
@@ -14,7 +15,14 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Status-Widget (#276): Status, "Seit HH:mm" und Netto der heutigen Arbeitszeit.
+ * Status-Widget (#276): Status, Live-Timer (Netto der heutigen Arbeitszeit),
+ * "Seit HH:mm" und ein Start-/Stopp-Button.
+ *
+ * Der Timer ist ein natives [android.widget.Chronometer]: er zaehlt vom
+ * Snapshot (`netMinutes` zum Zeitpunkt `netAtMs`) selbststaendig weiter, auch
+ * wenn die App nicht laeuft. Der Button oeffnet die App mit dem Shortcut-Extra
+ * von `quick_actions` (`timer_start`/`timer_stop`); die App fuehrt die Aktion
+ * nach Entsperren aus (gleicher Weg wie die App-Icon-Shortcuts, #274).
  *
  * Wird nur von der App aktualisiert (Dart schreibt den Snapshot per `home_widget`
  * und löst [onUpdate] aus). Die Schlüssel müssen zu `home_widget_gateway.dart`
@@ -47,6 +55,7 @@ class StatusWidgetProvider : HomeWidgetProvider() {
         val locked = all["locked"] as? Boolean ?: false
         val workStartMs = (all["workStartMs"] as? Number)?.toLong()
         val netMinutes = (all["netMinutes"] as? Number)?.toLong() ?: 0L
+        val netAtMs = (all["netAtMs"] as? Number)?.toLong()
 
         // Ein Stand vom Vortag (App seit Mitternacht nicht geöffnet) wird nicht
         // angezeigt; ein über Mitternacht laufender Timer bleibt "läuft".
@@ -68,7 +77,7 @@ class StatusWidgetProvider : HomeWidgetProvider() {
 
         val hasTimes = effective == "running" || effective == "paused" || effective == "stopped"
         var line1: String? = null
-        var line2: String? = null
+        var showTimer = false
         if (effective == "none") {
             line1 = context.getString(R.string.widget_open_hint)
         } else if (locked && effective != "notStarted") {
@@ -76,13 +85,45 @@ class StatusWidgetProvider : HomeWidgetProvider() {
         } else if (hasTimes && workStartMs != null && workStartMs > 0) {
             val time = DateFormat.getTimeFormat(context).format(Date(workStartMs))
             line1 = context.getString(R.string.widget_since, time)
-            line2 = context.getString(
-                R.string.widget_net,
-                String.format(Locale.getDefault(), "%d:%02d", netMinutes / 60, netMinutes % 60),
-            )
+            showTimer = true
         }
         setLine(views, R.id.widget_since, line1)
-        setLine(views, R.id.widget_net, line2)
+
+        if (showTimer) {
+            var elapsedMs = netMinutes * 60_000L
+            if (effective == "running" && netAtMs != null) {
+                elapsedMs += (System.currentTimeMillis() - netAtMs).coerceAtLeast(0L)
+            }
+            views.setChronometer(
+                R.id.widget_timer,
+                SystemClock.elapsedRealtime() - elapsedMs,
+                null,
+                effective == "running",
+            )
+            views.setViewVisibility(R.id.widget_timer, View.VISIBLE)
+        } else {
+            views.setViewVisibility(R.id.widget_timer, View.GONE)
+        }
+
+        // Start bei "nicht gestartet", Stopp bei laufend/pausiert, sonst kein Button.
+        val actionId = when (effective) {
+            "notStarted" -> "timer_start"
+            "running", "paused" -> "timer_stop"
+            else -> null
+        }
+        if (actionId == null) {
+            views.setViewVisibility(R.id.widget_action, View.GONE)
+        } else {
+            views.setTextViewText(
+                R.id.widget_action,
+                context.getString(
+                    if (actionId == "timer_start") R.string.widget_action_start
+                    else R.string.widget_action_stop,
+                ),
+            )
+            views.setOnClickPendingIntent(R.id.widget_action, actionIntent(context, actionId))
+            views.setViewVisibility(R.id.widget_action, View.VISIBLE)
+        }
     }
 
     private fun setLine(views: RemoteViews, viewId: Int, text: String?) {
@@ -97,6 +138,24 @@ class StatusWidgetProvider : HomeWidgetProvider() {
     /** Lokaler Kalendertag des Geräts als `yyyy-MM-dd` (wie `dayKey` im Snapshot). */
     private fun todayKey(): String =
         SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+
+    /**
+     * Startet die App mit dem `quick_actions`-Extra; Dart behandelt es wie einen
+     * App-Icon-Shortcut. Der Schluessel muss zu `QuickActions.EXTRA_ACTION` des
+     * Plugins passen.
+     */
+    private fun actionIntent(context: Context, actionId: String): PendingIntent {
+        val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+            ?: Intent()
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        intent.putExtra("some unique action key", actionId)
+        return PendingIntent.getActivity(
+            context,
+            if (actionId == "timer_start") 1 else 2,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+    }
 
     private fun launchAppIntent(context: Context): PendingIntent {
         val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)

@@ -3,14 +3,15 @@
      Englisch liegt in values-en/. Das Widget folgt der Systemsprache. -->
 <resources>
     <string name="app_name">Work Time Manager</string>
-    <string name="widget_description">Zeigt den Status deiner Arbeitszeit und die heutige Netto-Arbeitszeit.</string>
+    <string name="widget_description">Zeigt die heutige Netto-Arbeitszeit als Live-Timer und startet bzw. beendet den Timer.</string>
     <string name="widget_status_none">Keine Daten</string>
     <string name="widget_status_not_started">Nicht gestartet</string>
     <string name="widget_status_running">Läuft</string>
     <string name="widget_status_paused">Pausiert</string>
     <string name="widget_status_stopped">Beendet</string>
     <string name="widget_since">Seit %1$s</string>
-    <string name="widget_net">Netto: %1$s</string>
     <string name="widget_locked">App gesperrt</string>
     <string name="widget_open_hint">App öffnen</string>
+    <string name="widget_action_start">Starten</string>
+    <string name="widget_action_stop">Stoppen</string>
 </resources>

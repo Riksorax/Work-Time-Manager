@@ -14,13 +14,18 @@ const widgetKeyStatus = 'status';
 const widgetKeyWorkStartMs = 'workStartMs';
 const widgetKeyPauseStartMs = 'pauseStartMs';
 const widgetKeyNetMinutes = 'netMinutes';
+
+/// Zeitpunkt (Epoch-ms), zu dem `netMinutes` galt. Das Widget zaehlt davon aus
+/// selbst weiter (Chronometer), auch wenn die App nicht laeuft.
+const widgetKeyNetAtMs = 'netAtMs';
 const widgetKeyDayKey = 'dayKey';
 const widgetKeyLocked = 'locked';
 
 /// Status `none` = Snapshot geleert (Logout/Profilwechsel).
 const widgetStatusNone = 'none';
 
-/// Serialisiert [snapshot] fuer das Widget. [locked] (App-Sperre aktiv) kommt
+/// Serialisiert [snapshot] fuer das Widget. [nowMs] ist der Schreibzeitpunkt
+/// (Basis des nativen Live-Timers). [locked] (App-Sperre aktiv) kommt
 /// nicht aus dem Snapshot; `pauseStartMs` ist nur bei `paused` gesetzt.
 ///
 /// Bei [locked] werden nie Zeiten geschrieben (nur Status, Tag und
@@ -29,6 +34,7 @@ const widgetStatusNone = 'none';
 Map<String, Object?> widgetSnapshotToMap(
   TimerSnapshot snapshot, {
   required bool locked,
+  required int nowMs,
 }) =>
     {
       widgetKeyStatus: snapshot.status.name,
@@ -37,6 +43,7 @@ Map<String, Object?> widgetSnapshotToMap(
           ? snapshot.pauseStartMs
           : null,
       widgetKeyNetMinutes: locked ? 0 : snapshot.netMinutes,
+      widgetKeyNetAtMs: nowMs,
       widgetKeyDayKey: snapshot.dayKey,
       widgetKeyLocked: locked,
     };
@@ -47,6 +54,7 @@ Map<String, Object?> widgetClearedMap() => {
       widgetKeyWorkStartMs: null,
       widgetKeyPauseStartMs: null,
       widgetKeyNetMinutes: 0,
+      widgetKeyNetAtMs: null,
       widgetKeyDayKey: null,
       widgetKeyLocked: false,
     };
@@ -105,3 +113,8 @@ class PluginHomeWidgetGateway implements HomeWidgetGateway {
     await update();
   }
 }
+
+/// Vergleichsbasis fuer das Entdoppeln von Writes: ohne den Schreibzeitpunkt,
+/// der sich bei jedem Aufruf aendert.
+Map<String, Object?> widgetMapWithoutClock(Map<String, Object?> data) =>
+    {...data}..remove(widgetKeyNetAtMs);
