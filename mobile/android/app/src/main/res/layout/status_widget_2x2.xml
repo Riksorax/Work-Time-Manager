@@ -1,160 +1,197 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Status-Widget (#276), Vorlage "Home Screen Widget" (Claude Design). Texte, Farben,
-     Timer und Buttons setzt StatusWidgetProvider. -->
+<!-- Status-Widget (#276), 2x2: schmal und hoch, Ring oben, Buttons darunter. Texte, Farben, Timer und Buttons setzt StatusWidgetProvider. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/widget_background"
-    android:gravity="top"
+    android:gravity="center_horizontal"
     android:orientation="vertical"
-    android:padding="14dp">
+    android:padding="10dp">
 
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal">
-        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="horizontal">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
         <LinearLayout
-            android:id="@+id/w_chip"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:background="@drawable/w_chip_neutral"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingStart="9dp"
-            android:paddingTop="4dp"
-            android:paddingEnd="9dp"
-            android:paddingBottom="4dp">
+            android:layout_weight="1"
+            android:orientation="horizontal">
 
-            <ImageView
-                android:id="@+id/w_dot"
-                android:layout_width="7dp"
-                android:layout_height="7dp"
-                android:background="@drawable/w_dot_neutral"
-                android:importantForAccessibility="no" />
-
-            <TextView
-                android:id="@+id/w_status"
+            <LinearLayout
+                android:id="@+id/w_chip"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="6dp"
-                android:fontFamily="sans-serif-medium"
-                android:includeFontPadding="false"
-                android:maxLines="1"
-                android:textSize="12sp" />
+                android:background="@drawable/w_chip_neutral"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="8dp"
+                android:paddingTop="3dp"
+                android:paddingEnd="8dp"
+                android:paddingBottom="3dp">
+
+                <ImageView
+                android:id="@+id/w_dot"
+                    android:layout_width="7dp"
+                    android:layout_height="7dp"
+                    android:background="@drawable/w_dot_neutral"
+                    android:importantForAccessibility="no" />
+
+                <TextView
+                android:id="@+id/w_status"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="5dp"
+                    android:fontFamily="sans-serif-medium"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:textSize="12sp" />
+            </LinearLayout>
         </LinearLayout>
-        </LinearLayout>
+
         <ImageView
             android:id="@+id/w_logo"
-            android:layout_width="20dp"
-            android:layout_height="20dp"
+            android:layout_width="18dp"
+            android:layout_height="18dp"
             android:importantForAccessibility="no"
             android:src="@mipmap/launcher_icon" />
     </LinearLayout>
 
-    <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:gravity="center_vertical" android:orientation="horizontal">
-        <FrameLayout android:layout_width="104dp" android:layout_height="104dp">
-            <ProgressBar android:id="@+id/w_ring_track" style="?android:attr/progressBarStyleHorizontal" android:layout_width="104dp" android:layout_height="104dp" android:max="100" android:progress="0" android:progressDrawable="@drawable/w_ring_primary" />
-        <ProgressBar
-            android:id="@+id/w_ring_primary"
-            style="?android:attr/progressBarStyleHorizontal"
-            android:layout_width="104dp"
-            android:layout_height="104dp"
-            android:max="100"
-            android:progress="0"
-            android:progressDrawable="@drawable/w_ring_primary"
-            android:visibility="gone" />
-        <ProgressBar
-            android:id="@+id/w_ring_teal"
-            style="?android:attr/progressBarStyleHorizontal"
-            android:layout_width="104dp"
-            android:layout_height="104dp"
-            android:max="100"
-            android:progress="0"
-            android:progressDrawable="@drawable/w_ring_teal"
-            android:visibility="gone" />
-        <ProgressBar
-            android:id="@+id/w_ring_green"
-            style="?android:attr/progressBarStyleHorizontal"
-            android:layout_width="104dp"
-            android:layout_height="104dp"
-            android:max="100"
-            android:progress="0"
-            android:progressDrawable="@drawable/w_ring_green"
-            android:visibility="gone" />
-            <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center" android:orientation="vertical">
-                <FrameLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:orientation="vertical">
 
-            <Chronometer
-                android:id="@+id/w_timer"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:fontFamily="sans-serif-medium"
-                android:includeFontPadding="false"
-                android:maxLines="1"
-                android:textColor="@color/w_text"
-                android:textSize="24sp"
+        <FrameLayout
+            android:layout_width="76dp"
+            android:layout_height="76dp">
+
+            <ProgressBar
+                android:id="@+id/w_ring_track"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="76dp"
+                android:layout_height="76dp"
+                android:max="100"
+                android:progress="0"
+                android:progressDrawable="@drawable/w_ring_primary" />
+            <ProgressBar
+                android:id="@+id/w_ring_primary"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="76dp"
+                android:layout_height="76dp"
+                android:max="100"
+                android:progress="0"
+                android:progressDrawable="@drawable/w_ring_primary"
+                android:visibility="gone" />
+            <ProgressBar
+                android:id="@+id/w_ring_teal"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="76dp"
+                android:layout_height="76dp"
+                android:max="100"
+                android:progress="0"
+                android:progressDrawable="@drawable/w_ring_teal"
+                android:visibility="gone" />
+            <ProgressBar
+                android:id="@+id/w_ring_green"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="76dp"
+                android:layout_height="76dp"
+                android:max="100"
+                android:progress="0"
+                android:progressDrawable="@drawable/w_ring_green"
                 android:visibility="gone" />
 
-            <TextView
-                android:id="@+id/w_timer_static"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:fontFamily="sans-serif-medium"
-                android:includeFontPadding="false"
-                android:maxLines="1"
-                android:text="0:00"
-                android:textColor="@color/w_text"
-                android:textSize="24sp" />
-        </FrameLayout>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <FrameLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content">
+
+                    <Chronometer
+                        android:id="@+id/w_timer"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="sans-serif-medium"
+                        android:includeFontPadding="false"
+                        android:maxLines="1"
+                        android:textColor="@color/w_text"
+                        android:textSize="14sp"
+                        android:visibility="gone" />
+
+                    <TextView
+                        android:id="@+id/w_timer_static"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="sans-serif-medium"
+                        android:includeFontPadding="false"
+                        android:maxLines="1"
+                        android:text="0:00"
+                        android:textColor="@color/w_text"
+                        android:textSize="14sp" />
+                </FrameLayout>
+
                 <TextView
-            android:id="@+id/w_of"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:ellipsize="end"
-            android:includeFontPadding="false"
-            android:maxLines="1"
-            android:textColor="@color/w_text2"
-            android:textSize="11sp" />
+                    android:id="@+id/w_of"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:textColor="@color/w_text2"
+                    android:textSize="10sp" />
             </LinearLayout>
         </FrameLayout>
-        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center_horizontal" android:orientation="vertical">
-            <LinearLayout
-            android:id="@+id/w_btn_a"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:layout_marginEnd="0dp"
-            android:layout_marginTop="0dp"
-            android:background="@drawable/w_btn_primary"
-            android:gravity="center"
-            android:orientation="horizontal"
-            android:visibility="gone">
 
-            <ImageView
-                android:id="@+id/w_btn_a_icon"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:importantForAccessibility="no"
-                android:src="@drawable/ic_w_play" />
-        </LinearLayout>
-            <LinearLayout
-            android:id="@+id/w_btn_b"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:layout_marginEnd="0dp"
-            android:layout_marginTop="8dp"
-            android:background="@drawable/w_btn_primary"
-            android:gravity="center"
-            android:orientation="horizontal"
-            android:visibility="gone">
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:orientation="horizontal">
 
-            <ImageView
-                android:id="@+id/w_btn_b_icon"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:importantForAccessibility="no"
-                android:src="@drawable/ic_w_play" />
-        </LinearLayout>
+            <LinearLayout
+                android:id="@+id/w_btn_a"
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:layout_marginEnd="10dp"
+                android:background="@drawable/w_btn_container"
+                android:gravity="center"
+                android:orientation="horizontal"
+                android:visibility="gone">
+
+                <ImageView
+                    android:id="@+id/w_btn_a_icon"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_w_pause" />
+            </LinearLayout>
+            <LinearLayout
+                android:id="@+id/w_btn_b"
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:layout_marginEnd="0dp"
+                android:background="@drawable/w_btn_primary"
+                android:gravity="center"
+                android:orientation="horizontal"
+                android:visibility="gone">
+
+                <ImageView
+                    android:id="@+id/w_btn_b_icon"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_w_stop" />
+            </LinearLayout>
         </LinearLayout>
     </LinearLayout>
 </LinearLayout>

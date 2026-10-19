@@ -1,4 +1,4 @@
-Das ist neu in 1.7.3:
-• Das Home-Screen-Widget gibt es jetzt in vier Größen, jede einzeln in der Widget-Auswahl wählbar: 2×1, 4×1, 2×2 und 4×2
-• Vorschau mit Beispielwerten direkt in der Widget-Auswahl
-• Die Größe lässt sich nach dem Platzieren weiter anpassen, das Layout passt sich automatisch an
+Das ist neu in 1.7.4:
+• Home-Screen-Widget für schmale Displays überarbeitet: Das 2×2-Widget zeigt Ring und Buttons jetzt kompakt und ohne Abschneiden
+• Das 4×1-Widget und die Vorschau in der Widget-Auswahl sind sauberer dargestellt
+• Das 4×2-Widget ist vertikal zentriert
