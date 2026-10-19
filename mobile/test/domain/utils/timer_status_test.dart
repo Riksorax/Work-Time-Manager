@@ -42,6 +42,52 @@ void main() {
       expect(s.netMinutes, 225);
     });
 
+    test('Soll, Pausensumme, Feierabend, Ende und Ueberstunden', () {
+      final end = DateTime.utc(2026, 10, 5, 16, 45);
+      final s = buildTimerSnapshot(
+        entry: _entry(start: _start, end: end, breaks: [
+          BreakEntity(
+            id: 'b',
+            name: 'Pause',
+            start: _pauseStart,
+            end: _pauseStart.add(const Duration(minutes: 30)),
+          ),
+        ]),
+        net: _net,
+        target: const Duration(hours: 8),
+        expectedEnd: _end,
+        totalOvertime: const Duration(hours: 12, minutes: 30),
+      );
+      expect(s.status, TimerStatus.stopped);
+      expect(s.targetMinutes, 480);
+      expect(s.breakMinutes, 30);
+      expect(s.expectedEndMs, _end.millisecondsSinceEpoch);
+      final shifted = buildTimerSnapshot(
+        entry: _entry(start: _start),
+        net: _net,
+        expectedEnd: _end.add(const Duration(seconds: 37)),
+      );
+      expect(shifted.expectedEndMs, _end.millisecondsSinceEpoch,
+          reason: 'auf die Minute gerundet');
+      expect(s.workEndMs, end.millisecondsSinceEpoch);
+      expect(s.overtimeMinutes, 750);
+      final negative = buildTimerSnapshot(
+        entry: _entry(start: _start),
+        net: _net,
+        totalOvertime: const Duration(minutes: -479, seconds: -59),
+      );
+      expect(negative.overtimeMinutes, -480, reason: 'abgerundet');
+    });
+
+    test('ohne Angaben bleiben die optionalen Felder leer', () {
+      final s = buildTimerSnapshot(entry: _entry(start: _start), net: _net);
+      expect(s.targetMinutes, isNull);
+      expect(s.expectedEndMs, isNull);
+      expect(s.workEndMs, isNull);
+      expect(s.overtimeMinutes, isNull);
+      expect(s.breakMinutes, 0);
+    });
+
     test('geschlossene Pause -> weiter running', () {
       final s = buildTimerSnapshot(
         entry: _entry(start: _start, breaks: [

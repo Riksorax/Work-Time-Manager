@@ -95,6 +95,9 @@ class DashboardViewModel extends Notifier<DashboardState> {
   static bool _isRunning(WorkEntryEntity e) =>
       e.workStart != null && e.workEnd == null;
 
+  static bool _hasOpenBreak(WorkEntryEntity e) =>
+      e.breaks.any((b) => b.end == null);
+
   static DateTime _dayOf(DateTime d) => DateTime(d.year, d.month, d.day);
 
   @override
@@ -772,7 +775,10 @@ class DashboardViewModel extends Notifier<DashboardState> {
       return TimerActionResult.notApplicable;
     }
 
-    final ok = await startOrStopTimer();
+    final isBreakAction =
+        action == TimerAction.pause || action == TimerAction.resume;
+    final ok =
+        isBreakAction ? await startOrStopBreak() : await startOrStopTimer();
     if (!ref.mounted) return TimerActionResult.failed;
     if (!ok) return TimerActionResult.failed;
     // Profil wechselte während des Schreibens: die Writes liefen im Profil des
@@ -782,6 +788,8 @@ class DashboardViewModel extends Notifier<DashboardState> {
     final effective = switch (action) {
       TimerAction.start => _isRunning(state.workEntry),
       TimerAction.stop => !_isRunning(state.workEntry),
+      TimerAction.pause => _hasOpenBreak(state.workEntry),
+      TimerAction.resume => !_hasOpenBreak(state.workEntry),
     };
     return effective ? TimerActionResult.applied : TimerActionResult.failed;
   }

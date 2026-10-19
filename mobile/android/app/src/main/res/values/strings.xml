@@ -3,14 +3,29 @@
      Englisch liegt in values-en/. Das Widget folgt der Systemsprache. -->
 <resources>
     <string name="app_name">Work Time Manager</string>
-    <string name="widget_description">Zeigt den Status deiner Arbeitszeit und die heutige Netto-Arbeitszeit.</string>
     <string name="widget_status_none">Keine Daten</string>
     <string name="widget_status_not_started">Nicht gestartet</string>
     <string name="widget_status_running">Läuft</string>
     <string name="widget_status_paused">Pausiert</string>
     <string name="widget_status_stopped">Beendet</string>
-    <string name="widget_since">Seit %1$s</string>
-    <string name="widget_net">Netto: %1$s</string>
     <string name="widget_locked">App gesperrt</string>
     <string name="widget_open_hint">App öffnen</string>
+    <string name="widget_action_start">Starten</string>
+    <string name="widget_action_pause">Pause</string>
+    <string name="widget_action_resume">Weiter</string>
+    <string name="widget_description">Zeigt die heutige Arbeitszeit live und startet, pausiert und beendet den Timer.</string>
+    <string name="widget_action_stop">Beenden</string>
+    <string name="widget_today">Heute</string>
+    <string name="widget_overtime">Überstunden</string>
+    <string name="widget_locked_hint">Zeiten werden bei aktiver App-Sperre ausgeblendet.</string>
+    <string name="widget_net_short">netto</string>
+    <string name="widget_of">von %1$s</string>
+    <string name="widget_target">Ziel heute %1$s</string>
+    <string name="widget_since_end">seit %1$s · Feierabend ≈ %2$s</string>
+    <string name="widget_since_only">seit %1$s</string>
+    <string name="widget_pause_since">Pause seit %1$s · %2$s</string>
+    <string name="widget_range">%1$s – %2$s · Pause %3$s</string>
+    <string name="widget_day_done">Feierabend · %1$s heute</string>
+    <string name="widget_unlock">Entsperren</string>
+    <string name="widget_status_since">%1$s · seit %2$s</string>
 </resources>
