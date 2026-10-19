@@ -1,7 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Status-Widget (#276), hell -->
-    <color name="widget_background">#F2FFFFFF</color>
-    <color name="widget_text_primary">#1C1B1F</color>
-    <color name="widget_text_secondary">#49454F</color>
+    <color name="w_surface">#F7F9FF</color>
+    <color name="w_text">#191C20</color>
+    <color name="w_text2">#43474E</color>
+    <color name="w_text_off">#8E939C</color>
+    <color name="w_track">#DCE2EC</color>
+    <color name="w_primary">#1565C0</color>
+    <color name="w_on_primary">#FFFFFF</color>
+    <color name="w_container">#D6E3FF</color>
+    <color name="w_on_container">#0D3C78</color>
+    <color name="w_teal">#00796B</color>
+    <color name="w_teal_dot">#00A58E</color>
+    <color name="w_teal_container">#CCEFEA</color>
+    <color name="w_on_teal_container">#00504A</color>
+    <color name="w_neutral">#E8EEF8</color>
+    <color name="w_green">#2E7D32</color>
+    <color name="w_error">#BA1A1A</color>
 </resources>

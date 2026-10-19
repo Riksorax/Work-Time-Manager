@@ -26,6 +26,7 @@ jobs:
   build:
     name: Build & Deploy Production AAB
     runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_dispatch' || !inputs.sync_store_metadata
 
     steps:
       - name: Checkout
@@ -210,35 +211,145 @@ jobs:
           status: completed
           whatsNewDirectory: mobile/whatsnew
 
-      # Synchronisiert Titel, Kurz- und Langbeschreibung (de-DE & en-US) aus
-      # fastlane/metadata/android automatisch bei jedem Release auf main (oder
-      # manuell per workflow_dispatch mit sync_store_metadata=true).
-      - name: Sync Store Metadata to Google Play
-        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || inputs.sync_store_metadata == true
+  # Synchronisiert Titel, Kurz- und Langbeschreibung (de-DE & en-US) aus
+  # fastlane/metadata/android automatisch nach jedem Release auf main (oder
+  # einzeln per workflow_dispatch mit sync_store_metadata=true ohne AAB-Rebuild).
+  sync-metadata:
+    name: Sync Store Metadata to Google Play
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: |
+      always() && (
+        (github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.build.result == 'success') ||
+        (github.event_name == 'workflow_dispatch' && inputs.sync_store_metadata)
+      )
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Sync Store Listings via Google Play Android Publisher API
         working-directory: .
         env:
           PLAY_STORE_JSON_KEY: ${{ secrets.PLAY_STORE_JSON_KEY }}
         run: |
-          KEY_FILE="$(mktemp)"
-          trap 'rm -f "$KEY_FILE"' EXIT
-          echo "$PLAY_STORE_JSON_KEY" > "$KEY_FILE"
-          gem install fastlane --no-document
-          fastlane supply \
-            --package_name app.work_time_manager \
-            --metadata_path fastlane/metadata/android \
-            --json_key "$KEY_FILE" \
-            --skip_upload_aab true \
-            --skip_upload_apk true \
-            --skip_upload_images true \
-            --skip_upload_screenshots true \
-            --skip_upload_changelogs true || \
-          fastlane supply \
-            --package_name app.work_time_manager \
-            --metadata_path fastlane/metadata/android \
-            --json_key "$KEY_FILE" \
-            --skip_upload_aab true \
-            --skip_upload_apk true \
-            --skip_upload_images true \
-            --skip_upload_screenshots true \
-            --skip_upload_changelogs true \
-            --changes_not_sent_for_review true
+          node <<'EOF'
+          const crypto = require('crypto');
+          const fs = require('fs');
+          const path = require('path');
+
+          const packageName = 'app.work_time_manager';
+          const metadataRoot = 'fastlane/metadata/android';
+          const sa = JSON.parse(process.env.PLAY_STORE_JSON_KEY);
+
+          function b64url(input) {
+            return Buffer.from(input).toString('base64url');
+          }
+
+          async function getAccessToken() {
+            const now = Math.floor(Date.now() / 1000);
+            const tokenUri = sa.token_uri || 'https://oauth2.googleapis.com/token';
+            const header = b64url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
+            const claim = b64url(JSON.stringify({
+              iss: sa.client_email,
+              scope: 'https://www.googleapis.com/auth/androidpublisher',
+              aud: tokenUri,
+              iat: now,
+              exp: now + 3600,
+            }));
+            const sign = crypto.createSign('RSA-SHA256');
+            sign.update(`${header}.${claim}`);
+            const jwt = `${header}.${claim}.${sign.sign(sa.private_key, 'base64url')}`;
+
+            const res = await fetch(tokenUri, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: new URLSearchParams({
+                grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+                assertion: jwt,
+              }),
+            });
+            if (!res.ok) {
+              throw new Error(`OAuth token error (${res.status}): ${await res.text()}`);
+            }
+            const data = await res.json();
+            return data.access_token;
+          }
+
+          async function syncListings(token, changesNotSentForReview = false) {
+            const baseUrl = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${packageName}/edits`;
+            const headers = {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            };
+
+            const createRes = await fetch(baseUrl, { method: 'POST', headers, body: '{}' });
+            if (!createRes.ok) {
+              throw new Error(`Create edit failed (${createRes.status}): ${await createRes.text()}`);
+            }
+            const { id: editId } = await createRes.json();
+            console.log(`Created Google Play edit: ${editId}`);
+
+            const langs = fs.readdirSync(metadataRoot).filter((d) =>
+              fs.statSync(path.join(metadataRoot, d)).isDirectory()
+            );
+
+            for (const lang of langs) {
+              const dir = path.join(metadataRoot, lang);
+              const title = fs.readFileSync(path.join(dir, 'title.txt'), 'utf8').trim();
+              const shortDescription = fs.readFileSync(path.join(dir, 'short_description.txt'), 'utf8').trim();
+              const fullDescription = fs.readFileSync(path.join(dir, 'full_description.txt'), 'utf8').trim();
+
+              const putRes = await fetch(`${baseUrl}/${editId}/listings/${lang}`, {
+                method: 'PUT',
+                headers,
+                body: JSON.stringify({
+                  language: lang,
+                  title,
+                  shortDescription,
+                  fullDescription,
+                }),
+              });
+              if (!putRes.ok) {
+                throw new Error(`Update listing ${lang} failed (${putRes.status}): ${await putRes.text()}`);
+              }
+              console.log(`Updated store listing for ${lang} ("${title}")`);
+            }
+
+            const commitUrl = `${baseUrl}/${editId}:commit${changesNotSentForReview ? '?changesNotSentForReview=true' : ''}`;
+            const commitRes = await fetch(commitUrl, { method: 'POST', headers });
+            if (!commitRes.ok) {
+              const body = await commitRes.text();
+              const err = new Error(`Commit edit failed (${commitRes.status}): ${body}`);
+              err.status = commitRes.status;
+              err.body = body;
+              throw err;
+            }
+            console.log(`Committed Google Play edit ${editId} (changesNotSentForReview=${changesNotSentForReview})`);
+          }
+
+          (async () => {
+            const token = await getAccessToken();
+            try {
+              await syncListings(token, false);
+            } catch (err) {
+              if (err.status === 400 && err.body && err.body.includes('changesNotSentForReview')) {
+                console.warn('Standard commit requires changesNotSentForReview=true, retrying...');
+                await syncListings(token, true);
+              } else if (err.status === 403) {
+                console.error(
+                  `::error::Google Play API 403 PERMISSION_DENIED beim Speichern der Store-Texte. ` +
+                  `Dem Service-Account (${sa.client_email}) fehlt in der Google Play Console unter ` +
+                  `"Nutzer und Berechtigungen -> App-Berechtigungen" der Haken bei ` +
+                  `"Präsenz im Play Store verwalten" (Manage store presence).`
+                );
+                process.exit(1);
+              } else {
+                throw err;
+              }
+            }
+          })().catch((err) => {
+            console.error(err);
+            process.exit(1);
+          });
+          EOF
+

@@ -14,11 +14,17 @@ void main() {
         workStartMs: 1000,
         netMinutes: 95,
       );
-      expect(widgetSnapshotToMap(s, locked: false), {
+      expect(widgetSnapshotToMap(s, locked: false, nowMs: 5000), {
         'status': 'running',
         'workStartMs': 1000,
         'pauseStartMs': null,
         'netMinutes': 95,
+        'netAtMs': 5000,
+        'targetMinutes': null,
+        'breakMinutes': 0,
+        'expectedEndMs': null,
+        'workEndMs': null,
+        'overtimeMinutes': null,
         'dayKey': '2026-10-05',
         'locked': false,
       });
@@ -32,7 +38,7 @@ void main() {
         pauseStartMs: 2000,
         netMinutes: 10,
       );
-      final m = widgetSnapshotToMap(s, locked: false);
+      final m = widgetSnapshotToMap(s, locked: false, nowMs: 5000);
       expect(m['status'], 'paused');
       expect(m['pauseStartMs'], 2000);
       expect(m['locked'], false);
@@ -46,27 +52,60 @@ void main() {
         pauseStartMs: 2000,
         netMinutes: 10,
       );
-      expect(widgetSnapshotToMap(s, locked: true), {
+      expect(widgetSnapshotToMap(s, locked: true, nowMs: 5000), {
         'status': 'paused',
         'workStartMs': null,
         'pauseStartMs': null,
         'netMinutes': 0,
+        'netAtMs': 5000,
+        'targetMinutes': null,
+        'breakMinutes': 0,
+        'expectedEndMs': null,
+        'workEndMs': null,
+        'overtimeMinutes': null,
         'dayKey': '2026-10-05',
         'locked': true,
       });
     });
 
+    test('Soll, Pausen, Feierabend und Ueberstunden gehen mit, gesperrt nicht',
+        () {
+      const s = TimerSnapshot(
+        status: TimerStatus.running,
+        dayKey: '2026-10-05',
+        workStartMs: 1000,
+        netMinutes: 342,
+        targetMinutes: 480,
+        breakMinutes: 30,
+        expectedEndMs: 9000,
+        overtimeMinutes: 750,
+      );
+      final open = widgetSnapshotToMap(s, locked: false, nowMs: 5000);
+      expect(open['targetMinutes'], 480);
+      expect(open['breakMinutes'], 30);
+      expect(open['expectedEndMs'], 9000);
+      expect(open['overtimeMinutes'], 750);
+      final locked = widgetSnapshotToMap(s, locked: true, nowMs: 5000);
+      expect(locked['targetMinutes'], isNull);
+      expect(locked['breakMinutes'], 0);
+      expect(locked['expectedEndMs'], isNull);
+      expect(locked['overtimeMinutes'], isNull);
+    });
+
     test('nicht gestartet und gestoppt', () {
       const n =
           TimerSnapshot(status: TimerStatus.notStarted, dayKey: '2026-10-05');
-      expect(widgetSnapshotToMap(n, locked: false)['status'], 'notStarted');
-      expect(widgetSnapshotToMap(n, locked: false)['workStartMs'], isNull);
+      expect(widgetSnapshotToMap(n, locked: false, nowMs: 5000)['status'],
+          'notStarted');
+      expect(widgetSnapshotToMap(n, locked: false, nowMs: 5000)['workStartMs'],
+          isNull);
       const st = TimerSnapshot(
           status: TimerStatus.stopped,
           dayKey: '2026-10-05',
           workStartMs: 1,
           netMinutes: 480);
-      expect(widgetSnapshotToMap(st, locked: false)['status'], 'stopped');
+      expect(widgetSnapshotToMap(st, locked: false, nowMs: 5000)['status'],
+          'stopped');
     });
 
     test('geleerter Snapshot hat Status none und dieselben Schluessel', () {
@@ -76,7 +115,8 @@ void main() {
       expect(m['locked'], false);
       final running = widgetSnapshotToMap(
           const TimerSnapshot(status: TimerStatus.running, dayKey: 'x'),
-          locked: false);
+          locked: false,
+          nowMs: 5000);
       expect(m.keys, running.keys);
     });
   });

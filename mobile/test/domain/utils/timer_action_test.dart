@@ -81,10 +81,62 @@ void main() {
     });
   });
 
+  group('Pause und Weiter (Widget, #276)', () {
+    final openBreak = [
+      BreakEntity(id: 'b', name: 'Pause', start: DateTime(2026, 10, 5, 10)),
+    ];
+    final closedBreak = [
+      BreakEntity(
+        id: 'b',
+        name: 'Pause',
+        start: DateTime(2026, 10, 5, 10),
+        end: DateTime(2026, 10, 5, 10, 15),
+      ),
+    ];
+
+    test('Pause nur bei laufendem Timer ohne offene Pause', () {
+      expect(decideTimerAction(TimerAction.pause, _entry(start: _t0)),
+          TimerDecision.apply);
+      expect(
+          decideTimerAction(
+              TimerAction.pause, _entry(start: _t0, breaks: closedBreak)),
+          TimerDecision.apply);
+      expect(
+          decideTimerAction(
+              TimerAction.pause, _entry(start: _t0, breaks: openBreak)),
+          TimerDecision.notApplicable);
+      expect(decideTimerAction(TimerAction.pause, _entry()),
+          TimerDecision.notApplicable);
+      expect(decideTimerAction(TimerAction.pause, _entry(start: _t0, end: _t1)),
+          TimerDecision.notApplicable);
+    });
+
+    test('Weiter nur bei offener Pause', () {
+      expect(
+          decideTimerAction(
+              TimerAction.resume, _entry(start: _t0, breaks: openBreak)),
+          TimerDecision.apply);
+      expect(decideTimerAction(TimerAction.resume, _entry(start: _t0)),
+          TimerDecision.notApplicable);
+      expect(
+          decideTimerAction(TimerAction.resume,
+              _entry(start: _t0, end: _t1, breaks: openBreak)),
+          TimerDecision.notApplicable);
+    });
+
+    test('Pause und Weiter bei Sonder-Eintrag nicht anwendbar', () {
+      final e = _entry(start: _t0, type: WorkEntryType.vacation);
+      expect(
+          decideTimerAction(TimerAction.pause, e), TimerDecision.notApplicable);
+    });
+  });
+
   group('Id-Mapping', () {
-    test('timerActionFromId kennt timer_start und timer_stop', () {
+    test('timerActionFromId kennt alle Aktions-Ids', () {
       expect(timerActionFromId('timer_start'), TimerAction.start);
       expect(timerActionFromId('timer_stop'), TimerAction.stop);
+      expect(timerActionFromId('timer_pause'), TimerAction.pause);
+      expect(timerActionFromId('timer_resume'), TimerAction.resume);
     });
 
     test('unbekannt, leer und null ergeben null', () {

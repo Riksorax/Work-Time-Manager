@@ -13,11 +13,11 @@ Dein persönliches Überstundenkonto und Gleitzeitkonto zeigt dir sofort den Ver
 Erstelle übersichtliche Auswertungen deiner geleisteten Arbeitsstunden:
 • Tagesberichte & Kalenderübersicht (dauerhaft kostenlos)
 • Wochenberichte, Monatsberichte & Jahresberichte (Premium)
-• PDF-Export: Exportiere deinen Stundenzettel, Arbeitszeitnachweis und die Homeoffice-Auswertung (z. B. für die Steuererklärung oder den Arbeitgeber) als sauberes PDF-Dokument
-• Produktivitäts-Insights & Wochenreflexion für einen noch besseren Überblick über deine Arbeitswoche
+• PDF-Export: Exportiere deinen Stundenzettel, Arbeitszeitnachweis und die Homeoffice-Auswertung (z. B. für Steuererklärung oder Arbeitgeber) als PDF
+• Produktivitäts-Insights & Wochenreflexion für deine Arbeitswoche
 
 🗓 GESETZLICHE FEIERTAGE & URLAUBSKONTO
-Wähle dein Bundesland (alle 16 deutschen Bundesländer integriert) und lasse gesetzliche Feiertage automatisch berücksichtigen. Verwalte deinen Jahresurlaub mit Resturlaub-Anzeige und trage Urlaubstage, Krankheitstage und Sonderzeiten per Schnell-Eintrag bequem für ganze Wochen auf einmal ein.
+Wähle dein Bundesland (alle 16 Bundesländer integriert) und lasse gesetzliche Feiertage automatisch berücksichtigen. Verwalte deinen Jahresurlaub mit Resturlaub-Anzeige und trage Urlaubstage, Krankheitstage und Sonderzeiten per Schnell-Eintrag bequem für ganze Wochen ein.
 
 👥 MEHRERE ARBEITSZEIT-PROFILE (HAUPTJOB & NEBENJOB)
 Du hast mehrere Arbeitgeber, einen Nebenjob oder getrennte Projekte? Lege separate Arbeitszeit-Profile mit eigenen Sollstunden, Arbeitstagen und getrennten Zeitkonten an (Premium).
