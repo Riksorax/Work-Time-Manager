@@ -436,6 +436,8 @@
   "stopAndSwitchButton": "Stop and switch",
   "timerActionStart": "Clock in",
   "timerActionStop": "Clock out",
+  "timerActionPause": "Start break",
+  "timerActionResume": "End break",
   "homeOfficeToggleLabel": "Worked from home",
   "homeOfficeChipLabel": "Home office",
   "homeOfficeSemanticSuffix": ", home office day",
