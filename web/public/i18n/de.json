@@ -61,7 +61,6 @@
     "openEntrySaveError": "Eintrag konnte nicht beendet werden.",
     "openEntryContinue": "Fortsetzen",
     "openEntryContinueSemantics": "Eintrag vom {{date}} fortsetzen",
-    "homeOfficeToggleAria": "Home-Office für heute umschalten",
     "saveError": "Speichern fehlgeschlagen. Bitte prüfe deine Verbindung und versuche es erneut."
   },
   "holidays": {

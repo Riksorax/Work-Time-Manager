@@ -61,7 +61,6 @@
     "openEntrySaveError": "Could not end the entry.",
     "openEntryContinue": "Continue",
     "openEntryContinueSemantics": "Continue entry from {{date}}",
-    "homeOfficeToggleAria": "Toggle home office for today",
     "saveError": "Saving failed. Please check your connection and try again."
   },
   "holidays": {
