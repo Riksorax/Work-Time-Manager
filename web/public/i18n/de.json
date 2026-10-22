@@ -164,7 +164,10 @@
     "tabYearly": "Jahr",
     "yearNavAria": "Jahresnavigation",
     "prevYearAria": "Vorheriges Jahr",
-    "nextYearAria": "Nächstes Jahr"
+    "nextYearAria": "Nächstes Jahr",
+    "printYearButton": "Als PDF speichern / Drucken",
+    "printYearPremiumButton": "Mit Premium als PDF speichern",
+    "printTitle": "Urlaubs- und Krankheitsauswertung {{year}}"
   },
   "settings": {
     "title": "Einstellungen",

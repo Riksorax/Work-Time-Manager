@@ -194,3 +194,39 @@ describe('ReportsComponent - Mehrfachauswahl-Toggle (#377)', () => {
     expect(document.activeElement).toBe(toggle());
   });
 });
+
+describe('ReportsComponent.onPrintYear (#483)', () => {
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  function create(isPremium: boolean, presentPaywall = vi.fn().mockResolvedValue(false)) {
+    const print = vi.spyOn(window, 'print').mockImplementation(() => undefined);
+    TestBed.overrideComponent(ReportsComponent, { set: { template: '', imports: [] } });
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: ReportsService, useValue: { isPremium: () => isPremium } },
+        { provide: LeaveBalanceService, useValue: {} },
+        { provide: Router, useValue: { navigate: vi.fn() } },
+        { provide: MatDialog, useValue: {} },
+        { provide: MatSnackBar, useValue: { open: vi.fn() } },
+        { provide: TranslateService, useValue: { instant: (k: string) => k } },
+        { provide: WebPremiumService, useValue: {
+          isRestoring: signal(false), isPurchasing: signal(false), isConfigured: signal(false), presentPaywall } },
+      ],
+    });
+    return { cmp: TestBed.createComponent(ReportsComponent).componentInstance, print, presentPaywall };
+  }
+
+  it('Premium: öffnet den Druckdialog', async () => {
+    const { cmp, print, presentPaywall } = create(true);
+    await cmp.onPrintYear();
+    expect(print).toHaveBeenCalledTimes(1);
+    expect(presentPaywall).not.toHaveBeenCalled();
+  });
+
+  it('ohne Premium: Paywall statt Druck', async () => {
+    const { cmp, print, presentPaywall } = create(false);
+    await cmp.onPrintYear();
+    expect(print).not.toHaveBeenCalled();
+    expect(presentPaywall).toHaveBeenCalledTimes(1);
+  });
+});

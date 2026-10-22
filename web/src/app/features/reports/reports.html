@@ -456,7 +456,8 @@
       <!-- Frei (kein Premium-/Auth-Gate): anonyme Nutzer sehen lokal berechnete Werte. -->
       <mat-tab [label]="'reports.tabYearly' | translate">
         <div class="tab-content">
-          <div class="yearly-layout">
+          <div class="yearly-layout print-area">
+            <h2 class="print-only">{{ 'reports.printTitle' | translate: { year: leave.year() } }}</h2>
             <div class="month-nav" role="navigation" [attr.aria-label]="'reports.yearNavAria' | translate">
               <button mat-icon-button (click)="leave.navigateYear(-1)"
                       [disabled]="!leave.canGoPrevYear()"
@@ -479,6 +480,11 @@
                                     [localOnly]="!svc.isLoggedIn()"
                                     (retry)="leave.refresh()"
                                     (editEntitlement)="goToSettings()" />
+
+            <button mat-stroked-button class="print-button no-print" type="button" (click)="onPrintYear()">
+              <mat-icon>{{ svc.isPremium() ? 'picture_as_pdf' : 'lock' }}</mat-icon>
+              {{ (svc.isPremium() ? 'reports.printYearButton' : 'reports.printYearPremiumButton') | translate }}
+            </button>
           </div>
         </div>
       </mat-tab>
