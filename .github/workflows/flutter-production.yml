@@ -150,6 +150,16 @@ jobs:
             --dart-define=RC_ANDROID_KEY="${{ secrets.RC_ANDROID_PROD_KEY }}" \
             --dart-define=RECAPTCHA_SITE_KEY="${{ secrets.RECAPTCHA_SITE_KEY }}"
 
+      # Native Debug-Symbole (#469): debugSymbolLevel in android/app/build.gradle legt sie im AAB ab.
+      - name: Check native debug symbols in AAB
+        run: |
+          AAB=build/app/outputs/bundle/release/app-release.aab
+          if unzip -l "$AAB" | grep -q 'BUNDLE-METADATA/com.android.tools.build.debugsymbols/'; then
+            echo "Native Debug-Symbole sind im AAB enthalten."
+          else
+            echo "::warning::Keine native Debug-Symbole im AAB (BUNDLE-METADATA/com.android.tools.build.debugsymbols) - debugSymbolLevel in android/app/build.gradle pruefen (#469)."
+          fi
+
       - name: Upload AAB Artifact
         uses: actions/upload-artifact@v4
         with:
