@@ -23,8 +23,8 @@ entry() {
 
 # Kompakte Diagnose bei einem Fehlschlag: nur Zeilen ohne Stack-Frames.
 diag() {
-  adb logcat -d | grep -E "WtmAssistant|\[TimerAction\]|Hintergrund-Aktion|ActivityTaskManager.*$PKG|Displayed $PKG|FATAL|AndroidRuntime|Process $PKG.*died|E flutter" \
-    | grep -v -E "│ #|├┄|└─|┌─" | tail -n 12 | cut -c1-260 || true
+  adb logcat -d | grep -E "WtmAssistant|\[TimerAction\]|\[Dashboard\]|⛔|Hintergrund-Aktion|ActivityTaskManager.*$PKG|Displayed $PKG|FATAL|AndroidRuntime|Process $PKG.*died|E flutter" \
+    | grep -v -E "│ #|⛔ #|├┄|└─|┌─" | tail -n 14 | cut -c1-260 || true
 }
 
 # expect <Beschreibung> <erwartet> – wartet bis zu 60 s auf den Zustand.
