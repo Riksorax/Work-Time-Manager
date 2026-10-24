@@ -43,7 +43,8 @@ expect() {
 
 assistant() {
   adb logcat -c
-  adb shell am start -W -n "$PKG/$PKG.MainActivity" -a app.work_time_manager.ASSISTANT_TIMER --es feature "$1" | tr -d '\r' | grep -E "Status|Error|Warning|Exception" || true
+  # Ein einziger Remote-Befehl mit Anführungszeichen: sonst zerlegt die Shell auf dem Gerät "Arbeitstag starten".
+  adb shell "am start -W -n $PKG/$PKG.MainActivity -a app.work_time_manager.ASSISTANT_TIMER --es feature '$1'" | tr -d '\r' | grep -E "Status|Error|Warning|Exception" || true
 }
 
 notification_action() {

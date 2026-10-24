@@ -73,9 +73,13 @@ Future<TimerActionDispatch> runHeadlessTimerAction(TimerAction action) async {
     sharedPreferencesProvider.overrideWithValue(prefs),
     appLockStoreProvider.overrideWithValue(lockStore),
   ]);
+  ProviderSubscription<AsyncValue<Object?>>? authSub;
   try {
     // Erster Auth-Wert: ohne ihn fielen die Repositories auf den lokalen
     // Speicher zurück.
+    // `authStateProvider` ist auto-dispose: ohne Listener wird er schon beim ersten
+    // `.future`-Read wieder verworfen, bevor der Stream einen Wert liefert.
+    authSub = container.listen(authStateProvider, (_, __) {});
     await container
         .read(authStateProvider.future)
         .timeout(const Duration(seconds: 15));
@@ -89,6 +93,7 @@ Future<TimerActionDispatch> runHeadlessTimerAction(TimerAction action) async {
     // Das Widget schreibt seinen Snapshot asynchron; kurz warten.
     await Future<void>.delayed(const Duration(seconds: 1));
   } finally {
+    authSub?.close();
     container.dispose();
   }
   return TimerActionDispatch.headless;
