@@ -5,8 +5,8 @@ library;
 
 import '../entities/work_entry_entity.dart';
 
-/// Aktion, die von außen den Timer steuert. `pause`/`resume` kommen nur vom
-/// Widget (#276), nicht von Notification-Buttons oder App-Shortcuts.
+/// Aktion, die von außen den Timer steuert. `pause`/`resume` kommen vom
+/// Widget (#276) und von App-Shortcuts (#485), nicht von Notification-Buttons.
 enum TimerAction { start, stop, pause, resume }
 
 /// Ergebnis der Entscheidung: anwenden oder (still) nichts tun.
