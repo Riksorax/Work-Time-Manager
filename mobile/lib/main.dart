@@ -141,6 +141,7 @@ Future<void> main() async {
   final pendingAction = takePendingTimerAction(prefs, DateTime.now());
   if (pendingAction != null) inbox.push(pendingAction);
   void onTimerAction(TimerAction action) {
+    logger.i('[TimerAction] von außen empfangen: ${timerActionId(action)}');
     inbox.push(action);
     _openDashboard();
   }

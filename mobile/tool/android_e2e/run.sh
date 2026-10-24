@@ -95,7 +95,9 @@ else
   log "OK   Die App blieb bei der Hintergrund-Aktion geschlossen"
 fi
 
-adb logcat -d -s flutter:V AndroidRuntime:E ActionBroadcastReceiver:V > /tmp/logcat.txt || true
-tail -n 80 /tmp/logcat.txt || true
+adb logcat -d > "${GITHUB_WORKSPACE:-/tmp}/mobile/build/e2e-logcat.txt" 2>/dev/null || adb logcat -d > /tmp/e2e-logcat.txt || true
+LOG="${GITHUB_WORKSPACE:-/tmp}/mobile/build/e2e-logcat.txt"; [ -f "$LOG" ] || LOG=/tmp/e2e-logcat.txt
+log "Relevante Logzeilen:"
+grep -E "TimerAction|WtmAssistant|Hintergrund|ProviderException|AndroidRuntime|FATAL|ActionBroadcastReceiver|Exception" "$LOG" | tail -n 60 || true
 if [ "$FAIL" -ne 0 ]; then log "Mindestens ein Schritt ist fehlgeschlagen"; exit 1; fi
 log "Alle Schritte bestanden"

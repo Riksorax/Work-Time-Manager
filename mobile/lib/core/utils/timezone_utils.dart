@@ -28,7 +28,8 @@ Future<void> applyTimezone(String? override) async {
 
   try {
     final systemTimezone = await FlutterTimezone.getLocalTimezone();
-    tz.setLocalLocation(tz.getLocation(systemTimezone.toString()));
+    // flutter_timezone 5.x liefert ein TimezoneInfo; `toString()` ist keine IANA-Kennung.
+    tz.setLocalLocation(tz.getLocation(systemTimezone.identifier));
   } catch (e) {
     logger.w(
         '[Timezone] Systemzeitzone nicht ermittelbar, falle auf Europe/Berlin/UTC zurück: $e');

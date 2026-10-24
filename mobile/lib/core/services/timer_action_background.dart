@@ -3,6 +3,7 @@ import 'dart:isolate';
 import 'dart:ui' show IsolateNameServer;
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_riverpod/misc.dart' show ProviderException;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../domain/utils/timer_action.dart';
@@ -68,9 +69,11 @@ class TimerActionDispatcher {
     try {
       return await _runHeadless(action);
     } catch (e, st) {
+      // Riverpod verpackt Fehler aus Providern; die Ursache steht in `exception`.
+      final cause = e is ProviderException ? e.exception : e;
       logger.e(
-          '[TimerAction] Hintergrund-Aktion fehlgeschlagen (${e.runtimeType})',
-          stackTrace: st);
+          '[TimerAction] Hintergrund-Aktion fehlgeschlagen (${cause.runtimeType}): $cause',
+          stackTrace: e is ProviderException ? e.stackTrace : st);
       return TimerActionDispatch.ignored;
     }
   }

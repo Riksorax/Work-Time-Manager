@@ -1,6 +1,7 @@
 package app.work_time_manager
 
 import android.content.Intent
+import android.util.Log
 import java.util.Locale
 
 /**
@@ -26,7 +27,9 @@ object AssistantTimerIntent {
     /** Setzt das Quick-Action-Extra, wenn [intent] ein Assistant-Intent ist. */
     fun normalize(intent: Intent?) {
         if (intent == null || intent.action != ACTION) return
-        val id = map(intent.getStringExtra(EXTRA_FEATURE)) ?: return
+        val id = map(intent.getStringExtra(EXTRA_FEATURE))
+        Log.i("WtmAssistant", "feature='${intent.getStringExtra(EXTRA_FEATURE)}' -> $id")
+        if (id == null) return
         intent.putExtra(EXTRA_QUICK_ACTION, id)
     }
 

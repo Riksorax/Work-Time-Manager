@@ -77,3 +77,12 @@ jobs:
           disable-animations: true
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: bash mobile/tool/android_e2e/run.sh mobile/build/app/outputs/flutter-apk/app-debug.apk
+
+      - name: Upload logcat
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-emulator-logcat
+          path: mobile/build/e2e-logcat.txt
+          if-no-files-found: ignore
+          retention-days: 7
