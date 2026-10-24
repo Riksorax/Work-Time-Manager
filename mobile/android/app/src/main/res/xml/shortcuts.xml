@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Google Assistant / App Actions (#280): Sprachbefehle für den Timer. Das gesprochene Feature
+     ("Arbeitstag starten", "Pause beenden", "clock out") kommt als Text im Extra `feature` bei
+     MainActivity an und wird in AssistantTimerIntent auf die Timer-Aktion abgebildet. Keine
+     statischen Shortcuts: die dynamischen aus quick_actions behalten das Limit für sich. -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <capability android:name="actions.intent.OPEN_APP_FEATURE">
+        <intent
+            android:action="app.work_time_manager.ASSISTANT_TIMER"
+            android:targetPackage="app.work_time_manager"
+            android:targetClass="app.work_time_manager.MainActivity">
+            <parameter
+                android:name="feature"
+                android:key="feature" />
+        </intent>
+    </capability>
+</shortcuts>

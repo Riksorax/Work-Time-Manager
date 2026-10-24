@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/providers/app_lock_provider.dart';
 import '../../core/services/notification_service.dart';
 import '../../domain/entities/settings_entity.dart';
 import '../../domain/utils/weekday_labels.dart';
@@ -147,6 +148,8 @@ class _NotificationSettingsDialogState
         checkWorkStart: _notifyWorkStart,
         checkWorkEnd: _notifyWorkEnd,
         checkBreaks: _notifyBreaks,
+        // Ohne App-Sperre laufen die Buttons im Hintergrund (#485).
+        headlessActions: !ref.read(appLockServiceProvider).isActive,
         l10n: AppLocalizations.of(context),
       );
     } else {

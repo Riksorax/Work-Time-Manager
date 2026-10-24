@@ -436,6 +436,7 @@
   "stopAndSwitchButton": "Stop and switch",
   "timerActionStart": "Clock in",
   "timerActionStop": "Clock out",
+  "timerActionUnlockHint": "Unlock the app to run the action.",
   "timerActionPause": "Start break",
   "timerActionResume": "End break",
   "homeOfficeToggleLabel": "Worked from home",

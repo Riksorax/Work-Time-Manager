@@ -86,6 +86,9 @@ class AppLockService {
   /// Ob bereits eine PIN als Fallback hinterlegt ist.
   bool get hasPin => _store.getString(_pinHashKey) != null;
 
+  /// Ob die Sperre die App beim Start wirklich sperrt (aktiviert und PIN da).
+  bool get isActive => isEnabled && hasPin;
+
   /// Salt und Hash stehen in EINEM Wert (`salt:hash`), damit ein Abbruch
   /// (z. B. Prozess-Kill) nie einen unpassenden Salt/Hash-Mix hinterlässt.
   /// Ältere Installationen haben den Salt noch in [_pinSaltKey] (Hash ohne `:`).

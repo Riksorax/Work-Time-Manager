@@ -25,6 +25,7 @@ import 'core/services/app_lock_store.dart';
 import 'core/providers/widget_sync_provider.dart';
 import 'core/services/notification_service.dart';
 import 'core/services/shortcut_service.dart';
+import 'core/services/timer_action_background.dart';
 import 'core/services/timer_action_inbox.dart';
 import 'core/theme/app_theme.dart';
 import 'core/utils/app_navigator.dart';
@@ -133,6 +134,12 @@ Future<void> main() async {
   // die Callbacks feuern vor dem Widget-Baum und legen die Aktion in den
   // Briefkasten; das TimerActionViewModel führt sie nach Auth/Entsperren aus.
   final inbox = TimerActionInbox.instance;
+  // Aktionen ohne Oberfläche (#485) übergibt ein Hintergrund-Isolate über
+  // diesen Port, solange die App läuft; ohne App führt es sie selbst aus.
+  if (!kIsWeb && Platform.isAndroid) registerTimerActionPort(inbox);
+  // Eine bei aktiver App-Sperre gemerkte Aktion (Hinweis „App entsperren“).
+  final pendingAction = takePendingTimerAction(prefs, DateTime.now());
+  if (pendingAction != null) inbox.push(pendingAction);
   void onTimerAction(TimerAction action) {
     inbox.push(action);
     _openDashboard();
@@ -164,6 +171,9 @@ Future<void> main() async {
   // Request notification permissions
   await notificationService.requestPermissions();
 
+  // Der Sperrzustand entscheidet, ob Erinnerungs-Buttons im Hintergrund laufen.
+  final lockStore = await lockStoreFuture;
+
   // Reschedule notifications if enabled
   final notificationsEnabled = prefs.getBool('notifications_enabled') ?? false;
   if (notificationsEnabled) {
@@ -190,11 +200,12 @@ Future<void> main() async {
       checkWorkStart: notifyWorkStart,
       checkWorkEnd: notifyWorkEnd,
       checkBreaks: notifyBreaks,
+      // Ohne App-Sperre laufen die Buttons im Hintergrund (#485).
+      headlessActions: !(lockStore.getBool(AppLockKeys.enabled) == true &&
+          lockStore.getString(AppLockKeys.pinHash) != null),
       l10n: lookupAppLocalizations(Locale(prefs.getString('locale') ?? 'de')),
     );
   }
-
-  final lockStore = await lockStoreFuture;
 
   runApp(
     ProviderScope(
