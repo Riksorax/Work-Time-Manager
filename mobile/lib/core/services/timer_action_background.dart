@@ -70,7 +70,10 @@ class TimerActionDispatcher {
       return await _runHeadless(action);
     } catch (e, st) {
       // Riverpod verpackt Fehler aus Providern; die Ursache steht in `exception`.
-      final cause = e is ProviderException ? e.exception : e;
+      Object cause = e;
+      while (cause is ProviderException) {
+        cause = cause.exception;
+      }
       logger.e(
           '[TimerAction] Hintergrund-Aktion fehlgeschlagen (${cause.runtimeType}): $cause',
           stackTrace: e is ProviderException ? e.stackTrace : st);

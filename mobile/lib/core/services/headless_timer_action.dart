@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui' show DartPluginRegistrant, Locale;
 
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,6 +12,7 @@ import 'package:timezone/data/latest_all.dart' as tz_data;
 
 import '../../app_check_initializer.dart';
 import '../../domain/utils/timer_action.dart';
+import '../../firebase_options.dart';
 import '../../l10n/app_localizations.dart';
 import '../../presentation/view_models/dashboard_view_model.dart';
 import '../providers/app_lock_provider.dart';
@@ -56,6 +58,12 @@ Future<TimerActionDispatch> runHeadlessTimerAction(TimerAction action) async {
   await initializeDateFormatting('en_US', null);
   Intl.defaultLocale = locale == 'en' ? 'en_US' : 'de_DE';
 
+  // Wie `main()`: Firebase mit den Optionen starten (App Check allein tut das im
+  // Debug-Build nicht, dann scheitert schon `FirebaseAuth.instance`).
+  if (Firebase.apps.isEmpty) {
+    await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform);
+  }
   const siteKey = String.fromEnvironment('RECAPTCHA_SITE_KEY');
   await AppBootstrap.ensureInitializedForEnv(
     webRecaptchaSiteKey: siteKey.isEmpty ? null : siteKey,

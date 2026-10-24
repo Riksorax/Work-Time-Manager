@@ -21,24 +21,35 @@ entry() {
   python3 "$HERE/entry.py" /tmp/prefs.xml "$y" "$m" "$d"
 }
 
+# Kompakte Diagnose bei einem Fehlschlag: nur Zeilen ohne Stack-Frames.
+diag() {
+  adb logcat -d | grep -E "WtmAssistant|\[TimerAction\]|Hintergrund-Aktion|ActivityTaskManager.*$PKG|Displayed $PKG|FATAL|AndroidRuntime|Process $PKG.*died|E flutter" \
+    | grep -v -E "│ #|├┄|└─|┌─" | tail -n 12 | cut -c1-260 || true
+}
+
 # expect <Beschreibung> <erwartet> – wartet bis zu 60 s auf den Zustand.
 expect() {
   local what=$1 want=$2 got=""
-  for _ in $(seq 1 30); do
+  for _ in $(seq 1 15); do
     got=$(entry)
     if [ "$got" = "$want" ]; then log "OK   $what ($got)"; return 0; fi
     sleep 2
   done
   log "FAIL $what: erwartet '$want', gefunden '$got'"
+  diag
   FAIL=1
   return 0
 }
 
-assistant() { adb shell am start -W -n "$PKG/.MainActivity" -a app.work_time_manager.ASSISTANT_TIMER --es feature "$1" >/dev/null; }
+assistant() {
+  adb logcat -c
+  adb shell am start -W -n "$PKG/$PKG.MainActivity" -a app.work_time_manager.ASSISTANT_TIMER --es feature "$1" | tr -d '\r' | grep -E "Status|Error|Warning|Exception" || true
+}
 
 notification_action() {
+  adb logcat -c
   adb shell am broadcast -a "$RECEIVER.ACTION_TAPPED" -n "$PKG/$RECEIVER" \
-    --es actionId "$1" --ei notificationId 1 --es payload open_dashboard --ez cancelNotification true >/dev/null
+    --es actionId "$1" --ei notificationId 1 --es payload open_dashboard --ez cancelNotification true | tr -d '\r' | grep -E "Broadcast completed|Error|Exception" || true
 }
 
 adb wait-for-device
@@ -54,7 +65,7 @@ adb shell pm grant "$PKG" android.permission.POST_NOTIFICATIONS || true
 adb logcat -c
 
 log "Erster Start (registriert den Hintergrund-Handler des Plugins)"
-adb shell am start -W -n "$PKG/.MainActivity" >/dev/null
+adb shell am start -W -n "$PKG/$PKG.MainActivity" >/dev/null
 sleep 30
 adb shell am force-stop "$PKG"
 expect "kein Eintrag nach dem ersten Start" "start=0 end=0 breaks=0 open_break=0"
@@ -70,7 +81,7 @@ assistant "Pause beenden"
 expect "Assistant 'Pause beenden'" "start=1 end=0 breaks=1 open_break=0"
 
 log "#485: Notification-Aktion bei laufender App (Weiterleitung an die App)"
-adb shell am start -W -n "$PKG/.MainActivity" >/dev/null
+adb shell am start -W -n "$PKG/$PKG.MainActivity" >/dev/null
 adb shell input keyevent KEYCODE_HOME
 sleep 3
 notification_action timer_pause
