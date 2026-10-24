@@ -8,7 +8,12 @@ import sys
 import xml.etree.ElementTree as ET
 
 path, year, month, day = sys.argv[1], sys.argv[2], sys.argv[3], str(int(sys.argv[4]))
-root = ET.parse(path).getroot()
+try:
+    root = ET.parse(path).getroot()
+except ET.ParseError:
+    # Die Datei wird gerade neu geschrieben; der Aufrufer versucht es erneut.
+    print("unreadable")
+    sys.exit(0)
 key = f"flutter.local_work_entries_{year}_{month}"
 raw = next((e.text for e in root.iter("string") if e.get("name") == key), None)
 entry = {}

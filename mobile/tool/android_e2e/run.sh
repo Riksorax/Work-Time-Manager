@@ -18,7 +18,7 @@ entry() {
   local y m d
   y=$(adb shell date +%Y | tr -d '\r'); m=$(adb shell date +%m | tr -d '\r'); d=$(adb shell date +%d | tr -d '\r')
   adb shell "run-as $PKG cat shared_prefs/FlutterSharedPreferences.xml" > /tmp/prefs.xml 2>/dev/null || echo '<map/>' > /tmp/prefs.xml
-  python3 "$HERE/entry.py" /tmp/prefs.xml "$y" "$m" "$d"
+  python3 "$HERE/entry.py" /tmp/prefs.xml "$y" "$m" "$d" || echo unreadable
 }
 
 # Kompakte Diagnose bei einem Fehlschlag: nur Zeilen ohne Stack-Frames.
