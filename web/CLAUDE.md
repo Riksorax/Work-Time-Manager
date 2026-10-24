@@ -25,7 +25,7 @@ Laden ohne Konsolenfehler (je DE/EN, hell/dunkel), horizontaler Überlauf bei 32
 serious/critical, nur Chromium) und Kernabläufe (Timer, Pausen, Navigation, Theme, Sprache). Neue Seiten in
 `PAGES` ergänzen. Testdaten: `e2e/seed.ts` schreibt Einträge im `WorkEntryService`-localStorage-Format vor dem App-Start
 (`seedEntries`, `workDay`, `openDay`) und friert die Uhr auf einen festen Tag (`freezeTime`, 2026-03-18), damit nichts
-vom Ausführungsdatum abhängt. Abgedeckt: Kalender per Tastatur und Mehrfachauswahl (#377), Banner „Offene Einträge" (#385).
+vom Ausführungsdatum abhängt. Abgedeckt: Kalender per Tastatur und Mehrfachauswahl (#377), Banner „Offene Einträge" (#385). `e2e/matrix.spec.ts` (#429) deckt den Rest der automatisierbaren Prüfmatrix ab: Textskalierung 200 % (`html { font-size: 200% }`), Querformat 667×375, Touch-Zielgrößen ≥ 24 px (WCAG 2.5.8; bei Material-Eingaben zählt das ganze `mat-form-field`) und den Schnelleintrag-Dialog mit axe, Fokus und Escape. Nicht automatisierbar bleiben Screenreader-Stichproben und Safari auf echten Geräten.
 Tests mit Konto (`e2e/account.ts`, `profiles.spec.ts`: Profilwechsel #380/#388, Timer-Dialog, Anlegen/Löschen) laufen nur in
 Chromium und nur mit `E2E_EMULATORS=1 npm run e2e:chromium` (Java 21; die Config startet Auth- und Firestore-Emulator über
 `npx firebase-tools`, Projekt `demo-e2e`). Die App wird dafür mit `ng serve --configuration e2e` gebaut
@@ -78,6 +78,7 @@ shared/
 ├── components/
 │   ├── calendar/               CalendarComponent — Multi-Select + Pointer-Drag, Feiertags-Markierung per `bundesland`-Input (#371), Tastaturbedienung (#377): ARIA `grid > row > gridcell`, Roving tabindex, Pfeile/Home/End/PageUp/PageDown, Enter/Space (Fokus folgt nicht der Auswahl, `event.repeat` ignoriert). Mehrfachauswahl per Tastatur (#377): Toggle-Button im Reports-Kalender-Panel (`ReportsService` besitzt den Modus), Shift+Pfeil/Home/End/PageUp/PageDown wählen einen Bereich ab Anker (Anker/Base im Kalender, `daysDeselected` beim Verkleinern/Umkehren, vorher gewählte Tage bleiben), Escape (`multiSelectEnded`) beendet den Modus, `aria-multiselectable`, im aktiven Modus keine Einzelauswahl-Darstellung; `LiveAnnouncer` (polite) sagt Modus an/aus und nur nach Tastaturaktionen die Anzahl an. Kein Shift+Klick, kein Ctrl+Shift+Home/End
 │   ├── edit-entry-dialog/      EditEntryDialogComponent
+│   ├── home-office-card/       HomeOfficeCardComponent — Home-Office-Jahresauswertung (#283/#483, Premium im Jahres-Tab): lädt zwölf Monate über `getEntriesForMonthOnce`, Zählregel `domain/services/home-office-stats.ts` (Port von Mobile `home_office_stats.dart`: nur `work` mit Start, Dedup über `entryDayKey`, ein Flag macht den Tag zum Home-Office-Tag). Druck: Jahres-Tab ist `.print-area`, Button „Als PDF speichern“ ruft `window.print()` (Premium, sonst Paywall)
 │   ├── leave-balance-card/     LeaveBalanceCardComponent — reine Darstellung der Urlaubsübersicht (Settings, Reports; bewusst nicht im Dashboard: dort schob sie Start-/Endzeit und den Start-Button unter den sichtbaren Bereich)
 │   ├── holiday-banner/         HolidayBannerComponent — „Heute ist Feiertag: …“ (#279), rein informativ
 │   ├── open-entry-banner/      OpenEntryBannerComponent — Hinweis auf offenen Eintrag vor heute mit „Beenden“/„Später“ und optional „Fortsetzen“ (#385), rein darstellend
@@ -174,8 +175,8 @@ Das Dashboard lädt bei jedem Wechsel des Arbeitszeit-Profils (Header-Wechsler, 
   (`_switchPending`) = kein Wechsel. Nutzer: `DashboardService` (Constructor, nicht die Component: der Timer läuft auch ohne
   gerendertes Dashboard) fragt bei laufendem Timer über `ProfileSwitchConfirmService` (Dialog, `shared/components/work-profile-switcher/`,
   lazy per `Injector` aufgelöst), stoppt/speichert via `stopRunningTimerForSwitch` im alten Profil (Rollback bei Fehler, Snackbar)
-  und wechselt erst danach. Interaktiv über Guard: Header-Wechsler (`requestSwitch`) und `addProfile()` (Guard VOR dem API-Aufruf,
-  Rückgabe `null` = abgelehnt, nichts angelegt). **Bewusst ohne Guard:** `setActiveProfile`, `deleteProfile(aktiv)`, Reload mit
+  und wechselt erst danach. Interaktiv über Guard: Header-Wechsler (`requestSwitch`) und `addProfile()` (#394: Profil wird ZUERST per API angelegt, dann laufen die Guards;
+  Rückgabe `null` = abgelehnt, das angelegte Profil wird best-effort wieder gelöscht, scheitert die API, wurde nichts gestoppt). **Bewusst ohne Guard:** `setActiveProfile`, `deleteProfile(aktiv)`, Reload mit
   gemerktem Profil, Logout (dort gilt das „Einfrieren").
 - **Test-Falle (Vite 7.3 SSR-Transform, Ursache von #370/#380):** Steht ein importierter Wert direkt als Klassenfeld-Initializer
   (`x = IMPORTIERTE_KONSTANTE;`), hebt der Transform ihn als Schnappschuss `const X = import.X` vor die Klasse. Ist das Modul

@@ -3,6 +3,7 @@ import 'dart:ui' show Locale;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/providers/app_lock_provider.dart';
 import '../../core/providers/providers.dart' as core_providers;
 import '../../core/providers/settings_sync_provider.dart';
 import '../../core/utils/timezone_utils.dart';
@@ -453,6 +454,10 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
   }
 
   // --- Notification Rescheduling Logic ---
+  /// Plant die Erinnerungen neu, z. B. nach einer Änderung der App-Sperre, von
+  /// der abhängt, ob die Buttons im Hintergrund laufen dürfen (#485).
+  Future<void> rescheduleNotifications() => _rescheduleNotifications();
+
   Future<void> _rescheduleNotifications() async {
     final settingsRepository =
         ref.read(core_providers.settingsRepositoryProvider);
@@ -473,6 +478,8 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
         checkWorkStart: notifyWorkStart,
         checkWorkEnd: notifyWorkEnd,
         checkBreaks: notifyBreaks,
+        // Ohne App-Sperre laufen die Buttons im Hintergrund (#485).
+        headlessActions: !ref.read(appLockServiceProvider).isActive,
         l10n: lookupAppLocalizations(Locale(settingsRepository.getLocale())),
       );
     } else {

@@ -236,8 +236,19 @@ jobs:
       - name: Build
         run: dotnet build WorkTimeManager.slnx --no-restore --configuration Release
 
+      # Die Repository-Integrationstests (RepositoryIntegrationTests) brauchen den Firestore-Emulator
+      # und überspringen sich ohne ihn (#486). Hier läuft er über firebase-tools (Java 21);
+      # die Fixture erkennt FIRESTORE_EMULATOR_HOST und startet dann kein Docker.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
       - name: Test
-        run: dotnet test WorkTimeManager.slnx --no-build --configuration Release
+        run: >
+          npx --yes firebase-tools@14 emulators:exec
+          --only firestore --project worktime-test --config ../web/firebase.json
+          "dotnet test WorkTimeManager.slnx --no-build --configuration Release"
 
   # Branding-Pipeline (#437): die eingecheckten Logo-Assets müssen zu branding/src/*.svg passen.
   # Läuft immer (wenige Sekunden), damit auch ein von Hand geänderter Zielasset auffällt.
