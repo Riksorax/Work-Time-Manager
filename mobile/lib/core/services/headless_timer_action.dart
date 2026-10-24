@@ -85,9 +85,17 @@ Future<TimerActionDispatch> runHeadlessTimerAction(TimerAction action) async {
         .timeout(const Duration(seconds: 15));
     // Hält das Home-Screen-Widget aktuell, solange der Container lebt.
     container.read(widgetSyncProvider);
-    final result = await container
-        .read(dashboardViewModelProvider.notifier)
-        .performTimerAction(action);
+    // Das ViewModel lädt nach dem Aufbau asynchron; ohne UI wartet niemand
+    // darauf, und `performTimerAction` meldet sonst `failed` (noch nicht geladen).
+    // Wie `TimerActionViewModel`: erst einen Durchlauf warten, dann den Ladelauf.
+    await Future<void>.delayed(Duration.zero);
+    final notifier = container.read(dashboardViewModelProvider.notifier);
+    final waited = Stopwatch()..start();
+    while (container.read(dashboardViewModelProvider).isLoading &&
+        waited.elapsed < const Duration(seconds: 15)) {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    }
+    final result = await notifier.performTimerAction(action);
     logger.i('[TimerAction] Hintergrund-Aktion ${timerActionId(action)}: '
         '${result.name}');
     // Das Widget schreibt seinen Snapshot asynchron; kurz warten.
