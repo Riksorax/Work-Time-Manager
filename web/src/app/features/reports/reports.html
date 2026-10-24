@@ -481,6 +481,10 @@
                                     (retry)="leave.refresh()"
                                     (editEntitlement)="goToSettings()" />
 
+            @if (svc.isPremium()) {
+              <app-home-office-card class="home-office-card" [year]="leave.year()" />
+            }
+
             <button mat-stroked-button class="print-button no-print" type="button" (click)="onPrintYear()">
               <mat-icon>{{ svc.isPremium() ? 'picture_as_pdf' : 'lock' }}</mat-icon>
               {{ (svc.isPremium() ? 'reports.printYearButton' : 'reports.printYearPremiumButton') | translate }}

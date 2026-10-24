@@ -357,6 +357,16 @@
     "stopAndSwitchButton": "Stop and switch",
     "switchSaveFailed": "Switch cancelled: the time entry could not be saved."
   },
+  "homeOfficeStats": {
+    "cardAria": "Home office summary",
+    "loadingAria": "Loading home office data",
+    "loadError": "The home office summary could not be loaded.",
+    "title": "Home office {{year}}",
+    "empty": "There are no working days with recorded time for this year yet.",
+    "ofDays": "of {{total}} working days",
+    "ratio": "Home office share",
+    "officeDays": "Days in the office"
+  },
   "leave": {
     "cardAria": "Vacation overview",
     "loadingAria": "Loading vacation data",

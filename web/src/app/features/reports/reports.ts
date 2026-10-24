@@ -26,6 +26,7 @@ import { toDateKey } from '../../domain/services/report-calculator';
 import { Router } from '@angular/router';
 import { LeaveBalanceService } from '../../core/services/leave-balance';
 import { LeaveBalanceCardComponent } from '../../shared/components/leave-balance-card/leave-balance-card';
+import { HomeOfficeCardComponent } from '../../shared/components/home-office-card/home-office-card';
 
 @Component({
   selector: 'app-reports',
@@ -39,6 +40,7 @@ import { LeaveBalanceCardComponent } from '../../shared/components/leave-balance
     MatTooltipModule,
     CalendarComponent,
     LeaveBalanceCardComponent,
+    HomeOfficeCardComponent,
     TranslatePipe,
   ],
   templateUrl: './reports.html',

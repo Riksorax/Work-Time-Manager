@@ -357,6 +357,16 @@
     "stopAndSwitchButton": "Beenden und wechseln",
     "switchSaveFailed": "Wechsel abgebrochen: Die Zeiterfassung konnte nicht gespeichert werden."
   },
+  "homeOfficeStats": {
+    "cardAria": "Home-Office-Auswertung",
+    "loadingAria": "Home-Office-Daten werden geladen",
+    "loadError": "Die Home-Office-Auswertung konnte nicht geladen werden.",
+    "title": "Home-Office {{year}}",
+    "empty": "Für dieses Jahr gibt es noch keine Arbeitstage mit erfasster Zeit.",
+    "ofDays": "von {{total}} Arbeitstagen",
+    "ratio": "Anteil Home-Office",
+    "officeDays": "Tage im Büro"
+  },
   "leave": {
     "cardAria": "Urlaubsübersicht",
     "loadingAria": "Urlaubsdaten werden geladen",

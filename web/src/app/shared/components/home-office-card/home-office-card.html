@@ -1,0 +1,53 @@
+<section class="ho-card"
+         role="group"
+         [attr.aria-label]="'homeOfficeStats.cardAria' | translate"
+         [attr.aria-busy]="state().status === 'loading'">
+  @switch (state().status) {
+    @case ('loading') {
+      <div class="ho-loading" role="status" [attr.aria-label]="'homeOfficeStats.loadingAria' | translate">
+        <mat-spinner diameter="28" aria-hidden="true" />
+      </div>
+    }
+
+    @case ('error') {
+      <div class="ho-error" role="alert">
+        <mat-icon aria-hidden="true">error_outline</mat-icon>
+        <span>{{ 'homeOfficeStats.loadError' | translate }}</span>
+        <button mat-stroked-button class="no-print" type="button" (click)="retry()">
+          <mat-icon aria-hidden="true">refresh</mat-icon>
+          {{ 'leave.retry' | translate }}
+        </button>
+      </div>
+    }
+
+    @default {
+      @if (state(); as s) {
+        @if (s.status === 'data') {
+          <header class="ho-header">
+            <mat-icon class="ho-icon" aria-hidden="true">home_work</mat-icon>
+            <h3 class="ho-title">{{ 'homeOfficeStats.title' | translate: { year: year() } }}</h3>
+          </header>
+
+          @if (s.stats.totalDays === 0) {
+            <p class="ho-empty">{{ 'homeOfficeStats.empty' | translate }}</p>
+          } @else {
+            <div class="ho-main">
+              <span class="ho-value">{{ s.stats.homeOfficeDays }}</span>
+              <span class="ho-of">{{ 'homeOfficeStats.ofDays' | translate: { total: s.stats.totalDays } }}</span>
+            </div>
+            <dl class="ho-rows">
+              <div class="ho-row">
+                <dt>{{ 'homeOfficeStats.ratio' | translate }}</dt>
+                <dd>{{ formatRatio(s.stats.ratio ?? 0) }}</dd>
+              </div>
+              <div class="ho-row">
+                <dt>{{ 'homeOfficeStats.officeDays' | translate }}</dt>
+                <dd>{{ s.stats.officeDays }}</dd>
+              </div>
+            </dl>
+          }
+        }
+      }
+    }
+  }
+</section>
