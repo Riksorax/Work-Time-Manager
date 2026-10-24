@@ -25,7 +25,7 @@ Laden ohne Konsolenfehler (je DE/EN, hell/dunkel), horizontaler Überlauf bei 32
 serious/critical, nur Chromium) und Kernabläufe (Timer, Pausen, Navigation, Theme, Sprache). Neue Seiten in
 `PAGES` ergänzen. Testdaten: `e2e/seed.ts` schreibt Einträge im `WorkEntryService`-localStorage-Format vor dem App-Start
 (`seedEntries`, `workDay`, `openDay`) und friert die Uhr auf einen festen Tag (`freezeTime`, 2026-03-18), damit nichts
-vom Ausführungsdatum abhängt. Abgedeckt: Kalender per Tastatur und Mehrfachauswahl (#377), Banner „Offene Einträge" (#385).
+vom Ausführungsdatum abhängt. Abgedeckt: Kalender per Tastatur und Mehrfachauswahl (#377), Banner „Offene Einträge" (#385). `e2e/matrix.spec.ts` (#429) deckt den Rest der automatisierbaren Prüfmatrix ab: Textskalierung 200 % (`html { font-size: 200% }`), Querformat 667×375, Touch-Zielgrößen ≥ 24 px (WCAG 2.5.8; bei Material-Eingaben zählt das ganze `mat-form-field`) und den Schnelleintrag-Dialog mit axe, Fokus und Escape. Nicht automatisierbar bleiben Screenreader-Stichproben und Safari auf echten Geräten.
 Tests mit Konto (`e2e/account.ts`, `profiles.spec.ts`: Profilwechsel #380/#388, Timer-Dialog, Anlegen/Löschen) laufen nur in
 Chromium und nur mit `E2E_EMULATORS=1 npm run e2e:chromium` (Java 21; die Config startet Auth- und Firestore-Emulator über
 `npx firebase-tools`, Projekt `demo-e2e`). Die App wird dafür mit `ng serve --configuration e2e` gebaut
