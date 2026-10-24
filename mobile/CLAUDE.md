@@ -201,6 +201,11 @@ Play Vitals zeigte 0 % R8-Optimierung. Ursache (belegt über `configuration.txt`
 - **Regressionstest:** `test/android/r8_optimization_test.dart` (liest `build.gradle` und den Workflow).
 - **Manuell prüfen:** Mit aktiver Optimierung den Kaufablauf mit einem Release-Build auf einem Gerät testen (Paywall öffnen, Kauf, Abo wiederherstellen, `isPremium` wechselt), ebenso Login, Benachrichtigungen und App-Sperre. Fehlende Regeln einzeln in `android/app/proguard-rules.pro` nachtragen (mit Kommentar), nie pauschal `-keep class **`.
 
+### Debug-Symbole und Obfuscation (#469)
+
+- **Native Debug-Symbole:** `android/app/build.gradle` setzt im `release`-Build `ndk { debugSymbolLevel 'SYMBOL_TABLE' }`; das AAB enthält dann `BUNDLE-METADATA/com.android.tools.build.debugsymbols/` (Play Console symbolisiert native Abstürze). `flutter-production.yml` prüft das nach dem Build („Check native debug symbols in AAB“, nur Warnung). Verifiziert im Testlauf auf Branch (Log: „Native Debug-Symbole sind im AAB enthalten“).
+- **Dart-Obfuscation (`--obfuscate`) ist bewusst NICHT aktiv.** Ohne automatischen Upload der Symboldateien (`--split-debug-info`) zu Crashlytics wären Dart-Stacktraces unlesbar (manuell per `flutter symbolize`), der Nutzen (Reverse-Engineering erschweren, minimal kleineres AAB) steht dazu in keinem Verhältnis. Der Upload bräuchte Firebase-CLI-Zugang als CI-Secret (`firebase crashlytics:symbols:upload`). Neu bewerten, wenn dieser Zugang existiert: dann `--obfuscate --split-debug-info=build/symbols` im Build, Upload der Symbole in derselben Pipeline und `build/symbols` zusätzlich als Artefakt (90 Tage) ablegen. Das R8-Mapping (`mapping.txt`) wird bereits als Artefakt abgelegt.
+
 ### Home-Screen-Widget (#276)
 
 Nur Android. Vorlage: Claude-Design-Projekt „Home Screen Widget“. Der Snapshot (`TimerSnapshot`, `widgetSnapshotToMap`) geht per `home_widget` in die Widget-Preferences; das Widget wird **nur von der App** aktualisiert (`widgetSyncProvider`, `updatePeriodMillis=0`).
