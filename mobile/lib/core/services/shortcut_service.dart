@@ -6,7 +6,8 @@ import '../../domain/utils/timer_action.dart';
 import '../../l10n/app_localizations.dart';
 import '../utils/logger.dart';
 
-/// App-Icon-Shortcuts „Einstempeln“/„Ausstempeln“ (#274), nur Android.
+/// App-Icon-Shortcuts „Einstempeln“/„Ausstempeln“ (#274) sowie „Pause starten“/„Pause beenden“
+/// (#485), nur Android.
 ///
 /// Dünner Wrapper um `quick_actions`. Die Labels kommen aus `AppLocalizations`
 /// (dynamische Shortcuts, keine `shortcuts.xml`) und müssen bei Sprachwechsel
@@ -42,7 +43,7 @@ class ShortcutService {
     }
   }
 
-  /// Setzt (ersetzt) die beiden Shortcuts mit Labels aus [l10n].
+  /// Setzt (ersetzt) die Shortcuts mit Labels aus [l10n].
   Future<void> setShortcuts(AppLocalizations l10n) async {
     if (!_supported) return;
     try {
@@ -55,6 +56,16 @@ class ShortcutService {
         ShortcutItem(
           type: timerStopActionId,
           localizedTitle: l10n.timerActionStop,
+          icon: _icon,
+        ),
+        ShortcutItem(
+          type: timerPauseActionId,
+          localizedTitle: l10n.timerActionPause,
+          icon: _icon,
+        ),
+        ShortcutItem(
+          type: timerResumeActionId,
+          localizedTitle: l10n.timerActionResume,
           icon: _icon,
         ),
       ]);

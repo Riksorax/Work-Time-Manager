@@ -41,20 +41,22 @@ void main() {
     received = [];
   });
 
-  test('setShortcuts setzt zwei Items mit Typen und deutschen Labels',
+  test('setShortcuts setzt vier Items mit Typen und deutschen Labels',
       () async {
     await service.setShortcuts(de);
 
     final items = fake.setCalls.single;
-    expect(items.map((i) => i.type), ['timer_start', 'timer_stop']);
-    expect(items.map((i) => i.localizedTitle), ['Einstempeln', 'Ausstempeln']);
+    expect(items.map((i) => i.type),
+        ['timer_start', 'timer_stop', 'timer_pause', 'timer_resume']);
+    expect(items.map((i) => i.localizedTitle),
+        ['Einstempeln', 'Ausstempeln', 'Pause starten', 'Pause beenden']);
   });
 
   test('englische Labels aus AppLocalizations', () async {
     await service.setShortcuts(en);
 
     expect(fake.setCalls.single.map((i) => i.localizedTitle),
-        ['Clock in', 'Clock out']);
+        ['Clock in', 'Clock out', 'Start break', 'End break']);
   });
 
   test('erneuter Aufruf ersetzt die Items (Sprachwechsel)', () async {
@@ -70,8 +72,15 @@ void main() {
 
     fake.handler!('timer_start');
     fake.handler!('timer_stop');
+    fake.handler!('timer_pause');
+    fake.handler!('timer_resume');
 
-    expect(received, [TimerAction.start, TimerAction.stop]);
+    expect(received, [
+      TimerAction.start,
+      TimerAction.stop,
+      TimerAction.pause,
+      TimerAction.resume,
+    ]);
   });
 
   test('unbekannter Typ wird ignoriert', () async {

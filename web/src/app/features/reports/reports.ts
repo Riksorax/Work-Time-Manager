@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, ElementRef, Injector, afterNextRender, inject, signal, viewChild } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { DOCUMENT, DatePipe } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatDividerModule } from '@angular/material/divider';
@@ -26,6 +26,7 @@ import { toDateKey } from '../../domain/services/report-calculator';
 import { Router } from '@angular/router';
 import { LeaveBalanceService } from '../../core/services/leave-balance';
 import { LeaveBalanceCardComponent } from '../../shared/components/leave-balance-card/leave-balance-card';
+import { HomeOfficeCardComponent } from '../../shared/components/home-office-card/home-office-card';
 
 @Component({
   selector: 'app-reports',
@@ -39,6 +40,7 @@ import { LeaveBalanceCardComponent } from '../../shared/components/leave-balance
     MatTooltipModule,
     CalendarComponent,
     LeaveBalanceCardComponent,
+    HomeOfficeCardComponent,
     TranslatePipe,
   ],
   templateUrl: './reports.html',
@@ -54,6 +56,7 @@ export class ReportsComponent {
   private  readonly snackbar    = inject(MatSnackBar);
   private  readonly translate   = inject(TranslateService);
   private  readonly injector    = inject(Injector);
+  private  readonly document    = inject(DOCUMENT);
   private  readonly multiSelectToggle = viewChild('multiSelectToggle', { read: ElementRef<HTMLElement> });
   protected readonly activeTabIndex = signal(0);
 
@@ -76,6 +79,18 @@ export class ReportsComponent {
     } catch {
       this.snackbar.open(this.translate.instant('reports.restoreError'), 'OK', { duration: 4000 });
     }
+  }
+
+  /**
+   * Jahresauswertung als PDF (#483): Premium. Der Browser-Druckdialog (Als PDF speichern) druckt dank Print-CSS
+   * (`styles.scss`, `.print-area`) nur die Jahresansicht; Nicht-Premium-Nutzer sehen stattdessen die Paywall.
+   */
+  async onPrintYear(): Promise<void> {
+    if (!this.svc.isPremium()) {
+      await this.onPresentPaywall();
+      return;
+    }
+    this.document.defaultView?.print();
   }
 
   async onPresentPaywall(): Promise<void> {

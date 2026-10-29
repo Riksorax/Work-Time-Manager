@@ -119,15 +119,23 @@ export class WorkProfileService {
   }
 
   /**
-   * Legt ein Profil an und wechselt hinein. Die Guards laufen VOR dem API-Aufruf: lehnt einer ab, wird kein Profil
-   * angelegt und `null` geliefert.
+   * Legt ein Profil an und wechselt hinein. Das Profil wird ZUERST angelegt (#394): scheitert die API, hat noch kein
+   * Guard etwas getan (z. B. einen laufenden Timer im alten Profil gestoppt). Lehnt danach ein Guard ab, wird das neue
+   * Profil best-effort wieder gelöscht und `null` geliefert.
    */
   async addProfile(name: string): Promise<WorkProfile | null> {
     if (this._switchPending) return null;
     this._switchPending = true;
     try {
-      if (!(await this._guardsAllow({ from: this._activeProfileId(), to: null, toName: name }))) return null;
       const created = await this.api.addWorkProfile(name);
+      if (!(await this._guardsAllow({ from: this._activeProfileId(), to: null, toName: name }))) {
+        try {
+          await this.api.deleteWorkProfile(created.id);
+        } catch (e) {
+          console.error('Angelegtes Profil nach abgelehntem Wechsel nicht gelöscht', e);
+        }
+        return null;
+      }
       await this.refreshProfiles();
       this.setActiveProfile(created.id);
       return created;

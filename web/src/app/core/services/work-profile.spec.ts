@@ -172,7 +172,7 @@ describe('WorkProfileService Guard-Registry (#380)', () => {
   });
 
   describe('addProfile', () => {
-    it('der Guard läuft VOR dem API-Aufruf; bei true: Profil angelegt und aktiv', async () => {
+    it('das Profil wird VOR den Guards angelegt (#394); bei true: Profil aktiv', async () => {
       const h = setup();
       const order: string[] = [];
       h.svc.registerSwitchGuard(req => { order.push(`guard:${req.from}->${req.toName}`); return true; });
@@ -180,16 +180,28 @@ describe('WorkProfileService Guard-Registry (#380)', () => {
 
       const created = await h.svc.addProfile('Neu');
       expect(created).toEqual({ id: B, name: 'Neu' });
-      expect(order).toEqual([`guard:${A}->Neu`, 'api']);
+      expect(order).toEqual(['api', `guard:${A}->Neu`]);
       expect(h.svc.activeProfileId()).toBe(B);
+      expect(h.api.deleteWorkProfile).not.toHaveBeenCalled();
     });
 
-    it('bei Ablehnung wird kein Profil angelegt, aktiv bleibt das alte, Rückgabe null', async () => {
+    it('bei Ablehnung wird das angelegte Profil wieder gelöscht, aktiv bleibt das alte, Rückgabe null', async () => {
       const h = setup();
       h.svc.registerSwitchGuard(() => false);
       expect(await h.svc.addProfile('Neu')).toBeNull();
-      expect(h.api.addWorkProfile).not.toHaveBeenCalled();
+      expect(h.api.addWorkProfile).toHaveBeenCalledTimes(1);
+      expect(h.api.deleteWorkProfile).toHaveBeenCalledWith(B);
       expect(h.svc.activeProfileId()).toBe(A);
+    });
+
+    it('scheitert das Löschen nach einer Ablehnung, bleibt es bei null und die Sperre wird freigegeben', async () => {
+      const h = setup();
+      const err = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      h.svc.registerSwitchGuard(() => false);
+      h.api.deleteWorkProfile.mockRejectedValueOnce(new Error('delete down'));
+      expect(await h.svc.addProfile('Neu')).toBeNull();
+      expect(await h.svc.requestSwitch(B)).toBe(false);
+      err.mockRestore();
     });
 
     it('parallel zu einer laufenden Prüfung: addProfile liefert null, ohne Guard und API; umgekehrt wird requestSwitch abgelehnt', async () => {

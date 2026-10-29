@@ -84,6 +84,7 @@ class TimerActionViewModel extends Notifier<TimerActionState> {
               stackTrace: st);
           result = TimerActionResult.failed;
         }
+        logger.i('[TimerAction] ${timerActionId(action)}: ${result.name}');
         if (!ref.mounted) return;
         state =
             TimerActionState(lastResult: result, handled: state.handled + 1);

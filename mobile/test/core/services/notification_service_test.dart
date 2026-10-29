@@ -331,9 +331,22 @@ void main() {
       expect(actions!.map((a) => a.id), ['timer_start', 'timer_stop']);
     });
 
-    test('nur Pausen oder generisch -> keine Actions', () async {
-      expect(
-          await scheduleAndGetActions(start: false, end: false, breaks: true),
+    test('checkBreaks -> genau die Action timer_pause', () async {
+      final actions =
+          await scheduleAndGetActions(start: false, end: false, breaks: true);
+      expect(actions!.map((a) => a.id), ['timer_pause']);
+      expect(actions.single.title, 'Pause starten');
+    });
+
+    test('alle drei Checks -> drei Actions in fester Reihenfolge', () async {
+      final actions =
+          await scheduleAndGetActions(start: true, end: true, breaks: true);
+      expect(actions!.map((a) => a.id),
+          ['timer_start', 'timer_stop', 'timer_pause']);
+    });
+
+    test('ohne Check (generisch) -> keine Actions', () async {
+      expect(await scheduleAndGetActions(start: false, end: false),
           anyOf(isNull, isEmpty));
     });
 
@@ -341,6 +354,34 @@ void main() {
       final actions =
           await scheduleAndGetActions(start: true, end: true, l10n: en);
       expect(actions!.map((a) => a.title), ['Clock in', 'Clock out']);
+    });
+
+    test('headlessActions: Actions oeffnen die App nicht (#485)', () async {
+      await notificationService.scheduleDailyReminder(
+        time: '09:00',
+        days: [1],
+        checkWorkStart: true,
+        checkWorkEnd: true,
+        checkBreaks: true,
+        headlessActions: true,
+        l10n: de,
+      );
+      final details = verify(mockNotificationsPlugin.zonedSchedule(
+        any,
+        any,
+        any,
+        any,
+        captureAny,
+        androidScheduleMode: anyNamed('androidScheduleMode'),
+        matchDateTimeComponents: anyNamed('matchDateTimeComponents'),
+        payload: anyNamed('payload'),
+      )).captured.single as NotificationDetails;
+      final actions = details.android!.actions!;
+      expect(actions, hasLength(3));
+      for (final a in actions) {
+        expect(a.showsUserInterface, isFalse);
+        expect(a.cancelNotification, isTrue);
+      }
     });
 
     test('Actions oeffnen die App und schliessen die Notification', () async {

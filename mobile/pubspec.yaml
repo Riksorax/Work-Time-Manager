@@ -79,10 +79,6 @@ dependency_overrides:
   test_core: 0.6.18
   analyzer: ^8.0.0
   custom_lint_visitor: 1.0.0+8.4.0
-  # home_widget (#276) zieht path_provider; ab path_provider_android 2.3.0 haengt
-  # es an jni/jni_flutter (Native-Assets-Build). Bis zur Pruefung im Release-Build
-  # bei der Pigeon-Version bleiben.
-  path_provider_android: '>=2.2.23 <2.3.0'
 
 dev_dependencies:
   flutter_test:

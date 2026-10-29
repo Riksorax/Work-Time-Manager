@@ -421,7 +421,7 @@ interface RealHarness {
   world: World;
   workProfile: WorkProfileService;
   confirm: ConfirmFake;
-  api: { addWorkProfile: ReturnType<typeof vi.fn> };
+  api: { addWorkProfile: ReturnType<typeof vi.fn>; deleteWorkProfile: ReturnType<typeof vi.fn> };
 }
 
 function setupReal(order: 'dashboard-first' | 'profile-first', confirm: ConfirmFake, over: Parameters<typeof makeWorld>[0] = {}): RealHarness {
@@ -430,7 +430,7 @@ function setupReal(order: 'dashboard-first' | 'profile-first', confirm: ConfirmF
   const api = {
     getWorkProfiles: async () => [{ id: B, name: 'Zweit' }],
     addWorkProfile: vi.fn(async (n: string) => ({ id: B, name: n })),
-    deleteWorkProfile: async () => undefined,
+    deleteWorkProfile: vi.fn(async () => undefined),
   };
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
@@ -528,14 +528,15 @@ describe('Profilwechsel mit laufendem Timer und echtem WorkProfileService (#380,
     expect(h.svc.isTimerRunning()).toBe(false);
   });
 
-  it('addProfile() mit laufendem Timer, abgebrochen: nichts angelegt, A läuft weiter, kein Write', async () => {
+  it('addProfile() mit laufendem Timer, abgebrochen: Profil wieder gelöscht (#394), A läuft weiter, kein Write', async () => {
     const h = setupReal('dashboard-first', newConfirm(false), { bEntry: null });
     await run();
 
     expect(await h.workProfile.addProfile('Zweit')).toBeNull();
     await run();
 
-    expect(h.api.addWorkProfile).not.toHaveBeenCalled();
+    expect(h.api.addWorkProfile).toHaveBeenCalledTimes(1);
+    expect(h.api.deleteWorkProfile).toHaveBeenCalledTimes(1);
     expect(h.workProfile.activeProfileId()).toBe(A);
     expect(h.svc.isTimerRunning()).toBe(true);
     expect(h.world.writes).toEqual([]);

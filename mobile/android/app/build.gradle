@@ -71,6 +71,11 @@ android {
             signingConfig = signingConfigs.release
             minifyEnabled = true
             shrinkResources = true
+            // Native Debug-Symbole (#469): das AAB enthaelt dann native-debug-symbols.zip, Play Console und
+            // Crashlytics koennen native Stacktraces (Flutter-Engine, Plugins) lesbar machen.
+            ndk {
+                debugSymbolLevel 'SYMBOL_TABLE'
+            }
         }
     }
 }
