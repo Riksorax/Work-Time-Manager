@@ -153,6 +153,9 @@
                   </div>
                   <div class="break-time">
                     {{ b.start | date:'HH:mm' }} – {{ b.end ? (b.end | date:'HH:mm') : ('dashboard.breakInProgress' | translate) }}
+                    @if (breakDurations().get(b.id); as d) {
+                      <span class="break-duration">· {{ d.key | translate: d.params }}</span>
+                    }
                   </div>
                 </div>
 
