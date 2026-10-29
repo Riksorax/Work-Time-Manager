@@ -273,6 +273,11 @@
     font-variant-numeric: tabular-nums;
   }
 
+  .break-duration {
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
   .break-actions {
     display: flex;
     flex-shrink: 0;
