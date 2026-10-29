@@ -27,6 +27,9 @@
     "noBreaksYet": "No breaks recorded yet.",
     "automaticChipLabel": "Automatic",
     "breakInProgress": "in progress...",
+    "breakDurationLessThanMinute": "< 1 min",
+    "breakDurationMinutes": "{{minutes}} min",
+    "breakDurationHoursMinutes": "{{hours}} h {{minutes}} min",
     "editBreakAria": "Edit break {{name}}",
     "deleteBreakAria": "Delete break {{name}}",
     "editBreakDialogTitle": "Edit break",
@@ -61,7 +64,6 @@
     "openEntrySaveError": "Could not end the entry.",
     "openEntryContinue": "Continue",
     "openEntryContinueSemantics": "Continue entry from {{date}}",
-    "homeOfficeToggleAria": "Toggle home office for today",
     "saveError": "Saving failed. Please check your connection and try again."
   },
   "holidays": {
@@ -165,7 +167,10 @@
     "tabYearly": "Year",
     "yearNavAria": "Year navigation",
     "prevYearAria": "Previous year",
-    "nextYearAria": "Next year"
+    "nextYearAria": "Next year",
+    "printYearButton": "Save as PDF / Print",
+    "printYearPremiumButton": "Save as PDF with Premium",
+    "printTitle": "Vacation and sick-day summary {{year}}"
   },
   "settings": {
     "title": "Settings",
@@ -354,6 +359,16 @@
     "switchWhileRunningText": "A time entry is still running in profile \"{{from}}\". It will be stopped and saved before you switch to profile \"{{to}}\".",
     "stopAndSwitchButton": "Stop and switch",
     "switchSaveFailed": "Switch cancelled: the time entry could not be saved."
+  },
+  "homeOfficeStats": {
+    "cardAria": "Home office summary",
+    "loadingAria": "Loading home office data",
+    "loadError": "The home office summary could not be loaded.",
+    "title": "Home office {{year}}",
+    "empty": "There are no working days with recorded time for this year yet.",
+    "ofDays": "of {{total}} working days",
+    "ratio": "Home office share",
+    "officeDays": "Days in the office"
   },
   "leave": {
     "cardAria": "Vacation overview",

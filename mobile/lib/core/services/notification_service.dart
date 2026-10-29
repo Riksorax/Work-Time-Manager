@@ -4,6 +4,7 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter_work_time/core/utils/logger.dart';
 import 'package:flutter_work_time/domain/utils/overtime_warning_utils.dart';
 import 'package:flutter_work_time/domain/utils/timer_action.dart';
+import 'package:flutter_work_time/core/services/timer_action_background.dart';
 import 'package:flutter_work_time/l10n/app_localizations.dart';
 
 /// Nächster Zeitpunkt ab [now] (Wochentag [day], 1 = Montag ... 7 = Sonntag,
@@ -32,13 +33,17 @@ TimerAction? timerActionFromLaunchDetails(NotificationAppLaunchDetails? d) {
   return timerActionFromId(d.notificationResponse?.actionId);
 }
 
-/// Buttons einer Erinnerung (#274): „Einstempeln“ beim Start-Check,
-/// „Ausstempeln“ beim Ende-Check, in dieser Reihenfolge. Pausen-only ohne
-/// Button. Die App öffnet sich (kein Headless), die Notification wird
-/// geschlossen.
+/// Buttons einer Erinnerung (#274, #485): „Einstempeln“ beim Start-Check,
+/// „Ausstempeln“ beim Ende-Check und „Pause starten“ beim Pausen-Check, in
+/// dieser Reihenfolge (höchstens drei, das Maximum, das Android anzeigt). Die
+/// Notification wird geschlossen. Mit [headless] öffnet sich die App nicht,
+/// die Aktion läuft im Hintergrund (`timerActionBackgroundHandler`, #485);
+/// sonst öffnet sie sich und führt die Aktion über den Briefkasten aus.
 List<AndroidNotificationAction> reminderTimerActions({
   required bool checkWorkStart,
   required bool checkWorkEnd,
+  bool checkBreaks = false,
+  bool headless = false,
   required AppLocalizations l10n,
 }) =>
     [
@@ -46,14 +51,21 @@ List<AndroidNotificationAction> reminderTimerActions({
         AndroidNotificationAction(
           timerStartActionId,
           l10n.timerActionStart,
-          showsUserInterface: true,
+          showsUserInterface: !headless,
           cancelNotification: true,
         ),
       if (checkWorkEnd)
         AndroidNotificationAction(
           timerStopActionId,
           l10n.timerActionStop,
-          showsUserInterface: true,
+          showsUserInterface: !headless,
+          cancelNotification: true,
+        ),
+      if (checkBreaks)
+        AndroidNotificationAction(
+          timerPauseActionId,
+          l10n.timerActionPause,
+          showsUserInterface: !headless,
           cancelNotification: true,
         ),
     ];
@@ -105,6 +117,8 @@ class NotificationService {
     await _notifications.initialize(
       initSettings,
       onDidReceiveNotificationResponse: _onNotificationTapped,
+      // Aktionen ohne Oberfläche (#485) landen in einem eigenen Isolate.
+      onDidReceiveBackgroundNotificationResponse: timerActionBackgroundHandler,
     );
 
     _initialized = true;
@@ -136,6 +150,7 @@ class NotificationService {
     required bool checkWorkStart,
     required bool checkWorkEnd,
     required bool checkBreaks,
+    bool headlessActions = false,
     required AppLocalizations l10n,
   }) async {
     await initialize();
@@ -160,6 +175,7 @@ class NotificationService {
         checkWorkStart: checkWorkStart,
         checkWorkEnd: checkWorkEnd,
         checkBreaks: checkBreaks,
+        headlessActions: headlessActions,
         l10n: l10n,
       );
     }
@@ -236,6 +252,7 @@ class NotificationService {
     required bool checkWorkStart,
     required bool checkWorkEnd,
     required bool checkBreaks,
+    required bool headlessActions,
     required AppLocalizations l10n,
   }) async {
     if (day < 1 || day > 7) {
@@ -291,6 +308,8 @@ class NotificationService {
           actions: reminderTimerActions(
             checkWorkStart: checkWorkStart,
             checkWorkEnd: checkWorkEnd,
+            checkBreaks: checkBreaks,
+            headless: headlessActions,
             l10n: l10n,
           ),
         ),

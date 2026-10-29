@@ -116,6 +116,20 @@
   "@breakInProgress": {
     "description": "Platzhalter für die Endzeit einer noch laufenden Pause."
   },
+  "breakDurationLessThanMinute": "< 1 Min",
+  "@breakDurationLessThanMinute": {
+    "description": "Dauer einer Pause im Dashboard, wenn sie kürzer als eine Minute ist."
+  },
+  "breakDurationMinutes": "{minutes} Min",
+  "@breakDurationMinutes": {
+    "description": "Dauer einer Pause im Dashboard unter einer Stunde.",
+    "placeholders": { "minutes": { "type": "int" } }
+  },
+  "breakDurationHoursMinutes": "{hours} Std {minutes} Min",
+  "@breakDurationHoursMinutes": {
+    "description": "Dauer einer Pause im Dashboard ab einer Stunde.",
+    "placeholders": { "hours": { "type": "int" }, "minutes": { "type": "int" } }
+  },
   "restartSessionTitle": "Neue Session starten",
   "@restartSessionTitle": {
     "description": "Titel des Bestätigungsdialogs zum Neustart einer bereits beendeten Zeiterfassung."
@@ -1308,6 +1322,12 @@
   "@timerActionStart": {"description": "Beschriftung der Aktion zum Einstempeln: Button in der Erinnerungs-Benachrichtigung und App-Icon-Shortcut (Android). Startet den Timer des heutigen Tages."},
   "timerActionStop": "Ausstempeln",
   "@timerActionStop": {"description": "Beschriftung der Aktion zum Ausstempeln: Button in der Erinnerungs-Benachrichtigung und App-Icon-Shortcut (Android). Beendet den laufenden Timer."},
+  "timerActionUnlockHint": "Entsperre die App, um die Aktion auszuführen.",
+  "@timerActionUnlockHint": {"description": "Text einer Benachrichtigung, wenn eine Aktion aus der Erinnerung (Einstempeln, Ausstempeln, Pause) ausgeführt werden soll, die App-Sperre aber aktiv ist. Der Tap öffnet die App."},
+  "timerActionPause": "Pause starten",
+  "@timerActionPause": {"description": "Beschriftung der Shortcut-Aktion (Android, App-Icon) zum Starten einer Pause bei laufendem Timer."},
+  "timerActionResume": "Pause beenden",
+  "@timerActionResume": {"description": "Beschriftung der Shortcut-Aktion (Android, App-Icon) zum Beenden der laufenden Pause."},
   "homeOfficeToggleLabel": "Von zu Hause gearbeitet",
   "@homeOfficeToggleLabel": {"description": "Beschriftung des Home-Office-Schalters im Bearbeiten-Dialog und im Dashboard (#277): markiert den Tag als Home-Office-Tag."},
   "homeOfficeChipLabel": "Home-Office",

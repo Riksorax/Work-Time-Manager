@@ -797,6 +797,13 @@ class _AppLockSectionState extends ConsumerState<_AppLockSection> {
       // Persistenzfehler (#375): der Service hat geloggt und zurückgerollt;
       // der Rebuild unten lässt den Schalter auf den alten Wert springen.
     }
+    // Ob die Erinnerungs-Buttons im Hintergrund laufen dürfen, hängt von der
+    // Sperre ab (#485): Erinnerungen neu planen.
+    try {
+      await ref
+          .read(settingsViewModelProvider.notifier)
+          .rescheduleNotifications();
+    } catch (_) {}
     // Provider selbst ist nicht reaktiv (synchrone Store-Reads) - setState
     // erzwingt einen Rebuild dieses Abschnitts nach der Änderung.
     if (mounted) setState(() {});

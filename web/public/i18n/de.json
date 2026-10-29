@@ -27,6 +27,9 @@
     "noBreaksYet": "Noch keine Pausen eingetragen.",
     "automaticChipLabel": "Automatisch",
     "breakInProgress": "läuft…",
+    "breakDurationLessThanMinute": "< 1 Min",
+    "breakDurationMinutes": "{{minutes}} Min",
+    "breakDurationHoursMinutes": "{{hours}} Std {{minutes}} Min",
     "editBreakAria": "Pause {{name}} bearbeiten",
     "deleteBreakAria": "Pause {{name}} löschen",
     "editBreakDialogTitle": "Pause bearbeiten",
@@ -61,7 +64,6 @@
     "openEntrySaveError": "Eintrag konnte nicht beendet werden.",
     "openEntryContinue": "Fortsetzen",
     "openEntryContinueSemantics": "Eintrag vom {{date}} fortsetzen",
-    "homeOfficeToggleAria": "Home-Office für heute umschalten",
     "saveError": "Speichern fehlgeschlagen. Bitte prüfe deine Verbindung und versuche es erneut."
   },
   "holidays": {
@@ -165,7 +167,10 @@
     "tabYearly": "Jahr",
     "yearNavAria": "Jahresnavigation",
     "prevYearAria": "Vorheriges Jahr",
-    "nextYearAria": "Nächstes Jahr"
+    "nextYearAria": "Nächstes Jahr",
+    "printYearButton": "Als PDF speichern / Drucken",
+    "printYearPremiumButton": "Mit Premium als PDF speichern",
+    "printTitle": "Urlaubs- und Krankheitsauswertung {{year}}"
   },
   "settings": {
     "title": "Einstellungen",
@@ -354,6 +359,16 @@
     "switchWhileRunningText": "Im Profil \"{{from}}\" läuft noch eine Zeiterfassung. Sie wird beendet und gespeichert, bevor du in das Profil \"{{to}}\" wechselst.",
     "stopAndSwitchButton": "Beenden und wechseln",
     "switchSaveFailed": "Wechsel abgebrochen: Die Zeiterfassung konnte nicht gespeichert werden."
+  },
+  "homeOfficeStats": {
+    "cardAria": "Home-Office-Auswertung",
+    "loadingAria": "Home-Office-Daten werden geladen",
+    "loadError": "Die Home-Office-Auswertung konnte nicht geladen werden.",
+    "title": "Home-Office {{year}}",
+    "empty": "Für dieses Jahr gibt es noch keine Arbeitstage mit erfasster Zeit.",
+    "ofDays": "von {{total}} Arbeitstagen",
+    "ratio": "Anteil Home-Office",
+    "officeDays": "Tage im Büro"
   },
   "leave": {
     "cardAria": "Urlaubsübersicht",

@@ -27,6 +27,7 @@ import { Break, WorkEntryType } from '../../shared/models/index';
 import { entryDay } from '../../shared/utils/entry-day.util';
 import { LanguageService } from '../../core/services/language';
 import { formatEntryDay, formatHm } from '../../domain/utils/open-entry.utils';
+import { breakDurationLabel, breakDurationMs } from '../../domain/utils/break-duration.utils';
 import { OpenEntryBannerComponent } from '../../shared/components/open-entry-banner/open-entry-banner';
 import { OpenEntryService } from './open-entry';
 import { OpenEntryCandidate } from './open-entry-close';
@@ -69,6 +70,16 @@ export class DashboardComponent {
   private  readonly errorHandler = inject(ErrorHandler);
 
   /** Home-Office-Toggle nur bei Typ Arbeit (#277); computed statt Klassenfeld mit Enum (Vite-SSR-Falle). */
+  /**
+   * Dauer je Pause (#504). Hängt an `grossDuration`, das der Timer jede Sekunde fortschreibt: so läuft die Dauer einer
+   * laufenden Pause mit, ohne dass das Template die Uhr kennt.
+   */
+  protected readonly breakDurations = computed(() => {
+    this.svc.grossDuration();
+    const now = new Date();
+    return new Map(this.svc.breaks().map(b => [b.id, breakDurationLabel(breakDurationMs(b, now))]));
+  });
+
   protected readonly isWorkType = computed(() => this.svc.workEntry().type === WorkEntryType.Work);
 
   private readonly banner = viewChild(OpenEntryBannerComponent);

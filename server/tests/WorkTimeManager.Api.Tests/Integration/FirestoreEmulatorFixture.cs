@@ -6,7 +6,8 @@ using Google.Cloud.Firestore;
 namespace WorkTimeManager.Api.Tests.Integration;
 
 /// <summary>
-/// Startet den Google-Firestore-Emulator als Docker-Container (da kein lokales Java vorhanden).
+/// Nutzt einen vorhandenen Firestore-Emulator, wenn <c>FIRESTORE_EMULATOR_HOST</c> gesetzt ist
+/// (z. B. CI über <c>firebase emulators:exec</c>); sonst startet er ihn als Docker-Container.
 /// Schlägt der Start fehl (kein Docker / kein Image-Pull), bleibt <see cref="SkipReason"/> gesetzt
 /// und die Integrationstests überspringen sich selbst — <c>dotnet test</c> bleibt grün.
 /// </summary>
@@ -25,6 +26,16 @@ public sealed class FirestoreEmulatorFixture : IAsyncLifetime
     {
         try
         {
+            if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("FIRESTORE_EMULATOR_HOST")))
+            {
+                Db = new FirestoreDbBuilder
+                {
+                    ProjectId = ProjectId,
+                    EmulatorDetection = EmulatorDetection.EmulatorOnly,
+                }.Build();
+                return;
+            }
+
             _container = new ContainerBuilder()
                 .WithImage(Image)
                 .WithCommand("gcloud", "emulators", "firestore", "start",

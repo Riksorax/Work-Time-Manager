@@ -1,0 +1,73 @@
+:host { display: block; }
+
+.ho-card {
+  background: var(--mat-sys-surface-container-low);
+  border-radius: 16px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-sizing: border-box;
+  min-height: 72px;
+
+  @media (min-width: 768px) { padding: 20px 24px; }
+}
+
+.ho-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ho-icon { color: var(--mat-sys-primary); }
+
+.ho-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.ho-main {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ho-value {
+  font-size: 2rem;
+  font-weight: 500;
+  line-height: 1.1;
+}
+
+.ho-of { color: var(--mat-sys-on-surface-variant); }
+
+.ho-rows {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ho-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+
+  dt { color: var(--mat-sys-on-surface-variant); }
+  dd { margin: 0; font-variant-numeric: tabular-nums; }
+}
+
+.ho-loading { display: flex; justify-content: center; }
+
+.ho-error {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ho-empty {
+  margin: 0;
+  color: var(--mat-sys-on-surface-variant);
+}

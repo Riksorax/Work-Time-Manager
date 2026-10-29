@@ -101,8 +101,7 @@
               class="home-office-toggle"
               [checked]="!!svc.workEntry().isHomeOffice"
               [disabled]="svc.isSaving()"
-              (change)="onHomeOfficeChange($event.checked)"
-              [attr.aria-label]="'dashboard.homeOfficeToggleAria' | translate">
+              (change)="onHomeOfficeChange($event.checked)">
               {{ 'shared.homeOfficeLabel' | translate }}
             </mat-slide-toggle>
           }
@@ -154,6 +153,9 @@
                   </div>
                   <div class="break-time">
                     {{ b.start | date:'HH:mm' }} – {{ b.end ? (b.end | date:'HH:mm') : ('dashboard.breakInProgress' | translate) }}
+                    @if (breakDurations().get(b.id); as d) {
+                      <span class="break-duration">· {{ d.key | translate: d.params }}</span>
+                    }
                   </div>
                 </div>
 

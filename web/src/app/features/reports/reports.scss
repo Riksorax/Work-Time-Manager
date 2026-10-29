@@ -644,4 +644,6 @@
   margin: 0 auto;
   display: flex;
   flex-direction: column;
+  gap: 16px;
 }
+.print-button { align-self: flex-start; }

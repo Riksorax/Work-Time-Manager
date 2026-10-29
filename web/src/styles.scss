@@ -94,3 +94,40 @@ body {
 .mat-mdc-dialog-container .mat-mdc-dialog-title + .mat-mdc-dialog-content.mat-mdc-dialog-content {
   padding-top: 8px;
 }
+
+// Druck (#483): Es wird nur der mit `.print-area` markierte Bereich gedruckt (Jahresauswertung in den Berichten,
+// als PDF über den Druckdialog des Browsers). Alles andere ist unsichtbar; `.print-only` erscheint nur im Druck.
+.print-only {
+  display: none;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+
+  .print-area {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    max-width: none;
+  }
+
+  .print-only {
+    display: block;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .month-nav button {
+    display: none !important;
+  }
+}
