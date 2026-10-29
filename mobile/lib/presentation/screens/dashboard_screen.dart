@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/providers/clock_provider.dart';
 import '../../core/utils/time_format.dart';
 import '../../domain/entities/break_entity.dart';
 import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/services/break_calculator_service.dart';
+import '../../domain/utils/break_duration.dart';
 import '../../l10n/app_localizations.dart';
+import '../utils/break_duration_formatter.dart';
 import '../utils/break_name_localizer.dart';
 import '../view_models/dashboard_view_model.dart';
 import '../view_models/settings_view_model.dart';
@@ -354,6 +357,8 @@ class DashboardScreen extends ConsumerWidget {
     final dashboardViewModel = ref.read(dashboardViewModelProvider.notifier);
     final isSaving = ref.watch(dashboardViewModelProvider).isSaving;
     final l10n = AppLocalizations.of(context);
+    // Läuft eine Pause, baut der 1-s-Timer des Dashboards die Liste neu auf: die Dauer zählt mit.
+    final now = ref.read(clockProvider)();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -396,7 +401,8 @@ class DashboardScreen extends ConsumerWidget {
                 ),
                 subtitle: Text(
                     '${formatTime(b.start, use24HourFormat: use24HourFormat)} - '
-                    '${b.end != null ? formatTime(b.end!, use24HourFormat: use24HourFormat) : l10n.breakInProgress}'),
+                    '${b.end != null ? formatTime(b.end!, use24HourFormat: use24HourFormat) : l10n.breakInProgress}'
+                    ' · ${formatBreakDuration(breakDuration(b, now), l10n)}'),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [

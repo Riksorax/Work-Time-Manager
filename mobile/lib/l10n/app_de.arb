@@ -116,6 +116,20 @@
   "@breakInProgress": {
     "description": "Platzhalter für die Endzeit einer noch laufenden Pause."
   },
+  "breakDurationLessThanMinute": "< 1 Min",
+  "@breakDurationLessThanMinute": {
+    "description": "Dauer einer Pause im Dashboard, wenn sie kürzer als eine Minute ist."
+  },
+  "breakDurationMinutes": "{minutes} Min",
+  "@breakDurationMinutes": {
+    "description": "Dauer einer Pause im Dashboard unter einer Stunde.",
+    "placeholders": { "minutes": { "type": "int" } }
+  },
+  "breakDurationHoursMinutes": "{hours} Std {minutes} Min",
+  "@breakDurationHoursMinutes": {
+    "description": "Dauer einer Pause im Dashboard ab einer Stunde.",
+    "placeholders": { "hours": { "type": "int" }, "minutes": { "type": "int" } }
+  },
   "restartSessionTitle": "Neue Session starten",
   "@restartSessionTitle": {
     "description": "Titel des Bestätigungsdialogs zum Neustart einer bereits beendeten Zeiterfassung."
