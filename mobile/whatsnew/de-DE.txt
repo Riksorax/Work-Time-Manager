@@ -3,3 +3,4 @@ Das ist neu in 1.8.0:
 • Neue App-Shortcuts "Pause starten" und "Pause beenden"
 • Google Assistant: Timer per Sprache steuern (Android)
 • Die Zeitzone wird jetzt korrekt erkannt, auch außerhalb von Deutschland
+• Dashboard: Die Dauer jeder Pause steht jetzt direkt in der Pausenliste
