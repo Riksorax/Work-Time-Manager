@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
+import 'package:flutter_work_time/core/utils/network_error.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_work_time/core/utils/time_precision.dart';
 
@@ -258,14 +259,6 @@ class ReportsViewModel extends Notifier<ReportsState> {
     _loadWorkEntriesForMonth(now.year, now.month);
   }
 
-  static bool _isTransientNetworkError(String message) =>
-      message.contains('SocketException') ||
-      message.contains('Connection abort') ||
-      message.contains('Connection reset') ||
-      message.contains('Connection closed') ||
-      message.contains('Failed host lookup') ||
-      message.contains('TimeoutException');
-
   Future<void> _loadWorkEntriesForMonth(int year, int month) async {
     state = state.copyWith(isLoading: true);
     try {
@@ -278,7 +271,7 @@ class ReportsViewModel extends Notifier<ReportsState> {
       if (errorMessage.contains('permission-denied')) {
         logger.w(
             '[ReportsViewModel] Firebase Permission-Fehler erkannt - User wahrscheinlich nicht eingeloggt. Verwende leere Daten.');
-      } else if (_isTransientNetworkError(errorMessage)) {
+      } else if (isTransientNetworkError(e)) {
         // Verbindungsabbruch/Offline ist kein App-Fehler (#506): nur info,
         // da ab warning an Crashlytics gemeldet wird.
         logger.i(

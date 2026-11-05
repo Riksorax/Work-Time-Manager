@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:logger/logger.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:flutter_work_time/core/providers/clock_provider.dart';
@@ -127,19 +130,65 @@ void main() {
           .called(1);
     });
 
-    test(
-        'Verbindungsabbruch beim Laden beendet isLoading mit leeren Daten (#506)',
-        () async {
-      final now = _fixedNow;
-      when(mockWorkRepository.getWorkEntriesForMonth(now.year, now.month))
-          .thenAnswer((_) async => throw Exception(
-              'ClientException with SocketException: Software caused connection abort'));
+    group('Logging beim Laden-Fehler (#506)', () {
+      final events = <LogEvent>[];
+      void listener(LogEvent e) => events.add(e);
 
-      container.read(reportsViewModelProvider.notifier);
-      await Future.delayed(Duration.zero);
+      setUp(() {
+        events.clear();
+        Logger.addLogListener(listener);
+      });
+      tearDown(() => Logger.removeLogListener(listener));
 
-      final state = container.read(reportsViewModelProvider);
-      expect(state.isLoading, false);
+      Future<void> loadWithError(Object error) async {
+        when(mockWorkRepository.getWorkEntriesForMonth(
+                _fixedNow.year, _fixedNow.month))
+            .thenAnswer((_) async => throw error);
+
+        container.read(reportsViewModelProvider.notifier);
+        await Future.delayed(Duration.zero);
+
+        final state = container.read(reportsViewModelProvider);
+        expect(state.isLoading, false);
+      }
+
+      // Ab Level.warning meldet der Logger an Crashlytics. Nur Einträge zum
+      // Laden der Arbeitseinträge zählen (der API-Fallback loggt im Test
+      // unabhängig davon eine eigene Warnung).
+      Iterable<LogEvent> reported() => events.where((e) =>
+          e.level.index >= Level.warning.index &&
+          e.message.toString().contains('Arbeitseinträge'));
+
+      final transientErrors = <String, Object>{
+        'SocketException': const SocketException(
+            'Software caused connection abort',
+            osError: OSError('Software caused connection abort', 103)),
+        'ClientException(SocketException)': http.ClientException(
+            'SocketException: Software caused connection abort (OS Error: '
+            'Software caused connection abort, errno = 103)'),
+        'TimeoutException': TimeoutException('Zeitüberschreitung'),
+      };
+
+      for (final entry in transientErrors.entries) {
+        test('${entry.key} wird nicht an Crashlytics gemeldet', () async {
+          await loadWithError(entry.value);
+
+          expect(reported(), isEmpty);
+        });
+      }
+
+      test('anderer Fehler wird weiter auf Level error geloggt', () async {
+        await loadWithError(StateError('kaputt'));
+
+        expect(reported().map((e) => e.level), [Level.error]);
+      });
+
+      test('ClientException ohne SocketException wird weiter gemeldet',
+          () async {
+        await loadWithError(http.ClientException('Invalid statusCode: 500'));
+
+        expect(reported().map((e) => e.level), [Level.error]);
+      });
     });
 
     group('selectDate normalisiert auf lokale Mitternacht (#362)', () {
