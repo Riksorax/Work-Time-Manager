@@ -58,6 +58,7 @@ lädt den Inhalt beim Play-Upload automatisch als Änderungsprotokoll mit hoch.
 
 | Version | Charakter | Datum |
 | --- | --- | --- |
+| 1.8.0 | Ienzo | 2026-10-29 |
 | 1.7.4 | Eraqus | 2026-10-19 |
 | 1.7.3 | Eraqus | 2026-10-19 |
 | 1.7.2 | Eraqus | 2026-10-19 |
@@ -115,7 +116,6 @@ verwendet werden, auch wenn die Prüfung sie formal durchlässt.
 
 - Isa
 - Lea
-- Ienzo
 - Even
 - Aeleus
 - Dilan

@@ -1,4 +1,6 @@
-Das ist neu in 1.7.4:
-• Home-Screen-Widget für schmale Displays überarbeitet: Das 2×2-Widget zeigt Ring und Buttons jetzt kompakt und ohne Abschneiden
-• Das 4×1-Widget und die Vorschau in der Widget-Auswahl sind sauberer dargestellt
-• Das 4×2-Widget ist vertikal zentriert
+Das ist neu in 1.8.0:
+• Erinnerungen: Einstempeln, Ausstempeln und Pause starten direkt aus der Benachrichtigung, ohne die App zu öffnen
+• Neue App-Shortcuts "Pause starten" und "Pause beenden"
+• Google Assistant: Timer per Sprache steuern (Android)
+• Die Zeitzone wird jetzt korrekt erkannt, auch außerhalb von Deutschland
+• Dashboard: Die Dauer jeder Pause steht jetzt direkt in der Pausenliste
