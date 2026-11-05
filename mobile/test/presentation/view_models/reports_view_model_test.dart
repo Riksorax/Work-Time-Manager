@@ -127,6 +127,21 @@ void main() {
           .called(1);
     });
 
+    test(
+        'Verbindungsabbruch beim Laden beendet isLoading mit leeren Daten (#506)',
+        () async {
+      final now = _fixedNow;
+      when(mockWorkRepository.getWorkEntriesForMonth(now.year, now.month))
+          .thenAnswer((_) async => throw Exception(
+              'ClientException with SocketException: Software caused connection abort'));
+
+      container.read(reportsViewModelProvider.notifier);
+      await Future.delayed(Duration.zero);
+
+      final state = container.read(reportsViewModelProvider);
+      expect(state.isLoading, false);
+    });
+
     group('selectDate normalisiert auf lokale Mitternacht (#362)', () {
       for (final date in [
         DateTime(2025, 10, 26, 23),

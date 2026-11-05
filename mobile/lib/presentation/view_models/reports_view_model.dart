@@ -258,6 +258,14 @@ class ReportsViewModel extends Notifier<ReportsState> {
     _loadWorkEntriesForMonth(now.year, now.month);
   }
 
+  static bool _isTransientNetworkError(String message) =>
+      message.contains('SocketException') ||
+      message.contains('Connection abort') ||
+      message.contains('Connection reset') ||
+      message.contains('Connection closed') ||
+      message.contains('Failed host lookup') ||
+      message.contains('TimeoutException');
+
   Future<void> _loadWorkEntriesForMonth(int year, int month) async {
     state = state.copyWith(isLoading: true);
     try {
@@ -270,6 +278,11 @@ class ReportsViewModel extends Notifier<ReportsState> {
       if (errorMessage.contains('permission-denied')) {
         logger.w(
             '[ReportsViewModel] Firebase Permission-Fehler erkannt - User wahrscheinlich nicht eingeloggt. Verwende leere Daten.');
+      } else if (_isTransientNetworkError(errorMessage)) {
+        // Verbindungsabbruch/Offline ist kein App-Fehler (#506): nur info,
+        // da ab warning an Crashlytics gemeldet wird.
+        logger.i(
+            '[ReportsViewModel] Netzwerkfehler beim Laden der Arbeitseinträge: $e');
       } else {
         logger.e('Fehler beim Laden der Arbeitseinträge: $e',
             stackTrace: stackTrace);
