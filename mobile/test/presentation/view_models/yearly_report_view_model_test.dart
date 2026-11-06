@@ -1,3 +1,5 @@
+import 'package:logger/logger.dart';
+import '../../support/reported_logs.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -162,6 +164,35 @@ void main() {
         expect(container.read(yearlyReportViewModelProvider).year, 2025);
         verifyNever(mockWorkRepository.getWorkEntriesForMonth(any, any));
       });
+    });
+  });
+
+  group('Logging beim Laden-Fehler (#506) - YearlyReport', () {
+    final events = <LogEvent>[];
+    captureLogs(events);
+
+    for (final entry in transientNetworkErrors.entries) {
+      test('${entry.key} wird nicht an Crashlytics gemeldet', () async {
+        buildContainer(null);
+        when(mockWorkRepository.getWorkEntriesForMonth(any, any))
+            .thenAnswer((_) async => throw entry.value);
+        await container
+            .read(yearlyReportViewModelProvider.notifier)
+            .loadYear(2026);
+        expect(reported(events, 'Fehler beim Laden des Jahres'), isEmpty);
+      });
+    }
+
+    test('anderer Fehler wird weiter auf Level error geloggt', () async {
+      buildContainer(null);
+      when(mockWorkRepository.getWorkEntriesForMonth(any, any))
+          .thenAnswer((_) async => throw StateError('kaputt'));
+      await container
+          .read(yearlyReportViewModelProvider.notifier)
+          .loadYear(2026);
+      expect(
+          reported(events, 'Fehler beim Laden des Jahres').map((e) => e.level),
+          [Level.error]);
     });
   });
 }

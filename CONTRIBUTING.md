@@ -158,6 +158,11 @@ ist der Workflow rot. Dauerhafte Überwachung übernimmt Uptime-Kuma unter
 Ein manueller Start per `workflow_dispatch` auf einem anderen Branch als `main` baut und
 pusht nur das Image. Auf `main` gestartet, deployt er auch.
 
+**Play Console (Store-Texte):** Der Service-Account `github-actions-uploader@worktime-56c7a.iam.gserviceaccount.com`
+braucht in der Play Console unter „Nutzer und Berechtigungen → App-Berechtigungen“ das Recht
+„Präsenz im Play Store verwalten“. Fehlt es, scheitert „Sync Store Metadata“ in
+`flutter-production.yml` mit 403 (der AAB-Upload ist davon unabhängig).
+
 **Manuelle Schritte** (im Release-PR aufführen):
 
 - **Firestore Security Rules** werden nicht automatisch deployt. Nach einer Änderung an

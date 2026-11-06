@@ -1,4 +1,5 @@
 import 'package:flutter_work_time/core/utils/logger.dart';
+import 'package:flutter_work_time/core/utils/network_error.dart';
 import 'package:flutter_work_time/data/datasources/remote/firestore_datasource.dart';
 import 'package:flutter_work_time/domain/repositories/overtime_repository.dart';
 import 'package:flutter_work_time/core/utils/time_precision.dart';
@@ -93,8 +94,14 @@ class FirebaseOvertimeRepositoryImpl implements OvertimeRepository {
       logger.i(
           '[FirebaseOvertimeRepository] Daten von Firestore geladen: ${overtime.inMinutes} min, lastUpdate: $lastUpdate');
     } catch (e) {
-      logger.e(
-          '[FirebaseOvertimeRepository] Fehler beim Laden von Firestore: $e');
+      if (isTransientNetworkError(e)) {
+        // Verbindungsabbruch ist kein App-Fehler (#506): nur info.
+        logger.i(
+            '[FirebaseOvertimeRepository] Netzwerkfehler beim Laden von Firestore: $e');
+      } else {
+        logger.e(
+            '[FirebaseOvertimeRepository] Fehler beim Laden von Firestore: $e');
+      }
     }
   }
 
