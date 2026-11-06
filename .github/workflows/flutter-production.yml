@@ -352,6 +352,7 @@ jobs:
                   `"Nutzer und Berechtigungen -> App-Berechtigungen" der Haken bei ` +
                   `"Präsenz im Play Store verwalten" (Manage store presence).`
                 );
+                console.error(`API-Antwort: ${err.body}`);
                 process.exit(1);
               } else {
                 throw err;
