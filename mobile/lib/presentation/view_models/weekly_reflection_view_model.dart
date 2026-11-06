@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
+import 'package:flutter_work_time/core/utils/network_error.dart';
 
 import '../../core/providers/providers.dart' as core_providers;
 import '../../domain/entities/weekly_reflection_entity.dart';
@@ -48,8 +49,13 @@ class WeeklyReflectionViewModel extends Notifier<WeeklyReflectionState> {
             reflection ?? WeeklyReflectionEntity(year: year, week: week),
       );
     } catch (e, stackTrace) {
-      logger.e('[WeeklyReflectionViewModel] Fehler beim Laden: $e',
-          stackTrace: stackTrace);
+      if (isTransientNetworkError(e)) {
+        // Verbindungsabbruch ist kein App-Fehler (#506): nur info.
+        logger.i('[WeeklyReflectionViewModel] Netzwerkfehler beim Laden: $e');
+      } else {
+        logger.e('[WeeklyReflectionViewModel] Fehler beim Laden: $e',
+            stackTrace: stackTrace);
+      }
       state = state.copyWith(
         isLoading: false,
         reflection: WeeklyReflectionEntity(year: year, week: week),
@@ -82,8 +88,13 @@ class WeeklyReflectionViewModel extends Notifier<WeeklyReflectionState> {
       await repository.saveReflection(updated);
       state = state.copyWith(isSaving: false, reflection: updated);
     } catch (e, stackTrace) {
-      logger.e('[WeeklyReflectionViewModel] Fehler beim Speichern: $e',
-          stackTrace: stackTrace);
+      if (isTransientNetworkError(e)) {
+        logger
+            .i('[WeeklyReflectionViewModel] Netzwerkfehler beim Speichern: $e');
+      } else {
+        logger.e('[WeeklyReflectionViewModel] Fehler beim Speichern: $e',
+            stackTrace: stackTrace);
+      }
       state = state.copyWith(isSaving: false);
       rethrow;
     }

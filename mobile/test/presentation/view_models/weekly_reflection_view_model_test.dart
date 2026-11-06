@@ -1,3 +1,7 @@
+import 'dart:io';
+
+import 'package:logger/logger.dart';
+import '../../support/reported_logs.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_work_time/core/providers/providers.dart';
@@ -134,6 +138,63 @@ void main() {
           .single as WeeklyReflectionEntity;
       expect(saved.id, '2026-W01');
       expect(saved.whatWentWell, 'a');
+    });
+  });
+
+  group('Logging beim Laden-Fehler (#506) - WeeklyReflection', () {
+    final events = <LogEvent>[];
+    captureLogs(events);
+
+    for (final entry in transientNetworkErrors.entries) {
+      test('${entry.key} wird nicht an Crashlytics gemeldet', () async {
+        when(mockRepository.getReflection(any, any))
+            .thenAnswer((_) async => throw entry.value);
+        final container = createContainer(mockRepository);
+        await container
+            .read(weeklyReflectionViewModelProvider.notifier)
+            .loadReflection(DateTime(2026, 3, 9));
+        expect(reported(events, 'WeeklyReflectionViewModel'), isEmpty);
+      });
+    }
+
+    test('anderer Fehler wird weiter auf Level error geloggt', () async {
+      when(mockRepository.getReflection(any, any))
+          .thenAnswer((_) async => throw StateError('kaputt'));
+      final container = createContainer(mockRepository);
+      await container
+          .read(weeklyReflectionViewModelProvider.notifier)
+          .loadReflection(DateTime(2026, 3, 9));
+      expect(reported(events, 'WeeklyReflectionViewModel').map((e) => e.level),
+          [Level.error]);
+    });
+
+    test('Speichern: transienter Fehler nicht gemeldet, wird weitergeworfen',
+        () async {
+      final container = createContainer(mockRepository);
+      final notifier =
+          container.read(weeklyReflectionViewModelProvider.notifier);
+      await notifier.loadReflection(DateTime(2026, 3, 9));
+      when(mockRepository.saveReflection(any))
+          .thenAnswer((_) async => throw const SocketException('abort'));
+      await expectLater(
+          notifier.saveReflection(whatWentWell: 'a', whatWasHard: 'b'),
+          throwsA(isA<SocketException>()));
+      expect(reported(events, 'WeeklyReflectionViewModel'), isEmpty);
+    });
+
+    test('Speichern: anderer Fehler wird weiter auf Level error geloggt',
+        () async {
+      final container = createContainer(mockRepository);
+      final notifier =
+          container.read(weeklyReflectionViewModelProvider.notifier);
+      await notifier.loadReflection(DateTime(2026, 3, 9));
+      when(mockRepository.saveReflection(any))
+          .thenAnswer((_) async => throw StateError('kaputt'));
+      await expectLater(
+          notifier.saveReflection(whatWentWell: 'a', whatWasHard: 'b'),
+          throwsA(isA<StateError>()));
+      expect(reported(events, 'WeeklyReflectionViewModel').map((e) => e.level),
+          [Level.error]);
     });
   });
 }
