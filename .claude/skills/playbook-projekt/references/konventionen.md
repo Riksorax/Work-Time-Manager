@@ -9,6 +9,9 @@
   Rechenlogik wie Backend, Texte de + en (ARB bzw. `public/i18n/*.json`), `CLAUDE.md`-Doku.
 - **`/issue`-Einordnung zusätzlich:** Premium-Feature? Arbeitszeit-Profil-bezogen? Neue Texte? Neuer Firestore-Pfad?
   Plattformen: `server/`, `web/`, `mobile/`, CI/Infra (`.github/`, `server/docker-compose.yml`).
+- **iOS:** `mobile/` hat kein iOS-Projekt, die App erscheint nur für Android. iOS-Arbeit (Projekt anlegen, WidgetKit, Siri, Keychain)
+  liegt gesammelt im Backlog-Issue #484 und wird **nur nach ausdrücklicher Freigabe durch den Repo-Inhaber** begonnen: nicht einplanen,
+  nicht als Teil anderer Issues mit umsetzen, nicht von `/auto-bugfix` anfassen. Nennt ein Issue iOS als Plattform, gilt nur der Android-Teil.
 - **`/auto-bugfix`:** Produktionsbranch ist `main`. Crash-Issues (Marker `auto-monitoring:crashlytics|uptime-kuma` oder Sentry-Link) laufen als
   Hotfix gegen `main`: Web/API mit Auto-Merge, Mobile ohne (Play-Store-Release braucht Versions-Bump und Track; `/release` hängt den
   PR später auf den Release-Branch `release/v<Patch>-<Charakter>` um, der von `main` abzweigt). Die vollständigen Regeln
