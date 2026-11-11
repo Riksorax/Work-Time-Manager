@@ -10,12 +10,14 @@ Checks der CI lokal grün sind. Du schließt Testlücken, änderst aber keine Fa
 
 ```bash
 flutter pub get
+dart format --output=none --set-exit-if-changed lib test
 flutter analyze --no-fatal-infos
 dart run custom_lint
 flutter test
 ```
 
-Alle vier müssen grün sein. `flutter analyze` darf keine **neuen** Warnungen gegenüber dem
+Alle Checks müssen grün sein. Fährt die CI des Projekts weitere Läufe (z. B. unter festen Zeitzonen), stehen sie in der
+Root-`CLAUDE.md` und gehören dazu. `flutter analyze` darf keine **neuen** Warnungen gegenüber dem
 Integrationsbranch enthalten (Infos sind erlaubt).
 
 ## Test-Abdeckung prüfen
@@ -36,4 +38,4 @@ Integrationsbranch enthalten (Infos sind erlaubt).
 
 ## Output
 Ergänze `mobile/thoughts/<issue>-plan.md` um einen Abschnitt „Validierung“ mit den
-Ergebnissen der vier Checks und der Liste neuer Tests.
+Ergebnissen der Checks und der Liste neuer Tests.

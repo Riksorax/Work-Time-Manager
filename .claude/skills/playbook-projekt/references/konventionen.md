@@ -10,6 +10,7 @@
 - **`/issue`-Einordnung zusätzlich:** Premium-Feature? Arbeitszeit-Profil-bezogen? Neue Texte? Neuer Firestore-Pfad?
   Plattformen: `server/`, `web/`, `mobile/`, CI/Infra (`.github/`, `server/docker-compose.yml`).
 - **`/auto-bugfix`:** Produktionsbranch ist `main`. Crash-Issues (Marker `auto-monitoring:crashlytics|uptime-kuma` oder Sentry-Link) laufen als
-  Hotfix gegen `main`: Web/API mit Auto-Merge, Mobile ohne (Play-Store-Release braucht Versions-Bump und Track). Die vollständigen Regeln
+  Hotfix gegen `main`: Web/API mit Auto-Merge, Mobile ohne (Play-Store-Release braucht Versions-Bump und Track; `/release` hängt den
+  PR später auf den Release-Branch `release/v<Patch>-<Charakter>` um, der von `main` abzweigt). Die vollständigen Regeln
   stehen in der Root-`CLAUDE.md`, Abschnitt „Fehler-Monitoring“. Die PR-Beschreibung enthält `<!-- created-by: auto-bugfix -->` (löst die
   Discord-Benachrichtigung in `.github/workflows/notify-review-needed.yml` aus).

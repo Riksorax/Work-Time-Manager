@@ -30,13 +30,27 @@ git fetch origin develop
 git checkout -b release/v<Version>-<Charakter-mit-Bindestrichen> origin/develop
 git push -u origin release/v<Version>-<Charakter-mit-Bindestrichen>
 ```
+**Hotfix / Bugfix-Release von `main`:** Liegen auf `develop` schon Funktionen für die nächste
+Minor-Version (Vorbedingung 2) oder geht es um einen Crash-Hotfix aus `/auto-bugfix`, zweigt der
+Branch von `origin/main` statt von `origin/develop` ab:
+```bash
+git fetch origin main
+git checkout -b release/v<Version>-<Charakter-mit-Bindestrichen> origin/main
+git push -u origin release/v<Version>-<Charakter-mit-Bindestrichen>
+```
+Die Fixes kommen danach als PRs **gegen den Release-Branch** hinein, nicht gegen `main`: ein
+Merge nach `main` deployt sofort, und zwar ohne Versions-Bump und Versionshinweise. Offene
+Hotfix-PRs von `/auto-bugfix` (Mobile, Basis `main`) deshalb auf den Release-Branch umhängen
+(`update_pull_request`, `base`) und dort mergen. Vorbild: 1.8.1 (#507, #509).
+
 Der Push startet `version-bump.yml`: Es trägt die Version in `mobile/pubspec.yaml` und den
 Charakter in `RELEASE_NAMES.md` ein und committet das (bei einem weiteren Release derselben
 Linie nur eine neue Zeile). Danach `git pull`.
 
 ## Versionshinweise
 1. Nutzer-sichtbare Änderungen seit dem letzten Release sammeln:
-   `git log --oneline origin/main..origin/develop` plus die zugehörigen Issues.
+   `git log --oneline origin/main..origin/develop` plus die zugehörigen Issues (beim
+   Hotfix-Release von `main`: `git log --oneline origin/main..HEAD` nach dem Merge der Fix-PRs).
 2. `mobile/whatsnew/de-DE.txt` überschreiben: Deutsch, **max. 500 Zeichen**, nur dieses Release.
    Länge prüfen: `wc -m mobile/whatsnew/de-DE.txt`.
 3. Commit: `docs(release): Versionshinweise für <Version> (<Charakter>)`, pushen.
@@ -65,3 +79,11 @@ Konflikte.
    git push origin develop
    ```
 4. Release-Branch löschen: `git push origin --delete release/v<Version>-<Charakter>`.
+5. Issues aufräumen (`list_issues`, state open), Änderungen an Issues vorher mit dem Nutzer abstimmen:
+   - Ausgelieferte Issues, die noch offen sind, schließen. `Closes #…` greift nicht, wenn ein
+     Issue über mehrere Teil-PRs umgesetzt wurde. Kontrolle: `git log origin/main --oneline --grep='#<nr>'`.
+   - Bleibt nur eine Prüfung außerhalb des Repos offen (Play Console, Gerätetest, Konsolen),
+     den Issue-Text auf genau diesen Rest kürzen, statt die ursprüngliche Aufgabenliste stehen zu lassen.
+   - Tracking-Issue des Releases: Release-Schritte abhaken, Restpunkte benennen, schließen.
+   - Offene Issues, deren Annahmen das Release überholt hat (erledigte Abhängigkeiten,
+     „gibt es noch nicht“), mit einem Stand-Vermerk versehen.
