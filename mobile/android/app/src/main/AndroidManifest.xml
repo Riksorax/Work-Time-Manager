@@ -23,6 +23,13 @@
         <activity
             android:name="com.revenuecat.purchases.ui.revenuecatui.customercenter.CustomerCenterActivity"
             tools:node="remove" />
+        <!-- Zeigt nur die Meldung „Test Store API key used in release build“ und stürzt dann
+             absichtlich ab. Einen Test-Key im Release-Build verhindert der Schritt „Check
+             RevenueCat key“ in flutter-production.yml; von außen direkt gestartet erzeugt die
+             Activity dieselbe Absturzmeldung mit leerem Key (#455). -->
+        <activity
+            android:name="com.revenuecat.purchases.SimulatedStoreErrorDialogActivity"
+            tools:node="remove" />
         <activity
             android:name=".MainActivity"
             android:exported="true"
