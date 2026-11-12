@@ -214,6 +214,29 @@ firebase deploy --only functions --project worktime-56c7a
 - `UPTIME_KUMA_SECRET`: selbst gewählter Wert, identisch in der Uptime-Kuma-Webhook-URL (siehe oben)
   und im Secret hinterlegen.
 
+**Konto-Löschung (Cloud Function `onUserDeleted`, siehe #511):** Löscht ein Nutzer sein Konto
+(Mobile oder Web), entfernt `onUserDeleted` alle Firestore-Daten unter `users/{uid}` rekursiv
+(Arbeitseinträge, Gleitzeit, Einstellungen, Wochen-Reflexionen, zusätzliche Profile). Die Clients
+können das nicht selbst: Nach dem Löschen des Auth-Users ist niemand mehr angemeldet, die Security
+Rules lehnen jeden Zugriff ab. Der Trigger hängt am Löschen des Auth-Users (1. Generation, den
+Auth-Trigger gibt es in der 2. nicht), wirkt also für jede App-Version und auch beim Löschen in
+der Firebase-Konsole. Er braucht kein Secret; aktiv wird er erst mit
+`firebase deploy --only functions --project worktime-56c7a` (aus `web/`). Bei einem Fehler
+wiederholt Cloud Functions den Aufruf, das Löschen ist idempotent.
+
+**Altlasten bereinigen (einmalig):** Bis 1.8.0 blieben die Daten gelöschter Konten liegen. Das
+Skript listet `users/{uid}`-Dokumente ohne Auth-User auf und löscht sie nur mit `--delete`:
+```bash
+cd web/functions && npm ci --legacy-peer-deps && npm run build
+export GOOGLE_APPLICATION_CREDENTIALS=<pfad-zum-service-account.json>
+export GOOGLE_CLOUD_PROJECT=worktime-56c7a
+node lib/tools/cleanupOrphanedUsers.js            # Probelauf, verändert nichts
+node lib/tools/cleanupOrphanedUsers.js --delete   # löscht die aufgelisteten Daten
+```
+Der Service-Account braucht Lesezugriff auf Firebase Authentication und Schreibzugriff auf
+Firestore. Erst den Probelauf prüfen: Das Löschen lässt sich nicht rückgängig machen. Hat kein
+einziges Dokument einen Auth-User, bricht das Skript ab (falsches Projekt oder falsche Zugangsdaten).
+
 Beide Secrets liegen im Firebase Secret Manager (`firebase functions:secrets:set`), **nicht** als
 GitHub-Repository-Secret — die Functions laufen außerhalb von GitHub Actions.
 

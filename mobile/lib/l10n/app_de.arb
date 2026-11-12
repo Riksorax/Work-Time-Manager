@@ -464,6 +464,10 @@
   "@deleteAccountConfirm": {
     "description": "Beschriftung des endgültigen Lösch-Buttons."
   },
+  "deleteAccountFailed": "Der Account konnte nicht gelöscht werden. Bitte prüfe deine Verbindung und versuche es erneut.",
+  "@deleteAccountFailed": {
+    "description": "Snackbar, wenn das Löschen des Accounts fehlschlägt (#511)."
+  },
   "loadErrorGeneric": "Fehler beim Laden",
   "@loadErrorGeneric": {
     "description": "Generischer Fehlertext, wenn Profildaten nicht geladen werden konnten."
