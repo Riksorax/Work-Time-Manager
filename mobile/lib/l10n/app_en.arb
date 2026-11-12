@@ -120,6 +120,7 @@
   "deleteAccountTitle": "Permanently delete account",
   "deleteAccountWarning": "Warning: This action cannot be undone. All your data, including your time tracking records, will be permanently deleted.",
   "deleteAccountConfirm": "Delete permanently",
+  "deleteAccountFailed": "The account could not be deleted. Please check your connection and try again.",
   "loadErrorGeneric": "Failed to load",
   "loginButton": "Sign in",
   "logoutButton": "Sign out",
