@@ -32,19 +32,34 @@ WTM-Besonderheiten zum Stack-Playbook `playbook-flutter`, aus den bisherigen Age
 - **Texte:** neue Keys in `app_de.arb` (mit `@key`-Beschreibung) und `app_en.arb`; Datumsformate mit
   `Localizations.localeOf(context).toString()`, nie `'de_DE'` hart kodieren.
 - **Fehler** über `logger.e(...)` (geht an Crashlytics), kein `debugPrint` für Fehlerfälle.
+  **Ausnahme (#506, ab 1.8.1):** vorübergehende Netzwerkfehler (Verbindungsabbruch, Offline, Timeout) sind kein App-Fehler. In jedem
+  Ladepfad, der über `ApiDataSource`/HTTP läuft, zuerst `isTransientNetworkError(e)` (`lib/core/utils/network_error.dart`) prüfen und
+  dann nur `logger.i` schreiben; der Fehlerzustand in der UI bleibt. Gilt für **alle** Ladepfade eines neuen Features, nicht nur den
+  ersten (#506 brauchte deshalb zwei Fix-PRs).
 - **Zeiten** über `lib/core/utils/time_precision.dart` auf Minuten runden. Widget-Test-Referenz: `test/presentation/screens/settings_page_test.dart`.
 
 ## Validierung
+- Checks vollständig wie in der CI (Root-`CLAUDE.md`, „Checks je Plattform“): zusätzlich zu den vier Checks des Stack-Playbooks
+  `dart format --output=none --set-exit-if-changed lib test`, `TZ=Europe/Berlin flutter test` und bei Datums-/Zeitlogik die
+  `*_tz_test.dart` unter `TZ=America/Los_Angeles` und `TZ=Pacific/Auckland`.
 - `flutter analyze` darf keine **neuen** Warnungen gegenüber `develop` enthalten (Infos erlaubt).
 - Tests: Repository-Änderungen mit Hybrid-Umschaltung eingeloggt/ausgeloggt; Arbeitszeit-Profile: Standard-Profil **und** zusätzliches Profil;
   Widget-Tests für neue UI-Zustände inkl. **Premium-gesperrt**; neue ARB-Keys in `app_de.arb` **und** `app_en.arb`
-  (`test/l10n/app_localizations_test.dart` läuft mit).
+  (`test/l10n/app_localizations_test.dart` läuft mit). Ladepfade über HTTP: ein Test, dass ein transienter Netzwerkfehler nicht als
+  `logger.e` gemeldet wird (Hilfe: `test/support/reported_logs.dart`).
+- Natives Android (`mobile/android/**`, Timer-Aktionen von außen, Notification-Aktionen, Assistant-Intents): Unit-Tests erreichen das
+  nicht. Der Workflow `.github/workflows/android-emulator.yml` (`tool/android_e2e/run.sh`) läuft auf dem PR automatisch mit; sein
+  Ergebnis gehört in den Abschnitt „Validierung“. In Cloud-Sessions gibt es weiterhin kein Gerät.
 - UI: Premium-gesperrter Zustand führt zur Paywall (`showPaywall()`), nicht zu einer Snackbar; Deutsch **und** Englisch prüfen (Overflow).
+  Edge-to-Edge (#468, SDK 35): nichts liegt unter Status- oder Navigationsleiste. Seitliche Insets kommen zentral aus
+  `HorizontalSafeInsets` (kein eigenes `SafeArea` je Screen), Bottom Sheets nutzen unten `bottomSheetBottomInset(context)` statt
+  `MediaQuery.viewInsets`; Regeln in `mobile/CLAUDE.md`, „Edge-to-Edge“.
 
 ## Review
 - [ ] Hybrid-Repository-Pattern eingehalten, alle Repository-Varianten konsistent
 - [ ] Premium-Gate korrekt (`isPremiumProvider`); Arbeitszeit-Profile berücksichtigt (`profileId`)
 - [ ] Neue Firestore-Pfade haben eine Security Rule in `web/firestore.rules` (Hinweis im PR: Rules werden **nicht** automatisch deployt)
 - [ ] Berechnungslogik widerspricht nicht dem Backend
-- [ ] ARB de + en vollständig; Fehler über `logger.e` (Crashlytics)
+- [ ] ARB de + en vollständig; Fehler über `logger.e` (Crashlytics), transiente Netzwerkfehler nur `logger.i` (`isTransientNetworkError`)
+- [ ] Neue Screens/Bottom Sheets: Insets nach `mobile/CLAUDE.md`, „Edge-to-Edge“ (`bottomSheetBottomInset`, kein doppeltes `SafeArea`)
 - [ ] Nutzer-sichtbare Änderung: Vermerk für die Release-Notes (`mobile/whatsnew/de-DE.txt` wird erst im Release-Branch geschrieben, siehe `/release`)
