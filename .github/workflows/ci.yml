@@ -136,7 +136,10 @@ jobs:
 
   e2e:
     name: Web UI-Tests (Playwright, ${{ matrix.project }})
-    runs-on: ubuntu-latest
+    # Fest auf 24.04: `ubuntu-latest` zeigt inzwischen auf 26.04, dafür kann Playwright 1.56.1
+    # die Browser nicht installieren ("does not support chromium on ubuntu26.04-x64").
+    # Zurück auf `ubuntu-latest`, sobald Playwright auf eine Version mit 26.04-Unterstützung angehoben ist.
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:

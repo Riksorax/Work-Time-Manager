@@ -182,6 +182,10 @@ Ein über Mitternacht gelaufener Timer bleibt nach App-Neustart als offener Eint
 - **Rollback der App-Version:** Ein älterer Build findet keine Keys in den Prefs (PIN weg, Sperre aus, keine Daten verloren).
 - **Tests:** `test/support/fake_app_lock_backend.dart` (`FakeAppLockBackend` mit Fehlerinjektion `failWriteKeys`/`failDeleteKeys`/`failAllWrites`/`failReads`/`corruptKeys` und `holdReads`/`holdWrites`), `RecordingAppLockStore` in `test/helpers/app_lock_fakes.dart`, `app_lock_store_test`, `app_lock_migration_test`, `app_lock_service_test` (Gruppe „Persistenz“), `app_lock_provider_test` (Start-Race). Widget-Tests injizieren den Service weiter per `appLockServiceProvider.overrideWithValue`.
 
+### Konto-Löschung (#511)
+
+`FirestoreDataSourceImpl.deleteAccount()` löscht nur den Auth-User (bei `requires-recent-login` nach Re-Auth) und meldet danach Google ab. Die Firestore-Daten unter `users/{uid}` räumt der Server ab (Cloud Function `onUserDeleted` in `web/functions/`, `CONTRIBUTING.md`, „Konto-Löschung“). **Kein Firestore-Zugriff nach `user.delete()`:** Dann ist niemand mehr angemeldet, die Rules antworten mit `permission-denied`. `SettingsPage._deleteAccount` awaitet den Use Case und zeigt bei einem Fehler `deleteAccountFailed` als Snackbar; ein unbehandelter Fehler landete sonst als fataler Absturz in `PlatformDispatcher.onError`. Aufrufe von Use Cases aus `onPressed` deshalb nie ohne `await` und Fehlerbehandlung feuern.
+
 ### Edge-to-Edge (#468)
 
 Die App läuft auf allen Android-Versionen Edge-to-Edge (`enableEdgeToEdge()` in `main()`, `widgets/common/edge_to_edge.dart`); ab Android 15 erzwingt das System es ohnehin.

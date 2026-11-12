@@ -8,6 +8,7 @@ import '../../core/providers/app_lock_provider.dart';
 import '../../core/providers/providers.dart' as core_providers;
 import '../../core/providers/subscription_provider.dart';
 import '../../core/services/app_lock_service.dart';
+import '../../core/utils/logger.dart';
 import '../../domain/entities/bundesland.dart';
 import '../../domain/utils/weekday_labels.dart';
 import '../../l10n/app_localizations.dart';
@@ -381,6 +382,24 @@ class SettingsPage extends ConsumerWidget {
     );
   }
 
+  /// Löscht den Account und zeigt einen Fehler an, statt ihn unbehandelt in
+  /// `PlatformDispatcher.onError` laufen zu lassen (dort gälte er als fataler
+  /// Absturz, #511).
+  Future<void> _deleteAccount(BuildContext context, WidgetRef ref) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context);
+    final deleteAccount = ref.read(deleteAccountProvider);
+    try {
+      await deleteAccount();
+    } catch (e) {
+      // Die Datenquelle hat den Fehler bereits gemeldet (`logger.e`).
+      logger.i('Account-Löschung fehlgeschlagen: ${e.runtimeType}');
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.deleteAccountFailed)),
+      );
+    }
+  }
+
   Future<void> _openSubscriptionManagement(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context);
@@ -638,7 +657,7 @@ class SettingsPage extends ConsumerWidget {
                         FilledButton(
                           onPressed: () {
                             Navigator.of(dialogContext).pop();
-                            ref.read(deleteAccountProvider)();
+                            _deleteAccount(context, ref);
                           },
                           style: FilledButton.styleFrom(
                             backgroundColor: theme.colorScheme.error,
