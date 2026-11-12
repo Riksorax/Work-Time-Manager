@@ -470,6 +470,46 @@ void main() {
       verify(mockDeleteAccount.call()).called(1);
     });
 
+    testWidgets(
+        'Delete Account flow: Fehler wird als Snackbar gezeigt, nicht '
+        'unbehandelt weitergeworfen (#511)', (tester) async {
+      when(mockActions.deleteAccount())
+          .thenAnswer((_) async => throw StateError('permission-denied'));
+      final settingsViewModel = FakeSettingsViewModel(
+        initialState: const AsyncValue.data(SettingsState(
+          settings: SettingsEntity(),
+          overtimeBalance: Duration.zero,
+        )),
+        actions: mockActions,
+      );
+      final themeViewModel = FakeThemeViewModel(
+        initialState: ThemeMode.system,
+        actions: mockActions,
+      );
+
+      await tester.pumpWidget(createSubject(
+        settingsViewModel: settingsViewModel,
+        themeViewModel: themeViewModel,
+        authState:
+            const AsyncValue.data(UserEntity(id: '1', email: 'user@test.com')),
+      ));
+
+      final deleteButton = find.byTooltip('Account löschen');
+      await tester.scrollUntilVisible(deleteButton, 500);
+      await tester.tap(deleteButton);
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Endgültig löschen'));
+      await tester.pumpAndSettle();
+
+      verify(mockDeleteAccount.call()).called(1);
+      expect(
+          find.text('Der Account konnte nicht gelöscht werden. Bitte prüfe '
+              'deine Verbindung und versuche es erneut.'),
+          findsOneWidget);
+      // Ein unbehandelter Fehler ließe den Test hier fehlschlagen.
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('Edit Target Hours flow: Update value and save',
         (tester) async {
       final settings = const SettingsEntity(weeklyTargetHours: 40.0);

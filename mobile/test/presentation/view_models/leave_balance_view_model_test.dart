@@ -1,3 +1,5 @@
+import 'package:logger/logger.dart';
+import '../../support/reported_logs.dart';
 import 'dart:async';
 
 import 'package:fake_async/fake_async.dart';
@@ -282,6 +284,34 @@ void main() {
         async.flushMicrotasks();
         c.dispose();
       });
+    });
+  });
+
+  group('Logging beim Fehler (#506) - LeaveBalance', () {
+    final events = <LogEvent>[];
+    captureLogs(events);
+
+    for (final entry in transientNetworkErrors.entries) {
+      test('${entry.key} wird nicht an Crashlytics gemeldet', () async {
+        when(work.getWorkEntriesForMonth(2026, 5))
+            .thenAnswer((_) async => throw entry.value);
+        await (() async {
+          container.read(leaveBalanceViewModelProvider);
+          await settle();
+        })();
+        expect(reported(events, 'LeaveBalanceViewModel'), isEmpty);
+      });
+    }
+
+    test('anderer Fehler wird weiter auf Level error geloggt', () async {
+      when(work.getWorkEntriesForMonth(2026, 5))
+          .thenAnswer((_) async => throw StateError('kaputt'));
+      await (() async {
+        container.read(leaveBalanceViewModelProvider);
+        await settle();
+      })();
+      expect(reported(events, 'LeaveBalanceViewModel').map((e) => e.level),
+          [Level.error]);
     });
   });
 }

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
+import 'package:flutter_work_time/core/utils/network_error.dart';
 
 import '../../core/providers/providers.dart' as core_providers;
 import '../../core/providers/today_provider.dart';
@@ -63,7 +64,13 @@ class LeaveBalanceViewModel extends Notifier<LeaveBalanceState> {
           perMonth.expand((e) => e).toList(), year, entitlement);
       state = LeaveBalanceState(balance: _last);
     } catch (e, st) {
-      logger.e('[LeaveBalanceViewModel] Fehler beim Laden: $e', stackTrace: st);
+      if (isTransientNetworkError(e)) {
+        // Verbindungsabbruch ist kein App-Fehler (#506): nur info.
+        logger.i('[LeaveBalanceViewModel] Netzwerkfehler beim Laden: $e');
+      } else {
+        logger.e('[LeaveBalanceViewModel] Fehler beim Laden: $e',
+            stackTrace: st);
+      }
       if (!ref.mounted) return;
       state = const LeaveBalanceState(hasError: true);
     }
