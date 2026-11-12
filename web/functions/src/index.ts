@@ -1,4 +1,6 @@
 import { Octokit } from "@octokit/rest";
+import { getApps, initializeApp } from "firebase-admin/app";
+import { getFirestore } from "firebase-admin/firestore";
 import { defineSecret } from "firebase-functions/params";
 import {
   onNewFatalIssuePublished,
@@ -6,10 +8,12 @@ import {
 } from "firebase-functions/v2/alerts/crashlytics";
 import { onRequest } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/v2";
+import * as functionsV1 from "firebase-functions/v1";
 
 import { buildCrashlyticsBugIssue } from "./crashlyticsIssue";
 import { createBugIssueIfNotExists } from "./github";
 import { evaluateUptimeKumaWebhook, type UptimeKumaWebhookBody } from "./uptimeKumaWebhook";
+import { deleteUserData } from "./userData";
 
 // Fein granuliertes GitHub-PAT mit nur issues:write auf dieses Repo, siehe #322.
 const githubToken = defineSecret("GITHUB_TOKEN");
@@ -70,3 +74,23 @@ export const uptimeKumaWebhook = onRequest(
     res.status(200).send("ok");
   },
 );
+
+// Konto-Löschung (#511): Löscht ein Nutzer sein Konto, entfernt der Server alle Firestore-Daten
+// unter users/{uid}. Die Clients können das nicht selbst, weil nach dem Löschen des Auth-Users
+// niemand mehr angemeldet ist. Der Auth-Trigger existiert nur in der 1. Generation.
+// failurePolicy: bei einem Fehler wiederholt Cloud Functions den Aufruf; das Löschen ist idempotent.
+export const onUserDeleted = functionsV1
+  .runWith({ failurePolicy: true })
+  .auth.user()
+  .onDelete(async (user) => {
+    if (getApps().length === 0) {
+      initializeApp();
+    }
+    const db = getFirestore();
+    await deleteUserData(
+      { doc: (path) => db.doc(path), recursiveDelete: (ref) => db.recursiveDelete(ref) },
+      user.uid,
+    );
+    // Keine UID im Log (personenbezogen), nur das Ereignis.
+    logger.info("Firestore-Daten nach Konto-Löschung entfernt");
+  });

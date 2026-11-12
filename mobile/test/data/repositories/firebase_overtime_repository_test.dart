@@ -1,3 +1,5 @@
+import 'package:logger/logger.dart';
+import '../../support/reported_logs.dart';
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -236,6 +238,34 @@ void main() {
         expect(result, expectedOvertime);
         verify(mockDataSource.getOvertime(testUserId)).called(1);
       });
+    });
+  });
+
+  group('Logging beim Laden-Fehler (#506)', () {
+    final events = <LogEvent>[];
+    captureLogs(events);
+
+    for (final entry in transientNetworkErrors.entries) {
+      test('${entry.key} wird nicht an Crashlytics gemeldet', () async {
+        when(mockDataSource.getOvertime(any, profileId: anyNamed('profileId')))
+            .thenAnswer((_) async => throw entry.value);
+
+        repository.getOvertime(); // Cache leer -> lädt im Hintergrund
+        await Future<void>.delayed(Duration.zero);
+
+        expect(reported(events, 'FirebaseOvertimeRepository'), isEmpty);
+      });
+    }
+
+    test('anderer Fehler wird weiter auf Level error geloggt', () async {
+      when(mockDataSource.getOvertime(any, profileId: anyNamed('profileId')))
+          .thenAnswer((_) async => throw StateError('kaputt'));
+
+      repository.getOvertime();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(reported(events, 'FirebaseOvertimeRepository').map((e) => e.level),
+          [Level.error]);
     });
   });
 }

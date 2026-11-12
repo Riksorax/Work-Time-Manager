@@ -1,3 +1,5 @@
+import 'package:logger/logger.dart';
+import '../../support/reported_logs.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -73,6 +75,32 @@ void main() {
       verifyNever(work.getWorkEntriesForMonth(any, any));
       c.dispose();
       expect(async.pendingTimers, isEmpty);
+    });
+  });
+
+  group('Logging beim Fehler (#506) - Insights', () {
+    final events = <LogEvent>[];
+    captureLogs(events);
+
+    for (final entry in transientNetworkErrors.entries) {
+      test('${entry.key} wird nicht an Crashlytics gemeldet', () async {
+        when(work.getWorkEntriesForMonth(any, any))
+            .thenAnswer((_) async => throw entry.value);
+        final c = make(FakeClock(DateTime(2026, 11, 1, 8)));
+        addTearDown(c.dispose);
+        await c.read(insightsViewModelProvider.notifier).loadInsights();
+        expect(reported(events, 'InsightsViewModel'), isEmpty);
+      });
+    }
+
+    test('anderer Fehler wird weiter auf Level error geloggt', () async {
+      when(work.getWorkEntriesForMonth(any, any))
+          .thenAnswer((_) async => throw StateError('kaputt'));
+      final c = make(FakeClock(DateTime(2026, 11, 1, 8)));
+      addTearDown(c.dispose);
+      await c.read(insightsViewModelProvider.notifier).loadInsights();
+      expect(reported(events, 'InsightsViewModel').map((e) => e.level),
+          [Level.error]);
     });
   });
 }

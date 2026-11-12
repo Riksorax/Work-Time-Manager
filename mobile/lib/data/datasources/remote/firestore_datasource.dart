@@ -140,7 +140,6 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
   Future<void> deleteAccount() async {
     final user = _firebaseAuth.currentUser;
     if (user == null) return;
-    final userId = user.uid;
     try {
       await user.delete();
     } on firebase.FirebaseAuthException catch (e) {
@@ -192,34 +191,17 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
       rethrow;
     }
 
-    // Cleanup Firestore
+    // Die Firestore-Daten räumt der Server ab (Cloud Function
+    // `onUserDeleted`, #511). Hier ist das nicht möglich: Nach `user.delete()`
+    // ist niemand mehr angemeldet, die Security Rules lehnen jeden Zugriff mit
+    // `permission-denied` ab.
     try {
-      final userDocRef = _firestore.collection('users').doc(userId);
-
-      // Work Entries löschen
-      final workEntriesCollection = userDocRef.collection('work_entries');
-      final workEntriesSnapshot = await workEntriesCollection.get();
-      final batch = _firestore.batch();
-      for (final doc in workEntriesSnapshot.docs) {
-        batch.delete(doc.reference);
-      }
-
-      // Overtime-Daten löschen
-      final overtimeCollection = userDocRef.collection('overtime');
-      final overtimeSnapshot = await overtimeCollection.get();
-      for (final doc in overtimeSnapshot.docs) {
-        batch.delete(doc.reference);
-      }
-
-      await batch.commit();
-      await userDocRef.delete();
+      await _googleSignIn.signOut();
     } catch (e) {
-      logger.e(
-          "KRITISCH: Fehler beim Löschen der Firestore-Daten nach Account-Löschung: $e");
-      rethrow;
+      // Der Account ist bereits gelöscht, ein Fehler hier ändert daran nichts.
+      logger.i("Google-Abmeldung nach Account-Löschung fehlgeschlagen: "
+          "${e.runtimeType}");
     }
-
-    await _googleSignIn.signOut();
   }
 
   @override

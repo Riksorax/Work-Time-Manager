@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
+import 'package:flutter_work_time/core/utils/network_error.dart';
 
 import '../../core/providers/providers.dart' as core_providers;
 import '../../core/providers/today_provider.dart';
@@ -66,8 +67,14 @@ class InsightsViewModel extends Notifier<InsightsState> {
             buildStartTimeHeatmap(entries: entries, dailyTarget: dailyTarget),
       );
     } catch (e, stackTrace) {
-      logger.e('[InsightsViewModel] Fehler beim Laden der Insights: $e',
-          stackTrace: stackTrace);
+      if (isTransientNetworkError(e)) {
+        // Verbindungsabbruch ist kein App-Fehler (#506): nur info.
+        logger.i(
+            '[InsightsViewModel] Netzwerkfehler beim Laden der Insights: $e');
+      } else {
+        logger.e('[InsightsViewModel] Fehler beim Laden der Insights: $e',
+            stackTrace: stackTrace);
+      }
       state =
           state.copyWith(isLoading: false, weekdayAverages: [], heatmap: []);
     }

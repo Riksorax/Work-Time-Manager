@@ -43,7 +43,7 @@ The Angular app is a full port of the Flutter app sharing the same Firebase back
 ```
 core/
 ├── auth/           AuthService (Firebase Auth, Google Sign-In), AuthGuard
-│                   — deleteAccount() via Firebase deleteUser()
+│                   — deleteAccount() via Firebase deleteUser(); die Firestore-Daten unter users/{uid} löscht danach die Cloud Function `onUserDeleted` (#511), nicht der Client
 ├── services/
 │   ├── work-entry.ts      Hybrid — eingeloggt: Reads live via Firestore onSnapshot, Writes über ApiClient (Backend-API); ausgeloggt: localStorage. getAllLocalEntries() für DataSync. Optionales `profileId` (#380) bei `saveEntry(entry, profileId?)` / `getTodayEntry(profileId?)`: `undefined` = aktives Profil, sonst festes Profil (anonym ignoriert). `getEntriesForMonthOnce(year, month, profileId?)` (#385): Einmalabruf eines Monats (eingeloggt `ApiClient.getWorkEntriesForMonth`, ausgeloggt localStorage), Fehler werden geworfen. Feld `isHomeOffice` (#277, Free): Lesen fehlend/`null` = `false`; Schreiben `undefined` = unangetastet (API bekommt `null`, `_localSave` behält das vorhandene Flag; Schnelleintrag/Batch setzen es nie), nur `true`/`false` ändert es. Toggle im Edit-Dialog und Dashboard (`DashboardService.setHomeOffice`, ohne `workStart` nur Zustand, kein Tag ohne Zeiten), Kalender-Icon über `homeOfficeDays`; nur bei Typ Arbeit relevant
 │   ├── overtime.ts        Hybrid — eingeloggt komplett über ApiClient (Reads + Writes), sonst localStorage. Optionales `profileId` (#380) bei `getOvertime`/`getLastUpdateDate`/`saveOvertime` (`undefined` = aktives Profil). `saveOvertime(ms, pid, { keepLastUpdated: true })` (#385, Backend ab PR #408) lässt `lastUpdated` unangetastet; das Feld geht nur eingeloggt und nur bei `true` in den Body
