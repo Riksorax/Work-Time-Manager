@@ -6,8 +6,11 @@ test.beforeEach(async ({ page }) => {
   await seedPreferences(page, 'de', 'light');
 });
 
-async function loaded(img: import('@playwright/test').Locator): Promise<boolean> {
-  return img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0);
+/** Wartet, bis das Bild geladen ist (wiederholend, unabhängig vom Netzwerkzustand der Seite). */
+async function expectLoaded(img: import('@playwright/test').Locator): Promise<void> {
+  await expect
+    .poll(() => img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0))
+    .toBe(true);
 }
 
 test('Sidenav zeigt das Logo als geladenes, dekoratives Bild', async ({ page }) => {
@@ -16,7 +19,7 @@ test('Sidenav zeigt das Logo als geladenes, dekoratives Bild', async ({ page }) 
   const logo = page.locator('.sidenav-header img.sidenav-logo');
   await expect(logo).toBeVisible();
   await expect(logo).toHaveAttribute('alt', '');
-  expect(await loaded(logo)).toBe(true);
+  await expectLoaded(logo);
   await expect(page.locator('.sidenav-header mat-icon')).toHaveCount(0);
 });
 
@@ -26,7 +29,7 @@ test('Login zeigt das Logo als geladenes, dekoratives Bild', async ({ page }) =>
   const logo = page.locator('.logo-wrapper img.logo-icon');
   await expect(logo).toBeVisible();
   await expect(logo).toHaveAttribute('alt', '');
-  expect(await loaded(logo)).toBe(true);
+  await expectLoaded(logo);
 });
 
 test('index.html: favicon.svg steht zuerst, alle Icon-Verweise und das Manifest sind erreichbar', async ({ page, request }) => {
