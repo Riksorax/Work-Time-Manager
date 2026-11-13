@@ -58,6 +58,7 @@ lädt den Inhalt beim Play-Upload automatisch als Änderungsprotokoll mit hoch.
 
 | Version | Charakter | Datum |
 | --- | --- | --- |
+| 1.8.3 | Ienzo | 2026-11-13 |
 | 1.8.2 | Ienzo | 2026-11-13 |
 | 1.8.1 | Ienzo | 2026-11-06 |
 | 1.8.0 | Ienzo | 2026-10-29 |

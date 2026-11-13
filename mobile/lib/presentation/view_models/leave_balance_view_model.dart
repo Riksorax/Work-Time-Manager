@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
-import 'package:flutter_work_time/core/utils/network_error.dart';
+import 'package:flutter_work_time/core/utils/api_errors.dart';
 
 import '../../core/providers/providers.dart' as core_providers;
 import '../../core/providers/today_provider.dart';
@@ -64,7 +64,17 @@ class LeaveBalanceViewModel extends Notifier<LeaveBalanceState> {
           perMonth.expand((e) => e).toList(), year, entitlement);
       state = LeaveBalanceState(balance: _last);
     } catch (e, st) {
-      if (isTransientNetworkError(e)) {
+      if (e is NotSignedInException) {
+        // Kurz nach dem Abmelden oder Löschen des Kontos ist der Nutzer in
+        // Firebase schon weg, das Repository zeigt aber noch auf die API.
+        // Der Auth-Status zieht gleich nach und baut dieses ViewModel neu
+        // (`ref.watch` der Repositories). Kein Fehlerzustand, sonst blitzt in
+        // den Einstellungen kurz „Urlaubsdaten konnten nicht geladen werden“
+        // auf (#522).
+        logger.i('[LeaveBalanceViewModel] Laden ohne angemeldeten Nutzer');
+        return;
+      }
+      if (isExpectedLoadFailure(e)) {
         // Verbindungsabbruch ist kein App-Fehler (#506): nur info.
         logger.i('[LeaveBalanceViewModel] Netzwerkfehler beim Laden: $e');
       } else {

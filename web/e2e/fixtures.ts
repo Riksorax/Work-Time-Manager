@@ -37,11 +37,21 @@ export const test = base.extend<{ consoleErrors: string[] }>({
   },
 });
 
-/** Wartet, bis Angular gebootet und die Seite gerendert ist. */
+/** Höchstdauer, die `gotoReady` auf ein ruhiges Netzwerk wartet. */
+const NETWORK_IDLE_TIMEOUT_MS = 5_000;
+
+/**
+ * Wartet, bis Angular gebootet und die Seite gerendert ist.
+ *
+ * Ein ruhiges Netzwerk ist nur ein Bonus, keine Bedingung: Firebase hält mit den Platzhalter-Zugangsdaten
+ * Verbindungen offen bzw. versucht sie neu, und in Firefox tritt `networkidle` dann sporadisch nie ein
+ * (Test lief ins 30-s-Limit, zuerst auf der Login-Seite). Deshalb höchstens kurz warten und weitermachen;
+ * die Tests prüfen ihre Inhalte ohnehin mit wiederholenden `expect`-Aufrufen.
+ */
 export async function gotoReady(page: Page, path: string): Promise<void> {
   await page.goto(path);
   await expect(page.locator('app-root')).not.toBeEmpty();
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => undefined);
 }
 
 /** Horizontales Scrollen auf Seitenebene ist ein Layoutfehler. */

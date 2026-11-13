@@ -1,21 +1,14 @@
 import 'dart:convert';
 
-import 'package:firebase_auth/firebase_auth.dart' as firebase;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 
+import 'package:flutter_work_time/core/utils/api_errors.dart';
 import 'package:flutter_work_time/data/datasources/remote/api_client.dart';
 import 'package:flutter_work_time/data/models/work_entry_model.dart';
 import 'package:flutter_work_time/domain/entities/work_entry_entity.dart';
 
-/// Handgeschriebener Fake statt Mockito-Codegen: `FirebaseAuth` lässt sich
-/// nicht sinnvoll per `@GenerateMocks` erzeugen (Plugin-Klasse ohne
-/// öffentlichen Konstruktor). `currentUser` reicht hier aus, `_headers()`
-/// braucht nur diesen einen Getter.
-class _FakeFirebaseAuth extends Fake implements firebase.FirebaseAuth {
-  @override
-  firebase.User? get currentUser => null;
-}
+import '../../../support/fake_signed_in_auth.dart';
 
 /// Zeichnet den letzten Request auf, statt echte HTTP-Aufrufe zu machen.
 class _RecordingHttpClient extends Fake implements http.Client {
@@ -47,11 +40,38 @@ class _RecordingHttpClient extends Fake implements http.Client {
 
 void main() {
   late _RecordingHttpClient http_;
+  late FakeSignedInAuth auth;
   late ApiClient api;
 
   setUp(() {
     http_ = _RecordingHttpClient();
-    api = ApiClient(_FakeFirebaseAuth(), http_);
+    auth = FakeSignedInAuth();
+    api = ApiClient(auth, http_);
+  });
+
+  group('ApiClient — Fehlerfälle (#522)', () {
+    test('ohne angemeldeten Nutzer: NotSignedInException, kein Request',
+        () async {
+      auth.signedIn = false;
+      await expectLater(
+        api.getWorkEntriesForMonth(2026, 10),
+        throwsA(isA<NotSignedInException>()
+            .having((e) => e.operation, 'operation', 'getWorkEntriesForMonth')),
+      );
+      expect(http_.lastUri, isNull);
+    });
+
+    test('Antwort mit anderem Status: ApiException mit Status, ohne Body',
+        () async {
+      http_.nextResponse = http.Response('{"geheim":"wert"}', 503);
+      await expectLater(
+        api.getWorkEntriesForMonth(2026, 10),
+        throwsA(isA<ApiException>()
+            .having((e) => e.statusCode, 'statusCode', 503)
+            .having((e) => e.toString(), 'toString',
+                'API getWorkEntriesForMonth fehlgeschlagen (503)')),
+      );
+    });
   });
 
   group('ApiClient — profileId-Query-Parameter (siehe #239/#291/#292)', () {

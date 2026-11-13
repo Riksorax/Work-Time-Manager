@@ -1,3 +1,4 @@
+import 'package:flutter_work_time/core/utils/api_errors.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
 
 import '../entities/work_entry_entity.dart';
@@ -43,10 +44,15 @@ class GetOpenPastWorkEntries {
         }));
       } catch (e, st) {
         // Keine Eintragsinhalte loggen.
-        logger.e(
-            '[OpenEntries] Monat konnte nicht gelesen werden '
-            '(${e.runtimeType})',
-            stackTrace: st);
+        if (isExpectedLoadFailure(e)) {
+          // Offline oder gerade abgemeldet: kein App-Fehler (#506, #522).
+          logger.i('[OpenEntries] Monat nicht geladen (${errorLabel(e)})');
+        } else {
+          logger.e(
+              '[OpenEntries] Monat konnte nicht gelesen werden '
+              '(${errorLabel(e)})',
+              stackTrace: st);
+        }
       }
     }
     result.sort((a, b) => entryDay(b).compareTo(entryDay(a)));

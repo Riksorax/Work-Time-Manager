@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:firebase_auth/firebase_auth.dart' as firebase;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_work_time/data/datasources/remote/api_client.dart';
 import 'package:flutter_work_time/data/datasources/remote/api_data_source.dart';
@@ -8,14 +7,10 @@ import 'package:flutter_work_time/data/datasources/remote/firestore_datasource.d
 import 'package:flutter_work_time/data/repositories/work_repository_impl.dart';
 import 'package:http/http.dart' as http;
 
+import 'fake_signed_in_auth.dart';
+
 /// Auth-Teil der [ApiDataSource]; die Work-Pfade rufen ihn nie auf.
 class _UnusedAuthDataSource extends Fake implements FirestoreDataSource {}
-
-/// `_headers()` des [ApiClient] braucht nur `currentUser`.
-class _NoUserAuth extends Fake implements firebase.FirebaseAuth {
-  @override
-  firebase.User? get currentUser => null;
-}
 
 /// Fake-Backend hinter einem [http.Client] (#418).
 ///
@@ -121,7 +116,7 @@ class FakeBackendHttpClient extends Fake implements http.Client {
 /// -> [FakeBackendHttpClient] (wie `providers.dart:100`, ohne Hybrid-Local).
 class ApiBackedWork {
   ApiBackedWork({String? profileId}) {
-    api = ApiClient(_NoUserAuth(), backend);
+    api = ApiClient(FakeSignedInAuth(), backend);
     repository = WorkRepositoryImpl(
       dataSource: ApiDataSource(_UnusedAuthDataSource(), api),
       userId: 'u',

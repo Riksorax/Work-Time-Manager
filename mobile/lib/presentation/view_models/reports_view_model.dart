@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
-import 'package:flutter_work_time/core/utils/network_error.dart';
+import 'package:flutter_work_time/core/utils/api_errors.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_work_time/core/utils/time_precision.dart';
 
@@ -271,7 +271,7 @@ class ReportsViewModel extends Notifier<ReportsState> {
       if (errorMessage.contains('permission-denied')) {
         logger.w(
             '[ReportsViewModel] Firebase Permission-Fehler erkannt - User wahrscheinlich nicht eingeloggt. Verwende leere Daten.');
-      } else if (isTransientNetworkError(e)) {
+      } else if (isExpectedLoadFailure(e)) {
         // Verbindungsabbruch/Offline ist kein App-Fehler (#506): nur info,
         // da ab warning an Crashlytics gemeldet wird.
         logger.i(
