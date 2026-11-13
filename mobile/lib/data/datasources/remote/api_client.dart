@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
 
 import 'package:flutter_work_time/core/config/api_config.dart';
+import 'package:flutter_work_time/core/utils/api_errors.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
 import '../../../domain/entities/break_entity.dart';
 import '../../../domain/entities/work_entry_entity.dart';
@@ -31,8 +32,13 @@ class ApiClient {
     return base.replace(queryParameters: {'profileId': profileId});
   }
 
-  Future<Map<String, String>> _headers() async {
-    final token = await _auth.currentUser?.getIdToken();
+  /// Wirft [NotSignedInException], wenn niemand angemeldet ist: Ohne Token
+  /// antwortet das Backend immer mit 401, der Aufruf wäre also nutzlos und
+  /// würde als Fehler gemeldet (#522).
+  Future<Map<String, String>> _headers(String op) async {
+    final user = _auth.currentUser;
+    if (user == null) throw NotSignedInException(op);
+    final token = await user.getIdToken();
     return {
       'Content-Type': 'application/json',
       if (token != null) 'Authorization': 'Bearer $token',
@@ -41,7 +47,7 @@ class ApiClient {
 
   Never _fail(String op, http.Response res) {
     logger.e('[ApiClient] $op fehlgeschlagen: ${res.statusCode} ${res.body}');
-    throw Exception('API $op fehlgeschlagen (${res.statusCode})');
+    throw ApiException(op, res.statusCode);
   }
 
   // ── Work Entries ────────────────────────────────────────────────────────
@@ -49,7 +55,7 @@ class ApiClient {
   Future<List<WorkEntryModel>> getWorkEntriesForMonth(int year, int month,
       {String? profileId}) async {
     final res = await _http.get(_uri('/work-entries/$year/$month', profileId),
-        headers: await _headers());
+        headers: await _headers('getWorkEntriesForMonth'));
     if (res.statusCode != 200) _fail('getWorkEntriesForMonth', res);
     final list = jsonDecode(res.body) as List<dynamic>;
     return list.map((e) => _entryFromJson(e as Map<String, dynamic>)).toList();
@@ -59,7 +65,7 @@ class ApiClient {
       {String? profileId}) async {
     final res = await _http.get(
         _uri('/work-entries/$year/$month/$day', profileId),
-        headers: await _headers());
+        headers: await _headers('getWorkEntry'));
     if (res.statusCode == 404) return null;
     if (res.statusCode != 200) _fail('getWorkEntry', res);
     return _entryFromJson(jsonDecode(res.body) as Map<String, dynamic>);
@@ -68,7 +74,7 @@ class ApiClient {
   Future<void> saveWorkEntry(WorkEntryModel model, {String? profileId}) async {
     final res = await _http.put(
       _uri('/work-entries', profileId),
-      headers: await _headers(),
+      headers: await _headers('saveWorkEntry'),
       body: jsonEncode(_entryToJson(model)),
     );
     if (res.statusCode != 200 && res.statusCode != 204)
@@ -79,7 +85,7 @@ class ApiClient {
       {String? profileId}) async {
     final res = await _http.delete(
         _uri('/work-entries/$year/$month/$day', profileId),
-        headers: await _headers());
+        headers: await _headers('deleteWorkEntry'));
     if (res.statusCode != 200 && res.statusCode != 204)
       _fail('deleteWorkEntry', res);
   }
@@ -90,7 +96,7 @@ class ApiClient {
   Future<({int minutes, DateTime? lastUpdated})> getOvertime(
       {String? profileId}) async {
     final res = await _http.get(_uri('/overtime', profileId),
-        headers: await _headers());
+        headers: await _headers('getOvertime'));
     if (res.statusCode != 200) _fail('getOvertime', res);
     final json = jsonDecode(res.body) as Map<String, dynamic>;
     return (
@@ -105,7 +111,7 @@ class ApiClient {
       {String? profileId, bool keepLastUpdated = false}) async {
     final res = await _http.put(
       _uri('/overtime', profileId),
-      headers: await _headers(),
+      headers: await _headers('saveOvertime'),
       // Das Feld nur bei true senden: der Default-Body bleibt unverändert, ältere
       // APIs (vor #408) ignorieren das unbekannte Feld ohnehin.
       body: jsonEncode({
@@ -121,7 +127,7 @@ class ApiClient {
 
   Future<Map<String, dynamic>?> getSettings({String? profileId}) async {
     final res = await _http.get(_uri('/settings', profileId),
-        headers: await _headers());
+        headers: await _headers('getSettings'));
     if (res.statusCode != 200) _fail('getSettings', res);
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
@@ -130,7 +136,7 @@ class ApiClient {
       {String? profileId}) async {
     final res = await _http.put(
       _uri('/settings', profileId),
-      headers: await _headers(),
+      headers: await _headers('putSettings'),
       body: jsonEncode(settings),
     );
     if (res.statusCode != 200 && res.statusCode != 204)
@@ -155,7 +161,7 @@ class ApiClient {
   Future<Map<String, dynamic>> _getJson(String path, String op,
       [String? profileId]) async {
     final res =
-        await _http.get(_uri(path, profileId), headers: await _headers());
+        await _http.get(_uri(path, profileId), headers: await _headers(op));
     if (res.statusCode != 200) _fail(op, res);
     return jsonDecode(res.body) as Map<String, dynamic>;
   }

@@ -1,9 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_work_time/core/utils/api_errors.dart';
 import 'package:flutter_work_time/domain/entities/break_entity.dart';
 import 'package:flutter_work_time/domain/entities/work_entry_entity.dart';
 import 'package:flutter_work_time/domain/usecases/get_open_past_work_entries.dart';
+import 'package:logger/logger.dart';
 
 import '../../support/fake_repositories.dart';
+import '../../support/reported_logs.dart';
 
 // Feste Daten: Fr 2026-10-02, Sa 2026-10-03, So 2026-10-04.
 WorkEntryEntity open(DateTime day,
@@ -33,6 +36,44 @@ void main() {
   });
 
   void seed(WorkEntryEntity e) => repo.store[dayKey(e.date)] = e;
+
+  group('Fehler beim Lesen eines Monats (#506, #522)', () {
+    final events = <LogEvent>[];
+    captureLogs(events);
+
+    test('ohne angemeldeten Nutzer: kein gemeldeter Fehler, Suche läuft weiter',
+        () async {
+      seed(open(DateTime(2026, 10, 2)));
+      repo.failMonths.add('2026-09');
+      repo.readError = const NotSignedInException('getWorkEntriesForMonth');
+
+      final result = await build()();
+
+      expect(result, hasLength(1));
+      expect(reported(events, '[OpenEntries]'), isEmpty);
+    });
+
+    for (final entry in transientNetworkErrors.entries) {
+      test('${entry.key}: kein gemeldeter Fehler', () async {
+        repo.failReads = true;
+        repo.readError = entry.value;
+
+        expect(await build()(), isEmpty);
+        expect(reported(events, '[OpenEntries]'), isEmpty);
+      });
+    }
+
+    test('API-Fehler wird gemeldet, mit Status in der Meldung', () async {
+      repo.failMonths.add('2026-10');
+      repo.readError = const ApiException('getWorkEntriesForMonth', 503);
+
+      await build()();
+
+      final logged = reported(events, '[OpenEntries]');
+      expect(logged, hasLength(1));
+      expect(logged.single.message.toString(), contains('ApiException(503)'));
+    });
+  });
 
   test('offener Vortag (Fr 22:00, jetzt Sa 09:00) wird gefunden', () async {
     seed(open(DateTime(2026, 10, 2)));

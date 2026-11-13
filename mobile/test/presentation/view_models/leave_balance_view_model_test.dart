@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
+import 'package:flutter_work_time/core/utils/api_errors.dart';
 import 'package:flutter_work_time/core/providers/clock_provider.dart';
 import 'package:flutter_work_time/core/providers/providers.dart';
 import 'package:flutter_work_time/core/providers/today_provider.dart';
@@ -302,6 +303,21 @@ void main() {
         expect(reported(events, 'LeaveBalanceViewModel'), isEmpty);
       });
     }
+
+    test(
+        'ohne angemeldeten Nutzer (kurz nach Abmelden): kein Fehlerzustand, '
+        'nichts gemeldet (#522)', () async {
+      when(work.getWorkEntriesForMonth(2026, 5)).thenAnswer((_) async =>
+          throw const NotSignedInException('getWorkEntriesForMonth'));
+      await (() async {
+        container.read(leaveBalanceViewModelProvider);
+        await settle();
+      })();
+      final state = container.read(leaveBalanceViewModelProvider);
+      expect(state.hasError, isFalse);
+      expect(state.isLoading, isTrue);
+      expect(reported(events, 'LeaveBalanceViewModel'), isEmpty);
+    });
 
     test('anderer Fehler wird weiter auf Level error geloggt', () async {
       when(work.getWorkEntriesForMonth(2026, 5))

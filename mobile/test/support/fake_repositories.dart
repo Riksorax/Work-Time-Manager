@@ -39,6 +39,9 @@ class FakeWorkRepository implements WorkRepository {
 
   /// Monate (`yyyy-MM`), deren Lesen fehlschlägt (#385).
   final Set<String> failMonths = {};
+
+  /// Fehler, den ein fehlschlagender Monats-Read wirft (Standard: generische Exception).
+  Object? readError;
   bool failReads = false;
   bool failSaves = false;
 
@@ -108,7 +111,7 @@ class FakeWorkRepository implements WorkRepository {
       await c.future;
     }
     if (failReads || failMonths.contains(monthKey)) {
-      throw Exception('offline');
+      throw readError ?? Exception('offline');
     }
     return store.values
         .where((e) => e.date.year == year && e.date.month == month)
