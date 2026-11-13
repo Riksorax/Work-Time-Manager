@@ -89,7 +89,9 @@ eigener Marker) —, behandelt `/auto-bugfix` es als Hotfix und nicht wie ein no
   Closed-Testing-Track (`CONTRIBUTING.md`, „Hotfix / Bugfix-Release“) — das lässt sich nicht
   gefahrlos automatisch mergen. `/auto-bugfix` bereitet den Fix als PR gegen `main` vor (Branch von
   `main`), aktiviert aber **kein** Auto-Merge; stattdessen im Issue vermerken, dass ein Mensch
-  `/release` für den Hotfix anstoßen muss.
+  `/release` für den Hotfix anstoßen muss. `/release` legt dafür den Release-Branch von `main` an
+  und hängt den PR auf diesen Branch um; direkt nach `main` wird der Fix-PR nie gemergt (kein
+  Versions-Bump, keine Versionshinweise).
 - Betrifft der Crash-Fix mehrere Plattformen, gilt die Ausnahme in Schritt 4 von `/auto-bugfix`
   weiter (nicht automatisch umsetzen, Rückfrage im Issue).
 

@@ -10,11 +10,17 @@ test.beforeEach(({}, testInfo) => {
 
 const switcher = (page: Page) => page.getByRole('button', { name: 'Profil wechseln' });
 
-/** Eintrag von heute 08:00 ohne Ende, es sei denn, es ist noch vor 08:00 (dann eine Minute vor jetzt). */
+/**
+ * Eintrag von heute 08:00 ohne Ende. Vor 08:00 eine Minute vor jetzt, aber nie vor Mitternacht:
+ * der Eintrag muss am heutigen Kalendertag liegen, sonst läuft im Dashboard kein Timer.
+ * „Heute" ist der Tag des Browsers (Europe/Berlin, `playwright.config.ts` setzt dieselbe Zone für Node).
+ */
 function runningSince(): Date {
   const now = new Date();
+  const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const eight = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 8, 0);
-  return eight < now ? eight : new Date(now.getTime() - 60_000);
+  if (eight < now) return eight;
+  return new Date(Math.max(midnight.getTime(), now.getTime() - 60_000));
 }
 
 test.describe('Profilwechsler (#380/#388)', () => {

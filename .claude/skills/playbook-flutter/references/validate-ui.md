@@ -11,7 +11,8 @@ Emulator verfügbar ist — mit der laufenden App.
 - **Immer verfügbar:** Widget-Tests (`flutter test`), mit `tester.binding.setSurfaceSize(...)`
   für kleine Bildschirme (z. B. 320×640) und große (Tablet).
 - **Lokal mit Gerät/Emulator:** `flutter run`, Screenshots der betroffenen Screens.
-- In Cloud-Sessions gibt es kein Gerät — dort nur Widget-Tests und Code-Review.
+- In Cloud-Sessions gibt es kein Gerät — dort nur Widget-Tests und Code-Review. Hat das Projekt einen
+  Emulator-Workflow in der CI, dessen Ergebnis auf dem PR mit auswerten.
 
 ## Checkliste
 ### Zustände
@@ -22,6 +23,8 @@ Emulator verfügbar ist — mit der laufenden App.
 - [ ] Kein Overflow auf kleinen Bildschirmen (320 px Breite) und bei großer Schrift
       (`MediaQuery` `textScaler` 1.3)
 - [ ] Tastatur verdeckt keine Eingabefelder (scrollbar)
+- [ ] Randlose Anzeige (Edge-to-Edge, Android 15+): Inhalte, Bottom Sheets und Buttons liegen nicht unter
+      Status- oder Navigationsleiste (`SafeArea`, `MediaQuery.viewPadding`)
 - [ ] Abstände und Farben aus dem Theme (`lib/core/theme/`), keine Einzelwerte
 
 ### Texte
