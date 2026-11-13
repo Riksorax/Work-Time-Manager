@@ -32,10 +32,12 @@ WTM-Besonderheiten zum Stack-Playbook `playbook-flutter`, aus den bisherigen Age
 - **Texte:** neue Keys in `app_de.arb` (mit `@key`-Beschreibung) und `app_en.arb`; Datumsformate mit
   `Localizations.localeOf(context).toString()`, nie `'de_DE'` hart kodieren.
 - **Fehler** über `logger.e(...)` (geht an Crashlytics), kein `debugPrint` für Fehlerfälle.
-  **Ausnahme (#506, ab 1.8.1):** vorübergehende Netzwerkfehler (Verbindungsabbruch, Offline, Timeout) sind kein App-Fehler. In jedem
-  Ladepfad, der über `ApiDataSource`/HTTP läuft, zuerst `isTransientNetworkError(e)` (`lib/core/utils/network_error.dart`) prüfen und
-  dann nur `logger.i` schreiben; der Fehlerzustand in der UI bleibt. Gilt für **alle** Ladepfade eines neuen Features, nicht nur den
-  ersten (#506 brauchte deshalb zwei Fix-PRs).
+  **Ausnahme (#506, #522):** Erwartbare Ladefehler sind kein App-Fehler: vorübergehende Netzwerkfehler (Verbindungsabbruch, Offline,
+  Timeout) und API-Aufrufe ohne angemeldeten Nutzer (kurz nach Abmelden/Konto-Löschung, `ApiClient` wirft dann `NotSignedInException`
+  und sendet nichts). In jedem Ladepfad, der über `ApiDataSource`/HTTP läuft, zuerst `isExpectedLoadFailure(e)`
+  (`lib/core/utils/api_errors.dart`) prüfen und dann nur `logger.i` schreiben; der Fehlerzustand in der UI bleibt. Gilt für **alle**
+  Ladepfade eines neuen Features, nicht nur den ersten (#506 brauchte deshalb zwei Fix-PRs). Echte API-Fehler kommen als
+  `ApiException` mit Status; in Log-Zeilen `errorLabel(e)` statt `e.runtimeType` verwenden, dann steht der Status in der Meldung.
 - **Zeiten** über `lib/core/utils/time_precision.dart` auf Minuten runden. Widget-Test-Referenz: `test/presentation/screens/settings_page_test.dart`.
 
 ## Validierung
@@ -45,7 +47,7 @@ WTM-Besonderheiten zum Stack-Playbook `playbook-flutter`, aus den bisherigen Age
 - `flutter analyze` darf keine **neuen** Warnungen gegenüber `develop` enthalten (Infos erlaubt).
 - Tests: Repository-Änderungen mit Hybrid-Umschaltung eingeloggt/ausgeloggt; Arbeitszeit-Profile: Standard-Profil **und** zusätzliches Profil;
   Widget-Tests für neue UI-Zustände inkl. **Premium-gesperrt**; neue ARB-Keys in `app_de.arb` **und** `app_en.arb`
-  (`test/l10n/app_localizations_test.dart` läuft mit). Ladepfade über HTTP: ein Test, dass ein transienter Netzwerkfehler nicht als
+  (`test/l10n/app_localizations_test.dart` läuft mit). Ladepfade über HTTP: ein Test, dass ein erwartbarer Ladefehler nicht als
   `logger.e` gemeldet wird (Hilfe: `test/support/reported_logs.dart`).
 - Natives Android (`mobile/android/**`, Timer-Aktionen von außen, Notification-Aktionen, Assistant-Intents): Unit-Tests erreichen das
   nicht. Der Workflow `.github/workflows/android-emulator.yml` (`tool/android_e2e/run.sh`) läuft auf dem PR automatisch mit; sein
@@ -60,6 +62,6 @@ WTM-Besonderheiten zum Stack-Playbook `playbook-flutter`, aus den bisherigen Age
 - [ ] Premium-Gate korrekt (`isPremiumProvider`); Arbeitszeit-Profile berücksichtigt (`profileId`)
 - [ ] Neue Firestore-Pfade haben eine Security Rule in `web/firestore.rules` (Hinweis im PR: Rules werden **nicht** automatisch deployt)
 - [ ] Berechnungslogik widerspricht nicht dem Backend
-- [ ] ARB de + en vollständig; Fehler über `logger.e` (Crashlytics), transiente Netzwerkfehler nur `logger.i` (`isTransientNetworkError`)
+- [ ] ARB de + en vollständig; Fehler über `logger.e` (Crashlytics), erwartbare Ladefehler nur `logger.i` (`isExpectedLoadFailure`)
 - [ ] Neue Screens/Bottom Sheets: Insets nach `mobile/CLAUDE.md`, „Edge-to-Edge“ (`bottomSheetBottomInset`, kein doppeltes `SafeArea`)
 - [ ] Nutzer-sichtbare Änderung: Vermerk für die Release-Notes (`mobile/whatsnew/de-DE.txt` wird erst im Release-Branch geschrieben, siehe `/release`)
