@@ -1,4 +1,4 @@
-Das ist neu in 1.8.1:
-• Behoben: Absturz beim Löschen des Accounts
-• Behoben: Verbindungsabbrüche beim Laden der Berichte werden nicht mehr als Fehler gemeldet.
+Das ist neu in 1.8.2:
+• Aktualisierte Kauf-Bibliothek (Google Play Billing) für einen stabileren Kaufablauf
+• Behoben: seltene Abstürze beim Start einzelner Kauf-Ansichten
 • Mehr Stabilität
