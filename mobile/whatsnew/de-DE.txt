@@ -1,4 +1,3 @@
 Das ist neu in 1.8.3:
-• Behoben: Beim Abmelden blitzte in den Einstellungen kurz eine Fehlermeldung auf
-• Behoben: unnötige Fehlermeldungen im Hintergrund nach dem Abmelden oder Löschen des Accounts
+• Verbessert: Abmelden und Löschen des Accounts erzeugen keine unnötigen Fehlermeldungen mehr
 • Mehr Stabilität
