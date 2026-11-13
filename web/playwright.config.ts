@@ -10,6 +10,12 @@ import { defineConfig, devices } from '@playwright/test';
  * `npm run e2e -- --project=chromium`.
  */
 const port = 4200;
+// Die Tests laufen im Browser unter Europe/Berlin (`timezoneId` unten). Der Node-Prozess, der die
+// Testdaten anlegt (`e2e/account.ts`, Kalendertag und Monatsdokument aus `new Date()`), muss denselben
+// Kalendertag sehen. Auf einem UTC-Runner lag der angelegte Eintrag sonst zwischen 23:00 und 24:00 UTC
+// (Sommerzeit: ab 22:00) auf dem Vortag des Browsers, und die Tests mit laufendem Timer schlugen fehl.
+const timezoneId = 'Europe/Berlin';
+process.env['TZ'] = timezoneId;
 // Tests mit Konto (#429) brauchen die Firebase-Emulatoren (Java + firebase-tools); nur in Chromium, siehe e2e/account.ts.
 const withEmulators = process.env['E2E_EMULATORS'] === '1';
 
@@ -24,7 +30,7 @@ export default defineConfig({
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     // Feste Zeitzone/Sprache, damit Tests nicht vom Runner abhängen.
-    timezoneId: 'Europe/Berlin',
+    timezoneId,
     locale: 'de-DE',
   },
   projects: [
