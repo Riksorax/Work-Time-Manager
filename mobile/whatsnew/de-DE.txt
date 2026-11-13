@@ -1,4 +1,4 @@
-Das ist neu in 1.8.2:
-• Aktualisierte Kauf-Bibliothek (Google Play Billing) für einen stabileren Kaufablauf
-• Behoben: seltene Abstürze beim Start einzelner Kauf-Ansichten
+Das ist neu in 1.8.3:
+• Behoben: Beim Abmelden blitzte in den Einstellungen kurz eine Fehlermeldung auf
+• Behoben: unnötige Fehlermeldungen im Hintergrund nach dem Abmelden oder Löschen des Accounts
 • Mehr Stabilität
