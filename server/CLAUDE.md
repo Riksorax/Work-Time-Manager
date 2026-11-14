@@ -46,6 +46,7 @@ Firestore-Integrationstests übersprungen (`SkippableFact`) — das ist erwartet
 | GET | `/api/reports/monthly/{year}/{month}` | Monatsbericht |
 | GET | `/api/reports/yearly/{year}` | Jahresauswertung Urlaub/Krank (#278): `{year, vacationDaysPerYear, vacationDaysTaken, vacationDaysRemaining, sickDays}`; Rest kann negativ sein, `holiday` zählt nicht, Jahr 2000–2100 |
 | GET | `/api/reports/trend/{year}/{month}/{day}?granularity=week\|month` | Trend (#531): 12 Wochen bzw. 12 Monate bis zum Bezugstag + Wochen-Trend; `granularity` Pflicht (sonst 400), Jahr 2000–2100 |
+| GET | `/api/reports/yearly-comparison/{year}?until=MM-dd` | Jahresvergleich mit dem Vorjahr (#530): `{until, current, previous, delta}`; `until` optional (ungültig = 400), Jahr 2001–2100 |
 | GET | `/api/work-profiles` | Zusätzliche Arbeitszeit-Profile auflisten (ohne Standard-Profil, siehe #138/#239) |
 | POST | `/api/work-profiles` | Neues Profil anlegen (`{ name }`) |
 | DELETE | `/api/work-profiles/{profileId}` | Profil inkl. aller Daten löschen |
@@ -106,6 +107,27 @@ Mittel kaufmännisch auf ganze ms gerundet (`AwayFromZero`), `deltaMs = lastWeek
 `null`, wenn die letzte Woche leer ist oder weniger als zwei Vergleichswochen Einträge haben. Es gelten die heutigen
 Einstellungen für den ganzen Zeitraum. Daten über `WorkEntryRepository.GetRangeAsync` (alle berührten
 Monatsdokumente parallel). Kein Premium-Check im Backend.
+
+**Jahresvergleich (#530):** `GET /api/reports/yearly-comparison/{year}?until=MM-dd` → `YearlyComparisonDto`
+(`ReportCalculator.CalculateYearlySummary` je Jahr, dann `CalculateYearlyComparison`). Der bestehende
+`/reports/yearly/{year}` (Urlaubsbilanz) bleibt unverändert. `year` 2001–2100 (das Vorjahr muss in 2000–2100 liegen),
+sonst 400. `until` optional, genau `MM-dd` (ASCII-Ziffern, `TryParseUntil`); Tage, die es auch im Schaltjahr nicht
+gibt (`02-30`, `13-01`), und jede andere Form ergeben 400. `02-29` ist gültig und gilt in einem Nicht-Schaltjahr als
+`02-28`. In **beiden** Jahren zählen nur Einträge bis einschließlich des Stichtags; ohne `until` das ganze Jahr. Der
+Client sendet `until` nur für das laufende Jahr, das Backend nutzt keine Server-Uhr. `until` in der Antwort = der
+übergebene Wert oder `null`. `current`/`previous` (`YearlySummaryDto`): jeder der 12 `months` rechnet mit `SumPeriod`
+wie der Monatsbericht, die Jahreswerte sind die Summen der Monate. `totalWorkedMs` und `months[].workedMs` sind
+**netto** (= `TotalWorkedMs − TotalBreaksMs` des Monatsberichts; Urlaub/Krank/Feiertag mit Tagessoll), `totalBreaksMs`
+die Pausen, `overtimeMs` = `MonthlyOvertimeMs` (inkl. manueller Überstunden) bzw. deren Jahressumme, `workDays` wie im
+Monatsbericht. **Kein Saldo:** der gespeicherte Gleitzeit-Saldo fließt nirgends ein. Monate nach dem Stichtag sind 0.
+`vacationDays`/`sickDays`/`holidayDays`: ein Eintrag = ein Tag, auch am Wochenende (Regel wie `CalculateYearlyLeave`,
+`holiday` analog), bis zum Stichtag. `hasData = false`, wenn im abgeschnittenen Jahr kein Eintrag existiert. `delta` =
+`current − previous` je Feld (`workedMs`, `overtimeMs`, `workDays`, `vacationDays`, `sickDays`, `holidayDays`), `null`,
+wenn `previous.hasData` `false` ist. `workedPercent` = `delta.workedMs ÷ previous.totalWorkedMs × 100`, kaufmännisch auf
+eine Nachkommastelle (`decimal`, `AwayFromZero`: +12,35 → 12,4, −12,35 → −12,4), `null`, wenn
+`previous.totalWorkedMs` 0 ist (z. B. nur offene Einträge). **Für beide Jahre gelten die heutigen Einstellungen**
+(Wochenstunden, Arbeitstage), weil frühere nicht gespeichert sind. Daten: beide Jahre parallel über `GetRangeAsync`
+(1.1. bis Stichtag, höchstens 24 Monatsdokumente). Kein Premium-Check im Backend (nur in den Clients).
 
 **Gemeinsame Testfälle (#535):** `testdata/report-parity/cases.json` (Repo-Wurzel) prüft Backend
 (`ReportParityTests`) und Web (`report-calculator.parity.tz.spec.ts`) mit denselben Fällen. Die erwarteten

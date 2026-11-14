@@ -86,7 +86,55 @@ internal static class ReportEndpoints
         })
         .WithName("GetTrendReport");
 
+        reports.MapGet("/yearly-comparison/{year:int}", async (
+            int year, string? until, string? profileId, ClaimsPrincipal user,
+            WorkEntryRepository entries, SettingsRepository settingsRepo, CancellationToken ct) =>
+        {
+            if (user.GetUid() is not { } uid) return Results.Unauthorized();
+            // Das Vorjahr muss ebenfalls im Bereich 2000–2100 liegen.
+            if (year is < 2001 or > 2100) return Results.BadRequest("Ungültiges Jahr.");
+            if (!TryParseUntil(until, out var cutoff))
+                return Results.BadRequest("until muss ein gültiger Tag im Format MM-dd sein.");
+
+            var previousYear = year - 1;
+            var currentTask = entries.GetRangeAsync(
+                uid, new DateOnly(year, 1, 1), ReportCalculator.YearlyCutoffDate(year, cutoff), profileId, ct);
+            var previousTask = entries.GetRangeAsync(
+                uid, new DateOnly(previousYear, 1, 1), ReportCalculator.YearlyCutoffDate(previousYear, cutoff), profileId, ct);
+            var settingsTask = settingsRepo.GetAsync(uid, profileId, ct);
+            await Task.WhenAll(currentTask, previousTask, settingsTask);
+
+            var settings = settingsTask.Result;
+            var current = ReportCalculator.CalculateYearlySummary(currentTask.Result, year, settings, cutoff);
+            var previous = ReportCalculator.CalculateYearlySummary(previousTask.Result, previousYear, settings, cutoff);
+            return Results.Ok(ReportCalculator.CalculateYearlyComparison(current, previous, cutoff));
+        })
+        .WithName("GetYearlyComparisonReport");
+
         return group;
+    }
+
+    /// <summary>
+    /// Optionaler Stichtag <c>until</c> des Jahresvergleichs (#530): genau <c>MM-dd</c> (ASCII-Ziffern), ein Tag,
+    /// den es in einem Schaltjahr gibt (<c>02-29</c> gültig, <c>02-30</c>/<c>13-01</c> nicht). <c>null</c> = kein
+    /// Stichtag (gültig); jeder andere Wert, auch <c>""</c>, ist ungültig.
+    /// </summary>
+    internal static bool TryParseUntil(string? value, out MonthDay? until)
+    {
+        until = null;
+        if (value is null) return true;
+        if (value.Length != 5 || value[2] != '-'
+            || !char.IsAsciiDigit(value[0]) || !char.IsAsciiDigit(value[1])
+            || !char.IsAsciiDigit(value[3]) || !char.IsAsciiDigit(value[4]))
+            return false;
+
+        var month = (value[0] - '0') * 10 + (value[1] - '0');
+        var day = (value[3] - '0') * 10 + (value[4] - '0');
+        // 2000 ist ein Schaltjahr: so ist 02-29 gültig.
+        if (month is < 1 or > 12 || day < 1 || day > DateTime.DaysInMonth(2000, month)) return false;
+
+        until = new MonthDay(month, day);
+        return true;
     }
 
     /// <summary>Pflicht-Query <c>granularity</c> des Trends (#531): genau <c>week</c> oder <c>month</c> (kleingeschrieben).</summary>
