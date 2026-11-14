@@ -5,6 +5,7 @@ import 'package:mockito/mockito.dart';
 import 'package:flutter_work_time/core/providers/clock_provider.dart';
 import 'package:flutter_work_time/core/providers/providers.dart';
 import 'package:flutter_work_time/core/providers/settings_sync_provider.dart';
+import 'package:flutter_work_time/core/utils/api_errors.dart';
 import 'package:flutter_work_time/domain/entities/bundesland.dart';
 import 'package:flutter_work_time/domain/repositories/overtime_repository.dart';
 import 'package:flutter_work_time/domain/repositories/settings_repository.dart';
@@ -69,6 +70,28 @@ void main() {
     container.read(settingsViewModelProvider);
     await Future<void>.delayed(Duration.zero);
   }
+
+  test(
+      'Laden ohne angemeldeten Nutzer (beim Abmelden): kein Fehlerzustand, '
+      'der Auth-Wechsel lädt neu', () async {
+    when(overtime.ensureOvertimeLoaded())
+        .thenThrow(const NotSignedInException('getOvertime'));
+
+    await init();
+
+    final state = container.read(settingsViewModelProvider);
+    expect(state.hasError, isFalse);
+    expect(state.isLoading, isTrue);
+  });
+
+  test('anderer Ladefehler bleibt ein Fehlerzustand', () async {
+    when(overtime.ensureOvertimeLoaded())
+        .thenThrow(const ApiException('getOvertime', 503));
+
+    await init();
+
+    expect(container.read(settingsViewModelProvider).hasError, isTrue);
+  });
 
   test('_init liest den Anspruch in die SettingsEntity', () async {
     await init();

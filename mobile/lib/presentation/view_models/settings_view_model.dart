@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../core/providers/app_lock_provider.dart';
 import '../../core/providers/providers.dart' as core_providers;
 import '../../core/providers/settings_sync_provider.dart';
+import '../../core/utils/api_errors.dart';
 import '../../core/utils/timezone_utils.dart';
 import '../../domain/entities/app_theme_mode.dart';
 import '../../domain/entities/bundesland.dart';
@@ -226,6 +227,12 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
         lastOvertimeUpdate: lastOvertimeUpdate,
       ));
     } catch (e, st) {
+      // Beim Abmelden oder Löschen des Kontos ist der Nutzer in Firebase schon
+      // weg, die Repositories zeigen aber noch auf die API. Der Auth-Status
+      // zieht gleich nach und lädt neu; bis dahin den bisherigen Zustand
+      // behalten. Sonst blitzt in den Einstellungen kurz „Fehler:
+      // [firebase_auth/no-current-user] …“ auf.
+      if (e is NotSignedInException) return;
       state = AsyncValue.error(e, st);
     }
   }
