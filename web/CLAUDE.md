@@ -60,7 +60,8 @@ core/
 domain/
 ├── models/
 │   ├── reports.models.ts  DailyStat, WeeklyReport, MonthlyReport
-│   └── leave.models.ts    YearlyLeaveReport (1:1 Backend-DTO)
+│   ├── leave.models.ts    YearlyLeaveReport (1:1 Backend-DTO)
+│   └── trend.models.ts    TrendReport, TrendBucket, WeeklyTrend (#531, 1:1 Backend-DTO ohne `Ms`-Suffix)
 ├── services/
 │   ├── break-calculator.ts   Pure — Pflichtpausen (30min/6h, 45min/9h)
 │   ├── report-calculator.ts  Pure — ISO-8601-Wochennummer, DailyStat, Weekly/MonthlyReport; Parität zum Backend über `testdata/report-parity/` (`report-calculator.parity.tz.spec.ts`, #535)
@@ -71,7 +72,7 @@ domain/
 
 features/
 ├── dashboard/      DashboardComponent + DashboardService (Timer, Pausen, Überstunden); `OpenEntryService` + `OpenEntryCloseService` + Beenden-Dialog (offene Einträge vor heute, #385)
-├── reports/        ReportsComponent + ReportsService (Täglich/Wöchentlich/Monatlich, Premium-Gate); Mehrfachauswahl-Modus im Service: `toggleMultiSelect`, idempotentes `endMultiSelect`, `removeDatesFromSelection`, Modus endet nach erfolgreichem Batch-Speichern (#377)
+├── reports/        ReportsComponent + ReportsService (Täglich/Wöchentlich/Monatlich/Jahr/Trend, Premium-Gate); Trend-Ansicht `components/trend-view/` (#531, siehe „Trend-Ansicht“); Mehrfachauswahl-Modus im Service: `toggleMultiSelect`, idempotentes `endMultiSelect`, `removeDatesFromSelection`, Modus endet nach erfolgreichem Batch-Speichern (#377)
 └── settings/       SettingsComponent + SettingsPageService (Profil, Arbeitszeit, Gleitzeit, Sync, Theme)
 
 shared/
@@ -84,6 +85,7 @@ shared/
 │   ├── leave-balance-card/     LeaveBalanceCardComponent — reine Darstellung der Urlaubsübersicht (Settings, Reports; bewusst nicht im Dashboard: dort schob sie Start-/Endzeit und den Start-Button unter den sichtbaren Bereich)
 │   ├── holiday-banner/         HolidayBannerComponent — „Heute ist Feiertag: …“ (#279), rein informativ
 │   ├── open-entry-banner/      OpenEntryBannerComponent — Hinweis auf offenen Eintrag vor heute mit „Beenden“/„Später“ und optional „Fortsetzen“ (#385), rein darstellend
+│   ├── charts/                 BarChartComponent, LineChartComponent (#531) — eigene SVG-Diagramme ohne Bibliothek, gemeinsame Basis `ChartBase`, siehe „Trend-Ansicht“
 │   ├── time-input/             TimeInputComponent
 │   └── work-profile-switcher/  WorkProfileSwitcherComponent + Add-/Manage-Dialoge (siehe #138/#244)
 ├── utils/
@@ -91,6 +93,8 @@ shared/
 │   ├── bundesland.util.ts       Pure — isBundesland / normalizeBundesland
 │   ├── work-locations.util.ts   Pure (#526) — `normalizeWorkLocations`, `readWorkLocations`, `addWorkLocation` (Fehler empty/duplicate/tooLong/max), `suggestWorkLocations` (zuletzt verwendet zuerst, höchstens 10, ohne gewählte); Grenzen 5 Orte à 60 Zeichen
 │   ├── entry-day.util.ts        Pure (#407) — Kalendertag eines Eintrags: `entryDay(entry)`/`entryDayKey(entry)` (für Verbraucher), `localDateFromEntryId`, `parseEntryId` (gültige `yyyy-MM-dd`-Id oder `null`), `calendarDateFromUtcMidnight` (lokale Mitternacht aus den UTC-Feldern, für Lesegrenzen)
+│   ├── chart-scale.util.ts      Pure (#531) — `ChartPoint`/`ChartLabels`, `niceScale` (runde Teilstriche, 0 immer enthalten), `formatAxisHours`, `axisLabelStep` (Beschriftungen ausdünnen)
+│   ├── duration-format.util.ts  Pure (#531) — `formatDurationHm`/`formatSignedDurationHm` (Format der Berichte `HH:MM`/`±HH:MM`, von `ReportsComponent` mitgenutzt)
 │   ├── promise-timeout.util.ts  Pure (#426) — `withTimeout(promise, ms)` + `PromiseTimeoutError`, Timer immer mit `clearTimeout`
 │   ├── calendar-keyboard.util.ts  Pure — Kalender-Tastenlogik (#377): `isCalendarNavKey`, `nextFocusDate`, `rangeKeys`, `rangeDiff`
 │   └── work-profile-path.util.ts  Pure — `profileScopedPath` (Firestore-Pfad je Profil), `profileIdForApi` (Profil-ID → API-Form, `'default'` → `undefined`, #380)
@@ -127,6 +131,35 @@ runInInjectionContext(this.injector, () => {
 ```
 
 **Nie `docData` / `collectionData` verwenden** — rxfire-Bug mit DocumentReference. Stattdessen eigene `new Observable(observer => { runInInjectionContext(...) })`.
+
+### Trend-Ansicht (#531)
+
+Fünfter Tab „Trend“ in den Berichten (Premium; nicht im Dashboard). Eigener Tab statt Abschnitt im Wochen-/Monats-Tab:
+der Trend hat ein eigenes Zeitfenster (12 Wochen/12 Monate bis heute) und hängt nicht an der Wochen-/Monatsnavigation.
+- **Gate** in `reports.html` wie Wochen-/Monats-Tab (`!isLoggedIn` → Anmelde-Hinweis, `!isPremium` → gesperrte Karte mit
+  `onPresentPaywall()`). Der Tab-Inhalt steht in `<ng-template matTabContent>`: `TrendViewComponent` entsteht erst im
+  sichtbaren Tab und nur für Premium.
+- **Laden:** `TrendViewService` (von `ReportsComponent` bereitgestellt, nicht root; die Wahl Wochen/Monate bleibt beim
+  Tab-Wechsel) lädt nur, solange die Ansicht per `attach()` angehängt ist, und nur angemeldet + Premium
+  (`ApiClient.getTrendReport(date, granularity, profileId?)` → `GET /api/reports/trend/{y}/{m}/{d}?granularity=`). Bezugstag =
+  `TodayService.today()`; Profil-, Tages- und Granularitätswechsel laden neu. Keine Rechnung, kein Offline-Fallback: Zustände
+  `loading`/`error` (mit „Erneut versuchen“)/`data`, leer = alle Buckets `hasData = false`.
+- **Datum:** `buckets[].start/end` (UTC-Mitternacht) über `calendarDateFromUtcMidnight` (Zonen-Test `api-client.trend.tz.spec.ts`).
+  Beschriftung: Wochen „KW n“ (`reports.calendarWeek`) aus dem Schlüssel, Monate per `Intl.DateTimeFormat(locale)` aus `yyyy-MM`.
+- **Inhalt:** Wochen-Trend als Text (`weeklyTrend`, `comparedWeeks` aus der Antwort; `null` → Hinweis „zu wenig Daten“),
+  Balken Arbeitszeit netto mit Soll-Marke, Linie „Überstunden im Zeitraum“ (`cumulativeOvertimeMs`, ab 0, ausdrücklich nicht der
+  Gleitzeit-Saldo). Der letzte Bucket gilt als laufend.
+- **Diagramme (`shared/components/charts/`):** eigene SVG-Komponenten, keine Chart-Bibliothek. Breite per `ResizeObserver` in Pixeln
+  (kein `viewBox`, damit die Schrift auf dem Handy nicht schrumpft), Achsenbeschriftungen werden bei schmaler Breite ausgedünnt
+  (der jüngste Zeitraum bleibt). Lücke (`hasData = false`): Balken gestrichelte Grundlinie, Linie hohler Punkt; laufender Zeitraum:
+  heller, gestrichelt umrandeter Balken bzw. gestricheltes letztes Linienstück; Legende nennt beides. Hover/Klick und Tastatur
+  (Roving tabindex: ein Tab-Stopp, Pfeile/Home/End) füllen eine Detailzeile; jede Spalte ist `role="img"` mit `aria-label`, das SVG
+  `role="group"`. Textalternative: visuell versteckte Tabelle (`cdk-visually-hidden`) mit denselben Werten. Farben nur über
+  `--mat-sys-*`.
+- **Tab-Leiste:** die kompakte Tab-Darstellung (4 px Abstand, 13 px) gilt bis 430 px, damit fünf Tabs auf 320–430 px ohne Blättern passen.
+- **Tests:** `api-client.trend*.spec.ts`, `chart-scale.util.spec.ts`, `charts.spec.ts`, `trend-view.spec.ts`, `reports.trend.spec.ts`;
+  E2E `e2e/trend.spec.ts` (ohne Konto) und `e2e/trend-account.spec.ts` (Emulatoren; Trend-Endpunkt per `page.route` gemockt,
+  Testdaten `e2e/trend-data.ts`).
 
 ### Feiertage (#279)
 

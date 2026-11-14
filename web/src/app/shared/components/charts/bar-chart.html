@@ -1,0 +1,74 @@
+<svg class="chart-svg" [attr.width]="width()" [attr.height]="svgHeight"
+     role="group" [attr.aria-label]="labels().title">
+  <g class="chart-grid" aria-hidden="true">
+    @for (t of ticks(); track t.value) {
+      <line [class.chart-zero]="t.zero" [attr.x1]="marginLeft()" [attr.x2]="marginLeft() + plotWidth()"
+            [attr.y1]="t.y" [attr.y2]="t.y" />
+      <text class="chart-axis-label" text-anchor="end" [attr.x]="marginLeft() - 6" [attr.y]="t.y + 4">{{ t.label }}</text>
+    }
+  </g>
+
+  @for (s of slots(); track s.point.key) {
+    <g class="chart-slot" role="img"
+       [class.is-active]="s.index === highlightIndex()"
+       [class.is-partial]="s.point.partial"
+       [class.is-gap]="!s.point.hasData"
+       [attr.tabindex]="s.index === rovingIndex() ? 0 : -1"
+       [attr.aria-label]="describe(s.point)"
+       (mouseenter)="onHover(s.index)" (mouseleave)="onHover(null)"
+       (focus)="onSelect(s.index)" (click)="onSelect(s.index)"
+       (keydown)="onKeydown($event, s.index)">
+      <rect class="chart-hit" [attr.x]="s.x0 + 1" [attr.y]="marginTop" [attr.width]="s.width - 2" [attr.height]="plotHeight" rx="4" />
+      @if (s.point.hasData) {
+        <rect class="chart-bar" [attr.x]="s.cx - barWidth() / 2" [attr.y]="barY(s.point.value)"
+              [attr.width]="barWidth()" [attr.height]="barHeight(s.point.value)" rx="3" />
+        @if (labels().reference && (s.point.reference ?? 0) > 0) {
+          <line class="chart-target" [attr.x1]="s.cx - barWidth() * 0.62" [attr.x2]="s.cx + barWidth() * 0.62"
+                [attr.y1]="y(s.point.reference ?? 0)" [attr.y2]="y(s.point.reference ?? 0)" />
+        }
+      } @else {
+        <line class="chart-gap" [attr.x1]="s.cx - barWidth() / 2" [attr.x2]="s.cx + barWidth() / 2"
+              [attr.y1]="zeroY() - 2" [attr.y2]="zeroY() - 2" />
+      }
+      @if (s.showAxisLabel) {
+        <text class="chart-axis-label" text-anchor="middle" aria-hidden="true"
+              [attr.x]="s.cx" [attr.y]="axisLabelY">{{ s.point.axisLabel }}</text>
+      }
+    </g>
+  }
+</svg>
+
+<p class="chart-detail" aria-hidden="true">{{ detail() }}</p>
+
+<ul class="chart-legend" aria-hidden="true">
+  <li><svg width="14" height="12"><rect class="chart-bar" x="1" y="1" width="12" height="10" rx="2" /></svg>{{ labels().value }}</li>
+  @if (hasReference()) {
+    <li><svg width="16" height="12"><line class="chart-target" x1="1" x2="15" y1="6" y2="6" /></svg>{{ labels().reference }}</li>
+  }
+  @if (hasPartial()) {
+    <li class="is-partial"><svg width="14" height="12"><rect class="chart-bar" x="1" y="1" width="12" height="10" rx="2" /></svg>{{ labels().partial }}</li>
+  }
+  @if (hasGap()) {
+    <li class="is-gap"><svg width="16" height="12"><line class="chart-gap" x1="1" x2="15" y1="9" y2="9" /></svg>{{ labels().noData }}</li>
+  }
+</ul>
+
+<table class="cdk-visually-hidden">
+  <caption>{{ labels().title }}</caption>
+  <thead>
+    <tr>
+      <th scope="col">{{ labels().period }}</th>
+      <th scope="col">{{ labels().value }}</th>
+      @if (labels().reference) { <th scope="col">{{ labels().reference }}</th> }
+    </tr>
+  </thead>
+  <tbody>
+    @for (r of tableRows(); track r.key) {
+      <tr>
+        <th scope="row">{{ r.label }}</th>
+        <td>{{ r.value }}</td>
+        @if (r.reference !== null) { <td>{{ r.reference }}</td> }
+      </tr>
+    }
+  </tbody>
+</table>

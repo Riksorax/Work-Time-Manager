@@ -6,6 +6,7 @@ import { normalizeWorkLocations, readWorkLocations } from '../../shared/utils/wo
 import { Break, Bundesland, UserSettings, WorkEntry, WorkEntryType, WorkProfile } from '../../shared/models';
 import { YearlyLeaveReport } from '../../domain/models/leave.models';
 import { DailyStat, MonthlyReport, WeeklyReport } from '../../domain/models/reports.models';
+import { TrendGranularity, TrendReport } from '../../domain/models/trend.models';
 import { calendarDateFromUtcMidnight, parseEntryId } from '../../shared/utils/entry-day.util';
 import {
   roundToMinute,
@@ -54,6 +55,14 @@ interface MonthlyReportDto {
   avgPerDayMs: number; avgPerWeekMs: number; monthlyOvertimeMs: number;
   totalOvertimeMs: number; weeks: ReportWeekDto[]; days: ReportDayDto[];
 }
+interface TrendBucketDto {
+  key: string; start: string; end: string;
+  workedMs: number; targetMs: number; overtimeMs: number; cumulativeOvertimeMs: number; hasData: boolean;
+}
+interface WeeklyTrendDto {
+  lastWeekKey: string; lastWeekWorkedMs: number; averageWorkedMs: number; deltaMs: number; comparedWeeks: number;
+}
+interface TrendReportDto { granularity: TrendGranularity; buckets: TrendBucketDto[]; weeklyTrend: WeeklyTrendDto | null; }
 
 /**
  * Typisierter Client für die .NET-Backend-API. Übernimmt das Mapping zwischen
@@ -199,6 +208,39 @@ export class ApiClient {
         totalOvertime: dto.totalOvertimeMs,
         weeks: dto.weeks.map(w => ({ weekNumber: w.weekNumber, totalWorked: w.totalWorkedMs })),
         days: dto.days.map(d => ({ date: calendarDateFromUtcMidnight(new Date(d.date)), worked: d.workedMs })),
+      }))
+    );
+  }
+
+  /**
+   * Trend (#531): 12 Wochen bzw. 12 Monate bis zum Bezugstag `date` (lokaler Kalendertag, kommt vom Client, das
+   * Backend nutzt keine Server-Uhr). `start`/`end` sind UTC-Mitternacht und werden als lokaler Kalendertag gelesen (#407).
+   */
+  getTrendReport(date: Date, granularity: TrendGranularity, profileId?: string): Observable<TrendReport> {
+    const params = (this._params(profileId) ?? new HttpParams()).set('granularity', granularity);
+    const url = `${this.base}/reports/trend/${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
+    return this.http.get<TrendReportDto>(url, { params }).pipe(
+      map(dto => ({
+        granularity: dto.granularity,
+        buckets: (dto.buckets ?? []).map(b => ({
+          key: b.key,
+          start: calendarDateFromUtcMidnight(new Date(b.start)),
+          end: calendarDateFromUtcMidnight(new Date(b.end)),
+          worked: b.workedMs,
+          target: b.targetMs,
+          overtime: b.overtimeMs,
+          cumulativeOvertime: b.cumulativeOvertimeMs,
+          hasData: b.hasData,
+        })),
+        weeklyTrend: dto.weeklyTrend
+          ? {
+              lastWeekKey: dto.weeklyTrend.lastWeekKey,
+              lastWeekWorked: dto.weeklyTrend.lastWeekWorkedMs,
+              averageWorked: dto.weeklyTrend.averageWorkedMs,
+              delta: dto.weeklyTrend.deltaMs,
+              comparedWeeks: dto.weeklyTrend.comparedWeeks,
+            }
+          : null,
       }))
     );
   }

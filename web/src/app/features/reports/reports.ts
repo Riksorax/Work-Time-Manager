@@ -27,6 +27,9 @@ import { Router } from '@angular/router';
 import { LeaveBalanceService } from '../../core/services/leave-balance';
 import { LeaveBalanceCardComponent } from '../../shared/components/leave-balance-card/leave-balance-card';
 import { HomeOfficeCardComponent } from '../../shared/components/home-office-card/home-office-card';
+import { formatDurationHm, formatSignedDurationHm } from '../../shared/utils/duration-format.util';
+import { TrendViewComponent } from './components/trend-view/trend-view';
+import { TrendViewService } from './components/trend-view/trend-view.service';
 
 @Component({
   selector: 'app-reports',
@@ -41,8 +44,11 @@ import { HomeOfficeCardComponent } from '../../shared/components/home-office-car
     CalendarComponent,
     LeaveBalanceCardComponent,
     HomeOfficeCardComponent,
+    TrendViewComponent,
     TranslatePipe,
   ],
+  // Trend (#531): Zustand (Wochen/Monate) lebt mit der Berichtsseite, geladen wird nur im sichtbaren Tab.
+  providers: [TrendViewService],
   templateUrl: './reports.html',
   styleUrl: './reports.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -108,20 +114,11 @@ export class ReportsComponent {
   // ── Template helpers ────────────────────────────────────────────────────────
 
   formatDuration(ms: number): string {
-    if (!isFinite(ms)) return '00:00';
-    const abs = Math.abs(ms);
-    const h   = Math.floor(abs / 3600000);
-    const m   = Math.floor((abs % 3600000) / 60000);
-    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    return formatDurationHm(ms);
   }
 
   formatOvertime(ms: number): string {
-    if (!isFinite(ms)) return '+00:00';
-    const sign = ms >= 0 ? '+' : '-';
-    const abs  = Math.abs(ms);
-    const h    = Math.floor(abs / 3600000);
-    const m    = Math.floor((abs % 3600000) / 60000);
-    return `${sign}${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    return formatSignedDurationHm(ms);
   }
 
   entryTypeLabel(type: WorkEntryType): string {
