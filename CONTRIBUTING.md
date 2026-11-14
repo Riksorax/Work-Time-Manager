@@ -116,14 +116,14 @@ Mit Claude Code: `/release <Version> <Charakter>`.
    Charakter (`release/v1.6.0-Saix`, später `release/v1.6.1-Saix`).
 3. **Automatischer Bump:** `version-bump.yml` setzt die Version in `mobile/pubspec.yaml`
    und trägt den Charakter in `RELEASE_NAMES.md` ein. Danach `git pull`.
-4. **Versionshinweise:** `mobile/whatsnew/de-DE.txt` überschreiben, höchstens 500 Zeichen,
+4. **Versionshinweise:** `mobile/whatsnew/whatsnew-de-DE` überschreiben, höchstens 500 Zeichen,
    Commit `docs(release): Versionshinweise für <Version> (<Charakter>)`.
 5. **PR** `release/v…` → `main` mit Titel `Release <Version> (<Charakter>)`, als
    **Merge-Commit** (nicht Squash, sonst trennt sich die Historie von `main` und `develop`).
 6. **Deploy** startet automatisch (siehe unten).
 7. **GitHub Release:** `github-release.yml` läuft beim Push auf `main` und legt Tag `<Version>`
    (ohne `v`, wie `1.1.0`) und das Release `Release <Version> (<Charakter>)` an. Die
-   Beschreibung ist `mobile/whatsnew/de-DE.txt` plus Link auf den Release-PR. Der Workflow
+   Beschreibung ist `mobile/whatsnew/whatsnew-de-DE` plus Link auf den Release-PR. Der Workflow
    ist idempotent; nachträglich oder bei einem Fehler: Actions → „GitHub Release“ →
    *Run workflow* (`version` und optional `target` = Commit auf `main`).
 8. **Zurückmergen:** `main` nach `develop` mergen,
