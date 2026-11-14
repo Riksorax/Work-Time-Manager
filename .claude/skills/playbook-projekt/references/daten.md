@@ -8,4 +8,6 @@
   `users/{uid}/profiles/{profileId}/...`. Web: `profileScopedPath()`, API: `profileId` bzw. `activeProfileIdForApi`; Backend: `ProfileScope`.
 - **Rechenlogik:** Das Backend (`server/.../Domain/`) ist kanonisch, Web rechnet identisch, Flutter weicht bekannt ab
   (`server/CLAUDE.md`, „Rechenlogik“). Neue Logik immer an das Backend angleichen.
+  Neue Rechen- und Auswertungslogik entsteht nur im Backend, die Clients stellen dar (`entscheidungen.md`, „Logik ins Backend“).
 - **Premium:** `isPremiumProvider` (Flutter) bzw. `ProfileService.isPremium` (Web, Firestore-Flag `users/{uid}.isPremium`).
+  Das Gate liegt nur in den Clients; das Backend prüft Premium bei keinem Endpunkt (`entscheidungen.md`).

@@ -50,6 +50,12 @@ nehmen optional `?profileId=...`; fehlt er oder ist er `"default"`, gilt der unv
 weicht bekannt ab (Details `server/CLAUDE.md`, „Rechenlogik“) — neue Logik immer an das Backend
 angleichen, nicht umgekehrt.
 
+**Grundsatz „Logik ins Backend“ (Entscheidung 14.11.2026):** Neue Rechen- und Auswertungslogik entsteht
+nur im Backend; Web und Mobile rufen den Endpunkt auf und stellen dar. Angemeldete Nutzer (Free und
+Premium) bekommen berechnete Werte vom Backend. Lokal im Client bleibt nur, was ohne Server laufen muss
+(Gast-Modus, laufender Timer) oder reine Darstellung ist. Alle Architektur-Entscheidungen dazu:
+`.claude/skills/playbook-projekt/references/entscheidungen.md`.
+
 ## Claude-Code-Workflows
 
 Einstieg für jede Aufgabe: `/issue <nr>` (ordnet ein, legt den Branch an, nennt die passende Befehlskette). Die Phasen-Agents
@@ -57,6 +63,10 @@ Einstieg für jede Aufgabe: `/issue <nr>` (ordnet ein, legt den Branch an, nennt
 `.claude/skills/playbook-<flutter|angular|dotnet>/`, die Besonderheiten dieses Projekts aus `.claude/skills/playbook-projekt/`
 (geht den Stack-Playbooks vor). Issues über mehrere Plattformen plant der Subagent `cross-platform-coordinator`
 (Backend → Web → Mobile). `/auto-bugfix` mergt nie selbst, Ausnahme: Crash-Hotfix, siehe „Fehler-Monitoring“.
+
+**Schaltzentrale:** Bei Arbeit über mehrere Issues (z. B. ein Release) plant die Hauptsession, verteilt die Schritte an die
+Phasen-Agents, prüft deren Ergebnis und gibt Rückfragen gesammelt an den Repo-Inhaber weiter. Ablauf und Regeln:
+`.claude/skills/playbook-projekt/references/koordination.md`, „Schaltzentrale“.
 
 ## Agent-Standard (Obsidian-Vault)
 
