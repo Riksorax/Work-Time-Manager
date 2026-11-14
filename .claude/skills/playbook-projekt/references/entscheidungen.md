@@ -54,6 +54,13 @@ Einzelheiten zu einem Feature (Vertrag, Kriterien) stehen im jeweiligen Issue, n
 - **Schlank bleiben.** Das Dashboard bekommt keine zusätzlichen Auswertungen, Diagramme oder Prognosen. Auswertungen gehören
   in die Berichte. Neue Elemente im Dashboard brauchen die Zustimmung des Repo-Inhabers und sind, wo sinnvoll, über die
   Einstellungen abschaltbar (Standard: an, wenn es das bisherige Verhalten ist).
+- **Screenshots für jede UI- und UX-Änderung (14.11.2026):** Der Repo-Inhaber will jede sichtbare Änderung ansehen, bevor sie
+  gemergt wird. Jeder PR, der Oberfläche oder Bedienung ändert (neuer Bildschirm, Dialog, Bottom Sheet, Karte, Button, Text mit
+  Layout-Wirkung, geänderter Ablauf), liefert Screenshots: vorher und nachher, wo es ein Vorher gibt; die wichtigen Zustände
+  (leer, gefüllt, Fehler, gesperrt/Free); Hell- und Dunkelmodus; Deutsch, dazu Englisch, wenn der Text das Layout verändert;
+  im Web zusätzlich eine schmale (Handy-)Breite. Web: mit Playwright aufnehmen. Mobile: in Cloud-Sessions gibt es kein Gerät,
+  deshalb den Bildschirm im Widget-Test als Bild rendern; ein Bild vom echten Gerät ersetzt das nicht und wird im PR als offen
+  vermerkt. Reine Logik-, Backend- und Test-PRs brauchen keine Screenshots.
 - **Diagramme:** Web als eigene SVG-Komponente ohne Chart-Bibliothek; Mobile mit `fl_chart`. Jedes Diagramm hat eine
   Textalternative für Screenreader und funktioniert im Hell- und Dunkelmodus.
 - **Export:** Mobile erzeugt PDFs mit `pdf`/`printing` (`pdf_report_service.dart`). Das Web hat keine PDF-Bibliothek und nutzt

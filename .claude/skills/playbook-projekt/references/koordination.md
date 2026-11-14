@@ -30,5 +30,8 @@ Gilt, wenn die Hauptsession ein Release oder mehrere Issues gleichzeitig steuert
   Detailfragen entscheidet sie selbst und vermerkt sie im Issue.
 - **Prüfen vor dem Weitergeben:** Die Hauptsession liest den Diff und das CI-Ergebnis des PR und verlässt sich nicht allein auf
   den Bericht des Agents.
+- **Screenshots:** Bei UI- und UX-Schritten verlangt die Hauptsession vom Agent Screenshots (Regel in `entscheidungen.md`,
+  „Oberfläche“), sieht sie selbst an und zeigt sie dem Repo-Inhaber zusammen mit dem PR. Ohne Screenshots gilt ein solcher
+  Schritt nicht als fertig.
 - **Mergen** nur auf ausdrückliche Anweisung des Repo-Inhabers; nach `main` nie ohne sie.
 - **Bericht an den Repo-Inhaber:** was fertig ist (mit PR), was läuft, was blockiert ist und welche Entscheidung gebraucht wird.

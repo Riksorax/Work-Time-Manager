@@ -7,6 +7,7 @@
   (nur das englische Schlüsselwort schließt das Issue beim Merge).
 - **PR-Beschreibung:** nach `.github/pull_request_template.md`; Checkliste: Premium-Gate, Arbeitszeit-Profile (`profileId`),
   Rechenlogik wie Backend, Texte de + en (ARB bzw. `public/i18n/*.json`), `CLAUDE.md`-Doku.
+  Bei UI- oder UX-Änderungen gehören Screenshots dazu (`entscheidungen.md`, „Oberfläche“).
 - **`/issue`-Einordnung zusätzlich:** Premium-Feature? Arbeitszeit-Profil-bezogen? Neue Texte? Neuer Firestore-Pfad?
   Plattformen: `server/`, `web/`, `mobile/`, CI/Infra (`.github/`, `server/docker-compose.yml`).
 - **iOS:** `mobile/` hat kein iOS-Projekt, die App erscheint nur für Android. iOS-Arbeit (Projekt anlegen, WidgetKit, Siri, Keychain)
