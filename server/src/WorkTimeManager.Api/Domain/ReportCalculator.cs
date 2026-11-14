@@ -186,8 +186,17 @@ public static class ReportCalculator
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
 
-    private static long DailyTargetMs(SettingsDto s) =>
-        s.Workdays.Count == 0 ? 0 : (long)(s.WeeklyTargetHours * 3_600_000 / s.Workdays.Count);
+    /// <summary>
+    /// Tagessoll = Wochenstunden × 3 600 000 ÷ Zahl der Arbeitstage, auf die volle Minute gerundet
+    /// (#535). Rundung wie <c>roundMsToMinute</c> im Web: kaufmännisch, .5 von der Null weg. Ohne
+    /// Arbeitstage ist das Soll 0 (keine Division durch null).
+    /// </summary>
+    private static long DailyTargetMs(SettingsDto s)
+    {
+        if (s.Workdays.Count == 0) return 0;
+        var minutes = s.WeeklyTargetHours * 3_600_000 / s.Workdays.Count / 60_000;
+        return (long)Math.Round(minutes, MidpointRounding.AwayFromZero) * 60_000L;
+    }
 
     private static long SumBreakMs(WorkEntryDto entry) =>
         entry.Breaks.Where(b => b.End is not null)

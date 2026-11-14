@@ -104,6 +104,39 @@ public class ReportCalculatorTests
         Assert.Equal(EightHoursMs, saturdayStat.TargetMs);
     }
 
+    // ── Tagessoll auf die Minute gerundet (#535) ────────────────────────────
+
+    [Fact]
+    public void DailyTarget_NotDivisible_RoundsToFullMinute_535()
+    {
+        // 39 h / 7 Tage = 334,2857… min → 334 min (vorher abgeschnitten: 20 057 142 ms).
+        var settings = new SettingsDto { WeeklyTargetHours = 39, Workdays = new[] { 1, 2, 3, 4, 5, 6, 7 } };
+        var stat = ReportCalculator.CalculateDailyStat(Array.Empty<WorkEntryDto>(), new DateOnly(2026, 6, 1), settings);
+
+        Assert.Equal(334 * 60_000L, stat.TargetMs);
+    }
+
+    [Fact]
+    public void DailyTarget_HalfMinute_RoundsUp_LikeWebRoundMsToMinute_535()
+    {
+        // 37,5 h / 4 Tage = 562,5 min → 563 min (kaufmännisch, wie roundMsToMinute im Web).
+        var settings = new SettingsDto { WeeklyTargetHours = 37.5, Workdays = new[] { 1, 2, 3, 4 } };
+        var stat = ReportCalculator.CalculateDailyStat(Array.Empty<WorkEntryDto>(), new DateOnly(2026, 6, 1), settings);
+
+        Assert.Equal(563 * 60_000L, stat.TargetMs);
+    }
+
+    [Fact]
+    public void DailyTarget_NoWorkdays_IsZero_NoDivisionByZero_535()
+    {
+        var settings = new SettingsDto { WeeklyTargetHours = 40, Workdays = Array.Empty<int>() };
+        var stat = ReportCalculator.CalculateDailyStat(Array.Empty<WorkEntryDto>(), new DateOnly(2026, 6, 1), settings);
+        var week = ReportCalculator.CalculateWeeklyReport(new[] { WorkDay(1, 8, 16) }, new DateOnly(2026, 6, 1), settings);
+
+        Assert.Equal(0, stat.TargetMs);
+        Assert.Equal(EightHoursMs, week.OvertimeMs);
+    }
+
     // ── Jahresauswertung Urlaub/Krank (#278) ────────────────────────────────
 
     private static WorkEntryDto Leave(int year, int month, int day, string type) => new()

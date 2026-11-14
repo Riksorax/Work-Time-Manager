@@ -70,6 +70,15 @@ Flutter-Logik — Flutter soll perspektivisch auf die Backend-Logik gezogen werd
 identisch rechnen. `ReportCalculator.GetIsoWeekNumber` ist gegen `System.Globalization.ISOWeek`
 getestet.
 
+**Tagessoll (#535):** `Wochenstunden × 3 600 000 ÷ Zahl der Arbeitstage`, auf die volle Minute gerundet;
+Rundung wie `roundMsToMinute` im Web (kaufmännisch, .5 von der Null weg, `MidpointRounding.AwayFromZero`):
+39 h an 7 Tagen = 334,29 min → 334 min, 37,5 h an 4 Tagen = 562,5 min → 563 min. Ohne Arbeitstage ist das
+Soll 0. Bis #535 schnitt das Backend den Millisekundenwert nur ab.
+
+**Gemeinsame Testfälle (#535):** `testdata/report-parity/cases.json` (Repo-Wurzel) prüft Backend
+(`ReportParityTests`) und Web (`report-calculator.parity.tz.spec.ts`) mit denselben Fällen. Die erwarteten
+Werte erzeugt das Backend (`REPORT_PARITY_UPDATE=1`, siehe `testdata/report-parity/README.md`).
+
 ## Regeln
 
 - **Auth:** Jeder fachliche Endpunkt liegt in der `/api`-Gruppe mit `RequireAuthorization()`.

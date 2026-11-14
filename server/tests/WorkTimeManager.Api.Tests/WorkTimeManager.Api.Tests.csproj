@@ -21,6 +21,11 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <!-- Gemeinsame Report-Testfälle (Backend, Web, Mobile; #535): verlinkt, nicht kopiert. -->
+  <ItemGroup>
+    <None Include="..\..\..\testdata\report-parity\*.json" LinkBase="report-parity" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\src\WorkTimeManager.Api\WorkTimeManager.Api.csproj" />
   </ItemGroup>
