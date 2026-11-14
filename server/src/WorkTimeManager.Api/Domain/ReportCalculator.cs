@@ -145,7 +145,7 @@ public static class ReportCalculator
         var t = SumPeriod(FilterByWeek(entries, date), settings);
 
         var days = t.DayMap.OrderBy(kvp => kvp.Key)
-            .Select(kvp => new ReportDayDto(ToUtcMidnight(kvp.Key), kvp.Value))
+            .Select(kvp => new ReportDayDto(ToUtcMidnight(kvp.Key), kvp.Value, kvp.Value - t.DayBreaks.GetValueOrDefault(kvp.Key)))
             .ToList();
 
         return new WeeklyReportDto
@@ -170,7 +170,9 @@ public static class ReportCalculator
         // Jeder Tag gehört zu genau einer ISO-KW; die Summen je KW ergeben sich aus der Tages-Map.
         var weekTotals = t.DayMap
             .GroupBy(kvp => GetIsoWeekNumber(kvp.Key))
-            .ToDictionary(g => g.Key, g => g.Sum(kvp => kvp.Value));
+            .ToDictionary(
+                g => g.Key,
+                g => (Gross: g.Sum(kvp => kvp.Value), Net: g.Sum(kvp => kvp.Value - t.DayBreaks.GetValueOrDefault(kvp.Key))));
         var numWeeks = weekTotals.Count;
         var workDays = t.WorkDays.Count;
 
@@ -186,9 +188,9 @@ public static class ReportCalculator
             // Gesamt = gespeicherter Gleitzeit-Saldo; er enthält den laufenden Monat schon (#535).
             TotalOvertimeMs = storedOvertimeMs,
             Weeks = weekTotals.OrderBy(kvp => kvp.Key)
-                .Select(kvp => new ReportWeekDto(kvp.Key, kvp.Value)).ToList(),
+                .Select(kvp => new ReportWeekDto(kvp.Key, kvp.Value.Gross, kvp.Value.Net)).ToList(),
             Days = t.DayMap.OrderBy(kvp => kvp.Key)
-                .Select(kvp => new ReportDayDto(ToUtcMidnight(kvp.Key), kvp.Value)).ToList(),
+                .Select(kvp => new ReportDayDto(ToUtcMidnight(kvp.Key), kvp.Value, kvp.Value - t.DayBreaks.GetValueOrDefault(kvp.Key))).ToList(),
         };
     }
 
@@ -402,7 +404,8 @@ public static class ReportCalculator
         long ManualMs,
         long TargetMs,
         IReadOnlySet<DateOnly> WorkDays,
-        IReadOnlyDictionary<DateOnly, long> DayMap)
+        IReadOnlyDictionary<DateOnly, long> DayMap,
+        IReadOnlyDictionary<DateOnly, long> DayBreaks)
     {
         /// <summary>Brutto − Pausen (Urlaub/Krank/Feiertag mit dem Tagessoll).</summary>
         public long NetWorkedMs => GrossWorkedMs - BreaksMs;
@@ -426,6 +429,7 @@ public static class ReportCalculator
         var workDays = new HashSet<DateOnly>();
         var absenceDays = new HashSet<DateOnly>();
         var dayMap = new Dictionary<DateOnly, long>();
+        var dayBreaks = new Dictionary<DateOnly, long>();
 
         foreach (var entry in entries)
         {
@@ -449,10 +453,11 @@ public static class ReportCalculator
             totalBreaks += breaks;
             manualMs += (entry.ManualOvertimeMinutes ?? 0) * 60_000L;
             dayMap[key] = dayMap.GetValueOrDefault(key) + worked;
+            dayBreaks[key] = dayBreaks.GetValueOrDefault(key) + breaks;
         }
 
         var target = workDays.Count(d => absenceDays.Contains(d) || settings.Workdays.Contains(IsoDow(d))) * daily;
-        return new PeriodTotals(totalWorked, totalBreaks, manualMs, target, workDays, dayMap);
+        return new PeriodTotals(totalWorked, totalBreaks, manualMs, target, workDays, dayMap, dayBreaks);
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────────

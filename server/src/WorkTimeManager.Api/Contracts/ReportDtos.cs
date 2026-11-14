@@ -8,7 +8,11 @@ public sealed record DailyStatDto
     public long OvertimeMs { get; init; }
 }
 
-public sealed record ReportDayDto(DateTimeOffset Date, long WorkedMs);
+/// <summary>
+/// Tag im Wochen-/Monatsbericht. <c>WorkedMs</c> ist brutto (Start bis Ende; Urlaub/Krank/Feiertag mit dem Tagessoll),
+/// <c>NetWorkedMs</c> = brutto − abgeschlossene Pausen des Tages (#551), nicht bei 0 gekappt, also immer ≤ <c>WorkedMs</c>.
+/// </summary>
+public sealed record ReportDayDto(DateTimeOffset Date, long WorkedMs, long NetWorkedMs = 0);
 
 public sealed record WeeklyReportDto
 {
@@ -23,7 +27,8 @@ public sealed record WeeklyReportDto
     public IReadOnlyList<ReportDayDto> Days { get; init; } = Array.Empty<ReportDayDto>();
 }
 
-public sealed record ReportWeekDto(int WeekNumber, long TotalWorkedMs);
+/// <summary>Woche im Monatsbericht: <c>TotalWorkedMs</c> brutto, <c>NetWorkedMs</c> ohne Pausen (#551, nur Tage des Monats).</summary>
+public sealed record ReportWeekDto(int WeekNumber, long TotalWorkedMs, long NetWorkedMs = 0);
 
 public sealed record MonthlyReportDto
 {

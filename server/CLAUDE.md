@@ -136,6 +136,15 @@ eine Nachkommastelle (`decimal`, `AwayFromZero`: +12,35 → 12,4, −12,35 → �
 (Wochenstunden, Arbeitstage), weil frühere nicht gespeichert sind. Daten: beide Jahre parallel über `GetRangeAsync`
 (1.1. bis Stichtag, höchstens 24 Monatsdokumente). Kein Premium-Check im Backend (nur in den Clients).
 
+**Netto je Tag und Woche (#551, Teil 1 Backend):** `ReportDayDto` (`days[]` in Wochen- und Monatsbericht) und `ReportWeekDto`
+(`weeks[]` im Monatsbericht) haben zusätzlich `netWorkedMs` (hinten angefügt, rein additiv). `workedMs`/`totalWorkedMs` bleiben
+**brutto** (Start→Ende, Urlaub/Krank/Feiertag mit Tagessoll), `netWorkedMs` = brutto − abgeschlossene Pausen des Tages bzw. der
+Woche (Regel wie `TotalBreaksMs`, offene Pausen zählen nicht; Abwesenheit = Tagessoll). Je Tag **nicht bei 0 gekappt**: ein Eintrag
+ohne Ende mit abgeschlossener Pause ergibt brutto 0 und netto negativ. `weeks[].netWorkedMs` summiert nur Tage des Monats.
+Invarianten: Summe `days[].netWorkedMs` = `totalWorkedMs − totalBreaksMs` (Woche und Monat), Summe `weeks[].netWorkedMs` = derselbe
+Wert, je Tag `netWorkedMs ≤ workedMs`. Trend, Jahresvergleich und `CalculateDailyStat` unverändert. Web/Mobile nutzen die Felder
+noch nicht (die Paritätstests ignorieren sie bis #551 Web/Mobile). Deploy-Reihenfolge: API vor Clients.
+
 **Gemeinsame Testfälle (#535):** `testdata/report-parity/cases.json` (Repo-Wurzel) prüft Backend
 (`ReportParityTests`), Web (`report-calculator.parity.tz.spec.ts`) und Mobile
 (`report_calculator_parity_tz_test.dart`) mit denselben Fällen. Die erwarteten
