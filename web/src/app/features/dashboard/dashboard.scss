@@ -160,6 +160,47 @@
     width: 100%;
   }
 
+  .work-locations-add {
+    align-self: flex-start;
+    max-width: 100%;
+  }
+
+  .work-locations-summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    align-self: stretch;
+    min-height: 44px;
+    padding: 6px 12px;
+    border: 1px solid var(--mat-sys-outline-variant);
+    border-radius: 12px;
+    background: transparent;
+    color: var(--mat-sys-on-surface);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover:not(:disabled) { background: var(--mat-sys-surface-container); }
+    &:focus-visible { outline: 2px solid var(--mat-sys-primary); outline-offset: 2px; }
+
+    .work-locations-chips {
+      flex: 1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      min-width: 0;
+    }
+    .work-location-chip {
+      padding: 2px 10px;
+      border-radius: 8px;
+      background: var(--mat-sys-secondary-container);
+      color: var(--mat-sys-on-secondary-container);
+      font-size: 0.875rem;
+      overflow-wrap: anywhere;
+    }
+    .work-locations-edit { color: var(--mat-sys-on-surface-variant); flex: none; }
+  }
+
   .home-office-toggle {
     align-self: flex-start;
     max-width: 100%;

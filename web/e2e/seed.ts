@@ -19,6 +19,8 @@ export interface SeedEntry {
   breaks?: SeedBreak[];
   /** Home-Office-Tag (#277), fehlend = nicht gesetzt. */
   isHomeOffice?: boolean;
+  /** Arbeitsorte (#526), fehlend = nicht gesetzt. */
+  workLocations?: string[];
 }
 
 /** Friert die Uhr ein (läuft danach weiter) und muss VOR `page.goto` aufgerufen werden. */
@@ -44,6 +46,7 @@ export async function seedEntries(page: Page, entries: SeedEntry[]): Promise<voi
         manualOvertimeMinutes: null,
         description: null,
         ...(e.isHomeOffice === undefined ? {} : { isHomeOffice: e.isHomeOffice }),
+        ...(e.workLocations === undefined ? {} : { workLocations: e.workLocations }),
         breaks: (e.breaks ?? []).map((b, i) => ({
           id: `b${i}`, name: b.name, isAutomatic: false, start: b.start, end: b.end ?? null,
         })),
@@ -57,7 +60,7 @@ export async function seedEntries(page: Page, entries: SeedEntry[]): Promise<voi
 }
 
 /** Abgeschlossener Arbeitstag 08:00–16:30 mit 30 min Pause. */
-export function workDay(day: string, opts: { isHomeOffice?: boolean } = {}): SeedEntry {
+export function workDay(day: string, opts: { isHomeOffice?: boolean; workLocations?: string[] } = {}): SeedEntry {
   return {
     day,
     ...opts,
@@ -65,6 +68,19 @@ export function workDay(day: string, opts: { isHomeOffice?: boolean } = {}): See
     end: `${day}T16:30:00+01:00`,
     breaks: [{ name: 'Pause', start: `${day}T12:00:00+01:00`, end: `${day}T12:30:00+01:00` }],
   };
+}
+
+/**
+ * Schreibt Einstellungen (Teil von `UserSettings`, #526) vor dem App-Start in `user_settings` (nur beim ersten Laden).
+ * `SettingsService` ergänzt fehlende Felder mit den Standardwerten.
+ */
+export async function seedSettings(page: Page, settings: Record<string, unknown>): Promise<void> {
+  await page.addInitScript((s: Record<string, unknown>) => {
+    if (window.top !== window) return;
+    try { if (localStorage.getItem('e2e_settings_seeded') !== null) return; } catch { return; }
+    localStorage.setItem('user_settings', JSON.stringify(s));
+    localStorage.setItem('e2e_settings_seeded', '1');
+  }, settings);
 }
 
 /** Offener Eintrag: gestartet, nie beendet. */

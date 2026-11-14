@@ -137,6 +137,13 @@
                           {{ 'shared.homeOfficeChip' | translate }}
                         </span>
                       }
+                      @if (entry.type === 'work' && entry.workLocations?.length) {
+                        <span class="work-location-chip">
+                          <mat-icon aria-hidden="true">place</mat-icon>
+                          <span class="cdk-visually-hidden">{{ 'shared.workLocationLabel' | translate: { names: entry.workLocations!.join(', ') } }}</span>
+                          <span aria-hidden="true">{{ entry.workLocations!.join(', ') }}</span>
+                        </span>
+                      }
                       <div class="entry-actions">
                         <button mat-icon-button
                                 (click)="openEditDialog(entry)"

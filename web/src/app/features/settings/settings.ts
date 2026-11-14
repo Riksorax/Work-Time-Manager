@@ -144,6 +144,22 @@ export class SettingsComponent {
     });
   }
 
+  async onShowWorkLocationChange(value: boolean): Promise<void> {
+    await this.saveDashboardToggle(() => this.svc.setShowWorkLocationOnDashboard(value));
+  }
+
+  async onShowHomeOfficeChange(value: boolean): Promise<void> {
+    await this.saveDashboardToggle(() => this.svc.setShowHomeOfficeOnDashboard(value));
+  }
+
+  private async saveDashboardToggle(save: () => Promise<void>): Promise<void> {
+    try {
+      await save();
+    } catch {
+      this.snackbar.open(this.translate.instant('settings.dashboardDisplay.saveError'), 'OK', { duration: 4000 });
+    }
+  }
+
   onThemeToggle(dark: boolean): void {
     this.svc.setTheme(dark);
   }

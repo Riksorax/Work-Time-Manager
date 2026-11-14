@@ -35,7 +35,7 @@ describe('DashboardComponent: entryDate des Pausen-Dialogs (#407)', () => {
           isLoading: signal(false), holidayToday: signal(null), isLoggedIn: signal(false), isSaving: signal(false),
           netDuration: signal(0), grossDuration: signal(0), dailyOvertime: signal(0), totalOvertime: signal(0),
           isTimerRunning: signal(true), isBreakRunning: signal(false), expectedEndTime: signal(null),
-          expectedEndTotalZero: signal(null), breaks: computed(() => workEntry().breaks), workEntry,
+          expectedEndTotalZero: signal(null), showWorkLocation: signal(false), showHomeOffice: signal(true), breaks: computed(() => workEntry().breaks), workEntry,
         } },
         { provide: OpenEntryService, useValue: createFakeOpenEntry() },
         { provide: Router, useValue: { navigate: vi.fn() } },

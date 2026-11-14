@@ -117,6 +117,17 @@ export class SettingsPageService {
     await this.coreSettings.saveSettings({ ...current, workdays: normalizeWorkdays(days) });
   }
 
+  /** Dashboard-Anzeige (#526): wirkt nur auf das Dashboard, löscht keine Daten. */
+  async setShowWorkLocationOnDashboard(value: boolean): Promise<void> {
+    const current = this.settings();
+    await this.coreSettings.saveSettings({ ...current, showWorkLocationOnDashboard: value });
+  }
+
+  async setShowHomeOfficeOnDashboard(value: boolean): Promise<void> {
+    const current = this.settings();
+    await this.coreSettings.saveSettings({ ...current, showHomeOfficeOnDashboard: value });
+  }
+
   async setOvertime(ms: number): Promise<void> {
     // Dashboard live aktualisieren + Basis-Wert speichern (ohne lastUpdated zu setzen).
     // Der eingegebene Wert ist die Basis aus Vortagen, nicht der heutige Gesamtstand.
