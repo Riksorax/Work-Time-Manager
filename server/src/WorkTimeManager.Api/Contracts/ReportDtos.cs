@@ -34,6 +34,8 @@ public sealed record MonthlyReportDto
     public double AvgPerDayMs { get; init; }
     public double AvgPerWeekMs { get; init; }
     public long MonthlyOvertimeMs { get; init; }
+
+    /// <summary>Gespeicherter Gleitzeit-Saldo (#535); enthält den laufenden Monat schon, wird nicht mit <see cref="MonthlyOvertimeMs"/> addiert.</summary>
     public long TotalOvertimeMs { get; init; }
     public IReadOnlyList<ReportWeekDto> Weeks { get; init; } = Array.Empty<ReportWeekDto>();
     public IReadOnlyList<ReportDayDto> Days { get; init; } = Array.Empty<ReportDayDto>();
@@ -90,7 +92,10 @@ public sealed record TrendBucketDto
     /// </summary>
     public long WorkedMs { get; init; }
 
-    /// <summary>Soll: Tage mit Eintrag an einem Vertrags-Wochentag × Tagessoll (Regel der Berichte).</summary>
+    /// <summary>
+    /// Soll: (Tage mit Arbeit an einem Vertrags-Wochentag und jeder Tag mit Urlaub/Krank/Feiertag, #535) × Tagessoll
+    /// (Regel der Berichte).
+    /// </summary>
     public long TargetMs { get; init; }
 
     /// <summary>

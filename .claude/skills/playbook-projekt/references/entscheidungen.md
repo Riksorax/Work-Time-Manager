@@ -43,7 +43,11 @@ Einzelheiten zu einem Feature (Vertrag, Kriterien) stehen im jeweiligen Issue, n
 - **Es gibt keine Historie des Gleitzeit-Saldos.** Gespeichert ist nur der aktuelle Stand (`overtime/balance`), der auch von
   Hand korrigiert wird. Auswertungen zeigen deshalb Überstunden eines Zeitraums, nie einen rekonstruierten historischen Saldo.
 - Das Soll entsteht nur für Tage mit Eintrag an einem Vertrags-Wochentag; das Backend kennt keine Feiertagslogik. Neue
-  Auswertungen übernehmen diese Regel, statt eine zweite einzuführen.
+  Auswertungen übernehmen diese Regel, statt eine zweite einzuführen. **Ausnahme Abwesenheit (#535):** Ein Eintrag Urlaub,
+  Krank oder Feiertag gilt an jedem Tag, auch an einem freien, mit dem Tagessoll als geleistet und als Soll; er erzeugt nie
+  Über- oder Minusstunden (manuelle Überstunden am Eintrag zählen weiter). Ein Tag zählt höchstens einmal.
+- **Monats-Gesamtüberstunden = gespeicherter Gleitzeit-Saldo (#535).** Der Saldo enthält den laufenden Monat schon; die
+  Monatsüberstunden werden nicht dazugerechnet.
 - Frühere Einstellungen (Wochenstunden, Arbeitstage, Urlaubsanspruch) sind nicht gespeichert. Auswertungen über vergangene
   Zeiträume rechnen mit den heutigen Einstellungen und sagen das, wo es das Ergebnis beeinflusst (z. B. Resturlaub nur für das
   laufende Jahr).

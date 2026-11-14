@@ -80,15 +80,172 @@ public class ReportCalculatorTests
     }
 
     [Fact]
-    public void MonthlyReport_AddsStoredOvertimeToTotal()
+    public void MonthlyReport_TotalOvertimeIsStoredBalance_535()
     {
+        // Vor #535: Total = Monat + Saldo (−0,5 h + 1 h). Der Saldo enthält den laufenden Monat schon,
+        // deshalb ist das Gesamt jetzt nur der gespeicherte Saldo.
         var entries = new[] { WorkDay(5, 8, 16, breakMinutes: 30) };
-        const long stored = 3_600_000L; // +1h Altsaldo
+        const long stored = 3_600_000L; // +1h Saldo
         var report = ReportCalculator.CalculateMonthlyReport(entries, new DateOnly(2026, 6, 1), Settings, stored);
 
         Assert.Equal((long)(-0.5 * 3_600_000), report.MonthlyOvertimeMs);
-        Assert.Equal((long)(-0.5 * 3_600_000) + stored, report.TotalOvertimeMs);
+        Assert.Equal(stored, report.TotalOvertimeMs);
         Assert.Equal(1, report.WorkDays);
+    }
+
+    [Theory]
+    [InlineData(-5_400_000L)]
+    [InlineData(0L)]
+    [InlineData(7_200_000L)]
+    public void MonthlyReport_TotalOvertime_EqualsStoredBalance_IndependentOfMonth_535(long stored)
+    {
+        var entries = new[] { WorkDay(1, 8, 18), WorkDay(2, 8, 12) }; // +2 h, −4 h
+        var report = ReportCalculator.CalculateMonthlyReport(entries, new DateOnly(2026, 6, 1), Settings, stored);
+
+        Assert.Equal(-2 * 3_600_000L, report.MonthlyOvertimeMs);
+        Assert.Equal(stored, report.TotalOvertimeMs);
+    }
+
+    [Fact]
+    public void MonthlyReport_NoEntries_TotalOvertimeIsStoredBalance_535()
+    {
+        var report = ReportCalculator.CalculateMonthlyReport(
+            Array.Empty<WorkEntryDto>(), new DateOnly(2026, 6, 1), Settings, -3_600_000L);
+
+        Assert.Equal(0, report.MonthlyOvertimeMs);
+        Assert.Equal(-3_600_000L, report.TotalOvertimeMs);
+    }
+
+    // ── Abwesenheit an einem freien Tag (#535) ──────────────────────────────
+
+    private static WorkEntryDto Absence(int day, string type, int? manualMinutes = null) => new()
+    {
+        Id = $"2026-06-{day:D2}",
+        Date = new DateTimeOffset(2026, 6, day, 0, 0, 0, TimeSpan.Zero),
+        Type = type,
+        ManualOvertimeMinutes = manualMinutes,
+    };
+
+    // 2026-06-06 = Samstag, 2026-06-07 = Sonntag (Mo–Fr-Vertrag: freie Tage).
+    [Theory]
+    [InlineData("vacation")]
+    [InlineData("sick")]
+    [InlineData("holiday")]
+    public void DailyStat_AbsenceOnFreeDay_TargetAndWorkedAreDailyTarget_NoOvertime_535(string type)
+    {
+        var stat = ReportCalculator.CalculateDailyStat(new[] { Absence(6, type) }, new DateOnly(2026, 6, 6), Settings);
+
+        Assert.Equal(EightHoursMs, stat.TargetMs);
+        Assert.Equal(EightHoursMs, stat.WorkedMs);
+        Assert.Equal(0, stat.OvertimeMs);
+    }
+
+    [Fact]
+    public void DailyStat_AbsenceOnFreeDay_ManualOvertimeStillCounts_535()
+    {
+        var stat = ReportCalculator.CalculateDailyStat(
+            new[] { Absence(6, "vacation", manualMinutes: 30) }, new DateOnly(2026, 6, 6), Settings);
+
+        Assert.Equal(EightHoursMs, stat.TargetMs);
+        Assert.Equal(EightHoursMs, stat.WorkedMs);
+        Assert.Equal(30 * 60_000L, stat.OvertimeMs);
+    }
+
+    [Fact]
+    public void DailyStat_AbsenceOnContractDay_Unchanged_535()
+    {
+        var stat = ReportCalculator.CalculateDailyStat(new[] { Absence(5, "sick") }, new DateOnly(2026, 6, 5), Settings);
+
+        Assert.Equal(EightHoursMs, stat.TargetMs);
+        Assert.Equal(EightHoursMs, stat.WorkedMs);
+        Assert.Equal(0, stat.OvertimeMs);
+    }
+
+    [Fact]
+    public void DailyStat_WorkOnFreeDay_Unchanged_NoTarget_AllOvertime_535()
+    {
+        var saturday = WorkDay(6, 8, 12);
+        var stat = ReportCalculator.CalculateDailyStat(new[] { saturday }, new DateOnly(2026, 6, 6), Settings);
+
+        Assert.Equal(0, stat.TargetMs);
+        Assert.Equal(4 * 3_600_000L, stat.WorkedMs);
+        Assert.Equal(4 * 3_600_000L, stat.OvertimeMs);
+    }
+
+    [Fact]
+    public void DailyStat_FreeDayWithoutEntry_NoTarget_535()
+    {
+        var stat = ReportCalculator.CalculateDailyStat(Array.Empty<WorkEntryDto>(), new DateOnly(2026, 6, 6), Settings);
+
+        Assert.Equal(0, stat.TargetMs);
+        Assert.Equal(0, stat.WorkedMs);
+        Assert.Equal(0, stat.OvertimeMs);
+    }
+
+    [Fact]
+    public void WeeklyReport_AbsenceOnFreeDay_NoOvertime_535()
+    {
+        // Mo 1.6. Arbeit 8 h, Sa 6.6. Urlaub, So 7.6. Krank.
+        var entries = new[] { WorkDay(1, 8, 16), Absence(6, "vacation"), Absence(7, "sick") };
+        var report = ReportCalculator.CalculateWeeklyReport(entries, new DateOnly(2026, 6, 3), Settings);
+
+        Assert.Equal(3 * EightHoursMs, report.TotalWorkedMs);
+        Assert.Equal(3, report.WorkDays);
+        Assert.Equal(0, report.OvertimeMs); // vor #535: 16 h
+    }
+
+    [Fact]
+    public void WeeklyReport_WorkOnFreeDay_StillOvertime_535()
+    {
+        // Sa 6.6. Arbeit 4 h: kein Soll, die 4 h sind Überstunden (unverändert).
+        var entries = new[] { WorkDay(1, 8, 16), WorkDay(6, 8, 12) };
+        var report = ReportCalculator.CalculateWeeklyReport(entries, new DateOnly(2026, 6, 3), Settings);
+
+        Assert.Equal(2, report.WorkDays);
+        Assert.Equal(4 * 3_600_000L, report.OvertimeMs);
+    }
+
+    [Fact]
+    public void WeeklyReport_AbsenceAndWorkOnSameFreeDay_TargetCountsOnce_535()
+    {
+        // Sa 6.6. Feiertag + 2 h Arbeit: Soll 8 h einmal, geleistet 8 h + 2 h → 2 h Überstunden.
+        var entries = new[] { Absence(6, "holiday"), WorkDay(6, 8, 10) };
+        var report = ReportCalculator.CalculateWeeklyReport(entries, new DateOnly(2026, 6, 6), Settings);
+        var stat = ReportCalculator.CalculateDailyStat(entries, new DateOnly(2026, 6, 6), Settings);
+
+        Assert.Equal(1, report.WorkDays);
+        Assert.Equal(2 * 3_600_000L, report.OvertimeMs);
+        Assert.Equal(EightHoursMs, stat.TargetMs);
+        Assert.Equal(2 * 3_600_000L, stat.OvertimeMs);
+    }
+
+    [Fact]
+    public void MonthlyReport_AbsenceOnFreeDay_NoOvertime_ManualStillCounts_535()
+    {
+        var entries = new[] { Absence(6, "vacation", manualMinutes: 15), Absence(5, "vacation") };
+        var report = ReportCalculator.CalculateMonthlyReport(entries, new DateOnly(2026, 6, 1), Settings, 0);
+
+        Assert.Equal(2, report.WorkDays);
+        Assert.Equal(2 * EightHoursMs, report.TotalWorkedMs);
+        Assert.Equal(15 * 60_000L, report.MonthlyOvertimeMs); // vor #535: 8 h 15 min
+    }
+
+    [Fact]
+    public void Reports_AbsenceWithoutWorkdays_TargetAndWorkedZero_535()
+    {
+        var none = new SettingsDto { WeeklyTargetHours = 40, Workdays = Array.Empty<int>() };
+        var entries = new[] { Absence(6, "vacation") };
+
+        var stat = ReportCalculator.CalculateDailyStat(entries, new DateOnly(2026, 6, 6), none);
+        var week = ReportCalculator.CalculateWeeklyReport(entries, new DateOnly(2026, 6, 6), none);
+        var month = ReportCalculator.CalculateMonthlyReport(entries, new DateOnly(2026, 6, 1), none, 0);
+
+        Assert.Equal(0, stat.TargetMs);
+        Assert.Equal(0, stat.WorkedMs);
+        Assert.Equal(0, stat.OvertimeMs);
+        Assert.Equal(0, week.OvertimeMs);
+        Assert.Equal(0, month.MonthlyOvertimeMs);
+        Assert.Equal(1, month.WorkDays);
     }
 
     [Fact]

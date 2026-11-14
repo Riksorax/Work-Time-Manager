@@ -11,7 +11,7 @@ namespace WorkTimeManager.Api.Tests;
 /// Gemeinsame Report-Testfälle (#535): liest <c>testdata/report-parity/cases.json</c> (Repo-Wurzel) und prüft jeden Fall
 /// gegen <see cref="ReportCalculator"/>. Dieselbe Datei prüft das Web (<c>report-calculator.parity.tz.spec.ts</c>).
 /// Die erwarteten Werte stammen aus dem Backend: <c>REPORT_PARITY_UPDATE=1</c> schreibt sie neu (siehe README im Ordner).
-/// <c>totalOvertimeMs</c> des Monatsberichts ist bewusst nicht Teil der erwarteten Werte (Regel offen).
+/// <c>totalOvertimeMs</c> des Monatsberichts ist seit #535 (Teil 1b) Teil der erwarteten Werte (= gespeicherter Saldo).
 /// </summary>
 public class ReportParityTests
 {
@@ -67,7 +67,6 @@ public class ReportParityTests
         var weekly = ReportCalculator.CalculateWeeklyReport(entries, refDate, settings);
         var monthly = JsonSerializer.SerializeToNode(
             ReportCalculator.CalculateMonthlyReport(monthEntries, refDate, settings, stored), Json)!.AsObject();
-        monthly.Remove("totalOvertimeMs");
 
         // Über Text normalisieren, damit Zahlen genauso vorliegen wie nach dem Einlesen der Datei.
         return JsonNode.Parse(new JsonObject

@@ -78,6 +78,18 @@ Rundung wie `roundMsToMinute` im Web (kaufmännisch, .5 von der Null weg, `Midpo
 39 h an 7 Tagen = 334,29 min → 334 min, 37,5 h an 4 Tagen = 562,5 min → 563 min. Ohne Arbeitstage ist das
 Soll 0. Bis #535 schnitt das Backend den Millisekundenwert nur ab.
 
+**Soll-Tage, Abwesenheit an freien Tagen (#535):** Das Soll zählt jeden Tag höchstens einmal: Tage mit Arbeitseintrag
+mit Start an einem Vertrags-Wochentag und **jeden** Tag mit Urlaub/Krank/Feiertag, auch an einem freien Tag. Ein
+Abwesenheits-Eintrag zählt mit dem Tagessoll als geleistet und als Soll und erzeugt so nie Über- oder Minusstunden
+(manuelle Überstunden am Eintrag zählen weiter). Tagesbericht ebenso (Soll = geleistet = Tagessoll, auch am freien Tag).
+Unverändert: Arbeit an einem freien Tag (kein Soll, alles Überstunden), Einträge ohne Ende, Tage ohne Eintrag. `WorkDays`
+enthielt alle Abwesenheitstage schon vorher. Ohne Arbeitstage (Tagessoll 0) sind Soll und geleistet 0. Gilt über
+`SumPeriod` auch für den Trend.
+
+**Monats-Gesamtüberstunden (#535):** `MonthlyReportDto.TotalOvertimeMs` = gespeicherter Gleitzeit-Saldo
+(`overtime/balance`). Der Saldo ist ein laufender Stand und enthält den laufenden Monat schon; bis #535 wurde
+`MonthlyOvertimeMs` addiert und der Monat doppelt gezählt. `MonthlyOvertimeMs` bleibt die Summe des Monats.
+
 **Trend (#531):** `GET /api/reports/trend/{y}/{m}/{d}?granularity=week|month` → `TrendReportDto`
 (`ReportCalculator.CalculateTrend`). Das Datum ist der Bezugstag des Clients (keine Server-Uhr).
 `granularity` ist Pflicht und muss exakt `week` oder `month` sein, sonst 400. `buckets`: immer 12, älteste
@@ -85,7 +97,7 @@ zuerst, der letzte enthält den Bezugstag (laufende ISO-Woche bzw. laufender Mon
 `key` = `yyyy-Www` (ISO-Wochenjahr, `ISOWeek.GetYear`) bzw. `yyyy-MM`, `start`/`end` = UTC-Mitternacht des
 ersten/letzten Kalendertags. Jeder Bucket rechnet mit demselben privaten Kern wie Wochen- und Monatsbericht
 (`SumPeriod`): `workedMs` ist **netto** (= `TotalWorkedMs − TotalBreaksMs` der Berichte; Urlaub/Krank/Feiertag
-mit Tagessoll), `targetMs` = Tage mit Eintrag an einem Vertrags-Wochentag × Tagessoll, `overtimeMs` = `OvertimeMs`
+mit Tagessoll), `targetMs` = Soll-Tage × Tagessoll (Regel siehe „Soll-Tage“), `overtimeMs` = `OvertimeMs`
 des Wochen- bzw. `MonthlyOvertimeMs` des Monatsberichts (inkl. manueller Überstunden). **Kein Saldo:** der
 gespeicherte Gleitzeit-Saldo fließt nicht ein, `cumulativeOvertimeMs` ist die laufende Summe ab 0. Buckets ohne
 Eintrag: `hasData = false`, Werte 0. `weeklyTrend` (bei beiden Granularitäten): letzte abgeschlossene Woche = ISO-Woche
