@@ -31,6 +31,10 @@ public sealed class DayData
     [FirestoreProperty("isHomeOffice")]
     public bool? IsHomeOffice { get; set; }
 
+    /// <summary>Arbeitsorte (#526). <c>null</c> = im Dokument nicht gesetzt (gilt als leere Liste).</summary>
+    [FirestoreProperty("workLocations")]
+    public List<string>? WorkLocations { get; set; }
+
     [FirestoreProperty("breaks")]
     public List<BreakData> Breaks { get; set; } = new();
 }

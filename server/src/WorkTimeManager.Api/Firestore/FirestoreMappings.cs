@@ -21,6 +21,7 @@ internal static class FirestoreMappings
         ManualOvertimeMinutes = day.ManualOvertimeMinutes,
         Description = day.Description,
         IsHomeOffice = day.IsHomeOffice ?? false,
+        WorkLocations = (IReadOnlyList<string>?)day.WorkLocations ?? Array.Empty<string>(),
         Breaks = day.Breaks.Select(ToDto).ToList(),
     };
 
@@ -38,8 +39,48 @@ internal static class FirestoreMappings
             "manualOvertimeMinutes", "description", "breaks",
         };
         if (dto.IsHomeOffice is not null) fields.Add("isHomeOffice");
+        if (dto.WorkLocations is not null) fields.Add("workLocations"); // [] = löschen (siehe IsWorkLocationsDelete)
         return fields.Select(f => $"days.{dayKey}.{f}").ToArray();
     }
+
+    /// <summary>Maximale Anzahl Arbeitsorte je Tag (#526).</summary>
+    public const int MaxWorkLocations = 5;
+
+    /// <summary>Maximale Länge eines Arbeitsorts nach dem Trimmen (#526).</summary>
+    public const int MaxWorkLocationLength = 60;
+
+    /// <summary>
+    /// Trimmt die Orte und verwirft Duplikate (ohne Beachtung der Groß-/Kleinschreibung, der erste
+    /// bleibt, Reihenfolge bleibt). <c>null</c> bleibt <c>null</c>. Leere Einträge werden hier nicht
+    /// entfernt, sondern von <see cref="IsValidWorkLocations"/> abgelehnt (#526).
+    /// </summary>
+    public static List<string>? NormalizeWorkLocations(IReadOnlyList<string>? locations)
+    {
+        if (locations is null) return null;
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var result = new List<string>();
+        foreach (var location in locations)
+        {
+            var trimmed = (location ?? string.Empty).Trim();
+            if (seen.Add(trimmed)) result.Add(trimmed);
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// Gültige Arbeitsorte: <c>null</c>, <c>[]</c> oder höchstens 5 Einträge (nach Trimmen und
+    /// Duplikat-Entfernung), keiner leer, keiner länger als 60 Zeichen (nach Trimmen) (#526).
+    /// </summary>
+    public static bool IsValidWorkLocations(IReadOnlyList<string>? locations)
+    {
+        var normalized = NormalizeWorkLocations(locations);
+        if (normalized is null) return true;
+        if (normalized.Any(l => l.Length == 0 || l.Length > MaxWorkLocationLength)) return false;
+        return normalized.Count <= MaxWorkLocations;
+    }
+
+    /// <summary>PUT mit <c>workLocations: []</c> = gespeichertes Feld entfernen (#526).</summary>
+    public static bool IsWorkLocationsDelete(WorkEntryDto dto) => dto.WorkLocations is { Count: 0 };
 
     private static BreakDto ToDto(BreakData b) => new()
     {
@@ -60,6 +101,7 @@ internal static class FirestoreMappings
         ManualOvertimeMinutes = dto.ManualOvertimeMinutes,
         Description = dto.Description,
         IsHomeOffice = dto.IsHomeOffice,
+        WorkLocations = NormalizeWorkLocations(dto.WorkLocations) is { Count: > 0 } locations ? locations : null,
         Breaks = dto.Breaks.Select(ToDocument).ToList(),
     };
 
@@ -94,6 +136,8 @@ internal static class FirestoreMappings
         NotifyBreaks = doc.NotifyBreaks,
         VacationDaysPerYear = doc.VacationDaysPerYear ?? SettingsDto.DefaultVacationDaysPerYear,
         Bundesland = IsValidBundesland(doc.Bundesland) ? NullIfEmpty(doc.Bundesland) : null,
+        ShowWorkLocationOnDashboard = doc.ShowWorkLocationOnDashboard ?? SettingsDto.DefaultShowWorkLocationOnDashboard,
+        ShowHomeOfficeOnDashboard = doc.ShowHomeOfficeOnDashboard ?? SettingsDto.DefaultShowHomeOfficeOnDashboard,
     };
 
     public static SettingsDocument ToDocument(SettingsDto dto) => new()
@@ -108,6 +152,8 @@ internal static class FirestoreMappings
         NotifyBreaks = dto.NotifyBreaks,
         VacationDaysPerYear = dto.VacationDaysPerYear,
         Bundesland = NullIfEmpty(dto.Bundesland),
+        ShowWorkLocationOnDashboard = dto.ShowWorkLocationOnDashboard,
+        ShowHomeOfficeOnDashboard = dto.ShowHomeOfficeOnDashboard,
     };
 
     /// <summary>
@@ -124,6 +170,8 @@ internal static class FirestoreMappings
         };
         if (dto.VacationDaysPerYear is not null) fields.Add("vacationDaysPerYear");
         if (dto.Bundesland is not null) fields.Add("bundesland"); // "" = löschen (siehe IsBundeslandDelete)
+        if (dto.ShowWorkLocationOnDashboard is not null) fields.Add("showWorkLocationOnDashboard");
+        if (dto.ShowHomeOfficeOnDashboard is not null) fields.Add("showHomeOfficeOnDashboard");
         return fields.ToArray();
     }
 
