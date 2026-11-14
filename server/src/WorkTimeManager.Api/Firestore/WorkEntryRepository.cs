@@ -89,8 +89,23 @@ public sealed class WorkEntryRepository(FirestoreDb db)
                 [dayKey] = FirestoreMappings.ToDocument(entry),
             },
         };
-        await MonthDoc(uid, entry.Date.Year, entry.Date.Month, profileId)
-            .SetAsync(update, SetOptions.MergeFields(FirestoreMappings.DayMergeFields(entry, dayKey)), ct);
+        var doc = MonthDoc(uid, entry.Date.Year, entry.Date.Month, profileId);
+        var options = SetOptions.MergeFields(FirestoreMappings.DayMergeFields(entry, dayKey));
+
+        if (!FirestoreMappings.IsWorkLocationsDelete(entry))
+        {
+            await doc.SetAsync(update, options, ct);
+            return;
+        }
+
+        // workLocations [] = Feld entfernen (#526): MergeFields würde sonst null schreiben.
+        var batch = db.StartBatch();
+        batch.Set(doc, update, options);
+        batch.Update(doc, new Dictionary<FieldPath, object>
+        {
+            [new FieldPath("days", dayKey, "workLocations")] = FieldValue.Delete,
+        });
+        await batch.CommitAsync(ct);
     }
 
     public async Task DeleteAsync(

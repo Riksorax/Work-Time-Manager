@@ -19,6 +19,16 @@ public sealed record WorkEntryDto
     /// </summary>
     public bool? IsHomeOffice { get; init; }
 
+    /// <summary>
+    /// Arbeitsorte des Tages (#526), geordnet, max. 5 Einträge à max. 60 Zeichen (nach Trimmen;
+    /// Duplikate ohne Beachtung der Groß-/Kleinschreibung werden verworfen, der erste bleibt).
+    /// GET liefert immer eine Liste (fehlendes Feld = leer, nie <c>null</c>). Im PUT: <c>null</c>/fehlend
+    /// (alte Clients, Schnelleintrag, Batch) lässt die gespeicherten Orte unangetastet, <c>[]</c> entfernt
+    /// das Feld, eine Liste ersetzt die gespeicherte. Ungültige Liste (&gt; 5, leerer oder zu langer
+    /// Eintrag) ergibt 400.
+    /// </summary>
+    public IReadOnlyList<string>? WorkLocations { get; init; }
+
     public IReadOnlyList<BreakDto> Breaks { get; init; } = Array.Empty<BreakDto>();
 }
 
