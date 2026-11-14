@@ -21,9 +21,12 @@ class ReportAction {
 }
 
 /// Aktionszeile der Berichte (Wochen- und Monats-Tab, #535): alle Aktionen
-/// nebeneinander in einer Zeile, jede mit gleicher Breite. Reicht der Platz
-/// nicht, wird die Beschriftung einzeilig mit „…“ gekürzt; Tooltip und
-/// Screenreader bekommen immer den vollen Text.
+/// nebeneinander in einer Zeile, jede so breit wie ihr Inhalt und
+/// gleichmäßig verteilt (`OverflowBar`). Die sichtbaren Beschriftungen sind
+/// kurz gehalten. Nur wenn die Zeile trotzdem nicht passt (sehr schmal,
+/// große Schrift), stehen die Buttons untereinander; reicht selbst dann die
+/// Breite nicht, wird einzeilig mit „…“ gekürzt. Tooltip und Screenreader
+/// bekommen immer den vollen Text.
 class ReportActionRow extends StatelessWidget {
   final List<ReportAction> actions;
 
@@ -31,24 +34,24 @@ class ReportActionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return OverflowBar(
+      alignment: MainAxisAlignment.spaceEvenly,
+      overflowAlignment: OverflowBarAlignment.center,
       children: [
         for (final a in actions)
-          Expanded(
-            child: Tooltip(
-              message: a.fullLabel ?? a.label,
-              excludeFromSemantics: true,
-              child: Semantics(
-                button: true,
-                label: a.fullLabel ?? a.label,
-                onTap: a.onPressed,
-                excludeSemantics: true,
-                child: TextButton.icon(
-                  onPressed: a.onPressed,
-                  icon: Icon(a.icon),
-                  label: Text(a.label,
-                      overflow: TextOverflow.ellipsis, maxLines: 1),
-                ),
+          Tooltip(
+            message: a.fullLabel ?? a.label,
+            excludeFromSemantics: true,
+            child: Semantics(
+              button: true,
+              label: a.fullLabel ?? a.label,
+              onTap: a.onPressed,
+              excludeSemantics: true,
+              child: TextButton.icon(
+                onPressed: a.onPressed,
+                icon: Icon(a.icon),
+                label:
+                    Text(a.label, overflow: TextOverflow.ellipsis, maxLines: 1),
               ),
             ),
           ),

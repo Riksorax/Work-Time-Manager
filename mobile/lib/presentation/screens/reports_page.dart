@@ -757,7 +757,8 @@ class WeeklyReportView extends ConsumerWidget {
                   ),
                   ReportAction(
                     icon: Icons.picture_as_pdf_outlined,
-                    label: l10n.exportAsPdfButton,
+                    label: l10n.exportPdfShortButton,
+                    fullLabel: l10n.exportAsPdfButton,
                     onPressed: () => _exportWeeklyReportPdf(
                       context: context,
                       service: ref.read(pdfReportServiceProvider),
@@ -1258,7 +1259,8 @@ class MonthlyReportView extends ConsumerWidget {
         monthChildren.add(ReportActionRow(actions: [
           ReportAction(
             icon: Icons.picture_as_pdf_outlined,
-            label: l10n.exportAsPdfButton,
+            label: l10n.exportPdfShortButton,
+            fullLabel: l10n.exportAsPdfButton,
             onPressed: () => _exportMonthlyReportPdf(
               context: context,
               service: ref.read(pdfReportServiceProvider),
