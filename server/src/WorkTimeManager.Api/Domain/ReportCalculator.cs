@@ -62,11 +62,13 @@ public static class ReportCalculator
         IReadOnlyList<WorkEntryDto> monthEntries, DateOnly date, SettingsDto settings)
     {
         var daily = DailyTargetMs(settings);
-        var target = settings.Workdays.Contains(IsoDow(date)) ? daily : 0;
+        var dayEntries = monthEntries.Where(e => DatePart(e.Date) == date).ToList();
+        // Soll an Vertrags-Wochentagen; Urlaub/Krank/Feiertag bringen ihr Soll an jedem Tag mit (#535).
+        var target = settings.Workdays.Contains(IsoDow(date)) || dayEntries.Any(e => e.Type != "work") ? daily : 0;
 
         long worked = 0;
         long manualMs = 0;
-        foreach (var entry in monthEntries.Where(e => DatePart(e.Date) == date))
+        foreach (var entry in dayEntries)
         {
             worked += entry.Type != "work" ? target : NetWorkMs(entry);
             manualMs += (entry.ManualOvertimeMinutes ?? 0) * 60_000L;
@@ -120,7 +122,8 @@ public static class ReportCalculator
             AvgPerDayMs = workDays > 0 ? (double)t.NetWorkedMs / workDays : 0,
             AvgPerWeekMs = numWeeks > 0 ? (double)t.NetWorkedMs / numWeeks : 0,
             MonthlyOvertimeMs = t.OvertimeMs,
-            TotalOvertimeMs = t.OvertimeMs + storedOvertimeMs,
+            // Gesamt = gespeicherter Gleitzeit-Saldo; er enthält den laufenden Monat schon (#535).
+            TotalOvertimeMs = storedOvertimeMs,
             Weeks = weekTotals.OrderBy(kvp => kvp.Key)
                 .Select(kvp => new ReportWeekDto(kvp.Key, kvp.Value)).ToList(),
             Days = t.DayMap.OrderBy(kvp => kvp.Key)
@@ -264,14 +267,16 @@ public static class ReportCalculator
 
     /// <summary>
     /// Rechenregel der Berichte: Arbeit brutto (Start→Ende) und Pausen getrennt, Urlaub/Krank/Feiertag mit dem
-    /// Tagessoll; Soll = Tage mit Eintrag (Nicht-Arbeit oder Arbeit mit Start) an einem Vertrags-Wochentag ×
-    /// Tagessoll; manuelle Überstunden zusätzlich. Filtert nicht — der Aufrufer übergibt die Einträge des Zeitraums.
+    /// Tagessoll; Soll = (Tage mit Arbeit mit Start an einem Vertrags-Wochentag ∪ jeder Tag mit Urlaub/Krank/Feiertag,
+    /// auch an einem freien Tag, #535) × Tagessoll, jeder Tag höchstens einmal; manuelle Überstunden zusätzlich.
+    /// Filtert nicht — der Aufrufer übergibt die Einträge des Zeitraums.
     /// </summary>
     private static PeriodTotals SumPeriod(IEnumerable<WorkEntryDto> entries, SettingsDto settings)
     {
         var daily = DailyTargetMs(settings);
         long totalWorked = 0, totalBreaks = 0, manualMs = 0;
         var workDays = new HashSet<DateOnly>();
+        var absenceDays = new HashSet<DateOnly>();
         var dayMap = new Dictionary<DateOnly, long>();
 
         foreach (var entry in entries)
@@ -283,6 +288,7 @@ public static class ReportCalculator
             {
                 worked = daily;
                 workDays.Add(key);
+                absenceDays.Add(key);
             }
             else
             {
@@ -297,7 +303,7 @@ public static class ReportCalculator
             dayMap[key] = dayMap.GetValueOrDefault(key) + worked;
         }
 
-        var target = workDays.Count(d => settings.Workdays.Contains(IsoDow(d))) * daily;
+        var target = workDays.Count(d => absenceDays.Contains(d) || settings.Workdays.Contains(IsoDow(d))) * daily;
         return new PeriodTotals(totalWorked, totalBreaks, manualMs, target, workDays, dayMap);
     }
 

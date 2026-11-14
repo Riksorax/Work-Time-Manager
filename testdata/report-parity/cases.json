@@ -108,6 +108,7 @@
           "avgPerDayMs": 29520000,
           "avgPerWeekMs": 147600000,
           "monthlyOvertimeMs": 3600000,
+          "totalOvertimeMs": 0,
           "weeks": [
             {
               "weekNumber": 23,
@@ -231,6 +232,7 @@
           "avgPerDayMs": 25200000,
           "avgPerWeekMs": 50400000,
           "monthlyOvertimeMs": -7200000,
+          "totalOvertimeMs": 0,
           "weeks": [
             {
               "weekNumber": 23,
@@ -319,6 +321,7 @@
           "avgPerDayMs": 28800000,
           "avgPerWeekMs": 57600000,
           "monthlyOvertimeMs": 900000,
+          "totalOvertimeMs": 0,
           "weeks": [
             {
               "weekNumber": 24,
@@ -433,6 +436,7 @@
           "avgPerDayMs": 28800000,
           "avgPerWeekMs": 115200000,
           "monthlyOvertimeMs": 0,
+          "totalOvertimeMs": 0,
           "weeks": [
             {
               "weekNumber": 25,
@@ -497,8 +501,8 @@
       ],
       "expected": {
         "daily": {
-          "targetMs": 0,
-          "workedMs": 0,
+          "targetMs": 28800000,
+          "workedMs": 28800000,
           "overtimeMs": 0
         },
         "weekly": {
@@ -509,7 +513,7 @@
           "totalBreaksMs": 0,
           "workDays": 2,
           "avgPerDayMs": 28800000,
-          "overtimeMs": 28800000,
+          "overtimeMs": 0,
           "days": [
             {
               "date": "2026-06-19T00:00:00+00:00",
@@ -528,7 +532,8 @@
           "workDays": 2,
           "avgPerDayMs": 28800000,
           "avgPerWeekMs": 57600000,
-          "monthlyOvertimeMs": 28800000,
+          "monthlyOvertimeMs": 0,
+          "totalOvertimeMs": 0,
           "weeks": [
             {
               "weekNumber": 25,
@@ -585,8 +590,8 @@
       ],
       "expected": {
         "daily": {
-          "targetMs": 0,
-          "workedMs": 0,
+          "targetMs": 28800000,
+          "workedMs": 28800000,
           "overtimeMs": 0
         },
         "weekly": {
@@ -597,7 +602,7 @@
           "totalBreaksMs": 0,
           "workDays": 2,
           "avgPerDayMs": 28800000,
-          "overtimeMs": 28800000,
+          "overtimeMs": 0,
           "days": [
             {
               "date": "2026-06-19T00:00:00+00:00",
@@ -616,7 +621,8 @@
           "workDays": 2,
           "avgPerDayMs": 28800000,
           "avgPerWeekMs": 57600000,
-          "monthlyOvertimeMs": 28800000,
+          "monthlyOvertimeMs": 0,
+          "totalOvertimeMs": 0,
           "weeks": [
             {
               "weekNumber": 25,
@@ -673,8 +679,8 @@
       ],
       "expected": {
         "daily": {
-          "targetMs": 0,
-          "workedMs": 0,
+          "targetMs": 28800000,
+          "workedMs": 28800000,
           "overtimeMs": 0
         },
         "weekly": {
@@ -685,7 +691,7 @@
           "totalBreaksMs": 0,
           "workDays": 2,
           "avgPerDayMs": 28800000,
-          "overtimeMs": 28800000,
+          "overtimeMs": 0,
           "days": [
             {
               "date": "2026-06-26T00:00:00+00:00",
@@ -704,7 +710,8 @@
           "workDays": 2,
           "avgPerDayMs": 28800000,
           "avgPerWeekMs": 57600000,
-          "monthlyOvertimeMs": 28800000,
+          "monthlyOvertimeMs": 0,
+          "totalOvertimeMs": 0,
           "weeks": [
             {
               "weekNumber": 26,
@@ -793,6 +800,7 @@
           "avgPerDayMs": 21600000,
           "avgPerWeekMs": 43200000,
           "monthlyOvertimeMs": 14400000,
+          "totalOvertimeMs": 0,
           "weeks": [
             {
               "weekNumber": 23,
@@ -889,6 +897,7 @@
           "avgPerDayMs": 13500000,
           "avgPerWeekMs": 27000000,
           "monthlyOvertimeMs": -30600000,
+          "totalOvertimeMs": 0,
           "weeks": [
             {
               "weekNumber": 24,
@@ -1016,6 +1025,7 @@
           "avgPerDayMs": 28800000,
           "avgPerWeekMs": 86400000,
           "monthlyOvertimeMs": 0,
+          "totalOvertimeMs": 0,
           "weeks": [
             {
               "weekNumber": 27,
@@ -1147,6 +1157,7 @@
           "avgPerDayMs": 29700000,
           "avgPerWeekMs": 59400000,
           "monthlyOvertimeMs": 1800000,
+          "totalOvertimeMs": 0,
           "weeks": [
             {
               "weekNumber": 27,
@@ -1300,6 +1311,7 @@
           "avgPerDayMs": 25920000,
           "avgPerWeekMs": 64800000,
           "monthlyOvertimeMs": -14400000,
+          "totalOvertimeMs": 0,
           "weeks": [
             {
               "weekNumber": 49,
@@ -1469,6 +1481,7 @@
           "avgPerDayMs": 28800000,
           "avgPerWeekMs": 28800000,
           "monthlyOvertimeMs": 0,
+          "totalOvertimeMs": 0,
           "weeks": [
             {
               "weekNumber": 1,
@@ -1618,6 +1631,7 @@
           "avgPerDayMs": 26100000,
           "avgPerWeekMs": 52200000,
           "monthlyOvertimeMs": -10800000,
+          "totalOvertimeMs": 0,
           "weeks": [
             {
               "weekNumber": 1,
@@ -1775,6 +1789,7 @@
           "avgPerDayMs": 28800000,
           "avgPerWeekMs": 43200000,
           "monthlyOvertimeMs": 0,
+          "totalOvertimeMs": 0,
           "weeks": [
             {
               "weekNumber": 1,
@@ -1886,6 +1901,7 @@
           "avgPerDayMs": 20060000,
           "avgPerWeekMs": 60180000,
           "monthlyOvertimeMs": -1560000,
+          "totalOvertimeMs": 0,
           "weeks": [
             {
               "weekNumber": 23,
@@ -2010,6 +2026,7 @@
           "avgPerDayMs": 21450000,
           "avgPerWeekMs": 85800000,
           "monthlyOvertimeMs": 13800000,
+          "totalOvertimeMs": 0,
           "weeks": [
             {
               "weekNumber": 24,
@@ -2121,6 +2138,7 @@
           "avgPerDayMs": 20560000,
           "avgPerWeekMs": 61680000,
           "monthlyOvertimeMs": 1560000,
+          "totalOvertimeMs": 0,
           "weeks": [
             {
               "weekNumber": 25,
@@ -2212,6 +2230,7 @@
           "avgPerDayMs": 33780000,
           "avgPerWeekMs": 67560000,
           "monthlyOvertimeMs": 0,
+          "totalOvertimeMs": 0,
           "weeks": [
             {
               "weekNumber": 26,
@@ -2294,6 +2313,7 @@
           "avgPerDayMs": 14400000,
           "avgPerWeekMs": 28800000,
           "monthlyOvertimeMs": 28800000,
+          "totalOvertimeMs": 0,
           "weeks": [
             {
               "weekNumber": 23,
@@ -2354,8 +2374,276 @@
           "avgPerDayMs": 0,
           "avgPerWeekMs": 0,
           "monthlyOvertimeMs": 0,
+          "totalOvertimeMs": 0,
           "weeks": [],
           "days": []
+        }
+      }
+    },
+    {
+      "name": "gesamt-ueberstunden-positiver-saldo",
+      "description": "Gespeicherter Saldo +1,5 h; Monats-Gesamtüberstunden = Saldo (enthält den laufenden Monat schon), Monatsüberstunden aus den Einträgen (+1 h).",
+      "settings": {
+        "weeklyTargetHours": 40,
+        "workdays": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "storedOvertimeMs": 5400000,
+      "referenceDate": "2026-06-10",
+      "entries": [
+        {
+          "id": "2026-06-09",
+          "date": "2026-06-09T00:00:00Z",
+          "workStart": "2026-06-09T08:00:00Z",
+          "workEnd": "2026-06-09T17:00:00Z",
+          "type": "work",
+          "manualOvertimeMinutes": null,
+          "breaks": []
+        },
+        {
+          "id": "2026-06-10",
+          "date": "2026-06-10T00:00:00Z",
+          "workStart": "2026-06-10T08:00:00Z",
+          "workEnd": "2026-06-10T16:00:00Z",
+          "type": "work",
+          "manualOvertimeMinutes": null,
+          "breaks": []
+        }
+      ],
+      "expected": {
+        "daily": {
+          "targetMs": 28800000,
+          "workedMs": 28800000,
+          "overtimeMs": 0
+        },
+        "weekly": {
+          "weekNumber": 24,
+          "start": "2026-06-08T00:00:00+00:00",
+          "end": "2026-06-14T00:00:00+00:00",
+          "totalWorkedMs": 61200000,
+          "totalBreaksMs": 0,
+          "workDays": 2,
+          "avgPerDayMs": 30600000,
+          "overtimeMs": 3600000,
+          "days": [
+            {
+              "date": "2026-06-09T00:00:00+00:00",
+              "workedMs": 32400000
+            },
+            {
+              "date": "2026-06-10T00:00:00+00:00",
+              "workedMs": 28800000
+            }
+          ]
+        },
+        "monthly": {
+          "month": "2026-06-01T00:00:00+00:00",
+          "totalWorkedMs": 61200000,
+          "totalBreaksMs": 0,
+          "workDays": 2,
+          "avgPerDayMs": 30600000,
+          "avgPerWeekMs": 61200000,
+          "monthlyOvertimeMs": 3600000,
+          "totalOvertimeMs": 5400000,
+          "weeks": [
+            {
+              "weekNumber": 24,
+              "totalWorkedMs": 61200000
+            }
+          ],
+          "days": [
+            {
+              "date": "2026-06-09T00:00:00+00:00",
+              "workedMs": 32400000
+            },
+            {
+              "date": "2026-06-10T00:00:00+00:00",
+              "workedMs": 28800000
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "gesamt-ueberstunden-negativer-saldo",
+      "description": "Gespeicherter Saldo −2 h; Monats-Gesamtüberstunden = Saldo, Monatsüberstunden aus den Einträgen (−1 h).",
+      "settings": {
+        "weeklyTargetHours": 40,
+        "workdays": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "storedOvertimeMs": -7200000,
+      "referenceDate": "2026-06-10",
+      "entries": [
+        {
+          "id": "2026-06-09",
+          "date": "2026-06-09T00:00:00Z",
+          "workStart": "2026-06-09T08:00:00Z",
+          "workEnd": "2026-06-09T15:00:00Z",
+          "type": "work",
+          "manualOvertimeMinutes": null,
+          "breaks": []
+        },
+        {
+          "id": "2026-06-10",
+          "date": "2026-06-10T00:00:00Z",
+          "workStart": "2026-06-10T08:00:00Z",
+          "workEnd": "2026-06-10T16:00:00Z",
+          "type": "work",
+          "manualOvertimeMinutes": null,
+          "breaks": []
+        }
+      ],
+      "expected": {
+        "daily": {
+          "targetMs": 28800000,
+          "workedMs": 28800000,
+          "overtimeMs": 0
+        },
+        "weekly": {
+          "weekNumber": 24,
+          "start": "2026-06-08T00:00:00+00:00",
+          "end": "2026-06-14T00:00:00+00:00",
+          "totalWorkedMs": 54000000,
+          "totalBreaksMs": 0,
+          "workDays": 2,
+          "avgPerDayMs": 27000000,
+          "overtimeMs": -3600000,
+          "days": [
+            {
+              "date": "2026-06-09T00:00:00+00:00",
+              "workedMs": 25200000
+            },
+            {
+              "date": "2026-06-10T00:00:00+00:00",
+              "workedMs": 28800000
+            }
+          ]
+        },
+        "monthly": {
+          "month": "2026-06-01T00:00:00+00:00",
+          "totalWorkedMs": 54000000,
+          "totalBreaksMs": 0,
+          "workDays": 2,
+          "avgPerDayMs": 27000000,
+          "avgPerWeekMs": 54000000,
+          "monthlyOvertimeMs": -3600000,
+          "totalOvertimeMs": -7200000,
+          "weeks": [
+            {
+              "weekNumber": 24,
+              "totalWorkedMs": 54000000
+            }
+          ],
+          "days": [
+            {
+              "date": "2026-06-09T00:00:00+00:00",
+              "workedMs": 25200000
+            },
+            {
+              "date": "2026-06-10T00:00:00+00:00",
+              "workedMs": 28800000
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "abwesenheit-an-freiem-tag-mit-manuellen-ueberstunden",
+      "description": "Krank an einem Sonntag (kein Vertrags-Arbeitstag) mit 45 min manuellen Überstunden am selben Eintrag, dazu Freitag 9 h Arbeit; Bezugstag Sonntag.",
+      "settings": {
+        "weeklyTargetHours": 40,
+        "workdays": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "storedOvertimeMs": 0,
+      "referenceDate": "2026-06-28",
+      "entries": [
+        {
+          "id": "2026-06-26",
+          "date": "2026-06-26T00:00:00Z",
+          "workStart": "2026-06-26T08:00:00Z",
+          "workEnd": "2026-06-26T17:00:00Z",
+          "type": "work",
+          "manualOvertimeMinutes": null,
+          "breaks": []
+        },
+        {
+          "id": "2026-06-28",
+          "date": "2026-06-28T00:00:00Z",
+          "workStart": null,
+          "workEnd": null,
+          "type": "sick",
+          "manualOvertimeMinutes": 45,
+          "breaks": []
+        }
+      ],
+      "expected": {
+        "daily": {
+          "targetMs": 28800000,
+          "workedMs": 28800000,
+          "overtimeMs": 2700000
+        },
+        "weekly": {
+          "weekNumber": 26,
+          "start": "2026-06-22T00:00:00+00:00",
+          "end": "2026-06-28T00:00:00+00:00",
+          "totalWorkedMs": 61200000,
+          "totalBreaksMs": 0,
+          "workDays": 2,
+          "avgPerDayMs": 30600000,
+          "overtimeMs": 6300000,
+          "days": [
+            {
+              "date": "2026-06-26T00:00:00+00:00",
+              "workedMs": 32400000
+            },
+            {
+              "date": "2026-06-28T00:00:00+00:00",
+              "workedMs": 28800000
+            }
+          ]
+        },
+        "monthly": {
+          "month": "2026-06-01T00:00:00+00:00",
+          "totalWorkedMs": 61200000,
+          "totalBreaksMs": 0,
+          "workDays": 2,
+          "avgPerDayMs": 30600000,
+          "avgPerWeekMs": 61200000,
+          "monthlyOvertimeMs": 6300000,
+          "totalOvertimeMs": 0,
+          "weeks": [
+            {
+              "weekNumber": 26,
+              "totalWorkedMs": 61200000
+            }
+          ],
+          "days": [
+            {
+              "date": "2026-06-26T00:00:00+00:00",
+              "workedMs": 32400000
+            },
+            {
+              "date": "2026-06-28T00:00:00+00:00",
+              "workedMs": 28800000
+            }
+          ]
         }
       }
     }

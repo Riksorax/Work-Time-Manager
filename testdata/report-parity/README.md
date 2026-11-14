@@ -17,14 +17,14 @@ prüfen. Ziel: Backend, Web (und später Mobile) rechnen nachweisbar gleich.
       "name": "normale-woche",              // eindeutig, kebab-case
       "description": "…",                   // was der Fall abdeckt
       "settings": { "weeklyTargetHours": 40, "workdays": [1, 2, 3, 4, 5] },   // ISO-Wochentage 1 = Mo … 7 = So
-      "storedOvertimeMs": 0,                // gespeicherter Saldo (nur Eingabe für den Monatsbericht)
+      "storedOvertimeMs": 0,                // gespeicherter Saldo (Eingabe für den Monatsbericht, = totalOvertimeMs)
       "referenceDate": "2026-06-03",        // Bezugstag (yyyy-MM-dd)
       "entries": [ /* WorkEntryDto wie die API: id yyyy-MM-dd, date (UTC-Mitternacht), workStart, workEnd,
                       type, manualOvertimeMinutes, breaks [{ id, name, isAutomatic, start, end }] */ ],
       "expected": {
         "daily":   { /* DailyStatDto */ },
         "weekly":  { /* WeeklyReportDto */ },
-        "monthly": { /* MonthlyReportDto ohne totalOvertimeMs */ }
+        "monthly": { /* MonthlyReportDto */ }
       }
     }
   ]
@@ -36,7 +36,7 @@ Eingaben je Bericht (wie die Endpunkte):
 - **Tag** und **Monat** bekommen nur die Einträge, deren `id` im Monat des Bezugstags liegt.
 - **Woche** bekommt alle Einträge des Falls (die Rechnung filtert selbst auf die ISO-Woche des Bezugstags).
 
-`totalOvertimeMs` des Monatsberichts ist bewusst **nicht** Teil der erwarteten Werte: Die Regel dafür ist offen.
+`totalOvertimeMs` des Monatsberichts ist der gespeicherte Saldo (`storedOvertimeMs`, #535) und Teil der erwarteten Werte.
 
 **Zeitzonen:** Zeitpunkte (`workStart`, `workEnd`, Pausen) sind UTC-Instants auf volle Minuten, der Kalendertag kommt
 aus der `id`. Berichtstage (`start`, `end`, `month`, `days[].date`) liefert das Backend als UTC-Mitternacht; die Clients
