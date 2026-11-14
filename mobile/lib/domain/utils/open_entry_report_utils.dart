@@ -23,6 +23,12 @@ DateTime _dayOf(DateTime d) => DateTime(d.year, d.month, d.day);
 bool isOpenBeforeToday(WorkEntryEntity e, DateTime now) =>
     _isOpenWorkEntry(e) && entryDay(e).isBefore(_dayOf(now));
 
+/// `true`, wenn [e] offen ist und am Tag von [now] liegt (läuft heute). Nur
+/// für solche Einträge rechnet die Anzeige live bis "jetzt"; der Tagesbericht
+/// des Backends kennt sie nur mit Netto 0 (#535).
+bool isOpenToday(WorkEntryEntity e, DateTime now) =>
+    _isOpenWorkEntry(e) && entryDay(e) == _dayOf(now);
+
 /// Netto-Arbeitszeit eines Eintrags für die Reports-Anzeige.
 ///
 /// - abgeschlossen: Ende - Start - Pausen (Pausen auf [Start, Ende] geklemmt)

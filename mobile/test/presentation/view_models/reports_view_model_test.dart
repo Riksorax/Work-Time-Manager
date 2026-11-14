@@ -697,6 +697,38 @@ void main() {
                 profileId: 'p1'))
             .called(1);
       });
+
+      test('Tagesbericht: Soll, geleistet und Überstunden aus der API (#535)',
+          () async {
+        rebuildContainerWithActiveProfile(null);
+        final now = _fixedNow;
+        when(mockWorkRepository.getWorkEntriesForMonth(now.year, now.month))
+            .thenAnswer((_) async => []);
+        when(mockApiClient.getDailyReport(now.year, now.month, now.day,
+                profileId: null))
+            .thenAnswer((_) async => {
+                  'targetMs':
+                      const Duration(hours: 7, minutes: 48).inMilliseconds,
+                  'workedMs': const Duration(hours: 9).inMilliseconds,
+                  'overtimeMs':
+                      const Duration(hours: 1, minutes: 27).inMilliseconds,
+                });
+        when(mockApiClient.getWeeklyReport(now.year, now.month, now.day,
+                profileId: null))
+            .thenAnswer((_) async => {'workDays': 0});
+        when(mockApiClient.getMonthlyReport(now.year, now.month,
+                profileId: null))
+            .thenAnswer((_) async => {'workDays': 0});
+
+        container.read(reportsViewModelProvider.notifier);
+        await Future.delayed(Duration.zero);
+        await Future.delayed(Duration.zero);
+
+        final d = container.read(reportsViewModelProvider).dailyReportState;
+        expect(d.target, const Duration(hours: 7, minutes: 48));
+        expect(d.worked, const Duration(hours: 9));
+        expect(d.overtime, const Duration(hours: 1, minutes: 27));
+      });
     });
 
     group('Lokale Rechnung wie das Backend (#535)', () {
@@ -747,6 +779,10 @@ void main() {
       test('Tagesbericht: Überstunden = netto − Soll', () async {
         final s = await load();
         expect(s.dailyReportState.overtime, const Duration(minutes: 30));
+        // Teil 3: Soll und geleistet stehen ebenfalls im State.
+        expect(s.dailyReportState.target, const Duration(hours: 8));
+        expect(
+            s.dailyReportState.worked, const Duration(hours: 8, minutes: 30));
       });
 
       test('Wochenbericht: Pausen einmal abgezogen, Urlaub mit Tagessoll',

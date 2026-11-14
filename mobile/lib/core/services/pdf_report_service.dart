@@ -77,7 +77,8 @@ class PdfReportService {
       headers: [
         l10n.pdfDateColumn,
         l10n.pdfWeekdayColumn,
-        l10n.pdfWorkTimeColumn
+        // Tageswerte sind brutto (#535).
+        l10n.pdfAttendanceColumn
       ],
       cellAlignments: {
         0: pw.Alignment.centerLeft,
@@ -161,7 +162,8 @@ class PdfReportService {
     final sortedEntries = weeklyWork.entries.toList()
       ..sort((a, b) => a.key.compareTo(b.key));
     return pw.TableHelper.fromTextArray(
-      headers: [l10n.pdfCalendarWeekColumn, l10n.pdfWorkTimeColumn],
+      // Wochenwerte sind brutto (#535).
+      headers: [l10n.pdfCalendarWeekColumn, l10n.pdfAttendanceColumn],
       cellAlignments: {0: pw.Alignment.centerLeft, 1: pw.Alignment.centerRight},
       cellPadding: const pw.EdgeInsets.symmetric(vertical: 4, horizontal: 8),
       data: [
