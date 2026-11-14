@@ -9,7 +9,7 @@ import parityFile from '../../../../../testdata/report-parity/cases.json';
  *
  * Zonen-Regressionstest (`*.tz.spec.ts`): Die Einträge kommen als API-DTOs (`date` = UTC-Mitternacht) und laufen durch
  * den echten Mapper (`ApiClient.fromDto`). Berichtstage werden als Kalendertag (`yyyy-MM-dd`) verglichen: Das Web liefert
- * lokale Mitternacht, das Backend UTC-Mitternacht desselben Tages. `totalOvertimeMs` ist nicht Teil der Fälle.
+ * lokale Mitternacht, das Backend UTC-Mitternacht desselben Tages. `totalOvertimeMs` ist seit #535 (Teil 1b) Teil der Fälle.
  */
 
 interface ReportDayJson { date: string; workedMs: number }
@@ -42,6 +42,7 @@ interface ParityCase {
       avgPerDayMs: number;
       avgPerWeekMs: number;
       monthlyOvertimeMs: number;
+      totalOvertimeMs: number;
       weeks: { weekNumber: number; totalWorkedMs: number }[];
       days: ReportDayJson[];
     };
@@ -103,7 +104,7 @@ describe('Report-Parität Web ↔ Backend (#535, testdata/report-parity)', () =>
         });
       });
 
-      it('Monatsbericht (ohne totalOvertimeMs)', async () => {
+      it('Monatsbericht', async () => {
         const r = calculateMonthlyReport(await monthEntries(), ref(), settingsOf(c), c.storedOvertimeMs);
         const e = c.expected.monthly;
         expect({
@@ -114,6 +115,7 @@ describe('Report-Parität Web ↔ Backend (#535, testdata/report-parity)', () =>
           avgPerDayMs: r.avgPerDay,
           avgPerWeekMs: r.avgPerWeek,
           monthlyOvertimeMs: r.monthlyOvertime,
+          totalOvertimeMs: r.totalOvertime,
           weeks: r.weeks.map(w => ({ weekNumber: w.weekNumber, totalWorkedMs: w.totalWorked })),
           days: r.days.map(d => ({ date: toDateKey(d.date), workedMs: d.worked })),
         }).toEqual({

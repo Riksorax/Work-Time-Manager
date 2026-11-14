@@ -68,11 +68,12 @@ export function calculateDailyStat(
   settings: UserSettings,
 ): DailyStat {
   const daily = dailyTargetMs(settings);
-
-  // Effektives Tagessoll (0 wenn der Wochentag kein Vertrags-Arbeitstag ist)
-  const target = settings.workdays.includes(isoWeekday(date)) ? daily : 0;
-
   const dayEntries = monthEntries.filter(e => isSameDayRc(entryDay(e), date));
+
+  // Effektives Tagessoll: an Vertrags-Arbeitstagen; Urlaub/Krank/Feiertag bringen ihr Soll
+  // an jedem Tag mit, auch an einem freien Tag (#535). Sonst 0.
+  const hasAbsence = dayEntries.some(e => e.type !== WorkEntryType.Work);
+  const target = settings.workdays.includes(isoWeekday(date)) || hasAbsence ? daily : 0;
   let worked = 0;
   let manualMs = 0;
 
@@ -105,6 +106,7 @@ export function calculateWeeklyReport(
   let totalBreaks = 0;
   let manualMs = 0;
   const workDaySet = new Set<string>();
+  const absenceDaySet = new Set<string>();
   const dayMap = new Map<string, number>();
 
   for (const entry of weekEntries) {
@@ -117,6 +119,7 @@ export function calculateWeeklyReport(
       // Urlaub/Krank/Feiertag zählen als voller Arbeitstag
       worked = daily;
       workDaySet.add(key);
+      absenceDaySet.add(key);
     } else {
       // Bruttozeit (Start bis Ende), Pausen separat erfassen
       breaks = sumBreakMs(entry.breaks);
@@ -132,7 +135,9 @@ export function calculateWeeklyReport(
     dayMap.set(key, (dayMap.get(key) ?? 0) + worked);
   }
 
-  const effectiveDays = [...workDaySet].filter(k => settings.workdays.includes(isoWeekday(keyToDate(k)))).length;
+  // Soll: Arbeitstage an Vertrags-Wochentagen und jeder Abwesenheitstag (#535), jeder Tag einmal
+  const effectiveDays = [...workDaySet]
+    .filter(k => absenceDaySet.has(k) || settings.workdays.includes(isoWeekday(keyToDate(k)))).length;
   const weekTarget    = effectiveDays * daily;
   const netWork       = totalWorked - totalBreaks;
   const overtime      = netWork - weekTarget + manualMs;
@@ -167,6 +172,7 @@ export function calculateMonthlyReport(
   const weekWorkDays = new Map<number, Set<string>>();
   const weekTotals   = new Map<number, number>();
   const dayMap       = new Map<string, number>();
+  const absenceDays  = new Set<string>();
 
   let totalWorked = 0;
   let totalBreaks = 0;
@@ -184,6 +190,7 @@ export function calculateMonthlyReport(
     if (entry.type !== WorkEntryType.Work) {
       worked = daily;
       weekWorkDays.get(weekNum)!.add(key);
+      absenceDays.add(key);
     } else {
       // Bruttozeit (Start bis Ende), Pausen separat erfassen
       breaks = sumBreakMs(entry.breaks);
@@ -200,16 +207,18 @@ export function calculateMonthlyReport(
     weekTotals.set(weekNum, (weekTotals.get(weekNum) ?? 0) + worked);
   }
 
-  // Effektive Arbeitstage: nur Tage, deren Wochentag zu den Vertrags-Arbeitstagen gehört
+  // Effektive Soll-Tage: Arbeitstage an Vertrags-Wochentagen und jeder Abwesenheitstag (#535)
   let effectiveTotalWorkDays = 0;
   for (const [, daySet] of weekWorkDays) {
-    effectiveTotalWorkDays += [...daySet].filter(k => settings.workdays.includes(isoWeekday(keyToDate(k)))).length;
+    effectiveTotalWorkDays += [...daySet]
+      .filter(k => absenceDays.has(k) || settings.workdays.includes(isoWeekday(keyToDate(k)))).length;
   }
 
   const monthTarget       = effectiveTotalWorkDays * daily;
   const netWork           = totalWorked - totalBreaks;
   const monthlyOvertime   = netWork - monthTarget + manualMs;
-  const totalOvertime     = monthlyOvertime + storedOvertimeMs;
+  // Gesamt = gespeicherter Gleitzeit-Saldo; er enthält den laufenden Monat schon (#535).
+  const totalOvertime     = storedOvertimeMs;
 
   const workDays  = Array.from(weekWorkDays.values()).reduce((s, set) => s + set.size, 0);
   const numWeeks  = weekWorkDays.size;
