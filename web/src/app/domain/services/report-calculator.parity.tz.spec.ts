@@ -121,6 +121,8 @@ describe('Report-Parität Web ↔ Backend (#535, testdata/report-parity)', () =>
         }).toEqual({
           ...e,
           month: dayOf(e.month),
+          // netWorkedMs (je Woche/Tag) wird mit #551 Web/Mobile aktiviert; bis dahin bewusst ignoriert.
+          weeks: e.weeks.map(w => ({ weekNumber: w.weekNumber, totalWorkedMs: w.totalWorkedMs })),
           days: e.days.map(d => ({ date: dayOf(d.date), workedMs: d.workedMs })),
         });
       });

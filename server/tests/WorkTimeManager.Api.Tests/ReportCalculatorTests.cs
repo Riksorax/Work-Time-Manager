@@ -555,4 +555,202 @@ public class ReportCalculatorTests
         Assert.Contains("\"months\":[{\"month\":1,\"vacationDays\":0,\"sickDays\":0}", json);
         Assert.Contains("\"vacationDaysRemaining\":28", json);
     }
+
+    // ─── Netto je Tag und Woche (#551) ───────────────────────────────────────
+
+    private const long Min = 60_000L;
+    private static readonly DateOnly June1 = new(2026, 6, 1);
+
+    private static DateTimeOffset At(int month, int day, int hour, int minute = 0) =>
+        new(2026, month, day, hour, minute, 0, TimeSpan.Zero);
+
+    private static BreakDto Break(int month, int day, int hour, int minute, int lengthMinutes, bool open = false) =>
+        new()
+        {
+            Id = $"b{hour}{minute}",
+            Start = At(month, day, hour, minute),
+            End = open ? null : At(month, day, hour, minute).AddMinutes(lengthMinutes),
+        };
+
+    private static WorkEntryDto Entry(int month, int day, int? startHour, int? endHour, params BreakDto[] breaks) =>
+        new()
+        {
+            Id = $"2026-{month:D2}-{day:D2}",
+            Date = At(month, day, 0),
+            WorkStart = startHour is null ? null : At(month, day, startHour.Value),
+            WorkEnd = endHour is null ? null : At(month, day, endHour.Value),
+            Type = "work",
+            Breaks = breaks,
+        };
+
+    private static WorkEntryDto Absence(int month, int day, string type) =>
+        new() { Id = $"2026-{month:D2}-{day:D2}", Date = At(month, day, 0), Type = type };
+
+    /// <summary>Gemischte Juni-Daten: Pausen, offene Pause, offener Eintrag, mehrere Einträge je Tag, Abwesenheiten.</summary>
+    private static List<WorkEntryDto> MixedJune() => new()
+    {
+        Entry(6, 1, 8, 16, Break(6, 1, 12, 0, 30)),
+        Entry(6, 2, 8, 12, Break(6, 2, 10, 0, 15), Break(6, 2, 11, 0, 10)),
+        Entry(6, 2, 13, 17, Break(6, 2, 15, 0, 20)),
+        Entry(6, 3, 8, 16, Break(6, 3, 12, 0, 30, open: true)),
+        Entry(6, 4, 9, null, Break(6, 4, 12, 0, 45)),
+        Absence(6, 5, "vacation"),
+        Absence(6, 6, "sick"),
+        Absence(6, 7, "holiday"),
+        Entry(6, 8, 8, 17, Break(6, 8, 12, 0, 60)),
+        Entry(6, 30, 8, 16, Break(6, 30, 12, 0, 30)),
+    };
+
+    [Fact]
+    public void WeeklyReport_NetPerDay_OneBreak()
+    {
+        var r = ReportCalculator.CalculateWeeklyReport(
+            new[] { WorkDay(5, 8, 16, breakMinutes: 30) }, new DateOnly(2026, 6, 5), Settings);
+
+        var day = Assert.Single(r.Days);
+        Assert.Equal(EightHoursMs, day.WorkedMs);
+        Assert.Equal(EightHoursMs - 30 * Min, day.NetWorkedMs);
+    }
+
+    [Fact]
+    public void WeeklyReport_NetPerDay_MultipleBreaksAndEntriesOnSameDay()
+    {
+        var entries = new[]
+        {
+            Entry(6, 2, 8, 12, Break(6, 2, 10, 0, 15), Break(6, 2, 11, 0, 10)),
+            Entry(6, 2, 13, 17, Break(6, 2, 15, 0, 20)),
+        };
+        var r = ReportCalculator.CalculateWeeklyReport(entries, new DateOnly(2026, 6, 2), Settings);
+
+        var day = Assert.Single(r.Days);
+        Assert.Equal(8 * 60 * Min, day.WorkedMs);
+        Assert.Equal((8 * 60 - 45) * Min, day.NetWorkedMs); // 15 + 10 + 20 min Pause
+    }
+
+    [Fact]
+    public void WeeklyReport_NetPerDay_OpenBreakDoesNotCount()
+    {
+        var entries = new[] { Entry(6, 3, 8, 16, Break(6, 3, 12, 0, 30, open: true)) };
+        var r = ReportCalculator.CalculateWeeklyReport(entries, new DateOnly(2026, 6, 3), Settings);
+
+        Assert.Equal(EightHoursMs, r.Days[0].NetWorkedMs);
+        Assert.Equal(0, r.TotalBreaksMs);
+    }
+
+    [Fact]
+    public void WeeklyReport_NetPerDay_EntryWithoutEndAndClosedBreak_IsNegative_NotClamped()
+    {
+        var entries = new[] { Entry(6, 4, 9, null, Break(6, 4, 12, 0, 45)) };
+        var r = ReportCalculator.CalculateWeeklyReport(entries, new DateOnly(2026, 6, 4), Settings);
+
+        Assert.Equal(0, r.Days[0].WorkedMs);
+        Assert.Equal(-45 * Min, r.Days[0].NetWorkedMs);
+        Assert.Equal(r.TotalWorkedMs - r.TotalBreaksMs, r.Days.Sum(d => d.NetWorkedMs));
+    }
+
+    [Theory]
+    [InlineData("vacation")]
+    [InlineData("sick")]
+    [InlineData("holiday")]
+    public void WeeklyReport_NetPerDay_AbsenceEqualsDailyTarget(string type)
+    {
+        var r = ReportCalculator.CalculateWeeklyReport(
+            new[] { Absence(6, 3, type) }, new DateOnly(2026, 6, 3), Settings);
+
+        Assert.Equal(EightHoursMs, r.Days[0].WorkedMs);
+        Assert.Equal(EightHoursMs, r.Days[0].NetWorkedMs);
+    }
+
+    [Fact]
+    public void MonthlyReport_NetPerDay_WithBreaks()
+    {
+        var entries = new[] { WorkDay(5, 8, 16, breakMinutes: 30), WorkDay(8, 8, 17, breakMinutes: 60) };
+        var r = ReportCalculator.CalculateMonthlyReport(entries, June1, Settings, 0);
+
+        Assert.Equal(new[] { EightHoursMs - 30 * Min, 9 * 3_600_000L - 60 * Min }, r.Days.Select(d => d.NetWorkedMs));
+    }
+
+    [Fact]
+    public void MonthlyReport_NetPerWeek_SumsDaysOfThatWeek()
+    {
+        var entries = new[] { WorkDay(5, 8, 16, breakMinutes: 30), WorkDay(8, 8, 17, breakMinutes: 60) };
+        var r = ReportCalculator.CalculateMonthlyReport(entries, June1, Settings, 0);
+
+        Assert.Equal(2, r.Weeks.Count);
+        Assert.Equal(EightHoursMs, r.Weeks[0].TotalWorkedMs);
+        Assert.Equal(EightHoursMs - 30 * Min, r.Weeks[0].NetWorkedMs);
+        Assert.Equal(9 * 3_600_000L, r.Weeks[1].TotalWorkedMs);
+        Assert.Equal(9 * 3_600_000L - 60 * Min, r.Weeks[1].NetWorkedMs);
+    }
+
+    [Fact]
+    public void MonthlyReport_NetPerWeek_WeekAcrossMonthBoundary_OnlyDaysOfMonth()
+    {
+        // KW 27 = 29.06.-05.07.2026; der Julibericht bekommt nur Juli-Einträge, die Woche zählt nur den 1. und 2.7.
+        var entries = new[]
+        {
+            Entry(7, 1, 8, 16, Break(7, 1, 12, 0, 30)),
+            Entry(7, 2, 8, 12, Break(7, 2, 10, 0, 15)),
+            Entry(7, 6, 8, 16, Break(7, 6, 12, 0, 30)),
+        };
+        var r = ReportCalculator.CalculateMonthlyReport(entries, new DateOnly(2026, 7, 1), Settings, 0);
+
+        var kw27 = r.Weeks.Single(w => w.WeekNumber == 27);
+        Assert.Equal(12 * 3_600_000L, kw27.TotalWorkedMs);
+        Assert.Equal(12 * 3_600_000L - 45 * Min, kw27.NetWorkedMs);
+        var kw28 = r.Weeks.Single(w => w.WeekNumber == 28);
+        Assert.Equal(EightHoursMs - 30 * Min, kw28.NetWorkedMs);
+    }
+
+    [Fact]
+    public void Invariant_Weekly_SumOfDayNet_EqualsTotalMinusBreaks()
+    {
+        var entries = MixedJune();
+        foreach (var day in new[] { 1, 3, 4, 8, 30 })
+        {
+            var r = ReportCalculator.CalculateWeeklyReport(entries, new DateOnly(2026, 6, day), Settings);
+            Assert.Equal(r.TotalWorkedMs - r.TotalBreaksMs, r.Days.Sum(d => d.NetWorkedMs));
+        }
+
+        // Die Woche vom 1. bis 7.6. enthält Pausen, einen negativen Tag und Abwesenheiten: Netto weicht von Brutto ab.
+        var week = ReportCalculator.CalculateWeeklyReport(entries, new DateOnly(2026, 6, 3), Settings);
+        Assert.True(week.TotalBreaksMs > 0);
+    }
+
+    [Fact]
+    public void Invariant_Monthly_SumOfDayAndWeekNet_EqualsTotalMinusBreaks()
+    {
+        var r = ReportCalculator.CalculateMonthlyReport(MixedJune(), June1, Settings, 0);
+        var expected = r.TotalWorkedMs - r.TotalBreaksMs;
+
+        Assert.True(r.TotalBreaksMs > 0);
+        Assert.Equal(expected, r.Days.Sum(d => d.NetWorkedMs));
+        Assert.Equal(expected, r.Weeks.Sum(w => w.NetWorkedMs));
+        Assert.Equal(r.TotalWorkedMs, r.Weeks.Sum(w => w.TotalWorkedMs));
+    }
+
+    [Fact]
+    public void Invariant_PerDay_NetNeverExceedsGross()
+    {
+        var m = ReportCalculator.CalculateMonthlyReport(MixedJune(), June1, Settings, 0);
+        Assert.All(m.Days, d => Assert.True(d.NetWorkedMs <= d.WorkedMs));
+        var w = ReportCalculator.CalculateWeeklyReport(MixedJune(), new DateOnly(2026, 6, 2), Settings);
+        Assert.All(w.Days, d => Assert.True(d.NetWorkedMs <= d.WorkedMs));
+    }
+
+    [Fact]
+    public void Json_NetWorkedMsPresent_ExistingFieldNamesUnchanged()
+    {
+        var options = new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web);
+        var entries = new[] { WorkDay(5, 8, 16, breakMinutes: 30) };
+
+        var weekly = System.Text.Json.JsonSerializer.Serialize(
+            ReportCalculator.CalculateWeeklyReport(entries, new DateOnly(2026, 6, 5), Settings), options);
+        Assert.Contains("\"days\":[{\"date\":\"2026-06-05T00:00:00+00:00\",\"workedMs\":28800000,\"netWorkedMs\":27000000}]", weekly);
+
+        var monthly = System.Text.Json.JsonSerializer.Serialize(
+            ReportCalculator.CalculateMonthlyReport(entries, June1, Settings, 0), options);
+        Assert.Contains("\"weeks\":[{\"weekNumber\":23,\"totalWorkedMs\":28800000,\"netWorkedMs\":27000000}]", monthly);
+        Assert.Contains("\"days\":[{\"date\":\"2026-06-05T00:00:00+00:00\",\"workedMs\":28800000,\"netWorkedMs\":27000000}]", monthly);
+    }
 }

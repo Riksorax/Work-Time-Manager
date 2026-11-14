@@ -127,6 +127,15 @@ void main() {
           'month': _dayOf(e['month']),
           'avgPerDayMs': (e['avgPerDayMs'] as num).toDouble(),
           'avgPerWeekMs': (e['avgPerWeekMs'] as num).toDouble(),
+          // netWorkedMs (je Woche/Tag) wird mit #551 Web/Mobile aktiviert; bis dahin bewusst ignoriert.
+          'weeks': [
+            for (final w
+                in (e['weeks'] as List<dynamic>).cast<Map<String, dynamic>>())
+              {
+                'weekNumber': w['weekNumber'],
+                'totalWorkedMs': w['totalWorkedMs'],
+              },
+          ],
           'days': _expectedDays(e['days']),
         });
       });

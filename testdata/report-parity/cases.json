@@ -80,23 +80,28 @@
           "days": [
             {
               "date": "2026-06-01T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-06-02T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-06-03T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-06-04T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-06-05T00:00:00+00:00",
-              "workedMs": 32400000
+              "workedMs": 32400000,
+              "netWorkedMs": 32400000
             }
           ]
         },
@@ -112,29 +117,35 @@
           "weeks": [
             {
               "weekNumber": 23,
-              "totalWorkedMs": 147600000
+              "totalWorkedMs": 147600000,
+              "netWorkedMs": 147600000
             }
           ],
           "days": [
             {
               "date": "2026-06-01T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-06-02T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-06-03T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-06-04T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-06-05T00:00:00+00:00",
-              "workedMs": 32400000
+              "workedMs": 32400000,
+              "netWorkedMs": 32400000
             }
           ]
         }
@@ -216,11 +227,13 @@
           "days": [
             {
               "date": "2026-06-01T00:00:00+00:00",
-              "workedMs": 31500000
+              "workedMs": 31500000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-06-02T00:00:00+00:00",
-              "workedMs": 21600000
+              "workedMs": 21600000,
+              "netWorkedMs": 21600000
             }
           ]
         },
@@ -236,17 +249,20 @@
           "weeks": [
             {
               "weekNumber": 23,
-              "totalWorkedMs": 53100000
+              "totalWorkedMs": 53100000,
+              "netWorkedMs": 50400000
             }
           ],
           "days": [
             {
               "date": "2026-06-01T00:00:00+00:00",
-              "workedMs": 31500000
+              "workedMs": 31500000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-06-02T00:00:00+00:00",
-              "workedMs": 21600000
+              "workedMs": 21600000,
+              "netWorkedMs": 21600000
             }
           ]
         }
@@ -305,11 +321,13 @@
           "days": [
             {
               "date": "2026-06-08T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-06-09T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             }
           ]
         },
@@ -325,17 +343,20 @@
           "weeks": [
             {
               "weekNumber": 24,
-              "totalWorkedMs": 57600000
+              "totalWorkedMs": 57600000,
+              "netWorkedMs": 57600000
             }
           ],
           "days": [
             {
               "date": "2026-06-08T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-06-09T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             }
           ]
         }
@@ -412,19 +433,23 @@
           "days": [
             {
               "date": "2026-06-15T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-06-16T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-06-17T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-06-18T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             }
           ]
         },
@@ -440,25 +465,30 @@
           "weeks": [
             {
               "weekNumber": 25,
-              "totalWorkedMs": 115200000
+              "totalWorkedMs": 115200000,
+              "netWorkedMs": 115200000
             }
           ],
           "days": [
             {
               "date": "2026-06-15T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-06-16T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-06-17T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-06-18T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             }
           ]
         }
@@ -517,11 +547,13 @@
           "days": [
             {
               "date": "2026-06-19T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-06-20T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             }
           ]
         },
@@ -537,17 +569,20 @@
           "weeks": [
             {
               "weekNumber": 25,
-              "totalWorkedMs": 57600000
+              "totalWorkedMs": 57600000,
+              "netWorkedMs": 57600000
             }
           ],
           "days": [
             {
               "date": "2026-06-19T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-06-20T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             }
           ]
         }
@@ -606,11 +641,13 @@
           "days": [
             {
               "date": "2026-06-19T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-06-21T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             }
           ]
         },
@@ -626,17 +663,20 @@
           "weeks": [
             {
               "weekNumber": 25,
-              "totalWorkedMs": 57600000
+              "totalWorkedMs": 57600000,
+              "netWorkedMs": 57600000
             }
           ],
           "days": [
             {
               "date": "2026-06-19T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-06-21T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             }
           ]
         }
@@ -695,11 +735,13 @@
           "days": [
             {
               "date": "2026-06-26T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-06-27T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             }
           ]
         },
@@ -715,17 +757,20 @@
           "weeks": [
             {
               "weekNumber": 26,
-              "totalWorkedMs": 57600000
+              "totalWorkedMs": 57600000,
+              "netWorkedMs": 57600000
             }
           ],
           "days": [
             {
               "date": "2026-06-26T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-06-27T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             }
           ]
         }
@@ -784,11 +829,13 @@
           "days": [
             {
               "date": "2026-06-05T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-06-06T00:00:00+00:00",
-              "workedMs": 14400000
+              "workedMs": 14400000,
+              "netWorkedMs": 14400000
             }
           ]
         },
@@ -804,17 +851,20 @@
           "weeks": [
             {
               "weekNumber": 23,
-              "totalWorkedMs": 43200000
+              "totalWorkedMs": 43200000,
+              "netWorkedMs": 43200000
             }
           ],
           "days": [
             {
               "date": "2026-06-05T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-06-06T00:00:00+00:00",
-              "workedMs": 14400000
+              "workedMs": 14400000,
+              "netWorkedMs": 14400000
             }
           ]
         }
@@ -881,11 +931,13 @@
           "days": [
             {
               "date": "2026-06-09T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-06-10T00:00:00+00:00",
-              "workedMs": 0
+              "workedMs": 0,
+              "netWorkedMs": -1800000
             }
           ]
         },
@@ -901,17 +953,20 @@
           "weeks": [
             {
               "weekNumber": 24,
-              "totalWorkedMs": 28800000
+              "totalWorkedMs": 28800000,
+              "netWorkedMs": 27000000
             }
           ],
           "days": [
             {
               "date": "2026-06-09T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-06-10T00:00:00+00:00",
-              "workedMs": 0
+              "workedMs": 0,
+              "netWorkedMs": -1800000
             }
           ]
         }
@@ -997,23 +1052,28 @@
           "days": [
             {
               "date": "2026-06-29T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-06-30T00:00:00+00:00",
-              "workedMs": 30600000
+              "workedMs": 30600000,
+              "netWorkedMs": 30600000
             },
             {
               "date": "2026-07-01T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-07-02T00:00:00+00:00",
-              "workedMs": 32400000
+              "workedMs": 32400000,
+              "netWorkedMs": 32400000
             },
             {
               "date": "2026-07-03T00:00:00+00:00",
-              "workedMs": 25200000
+              "workedMs": 25200000,
+              "netWorkedMs": 25200000
             }
           ]
         },
@@ -1029,21 +1089,25 @@
           "weeks": [
             {
               "weekNumber": 27,
-              "totalWorkedMs": 86400000
+              "totalWorkedMs": 86400000,
+              "netWorkedMs": 86400000
             }
           ],
           "days": [
             {
               "date": "2026-07-01T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-07-02T00:00:00+00:00",
-              "workedMs": 32400000
+              "workedMs": 32400000,
+              "netWorkedMs": 32400000
             },
             {
               "date": "2026-07-03T00:00:00+00:00",
-              "workedMs": 25200000
+              "workedMs": 25200000,
+              "netWorkedMs": 25200000
             }
           ]
         }
@@ -1129,23 +1193,28 @@
           "days": [
             {
               "date": "2026-06-29T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-06-30T00:00:00+00:00",
-              "workedMs": 30600000
+              "workedMs": 30600000,
+              "netWorkedMs": 30600000
             },
             {
               "date": "2026-07-01T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-07-02T00:00:00+00:00",
-              "workedMs": 32400000
+              "workedMs": 32400000,
+              "netWorkedMs": 32400000
             },
             {
               "date": "2026-07-03T00:00:00+00:00",
-              "workedMs": 25200000
+              "workedMs": 25200000,
+              "netWorkedMs": 25200000
             }
           ]
         },
@@ -1161,17 +1230,20 @@
           "weeks": [
             {
               "weekNumber": 27,
-              "totalWorkedMs": 59400000
+              "totalWorkedMs": 59400000,
+              "netWorkedMs": 59400000
             }
           ],
           "days": [
             {
               "date": "2026-06-29T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-06-30T00:00:00+00:00",
-              "workedMs": 30600000
+              "workedMs": 30600000,
+              "netWorkedMs": 30600000
             }
           ]
         }
@@ -1283,23 +1355,28 @@
           "days": [
             {
               "date": "2026-12-28T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-12-29T00:00:00+00:00",
-              "workedMs": 30600000
+              "workedMs": 30600000,
+              "netWorkedMs": 30600000
             },
             {
               "date": "2026-12-30T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 27000000
             },
             {
               "date": "2026-12-31T00:00:00+00:00",
-              "workedMs": 14400000
+              "workedMs": 14400000,
+              "netWorkedMs": 14400000
             },
             {
               "date": "2027-01-01T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             }
           ]
         },
@@ -1315,33 +1392,40 @@
           "weeks": [
             {
               "weekNumber": 49,
-              "totalWorkedMs": 28800000
+              "totalWorkedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "weekNumber": 53,
-              "totalWorkedMs": 102600000
+              "totalWorkedMs": 102600000,
+              "netWorkedMs": 100800000
             }
           ],
           "days": [
             {
               "date": "2026-12-01T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-12-28T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-12-29T00:00:00+00:00",
-              "workedMs": 30600000
+              "workedMs": 30600000,
+              "netWorkedMs": 30600000
             },
             {
               "date": "2026-12-30T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 27000000
             },
             {
               "date": "2026-12-31T00:00:00+00:00",
-              "workedMs": 14400000
+              "workedMs": 14400000,
+              "netWorkedMs": 14400000
             }
           ]
         }
@@ -1453,23 +1537,28 @@
           "days": [
             {
               "date": "2026-12-28T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-12-29T00:00:00+00:00",
-              "workedMs": 30600000
+              "workedMs": 30600000,
+              "netWorkedMs": 30600000
             },
             {
               "date": "2026-12-30T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 27000000
             },
             {
               "date": "2026-12-31T00:00:00+00:00",
-              "workedMs": 14400000
+              "workedMs": 14400000,
+              "netWorkedMs": 14400000
             },
             {
               "date": "2027-01-01T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             }
           ]
         },
@@ -1485,21 +1574,25 @@
           "weeks": [
             {
               "weekNumber": 1,
-              "totalWorkedMs": 28800000
+              "totalWorkedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "weekNumber": 53,
-              "totalWorkedMs": 28800000
+              "totalWorkedMs": 28800000,
+              "netWorkedMs": 28800000
             }
           ],
           "days": [
             {
               "date": "2027-01-01T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2027-01-04T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             }
           ]
         }
@@ -1603,23 +1696,28 @@
           "days": [
             {
               "date": "2025-12-29T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2025-12-30T00:00:00+00:00",
-              "workedMs": 32400000
+              "workedMs": 32400000,
+              "netWorkedMs": 32400000
             },
             {
               "date": "2025-12-31T00:00:00+00:00",
-              "workedMs": 14400000
+              "workedMs": 14400000,
+              "netWorkedMs": 14400000
             },
             {
               "date": "2026-01-01T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-01-02T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             }
           ]
         },
@@ -1635,29 +1733,35 @@
           "weeks": [
             {
               "weekNumber": 1,
-              "totalWorkedMs": 75600000
+              "totalWorkedMs": 75600000,
+              "netWorkedMs": 75600000
             },
             {
               "weekNumber": 49,
-              "totalWorkedMs": 28800000
+              "totalWorkedMs": 28800000,
+              "netWorkedMs": 28800000
             }
           ],
           "days": [
             {
               "date": "2025-12-01T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2025-12-29T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2025-12-30T00:00:00+00:00",
-              "workedMs": 32400000
+              "workedMs": 32400000,
+              "netWorkedMs": 32400000
             },
             {
               "date": "2025-12-31T00:00:00+00:00",
-              "workedMs": 14400000
+              "workedMs": 14400000,
+              "netWorkedMs": 14400000
             }
           ]
         }
@@ -1761,23 +1865,28 @@
           "days": [
             {
               "date": "2025-12-29T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2025-12-30T00:00:00+00:00",
-              "workedMs": 32400000
+              "workedMs": 32400000,
+              "netWorkedMs": 32400000
             },
             {
               "date": "2025-12-31T00:00:00+00:00",
-              "workedMs": 14400000
+              "workedMs": 14400000,
+              "netWorkedMs": 14400000
             },
             {
               "date": "2026-01-01T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-01-02T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             }
           ]
         },
@@ -1793,25 +1902,30 @@
           "weeks": [
             {
               "weekNumber": 1,
-              "totalWorkedMs": 57600000
+              "totalWorkedMs": 57600000,
+              "netWorkedMs": 57600000
             },
             {
               "weekNumber": 2,
-              "totalWorkedMs": 28800000
+              "totalWorkedMs": 28800000,
+              "netWorkedMs": 28800000
             }
           ],
           "days": [
             {
               "date": "2026-01-01T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-01-02T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-01-05T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             }
           ]
         }
@@ -1881,15 +1995,18 @@
           "days": [
             {
               "date": "2026-06-01T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-06-06T00:00:00+00:00",
-              "workedMs": 20580000
+              "workedMs": 20580000,
+              "netWorkedMs": 20580000
             },
             {
               "date": "2026-06-07T00:00:00+00:00",
-              "workedMs": 10800000
+              "workedMs": 10800000,
+              "netWorkedMs": 10800000
             }
           ]
         },
@@ -1905,21 +2022,25 @@
           "weeks": [
             {
               "weekNumber": 23,
-              "totalWorkedMs": 60180000
+              "totalWorkedMs": 60180000,
+              "netWorkedMs": 60180000
             }
           ],
           "days": [
             {
               "date": "2026-06-01T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-06-06T00:00:00+00:00",
-              "workedMs": 20580000
+              "workedMs": 20580000,
+              "netWorkedMs": 20580000
             },
             {
               "date": "2026-06-07T00:00:00+00:00",
-              "workedMs": 10800000
+              "workedMs": 10800000,
+              "netWorkedMs": 10800000
             }
           ]
         }
@@ -2002,19 +2123,23 @@
           "days": [
             {
               "date": "2026-06-08T00:00:00+00:00",
-              "workedMs": 24000000
+              "workedMs": 24000000,
+              "netWorkedMs": 24000000
             },
             {
               "date": "2026-06-09T00:00:00+00:00",
-              "workedMs": 14400000
+              "workedMs": 14400000,
+              "netWorkedMs": 14400000
             },
             {
               "date": "2026-06-10T00:00:00+00:00",
-              "workedMs": 24000000
+              "workedMs": 24000000,
+              "netWorkedMs": 24000000
             },
             {
               "date": "2026-06-12T00:00:00+00:00",
-              "workedMs": 25200000
+              "workedMs": 25200000,
+              "netWorkedMs": 23400000
             }
           ]
         },
@@ -2030,25 +2155,30 @@
           "weeks": [
             {
               "weekNumber": 24,
-              "totalWorkedMs": 87600000
+              "totalWorkedMs": 87600000,
+              "netWorkedMs": 85800000
             }
           ],
           "days": [
             {
               "date": "2026-06-08T00:00:00+00:00",
-              "workedMs": 24000000
+              "workedMs": 24000000,
+              "netWorkedMs": 24000000
             },
             {
               "date": "2026-06-09T00:00:00+00:00",
-              "workedMs": 14400000
+              "workedMs": 14400000,
+              "netWorkedMs": 14400000
             },
             {
               "date": "2026-06-10T00:00:00+00:00",
-              "workedMs": 24000000
+              "workedMs": 24000000,
+              "netWorkedMs": 24000000
             },
             {
               "date": "2026-06-12T00:00:00+00:00",
-              "workedMs": 25200000
+              "workedMs": 25200000,
+              "netWorkedMs": 23400000
             }
           ]
         }
@@ -2118,15 +2248,18 @@
           "days": [
             {
               "date": "2026-06-15T00:00:00+00:00",
-              "workedMs": 20040000
+              "workedMs": 20040000,
+              "netWorkedMs": 20040000
             },
             {
               "date": "2026-06-16T00:00:00+00:00",
-              "workedMs": 21600000
+              "workedMs": 21600000,
+              "netWorkedMs": 21600000
             },
             {
               "date": "2026-06-17T00:00:00+00:00",
-              "workedMs": 20040000
+              "workedMs": 20040000,
+              "netWorkedMs": 20040000
             }
           ]
         },
@@ -2142,21 +2275,25 @@
           "weeks": [
             {
               "weekNumber": 25,
-              "totalWorkedMs": 61680000
+              "totalWorkedMs": 61680000,
+              "netWorkedMs": 61680000
             }
           ],
           "days": [
             {
               "date": "2026-06-15T00:00:00+00:00",
-              "workedMs": 20040000
+              "workedMs": 20040000,
+              "netWorkedMs": 20040000
             },
             {
               "date": "2026-06-16T00:00:00+00:00",
-              "workedMs": 21600000
+              "workedMs": 21600000,
+              "netWorkedMs": 21600000
             },
             {
               "date": "2026-06-17T00:00:00+00:00",
-              "workedMs": 20040000
+              "workedMs": 20040000,
+              "netWorkedMs": 20040000
             }
           ]
         }
@@ -2214,11 +2351,13 @@
           "days": [
             {
               "date": "2026-06-22T00:00:00+00:00",
-              "workedMs": 33780000
+              "workedMs": 33780000,
+              "netWorkedMs": 33780000
             },
             {
               "date": "2026-06-23T00:00:00+00:00",
-              "workedMs": 33780000
+              "workedMs": 33780000,
+              "netWorkedMs": 33780000
             }
           ]
         },
@@ -2234,17 +2373,20 @@
           "weeks": [
             {
               "weekNumber": 26,
-              "totalWorkedMs": 67560000
+              "totalWorkedMs": 67560000,
+              "netWorkedMs": 67560000
             }
           ],
           "days": [
             {
               "date": "2026-06-22T00:00:00+00:00",
-              "workedMs": 33780000
+              "workedMs": 33780000,
+              "netWorkedMs": 33780000
             },
             {
               "date": "2026-06-23T00:00:00+00:00",
-              "workedMs": 33780000
+              "workedMs": 33780000,
+              "netWorkedMs": 33780000
             }
           ]
         }
@@ -2297,11 +2439,13 @@
           "days": [
             {
               "date": "2026-06-01T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-06-02T00:00:00+00:00",
-              "workedMs": 0
+              "workedMs": 0,
+              "netWorkedMs": 0
             }
           ]
         },
@@ -2317,17 +2461,20 @@
           "weeks": [
             {
               "weekNumber": 23,
-              "totalWorkedMs": 28800000
+              "totalWorkedMs": 28800000,
+              "netWorkedMs": 28800000
             }
           ],
           "days": [
             {
               "date": "2026-06-01T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             },
             {
               "date": "2026-06-02T00:00:00+00:00",
-              "workedMs": 0
+              "workedMs": 0,
+              "netWorkedMs": 0
             }
           ]
         }
@@ -2433,11 +2580,13 @@
           "days": [
             {
               "date": "2026-06-09T00:00:00+00:00",
-              "workedMs": 32400000
+              "workedMs": 32400000,
+              "netWorkedMs": 32400000
             },
             {
               "date": "2026-06-10T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             }
           ]
         },
@@ -2453,17 +2602,20 @@
           "weeks": [
             {
               "weekNumber": 24,
-              "totalWorkedMs": 61200000
+              "totalWorkedMs": 61200000,
+              "netWorkedMs": 61200000
             }
           ],
           "days": [
             {
               "date": "2026-06-09T00:00:00+00:00",
-              "workedMs": 32400000
+              "workedMs": 32400000,
+              "netWorkedMs": 32400000
             },
             {
               "date": "2026-06-10T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             }
           ]
         }
@@ -2522,11 +2674,13 @@
           "days": [
             {
               "date": "2026-06-09T00:00:00+00:00",
-              "workedMs": 25200000
+              "workedMs": 25200000,
+              "netWorkedMs": 25200000
             },
             {
               "date": "2026-06-10T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             }
           ]
         },
@@ -2542,17 +2696,20 @@
           "weeks": [
             {
               "weekNumber": 24,
-              "totalWorkedMs": 54000000
+              "totalWorkedMs": 54000000,
+              "netWorkedMs": 54000000
             }
           ],
           "days": [
             {
               "date": "2026-06-09T00:00:00+00:00",
-              "workedMs": 25200000
+              "workedMs": 25200000,
+              "netWorkedMs": 25200000
             },
             {
               "date": "2026-06-10T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             }
           ]
         }
@@ -2611,11 +2768,13 @@
           "days": [
             {
               "date": "2026-06-26T00:00:00+00:00",
-              "workedMs": 32400000
+              "workedMs": 32400000,
+              "netWorkedMs": 32400000
             },
             {
               "date": "2026-06-28T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             }
           ]
         },
@@ -2631,17 +2790,20 @@
           "weeks": [
             {
               "weekNumber": 26,
-              "totalWorkedMs": 61200000
+              "totalWorkedMs": 61200000,
+              "netWorkedMs": 61200000
             }
           ],
           "days": [
             {
               "date": "2026-06-26T00:00:00+00:00",
-              "workedMs": 32400000
+              "workedMs": 32400000,
+              "netWorkedMs": 32400000
             },
             {
               "date": "2026-06-28T00:00:00+00:00",
-              "workedMs": 28800000
+              "workedMs": 28800000,
+              "netWorkedMs": 28800000
             }
           ]
         }
