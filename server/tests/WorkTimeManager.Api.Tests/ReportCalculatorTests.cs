@@ -370,4 +370,189 @@ public class ReportCalculatorTests
         Assert.Equal(0, r.VacationDaysRemaining);
         Assert.Equal(0, r.SickDays);
     }
+
+    // ── Urlaubs-/Krank-Auswertung: Monate und Zeiträume (#284) ──────────────
+
+    private static readonly SettingsDto Leave30 = new() { VacationDaysPerYear = 30 };
+
+    private static YearlyLeaveReportDto LeaveReport(params WorkEntryDto[] entries) =>
+        ReportCalculator.CalculateYearlyLeave(entries, 2026, Leave30);
+
+    private static WorkEntryDto[] Days(int year, int month, int from, int to, string type) =>
+        Enumerable.Range(from, to - from + 1).Select(d => Leave(year, month, d, type)).ToArray();
+
+    private static LeavePeriodDto P(int m1, int d1, int m2, int d2, int days, int year = 2026) =>
+        new(new DateOnly(year, m1, d1), new DateOnly(year, m2, d2), days);
+
+    [Fact]
+    public void YearlyLeave_EmptyYear_TwelveZeroMonthsAndEmptyLists()
+    {
+        var r = LeaveReport();
+        Assert.Equal(12, r.Months.Count);
+        Assert.Equal(Enumerable.Range(1, 12), r.Months.Select(m => m.Month));
+        Assert.All(r.Months, m => { Assert.Equal(0, m.VacationDays); Assert.Equal(0, m.SickDays); });
+        Assert.Empty(r.VacationPeriods);
+        Assert.Empty(r.SickPeriods);
+    }
+
+    [Fact]
+    public void YearlyLeave_SingleDays_SeparatePeriods()
+    {
+        var r = LeaveReport(Leave(2026, 3, 4, "vacation"), Leave(2026, 3, 9, "vacation"), Leave(2026, 5, 6, "sick"));
+        Assert.Equal(new[] { P(3, 4, 3, 4, 1), P(3, 9, 3, 9, 1) }, r.VacationPeriods);
+        Assert.Equal(new[] { P(5, 6, 5, 6, 1) }, r.SickPeriods);
+    }
+
+    [Fact]
+    public void YearlyLeave_ConsecutiveDays_OnePeriod()
+    {
+        var r = LeaveReport(Days(2026, 8, 3, 7, "vacation"));
+        Assert.Equal(new[] { P(8, 3, 8, 7, 5) }, r.VacationPeriods);
+    }
+
+    [Fact]
+    public void YearlyLeave_WeekendWithoutEntries_SplitsPeriod()
+    {
+        // 2026-08-07 ist Freitag, 2026-08-10 Montag.
+        var r = LeaveReport(Days(2026, 8, 3, 7, "vacation").Concat(Days(2026, 8, 10, 14, "vacation")).ToArray());
+        Assert.Equal(new[] { P(8, 3, 8, 7, 5), P(8, 10, 8, 14, 5) }, r.VacationPeriods);
+        Assert.Equal(10, r.VacationDaysTaken);
+    }
+
+    [Fact]
+    public void YearlyLeave_WeekendWithEntries_OnePeriod()
+    {
+        var r = LeaveReport(Days(2026, 8, 3, 14, "vacation"));
+        Assert.Equal(new[] { P(8, 3, 8, 14, 12) }, r.VacationPeriods);
+    }
+
+    [Fact]
+    public void YearlyLeave_MonthChange_OnePeriodAndMonthsSplit()
+    {
+        var r = LeaveReport(Days(2026, 7, 30, 31, "vacation").Concat(Days(2026, 8, 1, 3, "vacation")).ToArray());
+        Assert.Equal(new[] { P(7, 30, 8, 3, 5) }, r.VacationPeriods);
+        Assert.Equal(2, r.Months[6].VacationDays);
+        Assert.Equal(3, r.Months[7].VacationDays);
+        Assert.Equal(0, r.Months[0].VacationDays);
+    }
+
+    [Fact]
+    public void YearlyLeave_YearEnd_PeriodTruncatedAtDec31()
+    {
+        var r = LeaveReport(Leave(2026, 12, 30, "vacation"), Leave(2026, 12, 31, "vacation"), Leave(2027, 1, 1, "vacation"));
+        Assert.Equal(new[] { P(12, 30, 12, 31, 2) }, r.VacationPeriods);
+    }
+
+    [Fact]
+    public void YearlyLeave_YearStart_PeriodTruncatedAtJan1()
+    {
+        var r = LeaveReport(Leave(2025, 12, 31, "sick"), Leave(2026, 1, 1, "sick"), Leave(2026, 1, 2, "sick"));
+        Assert.Equal(new[] { P(1, 1, 1, 2, 2) }, r.SickPeriods);
+    }
+
+    [Fact]
+    public void YearlyLeave_LeapYear_Feb28Feb29Mar1_OnePeriod()
+    {
+        var entries = new[] { Leave(2028, 2, 28, "vacation"), Leave(2028, 2, 29, "vacation"), Leave(2028, 3, 1, "vacation") };
+        var r = ReportCalculator.CalculateYearlyLeave(entries, 2028, Leave30);
+        Assert.Equal(new[] { P(2, 28, 3, 1, 3, 2028) }, r.VacationPeriods);
+        Assert.Equal(2, r.Months[1].VacationDays);
+        Assert.Equal(1, r.Months[2].VacationDays);
+    }
+
+    [Fact]
+    public void YearlyLeave_NonLeapYear_Feb28Mar1_OnePeriod()
+    {
+        var r = LeaveReport(Leave(2026, 2, 28, "vacation"), Leave(2026, 3, 1, "vacation"));
+        Assert.Equal(new[] { P(2, 28, 3, 1, 2) }, r.VacationPeriods);
+    }
+
+    [Fact]
+    public void YearlyLeave_SickInsideVacation_SplitsVacation()
+    {
+        var r = LeaveReport(
+            Leave(2026, 8, 3, "vacation"), Leave(2026, 8, 4, "vacation"),
+            Leave(2026, 8, 5, "sick"),
+            Leave(2026, 8, 6, "vacation"), Leave(2026, 8, 7, "vacation"));
+        Assert.Equal(new[] { P(8, 3, 8, 4, 2), P(8, 6, 8, 7, 2) }, r.VacationPeriods);
+        Assert.Equal(new[] { P(8, 5, 8, 5, 1) }, r.SickPeriods);
+    }
+
+    [Fact]
+    public void YearlyLeave_VacationThenSickNextDay_SeparateLists()
+    {
+        var r = LeaveReport(Days(2026, 2, 9, 10, "vacation").Concat(Days(2026, 2, 11, 12, "sick")).ToArray());
+        Assert.Equal(new[] { P(2, 9, 2, 10, 2) }, r.VacationPeriods);
+        Assert.Equal(new[] { P(2, 11, 2, 12, 2) }, r.SickPeriods);
+    }
+
+    [Fact]
+    public void YearlyLeave_UnsortedInput_SortedOutput()
+    {
+        var r = LeaveReport(
+            Leave(2026, 9, 3, "vacation"), Leave(2026, 4, 2, "vacation"),
+            Leave(2026, 9, 1, "vacation"), Leave(2026, 9, 2, "vacation"));
+        Assert.Equal(new[] { P(4, 2, 4, 2, 1), P(9, 1, 9, 3, 3) }, r.VacationPeriods);
+    }
+
+    [Fact]
+    public void YearlyLeave_WorkAndHolidayEntries_DoNotAffectPeriodsOrMonths()
+    {
+        var r = LeaveReport(
+            Leave(2026, 8, 3, "vacation"), Leave(2026, 8, 4, "holiday"), Leave(2026, 8, 5, "work"),
+            Leave(2026, 8, 6, "vacation"));
+        Assert.Equal(new[] { P(8, 3, 8, 3, 1), P(8, 6, 8, 6, 1) }, r.VacationPeriods);
+        Assert.Empty(r.SickPeriods);
+        Assert.Equal(2, r.Months[7].VacationDays);
+        Assert.Equal(0, r.Months[7].SickDays);
+    }
+
+    [Fact]
+    public void YearlyLeave_DuplicateEntriesSameDay_EachCountsAndInvariantsHold()
+    {
+        var r = LeaveReport(
+            Leave(2026, 8, 3, "vacation"), Leave(2026, 8, 3, "vacation"), Leave(2026, 8, 4, "vacation"));
+        Assert.Equal(3, r.VacationDaysTaken);
+        Assert.Equal(new[] { P(8, 3, 8, 4, 3) }, r.VacationPeriods);
+        Assert.Equal(3, r.Months[7].VacationDays);
+    }
+
+    [Fact]
+    public void YearlyLeave_Invariants_HoldForMixedData()
+    {
+        var entries = Days(2025, 12, 28, 31, "vacation")
+            .Concat(Days(2026, 1, 1, 3, "vacation"))
+            .Concat(Days(2026, 2, 10, 12, "sick"))
+            .Concat(Days(2026, 7, 27, 31, "vacation"))
+            .Concat(Days(2026, 8, 1, 9, "vacation"))
+            .Append(Leave(2026, 8, 5, "sick"))
+            .Append(Leave(2026, 8, 5, "sick"))
+            .Append(Leave(2026, 8, 5, "vacation"))
+            .Concat(Days(2026, 12, 29, 31, "sick"))
+            .Concat(Days(2027, 1, 1, 2, "sick"))
+            .Append(Leave(2026, 5, 1, "holiday"))
+            .Append(Leave(2026, 5, 4, "work"))
+            .ToArray();
+        var r = LeaveReport(entries);
+
+        Assert.Equal(r.VacationDaysTaken, r.VacationPeriods.Sum(p => p.Days));
+        Assert.Equal(r.SickDays, r.SickPeriods.Sum(p => p.Days));
+        Assert.Equal(r.VacationDaysTaken, r.Months.Sum(m => m.VacationDays));
+        Assert.Equal(r.SickDays, r.Months.Sum(m => m.SickDays));
+        Assert.True(r.VacationDaysTaken > 0 && r.SickDays > 0);
+        Assert.Equal(r.VacationPeriods.OrderBy(p => p.Start).ToList(), r.VacationPeriods);
+    }
+
+    [Fact]
+    public void YearlyLeave_Serialization_DatesAsIsoDayAndCamelCase()
+    {
+        var r = LeaveReport(Days(2026, 8, 3, 4, "vacation"));
+        var json = System.Text.Json.JsonSerializer.Serialize(
+            r, new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
+
+        Assert.Contains("\"vacationPeriods\":[{\"start\":\"2026-08-03\",\"end\":\"2026-08-04\",\"days\":2}]", json);
+        Assert.Contains("\"sickPeriods\":[]", json);
+        Assert.Contains("\"months\":[{\"month\":1,\"vacationDays\":0,\"sickDays\":0}", json);
+        Assert.Contains("\"vacationDaysRemaining\":28", json);
+    }
 }

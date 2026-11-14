@@ -58,8 +58,14 @@ public static class ReportCalculator
         IReadOnlyList<WorkEntryDto> yearEntries, int year, SettingsDto settings)
     {
         var inYear = yearEntries.Where(e => e.Date.Year == year).ToList();
-        var taken = inYear.Count(e => e.Type == "vacation");
-        var sick = inYear.Count(e => e.Type == "sick");
+        var vacationDates = inYear.Where(e => e.Type == "vacation").Select(e => DatePart(e.Date)).ToList();
+        var sickDates = inYear.Where(e => e.Type == "sick").Select(e => DatePart(e.Date)).ToList();
+        var taken = vacationDates.Count;
+        var sick = sickDates.Count;
+        var months = Enumerable.Range(1, 12)
+            .Select(m => new YearlyLeaveMonthDto(
+                m, vacationDates.Count(d => d.Month == m), sickDates.Count(d => d.Month == m)))
+            .ToList();
         var entitlement = settings.VacationDaysPerYear ?? SettingsDto.DefaultVacationDaysPerYear;
         return new YearlyLeaveReportDto
         {
@@ -68,7 +74,49 @@ public static class ReportCalculator
             VacationDaysTaken = taken,
             VacationDaysRemaining = entitlement - taken,
             SickDays = sick,
+            Months = months,
+            VacationPeriods = BuildLeavePeriods(vacationDates),
+            SickPeriods = BuildLeavePeriods(sickDates),
         };
+    }
+
+    /// <summary>
+    /// Fasst Kalendertage zu Zeiträumen zusammen (#284): Tage gelten als zusammenhängend, wenn sie
+    /// kalendarisch direkt aufeinander folgen. Mehrere Einträge am selben Tag zählen jeweils
+    /// (<c>Days</c> = Zahl der Einträge, damit die Summe der Zeiträume der Summe der Einträge entspricht).
+    /// Eingabe unsortiert erlaubt, Ausgabe aufsteigend nach Start.
+    /// </summary>
+    public static IReadOnlyList<LeavePeriodDto> BuildLeavePeriods(IEnumerable<DateOnly> dates)
+    {
+        var periods = new List<LeavePeriodDto>();
+        var start = default(DateOnly);
+        var end = default(DateOnly);
+        var count = 0;
+        foreach (var date in dates.OrderBy(d => d))
+        {
+            if (count > 0 && date.DayNumber - end.DayNumber <= 1)
+            {
+                end = date;
+                count++;
+                continue;
+            }
+
+            if (count > 0)
+            {
+                periods.Add(new LeavePeriodDto(start, end, count));
+            }
+
+            start = date;
+            end = date;
+            count = 1;
+        }
+
+        if (count > 0)
+        {
+            periods.Add(new LeavePeriodDto(start, end, count));
+        }
+
+        return periods;
     }
 
     public static DailyStatDto CalculateDailyStat(
