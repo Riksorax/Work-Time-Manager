@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, Signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal, Signal, viewChild } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormArray } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -13,6 +13,8 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkEntry, WorkEntryType, Break } from '../../models/index';
 import { breakNameToStore, localizedBreakName } from '../../utils/break-name.util';
 import { toDateKey } from '../../utils/german-holidays.util';
+import { normalizeWorkLocations } from '../../utils/work-locations.util';
+import { WorkLocationsInputComponent } from '../work-locations-input/work-locations-input';
 
 interface BreakFormValue {
   id: string;
@@ -43,6 +45,7 @@ interface EntryFormValue {
     MatSelectModule,
     MatSlideToggleModule,
     TranslatePipe,
+    WorkLocationsInputComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -63,6 +66,10 @@ interface EntryFormValue {
           <mat-slide-toggle formControlName="isHomeOffice" class="home-office-toggle">
             {{ 'shared.homeOfficeLabel' | translate }}
           </mat-slide-toggle>
+        }
+
+        @if (showHomeOffice()) {
+          <app-work-locations-input #locationsInput [(locations)]="workLocations" />
         }
 
         <div class="time-row">
@@ -148,12 +155,16 @@ export class EditEntryDialogComponent {
   readonly form: FormGroup;
   /** Home-Office-Toggle nur bei Typ Arbeit (#277). */
   readonly showHomeOffice: Signal<boolean>;
+  /** Arbeitsorte (#526), nur bei Typ Arbeit sichtbar/bearbeitbar; sonst geht das Original durch. */
+  protected readonly workLocations = signal<string[]>([]);
+  private readonly locationsInput = viewChild<WorkLocationsInputComponent>('locationsInput');
 
   private readonly translateKey = (key: string, params?: Record<string, unknown>): string =>
     this.translate.instant(key, params);
 
   constructor() {
     const entry = this.data.entry;
+    this.workLocations.set(normalizeWorkLocations(entry?.workLocations));
     this.form = this.fb.group({
       type:                  [entry?.type ?? WorkEntryType.Work, Validators.required],
       startTime:             [this._formatTime(entry?.workStart)],
@@ -191,6 +202,8 @@ export class EditEntryDialogComponent {
 
   onSave(): void {
     if (this.form.invalid) return;
+    // Noch getippter Ort zählt mit; ist er ungültig, bleibt der Dialog offen und erklärt es
+    if (this.form.value.type === WorkEntryType.Work && this.locationsInput()?.commitPending() === false) return;
     const val  = this.form.value as EntryFormValue;
     const date = this.data.date;
     const originalNames = new Map((this.data.entry?.breaks ?? []).map(b => [b.id, b.name]));
@@ -207,6 +220,11 @@ export class EditEntryDialogComponent {
       isHomeOffice:          val.type === WorkEntryType.Work
         ? val.isHomeOffice
         : (this.data.entry?.isHomeOffice ?? false),
+      // Orte (#526): bei Arbeit die bearbeitete Liste ([] = löschen), bei anderen Typen das Original durchreichen
+      // (ohne Original `undefined` = unangetastet)
+      workLocations:         val.type === WorkEntryType.Work
+        ? normalizeWorkLocations(this.workLocations())
+        : this.data.entry?.workLocations,
       breaks: val.breaks.map((b): Break => ({
         id:          b.id,
         // Unverändert gelassene Standardnamen nicht als übersetzten Freitext speichern

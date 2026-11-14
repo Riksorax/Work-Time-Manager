@@ -3,6 +3,7 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { catchError, distinctUntilChanged, firstValueFrom, interval, of } from 'rxjs';
 import { WorkEntryService } from '../../core/services/work-entry';
 import { OvertimeService }  from '../../core/services/overtime';
+import { normalizeWorkLocations } from '../../shared/utils/work-locations.util';
 import { SettingsService }  from '../../core/services/settings';
 import { AuthService }      from '../../core/auth/auth';
 import { TodayService }     from '../../core/services/today';
@@ -99,6 +100,9 @@ export class DashboardService {
     return getGermanHolidayIds(Number(key.slice(0, 4)), land).get(key) ?? null;
   });
   readonly isLoggedIn = computed(() => !!this.authSvc.user());
+  /** Dashboard-Anzeige (#526): nur die Darstellung, Daten bleiben unberührt. Fehlende Werte = Standard (Ort aus, Home-Office an). */
+  readonly showWorkLocation = computed(() => this._holidaySettings().showWorkLocationOnDashboard === true);
+  readonly showHomeOffice   = computed(() => this._holidaySettings().showHomeOfficeOnDashboard !== false);
   private readonly destroyRef    = inject(DestroyRef);
   /** Nur lazy genutzt (Dialog-Service wird erst bei laufendem Timer aufgelöst, #380). */
   private readonly injector      = inject(Injector);
@@ -694,6 +698,26 @@ export class DashboardService {
     const e = this._s().workEntry;
     const ctx = this._ctx();
     const updated: WorkEntry = { ...e, isHomeOffice: value };
+    if (!e.workStart) {
+      this._s.update(s => ({ ...s, workEntry: updated }));
+      return;
+    }
+    await this._recalculateState(updated, true, ctx);
+  }
+
+  /**
+   * Setzt die Arbeitsorte des angezeigten Eintrags (#526, Muster `setHomeOffice`): ohne `workStart` nur Zustand (wird mit
+   * dem Start mitgeschrieben, kein Tag ohne Zeiten), sonst Speichern. Die Liste wird wie im Backend bereinigt.
+   */
+  setWorkLocations(locations: readonly string[]): Promise<void> {
+    return this._runAction(() => this._setWorkLocationsBody(locations), undefined);
+  }
+
+  private async _setWorkLocationsBody(locations: readonly string[]): Promise<void> {
+    if (!(await this._ensureCurrentDay())) return;
+    const e = this._s().workEntry;
+    const ctx = this._ctx();
+    const updated: WorkEntry = { ...e, workLocations: normalizeWorkLocations(locations) };
     if (!e.workStart) {
       this._s.update(s => ({ ...s, workEntry: updated }));
       return;

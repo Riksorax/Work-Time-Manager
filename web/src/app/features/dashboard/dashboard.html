@@ -96,7 +96,31 @@
             [attr.aria-label]="'dashboard.endTimeAria' | translate"
           />
 
-          @if (isWorkType()) {
+          @if (isWorkType() && svc.showWorkLocation()) {
+            @if (svc.workEntry().workLocations?.length) {
+              <button type="button" class="work-locations-summary"
+                      [disabled]="svc.isSaving()"
+                      [attr.aria-label]="'shared.workLocationEditAria' | translate: { names: svc.workEntry().workLocations!.join(', ') }"
+                      (click)="onEditWorkLocations()">
+                <mat-icon aria-hidden="true">place</mat-icon>
+                <span class="work-locations-chips">
+                  @for (loc of svc.workEntry().workLocations; track loc) {
+                    <span class="work-location-chip">{{ loc }}</span>
+                  }
+                </span>
+                <mat-icon class="work-locations-edit" aria-hidden="true">edit</mat-icon>
+              </button>
+            } @else {
+              <button mat-stroked-button type="button" class="work-locations-add"
+                      [disabled]="svc.isSaving()"
+                      (click)="onEditWorkLocations()">
+                <mat-icon aria-hidden="true">add_location_alt</mat-icon>
+                {{ 'shared.workLocationAddButton' | translate }}
+              </button>
+            }
+          }
+
+          @if (isWorkType() && svc.showHomeOffice()) {
             <mat-slide-toggle
               class="home-office-toggle"
               [checked]="!!svc.workEntry().isHomeOffice"

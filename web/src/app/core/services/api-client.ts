@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, firstValueFrom, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { normalizeWorkLocations, readWorkLocations } from '../../shared/utils/work-locations.util';
 import { Break, Bundesland, UserSettings, WorkEntry, WorkEntryType, WorkProfile } from '../../shared/models';
 import { YearlyLeaveReport } from '../../domain/models/leave.models';
 import { DailyStat, MonthlyReport, WeeklyReport } from '../../domain/models/reports.models';
@@ -27,6 +28,7 @@ interface WorkEntryDto {
   manualOvertimeMinutes: number | null;
   description: string | null;
   isHomeOffice?: boolean | null;
+  workLocations?: string[] | null;
   breaks: BreakDto[];
 }
 interface BreakDto {
@@ -226,6 +228,8 @@ export class ApiClient {
       description: entry.description ?? null,
       // undefined -> null: Backend lässt ein gespeichertes Flag dann unangetastet (#277)
       isHomeOffice: entry.isHomeOffice ?? null,
+      // undefined -> null: Backend lässt gespeicherte Orte unangetastet, [] entfernt sie (#526). Bereinigt wie das Backend.
+      workLocations: entry.workLocations === undefined ? null : normalizeWorkLocations(entry.workLocations),
       breaks: entry.breaks.map(b => ({
         id: b.id,
         name: b.name,
@@ -248,6 +252,7 @@ export class ApiClient {
       manualOvertimeMinutes: dto.manualOvertimeMinutes ?? undefined,
       description: dto.description ?? undefined,
       isHomeOffice: dto.isHomeOffice ?? false,
+      workLocations: readWorkLocations(dto.workLocations),
       breaks: (dto.breaks ?? []).map((b): Break => ({
         id: b.id,
         name: b.name,
