@@ -64,6 +64,35 @@ public sealed class WorkEntryRepository(FirestoreDb db)
         return all;
     }
 
+    /// <summary>
+    /// Alle Einträge mit Kalendertag in <paramref name="from"/>..<paramref name="to"/> (inklusive). Lädt jedes
+    /// berührte Monatsdokument parallel (Trend, #531: 12 Wochen ≈ 4 Dokumente, 12 Monate = 12 Dokumente).
+    /// </summary>
+    public async Task<IReadOnlyList<WorkEntryDto>> GetRangeAsync(
+        string uid, DateOnly from, DateOnly to, string? profileId, CancellationToken ct)
+    {
+        var months = await Task.WhenAll(MonthsInRange(from, to)
+            .Select(m => GetMonthAsync(uid, m.Year, m.Month, profileId, ct)));
+        return months.SelectMany(m => m)
+            .Where(e =>
+            {
+                var d = new DateOnly(e.Date.Year, e.Date.Month, e.Date.Day);
+                return d >= from && d <= to;
+            })
+            .ToList();
+    }
+
+    /// <summary>Jeder Kalendermonat, den <paramref name="from"/>..<paramref name="to"/> berührt, aufsteigend.</summary>
+    internal static IReadOnlyList<(int Year, int Month)> MonthsInRange(DateOnly from, DateOnly to)
+    {
+        var months = new List<(int, int)>();
+        for (var m = new DateOnly(from.Year, from.Month, 1); m <= to; m = m.AddMonths(1))
+        {
+            months.Add((m.Year, m.Month));
+        }
+        return months;
+    }
+
     public async Task<WorkEntryDto?> GetDayAsync(
         string uid, int year, int month, int day, string? profileId, CancellationToken ct)
     {

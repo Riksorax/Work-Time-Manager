@@ -69,7 +69,41 @@ internal static class ReportEndpoints
         })
         .WithName("GetYearlyLeaveReport");
 
+        reports.MapGet("/trend/{year:int}/{month:int}/{day:int}", async (
+            int year, int month, int day, string? granularity, string? profileId, ClaimsPrincipal user,
+            WorkEntryRepository entries, SettingsRepository settingsRepo, CancellationToken ct) =>
+        {
+            if (user.GetUid() is not { } uid) return Results.Unauthorized();
+            if (!IsValidDay(year, month, day)) return Results.BadRequest("Ungültiges Datum.");
+            if (!TryParseGranularity(granularity, out var g))
+                return Results.BadRequest("granularity muss 'week' oder 'month' sein.");
+
+            var date = new DateOnly(year, month, day);
+            var (from, to) = ReportCalculator.TrendRange(date, g);
+            var rangeEntries = await entries.GetRangeAsync(uid, from, to, profileId, ct);
+            var settings = await settingsRepo.GetAsync(uid, profileId, ct);
+            return Results.Ok(ReportCalculator.CalculateTrend(rangeEntries, date, g, settings));
+        })
+        .WithName("GetTrendReport");
+
         return group;
+    }
+
+    /// <summary>Pflicht-Query <c>granularity</c> des Trends (#531): genau <c>week</c> oder <c>month</c> (kleingeschrieben).</summary>
+    internal static bool TryParseGranularity(string? value, out TrendGranularity granularity)
+    {
+        switch (value)
+        {
+            case "week":
+                granularity = TrendGranularity.Week;
+                return true;
+            case "month":
+                granularity = TrendGranularity.Month;
+                return true;
+            default:
+                granularity = default;
+                return false;
+        }
     }
 
     private static bool IsValidMonth(int year, int month) =>

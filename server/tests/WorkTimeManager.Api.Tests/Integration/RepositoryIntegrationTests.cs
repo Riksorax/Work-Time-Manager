@@ -277,6 +277,33 @@ public class RepositoryIntegrationTests(FirestoreEmulatorFixture fixture)
     }
 
     [SkippableFact]
+    public async Task WorkEntry_GetRange_SpansYearBoundary_FiltersRange_IsolatesProfile()
+    {
+        RequireEmulator();
+        var repo = new WorkEntryRepository(fixture.Db!);
+        var uid = NewUid();
+        WorkEntryDto Vac(int y, int m, int d) => new()
+        {
+            Id = $"{y:D4}-{m:D2}-{d:D2}",
+            Date = new DateTimeOffset(y, m, d, 0, 0, 0, TimeSpan.Zero),
+            Type = "vacation",
+        };
+
+        await repo.SaveAsync(uid, Vac(2026, 11, 30), null, Ct); // vor dem Zeitraum, gleicher Monat
+        await repo.SaveAsync(uid, Vac(2026, 12, 7), null, Ct);
+        await repo.SaveAsync(uid, Vac(2027, 1, 4), null, Ct);
+        await repo.SaveAsync(uid, Vac(2027, 2, 15), null, Ct);
+        await repo.SaveAsync(uid, Vac(2027, 2, 16), null, Ct); // nach dem Zeitraum
+        await repo.SaveAsync(uid, Vac(2027, 1, 5), "p1", Ct);
+
+        var range = await repo.GetRangeAsync(uid, new DateOnly(2026, 12, 1), new DateOnly(2027, 2, 15), null, Ct);
+
+        Assert.Equal(new[] { "2026-12-07", "2027-01-04", "2027-02-15" }, range.Select(e => e.Id));
+        var profile = await repo.GetRangeAsync(uid, new DateOnly(2026, 12, 1), new DateOnly(2027, 2, 15), "p1", Ct);
+        Assert.Equal("2027-01-05", Assert.Single(profile).Id);
+    }
+
+    [SkippableFact]
     public async Task Profile_DefaultsToNonPremium_WhenMissing()
     {
         RequireEmulator();

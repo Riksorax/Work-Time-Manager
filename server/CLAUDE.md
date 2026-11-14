@@ -45,6 +45,7 @@ Firestore-Integrationstests übersprungen (`SkippableFact`) — das ist erwartet
 | GET | `/api/reports/weekly/{year}/{month}/{day}` | Wochenbericht |
 | GET | `/api/reports/monthly/{year}/{month}` | Monatsbericht |
 | GET | `/api/reports/yearly/{year}` | Jahresauswertung Urlaub/Krank (#278): `{year, vacationDaysPerYear, vacationDaysTaken, vacationDaysRemaining, sickDays}`; Rest kann negativ sein, `holiday` zählt nicht, Jahr 2000–2100 |
+| GET | `/api/reports/trend/{year}/{month}/{day}?granularity=week\|month` | Trend (#531): 12 Wochen bzw. 12 Monate bis zum Bezugstag + Wochen-Trend; `granularity` Pflicht (sonst 400), Jahr 2000–2100 |
 | GET | `/api/work-profiles` | Zusätzliche Arbeitszeit-Profile auflisten (ohne Standard-Profil, siehe #138/#239) |
 | POST | `/api/work-profiles` | Neues Profil anlegen (`{ name }`) |
 | DELETE | `/api/work-profiles/{profileId}` | Profil inkl. aller Daten löschen |
@@ -74,6 +75,23 @@ getestet.
 Rundung wie `roundMsToMinute` im Web (kaufmännisch, .5 von der Null weg, `MidpointRounding.AwayFromZero`):
 39 h an 7 Tagen = 334,29 min → 334 min, 37,5 h an 4 Tagen = 562,5 min → 563 min. Ohne Arbeitstage ist das
 Soll 0. Bis #535 schnitt das Backend den Millisekundenwert nur ab.
+
+**Trend (#531):** `GET /api/reports/trend/{y}/{m}/{d}?granularity=week|month` → `TrendReportDto`
+(`ReportCalculator.CalculateTrend`). Das Datum ist der Bezugstag des Clients (keine Server-Uhr).
+`granularity` ist Pflicht und muss exakt `week` oder `month` sein, sonst 400. `buckets`: immer 12, älteste
+zuerst, der letzte enthält den Bezugstag (laufende ISO-Woche bzw. laufender Monat, ggf. unvollständig);
+`key` = `yyyy-Www` (ISO-Wochenjahr, `ISOWeek.GetYear`) bzw. `yyyy-MM`, `start`/`end` = UTC-Mitternacht des
+ersten/letzten Kalendertags. Jeder Bucket rechnet mit demselben privaten Kern wie Wochen- und Monatsbericht
+(`SumPeriod`): `workedMs` ist **netto** (= `TotalWorkedMs − TotalBreaksMs` der Berichte; Urlaub/Krank/Feiertag
+mit Tagessoll), `targetMs` = Tage mit Eintrag an einem Vertrags-Wochentag × Tagessoll, `overtimeMs` = `OvertimeMs`
+des Wochen- bzw. `MonthlyOvertimeMs` des Monatsberichts (inkl. manueller Überstunden). **Kein Saldo:** der
+gespeicherte Gleitzeit-Saldo fließt nicht ein, `cumulativeOvertimeMs` ist die laufende Summe ab 0. Buckets ohne
+Eintrag: `hasData = false`, Werte 0. `weeklyTrend` (bei beiden Granularitäten): letzte abgeschlossene Woche = ISO-Woche
+vor der Woche des Bezugstags, verglichen mit dem Mittel der vier Wochen davor; Wochen ohne Einträge zählen nicht,
+Mittel kaufmännisch auf ganze ms gerundet (`AwayFromZero`), `deltaMs = lastWeekWorkedMs − averageWorkedMs`;
+`null`, wenn die letzte Woche leer ist oder weniger als zwei Vergleichswochen Einträge haben. Es gelten die heutigen
+Einstellungen für den ganzen Zeitraum. Daten über `WorkEntryRepository.GetRangeAsync` (alle berührten
+Monatsdokumente parallel). Kein Premium-Check im Backend.
 
 **Gemeinsame Testfälle (#535):** `testdata/report-parity/cases.json` (Repo-Wurzel) prüft Backend
 (`ReportParityTests`) und Web (`report-calculator.parity.tz.spec.ts`) mit denselben Fällen. Die erwarteten
