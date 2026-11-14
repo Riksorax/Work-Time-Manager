@@ -128,6 +128,40 @@ void main() {
       expect(http_.lastUri!.path, '/api/reports/monthly/2026/9');
     });
 
+    test('getYearlyLeave: Pfad und Antwort (#535)', () async {
+      http_.nextResponse = http.Response(
+          '{"year":2026,"vacationDaysPerYear":30,"vacationDaysTaken":4,'
+          '"vacationDaysRemaining":26,"sickDays":2,"extra":1}',
+          200);
+      final json = await api.getYearlyLeave(2026);
+      expect(http_.lastUri!.path, '/api/reports/yearly/2026');
+      expect(http_.lastUri!.queryParameters, isEmpty);
+      expect(json['vacationDaysTaken'], 4);
+      expect(json['sickDays'], 2);
+    });
+
+    test('getYearlyLeave gibt profileId weiter', () async {
+      await api.getYearlyLeave(2026, profileId: 'p1');
+      expect(http_.lastUri!.queryParameters, {'profileId': 'p1'});
+    });
+
+    test('getYearlyLeave: Fehlerstatus als ApiException', () async {
+      http_.nextResponse = http.Response('', 500);
+      await expectLater(
+        api.getYearlyLeave(2026),
+        throwsA(isA<ApiException>()
+            .having((e) => e.statusCode, 'statusCode', 500)
+            .having((e) => e.operation, 'operation', 'getYearlyLeave')),
+      );
+    });
+
+    test('getYearlyLeave ohne Anmeldung: NotSignedInException', () async {
+      auth.signedIn = false;
+      await expectLater(
+          api.getYearlyLeave(2026), throwsA(isA<NotSignedInException>()));
+      expect(http_.lastUri, isNull);
+    });
+
     test('getWorkEntriesForMonth gibt profileId weiter', () async {
       http_.nextResponse = http.Response('[]', 200);
       await api.getWorkEntriesForMonth(2026, 9, profileId: 'p1');

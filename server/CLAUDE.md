@@ -71,15 +71,16 @@ Firestore-Integrationstests übersprungen (`SkippableFact`) — das ist erwartet
 `0ddd15b`, 10.06.2026). Das ist die mathematisch korrekte Variante. `ReportCalculator.GetIsoWeekNumber`
 ist gegen `System.Globalization.ISOWeek` getestet.
 
-**Flutter (Stand #535, Teil 2):** Die lokale Tages-, Wochen- und Monatsrechnung
+**Flutter (Stand #535, Teil 3):** Die lokale Tages-, Wochen- und Monatsrechnung
 (`mobile/lib/domain/utils/report_calculator.dart`, Gast-Modus und erster Wert vor der API-Antwort) ist ein Port dieser
 Logik und besteht die gemeinsamen Testfälle. Behoben sind damit die früheren Abweichungen: doppelte Pausen-Subtraktion
 im Wochenbericht, ignorierte Urlaub/Krank/Feiertag-Einträge, Tages-Überstunden = 0, Monats-Gesamtüberstunden =
-Monatsüberstunden statt Saldo, abweichende Arbeitstage und Durchschnitte, netto statt brutto in den Tageswerten. Es bleibt:
-Jahressummen (`calculateMonthSummary`) rechnen noch eigen (bis #530); die Oberfläche (`reports_page.dart`) leitet
-Wochen-/Monatsüberstunden noch selbst aus den Tageswerten ab, statt die berechneten Werte anzuzeigen (bis #535, Teil 3);
-lokal rechnet die Woche nur mit den Einträgen des geladenen Monats (über den Monatswechsel unvollständig, bis die API
-antwortet). Neue Logik weiterhin hier zuerst, Flutter und Web gleichen sich an.
+Monatsüberstunden statt Saldo, abweichende Arbeitstage und Durchschnitte, netto statt brutto in den Tageswerten. Seit
+Teil 3 zeigt die Oberfläche (`reports_page.dart`) nur noch die Werte des ViewModels (angemeldet die dieses Backends,
+Gesamtarbeitszeit netto) und die Urlaubsbilanz kommt angemeldet von `/reports/yearly/{year}`. Es bleibt: Jahressummen
+(`calculateMonthSummary`) rechnen noch eigen (bis #530); lokal rechnet die Woche im Gast-Modus nur mit den Einträgen des
+geladenen Monats (über den Monatswechsel unvollständig). Ein heute laufender Eintrag erscheint im Tages-Tab bewusst live
+(das Backend zählt ihn mit netto 0). Neue Logik weiterhin hier zuerst, Flutter und Web gleichen sich an.
 
 **Tagessoll (#535):** `Wochenstunden × 3 600 000 ÷ Zahl der Arbeitstage`, auf die volle Minute gerundet;
 Rundung wie `roundMsToMinute` im Web (kaufmännisch, .5 von der Null weg, `MidpointRounding.AwayFromZero`):

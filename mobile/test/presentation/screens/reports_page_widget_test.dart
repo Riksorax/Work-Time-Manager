@@ -85,6 +85,9 @@ void main() {
         workTime: const Duration(hours: 6),
         breakTime: Duration.zero,
         totalTime: const Duration(hours: 6),
+        // Tageswerte wie vom ViewModel/Backend: Samstag ohne Soll (#535).
+        target: Duration.zero,
+        worked: const Duration(hours: 6),
         overtime: const Duration(hours: 6),
       ),
     );
@@ -115,8 +118,10 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    // Zusatztag-Label sichtbar (getEffectiveDailyTargetForDate gibt Duration.zero zurück)
+    // Zusatztag-Label sichtbar (Soll des Tagesberichts ist 0, #535)
     expect(find.text('Soll (Zusatztag):'), findsOneWidget);
+    // Ist = geleistet aus dem Tagesbericht
+    expect(find.text('06:00'), findsOneWidget);
     // Soll-Wert ist '-' (kein Sollwert für Zusatztag)
     expect(find.text('-'), findsWidgets);
     // Überstunden: 6h Arbeit, kein Soll → +06:00

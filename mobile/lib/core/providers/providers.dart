@@ -8,6 +8,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/services/home_widget_gateway.dart';
 import '../../core/services/shortcut_service.dart';
+import '../../core/services/pdf_report_service.dart';
 import '../../core/services/assistant_query_inbox.dart';
 import '../../core/services/timer_action_inbox.dart';
 import '../../core/services/version_service.dart';
@@ -134,6 +135,11 @@ AssistantQueryInbox assistantQueryInbox(Ref ref) =>
 /// App-Icon-Shortcuts „Einstempeln“/„Ausstempeln“ (#274, nur Android).
 @Riverpod(keepAlive: true)
 ShortcutService shortcutService(Ref ref) => ShortcutService();
+
+/// PDF-Export der Berichte; im Test überschreibbar, damit Widget-Tests die
+/// übergebenen Werte prüfen können (#535).
+@Riverpod(keepAlive: true)
+PdfReportService pdfReportService(Ref ref) => PdfReportService();
 
 //==============================================================================
 // REPOSITORIES

@@ -263,4 +263,38 @@ void main() {
       });
     }
   });
+
+  group('isOpenToday (#535)', () {
+    final today = DateTime(2026, 10, 5);
+    test('offener Arbeitseintrag von heute: true', () {
+      expect(
+          isOpenToday(entry(day: today, start: DateTime(2026, 10, 5, 8)), now),
+          isTrue);
+    });
+    test('abgeschlossen, ohne Start, anderer Typ oder Vortag: false', () {
+      expect(
+          isOpenToday(
+              entry(
+                  day: today,
+                  start: DateTime(2026, 10, 5, 8),
+                  end: DateTime(2026, 10, 5, 11)),
+              now),
+          isFalse);
+      expect(isOpenToday(entry(day: today), now), isFalse);
+      expect(
+          isOpenToday(
+              entry(
+                  day: today,
+                  start: DateTime(2026, 10, 5, 8),
+                  type: WorkEntryType.vacation),
+              now),
+          isFalse);
+      expect(
+          isOpenToday(
+              entry(
+                  day: DateTime(2026, 10, 4), start: DateTime(2026, 10, 4, 22)),
+              now),
+          isFalse);
+    });
+  });
 }

@@ -589,4 +589,19 @@ class MockApiClient extends _i1.Mock implements _i8.ApiClient {
         returnValue:
             _i3.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
       ) as _i3.Future<Map<String, dynamic>>);
+
+  @override
+  _i3.Future<Map<String, dynamic>> getYearlyLeave(
+    int? year, {
+    String? profileId,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getYearlyLeave,
+          [year],
+          {#profileId: profileId},
+        ),
+        returnValue:
+            _i3.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+      ) as _i3.Future<Map<String, dynamic>>);
 }

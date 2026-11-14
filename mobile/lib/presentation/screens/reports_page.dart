@@ -6,7 +6,8 @@ import 'package:flutter_work_time/core/utils/logger.dart';
 import 'package:flutter_work_time/core/utils/time_format.dart';
 import 'package:intl/intl.dart';
 import '../../core/providers/clock_provider.dart';
-import '../../core/providers/providers.dart' show workRepositoryProvider;
+import '../../core/providers/providers.dart'
+    show pdfReportServiceProvider, workRepositoryProvider;
 import '../../core/providers/subscription_provider.dart';
 import '../../core/providers/today_provider.dart';
 import '../../core/services/pdf_report_service.dart';
@@ -38,6 +39,7 @@ import '../widgets/common/loading_indicator.dart';
 import '../widgets/common/sheet_insets.dart';
 import '../widgets/edit_work_entry_modal.dart';
 import '../widgets/quick_entry_dialog.dart';
+import '../widgets/report_action_row.dart';
 import '../widgets/batch_quick_entry_dialog.dart';
 import '../widgets/weekly_reflection_dialog.dart';
 import '../widgets/work_profile_switcher.dart';
@@ -215,9 +217,10 @@ class DailyReportView extends ConsumerWidget {
         final DateTime selectedDay =
             reportsState.selectedDay ?? ref.read<DateTime>(todayProvider);
 
-        // Effektives Tages-Soll: 0 für Zusatztage (mehr Arbeitstage als konfiguriert)
-        final dailyTarget =
-            reportsNotifier.getEffectiveDailyTargetForDate(selectedDay);
+        // Soll, Ist und Saldo des Tages kommen aus dem Tagesbericht des
+        // ViewModels (angemeldet vom Backend, sonst kanonisch lokal, #535).
+        // Soll 0 = Tag ohne Soll (Zusatztag an einem freien Wochentag).
+        final dailyTarget = dailyReport.target;
         final isExtraDay =
             dailyTarget == Duration.zero && dailyReport.entries.isNotEmpty;
         final DateTime selectedMonth =
@@ -231,36 +234,33 @@ class DailyReportView extends ConsumerWidget {
             .map((date) => date.day)
             .toSet();
 
-        // Offene Einträge zählen nur am heutigen Tag live (#404), sonst 0.
         final DateTime now = ref.read(clockProvider)();
-        Duration totalWorked = Duration.zero;
-        Duration totalManualAdjustment = Duration.zero;
-        for (final e in dailyReport.entries) {
-          final dE = ref
-              .read(reportsViewModelProvider.notifier)
-              .applyBreakCalculation(e);
-
-          // Nur Arbeitseinträge zählen zur Arbeitszeit
-          // Urlaub, Krankheit und Feiertage erfüllen das Soll automatisch
-          if (dE.type == WorkEntryType.work) {
-            totalWorked += reportNetDuration(dE, now: now);
+        Duration totalWorked = dailyReport.worked;
+        Duration dayOvertime = dailyReport.overtime;
+        // Ausnahme Live-Anzeige (#404): Läuft heute ein Eintrag, kennt der
+        // Tagesbericht ihn nur mit Netto 0 (Backend: kein Ende). Dann zählt der
+        // Tag wie bisher live bis jetzt; das ist keine neue Rechenregel, sondern
+        // die bestehende Anzeige des laufenden Tages.
+        if (dailyReport.entries.any((e) => isOpenToday(e, now))) {
+          totalWorked = Duration.zero;
+          Duration totalManualAdjustment = Duration.zero;
+          for (final e in dailyReport.entries) {
+            final dE = reportsNotifier.applyBreakCalculation(e);
+            // Urlaub, Krankheit und Feiertage erfüllen das Soll automatisch.
+            if (dE.type == WorkEntryType.work) {
+              totalWorked += reportNetDuration(dE, now: now);
+            }
+            if (dE.manualOvertime != null) {
+              totalManualAdjustment += dE.manualOvertime!;
+            }
           }
-
-          if (dE.manualOvertime != null) {
-            totalManualAdjustment += dE.manualOvertime!;
+          final hasSpecialEntry =
+              dailyReport.entries.any((e) => e.type != WorkEntryType.work);
+          if (hasSpecialEntry && totalWorked == Duration.zero) {
+            totalWorked = dailyTarget;
           }
+          dayOvertime = totalWorked - dailyTarget + totalManualAdjustment;
         }
-
-        // Bei speziellen Tagen (Urlaub, Krankheit, Feiertag) wird das Soll als erfüllt betrachtet
-        // Daher: Wenn kein normaler Arbeitseintrag vorhanden ist, aber ein spezieller,
-        // zählt totalWorked als erfüllt
-        bool hasSpecialEntry =
-            dailyReport.entries.any((e) => e.type != WorkEntryType.work);
-        if (hasSpecialEntry && totalWorked == Duration.zero) {
-          totalWorked = dailyTarget;
-        }
-
-        final dayOvertime = totalWorked - dailyTarget + totalManualAdjustment;
 
         // --- Widgets Construction ---
 
@@ -683,16 +683,7 @@ class WeeklyReportView extends ConsumerWidget {
     final settingsValue = ref.watch(settingsViewModelProvider);
 
     return settingsValue.when(
-        data: (settingsState) {
-          final double weeklyTargetHours =
-              settingsState.settings.weeklyTargetHours;
-          final Duration dailyTarget = Duration(
-            minutes:
-                ((weeklyTargetHours / settingsState.settings.workdays.length) *
-                        60)
-                    .round(),
-          );
-
+        data: (_) {
           if (reportsState.isLoading) {
             return const LoadingIndicator();
           }
@@ -704,8 +695,10 @@ class WeeklyReportView extends ConsumerWidget {
               selectedDay.day - selectedDay.weekday + 1);
           final endOfWeek = addCalendarDays(startOfWeek, 6);
           final weekNumber = isoWeekNumber(startOfWeek);
-          final Duration weeklyOvertimeLocal = weeklyReport.dailyWork.entries
-              .fold(Duration.zero, (sum, e) => sum + (e.value - dailyTarget));
+          // Überstunden und Arbeitszeit kommen aus dem Wochenbericht des
+          // ViewModels (angemeldet vom Backend), die Oberfläche rechnet
+          // nicht selbst (#535).
+          final Duration weeklyOvertime = weeklyReport.overtime;
 
           return ResponsiveCenter(
               child: SingleChildScrollView(
@@ -752,37 +745,30 @@ class WeeklyReportView extends ConsumerWidget {
                     ),
                   ],
                 ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextButton.icon(
-                        onPressed: () => showDialog(
-                          context: context,
-                          builder: (_) =>
-                              WeeklyReflectionDialog(startOfWeek: startOfWeek),
-                        ),
-                        icon: const Icon(Icons.rate_review_outlined),
-                        label: Text(l10n.weeklyReflectionButton,
-                            overflow: TextOverflow.ellipsis, maxLines: 1),
-                      ),
+                ReportActionRow(actions: [
+                  ReportAction(
+                    icon: Icons.rate_review_outlined,
+                    label: l10n.weeklyReflectionButton,
+                    onPressed: () => showDialog(
+                      context: context,
+                      builder: (_) =>
+                          WeeklyReflectionDialog(startOfWeek: startOfWeek),
                     ),
-                    Expanded(
-                      child: TextButton.icon(
-                        onPressed: () => _exportWeeklyReportPdf(
-                          context: context,
-                          startOfWeek: startOfWeek,
-                          endOfWeek: endOfWeek,
-                          weekNumber: weekNumber,
-                          weeklyReport: weeklyReport,
-                          overtime: weeklyOvertimeLocal,
-                        ),
-                        icon: const Icon(Icons.picture_as_pdf_outlined),
-                        label: Text(l10n.exportAsPdfButton,
-                            overflow: TextOverflow.ellipsis, maxLines: 1),
-                      ),
+                  ),
+                  ReportAction(
+                    icon: Icons.picture_as_pdf_outlined,
+                    label: l10n.exportPdfShortButton,
+                    fullLabel: l10n.exportAsPdfButton,
+                    onPressed: () => _exportWeeklyReportPdf(
+                      context: context,
+                      service: ref.read(pdfReportServiceProvider),
+                      startOfWeek: startOfWeek,
+                      endOfWeek: endOfWeek,
+                      weekNumber: weekNumber,
+                      weeklyReport: weeklyReport,
                     ),
-                  ],
-                ),
+                  ),
+                ]),
                 const SizedBox(height: 8),
                 if (weeklyReport.workDays == 0)
                   Center(child: Text(l10n.noDataForWeek))
@@ -802,9 +788,7 @@ class WeeklyReportView extends ConsumerWidget {
                                       style: const TextStyle(
                                           fontWeight: FontWeight.bold)),
                                   Text(
-                                      weeklyReport.dailyWork.values
-                                          .fold(Duration.zero,
-                                              (prev, d) => prev + d)
+                                      weeklyReport.totalNetWorkDuration
                                           .toString()
                                           .split('.')
                                           .first,
@@ -854,9 +838,9 @@ class WeeklyReportView extends ConsumerWidget {
                                       style: const TextStyle(
                                           fontWeight: FontWeight.bold)),
                                   Text(
-                                    _formatDuration(weeklyOvertimeLocal),
+                                    _formatDuration(weeklyOvertime),
                                     style: TextStyle(
-                                        color: weeklyOvertimeLocal.isNegative
+                                        color: weeklyOvertime.isNegative
                                             ? Colors.red
                                             : Colors.green,
                                         fontWeight: FontWeight.bold),
@@ -868,7 +852,7 @@ class WeeklyReportView extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      Text(l10n.dailyWorkTimesLabel,
+                      Text(l10n.dailyAttendanceLabel,
                           style: const TextStyle(fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
                       ...weeklyReport.dailyWork.entries.map((entry) {
@@ -947,28 +931,29 @@ final _pdfReportService = PdfReportService();
 
 Future<void> _exportWeeklyReportPdf({
   required BuildContext context,
+  required PdfReportService service,
   required DateTime startOfWeek,
   required DateTime endOfWeek,
   required int weekNumber,
   required WeeklyReportState weeklyReport,
-  required Duration overtime,
 }) async {
   final messenger = ScaffoldMessenger.of(context);
   final l10n = AppLocalizations.of(context);
   final locale = Localizations.localeOf(context).toString();
   try {
-    await _pdfReportService.exportWeeklyReport(
+    await service.exportWeeklyReport(
       l10n: l10n,
       locale: locale,
       startOfWeek: startOfWeek,
       endOfWeek: endOfWeek,
       weekNumber: weekNumber,
       workDays: weeklyReport.workDays,
-      totalWorkDuration: weeklyReport.dailyWork.values
-          .fold(Duration.zero, (prev, d) => prev + d),
+      // Dieselben Werte wie die Anzeige (#535): netto und Überstunden aus dem
+      // Wochenbericht.
+      totalWorkDuration: weeklyReport.totalNetWorkDuration,
       totalBreakDuration: weeklyReport.totalBreakDuration,
       averageWorkDuration: weeklyReport.averageWorkDuration,
-      overtime: overtime,
+      overtime: weeklyReport.overtime,
       dailyWork: weeklyReport.dailyWork,
     );
   } catch (e) {
@@ -986,25 +971,26 @@ Future<void> _exportWeeklyReportPdf({
 
 Future<void> _exportMonthlyReportPdf({
   required BuildContext context,
+  required PdfReportService service,
   required DateTime month,
   required MonthlyReportState monthlyReport,
-  required Duration monthlyOvertime,
 }) async {
   final messenger = ScaffoldMessenger.of(context);
   final l10n = AppLocalizations.of(context);
   final locale = Localizations.localeOf(context).toString();
   try {
-    await _pdfReportService.exportMonthlyReport(
+    await service.exportMonthlyReport(
       l10n: l10n,
       locale: locale,
       month: month,
       workDays: monthlyReport.workDays,
-      totalWorkDuration: monthlyReport.dailyWork.values
-          .fold(Duration.zero, (prev, d) => prev + d),
+      // Dieselben Werte wie die Anzeige (#535): netto und Überstunden aus dem
+      // Monatsbericht.
+      totalWorkDuration: monthlyReport.totalNetWorkDuration,
       totalBreakDuration: monthlyReport.totalBreakDuration,
       averageWorkDuration: monthlyReport.averageWorkDuration,
       avgWorkDurationPerWeek: monthlyReport.avgWorkDurationPerWeek,
-      monthlyOvertime: monthlyOvertime,
+      monthlyOvertime: monthlyReport.overtime,
       totalOvertime: monthlyReport.totalOvertime,
       weeklyWork: monthlyReport.weeklyWork,
       dailyWork: monthlyReport.dailyWork,
@@ -1232,17 +1218,11 @@ class MonthlyReportView extends ConsumerWidget {
 
     final settingsValue = ref.watch(settingsViewModelProvider);
     return settingsValue.when(
-      data: (settingsState) {
-        final double weeklyTargetHours =
-            settingsState.settings.weeklyTargetHours;
-        final Duration dailyTarget = Duration(
-          minutes:
-              ((weeklyTargetHours / settingsState.settings.workdays.length) *
-                      60)
-                  .round(),
-        );
-        final Duration monthlyOvertimeLocal = monthlyReport.dailyWork.entries
-            .fold(Duration.zero, (sum, e) => sum + (e.value - dailyTarget));
+      data: (_) {
+        // Überstunden und Arbeitszeit kommen aus dem Monatsbericht des
+        // ViewModels (angemeldet vom Backend), die Oberfläche rechnet nicht
+        // selbst (#535).
+        final Duration monthlyOvertime = monthlyReport.overtime;
 
         // Baue children explizit in einer Liste auf, um Verschachtelungs-/Parserprobleme zu vermeiden
         final List<Widget> monthChildren = [];
@@ -1275,33 +1255,30 @@ class MonthlyReportView extends ConsumerWidget {
           ],
         ));
 
-        monthChildren.add(Align(
-          alignment: Alignment.centerRight,
-          child: Wrap(
-            alignment: WrapAlignment.end,
-            children: [
-              TextButton.icon(
-                onPressed: () => _exportMonthlyReportPdf(
-                  context: context,
-                  month: DateTime(selectedMonth.year, selectedMonth.month),
-                  monthlyReport: monthlyReport,
-                  monthlyOvertime: monthlyOvertimeLocal,
-                ),
-                icon: const Icon(Icons.picture_as_pdf_outlined),
-                label: Text(l10n.exportAsPdfButton),
-              ),
-              TextButton.icon(
-                onPressed: () => _exportHomeOfficeMonthPdf(
-                  context: context,
-                  ref: ref,
-                  month: DateTime(selectedMonth.year, selectedMonth.month),
-                ),
-                icon: const Icon(Icons.home_work_outlined),
-                label: Text(l10n.exportHomeOfficePdfButton),
-              ),
-            ],
+        // Aktionszeile wie im Wochen-Tab: beide Buttons nebeneinander (#535).
+        monthChildren.add(ReportActionRow(actions: [
+          ReportAction(
+            icon: Icons.picture_as_pdf_outlined,
+            label: l10n.exportPdfShortButton,
+            fullLabel: l10n.exportAsPdfButton,
+            onPressed: () => _exportMonthlyReportPdf(
+              context: context,
+              service: ref.read(pdfReportServiceProvider),
+              month: DateTime(selectedMonth.year, selectedMonth.month),
+              monthlyReport: monthlyReport,
+            ),
           ),
-        ));
+          ReportAction(
+            icon: Icons.home_work_outlined,
+            label: l10n.exportHomeOfficePdfShortButton,
+            fullLabel: l10n.exportHomeOfficePdfButton,
+            onPressed: () => _exportHomeOfficeMonthPdf(
+              context: context,
+              ref: ref,
+              month: DateTime(selectedMonth.year, selectedMonth.month),
+            ),
+          ),
+        ]));
 
         monthChildren.add(const SizedBox(height: 8));
 
@@ -1320,8 +1297,7 @@ class MonthlyReportView extends ConsumerWidget {
                       Text(l10n.totalWorkTimeLabel,
                           style: const TextStyle(fontWeight: FontWeight.bold)),
                       Text(
-                          monthlyReport.dailyWork.values
-                              .fold(Duration.zero, (prev, d) => prev + d)
+                          monthlyReport.totalNetWorkDuration
                               .toString()
                               .split('.')
                               .first,
@@ -1375,9 +1351,9 @@ class MonthlyReportView extends ConsumerWidget {
                     children: [
                       Text(l10n.monthlyOvertimeLabel,
                           style: const TextStyle(fontWeight: FontWeight.bold)),
-                      Text(_formatDuration(monthlyOvertimeLocal),
+                      Text(_formatDuration(monthlyOvertime),
                           style: TextStyle(
-                              color: monthlyOvertimeLocal.isNegative
+                              color: monthlyOvertime.isNegative
                                   ? Colors.red
                                   : Colors.green,
                               fontWeight: FontWeight.bold)),
@@ -2676,7 +2652,8 @@ Future<void> _handleQuickEntry(
   final settingsState = ref.read(settingsViewModelProvider).asData?.value;
   Duration? dailyTarget;
 
-  if (settingsState != null) {
+  // Ohne Arbeitstage kein Tagessoll als Vorschlag (sonst Division durch 0).
+  if (settingsState != null && settingsState.settings.workdays.isNotEmpty) {
     dailyTarget = Duration(
       minutes: ((settingsState.settings.weeklyTargetHours /
                   settingsState.settings.workdays.length) *
@@ -2721,7 +2698,8 @@ Future<void> _handleBatchQuickEntry(
 ) async {
   final settingsState = ref.read(settingsViewModelProvider).asData?.value;
   Duration? dailyTarget;
-  if (settingsState != null) {
+  // Ohne Arbeitstage kein Tagessoll als Vorschlag (sonst Division durch 0).
+  if (settingsState != null && settingsState.settings.workdays.isNotEmpty) {
     dailyTarget = Duration(
       minutes: ((settingsState.settings.weeklyTargetHours /
                   settingsState.settings.workdays.length) *

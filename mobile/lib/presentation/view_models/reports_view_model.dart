@@ -111,7 +111,7 @@ class ReportsViewModel extends Notifier<ReportsState> {
       ]);
       if (!ref.mounted) return;
       state = state.copyWith(
-        dailyReportState: _dailyWithApiOvertime(day, results[0]),
+        dailyReportState: _dailyFromApi(day, results[0]),
         weeklyReportState: _weeklyFromApi(results[1]),
         monthlyReportState: _monthlyFromApi(results[2]),
       );
@@ -129,15 +129,17 @@ class ReportsViewModel extends Notifier<ReportsState> {
   DateTime _dayKey(String iso) =>
       calendarDateFromUtcMidnight(DateTime.parse(iso));
 
-  /// Tages-Rohsummen lokal, Überstunden aus dem Backend.
-  DailyReportState _dailyWithApiOvertime(
-      DateTime day, Map<String, dynamic> json) {
+  /// Einträge und Rohsummen lokal, Soll, geleistet und Überstunden aus dem
+  /// Backend (`DailyStatDto`, #535).
+  DailyReportState _dailyFromApi(DateTime day, Map<String, dynamic> json) {
     final local = _calculateDailyReport(day);
     return DailyReportState(
       entries: local.entries,
       workTime: local.workTime,
       breakTime: local.breakTime,
       totalTime: local.totalTime,
+      target: _msDur(json['targetMs']),
+      worked: _msDur(json['workedMs']),
       overtime: _msDur(json['overtimeMs']),
     );
   }
@@ -332,6 +334,8 @@ class ReportsViewModel extends Notifier<ReportsState> {
       workTime: workTime,
       breakTime: breakTime,
       totalTime: totalTime,
+      target: stat.target,
+      worked: stat.worked,
       overtime: stat.overtime,
     );
   }
