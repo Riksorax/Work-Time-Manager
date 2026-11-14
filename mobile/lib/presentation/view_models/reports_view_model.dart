@@ -11,10 +11,9 @@ import '../../core/providers/providers.dart' as core_providers;
 import '../../core/providers/today_provider.dart';
 import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/services/break_calculator_service.dart';
-import '../../domain/utils/date_utils.dart';
 import '../../domain/utils/entry_day.dart';
-import '../../domain/utils/iso_week.dart';
 import '../../domain/utils/overtime_utils.dart';
+import '../../domain/utils/report_calculator.dart';
 import '../state/monthly_report_state.dart';
 import '../state/reports_state.dart';
 import '../state/weekly_report_state.dart';
@@ -290,6 +289,29 @@ class ReportsViewModel extends Notifier<ReportsState> {
     }
   }
 
+  /// Einstellungen der lokalen Berichtsrechnung (#535).
+  ReportSettings _reportSettings() {
+    final settingsRepository =
+        ref.read(core_providers.settingsRepositoryProvider);
+    return ReportSettings(
+      weeklyTargetHours: settingsRepository.getTargetWeeklyHours(),
+      workdays: settingsRepository.getWorkdays(),
+    );
+  }
+
+  /// Gespeicherter Gleitzeit-Saldo (synchron aus dem Cache des
+  /// `OvertimeRepository`; im Gast-Modus der lokal gespeicherte Saldo) für die
+  /// Monats-Gesamtüberstunden (#535). Ist das Repository nicht verfügbar,
+  /// gilt 0; eingeloggt überschreibt ohnehin der Wert der API.
+  Duration _storedOvertime() {
+    try {
+      return ref.read(core_providers.overtimeRepositoryProvider).getOvertime();
+    } catch (e) {
+      logger.w('[ReportsViewModel] Gleitzeit-Saldo nicht lesbar, 0: $e');
+      return Duration.zero;
+    }
+  }
+
   DailyReportState _calculateDailyReport(DateTime date) {
     final dayToReport = DateTime(date.year, date.month, date.day);
     final entriesForDay = _monthlyEntries
@@ -301,14 +323,16 @@ class ReportsViewModel extends Notifier<ReportsState> {
     final breakTime = entriesForDay.fold<Duration>(
         Duration.zero, (prev, e) => prev + e.totalBreakTime);
     final totalTime = workTime - breakTime;
-    final overtime = Duration.zero;
+    // Überstunden wie das Backend: geleistet − Soll + manuell (#535).
+    final stat =
+        calculateDailyStat(_monthlyEntries, dayToReport, _reportSettings());
 
     return DailyReportState(
       entries: entriesForDay,
       workTime: workTime,
       breakTime: breakTime,
       totalTime: totalTime,
-      overtime: overtime,
+      overtime: stat.overtime,
     );
   }
 
@@ -346,173 +370,42 @@ class ReportsViewModel extends Notifier<ReportsState> {
     );
   }
 
+  /// Lokaler Wochenbericht über die kanonische Rechnung (#535); Abbildung
+  /// wie [_weeklyFromApi] (brutto, Tageswerte brutto).
+  ///
+  /// Grundlage sind nur die geladenen Monatseinträge: Eine Woche über den
+  /// Monatswechsel enthält lokal nur die Tage des geladenen Monats.
   WeeklyReportState _calculateWeeklyReport(DateTime date) {
-    final settingsRepository =
-        ref.read(core_providers.settingsRepositoryProvider);
-    // Normalize date to midnight to avoid time-of-day issues in week calculation
-    final reportDate = DateTime(date.year, date.month, date.day);
-    final startOfWeek = addCalendarDays(reportDate, -(reportDate.weekday - 1));
-    final endOfWeek = addCalendarDays(startOfWeek, 6);
-
-    final entriesForWeek = _monthlyEntries.where((entry) {
-      // Kalendertag des Eintrags (lokale Mitternacht, #418).
-      final entryDate = entryDay(entry);
-      // Check if the entry date is within the week range (inclusive).
-      return !entryDate.isBefore(startOfWeek) && !entryDate.isAfter(endOfWeek);
-    }).toList();
-
-    final totalWorkDuration = entriesForWeek.fold<Duration>(
-        Duration.zero, (prev, e) => prev + e.effectiveWorkDuration);
-    final totalBreakDuration = entriesForWeek.fold<Duration>(
-        Duration.zero, (prev, e) => prev + e.totalBreakTime);
-    final totalNetWorkDuration = totalWorkDuration - totalBreakDuration;
-
-    // Unique Arbeitstage zählen (nicht Einträge, da mehrere Einträge pro Tag möglich)
-    final uniqueWorkDaysSet =
-        entriesForWeek.where((e) => e.workStart != null).map(entryDay).toSet();
-    final uniqueWorkDays = uniqueWorkDaysSet.length;
-    final averageWorkDuration = uniqueWorkDays > 0
-        ? roundDurationToMinute(Duration(
-            microseconds:
-                totalNetWorkDuration.inMicroseconds ~/ uniqueWorkDays))
-        : Duration.zero;
-
-    final workdays = settingsRepository.getWorkdays();
-    final targetDailyHoursInDouble = workdays.isNotEmpty
-        ? settingsRepository.getTargetWeeklyHours() / workdays.length
-        : 0.0;
-    // Wochen-Soll begrenzen: nur Tage zählen, deren Wochentag zu den
-    // konfigurierten Arbeitstagen gehört, damit Zusatztage an anderen
-    // Wochentagen das Soll nicht erhöhen (#217)
-    final effectiveWorkDays =
-        uniqueWorkDaysSet.where((d) => workdays.contains(d.weekday)).length;
-    final targetWeeklyHoursForActualWorkdaysInMicroseconds =
-        (targetDailyHoursInDouble *
-                effectiveWorkDays *
-                Duration.microsecondsPerHour)
-            .toInt();
-    final targetWeeklyHours = roundDurationToMinute(Duration(
-        microseconds: targetWeeklyHoursForActualWorkdaysInMicroseconds));
-    final overtime = totalNetWorkDuration - targetWeeklyHours;
-
-    final manualOvertimes = entriesForWeek.fold<Duration>(Duration.zero,
-        (prev, entry) => prev + (entry.manualOvertime ?? Duration.zero));
-    final totalWeeklyOvertime = overtime + manualOvertimes;
-
-    Map<DateTime, Duration> dailyWork = {};
-    for (var entry in entriesForWeek) {
-      // Stelle sicher, dass nur Einträge mit gültiger Dauer berücksichtigt werden
-      if (entry.workStart != null &&
-          entry.workEnd != null &&
-          entry.effectiveWorkDuration > Duration.zero) {
-        final day = entryDay(entry);
-        dailyWork[day] =
-            (dailyWork[day] ?? Duration.zero) + entry.effectiveWorkDuration;
-      }
-    }
-
+    final r = calculateWeeklyReport(_monthlyEntries, date, _reportSettings());
     return WeeklyReportState(
-      workDays: dailyWork.keys.length, // Besser: Anzahl der Tage mit Arbeit
-      totalWorkDuration: totalWorkDuration,
-      totalBreakDuration: totalBreakDuration,
-      totalNetWorkDuration: totalNetWorkDuration,
-      averageWorkDuration: averageWorkDuration,
-      overtime: totalWeeklyOvertime,
-      dailyWork: dailyWork,
+      totalWorkDuration: r.totalWorked,
+      totalBreakDuration: r.totalBreaks,
+      totalNetWorkDuration: r.totalWorked - r.totalBreaks,
+      averageWorkDuration: _msDur(r.avgPerDayMs),
+      overtime: r.overtime,
+      workDays: r.workDays,
+      dailyWork: {for (final d in r.days) d.date: d.worked},
     );
   }
 
+  /// Lokaler Monatsbericht über die kanonische Rechnung (#535); Abbildung
+  /// wie [_monthlyFromApi]. Gesamtüberstunden = gespeicherter Saldo.
   MonthlyReportState _calculateMonthlyReport() {
-    final settingsRepository =
-        ref.read(core_providers.settingsRepositoryProvider);
-    // _monthlyEntries enthält bereits alle Einträge für den ausgewählten Monat
-    final totalWorkDuration = _monthlyEntries.fold<Duration>(
-        Duration.zero, (prev, e) => prev + e.totalWorkTime);
-    final totalBreakDuration = _monthlyEntries.fold<Duration>(
-        Duration.zero, (prev, e) => prev + e.totalBreakTime);
-    final totalNetWorkDuration = totalWorkDuration - totalBreakDuration;
-
-    // Eindeutige Arbeitstage im Monat zählen
-    final uniqueWorkDaysSet = _monthlyEntries.map(entryDay).toSet();
-    final workDays = uniqueWorkDaysSet.length;
-
-    final averageWorkDuration = workDays > 0
-        ? roundDurationToMinute(Duration(
-            microseconds: totalNetWorkDuration.inMicroseconds ~/ workDays))
-        : Duration.zero;
-
-    final workdays = settingsRepository.getWorkdays();
-    final targetDailyHours = workdays.isNotEmpty
-        ? settingsRepository.getTargetWeeklyHours() / workdays.length
-        : 0.0;
-
-    // Arbeitstage pro Woche gruppieren; nur Tage zählen, deren Wochentag zu
-    // den konfigurierten Arbeitstagen gehört, damit Zusatztage an anderen
-    // Wochentagen das Monats-Soll nicht erhöhen (#217)
-    final Map<int, Set<DateTime>> weekToWorkDays = {};
-    for (var entry in _monthlyEntries) {
-      if (entry.workStart != null) {
-        final dayOnly = entryDay(entry);
-        final weekNum = isoWeekNumber(dayOnly);
-        weekToWorkDays.putIfAbsent(weekNum, () => {}).add(dayOnly);
-      }
-    }
-    int effectiveTotalWorkDays = 0;
-    for (var weekDays in weekToWorkDays.values) {
-      effectiveTotalWorkDays +=
-          weekDays.where((d) => workdays.contains(d.weekday)).length;
-    }
-
-    final totalTargetHoursForActualWorkDays = roundDurationToMinute(Duration(
-        microseconds: (targetDailyHours *
-                effectiveTotalWorkDays *
-                Duration.microsecondsPerHour)
-            .toInt()));
-    final overtime = totalNetWorkDuration - totalTargetHoursForActualWorkDays;
-
-    final manualOvertimes = _monthlyEntries.fold<Duration>(Duration.zero,
-        (prev, entry) => prev + (entry.manualOvertime ?? Duration.zero));
-    final calculatedMonthlyOvertime = overtime + manualOvertimes;
-
-    final Map<DateTime, Duration> dailyWork = {};
-    final Map<int, Duration> weeklyWork = {};
-
-    for (var entry in _monthlyEntries) {
-      if (entry.workStart != null &&
-          entry.workEnd != null &&
-          entry.effectiveWorkDuration > Duration.zero) {
-        final dayOnly = entryDay(entry);
-        dailyWork[dayOnly] =
-            (dailyWork[dayOnly] ?? Duration.zero) + entry.effectiveWorkDuration;
-
-        final weekNumber = isoWeekNumber(dayOnly);
-        weeklyWork[weekNumber] = (weeklyWork[weekNumber] ?? Duration.zero) +
-            entry.effectiveWorkDuration;
-      }
-    }
-
-    // Durchschnittliche Arbeitszeit pro Woche
-    final numberOfWeeksWithWork = weeklyWork.keys.length;
-    final totalWorkDurationInMonth = weeklyWork.values
-        .fold(Duration.zero, (prev, current) => prev + current);
-    final avgWorkDurationPerWeek = numberOfWeeksWithWork > 0
-        ? roundDurationToMinute(Duration(
-            microseconds: totalWorkDurationInMonth.inMicroseconds ~/
-                numberOfWeeksWithWork))
-        : Duration.zero;
-
+    final day = state.selectedDay ?? ref.read<DateTime>(todayProvider);
+    final monthRef = state.selectedMonth ?? DateTime(day.year, day.month);
+    final r = calculateMonthlyReport(
+        _monthlyEntries, monthRef, _reportSettings(), _storedOvertime());
     return MonthlyReportState(
-      totalWorkDuration: totalWorkDuration,
-      totalBreakDuration: totalBreakDuration,
-      totalNetWorkDuration: totalNetWorkDuration,
-      averageWorkDuration: averageWorkDuration, // Ø pro Tag
-      overtime: calculatedMonthlyOvertime,
-      totalOvertime: calculatedMonthlyOvertime,
-      workDays: workDays, // Anzahl der tatsächlichen Arbeitstage
-      dailyWork:
-          dailyWork, // Für Kalendermarkierungen und Tagesübersicht in Monatsansicht
-      weeklyWork: weeklyWork,
-      avgWorkDurationPerWeek: avgWorkDurationPerWeek,
+      totalWorkDuration: r.totalWorked,
+      totalBreakDuration: r.totalBreaks,
+      totalNetWorkDuration: r.totalWorked - r.totalBreaks,
+      averageWorkDuration: _msDur(r.avgPerDayMs),
+      overtime: r.monthlyOvertime,
+      totalOvertime: r.totalOvertime,
+      workDays: r.workDays,
+      avgWorkDurationPerWeek: _msDur(r.avgPerWeekMs),
+      weeklyWork: {for (final w in r.weeks) w.weekNumber: w.totalWorked},
+      dailyWork: {for (final d in r.days) d.date: d.worked},
     );
   }
 
