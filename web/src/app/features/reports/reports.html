@@ -500,6 +500,69 @@
         </div>
       </mat-tab>
 
+      <!-- ═══════════════════════════════════════════════════════ TAB: TREND ══ -->
+      <!-- Premium (#531). matTabContent: die Ansicht entsteht erst im sichtbaren Tab, erst dann wird geladen. -->
+      <mat-tab [label]="'reports.tabTrend' | translate">
+        <ng-template matTabContent>
+          <div class="tab-content">
+            @if (!svc.isLoggedIn()) {
+              <div class="auth-gate-card">
+                <mat-icon class="gate-icon" aria-hidden="true">lock_person</mat-icon>
+                <h3>{{ 'reports.authRequiredTitle' | translate }}</h3>
+                <p>{{ 'reports.authRequiredTrendText' | translate }}</p>
+                <button mat-flat-button class="login-btn" (click)="onLogin()"
+                        [attr.aria-label]="'reports.goToLoginAria' | translate">
+                  {{ 'reports.loginButton' | translate }}
+                </button>
+              </div>
+            } @else if (!svc.isPremium()) {
+              <div class="premium-gate">
+                <div class="premium-blur-content" aria-hidden="true">
+                  <div class="summary-card blurred">
+                    <div class="summary-row"><span>{{ 'reports.trendWeekTitle' | translate }}</span><span>+02:30</span></div>
+                    <div class="summary-row"><span>{{ 'reports.statActual' | translate }}</span><span>38:24</span></div>
+                    <div class="summary-row"><span>{{ 'reports.trendOvertimeTitle' | translate }}</span><span>+05:15</span></div>
+                  </div>
+                </div>
+                <div class="premium-overlay" role="status" [attr.aria-label]="'reports.premiumLockedAria' | translate">
+                  <mat-icon class="premium-icon" aria-hidden="true">workspace_premium</mat-icon>
+                  <h3>{{ 'reports.trendPremiumTitle' | translate }}</h3>
+                  <p>{{ 'reports.trendPremiumText' | translate }}</p>
+                  <div class="premium-actions">
+                    @if (isRcConfigured) {
+                      <button mat-flat-button
+                              [disabled]="isPurchasing()"
+                              (click)="onPresentPaywall()"
+                              [attr.aria-label]="'reports.unlockPremiumAria' | translate">
+                        @if (isPurchasing()) {
+                          <mat-spinner diameter="18" aria-hidden="true" />
+                        } @else {
+                          <mat-icon aria-hidden="true">workspace_premium</mat-icon>
+                        }
+                        {{ 'reports.unlockPremiumButton' | translate }}
+                      </button>
+                    }
+                    <button mat-stroked-button
+                            [disabled]="isRestoring()"
+                            (click)="onRestorePurchases()"
+                            [attr.aria-label]="'reports.restorePurchaseAria' | translate">
+                      @if (isRestoring()) {
+                        <mat-spinner diameter="18" aria-hidden="true" />
+                      } @else {
+                        <mat-icon aria-hidden="true">restore</mat-icon>
+                      }
+                      {{ 'reports.restorePurchaseButton' | translate }}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            } @else {
+              <app-trend-view />
+            }
+          </div>
+        </ng-template>
+      </mat-tab>
+
     </mat-tab-group>
   </div>
 }
