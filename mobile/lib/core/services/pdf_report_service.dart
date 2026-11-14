@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:intl/intl.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -37,7 +38,9 @@ class PdfReportService {
     return theme;
   }
 
-  String _fmtDuration(Duration d) {
+  String _fmtDuration(Duration d) => _fmtDurationStatic(d);
+
+  static String _fmtDurationStatic(Duration d) {
     final abs = d.abs();
     final h = abs.inHours.toString().padLeft(2, '0');
     final m = abs.inMinutes.remainder(60).toString().padLeft(2, '0');
@@ -65,35 +68,75 @@ class PdfReportService {
     );
   }
 
+  /// Kopf und Zeilen der Tagestabelle (Woche, Monat) als Text. Hat mindestens
+  /// ein Tag Arbeitsorte ([dailyLocations], #526), kommt eine Spalte
+  /// „Arbeitsort“ dazu (Orte durch Komma getrennt); sonst bleibt die Tabelle
+  /// wie bisher (keine leere Spalte). Tage werden über Jahr/Monat/Tag
+  /// zugeordnet.
+  @visibleForTesting
+  static List<List<String>> dailyTableData(
+    Map<DateTime, Duration> dailyWork, {
+    required AppLocalizations l10n,
+    required String locale,
+    Map<DateTime, List<String>> dailyLocations = const {},
+  }) {
+    DateTime dayOf(DateTime d) => DateTime(d.year, d.month, d.day);
+    final dateFmt = DateFormat('dd.MM.yyyy', locale);
+    final sortedEntries = dailyWork.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+    final locationsByDay = {
+      for (final e in dailyLocations.entries)
+        if (e.value.isNotEmpty) dayOf(e.key): e.value.join(', '),
+    };
+    final withLocations =
+        sortedEntries.any((e) => locationsByDay.containsKey(dayOf(e.key)));
+    return [
+      [
+        l10n.pdfDateColumn,
+        l10n.pdfWeekdayColumn,
+        // Tageswerte sind brutto (#535).
+        l10n.pdfAttendanceColumn,
+        if (withLocations) l10n.pdfWorkLocationColumn,
+      ],
+      for (final entry in sortedEntries)
+        [
+          dateFmt.format(entry.key),
+          DateFormat.EEEE(locale).format(entry.key),
+          _fmtDurationStatic(entry.value),
+          if (withLocations) locationsByDay[dayOf(entry.key)] ?? '',
+        ],
+    ];
+  }
+
+  /// Tagestabelle (Woche, Monat), siehe [dailyTableData]. Lange Orte brechen
+  /// in ihrer Zelle um (flexible letzte Spalte).
   pw.Widget _dailyTable(
     Map<DateTime, Duration> dailyWork, {
     required AppLocalizations l10n,
     required String locale,
+    Map<DateTime, List<String>> dailyLocations = const {},
   }) {
-    final dateFmt = DateFormat('dd.MM.yyyy', locale);
-    final sortedEntries = dailyWork.entries.toList()
-      ..sort((a, b) => a.key.compareTo(b.key));
+    final data = dailyTableData(dailyWork,
+        l10n: l10n, locale: locale, dailyLocations: dailyLocations);
+    final withLocations = data.first.length == 4;
     return pw.TableHelper.fromTextArray(
-      headers: [
-        l10n.pdfDateColumn,
-        l10n.pdfWeekdayColumn,
-        // Tageswerte sind brutto (#535).
-        l10n.pdfAttendanceColumn
-      ],
+      headers: data.first,
+      columnWidths: withLocations
+          ? const {
+              0: pw.IntrinsicColumnWidth(),
+              1: pw.IntrinsicColumnWidth(),
+              2: pw.IntrinsicColumnWidth(),
+              3: pw.FlexColumnWidth(),
+            }
+          : null,
       cellAlignments: {
         0: pw.Alignment.centerLeft,
         1: pw.Alignment.centerLeft,
         2: pw.Alignment.centerRight,
+        if (withLocations) 3: pw.Alignment.centerLeft,
       },
       cellPadding: const pw.EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-      data: [
-        for (final entry in sortedEntries)
-          [
-            dateFmt.format(entry.key),
-            DateFormat.EEEE(locale).format(entry.key),
-            _fmtDuration(entry.value),
-          ],
-      ],
+      data: data.skip(1).toList(),
     );
   }
 
@@ -122,6 +165,7 @@ class PdfReportService {
     required Duration averageWorkDuration,
     required Duration overtime,
     required Map<DateTime, Duration> dailyWork,
+    Map<DateTime, List<String>> dailyLocations = const {},
   }) async {
     final dateFmt = DateFormat('dd.MM.yyyy', locale);
     final doc = pw.Document(theme: await _loadTheme());
@@ -144,7 +188,8 @@ class PdfReportService {
               style:
                   pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
           pw.SizedBox(height: 8),
-          _dailyTable(dailyWork, l10n: l10n, locale: locale),
+          _dailyTable(dailyWork,
+              l10n: l10n, locale: locale, dailyLocations: dailyLocations),
         ],
       ),
     );
@@ -186,6 +231,7 @@ class PdfReportService {
     required Duration totalOvertime,
     required Map<int, Duration> weeklyWork,
     required Map<DateTime, Duration> dailyWork,
+    Map<DateTime, List<String>> dailyLocations = const {},
   }) async {
     final doc = pw.Document(theme: await _loadTheme());
     doc.addPage(
@@ -213,7 +259,8 @@ class PdfReportService {
               style:
                   pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
           pw.SizedBox(height: 8),
-          _dailyTable(dailyWork, l10n: l10n, locale: locale),
+          _dailyTable(dailyWork,
+              l10n: l10n, locale: locale, dailyLocations: dailyLocations),
         ],
       ),
     );

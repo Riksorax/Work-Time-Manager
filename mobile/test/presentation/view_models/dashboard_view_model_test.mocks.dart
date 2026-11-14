@@ -516,6 +516,46 @@ class MockSettingsRepository extends _i1.Mock
         returnValue: _i5.Future<void>.value(),
         returnValueForMissingStub: _i5.Future<void>.value(),
       ) as _i5.Future<void>);
+
+  @override
+  bool getShowWorkLocationOnDashboard() => (super.noSuchMethod(
+        Invocation.method(
+          #getShowWorkLocationOnDashboard,
+          [],
+        ),
+        returnValue: false,
+      ) as bool);
+
+  @override
+  _i5.Future<void> setShowWorkLocationOnDashboard(bool? value) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #setShowWorkLocationOnDashboard,
+          [value],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  bool getShowHomeOfficeOnDashboard() => (super.noSuchMethod(
+        Invocation.method(
+          #getShowHomeOfficeOnDashboard,
+          [],
+        ),
+        returnValue: false,
+      ) as bool);
+
+  @override
+  _i5.Future<void> setShowHomeOfficeOnDashboard(bool? value) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #setShowHomeOfficeOnDashboard,
+          [value],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 }
 
 /// A class which mocks [SaveWorkEntry].

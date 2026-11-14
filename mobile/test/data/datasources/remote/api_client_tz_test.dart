@@ -205,8 +205,9 @@ void main() {
       }
       for (final id in ids) {
         final p = id.split('-').map(int.parse).toList();
-        final expected =
-            WorkEntryModel(id: id, date: DateTime(p[0], p[1], p[2]));
+        // Gelesene Einträge tragen immer eine Orte-Liste (#526: fehlend = []).
+        final expected = WorkEntryModel(
+            id: id, date: DateTime(p[0], p[1], p[2]), workLocations: const []);
         final single = (await world.api.getWorkEntry(p[0], p[1], p[2]))!;
         final fromMonth = (await world.api.getWorkEntriesForMonth(p[0], p[1]))
             .singleWhere((e) => e.id == id);

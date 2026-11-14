@@ -54,6 +54,8 @@ void main() {
     when(settings.getTimezoneOverride()).thenReturn(null);
     when(settings.getLocale()).thenReturn('de');
     when(settings.getVacationDaysPerYear()).thenReturn(28);
+    when(settings.getShowWorkLocationOnDashboard()).thenReturn(false);
+    when(settings.getShowHomeOfficeOnDashboard()).thenReturn(true);
     when(settings.setVacationDaysPerYear(any)).thenAnswer((_) async {});
     when(settings.setBundesland(any)).thenAnswer((_) async {});
 
@@ -91,6 +93,35 @@ void main() {
     await init();
 
     expect(container.read(settingsViewModelProvider).hasError, isTrue);
+  });
+
+  group('Dashboard-Anzeige (#526)', () {
+    test('Standardwerte kommen aus dem Repository', () async {
+      await init();
+      final settings =
+          container.read(settingsViewModelProvider).value!.settings;
+      expect(settings.showWorkLocationOnDashboard, isFalse);
+      expect(settings.showHomeOfficeOnDashboard, isTrue);
+    });
+
+    test('Umschalten speichert über das Repository und ändert den State',
+        () async {
+      when(settings.setShowWorkLocationOnDashboard(any))
+          .thenAnswer((_) async {});
+      when(settings.setShowHomeOfficeOnDashboard(any)).thenAnswer((_) async {});
+      await init();
+      final vm = container.read(settingsViewModelProvider.notifier);
+
+      await vm.updateShowWorkLocationOnDashboard(true);
+      await vm.updateShowHomeOfficeOnDashboard(false);
+
+      verify(settings.setShowWorkLocationOnDashboard(true)).called(1);
+      verify(settings.setShowHomeOfficeOnDashboard(false)).called(1);
+      final s = container.read(settingsViewModelProvider).value!.settings;
+      expect(s.showWorkLocationOnDashboard, isTrue);
+      expect(s.showHomeOfficeOnDashboard, isFalse);
+      expect(s.vacationDaysPerYear, 28, reason: 'andere Werte bleiben');
+    });
   });
 
   test('_init liest den Anspruch in die SettingsEntity', () async {

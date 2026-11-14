@@ -78,6 +78,14 @@ class _DelayedOvertimeRepository implements OvertimeRepository {
 
 class _FakeSettingsRepository implements SettingsRepository {
   @override
+  bool getShowWorkLocationOnDashboard() => false;
+  @override
+  Future<void> setShowWorkLocationOnDashboard(bool value) async {}
+  @override
+  bool getShowHomeOfficeOnDashboard() => true;
+  @override
+  Future<void> setShowHomeOfficeOnDashboard(bool value) async {}
+  @override
   AppThemeMode getThemeMode() => AppThemeMode.system;
   @override
   Future<void> setThemeMode(AppThemeMode mode) async {}

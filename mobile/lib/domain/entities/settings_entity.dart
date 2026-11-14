@@ -65,6 +65,13 @@ class SettingsEntity extends Equatable {
   /// Siehe #278.
   final int vacationDaysPerYear;
 
+  /// Arbeitsort im Dashboard anzeigen (#526, je Profil). Nur Anzeige.
+  final bool showWorkLocationOnDashboard;
+
+  /// Home-Office-Schalter im Dashboard anzeigen (#526, je Profil). Nur
+  /// Anzeige; Standard an (Zustand vor #526).
+  final bool showHomeOfficeOnDashboard;
+
   const SettingsEntity({
     this.weeklyTargetHours = 40.0,
     this.workdays = const [1, 2, 3, 4, 5], // Monday to Friday
@@ -83,6 +90,8 @@ class SettingsEntity extends Equatable {
     this.timezoneOverride,
     this.locale = 'de',
     this.vacationDaysPerYear = 30,
+    this.showWorkLocationOnDashboard = false,
+    this.showHomeOfficeOnDashboard = true,
   });
 
   /// Creates a copy of this [SettingsEntity] but with the given fields
@@ -103,6 +112,8 @@ class SettingsEntity extends Equatable {
     bool? use24HourFormat,
     String? locale,
     int? vacationDaysPerYear,
+    bool? showWorkLocationOnDashboard,
+    bool? showHomeOfficeOnDashboard,
   }) {
     return SettingsEntity(
       weeklyTargetHours: weeklyTargetHours ?? this.weeklyTargetHours,
@@ -126,6 +137,10 @@ class SettingsEntity extends Equatable {
       timezoneOverride: timezoneOverride,
       locale: locale ?? this.locale,
       vacationDaysPerYear: vacationDaysPerYear ?? this.vacationDaysPerYear,
+      showWorkLocationOnDashboard:
+          showWorkLocationOnDashboard ?? this.showWorkLocationOnDashboard,
+      showHomeOfficeOnDashboard:
+          showHomeOfficeOnDashboard ?? this.showHomeOfficeOnDashboard,
     );
   }
 
@@ -153,6 +168,8 @@ class SettingsEntity extends Equatable {
       timezoneOverride: timezoneOverride,
       locale: locale,
       vacationDaysPerYear: vacationDaysPerYear,
+      showWorkLocationOnDashboard: showWorkLocationOnDashboard,
+      showHomeOfficeOnDashboard: showHomeOfficeOnDashboard,
     );
   }
 
@@ -178,6 +195,8 @@ class SettingsEntity extends Equatable {
       timezoneOverride: timezoneOverride,
       locale: locale,
       vacationDaysPerYear: vacationDaysPerYear,
+      showWorkLocationOnDashboard: showWorkLocationOnDashboard,
+      showHomeOfficeOnDashboard: showHomeOfficeOnDashboard,
     );
   }
 
@@ -200,5 +219,7 @@ class SettingsEntity extends Equatable {
         timezoneOverride,
         locale,
         vacationDaysPerYear,
+        showWorkLocationOnDashboard,
+        showHomeOfficeOnDashboard,
       ];
 }

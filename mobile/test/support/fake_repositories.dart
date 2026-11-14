@@ -250,6 +250,24 @@ class FakeSettingsRepository implements SettingsRepository {
   @override
   String getLocale() => 'de';
 
+  /// Dashboard-Anzeige (#526), Standardwerte wie im Repository.
+  bool showWorkLocationOnDashboard = false;
+  bool showHomeOfficeOnDashboard = true;
+
+  @override
+  bool getShowWorkLocationOnDashboard() => showWorkLocationOnDashboard;
+
+  @override
+  Future<void> setShowWorkLocationOnDashboard(bool value) async =>
+      showWorkLocationOnDashboard = value;
+
+  @override
+  bool getShowHomeOfficeOnDashboard() => showHomeOfficeOnDashboard;
+
+  @override
+  Future<void> setShowHomeOfficeOnDashboard(bool value) async =>
+      showHomeOfficeOnDashboard = value;
+
   @override
   dynamic noSuchMethod(Invocation invocation) =>
       throw UnimplementedError('${invocation.memberName}');

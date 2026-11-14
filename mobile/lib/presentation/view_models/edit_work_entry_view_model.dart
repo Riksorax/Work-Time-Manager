@@ -6,6 +6,7 @@ import '../../domain/entities/break_entity.dart';
 import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/utils/date_utils.dart';
 import '../../domain/utils/entry_day.dart';
+import '../../domain/utils/work_locations.dart';
 import '../state/edit_work_entry_state.dart';
 import 'reports_view_model.dart';
 
@@ -30,6 +31,11 @@ class EditWorkEntryViewModel extends Notifier<EditWorkEntryState> {
 
   void setHomeOffice(bool value) {
     state = state.copyWith(isHomeOffice: value);
+  }
+
+  /// Arbeitsorte (#526), nur bei Typ Arbeit wirksam (siehe [saveChanges]).
+  void setWorkLocations(List<String> locations) {
+    state = state.copyWith(workLocations: normalizeWorkLocations(locations));
   }
 
   void setStartTime(DateTime startTime) {
@@ -95,6 +101,16 @@ class EditWorkEntryViewModel extends Notifier<EditWorkEntryState> {
       isHomeOffice: isStandardWork
           ? state.isHomeOffice
           : state.originalEntry.isHomeOffice,
+      // Orte ebenso (#526): andere Typen reichen den Originalwert durch
+      // (`null` bleibt `null` = gespeicherte Orte unangetastet). Ein frischer
+      // Eintrag (Neu-Eintrag in den Berichten, Orte `null`) ohne eingetragene
+      // Orte bleibt ebenfalls `null`.
+      workLocations: isStandardWork
+          ? (state.originalEntry.workLocations == null &&
+                  state.workLocations.isEmpty
+              ? null
+              : normalizeWorkLocations(state.workLocations))
+          : state.originalEntry.workLocations,
       // ManuallyEntered ist true, wenn wir hier speichern.
       isManuallyEntered: true,
     );

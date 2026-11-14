@@ -4,19 +4,31 @@ import 'package:intl/intl.dart';
 
 import '../../../domain/entities/break_entity.dart';
 import '../../../domain/entities/work_entry_entity.dart';
+import '../../core/providers/providers.dart' show workLocationHistoryProvider;
 import '../../domain/utils/entry_day.dart';
 import '../../l10n/app_localizations.dart';
 import '../state/edit_work_entry_state.dart';
 import '../view_models/edit_work_entry_view_model.dart';
 import 'common/sheet_insets.dart';
+import 'work_locations_input.dart';
 
-class EditWorkEntryModal extends ConsumerWidget {
+class EditWorkEntryModal extends ConsumerStatefulWidget {
   final WorkEntryEntity workEntry;
 
   const EditWorkEntryModal({super.key, required this.workEntry});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<EditWorkEntryModal> createState() => _EditWorkEntryModalState();
+}
+
+class _EditWorkEntryModalState extends ConsumerState<EditWorkEntryModal> {
+  /// Orte-Eingabe (#526): beim Speichern wird noch getippter Text übernommen.
+  final _locationsKey = GlobalKey<WorkLocationsInputState>();
+
+  WorkEntryEntity get workEntry => widget.workEntry;
+
+  @override
+  Widget build(BuildContext context) {
     final provider = editWorkEntryViewModelProvider(workEntry);
     final state = ref.watch(provider);
     final viewModel = ref.read(provider.notifier);
@@ -85,7 +97,18 @@ class EditWorkEntryModal extends ConsumerWidget {
                           onChanged: viewModel.setHomeOffice,
                         ),
                       ),
+                      // Arbeitsorte (#526): im Dialog immer sichtbar,
+                      // unabhängig von der Dashboard-Einstellung.
                       const SizedBox(height: 8),
+                      WorkLocationsInput(
+                        key: _locationsKey,
+                        locations: state.workLocations,
+                        onChanged: viewModel.setWorkLocations,
+                        suggestions: (selected, filter) => ref
+                            .read(workLocationHistoryProvider)
+                            .suggestions(selected, filter: filter),
+                      ),
+                      const SizedBox(height: 16),
                       _buildTimeSection(context, state, viewModel),
                       const SizedBox(height: 24),
                       _buildBreaksSection(context, state, viewModel),
@@ -104,6 +127,12 @@ class EditWorkEntryModal extends ConsumerWidget {
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () async {
+                  // Noch getippter Ort zählt mit; ungültig -> Dialog bleibt
+                  // offen, die Eingabe erklärt den Fehler (#526).
+                  if (state.type == WorkEntryType.work &&
+                      !(_locationsKey.currentState?.commitPending() ?? true)) {
+                    return;
+                  }
                   await viewModel.saveChanges();
                   if (context.mounted)
                     Navigator.of(context).pop(true); // Return true on success

@@ -135,6 +135,18 @@ class NoOpSettingsRepository implements SettingsRepository {
 
   @override
   Future<void> setVacationDaysPerYear(int days) async {}
+
+  @override
+  bool getShowWorkLocationOnDashboard() => defaultShowWorkLocationOnDashboard;
+
+  @override
+  Future<void> setShowWorkLocationOnDashboard(bool value) async {}
+
+  @override
+  bool getShowHomeOfficeOnDashboard() => defaultShowHomeOfficeOnDashboard;
+
+  @override
+  Future<void> setShowHomeOfficeOnDashboard(bool value) async {}
 }
 
 class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
@@ -201,6 +213,10 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
       final timezoneOverride = settingsRepository.getTimezoneOverride();
       final locale = settingsRepository.getLocale();
       final vacationDaysPerYear = settingsRepository.getVacationDaysPerYear();
+      final showWorkLocationOnDashboard =
+          settingsRepository.getShowWorkLocationOnDashboard();
+      final showHomeOfficeOnDashboard =
+          settingsRepository.getShowHomeOfficeOnDashboard();
 
       final settings = SettingsEntity(
         weeklyTargetHours: weeklyTargetHours,
@@ -220,6 +236,8 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
         timezoneOverride: timezoneOverride,
         locale: locale,
         vacationDaysPerYear: vacationDaysPerYear,
+        showWorkLocationOnDashboard: showWorkLocationOnDashboard,
+        showHomeOfficeOnDashboard: showHomeOfficeOnDashboard,
       );
       state = AsyncValue.data(SettingsState(
         settings: settings,
@@ -320,6 +338,24 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
         state.value!.settings.copyWith(vacationDaysPerYear: days);
     state = state.whenData((value) => value.copyWith(settings: newSettings));
     ref.invalidate(leaveBalanceViewModelProvider);
+  }
+
+  /// Arbeitsort im Dashboard anzeigen (#526). Nur Anzeige, löscht nichts.
+  Future<void> updateShowWorkLocationOnDashboard(bool value) async {
+    final settingsRepository =
+        ref.read(core_providers.settingsRepositoryProvider);
+    await settingsRepository.setShowWorkLocationOnDashboard(value);
+    state = state.whenData((v) => v.copyWith(
+        settings: v.settings.copyWith(showWorkLocationOnDashboard: value)));
+  }
+
+  /// Home-Office im Dashboard anzeigen (#526). Nur Anzeige, löscht nichts.
+  Future<void> updateShowHomeOfficeOnDashboard(bool value) async {
+    final settingsRepository =
+        ref.read(core_providers.settingsRepositoryProvider);
+    await settingsRepository.setShowHomeOfficeOnDashboard(value);
+    state = state.whenData((v) => v.copyWith(
+        settings: v.settings.copyWith(showHomeOfficeOnDashboard: value)));
   }
 
   Future<void> updateNotificationsEnabled(bool enabled) async {

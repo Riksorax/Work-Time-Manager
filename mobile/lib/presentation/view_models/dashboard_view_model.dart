@@ -20,6 +20,7 @@ import '../../domain/utils/entry_day.dart';
 import '../../domain/utils/overtime_utils.dart';
 import '../../domain/utils/overtime_warning_utils.dart';
 import '../../domain/utils/timer_action.dart';
+import '../../domain/utils/work_locations.dart';
 import '../../l10n/app_localizations.dart';
 import '../state/dashboard_state.dart';
 
@@ -822,6 +823,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
       description: state.workEntry.description,
       type: state.workEntry.type,
       isHomeOffice: state.workEntry.isHomeOffice,
+      workLocations: state.workEntry.workLocations,
     );
     logger.i(
         '[Dashboard] Komplett neue Session gestartet um $now (Start, End, Pausen zurückgesetzt)');
@@ -847,6 +849,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
       description: state.workEntry.description,
       type: state.workEntry.type,
       isHomeOffice: state.workEntry.isHomeOffice,
+      workLocations: state.workEntry.workLocations,
     );
     logger.i('[Dashboard] Neue Session gestartet um $now (Pausen behalten)');
     return _recalculateStateAndSave(updatedEntry, ctx: ctx);
@@ -1106,6 +1109,27 @@ class DashboardViewModel extends Notifier<DashboardState> {
     return _recalculateStateAndSave(updatedEntry, ctx: ctx);
   }
 
+  /// Setzt die Arbeitsorte des aktuellen Eintrags (#526, Muster
+  /// [setHomeOffice]). Die Liste wird wie im Backend bereinigt; `[]` entfernt
+  /// alle Orte. Ohne `workStart` wird nur der State geändert (der Start
+  /// schreibt die Orte mit, kein Tag ohne Zeiten); sonst speichert die Aktion
+  /// den Eintrag, ohne Timer, Pausen oder andere Felder anzufassen.
+  Future<bool> setWorkLocations(List<String> locations) =>
+      _runAction(() => _setWorkLocationsBody(locations));
+
+  Future<bool> _setWorkLocationsBody(List<String> locations) async {
+    if (!await _ensureCurrentDay()) return false;
+    final ctx = _beginAction();
+    final updatedEntry = state.workEntry
+        .copyWith(workLocations: normalizeWorkLocations(locations));
+    if (updatedEntry.workStart == null) {
+      if (!ref.mounted || ctx.gen != _initGen) return true;
+      state = state.copyWith(workEntry: updatedEntry);
+      return true;
+    }
+    return _recalculateStateAndSave(updatedEntry, ctx: ctx);
+  }
+
   Future<bool> setManualStartTime(TimeOfDay time) =>
       _runAction(() => _setManualStartTimeBody(time));
 
@@ -1195,6 +1219,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
       description: state.workEntry.description,
       type: state.workEntry.type,
       isHomeOffice: state.workEntry.isHomeOffice,
+      workLocations: state.workEntry.workLocations,
     );
 
     final ok = await _recalculateStateAndSave(updatedEntry, ctx: ctx);

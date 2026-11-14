@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/entities/break_entity.dart';
 import '../../domain/utils/entry_day.dart';
+import '../../domain/utils/work_locations.dart';
 import 'break_model.dart';
 
 class WorkEntryModel extends WorkEntryEntity {
@@ -20,6 +21,7 @@ class WorkEntryModel extends WorkEntryEntity {
     super.isManuallyEntered,
     super.type,
     super.isHomeOffice,
+    super.workLocations,
   });
 
   static String generateId(DateTime date) =>
@@ -47,6 +49,7 @@ class WorkEntryModel extends WorkEntryEntity {
       isManuallyEntered: entity.isManuallyEntered,
       type: entity.type,
       isHomeOffice: entity.isHomeOffice,
+      workLocations: entity.workLocations,
     );
   }
 
@@ -76,6 +79,8 @@ class WorkEntryModel extends WorkEntryEntity {
             )
           : WorkEntryType.work,
       isHomeOffice: map['isHomeOffice'] as bool? ?? false,
+      // Lesegrenze: fehlendes Feld = keine Orte (#526), nie `null`.
+      workLocations: readWorkLocations(map['workLocations']),
     );
   }
 
@@ -101,7 +106,12 @@ class WorkEntryModel extends WorkEntryEntity {
     return WorkEntryModel.fromMap(data).copyWith(id: snapshot.id);
   }
 
+  /// Schreibformat des Tageseintrags. `workLocations` steht nur in der Map,
+  /// wenn das Feld gesetzt ist (#526): `null` = unangetastet. Der Altpfad
+  /// `FirestoreDataSourceImpl` schreibt per `merge` je Tag; fehlt der Schlüssel,
+  /// behält er gespeicherte Orte, `[]` überschreibt sie mit einer leeren Liste.
   Map<String, dynamic> toMap() {
+    final locations = normalizeWorkLocationsOrNull(workLocations);
     return {
       'date': Timestamp.fromDate(DateTime.utc(date.year, date.month, date.day)),
       'workStart': workStart != null
@@ -116,6 +126,7 @@ class WorkEntryModel extends WorkEntryEntity {
       'isManuallyEntered': isManuallyEntered,
       'type': type.name,
       'isHomeOffice': isHomeOffice,
+      if (locations != null) 'workLocations': locations,
     };
   }
 
@@ -135,6 +146,7 @@ class WorkEntryModel extends WorkEntryEntity {
     bool? isManuallyEntered,
     WorkEntryType? type,
     bool? isHomeOffice,
+    List<String>? workLocations,
   }) {
     return WorkEntryModel(
       id: id ?? this.id,
@@ -147,6 +159,7 @@ class WorkEntryModel extends WorkEntryEntity {
       isManuallyEntered: isManuallyEntered ?? this.isManuallyEntered,
       type: type ?? this.type,
       isHomeOffice: isHomeOffice ?? this.isHomeOffice,
+      workLocations: workLocations ?? this.workLocations,
     );
   }
 }

@@ -10,6 +10,7 @@ import '../../core/providers/subscription_provider.dart';
 import '../../core/services/app_lock_service.dart';
 import '../../core/utils/logger.dart';
 import '../../domain/entities/bundesland.dart';
+import '../../domain/entities/settings_entity.dart';
 import '../../domain/utils/weekday_labels.dart';
 import '../../l10n/app_localizations.dart';
 import '../view_models/auth_view_model.dart';
@@ -180,6 +181,9 @@ class SettingsPage extends ConsumerWidget {
                     .updateUse24HourFormat(use24Hour);
               },
             ),
+            const Divider(height: 1),
+            // Dashboard-Anzeige (#526): wirkt nur aufs Dashboard.
+            _DashboardDisplaySection(settings: settings),
             const Divider(height: 1),
             ListTile(
               title: Text(l10n.bundeslandTitle),
@@ -758,6 +762,57 @@ class SettingsPage extends ConsumerWidget {
       },
       loading: () => const SizedBox.shrink(),
       error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+}
+
+/// Abschnitt „Dashboard-Anzeige“ (#526): Arbeitsort und Home-Office im
+/// Dashboard ein-/ausblenden. Je Profil, angemeldet mit dem Server
+/// synchronisiert, im Gast-Modus lokal. Ausschalten löscht nichts; im
+/// Bearbeiten-Dialog und in den Berichten bleibt beides sichtbar.
+class _DashboardDisplaySection extends ConsumerWidget {
+  const _DashboardDisplaySection({required this.settings});
+
+  final SettingsEntity settings;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final viewModel = ref.read(settingsViewModelProvider.notifier);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+          child: Semantics(
+            header: true,
+            child: Text(
+              l10n.dashboardDisplaySectionTitle,
+              style: theme.textTheme.titleSmall
+                  ?.copyWith(color: theme.colorScheme.primary),
+            ),
+          ),
+        ),
+        SwitchListTile(
+          title: Text(l10n.showWorkLocationOnDashboardLabel),
+          value: settings.showWorkLocationOnDashboard,
+          onChanged: viewModel.updateShowWorkLocationOnDashboard,
+        ),
+        SwitchListTile(
+          title: Text(l10n.showHomeOfficeOnDashboardLabel),
+          value: settings.showHomeOfficeOnDashboard,
+          onChanged: viewModel.updateShowHomeOfficeOnDashboard,
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: Text(
+            l10n.dashboardDisplayHint,
+            style: theme.textTheme.bodySmall
+                ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+          ),
+        ),
+      ],
     );
   }
 }

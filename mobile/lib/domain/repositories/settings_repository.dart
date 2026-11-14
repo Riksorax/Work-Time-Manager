@@ -136,4 +136,27 @@ abstract class SettingsRepository {
 
   /// Speichert den Jahres-Urlaubsanspruch des aktiven Arbeitszeit-Profils.
   Future<void> setVacationDaysPerYear(int days);
+
+  /// Ruft ab, ob das Dashboard die Arbeitsorte zeigt (#526, je Profil).
+  /// Default `false` ([defaultShowWorkLocationOnDashboard]). Wirkt nur auf das
+  /// Dashboard; ausschalten löscht nichts.
+  bool getShowWorkLocationOnDashboard();
+
+  /// Speichert, ob das Dashboard die Arbeitsorte zeigt.
+  Future<void> setShowWorkLocationOnDashboard(bool value);
+
+  /// Ruft ab, ob das Dashboard den Home-Office-Schalter zeigt (#526, je
+  /// Profil). Default `true` ([defaultShowHomeOfficeOnDashboard]).
+  bool getShowHomeOfficeOnDashboard();
+
+  /// Speichert, ob das Dashboard den Home-Office-Schalter zeigt.
+  Future<void> setShowHomeOfficeOnDashboard(bool value);
 }
+
+/// Standard für [SettingsRepository.getShowWorkLocationOnDashboard] (wie
+/// Backend `SettingsDto.DefaultShowWorkLocationOnDashboard`).
+const bool defaultShowWorkLocationOnDashboard = false;
+
+/// Standard für [SettingsRepository.getShowHomeOfficeOnDashboard] (wie
+/// Backend `SettingsDto.DefaultShowHomeOfficeOnDashboard`, heutiger Zustand).
+const bool defaultShowHomeOfficeOnDashboard = true;

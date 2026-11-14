@@ -12,6 +12,7 @@ import '../../core/providers/today_provider.dart';
 import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/services/break_calculator_service.dart';
 import '../../domain/utils/entry_day.dart';
+import '../../domain/utils/work_locations.dart';
 import '../../domain/utils/overtime_utils.dart';
 import '../../domain/utils/report_calculator.dart';
 import '../state/monthly_report_state.dart';
@@ -81,6 +82,7 @@ class ReportsViewModel extends Notifier<ReportsState> {
       weeklyReportState: _calculateWeeklyReport(day),
       monthlyReportState: _calculateMonthlyReport(),
       homeOfficeDays: _calculateHomeOfficeDays(),
+      workLocationDays: workLocationsByDay(_monthlyEntries),
     );
     // Eingeloggt: server-berechnete Werte (zentrale, korrigierte Logik) laden und
     // die lokalen überschreiben. Schlägt der Abruf fehl (401/offline), bleibt der

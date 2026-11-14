@@ -762,7 +762,62 @@ final class WorkRepositoryProvider
   }
 }
 
-String _$workRepositoryHash() => r'3b59252ad86522d920133f40d32b0057570fb130';
+String _$workRepositoryHash() => r'f3376fefe33d50129e6b958abc0fb29eeb0cf412';
+
+/// Verlauf der Arbeitsorte je Nutzer und Profil (#526) für die Vorschläge.
+/// Wird aus den Einträgen gespeist, die [workRepository] ohnehin liest oder
+/// speichert (kein zusätzlicher Lesezugriff).
+
+@ProviderFor(workLocationHistory)
+const workLocationHistoryProvider = WorkLocationHistoryProvider._();
+
+/// Verlauf der Arbeitsorte je Nutzer und Profil (#526) für die Vorschläge.
+/// Wird aus den Einträgen gespeist, die [workRepository] ohnehin liest oder
+/// speichert (kein zusätzlicher Lesezugriff).
+
+final class WorkLocationHistoryProvider extends $FunctionalProvider<
+    WorkLocationHistory,
+    WorkLocationHistory,
+    WorkLocationHistory> with $Provider<WorkLocationHistory> {
+  /// Verlauf der Arbeitsorte je Nutzer und Profil (#526) für die Vorschläge.
+  /// Wird aus den Einträgen gespeist, die [workRepository] ohnehin liest oder
+  /// speichert (kein zusätzlicher Lesezugriff).
+  const WorkLocationHistoryProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'workLocationHistoryProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$workLocationHistoryHash();
+
+  @$internal
+  @override
+  $ProviderElement<WorkLocationHistory> $createElement(
+          $ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  WorkLocationHistory create(Ref ref) {
+    return workLocationHistory(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(WorkLocationHistory value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<WorkLocationHistory>(value),
+    );
+  }
+}
+
+String _$workLocationHistoryHash() =>
+    r'db28968532097b08fc5261b3b803569166634880';
 
 @ProviderFor(overtimeRepository)
 const overtimeRepositoryProvider = OvertimeRepositoryProvider._();

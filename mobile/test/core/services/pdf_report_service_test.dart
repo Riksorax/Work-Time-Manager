@@ -195,4 +195,79 @@ void main() {
       });
     }
   });
+
+  group('Arbeitsorte in der Tagestabelle (#526)', () {
+    final mo = DateTime(2026, 10, 5);
+    final di = DateTime(2026, 10, 6);
+    final work = {
+      mo: const Duration(hours: 8),
+      di: const Duration(hours: 9),
+    };
+
+    for (final (locale, column, weekday) in [
+      ('de', 'Arbeitsort', 'Montag'),
+      ('en', 'Work location', 'Monday'),
+    ]) {
+      final l10n = locale == 'de' ? AppLocalizationsDe() : AppLocalizationsEn();
+
+      test('Spalte mit Orten, durch Komma getrennt ($locale)', () {
+        final data = PdfReportService.dailyTableData(work,
+            l10n: l10n,
+            locale: locale,
+            // Zeitanteil im Schlüssel stört die Zuordnung nicht.
+            dailyLocations: {
+              DateTime(2026, 10, 5, 0, 0): const ['Büro', 'Kunde A'],
+            });
+        expect(data.first.last, column);
+        expect(data[1], ['05.10.2026', weekday, '08:00', 'Büro, Kunde A']);
+        expect(data[2].last, '', reason: 'Tag ohne Orte: leere Zelle');
+      });
+
+      test('ohne Orte keine leere Spalte ($locale)', () {
+        final data =
+            PdfReportService.dailyTableData(work, l10n: l10n, locale: locale);
+        expect(data.first, hasLength(3));
+        expect(data.first, isNot(contains(column)));
+      });
+
+      test('Wochen- und Monatsbericht mit Orten erzeugen ein PDF ($locale)',
+          () async {
+        final locs = {
+          mo: const ['Zentrale Düsseldorf, Königsallee 1', 'Kunde A'],
+        };
+        await service.exportWeeklyReport(
+          l10n: l10n,
+          locale: locale,
+          startOfWeek: mo,
+          endOfWeek: DateTime(2026, 10, 11),
+          weekNumber: 41,
+          workDays: 2,
+          totalWorkDuration: const Duration(hours: 17),
+          totalBreakDuration: const Duration(hours: 1),
+          averageWorkDuration: const Duration(hours: 8, minutes: 30),
+          overtime: const Duration(hours: 1),
+          dailyWork: work,
+          dailyLocations: locs,
+        );
+        expect(String.fromCharCodes(fakePlatform.lastBytes!.take(4)), '%PDF');
+
+        await service.exportMonthlyReport(
+          l10n: l10n,
+          locale: locale,
+          month: DateTime(2026, 10),
+          workDays: 2,
+          totalWorkDuration: const Duration(hours: 17),
+          totalBreakDuration: const Duration(hours: 1),
+          averageWorkDuration: const Duration(hours: 8, minutes: 30),
+          avgWorkDurationPerWeek: const Duration(hours: 17),
+          monthlyOvertime: const Duration(hours: 1),
+          totalOvertime: const Duration(hours: 3),
+          weeklyWork: {41: const Duration(hours: 17)},
+          dailyWork: work,
+          dailyLocations: locs,
+        );
+        expect(String.fromCharCodes(fakePlatform.lastBytes!.take(4)), '%PDF');
+      });
+    }
+  });
 }
