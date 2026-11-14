@@ -59,6 +59,12 @@ class SettingsRepositoryImpl implements SettingsRepository {
       'vacation_days_per_year_$_userId$_profileSuffix';
   // Bundesland ist profil-spezifisch (siehe #279).
   String get _bundeslandKey => 'bundesland_$_userId$_profileSuffix';
+  // Dashboard-Anzeige (#526) ist profil-spezifisch wie im Backend
+  // (`settings/current` je Profil).
+  String get _showWorkLocationKey =>
+      'show_work_location_on_dashboard_$_userId$_profileSuffix';
+  String get _showHomeOfficeKey =>
+      'show_home_office_on_dashboard_$_userId$_profileSuffix';
   // Vor dem Login gewähltes Bundesland (Nutzer 'local', gleiches Profil).
   String get _localBundeslandKey => 'bundesland_local$_profileSuffix';
   // Alter Schlüssel (reine Anzahl statt konkreter Wochentage) - nur noch
@@ -140,16 +146,48 @@ class SettingsRepositoryImpl implements SettingsRepository {
     _syncToFirestore({'vacationDaysPerYear': days});
   }
 
+  @override
+  bool getShowWorkLocationOnDashboard() =>
+      _readBool(_showWorkLocationKey) ?? defaultShowWorkLocationOnDashboard;
+
+  @override
+  Future<void> setShowWorkLocationOnDashboard(bool value) async {
+    await _prefs.setBool(_showWorkLocationKey, value);
+    _syncToFirestore({'showWorkLocationOnDashboard': value});
+  }
+
+  @override
+  bool getShowHomeOfficeOnDashboard() =>
+      _readBool(_showHomeOfficeKey) ?? defaultShowHomeOfficeOnDashboard;
+
+  @override
+  Future<void> setShowHomeOfficeOnDashboard(bool value) async {
+    await _prefs.setBool(_showHomeOfficeKey, value);
+    _syncToFirestore({'showHomeOfficeOnDashboard': value});
+  }
+
+  bool? _readBool(String key) {
+    try {
+      return _prefs.getBool(key);
+    } catch (_) {
+      // Fremdtyp unter dem Key - auf Default zurückfallen.
+      return null;
+    }
+  }
+
   /// Beim Login: Firestore-Einstellungen in SharedPreferences übernehmen.
-  /// Nur weeklyTargetHours, workdays, vacationDaysPerYear und bundesland werden
-  /// synchronisiert — Benachrichtigungen sind gerätespezifisch.
+  /// Nur weeklyTargetHours, workdays, vacationDaysPerYear, bundesland und die
+  /// Dashboard-Anzeige (#526) werden synchronisiert — Benachrichtigungen sind
+  /// gerätespezifisch.
   ///
-  /// Liefert `true`, wenn sich dadurch das Bundesland geändert hat (damit die
-  /// UI neu laden kann, siehe #279).
+  /// Liefert `true`, wenn sich dadurch das Bundesland oder die
+  /// Dashboard-Anzeige geändert hat (damit die UI neu laden kann, siehe #279).
   Future<bool> syncFromFirestore() async {
     if (_userId == 'local' || _userId.isEmpty) return false;
     try {
       final before = getBundesland();
+      final displayBefore =
+          (getShowWorkLocationOnDashboard(), getShowHomeOfficeOnDashboard());
       final data = await _firestoreDataSource.getSettings(_userId,
           profileId: _profileId);
       if (data == null) return false;
@@ -176,8 +214,19 @@ class SettingsRepositoryImpl implements SettingsRepository {
         await _prefs.setInt(_vacationDaysKey, vacation.toInt());
       }
       await _syncBundeslandFromRemote(data['bundesland']);
+      // GET liefert konkrete Werte; Fremdtypen/fehlend ignorieren.
+      final showLocation = data['showWorkLocationOnDashboard'];
+      if (showLocation is bool) {
+        await _prefs.setBool(_showWorkLocationKey, showLocation);
+      }
+      final showHomeOffice = data['showHomeOfficeOnDashboard'];
+      if (showHomeOffice is bool) {
+        await _prefs.setBool(_showHomeOfficeKey, showHomeOffice);
+      }
       logger.i('[SettingsRepository] Einstellungen von Firestore geladen.');
-      return getBundesland() != before;
+      final displayAfter =
+          (getShowWorkLocationOnDashboard(), getShowHomeOfficeOnDashboard());
+      return getBundesland() != before || displayAfter != displayBefore;
     } catch (e) {
       logger.w('[SettingsRepository] Firestore-Import fehlgeschlagen: $e');
       return false;

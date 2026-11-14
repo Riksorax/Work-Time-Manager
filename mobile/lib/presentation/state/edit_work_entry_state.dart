@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 
 import '../../../domain/entities/break_entity.dart';
 import '../../../domain/entities/work_entry_entity.dart';
+import '../../../domain/utils/work_locations.dart';
 
 class EditWorkEntryState extends Equatable {
   final WorkEntryEntity originalEntry;
@@ -11,6 +12,9 @@ class EditWorkEntryState extends Equatable {
   final WorkEntryType type;
   final bool isHomeOffice;
 
+  /// Arbeitsorte im Dialog (#526), bereinigt; nur bei Typ Arbeit bearbeitbar.
+  final List<String> workLocations;
+
   const EditWorkEntryState({
     required this.originalEntry,
     this.newStartTime,
@@ -18,6 +22,7 @@ class EditWorkEntryState extends Equatable {
     required this.breaks,
     required this.type,
     this.isHomeOffice = false,
+    this.workLocations = const [],
   });
 
   factory EditWorkEntryState.fromWorkEntry(WorkEntryEntity entry) {
@@ -28,6 +33,7 @@ class EditWorkEntryState extends Equatable {
       breaks: entry.breaks,
       type: entry.type,
       isHomeOffice: entry.isHomeOffice,
+      workLocations: normalizeWorkLocations(entry.workLocations),
     );
   }
 
@@ -37,6 +43,7 @@ class EditWorkEntryState extends Equatable {
     List<BreakEntity>? breaks,
     WorkEntryType? type,
     bool? isHomeOffice,
+    List<String>? workLocations,
   }) {
     return EditWorkEntryState(
       originalEntry: originalEntry,
@@ -45,10 +52,18 @@ class EditWorkEntryState extends Equatable {
       breaks: breaks ?? this.breaks,
       type: type ?? this.type,
       isHomeOffice: isHomeOffice ?? this.isHomeOffice,
+      workLocations: workLocations ?? this.workLocations,
     );
   }
 
   @override
-  List<Object?> get props =>
-      [originalEntry, newStartTime, newEndTime, breaks, type, isHomeOffice];
+  List<Object?> get props => [
+        originalEntry,
+        newStartTime,
+        newEndTime,
+        breaks,
+        type,
+        isHomeOffice,
+        workLocations,
+      ];
 }

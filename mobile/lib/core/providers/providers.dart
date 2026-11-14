@@ -28,6 +28,7 @@ import '../../data/repositories/firebase_overtime_repository_impl.dart';
 import '../../data/repositories/settings_repository_impl.dart';
 import '../../data/repositories/weekly_reflection_repository_impl.dart';
 import '../../data/repositories/work_profile_repository_impl.dart';
+import '../../data/repositories/work_location_history.dart';
 import '../../data/repositories/work_repository_impl.dart';
 import '../../domain/entities/user_entity.dart';
 import '../../domain/entities/work_profile_entity.dart';
@@ -194,10 +195,28 @@ WorkRepository workRepository(Ref ref) {
         )
       : localRepository;
 
+  final history = ref.watch(workLocationHistoryProvider);
+
   return HybridWorkRepositoryImpl(
     firebaseRepository: firebaseRepository,
     localRepository: localRepository,
     userId: userId,
+    onEntriesSeen: history.record,
+  );
+}
+
+/// Verlauf der Arbeitsorte je Nutzer und Profil (#526) für die Vorschläge.
+/// Wird aus den Einträgen gespeist, die [workRepository] ohnehin liest oder
+/// speichert (kein zusätzlicher Lesezugriff).
+@riverpod
+WorkLocationHistory workLocationHistory(Ref ref) {
+  final authState = ref.watch(authStateProvider);
+  final userId = authState.asData?.value?.id;
+  final profileId = ref.watch(activeWorkProfileIdProvider);
+  return WorkLocationHistory(
+    ref.watch(sharedPreferencesProvider),
+    userId: userId ?? 'local',
+    profileId: profileId,
   );
 }
 

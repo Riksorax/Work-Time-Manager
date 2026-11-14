@@ -99,4 +99,4 @@ final class WidgetSyncProvider extends $FunctionalProvider<void, void, void>
   }
 }
 
-String _$widgetSyncHash() => r'bf5aacae37837c5b5f991c901419bbf9fa4edb59';
+String _$widgetSyncHash() => r'7d11b8edb500545c22f9a86818d718bfa2b616f0';

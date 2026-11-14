@@ -26,6 +26,23 @@ class WorkEntryEntity extends Equatable {
   /// Feld in gespeicherten Daten, gilt `false`.
   final bool isHomeOffice;
 
+  /// Arbeitsorte des Tages (#526), geordnet, höchstens 5 à 60 Zeichen. Nur bei
+  /// [WorkEntryType.work] sichtbar und bearbeitbar.
+  ///
+  /// **`null` und `[]` bedeuten Verschiedenes** (Vertrag `PUT /api/work-entries`):
+  /// - `null` = „nicht bekannt / nicht geändert“: frisch erzeugte Einträge
+  ///   (Schnelleintrag, Batch, Neu-Eintrag in den Berichten) tragen `null`.
+  ///   Beim Speichern wird das Feld dann **nicht** gesendet bzw. lokal nicht
+  ///   geschrieben, gespeicherte Orte bleiben unangetastet.
+  /// - `[]` = „keine Orte“: entfernt gespeicherte Orte.
+  /// - Liste = ersetzt die gespeicherten Orte.
+  ///
+  /// Alle Lesegrenzen (API, Firestore, lokal) liefern immer eine Liste
+  /// (fehlendes Feld = `[]`). [copyWith] kann das Feld nicht auf `null`
+  /// zurücksetzen, das ist auch nie nötig (`[]` löscht). Für die Anzeige
+  /// [locations] verwenden.
+  final List<String>? workLocations;
+
   const WorkEntryEntity({
     required this.id,
     required this.date,
@@ -37,7 +54,11 @@ class WorkEntryEntity extends Equatable {
     this.description, // Added
     this.type = WorkEntryType.work,
     this.isHomeOffice = false,
+    this.workLocations,
   });
+
+  /// Arbeitsorte für die Anzeige: `null` (unbekannt) gilt als leer.
+  List<String> get locations => workLocations ?? const [];
 
   /// Die gesamte Pausenzeit für diesen Arbeitseintrag.
   Duration get totalBreakTime {
@@ -75,6 +96,7 @@ class WorkEntryEntity extends Equatable {
     String? description, // Added
     WorkEntryType? type,
     bool? isHomeOffice,
+    List<String>? workLocations,
   }) {
     return WorkEntryEntity(
       id: id ?? this.id,
@@ -87,6 +109,7 @@ class WorkEntryEntity extends Equatable {
       description: description ?? this.description, // Added
       type: type ?? this.type,
       isHomeOffice: isHomeOffice ?? this.isHomeOffice,
+      workLocations: workLocations ?? this.workLocations,
     );
   }
 
@@ -102,5 +125,6 @@ class WorkEntryEntity extends Equatable {
         description, // Added
         type,
         isHomeOffice,
+        workLocations,
       ];
 }

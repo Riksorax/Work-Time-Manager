@@ -604,6 +604,29 @@ void main() {
         expect(viewModel.state.selectedDates, isEmpty);
         expect(viewModel.state.multiSelectMode, false);
       });
+
+      test(
+          'saveBatchWorkEntries lässt gespeicherte Arbeitsorte unangetastet '
+          '(workLocations null, #526)', () async {
+        final now = _fixedNow;
+        when(mockWorkRepository.getWorkEntriesForMonth(now.year, now.month))
+            .thenAnswer((_) async => []);
+        when(mockWorkRepository.saveWorkEntry(any)).thenAnswer((_) async {});
+        final viewModel = container.read(reportsViewModelProvider.notifier);
+        await Future.delayed(Duration.zero);
+
+        await viewModel.saveBatchWorkEntries(
+          [_fixedNow.subtract(const Duration(days: 1))],
+          WorkEntryType.work,
+          const TimeOfDay(hour: 8, minute: 0),
+          const TimeOfDay(hour: 16, minute: 0),
+        );
+
+        final saved = verify(mockWorkRepository.saveWorkEntry(captureAny))
+            .captured
+            .cast<WorkEntryEntity>();
+        expect(saved.single.workLocations, isNull);
+      });
     });
 
     group(

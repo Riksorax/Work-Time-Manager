@@ -67,6 +67,8 @@ class _RecordingPdf extends PdfReportService {
   Duration? monthlyTotal;
   Duration? monthlyOvertime;
   Duration? monthlyTotalOvertime;
+  Map<DateTime, List<String>>? weeklyLocations;
+  Map<DateTime, List<String>>? monthlyLocations;
 
   @override
   Future<void> exportWeeklyReport({
@@ -81,7 +83,9 @@ class _RecordingPdf extends PdfReportService {
     required Duration averageWorkDuration,
     required Duration overtime,
     required Map<DateTime, Duration> dailyWork,
+    Map<DateTime, List<String>> dailyLocations = const {},
   }) async {
+    weeklyLocations = dailyLocations;
     weeklyTotal = totalWorkDuration;
     weeklyOvertime = overtime;
   }
@@ -100,7 +104,9 @@ class _RecordingPdf extends PdfReportService {
     required Duration totalOvertime,
     required Map<int, Duration> weeklyWork,
     required Map<DateTime, Duration> dailyWork,
+    Map<DateTime, List<String>> dailyLocations = const {},
   }) async {
+    monthlyLocations = dailyLocations;
     monthlyTotal = totalWorkDuration;
     this.monthlyOvertime = monthlyOvertime;
     monthlyTotalOvertime = totalOvertime;
@@ -311,6 +317,27 @@ void main() {
       await tester.pumpAndSettle();
       expect(pdf.weeklyTotal, const Duration(hours: 12, minutes: 34));
       expect(pdf.weeklyOvertime, const Duration(hours: 7, minutes: 13));
+    });
+
+    testWidgets('PDF bekommt die Arbeitsorte der geladenen Einträge (#526)',
+        (tester) async {
+      final pdf = _RecordingPdf();
+      final entries = _week();
+      entries[0] = entries[0].copyWith(workLocations: const ['Büro', 'Kunde']);
+      await pump(tester, entries: entries, pdf: pdf, tab: 1);
+      await tester.tap(find.byIcon(Icons.picture_as_pdf_outlined));
+      await tester.pumpAndSettle();
+      expect(pdf.weeklyLocations, {
+        DateTime(2026, 10, 5): ['Büro', 'Kunde']
+      });
+
+      await tester.tap(find.text('Monatlich'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.picture_as_pdf_outlined).first);
+      await tester.pumpAndSettle();
+      expect(pdf.monthlyLocations, {
+        DateTime(2026, 10, 5): ['Büro', 'Kunde']
+      });
     });
 
     testWidgets(

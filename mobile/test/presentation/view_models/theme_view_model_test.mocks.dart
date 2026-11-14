@@ -417,4 +417,44 @@ class MockSettingsRepository extends _i1.Mock
         returnValue: _i4.Future<void>.value(),
         returnValueForMissingStub: _i4.Future<void>.value(),
       ) as _i4.Future<void>);
+
+  @override
+  bool getShowWorkLocationOnDashboard() => (super.noSuchMethod(
+        Invocation.method(
+          #getShowWorkLocationOnDashboard,
+          [],
+        ),
+        returnValue: false,
+      ) as bool);
+
+  @override
+  _i4.Future<void> setShowWorkLocationOnDashboard(bool? value) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #setShowWorkLocationOnDashboard,
+          [value],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
+
+  @override
+  bool getShowHomeOfficeOnDashboard() => (super.noSuchMethod(
+        Invocation.method(
+          #getShowHomeOfficeOnDashboard,
+          [],
+        ),
+        returnValue: false,
+      ) as bool);
+
+  @override
+  _i4.Future<void> setShowHomeOfficeOnDashboard(bool? value) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #setShowHomeOfficeOnDashboard,
+          [value],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
 }

@@ -10,6 +10,7 @@ import 'package:flutter_work_time/core/utils/logger.dart';
 import '../../../domain/entities/break_entity.dart';
 import '../../../domain/entities/work_entry_entity.dart';
 import '../../../domain/utils/entry_day.dart';
+import '../../../domain/utils/work_locations.dart';
 import '../../models/work_entry_model.dart';
 import 'package:flutter_work_time/core/utils/time_precision.dart';
 
@@ -184,6 +185,11 @@ class ApiClient {
 
   Map<String, dynamic> _entryToJson(WorkEntryModel m) => {
         'id': m.id,
+        // Anders als `isHomeOffice` nur bei gesetztem Feld (#526): `null`
+        // (Schnelleintrag, Batch, Neu-Eintrag) lässt gespeicherte Orte
+        // unangetastet, `[]` entfernt sie. Bereinigt wie das Backend.
+        if (m.workLocations != null)
+          'workLocations': normalizeWorkLocations(m.workLocations),
         // UTC-Mitternacht aus lokalen Y/M/D — analog WorkEntryModel.toMap (Flutter-kanonisch)
         'date': DateTime.utc(m.date.year, m.date.month, m.date.day)
             .toIso8601String(),
@@ -244,5 +250,7 @@ class ApiClient {
           orElse: () => WorkEntryType.work,
         ),
         isHomeOffice: (j['isHomeOffice'] as bool?) ?? false,
+        // GET liefert immer eine Liste; fehlt sie (ältere API), gilt leer.
+        workLocations: readWorkLocations(j['workLocations']),
       );
 }

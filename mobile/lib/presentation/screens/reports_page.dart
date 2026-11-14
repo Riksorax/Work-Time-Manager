@@ -509,6 +509,37 @@ class DailyReportView extends ConsumerWidget {
                               ),
                             ),
                           ),
+                        // Arbeitsorte (#526), immer sichtbar (unabhängig von der
+                        // Dashboard-Einstellung), nur bei Typ Arbeit.
+                        if (!isSpecialType && displayEntry.locations.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: Semantics(
+                              container: true,
+                              label: l10n.workLocationListLabel(
+                                  displayEntry.locations.join(', ')),
+                              excludeSemantics: true,
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Icon(Icons.place_outlined,
+                                      size: 18,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      displayEntry.locations.join(', '),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         if (!isSpecialType ||
                             displayEntry.workStart != null ||
                             displayEntry.workEnd != null) ...[
@@ -766,6 +797,7 @@ class WeeklyReportView extends ConsumerWidget {
                       endOfWeek: endOfWeek,
                       weekNumber: weekNumber,
                       weeklyReport: weeklyReport,
+                      dailyLocations: reportsState.workLocationDays,
                     ),
                   ),
                 ]),
@@ -936,6 +968,7 @@ Future<void> _exportWeeklyReportPdf({
   required DateTime endOfWeek,
   required int weekNumber,
   required WeeklyReportState weeklyReport,
+  Map<DateTime, List<String>> dailyLocations = const {},
 }) async {
   final messenger = ScaffoldMessenger.of(context);
   final l10n = AppLocalizations.of(context);
@@ -955,6 +988,8 @@ Future<void> _exportWeeklyReportPdf({
       averageWorkDuration: weeklyReport.averageWorkDuration,
       overtime: weeklyReport.overtime,
       dailyWork: weeklyReport.dailyWork,
+      // Arbeitsorte der geladenen Einträge (#526), nur Anzeige.
+      dailyLocations: dailyLocations,
     );
   } catch (e) {
     logger.e('[PDF-Export] Wochenbericht fehlgeschlagen: $e');
@@ -974,6 +1009,7 @@ Future<void> _exportMonthlyReportPdf({
   required PdfReportService service,
   required DateTime month,
   required MonthlyReportState monthlyReport,
+  Map<DateTime, List<String>> dailyLocations = const {},
 }) async {
   final messenger = ScaffoldMessenger.of(context);
   final l10n = AppLocalizations.of(context);
@@ -994,6 +1030,8 @@ Future<void> _exportMonthlyReportPdf({
       totalOvertime: monthlyReport.totalOvertime,
       weeklyWork: monthlyReport.weeklyWork,
       dailyWork: monthlyReport.dailyWork,
+      // Arbeitsorte der geladenen Einträge (#526), nur Anzeige.
+      dailyLocations: dailyLocations,
     );
   } catch (e) {
     logger.e('[PDF-Export] Monatsbericht fehlgeschlagen: $e');
@@ -1266,6 +1304,7 @@ class MonthlyReportView extends ConsumerWidget {
               service: ref.read(pdfReportServiceProvider),
               month: DateTime(selectedMonth.year, selectedMonth.month),
               monthlyReport: monthlyReport,
+              dailyLocations: reportsState.workLocationDays,
             ),
           ),
           ReportAction(

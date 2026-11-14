@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers/clock_provider.dart';
+import '../../core/providers/providers.dart' show workLocationHistoryProvider;
 import '../../core/utils/time_format.dart';
 import '../../domain/entities/break_entity.dart';
 import '../../domain/entities/work_entry_entity.dart';
@@ -20,6 +22,8 @@ import '../widgets/common/responsive_center.dart';
 import '../widgets/edit_break_modal.dart';
 import '../widgets/holiday_banner.dart';
 import '../widgets/open_entry_banner.dart';
+import '../widgets/dashboard_work_locations.dart';
+import '../widgets/work_locations_sheet.dart';
 import '../widgets/work_profile_switcher.dart';
 
 class DashboardScreen extends ConsumerWidget {
@@ -41,6 +45,24 @@ class DashboardScreen extends ConsumerWidget {
     final minutes = twoDigits(absoluteOvertime.inMinutes.remainder(60));
     final sign = isNegative ? '-' : '+';
     return '$sign$hours:$minutes';
+  }
+
+  /// Öffnet das Bottom Sheet „Arbeitsorte“ (#526) und speichert eine
+  /// geänderte Liste über das ViewModel (Fehler wie bei den übrigen
+  /// Schreibaktionen als Snackbar).
+  Future<void> _editWorkLocations(
+      BuildContext context, WidgetRef ref, List<String> current) async {
+    final history = ref.read(workLocationHistoryProvider);
+    final viewModel = ref.read(dashboardViewModelProvider.notifier);
+    final result = await showWorkLocationsSheet(
+      context,
+      locations: current,
+      suggestions: (selected, filter) =>
+          history.suggestions(selected, filter: filter),
+    );
+    if (result == null || !context.mounted) return;
+    if (listEquals(result, current)) return;
+    reportDashboardSave(context, viewModel.setWorkLocations(result));
   }
 
   @override
@@ -73,9 +95,16 @@ class DashboardScreen extends ConsumerWidget {
     // Eine Schreibaktion läuft (#413): Schreib-Eingaben sind deaktiviert, der
     // VM-Guard verwirft weitere Aufrufe ohnehin still.
     final isSaving = dashboardState.isSaving;
-    final use24HourFormat =
-        ref.watch(settingsViewModelProvider).value?.settings.use24HourFormat ??
-            true;
+    final settings = ref.watch(settingsViewModelProvider).value?.settings;
+    final use24HourFormat = settings?.use24HourFormat ?? true;
+    // Dashboard-Anzeige (#526): wirkt nur hier, nicht im Bearbeiten-Dialog
+    // oder in den Berichten. Bis die Einstellungen geladen sind, gelten die
+    // Standardwerte (Orte aus, Home-Office an = Zustand vor #526).
+    final isWork = workEntry.type == WorkEntryType.work;
+    final showWorkLocation =
+        isWork && (settings?.showWorkLocationOnDashboard ?? false);
+    final showHomeOffice =
+        isWork && (settings?.showHomeOfficeOnDashboard ?? true);
 
     final workEntryWithAutoBreaks = workEntry.workStart != null &&
             workEntry.workEnd != null &&
@@ -172,9 +201,22 @@ class DashboardScreen extends ConsumerWidget {
                         context, dashboardViewModel.clearEndTime())
                     : null,
               ),
-              // Home-Office-Schalter (#277), nur bei Typ Arbeit; während einer
-              // laufenden Aktion gesperrt wie die übrigen Eingaben.
-              if (workEntry.type == WorkEntryType.work)
+              // Arbeitsorte (#526): Button bzw. Orte-Zeile, nur bei Typ
+              // Arbeit und eingeschalteter Einstellung.
+              if (showWorkLocation) ...[
+                const SizedBox(height: 12),
+                DashboardWorkLocations(
+                  locations: workEntry.locations,
+                  onTap: isSaving
+                      ? null
+                      : () =>
+                          _editWorkLocations(context, ref, workEntry.locations),
+                ),
+              ],
+              // Home-Office-Schalter (#277), nur bei Typ Arbeit und
+              // eingeschalteter Einstellung (#526); während einer laufenden
+              // Aktion gesperrt wie die übrigen Eingaben.
+              if (showHomeOffice)
                 Semantics(
                   container: true,
                   hint: l10n.homeOfficeToggleDashboardSemantics,
