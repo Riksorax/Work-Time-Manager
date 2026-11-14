@@ -38,7 +38,15 @@ class ApiClient {
   Future<Map<String, String>> _headers(String op) async {
     final user = _auth.currentUser;
     if (user == null) throw NotSignedInException(op);
-    final token = await user.getIdToken();
+    final String? token;
+    try {
+      token = await user.getIdToken();
+    } on firebase.FirebaseAuthException catch (e) {
+      // Der Nutzer wurde zwischen `currentUser` und dem Token-Abruf
+      // abgemeldet: derselbe Fall wie oben, nur einen Moment später.
+      if (e.code == 'no-current-user') throw NotSignedInException(op);
+      rethrow;
+    }
     return {
       'Content-Type': 'application/json',
       if (token != null) 'Authorization': 'Bearer $token',

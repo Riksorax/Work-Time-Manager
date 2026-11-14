@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:firebase_auth/firebase_auth.dart' as firebase;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 
@@ -59,6 +60,26 @@ void main() {
             .having((e) => e.operation, 'operation', 'getWorkEntriesForMonth')),
       );
       expect(http_.lastUri, isNull);
+    });
+
+    test(
+        'Abmeldung während des Token-Abrufs (no-current-user): '
+        'NotSignedInException, kein Request', () async {
+      auth.tokenError = firebase.FirebaseAuthException(
+          code: 'no-current-user', message: 'No user currently signed in.');
+      await expectLater(
+          api.getOvertime(), throwsA(isA<NotSignedInException>()));
+      expect(http_.lastUri, isNull);
+    });
+
+    test('anderer Auth-Fehler beim Token-Abruf wird weitergereicht', () async {
+      auth.tokenError = firebase.FirebaseAuthException(
+          code: 'network-request-failed', message: 'offline');
+      await expectLater(
+        api.getOvertime(),
+        throwsA(isA<firebase.FirebaseAuthException>()
+            .having((e) => e.code, 'code', 'network-request-failed')),
+      );
     });
 
     test('Antwort mit anderem Status: ApiException mit Status, ohne Body',
