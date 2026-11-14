@@ -207,6 +207,24 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
+      # Die Upload-Action liest nur Dateien nach dem Muster `whatsnew-<LOCALE>`
+      # (ohne Endung). Fehlt die Datei, läuft der Upload trotzdem grün durch,
+      # nur ohne Versionshinweise; deshalb hier ausdrücklich prüfen.
+      - name: Check release notes file
+        working-directory: .
+        run: |
+          FILE=mobile/whatsnew/whatsnew-de-DE
+          if [ ! -s "$FILE" ]; then
+            echo "::error::$FILE fehlt oder ist leer – die Versionshinweise kämen nicht in der Play Console an."
+            exit 1
+          fi
+          CHARS=$(wc -m < "$FILE")
+          if [ "$CHARS" -gt 500 ]; then
+            echo "::error::$FILE hat $CHARS Zeichen, Google Play erlaubt höchstens 500."
+            exit 1
+          fi
+          echo "Versionshinweise: $CHARS Zeichen"
+
       # Nur beim echten Release über main hochladen. Ein manueller Testlauf
       # (workflow_dispatch) baut das AAB, veröffentlicht es aber nicht.
       - name: Upload to Google Play (Closed Testing)

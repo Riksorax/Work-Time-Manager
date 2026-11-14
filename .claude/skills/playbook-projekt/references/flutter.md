@@ -64,4 +64,4 @@ WTM-Besonderheiten zum Stack-Playbook `playbook-flutter`, aus den bisherigen Age
 - [ ] Berechnungslogik widerspricht nicht dem Backend
 - [ ] ARB de + en vollständig; Fehler über `logger.e` (Crashlytics), erwartbare Ladefehler nur `logger.i` (`isExpectedLoadFailure`)
 - [ ] Neue Screens/Bottom Sheets: Insets nach `mobile/CLAUDE.md`, „Edge-to-Edge“ (`bottomSheetBottomInset`, kein doppeltes `SafeArea`)
-- [ ] Nutzer-sichtbare Änderung: Vermerk für die Release-Notes (`mobile/whatsnew/de-DE.txt` wird erst im Release-Branch geschrieben, siehe `/release`)
+- [ ] Nutzer-sichtbare Änderung: Vermerk für die Release-Notes (`mobile/whatsnew/whatsnew-de-DE` wird erst im Release-Branch geschrieben, siehe `/release`)

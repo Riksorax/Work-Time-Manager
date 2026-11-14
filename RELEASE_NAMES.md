@@ -50,7 +50,7 @@ Steht der Charakter nicht in der Frei-Liste oder passt er nicht zur Linie, brich
 Bump mit einer Fehlermeldung ab. Namen werden also nie doppelt vergeben.
 
 Vor dem Mergen des Release-Branches nach `main` außerdem
-`mobile/whatsnew/de-DE.txt` mit den Versionshinweisen für dieses Release
+`mobile/whatsnew/whatsnew-de-DE` mit den Versionshinweisen für dieses Release
 aktualisieren — siehe `mobile/whatsnew/README.md`. `flutter-production.yml`
 lädt den Inhalt beim Play-Upload automatisch als Änderungsprotokoll mit hoch.
 

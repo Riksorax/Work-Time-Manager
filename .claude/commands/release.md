@@ -51,8 +51,8 @@ Linie nur eine neue Zeile). Danach `git pull`.
 1. Nutzer-sichtbare Änderungen seit dem letzten Release sammeln:
    `git log --oneline origin/main..origin/develop` plus die zugehörigen Issues (beim
    Hotfix-Release von `main`: `git log --oneline origin/main..HEAD` nach dem Merge der Fix-PRs).
-2. `mobile/whatsnew/de-DE.txt` überschreiben: Deutsch, **max. 500 Zeichen**, nur dieses Release.
-   Länge prüfen: `wc -m mobile/whatsnew/de-DE.txt`.
+2. `mobile/whatsnew/whatsnew-de-DE` überschreiben: Deutsch, **max. 500 Zeichen**, nur dieses Release.
+   Länge prüfen: `wc -m mobile/whatsnew/whatsnew-de-DE`.
 3. Commit: `docs(release): Versionshinweise für <Version> (<Charakter>)`, pushen.
 
 ## Pull Request
@@ -69,7 +69,7 @@ Konflikte.
 1. Deploy-Workflows beobachten: `flutter-production.yml`, `deploy-api.yml`, `deploy-angular.yml`.
    Die Smoke-Tests am Ende von API- und Web-Deploy müssen grün sein.
 2. GitHub Release prüfen: `github-release.yml` legt Tag `<Version>` (ohne `v`) und das Release
-   `Release <Version> (<Charakter>)` an (Text aus `mobile/whatsnew/de-DE.txt` plus Link auf den
+   `Release <Version> (<Charakter>)` an (Text aus `mobile/whatsnew/whatsnew-de-DE` plus Link auf den
    Release-PR). Fehlt es danach (`list_releases`), den Workflow per `actions_run_trigger`
    (`workflow_dispatch`, Input `version`) starten.
 3. `main` zurück nach `develop` mergen:
