@@ -1,3 +1,0 @@
-Das ist neu in 1.8.3:
-• Verbessert: Abmelden und Löschen des Accounts erzeugen keine unnötigen Fehlermeldungen mehr
-• Mehr Stabilität

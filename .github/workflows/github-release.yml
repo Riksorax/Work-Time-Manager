@@ -2,7 +2,7 @@ name: GitHub Release
 
 # Legt nach dem Release-Merge den Tag und das GitHub Release an.
 # Version und Charakter stammen aus main (mobile/pubspec.yaml, RELEASE_NAMES.md),
-# die Beschreibung aus mobile/whatsnew/de-DE.txt plus Link auf den Release-PR.
+# die Beschreibung aus mobile/whatsnew/whatsnew-de-DE plus Link auf den Release-PR.
 # Läuft idempotent: existiert das Release schon, passiert nichts.
 #
 # Nachträglich anlegen (z. B. für ein bereits ausgeliefertes Release):
@@ -100,7 +100,7 @@ jobs:
           {
             echo "## Änderungen"
             echo
-            cat mobile/whatsnew/de-DE.txt
+            cat mobile/whatsnew/whatsnew-de-DE
             echo
             if [ -n "$PR_URL" ]; then
               echo
