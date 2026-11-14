@@ -237,10 +237,13 @@ class DashboardViewModel extends Notifier<DashboardState> {
       final lastUpdateDate = await overtimeRepository.ensureLastUpdateLoaded();
       if (stale()) return;
 
-      // Berechne dailyOvertime für den initialen Stand
+      // Berechne dailyOvertime für den initialen Stand. Manuelle Überstunden
+      // gehören dazu (#538): derselbe Tagesanteil wie beim Schreiben, sonst
+      // wandert die Basis bei `lastUpdated == heute` bei jedem Laden.
       final targetDailyHours =
           _getEffectiveTargetDailyHours(entryDay(workEntry));
       final isExtraDay = targetDailyHours == Duration.zero;
+      final manualOvertime = manualOvertimeOf(workEntry);
       Duration initialDailyOvertime = Duration.zero;
 
       if (workEntry.workStart != null && workEntry.workEnd != null) {
@@ -253,7 +256,8 @@ class DashboardViewModel extends Notifier<DashboardState> {
         );
         final actualWorkDuration =
             workEntry.workEnd!.difference(workEntry.workStart!) - breakDuration;
-        initialDailyOvertime = actualWorkDuration - targetDailyHours;
+        initialDailyOvertime =
+            actualWorkDuration - targetDailyHours + manualOvertime;
       } else if (workEntry.workStart != null) {
         // Laufender Tag -> Overtime wird im Timer berechnet.
         // Um initialOvertime (Basis) korrekt wiederherzustellen, müssen wir den aktuellen "Tagesfortschritt" vom gespeicherten Gesamtwert abziehen.
@@ -267,7 +271,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
             now.difference(workEntry.workStart!) - breakDuration;
 
         // Aktueller Überstunden-Stand für heute (wird meist negativ sein, da Tag noch läuft)
-        initialDailyOvertime = elapsedTime - targetDailyHours;
+        initialDailyOvertime = elapsedTime - targetDailyHours + manualOvertime;
       }
 
       Duration initialOvertime;
@@ -551,19 +555,25 @@ class DashboardViewModel extends Notifier<DashboardState> {
 
     final targetDailyHours =
         _getEffectiveTargetDailyHours(entryDay(state.workEntry));
-    final dailyOvertime = _calculateElapsedTime() - targetDailyHours;
+    // Manuelle Überstunden des Tages zählen mit (#538, wie Web/Backend).
+    final manualOvertime = manualOvertimeOf(state.workEntry);
+    final dailyOvertime =
+        _calculateElapsedTime() - targetDailyHours + manualOvertime;
 
     // Berechne Total = Base (initialOvertime) + Daily
     final base = state.initialOvertime ?? Duration.zero;
     final total = base + dailyOvertime;
 
-    // Berechne voraussichtliche Feierabendzeit für ±0 (Tagesziel)
+    // Berechne voraussichtliche Feierabendzeit für ±0 (Tagesziel). Wie im Web
+    // ohne manuelle Überstunden: Soll + Pausen ab Start.
     final expectedEndTime = _calculateExpectedEndTime(targetDailyHours);
 
     // Berechne voraussichtliche Feierabendzeit für Gesamtbilanz ±0
     // Wenn wir z.B. 1h Plus haben, müssen wir heute 1h weniger arbeiten.
     // Wenn wir 10h Plus haben und 8h Soll, müssen wir gar nicht arbeiten (Ende = Start).
-    final Duration remainingForTotalZero = targetDailyHours - base;
+    // Manuelle Überstunden verkürzen den Rest wie eine höhere Basis (Web).
+    final Duration remainingForTotalZero =
+        targetDailyHours - base - manualOvertime;
     final Duration targetForTotalZero = remainingForTotalZero.isNegative
         ? Duration.zero
         : remainingForTotalZero;
@@ -893,7 +903,10 @@ class DashboardViewModel extends Notifier<DashboardState> {
       final targetDailyHours =
           _getEffectiveTargetDailyHours(entryDay(updatedEntry));
       isExtraDay = targetDailyHours == Duration.zero;
-      dailyOvertime = newActualWorkDuration - targetDailyHours;
+      // Manuelle Überstunden des Tages zählen mit (#538, wie Web/Backend).
+      dailyOvertime = newActualWorkDuration -
+          targetDailyHours +
+          manualOvertimeOf(updatedEntry);
 
       // Total = Base + Daily
       final base = state.initialOvertime ?? Duration.zero;
