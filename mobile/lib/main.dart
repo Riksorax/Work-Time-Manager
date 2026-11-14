@@ -18,10 +18,12 @@ import 'dart:io' show Platform;
 
 import 'package:flutter_localizations/flutter_localizations.dart';
 
+import 'domain/utils/assistant_query.dart';
 import 'domain/utils/timer_action.dart';
 import 'core/providers/app_lock_provider.dart';
 import 'core/providers/providers.dart';
 import 'core/services/app_lock_store.dart';
+import 'core/services/assistant_query_inbox.dart';
 import 'core/providers/widget_sync_provider.dart';
 import 'core/services/notification_service.dart';
 import 'core/services/shortcut_service.dart';
@@ -32,10 +34,12 @@ import 'core/utils/app_navigator.dart';
 import 'core/utils/revenuecat_state.dart';
 import 'firebase_options.dart';
 import 'l10n/app_localizations.dart';
+import 'presentation/view_models/assistant_query_view_model.dart';
 import 'presentation/view_models/settings_view_model.dart';
 import 'presentation/view_models/theme_view_model.dart';
 import 'presentation/view_models/timer_action_view_model.dart';
 import 'presentation/widgets/app_lock_layer.dart';
+import 'presentation/widgets/assistant_query_sheet.dart';
 import 'presentation/widgets/common/edge_to_edge.dart';
 
 /// Wie der Tap auf eine Erinnerung: zum Dashboard (HomeScreen, Index 0).
@@ -143,6 +147,22 @@ Future<void> main() async {
   void onTimerAction(TimerAction action) {
     logger.i('[TimerAction] von außen empfangen: ${timerActionId(action)}');
     inbox.push(action);
+    // Ein offenes Antwort-Sheet (#287) schließen, sonst ersetzte
+    // `pushReplacement` das Sheet statt des HomeScreens.
+    dismissAssistantQuerySheet();
+    _openDashboard();
+  }
+
+  // Sprachabfragen des Assistant (#287, Überstunden/Resturlaub): eigener
+  // Briefkasten neben den Timer-Aktionen. Das AssistantQueryViewModel stellt
+  // sie nach Auth/Entsperren zu, der DashboardScreen zeigt die Antwort.
+  // Abfragen verändern keine Daten.
+  final queryInbox = AssistantQueryInbox.instance;
+  void onAssistantQuery(AssistantQuery query) {
+    logger
+        .i('[AssistantQuery] von außen empfangen: ${assistantQueryId(query)}');
+    queryInbox.push(query);
+    dismissAssistantQuerySheet();
     _openDashboard();
   }
 
@@ -162,10 +182,10 @@ Future<void> main() async {
   final launchAction = await notificationService.launchTimerAction();
   if (launchAction != null) inbox.push(launchAction);
 
-  // App-Icon-Shortcuts (nur Android; Kaltstart-Shortcut kommt direkt nach
-  // `initialize` an den Handler).
+  // App-Icon-Shortcuts und Assistant-Intents (nur Android; ein Kaltstart-
+  // Shortcut kommt direkt nach `initialize` an den Handler).
   final shortcutService = ShortcutService();
-  await shortcutService.initialize(onTimerAction);
+  await shortcutService.initialize(onTimerAction, onQuery: onAssistantQuery);
   await shortcutService.setShortcuts(
       lookupAppLocalizations(Locale(prefs.getString('locale') ?? 'de')));
 
@@ -272,6 +292,8 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     // Timer-Aktionen von außen (#274): hält das ViewModel am Leben, das sie
     // nach Auth und Entsperren ausführt.
     ref.watch(timerActionViewModelProvider);
+    // Sprachabfragen von außen (#287): stellt sie nach Auth und Entsperren zu.
+    ref.watch(assistantQueryViewModelProvider);
     // Shortcut-Labels folgen der App-Sprache (nie `watch`: kein Neuaufbau).
     ref.listen<String>(
       settingsViewModelProvider.select((s) => s.value?.settings.locale ?? 'de'),

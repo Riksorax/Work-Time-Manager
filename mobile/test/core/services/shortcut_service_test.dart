@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart' show Locale;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_work_time/core/services/shortcut_service.dart';
+import 'package:flutter_work_time/domain/utils/assistant_query.dart';
 import 'package:flutter_work_time/domain/utils/timer_action.dart';
 import 'package:flutter_work_time/l10n/app_localizations.dart';
 import 'package:quick_actions/quick_actions.dart';
@@ -107,5 +108,59 @@ void main() {
     await service.setShortcuts(de);
 
     expect(fake.setCalls, isEmpty);
+  });
+
+  group('Sprachabfragen (#287)', () {
+    late List<AssistantQuery> queries;
+
+    setUp(() => queries = []);
+
+    test('query_overtime/query_leave gehen an onQuery, nie an onAction',
+        () async {
+      await service.initialize(received.add, onQuery: queries.add);
+
+      fake.handler!('query_overtime');
+      fake.handler!('query_leave');
+
+      expect(queries, [AssistantQuery.overtime, AssistantQuery.leave]);
+      expect(received, isEmpty);
+    });
+
+    test('query_trend wird in Teil A still verworfen', () async {
+      await service.initialize(received.add, onQuery: queries.add);
+
+      fake.handler!('query_trend');
+
+      expect(queries, isEmpty);
+      expect(received, isEmpty);
+    });
+
+    test('Timer-Ids gehen weiter an onAction, nie an onQuery', () async {
+      await service.initialize(received.add, onQuery: queries.add);
+
+      fake.handler!('timer_start');
+      fake.handler!('timer_stop');
+      fake.handler!('timer_pause');
+      fake.handler!('timer_resume');
+
+      expect(received, TimerAction.values);
+      expect(queries, isEmpty);
+    });
+
+    test('ohne onQuery wird eine Abfrage ignoriert', () async {
+      await service.initialize(received.add);
+
+      fake.handler!('query_overtime');
+
+      expect(received, isEmpty);
+    });
+
+    test('setShortcuts bleibt bei den vier Timer-Aktionen', () async {
+      await service.initialize(received.add, onQuery: queries.add);
+      await service.setShortcuts(de);
+
+      expect(fake.setCalls.single.map((i) => i.type),
+          ['timer_start', 'timer_stop', 'timer_pause', 'timer_resume']);
+    });
   });
 }

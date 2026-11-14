@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart'
     show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:quick_actions/quick_actions.dart';
 
+import '../../domain/utils/assistant_query.dart';
 import '../../domain/utils/timer_action.dart';
 import '../../l10n/app_localizations.dart';
 import '../utils/logger.dart';
@@ -26,16 +27,37 @@ class ShortcutService {
 
   /// Registriert den Handler. Das Plugin liefert einen Kaltstart-Shortcut
   /// direkt nach `initialize` an den Handler. Unbekannte Typen werden ignoriert.
-  Future<void> initialize(void Function(TimerAction action) onAction) async {
+  ///
+  /// Sprachabfragen des Assistant (#287, `query_*`) gehen an [onQuery], nie an
+  /// [onAction]. Die Trend-Abfrage (`query_trend`) wird bis Teil B von #287
+  /// still verworfen (nur Log), ohne halbfertige Ansicht.
+  Future<void> initialize(
+    void Function(TimerAction action) onAction, {
+    void Function(AssistantQuery query)? onQuery,
+  }) async {
     if (!_supported) return;
     try {
       await _quickActions.initialize((type) {
         final action = timerActionFromId(type);
-        if (action == null) {
-          logger.w('[ShortcutService] Unbekannter Shortcut ignoriert: $type');
+        if (action != null) {
+          onAction(action);
           return;
         }
-        onAction(action);
+        final query = assistantQueryFromId(type);
+        if (query != null) {
+          if (onQuery == null) {
+            logger.w('[ShortcutService] Abfrage ohne Handler ignoriert: $type');
+            return;
+          }
+          onQuery(query);
+          return;
+        }
+        if (type == queryTrendId) {
+          logger.i('[ShortcutService] Abfrage $type noch nicht verfügbar, '
+              'verworfen');
+          return;
+        }
+        logger.w('[ShortcutService] Unbekannter Shortcut ignoriert: $type');
       });
     } catch (e, st) {
       logger.e('[ShortcutService] Initialisierung fehlgeschlagen',
