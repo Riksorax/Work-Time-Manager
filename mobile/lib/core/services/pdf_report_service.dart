@@ -77,7 +77,8 @@ class PdfReportService {
       headers: [
         l10n.pdfDateColumn,
         l10n.pdfWeekdayColumn,
-        l10n.pdfWorkTimeColumn
+        // Tageswerte sind brutto (#535).
+        l10n.pdfAttendanceColumn
       ],
       cellAlignments: {
         0: pw.Alignment.centerLeft,
@@ -139,7 +140,7 @@ class PdfReportService {
             (l10n.pdfOvertimeLabel, _fmtSignedDuration(overtime)),
           ]),
           pw.SizedBox(height: 20),
-          pw.Text(l10n.pdfDailyDetailsTitle,
+          pw.Text(l10n.pdfDailyAttendanceTitle,
               style:
                   pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
           pw.SizedBox(height: 8),
@@ -161,7 +162,8 @@ class PdfReportService {
     final sortedEntries = weeklyWork.entries.toList()
       ..sort((a, b) => a.key.compareTo(b.key));
     return pw.TableHelper.fromTextArray(
-      headers: [l10n.pdfCalendarWeekColumn, l10n.pdfWorkTimeColumn],
+      // Wochenwerte sind brutto (#535).
+      headers: [l10n.pdfCalendarWeekColumn, l10n.pdfAttendanceColumn],
       cellAlignments: {0: pw.Alignment.centerLeft, 1: pw.Alignment.centerRight},
       cellPadding: const pw.EdgeInsets.symmetric(vertical: 4, horizontal: 8),
       data: [
@@ -207,7 +209,7 @@ class PdfReportService {
           pw.SizedBox(height: 8),
           _weeklyTable(weeklyWork, l10n: l10n),
           pw.SizedBox(height: 20),
-          pw.Text(l10n.pdfDailyDetailsTitle,
+          pw.Text(l10n.pdfDayOverviewTitle,
               style:
                   pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
           pw.SizedBox(height: 8),

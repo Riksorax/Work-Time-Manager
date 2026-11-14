@@ -100,11 +100,21 @@ class ReportsState extends Equatable {
       ];
 }
 
+/// Tagesbericht. [target], [worked] und [overtime] sind die Tageswerte des
+/// Backends (`DailyStatDto`) bzw. lokal von `calculateDailyStat` (#535):
+/// Soll, geleistet (netto, Abwesenheit mit dem Tagessoll) und
+/// geleistet − Soll + manuelle Überstunden. Ein heute laufender Eintrag zählt
+/// darin mit 0; die Oberfläche zeigt ihn live (#404).
+///
+/// [workTime], [breakTime] und [totalTime] sind die Rohsummen der Einträge
+/// (brutto, Pausen, brutto − Pausen).
 class DailyReportState extends Equatable {
   final List<WorkEntryEntity> entries;
   final Duration workTime;
   final Duration breakTime;
   final Duration totalTime;
+  final Duration target;
+  final Duration worked;
   final Duration overtime;
 
   const DailyReportState({
@@ -112,6 +122,8 @@ class DailyReportState extends Equatable {
     required this.workTime,
     required this.breakTime,
     required this.totalTime,
+    this.target = Duration.zero,
+    this.worked = Duration.zero,
     required this.overtime,
   });
 
@@ -125,5 +137,5 @@ class DailyReportState extends Equatable {
 
   @override
   List<Object?> get props =>
-      [entries, workTime, breakTime, totalTime, overtime];
+      [entries, workTime, breakTime, totalTime, target, worked, overtime];
 }

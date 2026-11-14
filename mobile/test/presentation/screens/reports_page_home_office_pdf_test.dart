@@ -134,10 +134,16 @@ void main() {
         (tester) async {
       await pumpView(tester, view: const MonthlyReportView());
 
-      expect(find.text('Home-Office-Auswertung (PDF)'), findsOneWidget);
-      expect(find.text('Als PDF exportieren'), findsOneWidget);
+      // Aktionszeile (#535): kurze Beschriftung, voller Text als Tooltip
+      // und für Screenreader.
+      expect(find.text('Home-Office-PDF'), findsOneWidget);
+      expect(find.text('PDF-Export'), findsOneWidget);
+      expect(find.byTooltip('Als PDF exportieren'), findsOneWidget);
+      expect(find.byTooltip('Home-Office-Auswertung (PDF)'), findsOneWidget);
+      expect(find.bySemanticsLabel('Home-Office-Auswertung (PDF)'),
+          findsOneWidget);
 
-      await tapAndWait(tester, 'Home-Office-Auswertung (PDF)',
+      await tapAndWait(tester, 'Home-Office-PDF',
           done: () => platform.lastFilename != null);
 
       expect(platform.lastFilename, 'Home-Office-Auswertung_2026-06.pdf');
@@ -164,7 +170,7 @@ void main() {
       repo.failReads = true;
       await pumpView(tester, view: const MonthlyReportView());
 
-      await tapAndWait(tester, 'Home-Office-Auswertung (PDF)',
+      await tapAndWait(tester, 'Home-Office-PDF',
           done: () => repo.monthReads.isNotEmpty);
       await tester.pump(const Duration(milliseconds: 100));
 
@@ -175,7 +181,8 @@ void main() {
 
     testWidgets('Englisch: beschriftet, Monat und Jahr', (tester) async {
       await pumpView(tester, view: const MonthlyReportView(), locale: 'en');
-      expect(find.text('Home office report (PDF)'), findsOneWidget);
+      expect(find.text('Home office PDF'), findsOneWidget);
+      expect(find.byTooltip('Home office report (PDF)'), findsOneWidget);
 
       await pumpView(tester, view: const YearlyReportView(), locale: 'en');
       expect(find.text('Home office report (PDF)'), findsOneWidget);
@@ -190,6 +197,23 @@ void main() {
             size: const Size(280, 800));
         expect(tester.takeException(), isNull);
       });
+
+      // Ein-Zeilen-Layout und vollständige Texte prüft
+      // reports_page_action_row_test mit der echten Schrift; hier (Testschrift,
+      // jedes Zeichen 1 em breit) nur: kein Overflow.
+      for (final width in [360.0, 412.0]) {
+        testWidgets(
+            'Monat: Export-Buttons ohne Overflow (${width.toInt()} px, $locale)',
+            (tester) async {
+          await pumpView(tester,
+              view: const MonthlyReportView(),
+              locale: locale,
+              size: Size(width, 800));
+          expect(tester.takeException(), isNull);
+          expect(find.byIcon(Icons.picture_as_pdf_outlined), findsOneWidget);
+          expect(find.byIcon(Icons.home_work_outlined), findsOneWidget);
+        });
+      }
 
       testWidgets('schmale Breite ohne Overflow (Jahr, $locale)',
           (tester) async {
@@ -209,6 +233,7 @@ void main() {
 
       expect(find.text('Premium freischalten'), findsOneWidget);
       expect(find.text('Home-Office-Auswertung (PDF)'), findsNothing);
+      expect(find.text('Home-Office-PDF'), findsNothing);
     });
 
     testWidgets('Jahresansicht: Paywall-Gate, kein Home-Office-Button',

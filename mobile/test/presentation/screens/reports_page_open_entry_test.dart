@@ -9,6 +9,7 @@ import 'package:flutter_work_time/core/providers/providers.dart';
 import 'package:flutter_work_time/core/providers/subscription_provider.dart';
 import 'package:flutter_work_time/domain/entities/settings_entity.dart';
 import 'package:flutter_work_time/domain/entities/work_entry_entity.dart';
+import 'package:flutter_work_time/domain/utils/report_calculator.dart';
 import 'package:flutter_work_time/l10n/app_localizations.dart';
 import 'package:flutter_work_time/presentation/screens/reports_page.dart';
 import 'package:flutter_work_time/presentation/state/reports_state.dart';
@@ -62,21 +63,28 @@ void main() {
     prefs = await SharedPreferences.getInstance();
   });
 
-  ReportsState stateFor(DateTime day, List<WorkEntryEntity> entries) =>
-      ReportsState(
-        isLoading: false,
-        focusedDay: day,
-        selectedDay: day,
-        selectedMonth: DateTime(day.year, day.month),
-        workEntries: const {},
-        dailyReportState: DailyReportState(
-          entries: entries,
-          workTime: Duration.zero,
-          breakTime: Duration.zero,
-          totalTime: Duration.zero,
-          overtime: Duration.zero,
-        ),
-      );
+  // Tageswerte wie vom ViewModel (kanonische Rechnung, 40 h an Mo-Fr =
+  // 8:00 Soll; Backend identisch): Ein offener Eintrag zählt darin 0 (#535).
+  ReportsState stateFor(DateTime day, List<WorkEntryEntity> entries) {
+    final stat = calculateDailyStat(entries, day,
+        const ReportSettings(weeklyTargetHours: 40, workdays: [1, 2, 3, 4, 5]));
+    return ReportsState(
+      isLoading: false,
+      focusedDay: day,
+      selectedDay: day,
+      selectedMonth: DateTime(day.year, day.month),
+      workEntries: const {},
+      dailyReportState: DailyReportState(
+        entries: entries,
+        workTime: Duration.zero,
+        breakTime: Duration.zero,
+        totalTime: Duration.zero,
+        target: stat.target,
+        worked: stat.worked,
+        overtime: stat.overtime,
+      ),
+    );
+  }
 
   Future<void> pump(
     WidgetTester tester,

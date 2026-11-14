@@ -166,6 +166,12 @@ class ApiClient {
           {String? profileId}) =>
       _getJson('/reports/monthly/$year/$month', 'getMonthlyReport', profileId);
 
+  /// Urlaubsbilanz eines Kalenderjahres (`GET /api/reports/yearly/{year}`,
+  /// #535): `year`, `vacationDaysPerYear`, `vacationDaysTaken`,
+  /// `vacationDaysRemaining`, `sickDays`; weitere Felder sind möglich.
+  Future<Map<String, dynamic>> getYearlyLeave(int year, {String? profileId}) =>
+      _getJson('/reports/yearly/$year', 'getYearlyLeave', profileId);
+
   Future<Map<String, dynamic>> _getJson(String path, String op,
       [String? profileId]) async {
     final res =

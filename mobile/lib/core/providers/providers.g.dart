@@ -588,6 +588,56 @@ final class ShortcutServiceProvider extends $FunctionalProvider<ShortcutService,
 
 String _$shortcutServiceHash() => r'6d96e1bd51bc4ec3b55e6a463315b28199275232';
 
+/// PDF-Export der Berichte; im Test überschreibbar, damit Widget-Tests die
+/// übergebenen Werte prüfen können (#535).
+
+@ProviderFor(pdfReportService)
+const pdfReportServiceProvider = PdfReportServiceProvider._();
+
+/// PDF-Export der Berichte; im Test überschreibbar, damit Widget-Tests die
+/// übergebenen Werte prüfen können (#535).
+
+final class PdfReportServiceProvider extends $FunctionalProvider<
+    PdfReportService,
+    PdfReportService,
+    PdfReportService> with $Provider<PdfReportService> {
+  /// PDF-Export der Berichte; im Test überschreibbar, damit Widget-Tests die
+  /// übergebenen Werte prüfen können (#535).
+  const PdfReportServiceProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'pdfReportServiceProvider',
+          isAutoDispose: false,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$pdfReportServiceHash();
+
+  @$internal
+  @override
+  $ProviderElement<PdfReportService> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  PdfReportService create(Ref ref) {
+    return pdfReportService(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(PdfReportService value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<PdfReportService>(value),
+    );
+  }
+}
+
+String _$pdfReportServiceHash() => r'88c0a03f7d8f8b52daef3a5f0c7509d6346b31d2';
+
 @ProviderFor(authRepository)
 const authRepositoryProvider = AuthRepositoryProvider._();
 
