@@ -63,7 +63,7 @@ domain/
 │   └── leave.models.ts    YearlyLeaveReport (1:1 Backend-DTO)
 ├── services/
 │   ├── break-calculator.ts   Pure — Pflichtpausen (30min/6h, 45min/9h)
-│   ├── report-calculator.ts  Pure — ISO-8601-Wochennummer, DailyStat, Weekly/MonthlyReport
+│   ├── report-calculator.ts  Pure — ISO-8601-Wochennummer, DailyStat, Weekly/MonthlyReport; Parität zum Backend über `testdata/report-parity/` (`report-calculator.parity.tz.spec.ts`, #535)
 │   └── leave-calculator.ts   Pure — calculateYearlyLeave (Urlaubs-/Kranktage je Jahr, anonyme Nutzer)
 └── utils/
     ├── overtime.utils.ts  Pure — getEffectiveDailyTarget, getWeekEntriesForDate, isSameDay
