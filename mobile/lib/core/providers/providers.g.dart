@@ -491,6 +491,58 @@ final class TimerActionInboxProvider extends $FunctionalProvider<
 
 String _$timerActionInboxHash() => r'362a5e83cc486bf5ccffd0d6c82c76494285bfc4';
 
+/// Briefkasten für Sprachabfragen des Assistant (#287). Prozessweites
+/// Singleton wie [timerActionInbox]; im Test überschreibbar.
+
+@ProviderFor(assistantQueryInbox)
+const assistantQueryInboxProvider = AssistantQueryInboxProvider._();
+
+/// Briefkasten für Sprachabfragen des Assistant (#287). Prozessweites
+/// Singleton wie [timerActionInbox]; im Test überschreibbar.
+
+final class AssistantQueryInboxProvider extends $FunctionalProvider<
+    AssistantQueryInbox,
+    AssistantQueryInbox,
+    AssistantQueryInbox> with $Provider<AssistantQueryInbox> {
+  /// Briefkasten für Sprachabfragen des Assistant (#287). Prozessweites
+  /// Singleton wie [timerActionInbox]; im Test überschreibbar.
+  const AssistantQueryInboxProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'assistantQueryInboxProvider',
+          isAutoDispose: false,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$assistantQueryInboxHash();
+
+  @$internal
+  @override
+  $ProviderElement<AssistantQueryInbox> $createElement(
+          $ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  AssistantQueryInbox create(Ref ref) {
+    return assistantQueryInbox(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(AssistantQueryInbox value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<AssistantQueryInbox>(value),
+    );
+  }
+}
+
+String _$assistantQueryInboxHash() =>
+    r'd0ff67499a8d42f8ce4afdcded1a21cec559c593';
+
 /// App-Icon-Shortcuts „Einstempeln“/„Ausstempeln“ (#274, nur Android).
 
 @ProviderFor(shortcutService)

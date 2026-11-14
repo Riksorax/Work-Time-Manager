@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Android-Emulator-Test für Timer-Aktionen von außen (#280 Assistant, #485 Hintergrund).
+# Android-Emulator-Test für Timer-Aktionen von außen (#280 Assistant, #287 Sprachabfragen, #485 Hintergrund).
 # Läuft in .github/workflows/android-emulator.yml; erwartet einen Emulator mit `adb root`
 # (Image `google_apis`) und einen Debug-APK (run-as liest die SharedPreferences).
 #
@@ -80,6 +80,23 @@ assistant "Pause starten"
 expect "Assistant 'Pause starten'" "start=1 end=0 breaks=1 open_break=1"
 assistant "Pause beenden"
 expect "Assistant 'Pause beenden'" "start=1 end=0 breaks=1 open_break=0"
+
+log "#287: Sprachabfragen bei laufendem Timer verändern den Eintrag nicht"
+# "Wochen-Trend" enthält das Stop-Wort "end": die Abfrage-Stichwörter müssen vor den Timer-Stichwörtern greifen.
+for query in "Wochen-Trend:query_trend" "Überstunden:query_overtime" "Resturlaub:query_leave"; do
+  phrase=${query%%:*}; id=${query##*:}
+  assistant "$phrase"
+  if adb logcat -d | grep "WtmAssistant" | grep -q -- "-> $id"; then
+    log "OK   Assistant '$phrase' -> $id"
+  else
+    log "FAIL Assistant '$phrase': erwartet -> $id"
+    diag
+    FAIL=1
+  fi
+  # Ein fälschlicher Stop/Pause liefe asynchron; erst warten, dann prüfen.
+  sleep 8
+  expect "Assistant '$phrase' lässt den Eintrag unverändert" "start=1 end=0 breaks=1 open_break=0"
+done
 
 log "#485: Notification-Aktion bei laufender App (Weiterleitung an die App)"
 adb shell am start -W -n "$PKG/$PKG.MainActivity" >/dev/null

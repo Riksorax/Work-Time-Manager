@@ -10,9 +10,11 @@ import '../../domain/utils/break_duration.dart';
 import '../../l10n/app_localizations.dart';
 import '../utils/break_duration_formatter.dart';
 import '../utils/break_name_localizer.dart';
+import '../view_models/assistant_query_view_model.dart';
 import '../view_models/dashboard_view_model.dart';
 import '../view_models/settings_view_model.dart';
 import '../view_models/timer_action_view_model.dart';
+import '../widgets/assistant_query_sheet.dart';
 import '../widgets/common/dashboard_save_feedback.dart';
 import '../widgets/common/responsive_center.dart';
 import '../widgets/edit_break_modal.dart';
@@ -54,6 +56,17 @@ class DashboardScreen extends ConsumerWidget {
         if (!ref.read(timerActionFailurePendingProvider)) return;
         ref.read(timerActionFailurePendingProvider.notifier).state = false;
         reportDashboardSave(context, Future.value(false));
+      });
+    }
+    // Sprachabfrage von außen (#287): Antwort als Bottom Sheet, einmalig.
+    // Auch eine Abfrage, die vor dem ersten Frame dieses Screens anstand.
+    if (ref.watch(assistantQueryPendingProvider) != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
+        final query = ref.read(assistantQueryPendingProvider);
+        if (query == null) return;
+        ref.read(assistantQueryPendingProvider.notifier).state = null;
+        showAssistantQuerySheet(context, query);
       });
     }
     final workEntry = dashboardState.workEntry;

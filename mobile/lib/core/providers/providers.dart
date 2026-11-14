@@ -8,6 +8,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/services/home_widget_gateway.dart';
 import '../../core/services/shortcut_service.dart';
+import '../../core/services/assistant_query_inbox.dart';
 import '../../core/services/timer_action_inbox.dart';
 import '../../core/services/version_service.dart';
 import 'settings_sync_provider.dart';
@@ -123,6 +124,12 @@ NotificationService notificationService(Ref ref) {
 /// Widget-Baum feuern; im Test überschreibbar.
 @Riverpod(keepAlive: true)
 TimerActionInbox timerActionInbox(Ref ref) => TimerActionInbox.instance;
+
+/// Briefkasten für Sprachabfragen des Assistant (#287). Prozessweites
+/// Singleton wie [timerActionInbox]; im Test überschreibbar.
+@Riverpod(keepAlive: true)
+AssistantQueryInbox assistantQueryInbox(Ref ref) =>
+    AssistantQueryInbox.instance;
 
 /// App-Icon-Shortcuts „Einstempeln“/„Ausstempeln“ (#274, nur Android).
 @Riverpod(keepAlive: true)

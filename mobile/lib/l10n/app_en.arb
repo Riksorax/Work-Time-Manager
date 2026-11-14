@@ -446,5 +446,10 @@
   "homeOfficeToggleLabel": "Worked from home",
   "homeOfficeChipLabel": "Home office",
   "homeOfficeSemanticSuffix": ", home office day",
-  "homeOfficeToggleDashboardSemantics": "Toggle home office for today"
+  "homeOfficeToggleDashboardSemantics": "Toggle home office for today",
+  "assistantQueryProfileLabel": "Profile: {name}",
+  "assistantQueryPremiumHint": "Answers to voice queries are a Premium feature.",
+  "assistantQueryLoginHint": "Sign in to check your overtime and remaining vacation.",
+  "assistantQueryOvertimeError": "Could not load overtime.",
+  "assistantQueryLeaveYear": "Year {year}"
 }

@@ -1339,5 +1339,15 @@
   "homeOfficeSemanticSuffix": ", Home-Office-Tag",
   "@homeOfficeSemanticSuffix": {"description": "Suffix für das Semantics-Label eines Kalendertags, der als Home-Office-Tag markiert ist (#277). Wird an das Tageslabel angehängt, daher mit führendem Komma."},
   "homeOfficeToggleDashboardSemantics": "Home-Office für heute umschalten",
-  "@homeOfficeToggleDashboardSemantics": {"description": "Semantics-Label des Home-Office-Schalters im Dashboard (#277), für Screenreader."}
+  "@homeOfficeToggleDashboardSemantics": {"description": "Semantics-Label des Home-Office-Schalters im Dashboard (#277), für Screenreader."},
+  "assistantQueryProfileLabel": "Profil: {name}",
+  "@assistantQueryProfileLabel": {"description": "Zeile in der Antwort auf eine Sprachabfrage (#287, Überstunden/Resturlaub per Google Assistant), wenn nicht das Standard-Profil aktiv ist: nennt das Arbeitszeit-Profil, für das die Antwort gilt.", "placeholders": {"name": {"type": "String"}}},
+  "assistantQueryPremiumHint": "Antworten auf Sprachabfragen sind ein Premium-Feature.",
+  "@assistantQueryPremiumHint": {"description": "Hinweis in der Antwort auf eine Sprachabfrage (#287) für angemeldete Nutzer ohne Premium; darunter der Button zum Freischalten (öffnet die Paywall)."},
+  "assistantQueryLoginHint": "Melde dich an, um deine Überstunden und deinen Resturlaub abzufragen.",
+  "@assistantQueryLoginHint": {"description": "Hinweis in der Antwort auf eine Sprachabfrage (#287) für nicht angemeldete Nutzer; darunter der Button zur Anmeldung."},
+  "assistantQueryOvertimeError": "Überstunden konnten nicht geladen werden.",
+  "@assistantQueryOvertimeError": {"description": "Fehlerzustand in der Antwort auf die Sprachabfrage nach den Überstunden (#287), wenn das Dashboard nicht geladen werden konnte."},
+  "assistantQueryLeaveYear": "Jahr {year}",
+  "@assistantQueryLeaveYear": {"description": "Zeile in der Antwort auf die Sprachabfrage nach dem Resturlaub (#287): das Kalenderjahr, für das Resturlaub und Anspruch gelten.", "placeholders": {"year": {"type": "int"}}}
 }
