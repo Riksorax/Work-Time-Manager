@@ -83,7 +83,8 @@ expect "Assistant 'Pause beenden'" "start=1 end=0 breaks=1 open_break=0"
 
 log "#287: Sprachabfragen bei laufendem Timer verändern den Eintrag nicht"
 # "Wochen-Trend" enthält das Stop-Wort "end": die Abfrage-Stichwörter müssen vor den Timer-Stichwörtern greifen.
-for query in "Wochen-Trend:query_trend" "Überstunden:query_overtime" "Resturlaub:query_leave"; do
+# "leave work" ist weder Abfrage noch Timer-Befehl ("leave" allein ist bewusst kein Stichwort).
+for query in "Wochen-Trend:query_trend" "Überstunden:query_overtime" "Resturlaub:query_leave" "leave work:null"; do
   phrase=${query%%:*}; id=${query##*:}
   assistant "$phrase"
   if adb logcat -d | grep "WtmAssistant" | grep -q -- "-> $id"; then

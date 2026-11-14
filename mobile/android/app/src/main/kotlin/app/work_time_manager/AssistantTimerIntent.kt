@@ -52,7 +52,10 @@ object AssistantTimerIntent {
         // Timer-Wörter zuerst geprüft, stempelte "Trend" den Nutzer aus.
         if (has("trend")) return QUERY_TREND
         if (has("überstunden", "gleitzeit", "overtime", "flextime")) return QUERY_OVERTIME
-        if (has("resturlaub", "urlaub", "vacation", "leave")) return QUERY_LEAVE
+        // Bewusst nicht "leave" allein: "leave work" darf keine Abfrage sein.
+        if (has("resturlaub", "urlaub", "vacation", "leave balance", "remaining leave", "annual leave", "days off")) {
+            return QUERY_LEAVE
+        }
 
         if (has("pause", "break")) {
             return if (has("beend", "ende", "end", "stop", "weiter", "resume", "fortsetz", "finish")) RESUME
