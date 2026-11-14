@@ -49,7 +49,25 @@ public sealed record YearlyLeaveReportDto
     public int VacationDaysTaken { get; init; }
     public int VacationDaysRemaining { get; init; }
     public int SickDays { get; init; }
+
+    /// <summary>Immer 12 Einträge (Monat 1–12), Zählung wie die Summen (#284).</summary>
+    public IReadOnlyList<YearlyLeaveMonthDto> Months { get; init; } = Array.Empty<YearlyLeaveMonthDto>();
+
+    /// <summary>Urlaubszeiträume, aufsteigend nach Start, auf das Jahr beschnitten (#284).</summary>
+    public IReadOnlyList<LeavePeriodDto> VacationPeriods { get; init; } = Array.Empty<LeavePeriodDto>();
+
+    /// <summary>Krankheitszeiträume, aufsteigend nach Start, auf das Jahr beschnitten (#284).</summary>
+    public IReadOnlyList<LeavePeriodDto> SickPeriods { get; init; } = Array.Empty<LeavePeriodDto>();
 }
+
+/// <summary>Urlaubs- und Krankheitstage eines Monats (#284).</summary>
+public sealed record YearlyLeaveMonthDto(int Month, int VacationDays, int SickDays);
+
+/// <summary>
+/// Zusammenhängender Zeitraum (kalendarisch direkt aufeinander folgende Tage), <c>Start</c>/<c>End</c>
+/// als Kalendertag (JSON <c>yyyy-MM-dd</c>), <c>Days</c> = Zahl der gezählten Einträge (#284).
+/// </summary>
+public sealed record LeavePeriodDto(DateOnly Start, DateOnly End, int Days);
 
 /// <summary>
 /// Verlauf von Arbeitszeit und Überstunden über 12 Wochen bzw. 12 Monate (#531). Alle Zeitwerte in
