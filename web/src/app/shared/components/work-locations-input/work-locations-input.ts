@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, ElementRef, computed, inject, model, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, afterNextRender, computed, inject, model, signal, viewChild } from '@angular/core';
 import { MatAutocompleteModule, MatAutocompleteSelectedEvent, MatAutocompleteTrigger } from '@angular/material/autocomplete';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -45,10 +45,12 @@ import {
         #field
         [disabled]="atMax()"
         [matAutocomplete]="auto"
+        [matAutocompleteDisabled]="locked()"
         [attr.aria-describedby]="messageId"
         [attr.aria-invalid]="error() && error() !== 'max' ? 'true' : null"
         autocomplete="off"
-        (input)="query.set(field.value)"
+        (input)="onInput(field.value)"
+        (click)="reveal()"
         (keydown.enter)="onSeparator($event)"
         (keydown)="onKeydown($event)"
       />
@@ -97,6 +99,15 @@ export class WorkLocationsInputComponent {
   private readonly field = viewChild<ElementRef<HTMLInputElement>>('field');
   private readonly trigger = viewChild(MatAutocompleteTrigger);
 
+  /**
+   * Vorschlagsliste gesperrt: Sie geht nicht beim Fokussieren auf (sonst deckt sie im Dialog Hinweis und Buttons ab),
+   * sondern erst bei Tippen, Klick ins Feld oder Pfeil-Taste (`reveal`), und schließt nach dem Hinzufügen wieder.
+   */
+  protected readonly locked = signal(true);
+
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly destroyRef = inject(DestroyRef);
+
   protected readonly atMax = computed(() => this.locations().length >= this.max);
   protected readonly suggestions = computed(() =>
     this.atMax() ? [] : this.workSvc.suggestWorkLocations(this.locations(), this.query()));
@@ -106,6 +117,45 @@ export class WorkLocationsInputComponent {
     this.max = MAX_WORK_LOCATIONS;
     this.maxLength = MAX_WORK_LOCATION_LENGTH;
     this.messageId = `wl-message-${WorkLocationsInputComponent.nextId++}`;
+
+    // Escape bei offener Liste schließt nur die Liste. Der Autocomplete schließt sie schon im keydown am Feld; danach sähe
+    // der Overlay-Dispatcher des Dialogs das Escape als sein eigenes. Deshalb in der Capture-Phase abfangen.
+    afterNextRender(() => {
+      const el = this.host.nativeElement;
+      const onKeydown = (e: KeyboardEvent): void => {
+        if (e.key !== 'Escape') return;
+        const trigger = this.trigger();
+        if (!trigger?.panelOpen) return;
+        e.stopPropagation();
+        e.preventDefault();
+        trigger.closePanel();
+      };
+      el.addEventListener('keydown', onKeydown, true);
+      this.destroyRef.onDestroy(() => el.removeEventListener('keydown', onKeydown, true));
+    });
+  }
+
+  /** Öffnet die Vorschlagsliste auf Wunsch des Nutzers (Klick, Tippen, Pfeil-Taste). */
+  protected reveal(): void {
+    if (this.atMax()) return;
+    this.locked.set(false);
+    const trigger = this.trigger();
+    if (!trigger) return;
+    trigger.autocompleteDisabled = false; // sofort, die Bindung zieht erst mit der nächsten Änderungserkennung nach
+    if (!trigger.panelOpen) trigger.openPanel();
+  }
+
+  private lock(): void {
+    this.locked.set(true);
+    const trigger = this.trigger();
+    if (!trigger) return;
+    trigger.autocompleteDisabled = true;
+    trigger.closePanel();
+  }
+
+  protected onInput(value: string): void {
+    this.query.set(value);
+    this.reveal();
   }
 
   /** Übernimmt den noch nicht bestätigten Text; `false`, wenn er ungültig ist (Fehler wird angezeigt). */
@@ -125,6 +175,7 @@ export class WorkLocationsInputComponent {
 
   /** Komma wirkt wie Enter. */
   protected onKeydown(event: KeyboardEvent): void {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { this.reveal(); return; }
     if (event.key !== ',') return;
     event.preventDefault();
     this.commitFromField();
@@ -153,6 +204,7 @@ export class WorkLocationsInputComponent {
     const input = this.field()?.nativeElement;
     if (input) input.value = '';
     this.query.set('');
+    this.lock();
     return true;
   }
 }

@@ -37,6 +37,9 @@ test.describe('Arbeitsorte im Dashboard', () => {
     const dialog = page.getByRole('dialog');
     const field = dialog.getByLabel('Arbeitsort', { exact: true });
     await expect(field).toBeFocused();
+    // Die Vorschlagsliste ist beim Öffnen zu (sonst deckt sie Hinweis und Buttons ab)
+    await expect(page.getByRole('option')).toHaveCount(0);
+    await expect(dialog.getByRole('button', { name: 'Speichern' })).toBeVisible();
 
     // Hinzufügen mit Enter, Leerzeichen werden getrimmt
     await field.fill('  Büro Süd ');
@@ -71,7 +74,12 @@ test.describe('Arbeitsorte im Dashboard', () => {
     // Klick auf die Zeile öffnet denselben Dialog mit dem Stand
     await summary.click();
     await expect(page.getByRole('dialog').locator('mat-chip').filter({ hasText: 'Home Base' })).toHaveCount(1);
-    // Escape bricht ab (auch bei offener Vorschlagsliste, die beim Fokussieren aufgeht): der Stand bleibt
+    // Escape schließt bei offener Vorschlagsliste zuerst nur die Liste, erst das zweite bricht den Dialog ab
+    await page.getByRole('dialog').getByLabel('Arbeitsort', { exact: true }).click();
+    await expect(page.getByRole('option').first()).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('option')).toHaveCount(0);
+    await expect(page.getByRole('dialog')).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(summary).toBeVisible();

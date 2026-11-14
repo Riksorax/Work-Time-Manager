@@ -292,15 +292,13 @@
   }
 }
 
-.home-office-chip,
-.work-location-chip {
+.home-office-chip {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   margin-left: 8px;
   font-size: 0.75rem;
   font-weight: 500;
-  overflow-wrap: anywhere;
   color: var(--mat-sys-on-surface-variant);
 
   .mat-icon {

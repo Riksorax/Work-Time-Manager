@@ -156,6 +156,74 @@ describe('WorkLocationsDialogComponent (#526)', () => {
     expect(close).not.toHaveBeenCalled();
   });
 
+  describe('Vorschlagsliste', () => {
+    const options = (): number => document.querySelectorAll('mat-option').length;
+    const settle = async (): Promise<void> => { fixture.detectChanges(); await fixture.whenStable(); fixture.detectChanges(); };
+
+    it('ist beim Öffnen zu, auch wenn das Feld den Fokus hat', async () => {
+      await open([], ['Kunde']);
+      field().focus();
+      field().dispatchEvent(new Event('focusin', { bubbles: true }));
+      await settle();
+      expect(options()).toBe(0);
+    });
+
+    it('öffnet sich beim Tippen', async () => {
+      await open([], ['Kunde']);
+      field().value = 'K';
+      field().dispatchEvent(new Event('input', { bubbles: true }));
+      await settle();
+      expect(options()).toBe(1);
+    });
+
+    it('öffnet sich beim Klick ins Feld und bei Pfeil-runter', async () => {
+      await open([], ['Kunde']);
+      field().click();
+      await settle();
+      expect(options()).toBe(1);
+
+      await open([], ['Kunde']);
+      field().dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+      await settle();
+      expect(options()).toBe(1);
+    });
+
+    it('schließt nach dem Hinzufügen und geht nicht sofort wieder auf', async () => {
+      await open([], ['Kunde']);
+      field().click();
+      await settle();
+      await type('Büro');
+      expect(chips()).toEqual(['Büro']);
+      expect(options()).toBe(0);
+      field().focus();
+      field().dispatchEvent(new Event('focusin', { bubbles: true }));
+      await settle();
+      expect(options()).toBe(0);
+    });
+
+    it('Escape schließt bei offener Liste nur die Liste und erreicht den Dialog nicht', async () => {
+      await open([], ['Kunde']);
+      field().click();
+      await settle();
+      const seen = vi.fn();
+      document.body.addEventListener('keydown', seen);
+      field().dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+      await settle();
+      document.body.removeEventListener('keydown', seen);
+      expect(options()).toBe(0);
+      expect(seen).not.toHaveBeenCalled();
+    });
+
+    it('Escape bei geschlossener Liste läuft weiter (Dialog bricht ab)', async () => {
+      await open([], ['Kunde']);
+      const seen = vi.fn();
+      document.body.addEventListener('keydown', seen);
+      field().dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+      document.body.removeEventListener('keydown', seen);
+      expect(seen).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it('fragt Vorschläge ohne die gewählten Orte beim Dienst ab', async () => {
     await open(['Büro'], ['Kunde']);
     expect(suggest).toHaveBeenCalledWith(['Büro'], '');
