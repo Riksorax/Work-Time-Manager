@@ -11,6 +11,19 @@ public enum TrendGranularity
 }
 
 /// <summary>
+/// Monat und Tag ohne Jahr, Stichtag des Jahresvergleichs (#530). Im Query-Parameter als <c>MM-dd</c>;
+/// <c>02-29</c> ist gültig und gilt in einem Nicht-Schaltjahr als <c>02-28</c>.
+/// </summary>
+public readonly record struct MonthDay(int Month, int Day)
+{
+    /// <summary>Der Stichtag in <paramref name="year"/>; der 29.02. wird in einem Nicht-Schaltjahr zum 28.02.</summary>
+    public DateOnly InYear(int year) => new(year, Month, Math.Min(Day, DateTime.DaysInMonth(year, Month)));
+
+    /// <summary><c>MM-dd</c>.</summary>
+    public override string ToString() => $"{Month:D2}-{Day:D2}";
+}
+
+/// <summary>
 /// Berechnet Tages-, Wochen- und Monatsberichte. Portiert aus dem Web-ReportCalculatorService —
 /// Bruttozeit (Start→Ende) wird summiert, Pausen separat erfasst; Urlaub/Krank/Feiertag zählen
 /// als voller Arbeitstag. Alle Zeitwerte in Millisekunden.
@@ -242,6 +255,93 @@ public static class ReportCalculator
             AverageWorkedMs = average,
             DeltaMs = lastWeek.NetWorkedMs - average,
             ComparedWeeks = compared.Count,
+        };
+    }
+
+    // ─── Jahresvergleich (#530) ──────────────────────────────────────────────
+
+    /// <summary>Letzter gezählter Tag von <paramref name="year"/>: der Stichtag, ohne Stichtag der 31.12.</summary>
+    public static DateOnly YearlyCutoffDate(int year, MonthDay? until) =>
+        until?.InYear(year) ?? new DateOnly(year, 12, 31);
+
+    /// <summary>
+    /// Kennzahlen eines Kalenderjahres bis einschließlich <paramref name="until"/> (ohne Stichtag: ganzes Jahr).
+    /// Jeder Monat rechnet mit demselben Kern wie der Monatsbericht (<see cref="SumPeriod"/>); die Jahreswerte sind
+    /// die Summen der 12 Monate. <c>workedMs</c> ist <b>netto</b> (Brutto − Pausen, Urlaub/Krank/Feiertag mit dem
+    /// Tagessoll), <c>overtimeMs</c> = <c>MonthlyOvertimeMs</c> inkl. manueller Überstunden; der gespeicherte
+    /// Gleitzeit-Saldo fließt nicht ein. Urlaub/Krank/Feiertag: ein Eintrag = ein Tag (Regel wie
+    /// <see cref="CalculateYearlyLeave"/>). Einträge anderer Jahre werden ignoriert.
+    /// </summary>
+    public static YearlySummaryDto CalculateYearlySummary(
+        IReadOnlyList<WorkEntryDto> yearEntries, int year, SettingsDto settings, MonthDay? until)
+    {
+        var cutoff = YearlyCutoffDate(year, until);
+        var inRange = FilterByRange(yearEntries, new DateOnly(year, 1, 1), cutoff);
+
+        var months = new List<YearlySummaryMonthDto>(12);
+        long breaks = 0;
+        for (var month = 1; month <= 12; month++)
+        {
+            var t = SumPeriod(inRange.Where(e => e.Date.Month == month), settings);
+            breaks += t.BreaksMs;
+            months.Add(new YearlySummaryMonthDto
+            {
+                Month = month,
+                WorkedMs = t.NetWorkedMs,
+                OvertimeMs = t.OvertimeMs,
+                WorkDays = t.WorkDays.Count,
+            });
+        }
+
+        return new YearlySummaryDto
+        {
+            Year = year,
+            HasData = inRange.Count > 0,
+            TotalWorkedMs = months.Sum(m => m.WorkedMs),
+            TotalBreaksMs = breaks,
+            OvertimeMs = months.Sum(m => m.OvertimeMs),
+            WorkDays = months.Sum(m => m.WorkDays),
+            VacationDays = inRange.Count(e => e.Type == "vacation"),
+            SickDays = inRange.Count(e => e.Type == "sick"),
+            HolidayDays = inRange.Count(e => e.Type == "holiday"),
+            Months = months,
+        };
+    }
+
+    /// <summary>
+    /// Vergleich zweier Jahreskennzahlen (#530). <c>delta</c> = aktuell − Vorjahr je Feld, <c>null</c> ohne
+    /// Vorjahres-Einträge. <c>workedPercent</c> kaufmännisch auf eine Nachkommastelle (.5 von der Null weg),
+    /// <c>null</c>, wenn die Netto-Arbeitszeit des Vorjahres 0 ist.
+    /// </summary>
+    public static YearlyComparisonDto CalculateYearlyComparison(
+        YearlySummaryDto current, YearlySummaryDto previous, MonthDay? until)
+    {
+        YearlyDeltaDto? delta = null;
+        if (previous.HasData)
+        {
+            var workedDelta = current.TotalWorkedMs - previous.TotalWorkedMs;
+            delta = new YearlyDeltaDto
+            {
+                WorkedMs = workedDelta,
+                // decimal statt double, damit z. B. 12,35 % exakt bleibt und auf 12,4 rundet.
+                WorkedPercent = previous.TotalWorkedMs == 0
+                    ? null
+                    : (double)Math.Round(
+                        (decimal)workedDelta * 100m / previous.TotalWorkedMs, 1, MidpointRounding.AwayFromZero),
+                OvertimeMs = current.OvertimeMs - previous.OvertimeMs,
+                WorkDays = current.WorkDays - previous.WorkDays,
+                VacationDays = current.VacationDays - previous.VacationDays,
+                SickDays = current.SickDays - previous.SickDays,
+                HolidayDays = current.HolidayDays - previous.HolidayDays,
+            };
+        }
+
+        return new YearlyComparisonDto
+        {
+            Until = until?.ToString(),
+            Current = current,
+            Previous = previous,
+            Delta = delta,
         };
     }
 
