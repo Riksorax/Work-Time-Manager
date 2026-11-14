@@ -204,6 +204,7 @@ void main() {
     PdfReportService? pdf,
     DateTime? now,
     int tab = 0,
+    Locale locale = const Locale('de'),
   }) async {
     tester.view.physicalSize = const Size(800, 3000);
     tester.view.devicePixelRatio = 1.0;
@@ -240,7 +241,7 @@ void main() {
           reportsViewModelProvider.overrideWith(() => _StateViewModel(state)),
       ],
       child: MaterialApp(
-        locale: const Locale('de'),
+        locale: locale,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: const ReportsPage(),
@@ -248,7 +249,10 @@ void main() {
     ));
     await tester.pumpAndSettle();
     if (tab > 0) {
-      await tester.tap(find.text(['', 'Wöchentlich', 'Monatlich'][tab]));
+      final labels = locale.languageCode == 'de'
+          ? ['', 'Wöchentlich', 'Monatlich']
+          : ['', 'Weekly', 'Monthly'];
+      await tester.tap(find.text(labels[tab]));
       await tester.pumpAndSettle();
     }
     expect(tester.takeException(), isNull);
@@ -389,6 +393,21 @@ void main() {
       expect(find.text('-02:22'), findsOneWidget);
       expect(find.text('+05:00'), findsOneWidget); // Gesamt = Saldo
       expect(find.text('+00:00'), findsNothing); // 8:00 - 8:00
+      // Wochen- und Tageszeilen sind brutto und so beschriftet (#535).
+      expect(find.text('Wochenübersicht (inkl. Pausen):'), findsOneWidget);
+      expect(find.text('Tagesübersicht (inkl. Pausen):'), findsOneWidget);
+    });
+
+    // Schmale Breite mit echten Schriften: Screenshot (Testschrift Ahem ist
+    // zu breit für die bestehenden Zeilen der Statistikkarte).
+    testWidgets('Überschriften auf Englisch', (tester) async {
+      await pump(tester,
+          state: stateWith(monthly: monthly),
+          tab: 2,
+          locale: const Locale('en'));
+      expect(find.text('Week overview (incl. breaks):'), findsOneWidget);
+      expect(find.text('Day overview (incl. breaks):'), findsOneWidget);
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('PDF bekommt dieselben Werte wie die Anzeige', (tester) async {

@@ -140,7 +140,7 @@ class PdfReportService {
             (l10n.pdfOvertimeLabel, _fmtSignedDuration(overtime)),
           ]),
           pw.SizedBox(height: 20),
-          pw.Text(l10n.pdfDailyDetailsTitle,
+          pw.Text(l10n.pdfDailyAttendanceTitle,
               style:
                   pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
           pw.SizedBox(height: 8),
@@ -209,7 +209,7 @@ class PdfReportService {
           pw.SizedBox(height: 8),
           _weeklyTable(weeklyWork, l10n: l10n),
           pw.SizedBox(height: 20),
-          pw.Text(l10n.pdfDailyDetailsTitle,
+          pw.Text(l10n.pdfDayOverviewTitle,
               style:
                   pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
           pw.SizedBox(height: 8),
