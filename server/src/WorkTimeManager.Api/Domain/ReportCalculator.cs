@@ -1,6 +1,14 @@
+using System.Globalization;
 using WorkTimeManager.Api.Contracts;
 
 namespace WorkTimeManager.Api.Domain;
+
+/// <summary>Bucket-Größe des Trends (#531); im Query-Parameter als <c>week</c> bzw. <c>month</c>.</summary>
+public enum TrendGranularity
+{
+    Week,
+    Month,
+}
 
 /// <summary>
 /// Berechnet Tages-, Wochen- und Monatsberichte. Portiert aus dem Web-ReportCalculatorService —
@@ -70,15 +78,203 @@ public static class ReportCalculator
     public static WeeklyReportDto CalculateWeeklyReport(
         IReadOnlyList<WorkEntryDto> entries, DateOnly date, SettingsDto settings)
     {
-        var daily = DailyTargetMs(settings);
         var (weekStart, weekEnd) = WeekBounds(date);
-        var weekEntries = FilterByWeek(entries, date);
+        var t = SumPeriod(FilterByWeek(entries, date), settings);
 
+        var days = t.DayMap.OrderBy(kvp => kvp.Key)
+            .Select(kvp => new ReportDayDto(ToUtcMidnight(kvp.Key), kvp.Value))
+            .ToList();
+
+        return new WeeklyReportDto
+        {
+            WeekNumber = GetIsoWeekNumber(date),
+            Start = ToUtcMidnight(weekStart),
+            End = ToUtcMidnight(weekEnd),
+            TotalWorkedMs = t.GrossWorkedMs,
+            TotalBreaksMs = t.BreaksMs,
+            WorkDays = t.WorkDays.Count,
+            AvgPerDayMs = t.WorkDays.Count > 0 ? (double)t.NetWorkedMs / t.WorkDays.Count : 0,
+            OvertimeMs = t.OvertimeMs,
+            Days = days,
+        };
+    }
+
+    public static MonthlyReportDto CalculateMonthlyReport(
+        IReadOnlyList<WorkEntryDto> entries, DateOnly monthRef, SettingsDto settings, long storedOvertimeMs)
+    {
+        var t = SumPeriod(entries, settings);
+
+        // Jeder Tag gehört zu genau einer ISO-KW; die Summen je KW ergeben sich aus der Tages-Map.
+        var weekTotals = t.DayMap
+            .GroupBy(kvp => GetIsoWeekNumber(kvp.Key))
+            .ToDictionary(g => g.Key, g => g.Sum(kvp => kvp.Value));
+        var numWeeks = weekTotals.Count;
+        var workDays = t.WorkDays.Count;
+
+        return new MonthlyReportDto
+        {
+            Month = ToUtcMidnight(new DateOnly(monthRef.Year, monthRef.Month, 1)),
+            TotalWorkedMs = t.GrossWorkedMs,
+            TotalBreaksMs = t.BreaksMs,
+            WorkDays = workDays,
+            AvgPerDayMs = workDays > 0 ? (double)t.NetWorkedMs / workDays : 0,
+            AvgPerWeekMs = numWeeks > 0 ? (double)t.NetWorkedMs / numWeeks : 0,
+            MonthlyOvertimeMs = t.OvertimeMs,
+            TotalOvertimeMs = t.OvertimeMs + storedOvertimeMs,
+            Weeks = weekTotals.OrderBy(kvp => kvp.Key)
+                .Select(kvp => new ReportWeekDto(kvp.Key, kvp.Value)).ToList(),
+            Days = t.DayMap.OrderBy(kvp => kvp.Key)
+                .Select(kvp => new ReportDayDto(ToUtcMidnight(kvp.Key), kvp.Value)).ToList(),
+        };
+    }
+
+    // ─── Trend (#531) ────────────────────────────────────────────────────────
+
+    private const int TrendBucketCount = 12;
+    private const int TrendComparisonWeeks = 4;
+
+    /// <summary>
+    /// Verlauf über 12 Wochen bzw. 12 Monate bis einschließlich der Woche/des Monats von
+    /// <paramref name="referenceDate"/> (#531). Jeder Bucket rechnet mit demselben Kern wie Wochen- bzw.
+    /// Monatsbericht (<see cref="SumPeriod"/>); <c>workedMs</c> ist netto. Der gespeicherte Gleitzeit-Saldo
+    /// fließt nicht ein, <c>cumulativeOvertimeMs</c> beginnt bei 0. Dazu der Wochen-Trend (bei beiden
+    /// Granularitäten). <paramref name="entries"/> muss mindestens <see cref="TrendRange"/> abdecken.
+    /// </summary>
+    public static TrendReportDto CalculateTrend(
+        IReadOnlyList<WorkEntryDto> entries, DateOnly referenceDate, TrendGranularity granularity, SettingsDto settings)
+    {
+        var buckets = new List<TrendBucketDto>(TrendBucketCount);
+        long cumulative = 0;
+        foreach (var (start, end) in TrendPeriods(referenceDate, granularity))
+        {
+            var t = SumPeriod(FilterByRange(entries, start, end), settings);
+            cumulative += t.OvertimeMs;
+            buckets.Add(new TrendBucketDto
+            {
+                Key = granularity == TrendGranularity.Week ? IsoWeekKey(start) : $"{start.Year:D4}-{start.Month:D2}",
+                Start = ToUtcMidnight(start),
+                End = ToUtcMidnight(end),
+                WorkedMs = t.NetWorkedMs,
+                TargetMs = t.TargetMs,
+                OvertimeMs = t.OvertimeMs,
+                CumulativeOvertimeMs = cumulative,
+                HasData = t.HasData,
+            });
+        }
+
+        return new TrendReportDto
+        {
+            Granularity = granularity == TrendGranularity.Week ? "week" : "month",
+            Buckets = buckets,
+            WeeklyTrend = CalculateWeeklyTrend(entries, referenceDate, settings),
+        };
+    }
+
+    /// <summary>
+    /// Kalendertage, die der Trend braucht: alle Buckets und die Wochen des Wochen-Trends
+    /// (letzte abgeschlossene Woche + vier Vergleichswochen).
+    /// </summary>
+    public static (DateOnly From, DateOnly To) TrendRange(DateOnly referenceDate, TrendGranularity granularity)
+    {
+        var periods = TrendPeriods(referenceDate, granularity);
+        var comparisonStart = WeekBounds(referenceDate).Start.AddDays(-7 * (TrendComparisonWeeks + 1));
+        var from = periods[0].Start < comparisonStart ? periods[0].Start : comparisonStart;
+        return (from, periods[^1].End);
+    }
+
+    /// <summary>ISO-Wochenschlüssel <c>yyyy-Www</c> mit ISO-Wochenjahr (Mo 29.12.2025 → <c>2026-W01</c>).</summary>
+    public static string IsoWeekKey(DateOnly date) =>
+        $"{ISOWeek.GetYear(date.ToDateTime(TimeOnly.MinValue)):D4}-W{GetIsoWeekNumber(date):D2}";
+
+    private static List<(DateOnly Start, DateOnly End)> TrendPeriods(DateOnly referenceDate, TrendGranularity granularity)
+    {
+        var periods = new List<(DateOnly, DateOnly)>(TrendBucketCount);
+        if (granularity == TrendGranularity.Week)
+        {
+            var current = WeekBounds(referenceDate).Start;
+            for (var i = TrendBucketCount - 1; i >= 0; i--)
+            {
+                var start = current.AddDays(-7 * i);
+                periods.Add((start, start.AddDays(6)));
+            }
+        }
+        else
+        {
+            var current = new DateOnly(referenceDate.Year, referenceDate.Month, 1);
+            for (var i = TrendBucketCount - 1; i >= 0; i--)
+            {
+                var start = current.AddMonths(-i);
+                periods.Add((start, start.AddMonths(1).AddDays(-1)));
+            }
+        }
+        return periods;
+    }
+
+    /// <summary>
+    /// Letzte abgeschlossene ISO-Woche (vor der Woche des Bezugstags) gegen das Mittel der vier Wochen davor.
+    /// Vergleichswochen ohne Einträge zählen nicht. <c>null</c>, wenn die letzte Woche leer ist oder weniger
+    /// als zwei Vergleichswochen Einträge haben. Mittel kaufmännisch auf ganze Millisekunden gerundet.
+    /// </summary>
+    private static WeeklyTrendDto? CalculateWeeklyTrend(
+        IReadOnlyList<WorkEntryDto> entries, DateOnly referenceDate, SettingsDto settings)
+    {
+        var lastWeekStart = WeekBounds(referenceDate).Start.AddDays(-7);
+        var lastWeek = SumPeriod(FilterByRange(entries, lastWeekStart, lastWeekStart.AddDays(6)), settings);
+        if (!lastWeek.HasData) return null;
+
+        var compared = Enumerable.Range(1, TrendComparisonWeeks)
+            .Select(i => lastWeekStart.AddDays(-7 * i))
+            .Select(start => SumPeriod(FilterByRange(entries, start, start.AddDays(6)), settings))
+            .Where(t => t.HasData)
+            .Select(t => t.NetWorkedMs)
+            .ToList();
+        if (compared.Count < 2) return null;
+
+        var average = (long)Math.Round(
+            (decimal)compared.Sum() / compared.Count, MidpointRounding.AwayFromZero);
+        return new WeeklyTrendDto
+        {
+            LastWeekKey = IsoWeekKey(lastWeekStart),
+            LastWeekWorkedMs = lastWeek.NetWorkedMs,
+            AverageWorkedMs = average,
+            DeltaMs = lastWeek.NetWorkedMs - average,
+            ComparedWeeks = compared.Count,
+        };
+    }
+
+    // ─── Gemeinsamer Kern ────────────────────────────────────────────────────
+
+    /// <summary>Summen eines Zeitraums; Grundlage für Wochen-, Monatsbericht und Trend.</summary>
+    private sealed record PeriodTotals(
+        long GrossWorkedMs,
+        long BreaksMs,
+        long ManualMs,
+        long TargetMs,
+        IReadOnlySet<DateOnly> WorkDays,
+        IReadOnlyDictionary<DateOnly, long> DayMap)
+    {
+        /// <summary>Brutto − Pausen (Urlaub/Krank/Feiertag mit dem Tagessoll).</summary>
+        public long NetWorkedMs => GrossWorkedMs - BreaksMs;
+
+        public long OvertimeMs => NetWorkedMs - TargetMs + ManualMs;
+
+        /// <summary>Mindestens ein Eintrag im Zeitraum (jeder Eintrag erzeugt einen Tag in der Map).</summary>
+        public bool HasData => DayMap.Count > 0;
+    }
+
+    /// <summary>
+    /// Rechenregel der Berichte: Arbeit brutto (Start→Ende) und Pausen getrennt, Urlaub/Krank/Feiertag mit dem
+    /// Tagessoll; Soll = Tage mit Eintrag (Nicht-Arbeit oder Arbeit mit Start) an einem Vertrags-Wochentag ×
+    /// Tagessoll; manuelle Überstunden zusätzlich. Filtert nicht — der Aufrufer übergibt die Einträge des Zeitraums.
+    /// </summary>
+    private static PeriodTotals SumPeriod(IEnumerable<WorkEntryDto> entries, SettingsDto settings)
+    {
+        var daily = DailyTargetMs(settings);
         long totalWorked = 0, totalBreaks = 0, manualMs = 0;
         var workDays = new HashSet<DateOnly>();
         var dayMap = new Dictionary<DateOnly, long>();
 
-        foreach (var entry in weekEntries)
+        foreach (var entry in entries)
         {
             var key = DatePart(entry.Date);
             long worked, breaks = 0;
@@ -101,87 +297,8 @@ public static class ReportCalculator
             dayMap[key] = dayMap.GetValueOrDefault(key) + worked;
         }
 
-        var effectiveDays = workDays.Count(d => settings.Workdays.Contains(IsoDow(d)));
-        var weekTarget = effectiveDays * daily;
-        var netWork = totalWorked - totalBreaks;
-        var days = dayMap.OrderBy(kvp => kvp.Key)
-            .Select(kvp => new ReportDayDto(ToUtcMidnight(kvp.Key), kvp.Value))
-            .ToList();
-
-        return new WeeklyReportDto
-        {
-            WeekNumber = GetIsoWeekNumber(date),
-            Start = ToUtcMidnight(weekStart),
-            End = ToUtcMidnight(weekEnd),
-            TotalWorkedMs = totalWorked,
-            TotalBreaksMs = totalBreaks,
-            WorkDays = workDays.Count,
-            AvgPerDayMs = workDays.Count > 0 ? (double)netWork / workDays.Count : 0,
-            OvertimeMs = netWork - weekTarget + manualMs,
-            Days = days,
-        };
-    }
-
-    public static MonthlyReportDto CalculateMonthlyReport(
-        IReadOnlyList<WorkEntryDto> entries, DateOnly monthRef, SettingsDto settings, long storedOvertimeMs)
-    {
-        var daily = DailyTargetMs(settings);
-        var weekWorkDays = new Dictionary<int, HashSet<DateOnly>>();
-        var weekTotals = new Dictionary<int, long>();
-        var dayMap = new Dictionary<DateOnly, long>();
-
-        long totalWorked = 0, totalBreaks = 0, manualMs = 0;
-
-        foreach (var entry in entries)
-        {
-            var key = DatePart(entry.Date);
-            var weekNum = GetIsoWeekNumber(key);
-            var daySet = weekWorkDays.TryGetValue(weekNum, out var s) ? s : weekWorkDays[weekNum] = new();
-
-            long worked, breaks = 0;
-            if (entry.Type != "work")
-            {
-                worked = daily;
-                daySet.Add(key);
-            }
-            else
-            {
-                breaks = SumBreakMs(entry);
-                worked = GrossWorkMs(entry);
-                if (entry.WorkStart is not null) daySet.Add(key);
-            }
-
-            totalWorked += worked;
-            totalBreaks += breaks;
-            manualMs += (entry.ManualOvertimeMinutes ?? 0) * 60_000L;
-            dayMap[key] = dayMap.GetValueOrDefault(key) + worked;
-            weekTotals[weekNum] = weekTotals.GetValueOrDefault(weekNum) + worked;
-        }
-
-        var effectiveTotalWorkDays = weekWorkDays.Values
-            .Sum(set => set.Count(d => settings.Workdays.Contains(IsoDow(d))));
-        var monthTarget = effectiveTotalWorkDays * daily;
-        var netWork = totalWorked - totalBreaks;
-        var monthlyOvertime = netWork - monthTarget + manualMs;
-
-        var workDays = weekWorkDays.Values.Sum(set => set.Count);
-        var numWeeks = weekWorkDays.Count;
-
-        return new MonthlyReportDto
-        {
-            Month = ToUtcMidnight(new DateOnly(monthRef.Year, monthRef.Month, 1)),
-            TotalWorkedMs = totalWorked,
-            TotalBreaksMs = totalBreaks,
-            WorkDays = workDays,
-            AvgPerDayMs = workDays > 0 ? (double)netWork / workDays : 0,
-            AvgPerWeekMs = numWeeks > 0 ? (double)netWork / numWeeks : 0,
-            MonthlyOvertimeMs = monthlyOvertime,
-            TotalOvertimeMs = monthlyOvertime + storedOvertimeMs,
-            Weeks = weekTotals.OrderBy(kvp => kvp.Key)
-                .Select(kvp => new ReportWeekDto(kvp.Key, kvp.Value)).ToList(),
-            Days = dayMap.OrderBy(kvp => kvp.Key)
-                .Select(kvp => new ReportDayDto(ToUtcMidnight(kvp.Key), kvp.Value)).ToList(),
-        };
+        var target = workDays.Count(d => settings.Workdays.Contains(IsoDow(d))) * daily;
+        return new PeriodTotals(totalWorked, totalBreaks, manualMs, target, workDays, dayMap);
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
@@ -217,12 +334,16 @@ public static class ReportCalculator
     private static IReadOnlyList<WorkEntryDto> FilterByWeek(IReadOnlyList<WorkEntryDto> entries, DateOnly date)
     {
         var (start, end) = WeekBounds(date);
-        return entries.Where(e =>
+        return FilterByRange(entries, start, end);
+    }
+
+    /// <summary>Einträge mit Kalendertag in <paramref name="start"/>..<paramref name="end"/> (inklusive).</summary>
+    private static IReadOnlyList<WorkEntryDto> FilterByRange(IReadOnlyList<WorkEntryDto> entries, DateOnly start, DateOnly end) =>
+        entries.Where(e =>
         {
             var d = DatePart(e.Date);
             return d >= start && d <= end;
         }).ToList();
-    }
 
     /// <summary>Wochengrenzen (Montag–Sonntag) der Woche, die <paramref name="date"/> enthält.</summary>
     public static (DateOnly Start, DateOnly End) WeekBounds(DateOnly date)
