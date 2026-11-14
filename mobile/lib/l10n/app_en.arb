@@ -235,6 +235,7 @@
   "pdfAttendanceColumn": "Attendance (incl. breaks)",
   "pdfCalendarWeekColumn": "Calendar week",
   "pdfMonthColumn": "Month",
+  "exportHomeOfficePdfShortButton": "Home office (PDF)",
   "exportHomeOfficePdfButton": "Home office report (PDF)",
   "pdfHomeOfficeReportTitle": "Home office report",
   "pdfHomeOfficeDaysLabel": "Home office days",

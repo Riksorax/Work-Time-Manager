@@ -820,6 +820,8 @@
   "@pdfCalendarWeekColumn": { "description": "Spaltenüberschrift „Kalenderwoche“ in der Wochentabelle des PDF-Monatsberichts (siehe #297)." },
   "pdfMonthColumn": "Monat",
   "@pdfMonthColumn": { "description": "Spaltenüberschrift „Monat“ in der Monatstabelle des PDF-Jahresberichts (siehe #297)." },
+  "exportHomeOfficePdfShortButton": "Home-Office (PDF)",
+  "@exportHomeOfficePdfShortButton": { "description": "Kurze Beschriftung des Home-Office-PDF-Buttons in der Aktionszeile des Monatsberichts (neben „Als PDF exportieren“); Tooltip und Screenreader nutzen exportHomeOfficePdfButton (siehe #535)." },
   "exportHomeOfficePdfButton": "Home-Office-Auswertung (PDF)",
   "@exportHomeOfficePdfButton": { "description": "Beschriftung des Buttons, der die Home-Office-Auswertung als PDF exportiert (Monats- und Jahresansicht, Premium, siehe #282)." },
   "pdfHomeOfficeReportTitle": "Home-Office-Auswertung",

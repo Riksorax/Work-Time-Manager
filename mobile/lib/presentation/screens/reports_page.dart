@@ -39,6 +39,7 @@ import '../widgets/common/loading_indicator.dart';
 import '../widgets/common/sheet_insets.dart';
 import '../widgets/edit_work_entry_modal.dart';
 import '../widgets/quick_entry_dialog.dart';
+import '../widgets/report_action_row.dart';
 import '../widgets/batch_quick_entry_dialog.dart';
 import '../widgets/weekly_reflection_dialog.dart';
 import '../widgets/work_profile_switcher.dart';
@@ -744,37 +745,29 @@ class WeeklyReportView extends ConsumerWidget {
                     ),
                   ],
                 ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextButton.icon(
-                        onPressed: () => showDialog(
-                          context: context,
-                          builder: (_) =>
-                              WeeklyReflectionDialog(startOfWeek: startOfWeek),
-                        ),
-                        icon: const Icon(Icons.rate_review_outlined),
-                        label: Text(l10n.weeklyReflectionButton,
-                            overflow: TextOverflow.ellipsis, maxLines: 1),
-                      ),
+                ReportActionRow(actions: [
+                  ReportAction(
+                    icon: Icons.rate_review_outlined,
+                    label: l10n.weeklyReflectionButton,
+                    onPressed: () => showDialog(
+                      context: context,
+                      builder: (_) =>
+                          WeeklyReflectionDialog(startOfWeek: startOfWeek),
                     ),
-                    Expanded(
-                      child: TextButton.icon(
-                        onPressed: () => _exportWeeklyReportPdf(
-                          context: context,
-                          service: ref.read(pdfReportServiceProvider),
-                          startOfWeek: startOfWeek,
-                          endOfWeek: endOfWeek,
-                          weekNumber: weekNumber,
-                          weeklyReport: weeklyReport,
-                        ),
-                        icon: const Icon(Icons.picture_as_pdf_outlined),
-                        label: Text(l10n.exportAsPdfButton,
-                            overflow: TextOverflow.ellipsis, maxLines: 1),
-                      ),
+                  ),
+                  ReportAction(
+                    icon: Icons.picture_as_pdf_outlined,
+                    label: l10n.exportAsPdfButton,
+                    onPressed: () => _exportWeeklyReportPdf(
+                      context: context,
+                      service: ref.read(pdfReportServiceProvider),
+                      startOfWeek: startOfWeek,
+                      endOfWeek: endOfWeek,
+                      weekNumber: weekNumber,
+                      weeklyReport: weeklyReport,
                     ),
-                  ],
-                ),
+                  ),
+                ]),
                 const SizedBox(height: 8),
                 if (weeklyReport.workDays == 0)
                   Center(child: Text(l10n.noDataForWeek))
@@ -1261,33 +1254,29 @@ class MonthlyReportView extends ConsumerWidget {
           ],
         ));
 
-        monthChildren.add(Align(
-          alignment: Alignment.centerRight,
-          child: Wrap(
-            alignment: WrapAlignment.end,
-            children: [
-              TextButton.icon(
-                onPressed: () => _exportMonthlyReportPdf(
-                  context: context,
-                  service: ref.read(pdfReportServiceProvider),
-                  month: DateTime(selectedMonth.year, selectedMonth.month),
-                  monthlyReport: monthlyReport,
-                ),
-                icon: const Icon(Icons.picture_as_pdf_outlined),
-                label: Text(l10n.exportAsPdfButton),
-              ),
-              TextButton.icon(
-                onPressed: () => _exportHomeOfficeMonthPdf(
-                  context: context,
-                  ref: ref,
-                  month: DateTime(selectedMonth.year, selectedMonth.month),
-                ),
-                icon: const Icon(Icons.home_work_outlined),
-                label: Text(l10n.exportHomeOfficePdfButton),
-              ),
-            ],
+        // Aktionszeile wie im Wochen-Tab: beide Buttons nebeneinander (#535).
+        monthChildren.add(ReportActionRow(actions: [
+          ReportAction(
+            icon: Icons.picture_as_pdf_outlined,
+            label: l10n.exportAsPdfButton,
+            onPressed: () => _exportMonthlyReportPdf(
+              context: context,
+              service: ref.read(pdfReportServiceProvider),
+              month: DateTime(selectedMonth.year, selectedMonth.month),
+              monthlyReport: monthlyReport,
+            ),
           ),
-        ));
+          ReportAction(
+            icon: Icons.home_work_outlined,
+            label: l10n.exportHomeOfficePdfShortButton,
+            fullLabel: l10n.exportHomeOfficePdfButton,
+            onPressed: () => _exportHomeOfficeMonthPdf(
+              context: context,
+              ref: ref,
+              month: DateTime(selectedMonth.year, selectedMonth.month),
+            ),
+          ),
+        ]));
 
         monthChildren.add(const SizedBox(height: 8));
 
