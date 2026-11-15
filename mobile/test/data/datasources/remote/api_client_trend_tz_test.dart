@@ -74,6 +74,34 @@ void main() {
     expect(r.buckets[1].end, DateTime(2026, 1, 4));
   });
 
+  test('Prognose (#532): Zieltag bleibt der 31.12. (auch mit Zeitanteil)',
+      () async {
+    for (final raw in [
+      '2026-12-31',
+      '2026-12-31T00:00:00+00:00',
+      '2026-12-31T00:00:00Z'
+    ]) {
+      final http_ = _FixedHttpClient({
+        'granularity': 'week',
+        'buckets': [],
+        'forecast': {
+          'targetDate': raw,
+          'currentBalanceMs': 0,
+          'averageWeeklyOvertimeMs': 0,
+          'weeksUsed': 4,
+          'remainingWeeks': 0,
+          'projectedBalanceMs': 0,
+        },
+      });
+      final api = ApiClient(FakeSignedInAuth(), http_);
+      final r = await api.getTrendReport(
+          DateTime(2026, 12, 31), TrendGranularity.week);
+      final d = r.forecast!.targetDate;
+      expect(d, DateTime(2026, 12, 31), reason: raw);
+      expect((d.year, d.month, d.day, d.hour), (2026, 12, 31, 0), reason: raw);
+    }
+  });
+
   test('Bezugstag im Pfad sind die lokalen Kalenderfelder', () async {
     final http_ = _FixedHttpClient({'granularity': 'week', 'buckets': []});
     final api = ApiClient(FakeSignedInAuth(), http_);

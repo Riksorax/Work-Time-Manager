@@ -105,7 +105,8 @@ void main() {
           find.text(
               'Aufsummiert ab 24. Aug. 2026, nicht dein Gleitzeit-Saldo.'),
           findsOneWidget);
-      expect(find.byIcon(Icons.trending_up), findsOneWidget);
+      // Wochen-Trend und Prognose zum Jahresende (#532) steigen beide.
+      expect(find.byIcon(Icons.trending_up), findsNWidgets(2));
       // Die vorhandenen Insights folgen darunter.
       final trendY = t.getTopLeft(find.byType(TrendSection)).dy;
       final insightsY = t.getTopLeft(find.text('Wochentags-Analyse')).dy;

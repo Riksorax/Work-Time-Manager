@@ -94,6 +94,49 @@ class WeeklyTrend extends Equatable {
       [lastWeekKey, lastWeekWorked, averageWorked, delta, comparedWeeks];
 }
 
+/// Überstunden-Prognose zum Jahresende (#532, `OvertimeForecastDto`). Alle
+/// Werte kommen fertig vom Backend; die App rechnet nichts nach. Geplanter
+/// Urlaub und Feiertage im Rest des Jahres sind nicht berücksichtigt.
+class OvertimeForecast extends Equatable {
+  /// 31.12. des Jahres des Bezugstags als lokale Mitternacht (Kalendertag
+  /// `yyyy-MM-dd`, nie über eine Zeitzone gelesen).
+  final DateTime targetDate;
+
+  /// Gespeicherter Gleitzeit-Saldo.
+  final Duration currentBalance;
+
+  /// Mittel der Wochen-Überstunden über die eingerechneten Wochen.
+  final Duration averageWeeklyOvertime;
+
+  /// Eingerechnete Wochen (4–8).
+  final int weeksUsed;
+
+  /// Kalendertage bis einschließlich 31.12. / 7, nicht gerundet (am 31.12. 0).
+  final double remainingWeeks;
+
+  /// Aktueller Saldo + Mittel × Restwochen (Backend).
+  final Duration projectedBalance;
+
+  const OvertimeForecast({
+    required this.targetDate,
+    required this.currentBalance,
+    required this.averageWeeklyOvertime,
+    required this.weeksUsed,
+    required this.remainingWeeks,
+    required this.projectedBalance,
+  });
+
+  @override
+  List<Object?> get props => [
+        targetDate,
+        currentBalance,
+        averageWeeklyOvertime,
+        weeksUsed,
+        remainingWeeks,
+        projectedBalance,
+      ];
+}
+
 /// Antwort von `GET /api/reports/trend/{y}/{m}/{d}` (#531).
 class TrendReport extends Equatable {
   final TrendGranularity granularity;
@@ -105,17 +148,22 @@ class TrendReport extends Equatable {
   /// `null`: zu wenig Daten für den Wochen-Trend.
   final WeeklyTrend? weeklyTrend;
 
+  /// Prognose zum Jahresende (#532), bei beiden Granularitäten gleich.
+  /// `null`: zu wenig Daten oder Feld fehlt (älteres Backend).
+  final OvertimeForecast? forecast;
+
   const TrendReport({
     required this.granularity,
     required this.buckets,
     required this.weeklyTrend,
+    this.forecast,
   });
 
   /// Kein Zeitraum mit Einträgen.
   bool get isEmpty => buckets.every((b) => !b.hasData);
 
   @override
-  List<Object?> get props => [granularity, buckets, weeklyTrend];
+  List<Object?> get props => [granularity, buckets, weeklyTrend, forecast];
 }
 
 /// Kalenderwoche aus `yyyy-Www`, sonst `null`.
