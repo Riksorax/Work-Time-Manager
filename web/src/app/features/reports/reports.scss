@@ -180,7 +180,8 @@
   gap: 12px;
 }
 
-.day-header-actions {
+.day-header-actions,
+.print-actions { // Jahres-Tab: beide Druck-Buttons, umbrechend (#284)
   display: flex;
   align-items: center;
   gap: 8px;
@@ -647,4 +648,3 @@
   flex-direction: column;
   gap: 16px;
 }
-.print-button { align-self: flex-start; }

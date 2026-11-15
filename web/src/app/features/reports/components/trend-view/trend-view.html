@@ -41,6 +41,20 @@
           }
         </section>
 
+        <section class="trend-card trend-kpi trend-forecast" [attr.aria-label]="'reports.trendForecastTitle' | translate">
+          <h3 class="trend-title">{{ 'reports.trendForecastTitle' | translate }}</h3>
+          @if (forecastTexts(); as ft) {
+            <p class="trend-kpi-main">
+              <mat-icon aria-hidden="true">{{ forecastTrendIcon() }}</mat-icon>
+              <span>{{ ft.main }}</span>
+            </p>
+            <p class="trend-sub">{{ ft.detail }}</p>
+            <p class="trend-note">{{ 'reports.trendForecastNote' | translate }}</p>
+          } @else {
+            <p class="trend-sub">{{ 'reports.trendForecastMissing' | translate }}</p>
+          }
+        </section>
+
         <section class="trend-card">
           <h3 class="trend-title">{{ workedLabels().title }}</h3>
           <app-bar-chart [points]="workedPoints()" [labels]="workedLabels()" />

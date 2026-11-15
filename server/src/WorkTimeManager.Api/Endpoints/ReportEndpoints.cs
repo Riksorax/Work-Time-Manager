@@ -71,7 +71,8 @@ internal static class ReportEndpoints
 
         reports.MapGet("/trend/{year:int}/{month:int}/{day:int}", async (
             int year, int month, int day, string? granularity, string? profileId, ClaimsPrincipal user,
-            WorkEntryRepository entries, SettingsRepository settingsRepo, CancellationToken ct) =>
+            WorkEntryRepository entries, SettingsRepository settingsRepo,
+            OvertimeRepository overtimeRepo, CancellationToken ct) =>
         {
             if (user.GetUid() is not { } uid) return Results.Unauthorized();
             if (!IsValidDay(year, month, day)) return Results.BadRequest("Ungültiges Datum.");
@@ -80,9 +81,13 @@ internal static class ReportEndpoints
 
             var date = new DateOnly(year, month, day);
             var (from, to) = ReportCalculator.TrendRange(date, g);
-            var rangeEntries = await entries.GetRangeAsync(uid, from, to, profileId, ct);
-            var settings = await settingsRepo.GetAsync(uid, profileId, ct);
-            return Results.Ok(ReportCalculator.CalculateTrend(rangeEntries, date, g, settings));
+            var entriesTask = entries.GetRangeAsync(uid, from, to, profileId, ct);
+            var settingsTask = settingsRepo.GetAsync(uid, profileId, ct);
+            var overtimeTask = overtimeRepo.GetAsync(uid, profileId, ct);
+            await Task.WhenAll(entriesTask, settingsTask, overtimeTask);
+
+            return Results.Ok(ReportCalculator.CalculateTrend(
+                entriesTask.Result, date, g, settingsTask.Result, overtimeTask.Result.Minutes * 60_000L));
         })
         .WithName("GetTrendReport");
 
