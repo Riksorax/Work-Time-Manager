@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
+import '../../domain/entities/yearly_leave_report.dart';
 import '../../domain/utils/home_office_stats.dart';
 import '../../domain/utils/iso_week.dart';
 import '../../l10n/app_localizations.dart';
@@ -401,6 +402,210 @@ class PdfReportService {
     );
   }
 
+  /// Datumsformat der App-Sprache mit zweistelligem Tag und Monat, abgeleitet
+  /// aus dem Muster von [base] (de `d.M.` → `dd.MM.`, en `M/d` → `MM/dd`).
+  static DateFormat _twoDigit(DateFormat base, String locale) => DateFormat(
+      base.pattern!
+          .replaceAll(RegExp('d+'), 'dd')
+          .replaceAll(RegExp('M+'), 'MM'),
+      locale);
+
+  /// Alle Texte der Urlaubs- und Krankheitsauswertung (#284), getrennt vom
+  /// PDF-Aufbau, damit Tests den Inhalt prüfen können. Rechnet nichts nach:
+  /// Summen, Monate und Zeiträume stammen aus [report] (Backend).
+  @visibleForTesting
+  static LeaveReportContent leaveReportContent({
+    required AppLocalizations l10n,
+    required String locale,
+    required YearlyLeaveReport report,
+    required bool isCurrentYear,
+    required DateTime createdOn,
+    String? profileName,
+  }) {
+    final dayFmt = _twoDigit(DateFormat.Md(locale), locale);
+    final createdFmt = _twoDigit(DateFormat.yMd(locale), locale);
+    final monthFmt = DateFormat.MMMM(locale);
+    final year = '${report.year}';
+
+    List<String> periods(List<LeavePeriod> list) => [
+          for (final p in list)
+            l10n.pdfLeavePeriodLabel(
+              _sameDay(p.start, p.end)
+                  ? dayFmt.format(p.start)
+                  : '${dayFmt.format(p.start)}–${dayFmt.format(p.end)}',
+              p.days,
+            ),
+        ];
+
+    return LeaveReportContent(
+      title: l10n.pdfLeaveReportTitle(year),
+      meta: [
+        if (profileName != null && profileName.isNotEmpty)
+          l10n.pdfLeaveProfileLabel(profileName),
+        l10n.pdfLeaveCreatedLabel(createdFmt.format(createdOn)),
+      ],
+      summary: [
+        (l10n.pdfLeaveVacationTakenLabel, '${report.vacationDaysTaken}'),
+        (l10n.pdfSickDaysLabel, '${report.sickDays}'),
+        if (isCurrentYear) ...[
+          (l10n.pdfLeaveEntitlementLabel, '${report.vacationDaysPerYear}'),
+          (l10n.pdfLeaveRemainingLabel, '${report.vacationDaysRemaining}'),
+        ],
+      ],
+      pastYearNote: isCurrentYear ? null : l10n.pdfLeavePastYearNote,
+      emptyNote: report.isEmpty ? l10n.pdfLeaveEmptyNote(year) : null,
+      monthHeader: [
+        l10n.pdfMonthColumn,
+        l10n.pdfLeaveVacationDaysColumn,
+        l10n.pdfLeaveSickDaysColumn,
+      ],
+      monthRows: [
+        for (final m in report.months)
+          [
+            monthFmt.format(DateTime(2000, m.month)),
+            '${m.vacationDays}',
+            '${m.sickDays}',
+          ],
+      ],
+      totalRow: [
+        l10n.pdfLeaveTotalLabel,
+        '${report.vacationDaysTaken}',
+        '${report.sickDays}',
+      ],
+      vacationPeriods: report.isEmpty ? null : periods(report.vacationPeriods),
+      sickPeriods: report.isEmpty ? null : periods(report.sickPeriods),
+      footnote: l10n.pdfLeaveCountNote,
+    );
+  }
+
+  static bool _sameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  pw.Widget _leaveMonthTable(LeaveReportContent c) {
+    const padding = pw.EdgeInsets.symmetric(vertical: 3, horizontal: 8);
+    final bold = pw.TextStyle(fontWeight: pw.FontWeight.bold);
+    pw.Widget cell(String text, int col, {pw.TextStyle? style}) => pw.Padding(
+          padding: padding,
+          child: pw.Align(
+            alignment:
+                col == 0 ? pw.Alignment.centerLeft : pw.Alignment.centerRight,
+            child: pw.Text(text, style: style),
+          ),
+        );
+    pw.TableRow row(List<String> cells, {pw.TextStyle? style}) => pw.TableRow(
+          children: [
+            for (var i = 0; i < cells.length; i++)
+              cell(cells[i], i, style: style),
+          ],
+        );
+    return pw.Table(
+      border: const pw.TableBorder(
+        horizontalInside: pw.BorderSide(width: 0.5),
+        top: pw.BorderSide(width: 0.5),
+        bottom: pw.BorderSide(width: 0.5),
+      ),
+      columnWidths: const {
+        0: pw.FlexColumnWidth(2),
+        1: pw.FlexColumnWidth(),
+        2: pw.FlexColumnWidth(),
+      },
+      children: [
+        row(c.monthHeader, style: bold),
+        for (final r in c.monthRows) row(r),
+        row(c.totalRow, style: bold),
+      ],
+    );
+  }
+
+  /// Überschrift und Zeilen einer Zeitraum-Liste als einzelne Widgets, damit
+  /// `MultiPage` eine lange Liste auf mehrere Seiten verteilen kann.
+  List<pw.Widget> _leavePeriodSection(String title, List<String> lines,
+      {required AppLocalizations l10n}) {
+    return [
+      pw.Text(title,
+          style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+      pw.SizedBox(height: 4),
+      if (lines.isEmpty)
+        pw.Text(l10n.pdfLeaveNoPeriodsLabel)
+      else
+        for (final line in lines)
+          pw.Bullet(
+            text: line,
+            margin: const pw.EdgeInsets.symmetric(vertical: 1.5),
+            padding: pw.EdgeInsets.zero,
+          ),
+    ];
+  }
+
+  /// Exportiert die Urlaubs- und Krankheitsauswertung eines Jahres als PDF
+  /// (#284). Inhalt siehe [leaveReportContent]; der Dateiname ist fest
+  /// deutsch (`Urlaub-Krank-Auswertung_{Jahr}.pdf`, wie die übrigen
+  /// Berichte). Ein Jahr ohne Urlaub und Krankheit ergibt trotzdem ein PDF
+  /// mit Hinweis.
+  Future<void> exportLeaveReport({
+    required AppLocalizations l10n,
+    required String locale,
+    required YearlyLeaveReport report,
+    required bool isCurrentYear,
+    required DateTime createdOn,
+    String? profileName,
+  }) async {
+    final c = leaveReportContent(
+      l10n: l10n,
+      locale: locale,
+      report: report,
+      isCurrentYear: isCurrentYear,
+      createdOn: createdOn,
+      profileName: profileName,
+    );
+    final doc = pw.Document(theme: await _loadTheme());
+    doc.addPage(
+      pw.MultiPage(
+        build: (context) => [
+          _header(c.title, c.meta.join(' · ')),
+          _summaryTable(c.summary),
+          if (c.pastYearNote != null) ...[
+            pw.SizedBox(height: 8),
+            pw.Text(c.pastYearNote!, style: const pw.TextStyle(fontSize: 10)),
+          ],
+          if (c.emptyNote != null) ...[
+            pw.SizedBox(height: 12),
+            pw.Text(c.emptyNote!,
+                style:
+                    pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+          ],
+          if (c.monthRows.isNotEmpty) ...[
+            pw.SizedBox(height: 16),
+            pw.Text(l10n.pdfLeaveMonthsTitle,
+                style:
+                    pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 8),
+            _leaveMonthTable(c),
+          ],
+          if (c.vacationPeriods != null) ...[
+            pw.SizedBox(height: 16),
+            ..._leavePeriodSection(
+                l10n.pdfLeaveVacationPeriodsTitle, c.vacationPeriods!,
+                l10n: l10n),
+          ],
+          if (c.sickPeriods != null) ...[
+            pw.SizedBox(height: 12),
+            ..._leavePeriodSection(
+                l10n.pdfLeaveSickPeriodsTitle, c.sickPeriods!,
+                l10n: l10n),
+          ],
+          pw.SizedBox(height: 16),
+          pw.Text(c.footnote, style: const pw.TextStyle(fontSize: 9)),
+        ],
+      ),
+    );
+
+    await Printing.sharePdf(
+      bytes: await doc.save(),
+      filename: 'Urlaub-Krank-Auswertung_${report.year}.pdf',
+    );
+  }
+
   /// Exportiert den Jahresbericht als PDF (siehe #256).
   Future<void> exportYearlyReport({
     required AppLocalizations l10n,
@@ -442,4 +647,45 @@ class PdfReportService {
       filename: 'Jahresbericht_$year.pdf',
     );
   }
+}
+
+/// Texte der Urlaubs- und Krankheitsauswertung (#284), siehe
+/// [PdfReportService.leaveReportContent].
+class LeaveReportContent {
+  final String title;
+
+  /// Zeile unter dem Titel: ggf. Profil, dann Erstellungsdatum.
+  final List<String> meta;
+  final List<(String, String)> summary;
+
+  /// Nur für ein anderes als das laufende Jahr gesetzt.
+  final String? pastYearNote;
+
+  /// Nur für ein Jahr ohne Urlaubs- und Krankheitstage gesetzt.
+  final String? emptyNote;
+  final List<String> monthHeader;
+
+  /// Zwölf Monatszeilen; leer, wenn das Backend keine Monate liefert.
+  final List<List<String>> monthRows;
+  final List<String> totalRow;
+
+  /// `null` bei einem Jahr ohne Urlaubs- und Krankheitstage (Abschnitt
+  /// entfällt); eine leere Liste steht als „Keine“ im PDF.
+  final List<String>? vacationPeriods;
+  final List<String>? sickPeriods;
+  final String footnote;
+
+  const LeaveReportContent({
+    required this.title,
+    required this.meta,
+    required this.summary,
+    required this.pastYearNote,
+    required this.emptyNote,
+    required this.monthHeader,
+    required this.monthRows,
+    required this.totalRow,
+    required this.vacationPeriods,
+    required this.sickPeriods,
+    required this.footnote,
+  });
 }

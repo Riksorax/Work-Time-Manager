@@ -160,6 +160,10 @@ void main() {
         (tester) async {
       await pumpView(tester, view: const YearlyReportView());
 
+      // Jahres-Tab (#284): Auswertungen im Menü des Buttons „PDF-Export“.
+      await tester.tap(find.text('PDF-Export'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
       await tapAndWait(tester, 'Home-Office-Auswertung (PDF)',
           done: () => platform.lastFilename != null);
 
@@ -190,6 +194,9 @@ void main() {
       expect(find.byTooltip('Home office report (PDF)'), findsOneWidget);
 
       await pumpView(tester, view: const YearlyReportView(), locale: 'en');
+      await tester.tap(find.text('PDF export'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
       expect(find.text('Home office report (PDF)'), findsOneWidget);
     });
 
