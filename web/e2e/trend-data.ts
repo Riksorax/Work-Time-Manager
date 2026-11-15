@@ -22,10 +22,24 @@ export interface TrendMockOptions {
   workedHours?: number[];
   /** `null` = zu wenig Daten für den Wochen-Trend. */
   weeklyTrend?: 'default' | null;
+  /** Prognose zum Jahresende (#532): `'default'` = positiv, `'negative'`, `null` = zu wenig Daten. Standard: positiv. */
+  forecast?: 'default' | 'negative' | null;
 }
 
 const WEEK_HOURS = [38.5, 41, 40, 36.5, 42.5, 39, 40, 44, 37.5, 40.5, 41.5, 22];
 const MONTH_HOURS = [168, 152, 171, 160, 158, 175, 120, 166, 172, 169, 174, 86];
+
+/** Prognose im Format von `OvertimeForecastDto`: 6 Wochen, 7 Restwochen; Zahlen fest, nicht aus dem Datum abgeleitet. */
+function forecastMock(year: number, negative: boolean): unknown {
+  return {
+    targetDate: `${year}-12-31`,
+    currentBalanceMs: (negative ? -2.5 : 18.75) * HOUR,
+    averageWeeklyOvertimeMs: (negative ? -0.75 : 1.25) * HOUR,
+    weeksUsed: 6,
+    remainingWeeks: 7,
+    projectedBalanceMs: (negative ? -7.75 : 27.5) * HOUR,
+  };
+}
 
 /** Antwort für den Bezugstag `y-m-d` und `granularity` (Buckets wie das Backend: 12, älteste zuerst). */
 export function trendResponse(y: number, m: number, d: number, granularity: string, opts: TrendMockOptions = {}): unknown {
@@ -62,10 +76,11 @@ export function trendResponse(y: number, m: number, d: number, granularity: stri
     lastWeekKey: isoWeekKey(lastMonday), lastWeekWorkedMs: 41.5 * HOUR, averageWorkedMs: 39 * HOUR,
     deltaMs: 2.5 * HOUR, comparedWeeks: 4,
   };
-  return { granularity, buckets, weeklyTrend };
+  const forecast = opts.forecast === null ? null : forecastMock(y, opts.forecast === 'negative');
+  return { granularity, buckets, weeklyTrend, forecast };
 }
 
 /** Leere Antwort: kein Zeitraum mit Einträgen. */
 export function emptyTrendResponse(y: number, m: number, d: number, granularity: string): unknown {
-  return trendResponse(y, m, d, granularity, { gaps: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], weeklyTrend: null });
+  return trendResponse(y, m, d, granularity, { gaps: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], weeklyTrend: null, forecast: null });
 }

@@ -161,7 +161,22 @@ pusht nur das Image. Auf `main` gestartet, deployt er auch.
 **Play Console (Store-Texte):** Der Service-Account `github-actions-uploader@worktime-56c7a.iam.gserviceaccount.com`
 braucht in der Play Console unter „Nutzer und Berechtigungen → App-Berechtigungen“ das Recht
 „Präsenz im Play Store verwalten“. Fehlt es, scheitert „Sync Store Metadata“ in
-`flutter-production.yml` mit 403 (der AAB-Upload ist davon unabhängig).
+`flutter-production.yml` mit 403 (der AAB-Upload ist davon unabhängig). Dasselbe Recht deckt
+auch die Screenshots ab.
+
+Der Job synchronisiert je Sprache aus `fastlane/metadata/android/<Sprache>/` Titel, Kurz- und
+Langbeschreibung und, falls vorhanden, die Phone-Screenshots aus `images/phoneScreenshots/`
+(Skript `.github/scripts/sync-store-metadata.mjs`, Tests im CI-Job „Store-Sync-Skript Test“):
+
+- Liegen dort Bilder, ersetzt der Job im selben Edit alle Phone-Screenshots dieser Sprache, in der
+  numerischen Reihenfolge des Dateinamens (`1.png`, `2.png`, …, `10.png`).
+- Fehlt der Ordner oder ist er leer (versteckte Dateien wie `.gitkeep` zählen nicht), bleiben die
+  Screenshots dieser Sprache im Store unverändert; es wird nichts gelöscht.
+- Regeln (geprüft für alle Sprachen, bevor ein Edit angelegt wird): 2 bis 8 Bilder je Sprache,
+  Dateiname `<Zahl>.png|.jpg|.jpeg`, nur PNG oder JPEG, höchstens 8 MB je Datei, jede Kante
+  320–3840 px, die längere Kante höchstens doppelt so lang wie die kürzere. Verletzt ein Bild eine
+  Regel, bricht der Job mit Datei und Regel ab und ändert nichts im Store.
+- Scheitert ein Upload, wird der Edit nicht committet; der Store bleibt unverändert, der Job ist rot.
 
 **Manuelle Schritte** (im Release-PR aufführen):
 
