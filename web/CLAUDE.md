@@ -137,7 +137,7 @@ runInInjectionContext(this.injector, () => {
 ### Netto-Zeilen der Berichte (#551)
 
 Die Zeilen der Berichte zeigen **netto** (ohne Pausen): Tage im Wochen- und Monatsbericht (`day.netWorked`, auch `aria-label`)
-und Wochen im Monatsbericht (`week.netWorked`). `worked`/`totalWorked` bleiben brutto im Modell (Summenkarte unverändert).
+und Wochen im Monatsbericht (`week.netWorked`). `worked`/`totalWorked` bleiben brutto im Modell. Die Karte „Gesamtarbeitszeit“ (Wochen- und Monatsbericht) zeigt `totalWorked − totalBreaks` (netto, wie das Backend es definiert), „Gesamtpausen“ steht als eigene Zeile darunter; die Zeilensumme entspricht damit der Gesamtarbeitszeit (Tage mit Netto ≤ 0 zeigen „—“, zählen in der Summe aber mit).
 - **Vertrag:** `ReportDayDto.netWorkedMs`/`ReportWeekDto.netWorkedMs` (additiv). `ApiClient` liest `netWorkedMs ?? workedMs`
   (älteres Backend: Rückfall auf brutto, kein 0). Tag-Netto = brutto − abgeschlossene Pausen, **nicht bei 0 gekappt**.
 - **Gäste:** `report-calculator.ts` rechnet dieselben Werte (`dayBreaks`); Parität über `cases.json`.

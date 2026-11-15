@@ -274,7 +274,7 @@
               <div class="summary-card">
                 <div class="summary-row">
                   <span class="summary-label">{{ 'reports.totalWorkTimeLabel' | translate }}</span>
-                  <span class="summary-value">{{ formatDuration(svc.weeklyReport().totalWorked) }}</span>
+                  <span class="summary-value">{{ formatDuration(svc.weeklyReport().totalWorked - svc.weeklyReport().totalBreaks) }}</span>
                 </div>
                 <div class="summary-row">
                   <span class="summary-label">{{ 'reports.totalBreaksLabel' | translate }}</span>
@@ -394,7 +394,7 @@
               <div class="summary-card">
                 <div class="summary-row">
                   <span class="summary-label">{{ 'reports.totalWorkTimeLabel' | translate }}</span>
-                  <span class="summary-value">{{ formatDuration(svc.monthlyReport().totalWorked) }}</span>
+                  <span class="summary-value">{{ formatDuration(svc.monthlyReport().totalWorked - svc.monthlyReport().totalBreaks) }}</span>
                 </div>
                 <div class="summary-row">
                   <span class="summary-label">{{ 'reports.totalBreaksLabel' | translate }}</span>

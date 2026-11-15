@@ -107,4 +107,22 @@ describe('ReportsComponent: Zeilen der Berichte zeigen Netto (#551)', () => {
     expect(texts('.day-duration')).toEqual(['08:30']);
     expect(root().querySelector('.day-row')!.getAttribute('aria-label')).toContain('08:30');
   });
+
+  it('Wochenbericht: Gesamtarbeitszeit netto (brutto − Pausen), Gesamtpausen separat, passt zur Zeilensumme', async () => {
+    await mount(1);
+    const rows = [...root().querySelectorAll('.summary-card')].find(c => c.textContent!.includes('Gesamtarbeitszeit'))!;
+    const values = [...rows.querySelectorAll('.summary-value')].map(e => e.textContent!.trim());
+    expect(values[0]).toBe('08:30');
+    expect(values[1]).toBe('00:30');
+    expect(texts('.day-duration').filter(t => t !== '—')).toEqual([values[0]]);
+  });
+
+  it('Monatsbericht: Gesamtarbeitszeit netto, gleich der Wochenzeile', async () => {
+    await mount(2);
+    const card = [...root().querySelectorAll('.summary-card')].find(c => c.textContent!.includes('Gesamtarbeitszeit'))!;
+    const values = [...card.querySelectorAll('.summary-value')].map(e => e.textContent!.trim());
+    expect(values[0]).toBe('08:30');
+    expect(values[1]).toBe('00:30');
+    expect(texts('.week-overview-duration')).toEqual([values[0]]);
+  });
 });
