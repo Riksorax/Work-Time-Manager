@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show mapEquals;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../domain/utils/overtime_utils.dart';
 import '../../domain/utils/timer_status.dart';
 import '../../presentation/view_models/dashboard_view_model.dart';
 import '../services/home_widget_gateway.dart';
@@ -106,8 +107,11 @@ void widgetSync(Ref ref) {
     lastSnapshot = buildTimerSnapshot(
       entry: next.workEntry,
       net: net,
-      // Tagessoll aus Netto und Tagessaldo (Saldo = Netto - Soll).
-      target: dailyOvertime == null ? null : net - dailyOvertime,
+      // Tagessoll aus Netto und Tagessaldo (Saldo = Netto - Soll + manuelle
+      // Überstunden, #538).
+      target: dailyOvertime == null
+          ? null
+          : net - dailyOvertime + manualOvertimeOf(next.workEntry),
       expectedEnd: next.expectedEndTime,
       totalOvertime: next.totalOvertime,
     );

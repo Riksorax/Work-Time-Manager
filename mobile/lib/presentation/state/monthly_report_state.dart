@@ -10,8 +10,21 @@ class MonthlyReportState {
   final Duration overtime;
   final Duration totalOvertime; // Überstunden inkl. heute
   final int workDays;
+
+  /// Brutto je ISO-Woche (`weeks[].totalWorkedMs`), nur Tage des Monats.
   final Map<int, Duration> weeklyWork;
+
+  /// Brutto je Tag (`days[].workedMs`), Abwesenheit mit dem Tagessoll.
   final Map<DateTime, Duration> dailyWork;
+
+  /// Netto je ISO-Woche (`weeks[].netWorkedMs`, #551), nur Tage des Monats.
+  /// Die Wochenzeilen der Berichte und des PDFs zeigen diese Werte.
+  final Map<int, Duration> weeklyNetWork;
+
+  /// Netto je Tag (`days[].netWorkedMs`, #551): brutto − abgeschlossene
+  /// Pausen, nicht bei 0 gekappt. Die Tageszeilen der Berichte und des PDFs
+  /// zeigen diese Werte; ihre Summe ist [totalNetWorkDuration].
+  final Map<DateTime, Duration> dailyNetWork;
   final Duration avgWorkDurationPerWeek; // Added field
 
   const MonthlyReportState({
@@ -25,6 +38,8 @@ class MonthlyReportState {
     this.workDays = 0,
     this.weeklyWork = const {},
     this.dailyWork = const {},
+    this.weeklyNetWork = const {},
+    this.dailyNetWork = const {},
     this.avgWorkDurationPerWeek = Duration.zero, // Added to constructor
   });
 

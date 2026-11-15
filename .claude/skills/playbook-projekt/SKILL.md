@@ -11,10 +11,11 @@ zusätzlich zu `playbook-<stack>`; bei Widerspruch gilt dieses, danach `CLAUDE.m
 |---|---|
 | Konventionen, PR-Checkliste, Issue-Einordnung, `/auto-bugfix`-Hotfix | [references/konventionen.md](references/konventionen.md) |
 | Datenpfade, Hybrid-Layer, Arbeitszeit-Profile, Rechenlogik, Premium | [references/daten.md](references/daten.md) |
+| Architektur-Entscheidungen: Logik ins Backend, API-Feldregeln, Berichte, Diagramme, Export | [references/entscheidungen.md](references/entscheidungen.md) |
 | Flutter (`mobile/`), je Phase | [references/flutter.md](references/flutter.md) |
 | Angular (`web/`): Architektur, Hybrid-Services, Premium, i18n, Parität | [references/web.md](references/web.md) |
 | Angular-UI-Port: Design-System, Screen-Mapping | [references/design.md](references/design.md) |
 | Backend (`server/`) | [references/backend.md](references/backend.md) |
-| Mehrplattform-Issues | [references/koordination.md](references/koordination.md) |
+| Mehrplattform-Issues, Schaltzentrale (mehrere Issues steuern) | [references/koordination.md](references/koordination.md) |
 
 Nur lesen, was die laufende Phase und Plattform brauchen.

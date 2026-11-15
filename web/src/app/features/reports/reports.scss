@@ -40,7 +40,7 @@
     overflow: hidden auto;
   }
 
-  // Vier Tabs (Täglich, Wöchentlich, Monatlich, Jahr) müssen auch auf 320-375 px ohne Blätterpfeile passen.
+  // Fünf Tabs (Täglich, Wöchentlich, Monatlich, Jahr, Trend #531) müssen auch auf 320-375 px ohne Blätterpfeile passen.
   @media (max-width: 600px) {
     ::ng-deep .mdc-tab {
       min-width: 0;
@@ -48,7 +48,8 @@
     }
   }
 
-  @media (max-width: 360px) {
+  // Ab #531 (fünfter Tab) gilt die kompakte Form bis Handy-Breite 430 px (vorher 360 px).
+  @media (max-width: 430px) {
     ::ng-deep .mdc-tab {
       padding: 0 4px;
     }
@@ -179,7 +180,8 @@
   gap: 12px;
 }
 
-.day-header-actions {
+.day-header-actions,
+.print-actions { // Jahres-Tab: beide Druck-Buttons, umbrechend (#284)
   display: flex;
   align-items: center;
   gap: 8px;
@@ -646,4 +648,3 @@
   flex-direction: column;
   gap: 16px;
 }
-.print-button { align-self: flex-start; }

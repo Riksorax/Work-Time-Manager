@@ -130,6 +130,33 @@
 
         <mat-divider />
 
+        <!-- ── Dashboard-Anzeige (#526) ─────────────────────────── -->
+        <section class="dashboard-display-section" [attr.aria-label]="'settings.dashboardDisplay.sectionAria' | translate">
+          <h3 class="section-title">{{ 'settings.dashboardDisplay.sectionTitle' | translate }}</h3>
+
+          <mat-list>
+            <mat-list-item>
+              <mat-icon matListItemIcon aria-hidden="true">place</mat-icon>
+              <span matListItemTitle>{{ 'settings.dashboardDisplay.workLocationLabel' | translate }}</span>
+              <mat-slide-toggle matListItemMeta class="show-work-location-toggle"
+                                [checked]="svc.settings().showWorkLocationOnDashboard"
+                                (change)="onShowWorkLocationChange($event.checked)"
+                                [aria-label]="'settings.dashboardDisplay.workLocationLabel' | translate" />
+            </mat-list-item>
+            <mat-list-item>
+              <mat-icon matListItemIcon aria-hidden="true">home_work</mat-icon>
+              <span matListItemTitle>{{ 'settings.dashboardDisplay.homeOfficeLabel' | translate }}</span>
+              <mat-slide-toggle matListItemMeta class="show-home-office-toggle"
+                                [checked]="svc.settings().showHomeOfficeOnDashboard"
+                                (change)="onShowHomeOfficeChange($event.checked)"
+                                [aria-label]="'settings.dashboardDisplay.homeOfficeLabel' | translate" />
+            </mat-list-item>
+          </mat-list>
+          <p class="dashboard-display-hint">{{ 'settings.dashboardDisplay.hint' | translate }}</p>
+        </section>
+
+        <mat-divider />
+
         <!-- ── Gleitzeit-Bilanz ─────────────────────────────────── -->
         <section class="overtime-section" [attr.aria-label]="'settings.overtimeSectionAria' | translate">
           <h3 class="section-title">{{ 'settings.overtimeSectionTitle' | translate }}</h3>

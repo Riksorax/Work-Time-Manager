@@ -12,10 +12,12 @@ test.describe('Jahresauswertung drucken', () => {
     await expect(page.locator('.print-area')).toBeVisible();
     await expect(page.getByRole('button', { name: /PDF/ })).toBeVisible();
     await expect(page.locator('.print-area .print-only')).toBeHidden();
+    // Urlaubs-/Krankheitsauswertung (#284) gibt es nur angemeldet (Werte vom Backend).
+    await expect(page.getByRole('button', { name: /Urlaub\/Krank/ })).toHaveCount(0);
 
     await page.emulateMedia({ media: 'print' });
     await expect(page.locator('.print-area .print-only')).toBeVisible();
-    await expect(page.locator('.print-area .print-only')).toContainText('Urlaubs- und Krankheitsauswertung');
+    await expect(page.locator('.print-area .print-only')).toContainText('Jahresauswertung');
     await expect(page.getByRole('button', { name: /PDF/ })).toBeHidden();
     await expect(page.locator('mat-sidenav')).toBeHidden();
     await expect(page.getByRole('tab', { name: 'Jahr' })).toBeHidden();

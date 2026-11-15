@@ -17,10 +17,12 @@ import 'package:flutter_work_time/presentation/state/settings_state.dart';
 import 'package:flutter_work_time/presentation/state/yearly_report_state.dart';
 import 'package:flutter_work_time/presentation/view_models/reports_view_model.dart';
 import 'package:flutter_work_time/presentation/view_models/settings_view_model.dart';
+import 'package:flutter_work_time/presentation/view_models/yearly_comparison_view_model.dart';
 import 'package:flutter_work_time/presentation/view_models/yearly_report_view_model.dart';
 
 import '../../support/fake_printing_platform.dart';
 import '../../support/fake_repositories.dart';
+import '../../support/yearly_comparison_fixture.dart';
 
 class _FakeReportsViewModel extends ReportsViewModel {
   @override
@@ -104,6 +106,9 @@ void main() {
           reportsViewModelProvider.overrideWith(_FakeReportsViewModel.new),
           settingsViewModelProvider.overrideWith(_FakeSettingsViewModel.new),
           yearlyReportViewModelProvider.overrideWith(_FakeYearlyViewModel.new),
+          // Vergleichskarte (#530) steht im Jahres-Tab: fester Ladezustand.
+          yearlyComparisonViewModelProvider
+              .overrideWith(FakeYearlyComparisonViewModel.new),
         ],
         child: MaterialApp(
           locale: Locale(locale),
@@ -134,10 +139,16 @@ void main() {
         (tester) async {
       await pumpView(tester, view: const MonthlyReportView());
 
-      expect(find.text('Home-Office-Auswertung (PDF)'), findsOneWidget);
-      expect(find.text('Als PDF exportieren'), findsOneWidget);
+      // Aktionszeile (#535): kurze Beschriftung, voller Text als Tooltip
+      // und für Screenreader.
+      expect(find.text('Home-Office-PDF'), findsOneWidget);
+      expect(find.text('PDF-Export'), findsOneWidget);
+      expect(find.byTooltip('Als PDF exportieren'), findsOneWidget);
+      expect(find.byTooltip('Home-Office-Auswertung (PDF)'), findsOneWidget);
+      expect(find.bySemanticsLabel('Home-Office-Auswertung (PDF)'),
+          findsOneWidget);
 
-      await tapAndWait(tester, 'Home-Office-Auswertung (PDF)',
+      await tapAndWait(tester, 'Home-Office-PDF',
           done: () => platform.lastFilename != null);
 
       expect(platform.lastFilename, 'Home-Office-Auswertung_2026-06.pdf');
@@ -149,6 +160,10 @@ void main() {
         (tester) async {
       await pumpView(tester, view: const YearlyReportView());
 
+      // Jahres-Tab (#284): Auswertungen im Menü des Buttons „PDF-Export“.
+      await tester.tap(find.text('PDF-Export'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
       await tapAndWait(tester, 'Home-Office-Auswertung (PDF)',
           done: () => platform.lastFilename != null);
 
@@ -164,7 +179,7 @@ void main() {
       repo.failReads = true;
       await pumpView(tester, view: const MonthlyReportView());
 
-      await tapAndWait(tester, 'Home-Office-Auswertung (PDF)',
+      await tapAndWait(tester, 'Home-Office-PDF',
           done: () => repo.monthReads.isNotEmpty);
       await tester.pump(const Duration(milliseconds: 100));
 
@@ -175,9 +190,13 @@ void main() {
 
     testWidgets('Englisch: beschriftet, Monat und Jahr', (tester) async {
       await pumpView(tester, view: const MonthlyReportView(), locale: 'en');
-      expect(find.text('Home office report (PDF)'), findsOneWidget);
+      expect(find.text('Home office PDF'), findsOneWidget);
+      expect(find.byTooltip('Home office report (PDF)'), findsOneWidget);
 
       await pumpView(tester, view: const YearlyReportView(), locale: 'en');
+      await tester.tap(find.text('PDF export'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
       expect(find.text('Home office report (PDF)'), findsOneWidget);
     });
 
@@ -190,6 +209,23 @@ void main() {
             size: const Size(280, 800));
         expect(tester.takeException(), isNull);
       });
+
+      // Ein-Zeilen-Layout und vollständige Texte prüft
+      // reports_page_action_row_test mit der echten Schrift; hier (Testschrift,
+      // jedes Zeichen 1 em breit) nur: kein Overflow.
+      for (final width in [360.0, 412.0]) {
+        testWidgets(
+            'Monat: Export-Buttons ohne Overflow (${width.toInt()} px, $locale)',
+            (tester) async {
+          await pumpView(tester,
+              view: const MonthlyReportView(),
+              locale: locale,
+              size: Size(width, 800));
+          expect(tester.takeException(), isNull);
+          expect(find.byIcon(Icons.picture_as_pdf_outlined), findsOneWidget);
+          expect(find.byIcon(Icons.home_work_outlined), findsOneWidget);
+        });
+      }
 
       testWidgets('schmale Breite ohne Overflow (Jahr, $locale)',
           (tester) async {
@@ -209,6 +245,7 @@ void main() {
 
       expect(find.text('Premium freischalten'), findsOneWidget);
       expect(find.text('Home-Office-Auswertung (PDF)'), findsNothing);
+      expect(find.text('Home-Office-PDF'), findsNothing);
     });
 
     testWidgets('Jahresansicht: Paywall-Gate, kein Home-Office-Button',

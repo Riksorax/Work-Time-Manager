@@ -34,6 +34,9 @@ import { OpenEntryCandidate } from './open-entry-close';
 import {
   OpenEntryEndDialogComponent, OpenEntryEndDialogData, OpenEntryEndDialogResult,
 } from './components/open-entry-end-dialog/open-entry-end-dialog';
+import {
+  WorkLocationsDialogComponent, WorkLocationsDialogData, WorkLocationsDialogResult,
+} from '../../shared/components/work-locations-dialog/work-locations-dialog';
 import { HolidayBannerComponent } from '../../shared/components/holiday-banner/holiday-banner';
 
 @Component({
@@ -225,6 +228,17 @@ export class DashboardComponent {
 
   async onHomeOfficeChange(checked: boolean): Promise<void> {
     await this.guarded(() => this.svc.setHomeOffice(checked));
+  }
+
+  /** Öffnet den Arbeitsorte-Dialog (#526); Abbrechen ändert nichts. */
+  async onEditWorkLocations(): Promise<void> {
+    const ref = this.dialog.open<WorkLocationsDialogComponent, WorkLocationsDialogData, WorkLocationsDialogResult>(
+      WorkLocationsDialogComponent,
+      { data: { locations: this.svc.workEntry().workLocations ?? [] } },
+    );
+    const result = await firstValueFrom(ref.afterClosed());
+    if (!result) return;
+    await this.guarded(() => this.svc.setWorkLocations(result.locations));
   }
 
   async onBreakAction(): Promise<void> {

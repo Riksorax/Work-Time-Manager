@@ -11,13 +11,31 @@ class HybridWorkRepositoryImpl implements WorkRepository {
   final WorkRepository _localRepository;
   final String? _userId;
 
+  /// Wird mit den Einträgen aufgerufen, die ohnehin gelesen oder gespeichert
+  /// wurden (#526: Vorschläge für Arbeitsorte, `WorkLocationHistory.record`).
+  /// Fehler darin werden geschluckt, die eigentliche Operation bleibt gültig.
+  final void Function(List<WorkEntryEntity> entries)? _onEntriesSeen;
+
   HybridWorkRepositoryImpl({
     required WorkRepository firebaseRepository,
     required WorkRepository localRepository,
     required String? userId,
+    void Function(List<WorkEntryEntity> entries)? onEntriesSeen,
   })  : _firebaseRepository = firebaseRepository,
         _localRepository = localRepository,
-        _userId = userId;
+        _userId = userId,
+        _onEntriesSeen = onEntriesSeen;
+
+  void _seen(List<WorkEntryEntity> entries) {
+    final cb = _onEntriesSeen;
+    if (cb == null) return;
+    try {
+      cb(entries);
+    } catch (e) {
+      logger.w('[HybridWorkRepository] Orte-Verlauf nicht aktualisiert: '
+          '${e.runtimeType}');
+    }
+  }
 
   /// Gibt das aktive Repository zurück
   WorkRepository get _activeRepository {
@@ -32,18 +50,23 @@ class HybridWorkRepositoryImpl implements WorkRepository {
 
   @override
   Future<WorkEntryEntity> getWorkEntry(DateTime date) async {
-    return await _activeRepository.getWorkEntry(date);
+    final entry = await _activeRepository.getWorkEntry(date);
+    _seen([entry]);
+    return entry;
   }
 
   @override
   Future<List<WorkEntryEntity>> getWorkEntriesForMonth(
       int year, int month) async {
-    return await _activeRepository.getWorkEntriesForMonth(year, month);
+    final entries = await _activeRepository.getWorkEntriesForMonth(year, month);
+    _seen(entries);
+    return entries;
   }
 
   @override
   Future<void> saveWorkEntry(WorkEntryEntity entry) async {
     await _activeRepository.saveWorkEntry(entry);
+    _seen([entry]);
   }
 
   @override

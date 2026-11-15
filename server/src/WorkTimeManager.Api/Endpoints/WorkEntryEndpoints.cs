@@ -36,6 +36,8 @@ internal static class WorkEntryEndpoints
             ClaimsPrincipal user, WorkEntryRepository repo, CancellationToken ct) =>
         {
             if (user.GetUid() is not { } uid) return Results.Unauthorized();
+            if (!FirestoreMappings.IsValidWorkLocations(entry.WorkLocations))
+                return Results.BadRequest("workLocations: höchstens 5 Orte, jeder nicht leer und höchstens 60 Zeichen.");
             await repo.SaveAsync(uid, entry, profileId, ct);
             return Results.Ok(entry);
         })

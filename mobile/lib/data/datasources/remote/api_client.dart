@@ -8,8 +8,15 @@ import 'package:flutter_work_time/core/config/api_config.dart';
 import 'package:flutter_work_time/core/utils/api_errors.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
 import '../../../domain/entities/break_entity.dart';
+import '../../../domain/entities/trend_report.dart';
+import '../../../domain/entities/yearly_comparison.dart';
+import '../../../domain/entities/yearly_leave_report.dart';
+import '../../models/trend_report_model.dart';
+import '../../models/yearly_comparison_model.dart';
+import '../../models/yearly_leave_report_model.dart';
 import '../../../domain/entities/work_entry_entity.dart';
 import '../../../domain/utils/entry_day.dart';
+import '../../../domain/utils/work_locations.dart';
 import '../../models/work_entry_model.dart';
 import 'package:flutter_work_time/core/utils/time_precision.dart';
 
@@ -166,6 +173,66 @@ class ApiClient {
           {String? profileId}) =>
       _getJson('/reports/monthly/$year/$month', 'getMonthlyReport', profileId);
 
+  /// Urlaubsbilanz eines Kalenderjahres (`GET /api/reports/yearly/{year}`,
+  /// #535): `year`, `vacationDaysPerYear`, `vacationDaysTaken`,
+  /// `vacationDaysRemaining`, `sickDays`; weitere Felder sind möglich.
+  Future<Map<String, dynamic>> getYearlyLeave(int year, {String? profileId}) =>
+      _getJson('/reports/yearly/$year', 'getYearlyLeave', profileId);
+
+  /// Urlaubs- und Krankheitsauswertung (#284), derselbe Endpunkt wie
+  /// [getYearlyLeave], gelesen über die typisierte Lesegrenze
+  /// `yearlyLeaveReportFromJson` (Monate, Zeiträume als Kalendertage).
+  Future<YearlyLeaveReport> getYearlyLeaveReport(int year,
+      {String? profileId}) async {
+    final json = await _getJson(
+        '/reports/yearly/$year', 'getYearlyLeaveReport', profileId);
+    return yearlyLeaveReportFromJson(json, requestedYear: year);
+  }
+
+  /// Trend (#531): `GET /api/reports/trend/{y}/{m}/{d}?granularity=…`.
+  /// [date] ist der Bezugstag des Clients (lokaler Kalendertag aus
+  /// `todayProvider`); nur seine Kalenderfelder gehen in den Pfad.
+  Future<TrendReport> getTrendReport(
+      DateTime date, TrendGranularity granularity,
+      {String? profileId}) async {
+    final base = _uri(
+        '/reports/trend/${date.year}/${date.month}/${date.day}', profileId);
+    final uri = base.replace(queryParameters: {
+      ...base.queryParameters,
+      'granularity': granularity.apiValue,
+    });
+    const op = 'getTrendReport';
+    final res = await _http.get(uri, headers: await _headers(op));
+    if (res.statusCode != 200) _fail(op, res);
+    return trendReportFromJson(jsonDecode(res.body) as Map<String, dynamic>,
+        requested: granularity);
+  }
+
+  /// Jahresvergleich mit dem Vorjahr (#530):
+  /// `GET /api/reports/yearly-comparison/{year}?until=MM-dd`.
+  ///
+  /// [until] ist der Stichtag als lokaler Kalendertag (z. B. heute aus
+  /// `todayProvider`); nur Monat und Tag seiner lokalen Felder gehen als
+  /// `MM-dd` in die Anfrage. Ohne [until] gilt das ganze Jahr. Ob ein Stichtag
+  /// mitgeht (nur im laufenden Jahr), entscheidet der Aufrufer.
+  Future<YearlyComparison> getYearlyComparison(int year,
+      {DateTime? until, String? profileId}) async {
+    final base = _uri('/reports/yearly-comparison/$year', profileId);
+    final uri = until == null
+        ? base
+        : base.replace(queryParameters: {
+            ...base.queryParameters,
+            'until': '${until.month.toString().padLeft(2, '0')}-'
+                '${until.day.toString().padLeft(2, '0')}',
+          });
+    const op = 'getYearlyComparison';
+    final res = await _http.get(uri, headers: await _headers(op));
+    if (res.statusCode != 200) _fail(op, res);
+    return yearlyComparisonFromJson(
+        jsonDecode(res.body) as Map<String, dynamic>,
+        requestedYear: year);
+  }
+
   Future<Map<String, dynamic>> _getJson(String path, String op,
       [String? profileId]) async {
     final res =
@@ -178,6 +245,11 @@ class ApiClient {
 
   Map<String, dynamic> _entryToJson(WorkEntryModel m) => {
         'id': m.id,
+        // Anders als `isHomeOffice` nur bei gesetztem Feld (#526): `null`
+        // (Schnelleintrag, Batch, Neu-Eintrag) lässt gespeicherte Orte
+        // unangetastet, `[]` entfernt sie. Bereinigt wie das Backend.
+        if (m.workLocations != null)
+          'workLocations': normalizeWorkLocations(m.workLocations),
         // UTC-Mitternacht aus lokalen Y/M/D — analog WorkEntryModel.toMap (Flutter-kanonisch)
         'date': DateTime.utc(m.date.year, m.date.month, m.date.day)
             .toIso8601String(),
@@ -238,5 +310,7 @@ class ApiClient {
           orElse: () => WorkEntryType.work,
         ),
         isHomeOffice: (j['isHomeOffice'] as bool?) ?? false,
+        // GET liefert immer eine Liste; fehlt sie (ältere API), gilt leer.
+        workLocations: readWorkLocations(j['workLocations']),
       );
 }

@@ -33,7 +33,8 @@ enum CloseOpenEntryResult {
 ///
 /// Ablauf: validieren, Eintrag frisch lesen, offene Pause schließen,
 /// Auto-Pausen wie beim Stop, Saldo inkrementell fortschreiben
-/// (`neu = alt + Netto - Soll am Eintragsdatum`), erst Saldo, dann Eintrag
+/// (`neu = alt + Netto - Soll am Eintragsdatum + manuelle Überstunden`, #538),
+/// erst Saldo, dann Eintrag
 /// speichern (wie im Stop-Pfad). Scheitert der Eintrag-Write nach dem Saldo,
 /// wird der Saldo best-effort auf den gelesenen Stand zurückgeschrieben (#410,
 /// Vorbild Web `OpenEntryCloseService`); scheitert auch das, bleibt er
@@ -88,7 +89,9 @@ class CloseOpenWorkEntry {
 
       final net = workEnd.difference(closed.workStart!) - closed.totalBreakTime;
       final storedOvertime = await _overtimeRepository.ensureOvertimeLoaded();
-      await _overtimeRepository.saveOvertime(storedOvertime + net - dailyTarget,
+      // Manuelle Überstunden zählen mit (#538, wie Web `retroDeltaMs`).
+      await _overtimeRepository.saveOvertime(
+          storedOvertime + net - dailyTarget + manualOvertimeOf(closed),
           keepLastUpdated: true);
       try {
         await _workRepository.saveWorkEntry(closed);

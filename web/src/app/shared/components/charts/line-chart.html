@@ -1,0 +1,71 @@
+<svg class="chart-svg" [attr.width]="width()" [attr.height]="svgHeight"
+     role="group" [attr.aria-label]="labels().title">
+  <g class="chart-grid" aria-hidden="true">
+    @for (t of ticks(); track t.value) {
+      @if (!t.zero) {
+        <line [attr.x1]="marginLeft()" [attr.x2]="marginLeft() + plotWidth()" [attr.y1]="t.y" [attr.y2]="t.y" />
+      }
+      <text class="chart-axis-label" text-anchor="end" [attr.x]="marginLeft() - 6" [attr.y]="t.y + 4">{{ t.label }}</text>
+    }
+  </g>
+
+  <path class="chart-area" aria-hidden="true" [attr.d]="areaPath()" />
+  <line class="chart-zero" aria-hidden="true" [attr.x1]="marginLeft()" [attr.x2]="marginLeft() + plotWidth()"
+        [attr.y1]="zeroY()" [attr.y2]="zeroY()" />
+  <path class="chart-line" aria-hidden="true" [attr.d]="solidPath()" />
+  @if (partialPath()) {
+    <path class="chart-line is-partial-line" aria-hidden="true" [attr.d]="partialPath()" />
+  }
+
+  @for (s of slots(); track s.point.key) {
+    <g class="chart-slot" role="img"
+       [class.is-active]="s.index === highlightIndex()"
+       [class.is-partial]="s.point.partial"
+       [class.is-gap]="!s.point.hasData"
+       [attr.tabindex]="s.index === rovingIndex() ? 0 : -1"
+       [attr.aria-label]="describe(s.point)"
+       (mouseenter)="onHover(s.index)" (mouseleave)="onHover(null)"
+       (focus)="onSelect(s.index)" (click)="onSelect(s.index)"
+       (keydown)="onKeydown($event, s.index)">
+      <rect class="chart-hit" [attr.x]="s.x0 + 1" [attr.y]="marginTop" [attr.width]="s.width - 2" [attr.height]="plotHeight" rx="4" />
+      <circle class="chart-dot" [attr.cx]="s.cx" [attr.cy]="y(s.point.value)" [attr.r]="s.point.hasData ? 4 : 3" />
+      @if (s.showAxisLabel) {
+        <text class="chart-axis-label" text-anchor="middle" aria-hidden="true"
+              [attr.x]="s.cx" [attr.y]="axisLabelY">{{ s.point.axisLabel }}</text>
+      }
+    </g>
+  }
+</svg>
+
+<p class="chart-detail" aria-hidden="true">{{ detail() }}</p>
+
+<ul class="chart-legend" aria-hidden="true">
+  <li><svg width="16" height="12"><line class="chart-line" x1="1" x2="15" y1="6" y2="6" /><circle class="chart-dot" cx="8" cy="6" r="3" /></svg>{{ labels().value }}</li>
+  <li><svg width="16" height="12"><line class="chart-zero" x1="1" x2="15" y1="6" y2="6" /></svg>0</li>
+  @if (hasPartial()) {
+    <li class="is-partial"><svg width="16" height="12"><line class="chart-line is-partial-line" x1="1" x2="15" y1="6" y2="6" /><circle class="chart-dot" cx="8" cy="6" r="3" /></svg>{{ labels().partial }}</li>
+  }
+  @if (hasGap()) {
+    <li class="is-gap"><svg width="16" height="12"><circle class="chart-dot" cx="8" cy="6" r="3" /></svg>{{ labels().noData }}</li>
+  }
+</ul>
+
+<table class="cdk-visually-hidden">
+  <caption>{{ labels().title }}</caption>
+  <thead>
+    <tr>
+      <th scope="col">{{ labels().period }}</th>
+      <th scope="col">{{ labels().value }}</th>
+      @if (labels().secondary) { <th scope="col">{{ labels().secondary }}</th> }
+    </tr>
+  </thead>
+  <tbody>
+    @for (r of tableRows(); track r.key) {
+      <tr>
+        <th scope="row">{{ r.label }}</th>
+        <td>{{ r.value }}</td>
+        @if (r.secondary !== null) { <td>{{ r.secondary }}</td> }
+      </tr>
+    }
+  </tbody>
+</table>

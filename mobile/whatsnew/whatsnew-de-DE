@@ -1,3 +1,9 @@
-Das ist neu in 1.8.4:
-• Behoben: Beim Abmelden erschien in den Einstellungen kurz eine Fehlermeldung
-• Mehr Stabilität
+Das ist neu in 1.9:
+• Arbeitsorte: mehrere Orte pro Tag, auf Wunsch im Dashboard
+• Trend: Arbeitszeit und Überstunden der letzten 12 Wochen oder Monate als Diagramm
+• Prognose deines Überstunden-Saldos zum Jahresende
+• Jahresvergleich mit dem Vorjahr
+• Urlaubs- und Krankheitsauswertung als PDF
+• Google Assistant: Überstunden, Resturlaub und Wochen-Trend abfragen
+• Berichte zeigen die Arbeitszeit ohne Pausen
+• Genauere Berechnung und mehr Stabilität

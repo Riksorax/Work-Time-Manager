@@ -28,6 +28,13 @@ export interface WorkEntry {
    * `undefined` "unangetastet" (bestehendes Flag bleibt), `false` löscht es explizit.
    */
   isHomeOffice?: boolean;
+  /**
+   * Arbeitsorte des Tages (#526), geordnet, höchstens 5 à höchstens 60 Zeichen, nur bei Typ Arbeit relevant.
+   * Beim Lesen fehlend = `[]`. Beim Schreiben bedeutet `undefined` "unangetastet" (gespeicherte Orte bleiben),
+   * `[]` löscht das Feld, eine Liste ersetzt die gespeicherte. Der Client bereinigt vor dem Schreiben selbst
+   * (`normalizeWorkLocations`), das Backend tut es ebenso.
+   */
+  workLocations?: string[];
 }
 
 export interface UserSettings {
@@ -44,6 +51,10 @@ export interface UserSettings {
   vacationDaysPerYear: number;
   /** Bundesland für Feiertage im Dashboard und Kalender (null = nicht gewählt). Siehe #279. */
   bundesland: Bundesland | null;
+  /** Arbeitsort im Dashboard anzeigen (Standard aus). Wirkt nur auf das Dashboard. Siehe #526. */
+  showWorkLocationOnDashboard: boolean;
+  /** Home-Office im Dashboard anzeigen (Standard an). Wirkt nur auf das Dashboard. Siehe #526. */
+  showHomeOfficeOnDashboard: boolean;
 }
 
 /** Die 16 Bundesländer (Werte = Flutter-Enum-Namen, i18n-Key `settings.bundesland.state.<wert>`). Siehe #279. */
@@ -68,6 +79,8 @@ export const DEFAULT_SETTINGS: UserSettings = {
   notifyBreaks: false,
   vacationDaysPerYear: DEFAULT_VACATION_DAYS_PER_YEAR,
   bundesland: null,
+  showWorkLocationOnDashboard: false,
+  showHomeOfficeOnDashboard: true,
 };
 
 export interface UserProfile {

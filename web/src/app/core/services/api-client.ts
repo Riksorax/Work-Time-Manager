@@ -2,9 +2,12 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, firstValueFrom, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { normalizeWorkLocations, readWorkLocations } from '../../shared/utils/work-locations.util';
 import { Break, Bundesland, UserSettings, WorkEntry, WorkEntryType, WorkProfile } from '../../shared/models';
 import { YearlyLeaveReport } from '../../domain/models/leave.models';
 import { DailyStat, MonthlyReport, WeeklyReport } from '../../domain/models/reports.models';
+import { OvertimeForecast, TrendGranularity, TrendReport } from '../../domain/models/trend.models';
+import { YearlyComparison } from '../../domain/models/yearly-comparison.models';
 import { calendarDateFromUtcMidnight, parseEntryId } from '../../shared/utils/entry-day.util';
 import {
   roundToMinute,
@@ -27,6 +30,7 @@ interface WorkEntryDto {
   manualOvertimeMinutes: number | null;
   description: string | null;
   isHomeOffice?: boolean | null;
+  workLocations?: string[] | null;
   breaks: BreakDto[];
 }
 interface BreakDto {
@@ -40,17 +44,52 @@ interface OvertimeDto { minutes: number; lastUpdated: string | null; }
 interface ProfileDto { uid: string; isPremium: boolean; }
 interface WorkProfileDto { id: string; name: string; }
 interface DailyStatDto { targetMs: number; workedMs: number; overtimeMs: number; }
-interface ReportDayDto { date: string; workedMs: number; }
+/** `netWorkedMs` additiv (#551): fehlt es (älteres Backend), gilt der Brutto-Wert. */
+interface ReportDayDto { date: string; workedMs: number; netWorkedMs?: number | null; }
 interface WeeklyReportDto {
   weekNumber: number; start: string; end: string;
   totalWorkedMs: number; totalBreaksMs: number; workDays: number;
   avgPerDayMs: number; overtimeMs: number; days: ReportDayDto[];
 }
-interface ReportWeekDto { weekNumber: number; totalWorkedMs: number; }
+interface ReportWeekDto { weekNumber: number; totalWorkedMs: number; netWorkedMs?: number | null; }
 interface MonthlyReportDto {
   month: string; totalWorkedMs: number; totalBreaksMs: number; workDays: number;
   avgPerDayMs: number; avgPerWeekMs: number; monthlyOvertimeMs: number;
   totalOvertimeMs: number; weeks: ReportWeekDto[]; days: ReportDayDto[];
+}
+interface TrendBucketDto {
+  key: string; start: string; end: string;
+  workedMs: number; targetMs: number; overtimeMs: number; cumulativeOvertimeMs: number; hasData: boolean;
+}
+interface WeeklyTrendDto {
+  lastWeekKey: string; lastWeekWorkedMs: number; averageWorkedMs: number; deltaMs: number; comparedWeeks: number;
+}
+interface OvertimeForecastDto {
+  targetDate: string; currentBalanceMs: number; averageWeeklyOvertimeMs: number; weeksUsed: number;
+  remainingWeeks: number; projectedBalanceMs: number;
+}
+interface TrendReportDto {
+  granularity: TrendGranularity; buckets: TrendBucketDto[]; weeklyTrend: WeeklyTrendDto | null;
+  forecast?: OvertimeForecastDto | null;
+}
+
+/** `yyyy-MM-dd` (ggf. mit Zeitanteil) als lokale Mitternacht dieses Kalendertags; ungültig → `null`. */
+function calendarDayFromIso(value: string | null | undefined): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(value ?? '');
+  return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : null;
+}
+
+function mapForecast(dto: OvertimeForecastDto | null | undefined): OvertimeForecast | null {
+  const targetDate = dto ? calendarDayFromIso(dto.targetDate) : null;
+  if (!dto || !targetDate) return null;
+  return {
+    targetDate,
+    currentBalance: dto.currentBalanceMs,
+    averageWeeklyOvertime: dto.averageWeeklyOvertimeMs,
+    weeksUsed: dto.weeksUsed,
+    remainingWeeks: dto.remainingWeeks,
+    projectedBalance: dto.projectedBalanceMs,
+  };
 }
 
 /**
@@ -179,7 +218,11 @@ export class ApiClient {
         workDays: dto.workDays,
         avgPerDay: dto.avgPerDayMs,
         overtime: dto.overtimeMs,
-        days: dto.days.map(d => ({ date: calendarDateFromUtcMidnight(new Date(d.date)), worked: d.workedMs })),
+        days: dto.days.map(d => ({
+          date: calendarDateFromUtcMidnight(new Date(d.date)),
+          worked: d.workedMs,
+          netWorked: d.netWorkedMs ?? d.workedMs,
+        })),
       }))
     );
   }
@@ -195,16 +238,79 @@ export class ApiClient {
         avgPerWeek: dto.avgPerWeekMs,
         monthlyOvertime: dto.monthlyOvertimeMs,
         totalOvertime: dto.totalOvertimeMs,
-        weeks: dto.weeks.map(w => ({ weekNumber: w.weekNumber, totalWorked: w.totalWorkedMs })),
-        days: dto.days.map(d => ({ date: calendarDateFromUtcMidnight(new Date(d.date)), worked: d.workedMs })),
+        weeks: dto.weeks.map(w => ({
+          weekNumber: w.weekNumber,
+          totalWorked: w.totalWorkedMs,
+          netWorked: w.netWorkedMs ?? w.totalWorkedMs,
+        })),
+        days: dto.days.map(d => ({
+          date: calendarDateFromUtcMidnight(new Date(d.date)),
+          worked: d.workedMs,
+          netWorked: d.netWorkedMs ?? d.workedMs,
+        })),
+      }))
+    );
+  }
+
+  /**
+   * Trend (#531): 12 Wochen bzw. 12 Monate bis zum Bezugstag `date` (lokaler Kalendertag, kommt vom Client, das
+   * Backend nutzt keine Server-Uhr). `start`/`end` sind UTC-Mitternacht und werden als lokaler Kalendertag gelesen (#407).
+   */
+  getTrendReport(date: Date, granularity: TrendGranularity, profileId?: string): Observable<TrendReport> {
+    const params = (this._params(profileId) ?? new HttpParams()).set('granularity', granularity);
+    const url = `${this.base}/reports/trend/${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
+    return this.http.get<TrendReportDto>(url, { params }).pipe(
+      map(dto => ({
+        granularity: dto.granularity,
+        buckets: (dto.buckets ?? []).map(b => ({
+          key: b.key,
+          start: calendarDateFromUtcMidnight(new Date(b.start)),
+          end: calendarDateFromUtcMidnight(new Date(b.end)),
+          worked: b.workedMs,
+          target: b.targetMs,
+          overtime: b.overtimeMs,
+          cumulativeOvertime: b.cumulativeOvertimeMs,
+          hasData: b.hasData,
+        })),
+        weeklyTrend: dto.weeklyTrend
+          ? {
+              lastWeekKey: dto.weeklyTrend.lastWeekKey,
+              lastWeekWorked: dto.weeklyTrend.lastWeekWorkedMs,
+              averageWorked: dto.weeklyTrend.averageWorkedMs,
+              delta: dto.weeklyTrend.deltaMs,
+              comparedWeeks: dto.weeklyTrend.comparedWeeks,
+            }
+          : null,
+        forecast: mapForecast(dto.forecast),
       }))
     );
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
+  /**
+   * Jahres-Urlaubsübersicht. Die Aufschlüsselung (`months`, `vacationPeriods`, `sickPeriods`, #284) kommt fertig vom
+   * Backend; fehlt ein Feld (älteres Backend), gilt eine leere Liste.
+   */
   getYearlyLeave(year: number, profileId?: string): Observable<YearlyLeaveReport> {
-    return this.http.get<YearlyLeaveReport>(`${this.base}/reports/yearly/${year}`, { params: this._params(profileId) });
+    return this.http.get<YearlyLeaveReport>(`${this.base}/reports/yearly/${year}`, { params: this._params(profileId) }).pipe(
+      map(dto => ({
+        ...dto,
+        months: dto.months ?? [],
+        vacationPeriods: dto.vacationPeriods ?? [],
+        sickPeriods: dto.sickPeriods ?? [],
+      })),
+    );
+  }
+
+  /**
+   * Jahresvergleich mit dem Vorjahr (#530): `year` 2001–2100. `until` (`MM-dd`) nur für das laufende Jahr mitgeben
+   * (Stichtagsvergleich, das Backend nutzt keine Server-Uhr); ohne `until` gilt das ganze Jahr.
+   */
+  getYearlyComparison(year: number, until?: string, profileId?: string): Observable<YearlyComparison> {
+    let params = this._params(profileId) ?? new HttpParams();
+    if (until) params = params.set('until', until);
+    return this.http.get<YearlyComparison>(`${this.base}/reports/yearly-comparison/${year}`, { params });
   }
 
   private _params(profileId?: string): HttpParams | undefined {
@@ -226,6 +332,8 @@ export class ApiClient {
       description: entry.description ?? null,
       // undefined -> null: Backend lässt ein gespeichertes Flag dann unangetastet (#277)
       isHomeOffice: entry.isHomeOffice ?? null,
+      // undefined -> null: Backend lässt gespeicherte Orte unangetastet, [] entfernt sie (#526). Bereinigt wie das Backend.
+      workLocations: entry.workLocations === undefined ? null : normalizeWorkLocations(entry.workLocations),
       breaks: entry.breaks.map(b => ({
         id: b.id,
         name: b.name,
@@ -248,6 +356,7 @@ export class ApiClient {
       manualOvertimeMinutes: dto.manualOvertimeMinutes ?? undefined,
       description: dto.description ?? undefined,
       isHomeOffice: dto.isHomeOffice ?? false,
+      workLocations: readWorkLocations(dto.workLocations),
       breaks: (dto.breaks ?? []).map((b): Break => ({
         id: b.id,
         name: b.name,

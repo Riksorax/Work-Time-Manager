@@ -13,6 +13,8 @@ import { Observable, combineLatest, of, switchMap } from 'rxjs';
 import { roundToMinute, roundToMinuteOrUndefined } from '../../shared/utils/time-precision.util';
 import { profileIdForApi, profileScopedPath } from '../../shared/utils/work-profile-path.util';
 import { calendarDateFromUtcMidnight, parseEntryId } from '../../shared/utils/entry-day.util';
+import { WorkLocationHistoryService } from './work-location-history';
+import { normalizeWorkLocations, readWorkLocations } from '../../shared/utils/work-locations.util';
 
 // localStorage Keys — identisch zu Flutter LocalWorkRepositoryImpl
 const LS_PREFIX = 'local_work_entries_';
@@ -25,6 +27,7 @@ export class WorkEntryService {
   private readonly injector    = inject(Injector);
   private readonly api         = inject(ApiClient);
   private readonly workProfile = inject(WorkProfileService);
+  private readonly locationHistory = inject(WorkLocationHistoryService);
 
   // ─── Public API ────────────────────────────────────────────────────────────
 
@@ -64,10 +67,12 @@ export class WorkEntryService {
    */
   async getEntriesForMonthOnce(year: number, month: number, profileId?: string): Promise<WorkEntry[]> {
     if (!this.auth.uid) return this._localGetMonth(year, month);
-    return this.api.getWorkEntriesForMonth(
+    const entries = await this.api.getWorkEntriesForMonth(
       year, month,
       profileId === undefined ? this.workProfile.activeProfileIdForApi : profileIdForApi(profileId),
     );
+    this.locationHistory.record(this._historyScope(profileId), entries);
+    return entries;
   }
 
   /**
@@ -83,6 +88,26 @@ export class WorkEntryService {
       );
     }
     else               this._localSave(entry);
+    // Orte merken (#526): nur wenn der Aufrufer sie gesetzt hat, bereinigt wie gesendet
+    if (entry.workLocations !== undefined) {
+      this.locationHistory.record(
+        this._historyScope(profileId),
+        [{ ...entry, workLocations: normalizeWorkLocations(entry.workLocations) }],
+      );
+    }
+  }
+
+  /**
+   * Vorschläge für Arbeitsorte (#526) aus Einträgen, die der Client ohnehin geladen/gespeichert hat (kein zusätzlicher
+   * Lesezugriff). Ohne Konto zusätzlich aus localStorage (kein Netz). Zuletzt verwendete zuerst, ohne `selected`.
+   */
+  suggestWorkLocations(selected: readonly string[], filter = ''): string[] {
+    const extra = this.auth.uid ? [] : this.getAllLocalEntries();
+    return this.locationHistory.suggestions(this._historyScope(), selected, extra, filter);
+  }
+
+  private _historyScope(profileId?: string): string {
+    return `${this.auth.uid ?? 'anon'}|${profileId ?? this.workProfile.activeProfileId()}`;
   }
 
   async deleteEntry(id: string): Promise<void> {
@@ -119,7 +144,9 @@ export class WorkEntryService {
             if (!snap.exists()) { observer.next(null); return; }
             const days = (snap.data()['days'] as Record<string, unknown>) ?? {};
             const dayData = days[dayKey];
-            observer.next(dayData ? this._fromFirestore(dayData as Record<string, unknown>, id) : null);
+            const entry = dayData ? this._fromFirestore(dayData as Record<string, unknown>, id) : null;
+            this.locationHistory.record(`${uid}|${profileId}`, entry ? [entry] : [{ id, date: today, type: WorkEntryType.Work }]);
+            observer.next(entry);
           },
           err => observer.error(err),
         );
@@ -148,6 +175,7 @@ export class WorkEntryService {
               })
               .filter((e): e is WorkEntry => e !== null)
               .sort((a, b) => a.date.getTime() - b.date.getTime());
+            this.locationHistory.record(`${uid}|${profileId}`, entries);
             observer.next(entries);
           },
           err => observer.error(err),
@@ -179,6 +207,7 @@ export class WorkEntryService {
         manualOvertimeMinutes: (data['manualOvertimeMinutes'] as number) ?? undefined,
         description:           data['description'] as string | undefined,
         isHomeOffice:          (data['isHomeOffice'] as boolean) ?? false,
+        workLocations:         readWorkLocations(data['workLocations']),
         breaks: ((data['breaks'] as Record<string, unknown>[]) ?? []).map(b => ({
           id:          (b['id'] as string) || `break-${b['start']}`,
           name:        (b['name'] as string) || 'Pause',
@@ -235,6 +264,11 @@ export class WorkEntryService {
       const previous = (month.days[dayKey] as Record<string, unknown> | undefined)?.['isHomeOffice'];
       if (typeof previous === 'boolean') json['isHomeOffice'] = previous;
     }
+    // undefined = unangetastet (#526): vorhandene Orte des Tages bleiben; [] löscht (das Feld fehlt dann)
+    if (entry.workLocations === undefined) {
+      const previous = readWorkLocations((month.days[dayKey] as Record<string, unknown> | undefined)?.['workLocations']);
+      if (previous.length > 0) json['workLocations'] = previous;
+    }
     month.days[dayKey] = json;
     localStorage.setItem(monthKey, JSON.stringify(month));
     this._addToIndex(monthKey);
@@ -258,6 +292,7 @@ export class WorkEntryService {
   }
 
   private _toLocalJson(entry: WorkEntry): Record<string, unknown> {
+    const workLocations = normalizeWorkLocations(entry.workLocations);
     return {
       workStart:             roundToMinuteOrUndefined(entry.workStart)?.toISOString() ?? null,
       workEnd:               roundToMinuteOrUndefined(entry.workEnd)?.toISOString()   ?? null,
@@ -266,6 +301,8 @@ export class WorkEntryService {
       manualOvertimeMinutes: entry.manualOvertimeMinutes ?? null,
       description:           entry.description ?? null,
       isHomeOffice:          entry.isHomeOffice ?? false,
+      // Leere Liste = Feld fehlt (wie im Backend)
+      ...(workLocations.length > 0 ? { workLocations } : {}),
       breaks: entry.breaks.map(b => ({
         id: b.id, name: b.name, isAutomatic: b.isAutomatic,
         start: roundToMinute(b.start).toISOString(),
@@ -288,6 +325,7 @@ export class WorkEntryService {
         manualOvertimeMinutes: (data['manualOvertimeMinutes'] as number) ?? undefined,
         description:           data['description'] as string | undefined,
         isHomeOffice:          (data['isHomeOffice'] as boolean) ?? false,
+        workLocations:         readWorkLocations(data['workLocations']),
         breaks: ((data['breaks'] as Record<string, unknown>[]) ?? []).map(b => ({
           id:          b['id'] as string,
           name:        b['name'] as string,

@@ -2,10 +2,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:printing/src/interface.dart' show PrintingPlatform;
 import 'package:flutter_work_time/core/services/pdf_report_service.dart';
+import 'package:flutter_work_time/data/models/yearly_leave_report_model.dart';
+import 'package:flutter_work_time/domain/entities/yearly_leave_report.dart';
 import 'package:flutter_work_time/l10n/app_localizations_de.dart';
 import 'package:flutter_work_time/l10n/app_localizations_en.dart';
 
 import '../../support/fake_printing_platform.dart';
+import '../../support/yearly_leave_report_fixture.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -194,5 +197,322 @@ void main() {
         expect(fakePlatform.lastBytes, isNotEmpty);
       });
     }
+  });
+
+  group('Arbeitsorte in der Tagestabelle (#526)', () {
+    final mo = DateTime(2026, 10, 5);
+    final di = DateTime(2026, 10, 6);
+    final work = {
+      mo: const Duration(hours: 8),
+      di: const Duration(hours: 9),
+    };
+
+    for (final (locale, column, weekday) in [
+      ('de', 'Arbeitsort', 'Montag'),
+      ('en', 'Work location', 'Monday'),
+    ]) {
+      final l10n = locale == 'de' ? AppLocalizationsDe() : AppLocalizationsEn();
+
+      test('Spalte mit Orten, durch Komma getrennt ($locale)', () {
+        final data = PdfReportService.dailyTableData(work,
+            l10n: l10n,
+            locale: locale,
+            // Zeitanteil im Schlüssel stört die Zuordnung nicht.
+            dailyLocations: {
+              DateTime(2026, 10, 5, 0, 0): const ['Büro', 'Kunde A'],
+            });
+        expect(data.first.last, column);
+        expect(data[1], ['05.10.2026', weekday, '08:00', 'Büro, Kunde A']);
+        expect(data[2].last, '', reason: 'Tag ohne Orte: leere Zelle');
+      });
+
+      test('ohne Orte keine leere Spalte ($locale)', () {
+        final data =
+            PdfReportService.dailyTableData(work, l10n: l10n, locale: locale);
+        expect(data.first, hasLength(3));
+        expect(data.first, isNot(contains(column)));
+      });
+
+      test('Wochen- und Monatsbericht mit Orten erzeugen ein PDF ($locale)',
+          () async {
+        final locs = {
+          mo: const ['Zentrale Düsseldorf, Königsallee 1', 'Kunde A'],
+        };
+        await service.exportWeeklyReport(
+          l10n: l10n,
+          locale: locale,
+          startOfWeek: mo,
+          endOfWeek: DateTime(2026, 10, 11),
+          weekNumber: 41,
+          workDays: 2,
+          totalWorkDuration: const Duration(hours: 17),
+          totalBreakDuration: const Duration(hours: 1),
+          averageWorkDuration: const Duration(hours: 8, minutes: 30),
+          overtime: const Duration(hours: 1),
+          dailyWork: work,
+          dailyLocations: locs,
+        );
+        expect(String.fromCharCodes(fakePlatform.lastBytes!.take(4)), '%PDF');
+
+        await service.exportMonthlyReport(
+          l10n: l10n,
+          locale: locale,
+          month: DateTime(2026, 10),
+          workDays: 2,
+          totalWorkDuration: const Duration(hours: 17),
+          totalBreakDuration: const Duration(hours: 1),
+          averageWorkDuration: const Duration(hours: 8, minutes: 30),
+          avgWorkDurationPerWeek: const Duration(hours: 17),
+          monthlyOvertime: const Duration(hours: 1),
+          totalOvertime: const Duration(hours: 3),
+          weeklyWork: {41: const Duration(hours: 17)},
+          dailyWork: work,
+          dailyLocations: locs,
+        );
+        expect(String.fromCharCodes(fakePlatform.lastBytes!.take(4)), '%PDF');
+      });
+    }
+  });
+
+  group('Netto-Zeilen in Wochen- und Monatsbericht (#551)', () {
+    for (final (locale, column, weekday) in [
+      ('de', 'Arbeitszeit', 'Montag'),
+      ('en', 'Work time', 'Monday'),
+    ]) {
+      final l10n = locale == 'de' ? AppLocalizationsDe() : AppLocalizationsEn();
+
+      test('Tagestabelle: Spalte „$column“, Werte unverändert ($locale)', () {
+        final data = PdfReportService.dailyTableData({
+          DateTime(2026, 10, 5): const Duration(hours: 7, minutes: 45),
+        }, l10n: l10n, locale: locale);
+        expect(data.first, [
+          locale == 'de' ? 'Datum' : 'Date',
+          locale == 'de' ? 'Wochentag' : 'Weekday',
+          column,
+        ]);
+        expect(data[1], ['05.10.2026', weekday, '07:45']);
+        expect(data.first.join(), isNot(contains('inkl. Pausen')));
+        expect(data.first.join(), isNot(contains('incl. breaks')));
+      });
+
+      test('Tag mit netto ≤ 0 steht als „—“ wie in der App ($locale)', () {
+        final data = PdfReportService.dailyTableData({
+          DateTime(2026, 10, 8): Duration.zero,
+          DateTime(2026, 10, 9): const Duration(minutes: -30),
+        }, l10n: l10n, locale: locale);
+        expect(data[1][2], '—');
+        expect(data[2][2], '—');
+      });
+
+      test('Wochentabelle: Spalte „$column“, nach Woche sortiert ($locale)',
+          () {
+        final data = PdfReportService.weeklyTableData({
+          41: const Duration(hours: 15, minutes: 30),
+          40: const Duration(hours: 8),
+        }, l10n: l10n);
+        expect(data.first, [
+          locale == 'de' ? 'Kalenderwoche' : 'Calendar week',
+          column,
+        ]);
+        expect(data.skip(1).map((r) => r[1]), ['08:00', '15:30']);
+      });
+    }
+
+    test('Abschnittsüberschriften ohne Zusatz (de/en)', () {
+      final de = AppLocalizationsDe();
+      final en = AppLocalizationsEn();
+      expect(
+        [
+          de.pdfDailyWorkTimeTitle,
+          de.pdfWeeklyOverviewTitle,
+          de.pdfDayOverviewTitle
+        ],
+        ['Arbeitszeit pro Tag', 'Wochenübersicht', 'Tagesübersicht'],
+      );
+      expect(
+        [
+          en.pdfDailyWorkTimeTitle,
+          en.pdfWeeklyOverviewTitle,
+          en.pdfDayOverviewTitle
+        ],
+        ['Work time per day', 'Week overview', 'Day overview'],
+      );
+    });
+  });
+
+  group('Urlaubs- und Krankheitsauswertung (#284)', () {
+    final report = yearlyLeaveReportFromJson(yearlyLeaveReportJson(2026),
+        requestedYear: 2026);
+    final empty = yearlyLeaveReportFromJson(
+        yearlyLeaveReportJson(2024, empty: true),
+        requestedYear: 2024);
+    final created = DateTime(2026, 11, 5);
+
+    LeaveReportContent content(
+      YearlyLeaveReport r, {
+      String locale = 'de',
+      bool current = true,
+      String? profileName,
+    }) =>
+        PdfReportService.leaveReportContent(
+          l10n: locale == 'de' ? AppLocalizationsDe() : AppLocalizationsEn(),
+          locale: locale,
+          report: r,
+          isCurrentYear: current,
+          createdOn: created,
+          profileName: profileName,
+        );
+
+    test('laufendes Jahr: Titel, Summen mit Anspruch und Resturlaub', () {
+      final c = content(report);
+      expect(c.title, 'Urlaubs- und Krankheitsauswertung 2026');
+      expect(c.meta, ['Erstellt am 05.11.2026']);
+      expect(c.summary, [
+        ('Urlaubstage genommen', '14'),
+        ('Krankheitstage', '4'),
+        ('Urlaubsanspruch', '30'),
+        ('Resturlaub', '16'),
+      ]);
+      expect(c.pastYearNote, isNull);
+      expect(c.emptyNote, isNull);
+      expect(c.footnote, startsWith('Zählregel: Jeder Urlaubs-'));
+    });
+
+    test('Monatstabelle: zwölf Monate in der App-Sprache und Summenzeile', () {
+      final c = content(report);
+      expect(c.monthHeader, ['Monat', 'Urlaubstage', 'Krankheitstage']);
+      expect(c.monthRows, hasLength(12));
+      expect(c.monthRows.first, ['Januar', '0', '0']);
+      expect(c.monthRows[1], ['Februar', '0', '3']);
+      expect(c.monthRows[2].first, 'März');
+      expect(c.monthRows[7], ['August', '12', '0']);
+      expect(c.totalRow, ['Summe', '14', '4']);
+    });
+
+    test('Zeiträume: Bereich mit Tagen, einzelner Tag im Singular', () {
+      final c = content(report);
+      expect(c.vacationPeriods,
+          ['03.08.–14.08. (12 Tage)', '23.12.–24.12. (2 Tage)']);
+      expect(c.sickPeriods, ['10.02.–12.02. (3 Tage)', '03.11. (1 Tag)']);
+    });
+
+    test('vergangenes Jahr: ohne Anspruch/Resturlaub, mit Hinweis', () {
+      final c = content(report, current: false);
+      expect(c.summary.map((r) => r.$1),
+          ['Urlaubstage genommen', 'Krankheitstage']);
+      expect(c.pastYearNote,
+          'Anspruch und Resturlaub werden nur für das laufende Jahr ausgewiesen.');
+    });
+
+    test('leeres Jahr: Hinweis, Nullen, keine Zeitraum-Abschnitte', () {
+      final c = content(empty, current: false);
+      expect(c.title, 'Urlaubs- und Krankheitsauswertung 2024');
+      expect(c.emptyNote,
+          'In 2024 wurden keine Urlaubs- oder Krankheitstage erfasst.');
+      expect(c.monthRows, hasLength(12));
+      expect(c.totalRow, ['Summe', '0', '0']);
+      expect(c.vacationPeriods, isNull);
+      expect(c.sickPeriods, isNull);
+    });
+
+    test('nur Krankheit: Urlaubsliste „Keine“ (leere Liste)', () {
+      final onlySick = yearlyLeaveReportFromJson({
+        ...yearlyLeaveReportJson(2026),
+        'vacationDaysTaken': 0,
+        'vacationPeriods': <Map<String, dynamic>>[],
+      }, requestedYear: 2026);
+      final c = content(onlySick);
+      expect(c.emptyNote, isNull);
+      expect(c.vacationPeriods, isEmpty);
+      expect(c.sickPeriods, hasLength(2));
+    });
+
+    test('Zusatzprofil: Profilname vor dem Erstellungsdatum', () {
+      final c = content(report, profileName: 'Nebenjob');
+      expect(c.meta, ['Profil: Nebenjob', 'Erstellt am 05.11.2026']);
+    });
+
+    test('ohne Monate (älteres Backend): keine Tabellenzeilen', () {
+      final old = yearlyLeaveReportFromJson({
+        'year': 2026,
+        'vacationDaysTaken': 3,
+        'sickDays': 1,
+      }, requestedYear: 2026);
+      final c = content(old);
+      expect(c.monthRows, isEmpty);
+      expect(c.vacationPeriods, isEmpty);
+      expect(c.sickPeriods, isEmpty);
+    });
+
+    test('Englisch: Texte, Monatsnamen und Datumsformat', () {
+      final c = content(report, locale: 'en', profileName: 'Side job');
+      expect(c.title, 'Vacation and sick-day report 2026');
+      expect(c.meta, ['Profile: Side job', 'Created on 11/05/2026']);
+      expect(c.summary, [
+        ('Vacation days taken', '14'),
+        ('Sick days', '4'),
+        ('Vacation entitlement', '30'),
+        ('Remaining vacation', '16'),
+      ]);
+      expect(c.monthHeader, ['Month', 'Vacation days', 'Sick days']);
+      expect(c.monthRows.first.first, 'January');
+      expect(c.totalRow.first, 'Total');
+      expect(
+          c.vacationPeriods, ['08/03–08/14 (12 days)', '12/23–12/24 (2 days)']);
+      expect(c.sickPeriods!.last, '11/03 (1 day)');
+      expect(content(empty, locale: 'en', current: false).emptyNote,
+          'No vacation or sick days were recorded in 2024.');
+    });
+
+    for (final (name, r, current, locale, profile) in [
+      ('laufendes Jahr', report, true, 'de', null),
+      ('vergangenes Jahr', report, false, 'de', null),
+      ('leeres Jahr', empty, false, 'de', null),
+      ('Englisch', report, true, 'en', null),
+      ('Zusatzprofil', report, true, 'de', 'Nebenjob'),
+    ]) {
+      test('Export $name: Dateiname und PDF-Bytes', () async {
+        await service.exportLeaveReport(
+          l10n: locale == 'de' ? AppLocalizationsDe() : AppLocalizationsEn(),
+          locale: locale,
+          report: r,
+          isCurrentYear: current,
+          createdOn: created,
+          profileName: profile,
+        );
+        // Dateiname fest deutsch, auch bei englischer App-Sprache.
+        expect(
+            fakePlatform.lastFilename, 'Urlaub-Krank-Auswertung_${r.year}.pdf');
+        expect(String.fromCharCodes(fakePlatform.lastBytes!.take(4)), '%PDF');
+      });
+    }
+
+    test('viele Zeiträume verteilen sich auf mehrere Seiten', () async {
+      // 120 einzelne Krankheitstage: die Liste ist länger als eine Seite.
+      final days = [
+        for (var i = 0; i < 120; i++)
+          DateTime(2026, 1, 1).add(Duration(days: i * 3)),
+      ];
+      String key(DateTime d) => '${d.year}-'
+          '${d.month.toString().padLeft(2, '0')}-'
+          '${d.day.toString().padLeft(2, '0')}';
+      final many = yearlyLeaveReportFromJson({
+        ...yearlyLeaveReportJson(2026),
+        'sickDays': days.length,
+        'sickPeriods': [
+          for (final d in days) {'start': key(d), 'end': key(d), 'days': 1},
+        ],
+      }, requestedYear: 2026);
+      await service.exportLeaveReport(
+        l10n: AppLocalizationsDe(),
+        locale: 'de',
+        report: many,
+        isCurrentYear: true,
+        createdOn: created,
+      );
+      final pdf = String.fromCharCodes(fakePlatform.lastBytes!);
+      expect(RegExp(r'/Type\s*/Page\b').allMatches(pdf).length,
+          greaterThanOrEqualTo(3));
+    });
   });
 }

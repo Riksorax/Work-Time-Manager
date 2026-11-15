@@ -39,6 +39,14 @@ public sealed class SettingsDocument
     [FirestoreProperty("bundesland")]
     public string? Bundesland { get; set; }
 
+    /// <summary>Arbeitsort im Dashboard anzeigen (#526). Fehlt das Feld: <c>false</c>.</summary>
+    [FirestoreProperty("showWorkLocationOnDashboard")]
+    public bool? ShowWorkLocationOnDashboard { get; set; }
+
+    /// <summary>Home-Office im Dashboard anzeigen (#526). Fehlt das Feld: <c>true</c>.</summary>
+    [FirestoreProperty("showHomeOfficeOnDashboard")]
+    public bool? ShowHomeOfficeOnDashboard { get; set; }
+
     [FirestoreProperty("notifyBreaks")]
     public bool NotifyBreaks { get; set; }
 }

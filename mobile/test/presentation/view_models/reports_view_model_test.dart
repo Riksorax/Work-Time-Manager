@@ -13,6 +13,7 @@ import 'package:flutter_work_time/core/providers/clock_provider.dart';
 import 'package:flutter_work_time/core/providers/providers.dart';
 import 'package:flutter_work_time/core/providers/today_provider.dart';
 import 'package:flutter_work_time/data/datasources/remote/api_client.dart';
+import 'package:flutter_work_time/domain/entities/break_entity.dart';
 import 'package:flutter_work_time/domain/entities/work_entry_entity.dart';
 import 'package:flutter_work_time/domain/repositories/settings_repository.dart';
 import 'package:flutter_work_time/domain/repositories/work_repository.dart';
@@ -24,6 +25,7 @@ import 'package:flutter_work_time/presentation/view_models/leave_balance_view_mo
 import 'package:flutter_work_time/presentation/view_models/reports_view_model.dart';
 
 import '../../support/fake_clock.dart';
+import '../../support/fake_repositories.dart';
 import 'reports_view_model_test.mocks.dart';
 
 /// Liefert im Test ein festes aktives Arbeitszeit-Profil, ohne den echten
@@ -602,6 +604,29 @@ void main() {
         expect(viewModel.state.selectedDates, isEmpty);
         expect(viewModel.state.multiSelectMode, false);
       });
+
+      test(
+          'saveBatchWorkEntries lässt gespeicherte Arbeitsorte unangetastet '
+          '(workLocations null, #526)', () async {
+        final now = _fixedNow;
+        when(mockWorkRepository.getWorkEntriesForMonth(now.year, now.month))
+            .thenAnswer((_) async => []);
+        when(mockWorkRepository.saveWorkEntry(any)).thenAnswer((_) async {});
+        final viewModel = container.read(reportsViewModelProvider.notifier);
+        await Future.delayed(Duration.zero);
+
+        await viewModel.saveBatchWorkEntries(
+          [_fixedNow.subtract(const Duration(days: 1))],
+          WorkEntryType.work,
+          const TimeOfDay(hour: 8, minute: 0),
+          const TimeOfDay(hour: 16, minute: 0),
+        );
+
+        final saved = verify(mockWorkRepository.saveWorkEntry(captureAny))
+            .captured
+            .cast<WorkEntryEntity>();
+        expect(saved.single.workLocations, isNull);
+      });
     });
 
     group(
@@ -694,6 +719,215 @@ void main() {
         verify(mockApiClient.getMonthlyReport(now.year, now.month,
                 profileId: 'p1'))
             .called(1);
+      });
+
+      test('Tagesbericht: Soll, geleistet und Überstunden aus der API (#535)',
+          () async {
+        rebuildContainerWithActiveProfile(null);
+        final now = _fixedNow;
+        when(mockWorkRepository.getWorkEntriesForMonth(now.year, now.month))
+            .thenAnswer((_) async => []);
+        when(mockApiClient.getDailyReport(now.year, now.month, now.day,
+                profileId: null))
+            .thenAnswer((_) async => {
+                  'targetMs':
+                      const Duration(hours: 7, minutes: 48).inMilliseconds,
+                  'workedMs': const Duration(hours: 9).inMilliseconds,
+                  'overtimeMs':
+                      const Duration(hours: 1, minutes: 27).inMilliseconds,
+                });
+        when(mockApiClient.getWeeklyReport(now.year, now.month, now.day,
+                profileId: null))
+            .thenAnswer((_) async => {'workDays': 0});
+        when(mockApiClient.getMonthlyReport(now.year, now.month,
+                profileId: null))
+            .thenAnswer((_) async => {'workDays': 0});
+
+        container.read(reportsViewModelProvider.notifier);
+        await Future.delayed(Duration.zero);
+        await Future.delayed(Duration.zero);
+
+        final d = container.read(reportsViewModelProvider).dailyReportState;
+        expect(d.target, const Duration(hours: 7, minutes: 48));
+        expect(d.worked, const Duration(hours: 9));
+        expect(d.overtime, const Duration(hours: 1, minutes: 27));
+      });
+
+      group('Netto je Tag und Woche aus der API (#551)', () {
+        int ms(int h, [int m = 0]) =>
+            Duration(hours: h, minutes: m).inMilliseconds;
+
+        // Tag 1: Feld gesetzt; Tag 2: Feld fehlt (älteres Backend);
+        // Tag 3: Feld null; Tag 4: negativ (Eintrag ohne Ende mit Pause).
+        final days = [
+          {
+            'date': '2026-06-01T00:00:00Z',
+            'workedMs': ms(9),
+            'netWorkedMs': ms(8),
+          },
+          {'date': '2026-06-02T00:00:00Z', 'workedMs': ms(8)},
+          {
+            'date': '2026-06-03T00:00:00Z',
+            'workedMs': ms(7, 30),
+            'netWorkedMs': null,
+          },
+          {
+            'date': '2026-06-04T00:00:00Z',
+            'workedMs': 0,
+            'netWorkedMs': -ms(0, 30),
+          },
+        ];
+
+        Future<ReportsState> loadWith() async {
+          rebuildContainerWithActiveProfile(null);
+          final now = _fixedNow;
+          when(mockWorkRepository.getWorkEntriesForMonth(now.year, now.month))
+              .thenAnswer((_) async => []);
+          when(mockApiClient.getDailyReport(now.year, now.month, now.day,
+                  profileId: null))
+              .thenAnswer((_) async => {'workDays': 0});
+          when(mockApiClient.getWeeklyReport(now.year, now.month, now.day,
+                  profileId: null))
+              .thenAnswer((_) async => {'workDays': 4, 'days': days});
+          when(mockApiClient.getMonthlyReport(now.year, now.month,
+                  profileId: null))
+              .thenAnswer((_) async => {
+                    'workDays': 4,
+                    'weeks': [
+                      {
+                        'weekNumber': 23,
+                        'totalWorkedMs': ms(24, 30),
+                        'netWorkedMs': ms(23),
+                      },
+                      {'weekNumber': 24, 'totalWorkedMs': ms(8)},
+                      {
+                        'weekNumber': 25,
+                        'totalWorkedMs': ms(4),
+                        'netWorkedMs': null,
+                      },
+                    ],
+                    'days': days,
+                  });
+          container.read(reportsViewModelProvider.notifier);
+          await Future.delayed(Duration.zero);
+          await Future.delayed(Duration.zero);
+          return container.read(reportsViewModelProvider);
+        }
+
+        final expectedDays = {
+          DateTime(2026, 6, 1): const Duration(hours: 8),
+          DateTime(2026, 6, 2): const Duration(hours: 8), // Rückfall brutto
+          DateTime(2026, 6, 3): const Duration(hours: 7, minutes: 30),
+          DateTime(2026, 6, 4): const Duration(minutes: -30), // nicht gekappt
+        };
+
+        test('Wochenbericht: netWorkedMs, sonst brutto', () async {
+          final w = (await loadWith()).weeklyReportState;
+          expect(w.dailyNetWork, expectedDays);
+          // Brutto bleibt unverändert im State.
+          expect(w.dailyWork[DateTime(2026, 6, 1)], const Duration(hours: 9));
+        });
+
+        test('Monatsbericht: Wochen und Tage netto, sonst brutto', () async {
+          final m = (await loadWith()).monthlyReportState;
+          expect(m.weeklyNetWork, {
+            23: const Duration(hours: 23),
+            24: const Duration(hours: 8),
+            25: const Duration(hours: 4),
+          });
+          expect(m.weeklyWork[23], const Duration(hours: 24, minutes: 30));
+          expect(m.dailyNetWork, expectedDays);
+        });
+      });
+    });
+
+    group('Lokale Rechnung wie das Backend (#535)', () {
+      // Mo 01.06.2026 9 h brutto, 1 h Pause; Di 02.06. Urlaub; 40 h Mo–Fr.
+      final monday = WorkEntryEntity(
+        id: '2026-06-01',
+        date: DateTime(2026, 6, 1),
+        workStart: DateTime(2026, 6, 1, 8),
+        workEnd: DateTime(2026, 6, 1, 17, 30),
+        breaks: [
+          BreakEntity(
+            id: 'b',
+            name: 'Pause',
+            start: DateTime(2026, 6, 1, 12),
+            end: DateTime(2026, 6, 1, 13),
+          ),
+        ],
+      );
+      final tuesday = WorkEntryEntity(
+        id: '2026-06-02',
+        date: DateTime(2026, 6, 2),
+        type: WorkEntryType.vacation,
+      );
+      late FakeOvertimeRepository overtime;
+
+      Future<ReportsState> load() async {
+        overtime = FakeOvertimeRepository()
+          ..stored = const Duration(minutes: 90);
+        container.dispose();
+        container = ProviderContainer(
+          overrides: [
+            clockProvider.overrideWithValue(() => _fixedNow),
+            workRepositoryProvider.overrideWithValue(mockWorkRepository),
+            settingsRepositoryProvider
+                .overrideWithValue(mockSettingsRepository),
+            overtimeRepositoryProvider.overrideWithValue(overtime),
+          ],
+        );
+        when(mockWorkRepository.getWorkEntriesForMonth(2026, 6))
+            .thenAnswer((_) async => [monday, tuesday]);
+        final viewModel = container.read(reportsViewModelProvider.notifier);
+        await Future.delayed(Duration.zero);
+        viewModel.selectDate(DateTime(2026, 6, 1));
+        await Future.delayed(Duration.zero);
+        return container.read(reportsViewModelProvider);
+      }
+
+      test('Tagesbericht: Überstunden = netto − Soll', () async {
+        final s = await load();
+        expect(s.dailyReportState.overtime, const Duration(minutes: 30));
+        // Teil 3: Soll und geleistet stehen ebenfalls im State.
+        expect(s.dailyReportState.target, const Duration(hours: 8));
+        expect(
+            s.dailyReportState.worked, const Duration(hours: 8, minutes: 30));
+      });
+
+      test('Wochenbericht: Pausen einmal abgezogen, Urlaub mit Tagessoll',
+          () async {
+        final w = (await load()).weeklyReportState;
+        expect(w.totalWorkDuration, const Duration(hours: 17, minutes: 30));
+        expect(w.totalBreakDuration, const Duration(hours: 1));
+        expect(w.totalNetWorkDuration, const Duration(hours: 16, minutes: 30));
+        expect(w.workDays, 2);
+        expect(w.averageWorkDuration, const Duration(hours: 8, minutes: 15));
+        expect(w.overtime, const Duration(minutes: 30));
+        expect(w.dailyWork, {
+          DateTime(2026, 6, 1): const Duration(hours: 9, minutes: 30),
+          DateTime(2026, 6, 2): const Duration(hours: 8),
+        });
+        // Netto je Tag (#551): Pause abgezogen, Urlaub mit dem Tagessoll.
+        expect(w.dailyNetWork, {
+          DateTime(2026, 6, 1): const Duration(hours: 8, minutes: 30),
+          DateTime(2026, 6, 2): const Duration(hours: 8),
+        });
+      });
+
+      test('Monatsbericht: Gesamtüberstunden = gespeicherter Saldo', () async {
+        final m = (await load()).monthlyReportState;
+        expect(m.overtime, const Duration(minutes: 30));
+        expect(m.totalOvertime, const Duration(minutes: 90));
+        expect(m.workDays, 2);
+        expect(
+            m.avgWorkDurationPerWeek, const Duration(hours: 16, minutes: 30));
+        expect(m.weeklyWork, {23: const Duration(hours: 17, minutes: 30)});
+        expect(m.weeklyNetWork, {23: const Duration(hours: 16, minutes: 30)});
+        expect(m.dailyNetWork, {
+          DateTime(2026, 6, 1): const Duration(hours: 8, minutes: 30),
+          DateTime(2026, 6, 2): const Duration(hours: 8),
+        });
       });
     });
   });

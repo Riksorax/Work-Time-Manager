@@ -1,5 +1,5 @@
 import { getIsoWeekNumber, calculateDailyStat, calculateWeeklyReport, calculateMonthlyReport } from './report-calculator';
-import { DEFAULT_SETTINGS, WorkEntry, WorkEntryType, UserSettings } from '../../shared/models/index';
+import { Break, DEFAULT_SETTINGS, WorkEntry, WorkEntryType, UserSettings } from '../../shared/models/index';
 
 // 8h daily target (40h / 5d)
 const DAILY_MS = 8 * 3600000;
@@ -293,11 +293,22 @@ describe('ReportCalculatorService', () => {
       expect(report.totalOvertime).toBe(0);
     });
 
-    it('includes stored overtime in totalOvertime', () => {
+    it('totalOvertime ist der gespeicherte Saldo (#535)', () => {
       const stored = 2 * 3600000; // 2h stored
       const report = calculateMonthlyReport([], d(2026, 4, 1), DEFAULT_SETTINGS, stored);
       expect(report.totalOvertime).toBe(stored);
     });
+
+    it.each([-5_400_000, 0, 7_200_000])(
+      'totalOvertime = Saldo %i, Monatsüberstunden werden nicht addiert (#535)', (stored) => {
+        const entries: WorkEntry[] = [
+          makeWorkEntry({ date: d(2026, 4, 20), workStart: d(2026, 4, 20, 8), workEnd: d(2026, 4, 20, 18) }), // +2h
+          makeWorkEntry({ date: d(2026, 4, 21), workStart: d(2026, 4, 21, 8), workEnd: d(2026, 4, 21, 12) }), // −4h
+        ];
+        const report = calculateMonthlyReport(entries, d(2026, 4, 1), DEFAULT_SETTINGS, stored);
+        expect(report.monthlyOvertime).toBe(-2 * 3600000);
+        expect(report.totalOvertime).toBe(stored);
+      });
 
     it('groups days into weeks and only counts days matching workdays', () => {
       // 6 work entries in a single week (Mon-Sat), only Mon-Fri are contract workdays → 5 count
@@ -328,6 +339,140 @@ describe('ReportCalculatorService', () => {
       const report = calculateMonthlyReport(entries, d(2026, 4, 1), DEFAULT_SETTINGS, 0);
       expect(report.weeks.length).toBe(1);
       expect(report.weeks[0].totalWorked).toBe(8 * 3600000);
+    });
+  });
+
+  // ─── Netto je Zeile (#551) ───────────────────────────────────────────────────
+  describe('Netto je Tag und Woche (#551)', () => {
+    const brk = (day: number, h: number, min: number, lenMin: number) => ({
+      id: `b${day}${h}${min}`, name: 'Pause', isAutomatic: false,
+      start: d(2026, 4, day, h, min), end: d(2026, 4, day, h, min + lenMin),
+    });
+    const entry = (day: number, breaks: Break[]) =>
+      makeWorkEntry({ date: d(2026, 4, day), workStart: d(2026, 4, day, 8), workEnd: d(2026, 4, day, 17), breaks });
+
+    it('Woche: Tag netto = brutto − Pausen, brutto bleibt', () => {
+      const r = calculateWeeklyReport([entry(21, [brk(21, 12, 0, 30)])], d(2026, 4, 21), DEFAULT_SETTINGS);
+      expect(r.days[0].worked).toBe(9 * 3600000);
+      expect(r.days[0].netWorked).toBe(8.5 * 3600000);
+    });
+
+    it('Woche: offene Pause zählt nicht, Tag ohne Pause netto = brutto', () => {
+      const open = { id: 'o', name: 'Pause', isAutomatic: false, start: d(2026, 4, 21, 12), end: undefined };
+      const r = calculateWeeklyReport([entry(21, [open]), entry(22, [])], d(2026, 4, 21), DEFAULT_SETTINGS);
+      expect(r.days.map(x => x.netWorked)).toEqual([9 * 3600000, 9 * 3600000]);
+    });
+
+    it('Woche: Pausen länger als die Arbeitszeit werden nicht bei 0 gekappt (wie das Backend)', () => {
+      const e = makeWorkEntry({
+        date: d(2026, 4, 21), workStart: d(2026, 4, 21, 8), workEnd: d(2026, 4, 21, 9),
+        breaks: [brk(21, 8, 0, 30), brk(21, 8, 30, 30), brk(21, 9, 0, 30)],
+      });
+      const r = calculateWeeklyReport([e], d(2026, 4, 21), DEFAULT_SETTINGS);
+      expect(r.days[0].netWorked).toBe(-30 * 60000);
+    });
+
+    it('Woche: Urlaub zählt mit dem Tagessoll, netto = brutto', () => {
+      const v = makeWorkEntry({ date: d(2026, 4, 21), type: WorkEntryType.Vacation });
+      const r = calculateWeeklyReport([v], d(2026, 4, 21), DEFAULT_SETTINGS);
+      expect(r.days[0].netWorked).toBe(DAILY_MS);
+      expect(r.days[0].worked).toBe(DAILY_MS);
+    });
+
+    it('Monat: Tage und Wochen netto; Summe der Wochen-Netto = Gesamt − Pausen', () => {
+      const entries = [entry(20, [brk(20, 12, 0, 30)]), entry(21, [brk(21, 12, 0, 45)]), entry(28, [brk(28, 12, 0, 30)])];
+      const r = calculateMonthlyReport(entries, d(2026, 4, 1), DEFAULT_SETTINGS, 0);
+      expect(r.days.map(x => x.netWorked)).toEqual([8.5 * 3600000, 8.25 * 3600000, 8.5 * 3600000]);
+      expect(r.weeks.map(w => w.totalWorked)).toEqual([18 * 3600000, 9 * 3600000]);
+      expect(r.weeks.map(w => w.netWorked)).toEqual([16.75 * 3600000, 8.5 * 3600000]);
+      expect(r.weeks.reduce((s, w) => s + w.netWorked, 0)).toBe(r.totalWorked - r.totalBreaks);
+    });
+  });
+
+  // ─── Abwesenheit an einem freien Tag (#535) ────────────────────────────────
+  // 2026-04-25 = Samstag, 2026-04-26 = Sonntag (Mo–Fr-Vertrag: freie Tage).
+
+  describe('Abwesenheit an einem freien Tag (#535)', () => {
+    it.each([WorkEntryType.Vacation, WorkEntryType.Sick, WorkEntryType.Holiday])(
+      'Tag: %s am Samstag → Soll = geleistet = Tagessoll, keine Überstunden', (type) => {
+        const stat = calculateDailyStat([makeWorkEntry({ date: d(2026, 4, 25), type })], d(2026, 4, 25), DEFAULT_SETTINGS);
+        expect(stat).toEqual({ target: DAILY_MS, worked: DAILY_MS, overtime: 0 });
+      });
+
+    it('Tag: manuelle Überstunden am Abwesenheits-Eintrag zählen weiter', () => {
+      const entries = [makeWorkEntry({ date: d(2026, 4, 25), type: WorkEntryType.Vacation, manualOvertimeMinutes: 30 })];
+      const stat = calculateDailyStat(entries, d(2026, 4, 25), DEFAULT_SETTINGS);
+      expect(stat).toEqual({ target: DAILY_MS, worked: DAILY_MS, overtime: 30 * 60000 });
+    });
+
+    it('Tag: Abwesenheit am Vertrags-Wochentag unverändert', () => {
+      const stat = calculateDailyStat(
+        [makeWorkEntry({ date: d(2026, 4, 24), type: WorkEntryType.Sick })], d(2026, 4, 24), DEFAULT_SETTINGS);
+      expect(stat).toEqual({ target: DAILY_MS, worked: DAILY_MS, overtime: 0 });
+    });
+
+    it('Tag: Arbeit am freien Tag unverändert (kein Soll, alles Überstunden)', () => {
+      const entries = [makeWorkEntry({ date: d(2026, 4, 25), workStart: d(2026, 4, 25, 8), workEnd: d(2026, 4, 25, 12) })];
+      const stat = calculateDailyStat(entries, d(2026, 4, 25), DEFAULT_SETTINGS);
+      expect(stat).toEqual({ target: 0, worked: 4 * 3600000, overtime: 4 * 3600000 });
+    });
+
+    it('Tag: freier Tag ohne Eintrag hat kein Soll', () => {
+      expect(calculateDailyStat([], d(2026, 4, 25), DEFAULT_SETTINGS)).toEqual({ target: 0, worked: 0, overtime: 0 });
+    });
+
+    it('Woche: Urlaub am Samstag und Krank am Sonntag erzeugen keine Überstunden', () => {
+      const entries = [
+        makeWorkEntry({ date: d(2026, 4, 20), workStart: d(2026, 4, 20, 8), workEnd: d(2026, 4, 20, 16) }),
+        makeWorkEntry({ date: d(2026, 4, 25), type: WorkEntryType.Vacation }),
+        makeWorkEntry({ date: d(2026, 4, 26), type: WorkEntryType.Sick }),
+      ];
+      const report = calculateWeeklyReport(entries, d(2026, 4, 22), DEFAULT_SETTINGS);
+      expect(report.totalWorked).toBe(3 * DAILY_MS);
+      expect(report.workDays).toBe(3);
+      expect(report.overtime).toBe(0); // vor #535: 16h
+    });
+
+    it('Woche: Arbeit am Samstag bleibt Überstunden', () => {
+      const entries = [
+        makeWorkEntry({ date: d(2026, 4, 20), workStart: d(2026, 4, 20, 8), workEnd: d(2026, 4, 20, 16) }),
+        makeWorkEntry({ date: d(2026, 4, 25), workStart: d(2026, 4, 25, 8), workEnd: d(2026, 4, 25, 12) }),
+      ];
+      const report = calculateWeeklyReport(entries, d(2026, 4, 22), DEFAULT_SETTINGS);
+      expect(report.overtime).toBe(4 * 3600000);
+    });
+
+    it('Woche/Tag: Feiertag und Arbeit am selben freien Tag – Soll zählt einmal', () => {
+      const entries = [
+        makeWorkEntry({ date: d(2026, 4, 25), type: WorkEntryType.Holiday }),
+        makeWorkEntry({ date: d(2026, 4, 25), workStart: d(2026, 4, 25, 8), workEnd: d(2026, 4, 25, 10) }),
+      ];
+      const report = calculateWeeklyReport(entries, d(2026, 4, 25), DEFAULT_SETTINGS);
+      const stat = calculateDailyStat(entries, d(2026, 4, 25), DEFAULT_SETTINGS);
+      expect(report.workDays).toBe(1);
+      expect(report.overtime).toBe(2 * 3600000);
+      expect(stat).toEqual({ target: DAILY_MS, worked: DAILY_MS + 2 * 3600000, overtime: 2 * 3600000 });
+    });
+
+    it('Monat: Abwesenheit am freien Tag ohne Überstunden, manuelle zählen', () => {
+      const entries = [
+        makeWorkEntry({ date: d(2026, 4, 25), type: WorkEntryType.Vacation, manualOvertimeMinutes: 15 }),
+        makeWorkEntry({ date: d(2026, 4, 24), type: WorkEntryType.Vacation }),
+      ];
+      const report = calculateMonthlyReport(entries, d(2026, 4, 1), DEFAULT_SETTINGS, 0);
+      expect(report.workDays).toBe(2);
+      expect(report.totalWorked).toBe(2 * DAILY_MS);
+      expect(report.monthlyOvertime).toBe(15 * 60000); // vor #535: 8h 15min
+    });
+
+    it('ohne eingestellte Arbeitstage: Soll und geleistet 0, kein Fehler', () => {
+      const none: UserSettings = { ...DEFAULT_SETTINGS, workdays: [] };
+      const entries = [makeWorkEntry({ date: d(2026, 4, 25), type: WorkEntryType.Vacation })];
+      expect(calculateDailyStat(entries, d(2026, 4, 25), none)).toEqual({ target: 0, worked: 0, overtime: 0 });
+      expect(calculateWeeklyReport(entries, d(2026, 4, 25), none).overtime).toBe(0);
+      const month = calculateMonthlyReport(entries, d(2026, 4, 1), none, 0);
+      expect(month.monthlyOvertime).toBe(0);
+      expect(month.workDays).toBe(1);
     });
   });
 });

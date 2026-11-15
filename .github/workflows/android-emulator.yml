@@ -1,7 +1,7 @@
 name: Android Emulator – Timer-Aktionen von außen
 
-# Prüft auf einem echten Android-Emulator (KVM), was Unit-Tests nicht erreichen: Assistant-Intents (#280)
-# und Notification-Aktionen mit und ohne laufende App (#485). Läuft manuell und bei Änderungen an den
+# Prüft auf einem echten Android-Emulator (KVM), was Unit-Tests nicht erreichen: Assistant-Intents (#280,
+# Sprachabfragen #287) und Notification-Aktionen mit und ohne laufende App (#485). Läuft manuell und bei Änderungen an den
 # beteiligten Dateien. Braucht das Secret GOOGLE_SERVICES_JSON (wie flutter-production.yml), daher nicht
 # für Fork-PRs.
 on:
@@ -15,6 +15,11 @@ on:
       - 'mobile/lib/core/services/notification_service.dart'
       - 'mobile/lib/domain/utils/timer_action.dart'
       - 'mobile/lib/presentation/view_models/timer_action_view_model.dart'
+      - 'mobile/lib/core/services/shortcut_service.dart'
+      - 'mobile/lib/core/services/assistant_query_inbox.dart'
+      - 'mobile/lib/domain/utils/assistant_query.dart'
+      - 'mobile/lib/presentation/view_models/assistant_query_view_model.dart'
+      - 'mobile/lib/presentation/widgets/assistant_query_sheet.dart'
       - 'mobile/tool/android_e2e/**'
       - '.github/workflows/android-emulator.yml'
 

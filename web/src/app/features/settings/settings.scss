@@ -388,6 +388,7 @@ button[mat-list-item] {
 }
 
 // ── Bundesland / Feiertage (#279) ───────────────────────────────────────────────
+.dashboard-display-section .dashboard-display-hint,
 .bundesland-section .bundesland-hint {
   margin: 0;
   padding: 0 16px 8px 72px; // bündig mit dem Zeilentext (Icon-Spalte)

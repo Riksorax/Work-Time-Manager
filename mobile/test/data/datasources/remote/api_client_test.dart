@@ -128,6 +128,40 @@ void main() {
       expect(http_.lastUri!.path, '/api/reports/monthly/2026/9');
     });
 
+    test('getYearlyLeave: Pfad und Antwort (#535)', () async {
+      http_.nextResponse = http.Response(
+          '{"year":2026,"vacationDaysPerYear":30,"vacationDaysTaken":4,'
+          '"vacationDaysRemaining":26,"sickDays":2,"extra":1}',
+          200);
+      final json = await api.getYearlyLeave(2026);
+      expect(http_.lastUri!.path, '/api/reports/yearly/2026');
+      expect(http_.lastUri!.queryParameters, isEmpty);
+      expect(json['vacationDaysTaken'], 4);
+      expect(json['sickDays'], 2);
+    });
+
+    test('getYearlyLeave gibt profileId weiter', () async {
+      await api.getYearlyLeave(2026, profileId: 'p1');
+      expect(http_.lastUri!.queryParameters, {'profileId': 'p1'});
+    });
+
+    test('getYearlyLeave: Fehlerstatus als ApiException', () async {
+      http_.nextResponse = http.Response('', 500);
+      await expectLater(
+        api.getYearlyLeave(2026),
+        throwsA(isA<ApiException>()
+            .having((e) => e.statusCode, 'statusCode', 500)
+            .having((e) => e.operation, 'operation', 'getYearlyLeave')),
+      );
+    });
+
+    test('getYearlyLeave ohne Anmeldung: NotSignedInException', () async {
+      auth.signedIn = false;
+      await expectLater(
+          api.getYearlyLeave(2026), throwsA(isA<NotSignedInException>()));
+      expect(http_.lastUri, isNull);
+    });
+
     test('getWorkEntriesForMonth gibt profileId weiter', () async {
       http_.nextResponse = http.Response('[]', 200);
       await api.getWorkEntriesForMonth(2026, 9, profileId: 'p1');
@@ -251,6 +285,74 @@ void main() {
       expect(await read({'isHomeOffice': false}), isFalse);
       expect(await read({'isHomeOffice': null}), isFalse);
       expect(await read({}), isFalse);
+    });
+  });
+
+  group('ApiClient — workLocations (#526)', () {
+    Map<String, dynamic> sentJson() =>
+        jsonDecode(http_.lastBody! as String) as Map<String, dynamic>;
+
+    Future<void> save(List<String>? locations) async {
+      http_.nextResponse = http.Response('', 204);
+      await api.saveWorkEntry(WorkEntryModel(
+        id: '2026-06-05',
+        date: DateTime(2026, 6, 5),
+        workLocations: locations,
+      ));
+    }
+
+    test('null wird nicht gesendet (gespeicherte Orte bleiben)', () async {
+      await save(null);
+      expect(sentJson().containsKey('workLocations'), isFalse);
+      // isHomeOffice dagegen immer.
+      expect(sentJson().containsKey('isHomeOffice'), isTrue);
+    });
+
+    test('[] wird gesendet (entfernt die Orte)', () async {
+      await save(const []);
+      expect(sentJson()['workLocations'], isEmpty);
+      expect(sentJson()['workLocations'], isA<List>());
+    });
+
+    test('Liste wird bereinigt gesendet', () async {
+      await save(const [' Büro ', 'büro', 'Kunde', '']);
+      expect(sentJson()['workLocations'], ['Büro', 'Kunde']);
+    });
+
+    test('frische Einträge (Schnelleintrag/Batch/Neu-Eintrag) senden nichts',
+        () async {
+      http_.nextResponse = http.Response('', 204);
+      await api.saveWorkEntry(WorkEntryModel.fromEntity(WorkEntryEntity(
+        id: '2026-06-05',
+        date: DateTime(2026, 6, 5),
+        type: WorkEntryType.vacation,
+        isManuallyEntered: true,
+      )));
+      expect(sentJson().containsKey('workLocations'), isFalse);
+    });
+
+    Future<List<String>?> read(Map<String, dynamic> extra) async {
+      http_.nextResponse = http.Response(
+          jsonEncode({
+            'id': '2026-06-05',
+            'date': '2026-06-05T00:00:00Z',
+            'type': 'work',
+            ...extra,
+          }),
+          200);
+      return (await api.getWorkEntry(2026, 6, 5))!.workLocations;
+    }
+
+    test('GET liest Liste; fehlend/null ergibt leer, nie null', () async {
+      expect(
+          await read({
+            'workLocations': ['A', 'B']
+          }),
+          ['A', 'B']);
+      expect(await read({'workLocations': <String>[]}), isEmpty);
+      expect(await read({'workLocations': null}), isEmpty);
+      expect(await read({}), isNotNull);
+      expect(await read({}), isEmpty);
     });
   });
 }

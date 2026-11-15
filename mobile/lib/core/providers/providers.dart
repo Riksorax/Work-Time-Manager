@@ -8,6 +8,8 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/services/home_widget_gateway.dart';
 import '../../core/services/shortcut_service.dart';
+import '../../core/services/pdf_report_service.dart';
+import '../../core/services/assistant_query_inbox.dart';
 import '../../core/services/timer_action_inbox.dart';
 import '../../core/services/version_service.dart';
 import 'settings_sync_provider.dart';
@@ -26,6 +28,7 @@ import '../../data/repositories/firebase_overtime_repository_impl.dart';
 import '../../data/repositories/settings_repository_impl.dart';
 import '../../data/repositories/weekly_reflection_repository_impl.dart';
 import '../../data/repositories/work_profile_repository_impl.dart';
+import '../../data/repositories/work_location_history.dart';
 import '../../data/repositories/work_repository_impl.dart';
 import '../../domain/entities/user_entity.dart';
 import '../../domain/entities/work_profile_entity.dart';
@@ -124,9 +127,20 @@ NotificationService notificationService(Ref ref) {
 @Riverpod(keepAlive: true)
 TimerActionInbox timerActionInbox(Ref ref) => TimerActionInbox.instance;
 
+/// Briefkasten für Sprachabfragen des Assistant (#287). Prozessweites
+/// Singleton wie [timerActionInbox]; im Test überschreibbar.
+@Riverpod(keepAlive: true)
+AssistantQueryInbox assistantQueryInbox(Ref ref) =>
+    AssistantQueryInbox.instance;
+
 /// App-Icon-Shortcuts „Einstempeln“/„Ausstempeln“ (#274, nur Android).
 @Riverpod(keepAlive: true)
 ShortcutService shortcutService(Ref ref) => ShortcutService();
+
+/// PDF-Export der Berichte; im Test überschreibbar, damit Widget-Tests die
+/// übergebenen Werte prüfen können (#535).
+@Riverpod(keepAlive: true)
+PdfReportService pdfReportService(Ref ref) => PdfReportService();
 
 //==============================================================================
 // REPOSITORIES
@@ -181,10 +195,28 @@ WorkRepository workRepository(Ref ref) {
         )
       : localRepository;
 
+  final history = ref.watch(workLocationHistoryProvider);
+
   return HybridWorkRepositoryImpl(
     firebaseRepository: firebaseRepository,
     localRepository: localRepository,
     userId: userId,
+    onEntriesSeen: history.record,
+  );
+}
+
+/// Verlauf der Arbeitsorte je Nutzer und Profil (#526) für die Vorschläge.
+/// Wird aus den Einträgen gespeist, die [workRepository] ohnehin liest oder
+/// speichert (kein zusätzlicher Lesezugriff).
+@riverpod
+WorkLocationHistory workLocationHistory(Ref ref) {
+  final authState = ref.watch(authStateProvider);
+  final userId = authState.asData?.value?.id;
+  final profileId = ref.watch(activeWorkProfileIdProvider);
+  return WorkLocationHistory(
+    ref.watch(sharedPreferencesProvider),
+    userId: userId ?? 'local',
+    profileId: profileId,
   );
 }
 

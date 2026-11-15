@@ -20,6 +20,7 @@ import '../../domain/utils/entry_day.dart';
 import '../../domain/utils/overtime_utils.dart';
 import '../../domain/utils/overtime_warning_utils.dart';
 import '../../domain/utils/timer_action.dart';
+import '../../domain/utils/work_locations.dart';
 import '../../l10n/app_localizations.dart';
 import '../state/dashboard_state.dart';
 
@@ -237,10 +238,13 @@ class DashboardViewModel extends Notifier<DashboardState> {
       final lastUpdateDate = await overtimeRepository.ensureLastUpdateLoaded();
       if (stale()) return;
 
-      // Berechne dailyOvertime für den initialen Stand
+      // Berechne dailyOvertime für den initialen Stand. Manuelle Überstunden
+      // gehören dazu (#538): derselbe Tagesanteil wie beim Schreiben, sonst
+      // wandert die Basis bei `lastUpdated == heute` bei jedem Laden.
       final targetDailyHours =
           _getEffectiveTargetDailyHours(entryDay(workEntry));
       final isExtraDay = targetDailyHours == Duration.zero;
+      final manualOvertime = manualOvertimeOf(workEntry);
       Duration initialDailyOvertime = Duration.zero;
 
       if (workEntry.workStart != null && workEntry.workEnd != null) {
@@ -253,7 +257,8 @@ class DashboardViewModel extends Notifier<DashboardState> {
         );
         final actualWorkDuration =
             workEntry.workEnd!.difference(workEntry.workStart!) - breakDuration;
-        initialDailyOvertime = actualWorkDuration - targetDailyHours;
+        initialDailyOvertime =
+            actualWorkDuration - targetDailyHours + manualOvertime;
       } else if (workEntry.workStart != null) {
         // Laufender Tag -> Overtime wird im Timer berechnet.
         // Um initialOvertime (Basis) korrekt wiederherzustellen, müssen wir den aktuellen "Tagesfortschritt" vom gespeicherten Gesamtwert abziehen.
@@ -267,7 +272,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
             now.difference(workEntry.workStart!) - breakDuration;
 
         // Aktueller Überstunden-Stand für heute (wird meist negativ sein, da Tag noch läuft)
-        initialDailyOvertime = elapsedTime - targetDailyHours;
+        initialDailyOvertime = elapsedTime - targetDailyHours + manualOvertime;
       }
 
       Duration initialOvertime;
@@ -551,19 +556,25 @@ class DashboardViewModel extends Notifier<DashboardState> {
 
     final targetDailyHours =
         _getEffectiveTargetDailyHours(entryDay(state.workEntry));
-    final dailyOvertime = _calculateElapsedTime() - targetDailyHours;
+    // Manuelle Überstunden des Tages zählen mit (#538, wie Web/Backend).
+    final manualOvertime = manualOvertimeOf(state.workEntry);
+    final dailyOvertime =
+        _calculateElapsedTime() - targetDailyHours + manualOvertime;
 
     // Berechne Total = Base (initialOvertime) + Daily
     final base = state.initialOvertime ?? Duration.zero;
     final total = base + dailyOvertime;
 
-    // Berechne voraussichtliche Feierabendzeit für ±0 (Tagesziel)
+    // Berechne voraussichtliche Feierabendzeit für ±0 (Tagesziel). Wie im Web
+    // ohne manuelle Überstunden: Soll + Pausen ab Start.
     final expectedEndTime = _calculateExpectedEndTime(targetDailyHours);
 
     // Berechne voraussichtliche Feierabendzeit für Gesamtbilanz ±0
     // Wenn wir z.B. 1h Plus haben, müssen wir heute 1h weniger arbeiten.
     // Wenn wir 10h Plus haben und 8h Soll, müssen wir gar nicht arbeiten (Ende = Start).
-    final Duration remainingForTotalZero = targetDailyHours - base;
+    // Manuelle Überstunden verkürzen den Rest wie eine höhere Basis (Web).
+    final Duration remainingForTotalZero =
+        targetDailyHours - base - manualOvertime;
     final Duration targetForTotalZero = remainingForTotalZero.isNegative
         ? Duration.zero
         : remainingForTotalZero;
@@ -812,6 +823,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
       description: state.workEntry.description,
       type: state.workEntry.type,
       isHomeOffice: state.workEntry.isHomeOffice,
+      workLocations: state.workEntry.workLocations,
     );
     logger.i(
         '[Dashboard] Komplett neue Session gestartet um $now (Start, End, Pausen zurückgesetzt)');
@@ -837,6 +849,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
       description: state.workEntry.description,
       type: state.workEntry.type,
       isHomeOffice: state.workEntry.isHomeOffice,
+      workLocations: state.workEntry.workLocations,
     );
     logger.i('[Dashboard] Neue Session gestartet um $now (Pausen behalten)');
     return _recalculateStateAndSave(updatedEntry, ctx: ctx);
@@ -893,7 +906,10 @@ class DashboardViewModel extends Notifier<DashboardState> {
       final targetDailyHours =
           _getEffectiveTargetDailyHours(entryDay(updatedEntry));
       isExtraDay = targetDailyHours == Duration.zero;
-      dailyOvertime = newActualWorkDuration - targetDailyHours;
+      // Manuelle Überstunden des Tages zählen mit (#538, wie Web/Backend).
+      dailyOvertime = newActualWorkDuration -
+          targetDailyHours +
+          manualOvertimeOf(updatedEntry);
 
       // Total = Base + Daily
       final base = state.initialOvertime ?? Duration.zero;
@@ -1093,6 +1109,27 @@ class DashboardViewModel extends Notifier<DashboardState> {
     return _recalculateStateAndSave(updatedEntry, ctx: ctx);
   }
 
+  /// Setzt die Arbeitsorte des aktuellen Eintrags (#526, Muster
+  /// [setHomeOffice]). Die Liste wird wie im Backend bereinigt; `[]` entfernt
+  /// alle Orte. Ohne `workStart` wird nur der State geändert (der Start
+  /// schreibt die Orte mit, kein Tag ohne Zeiten); sonst speichert die Aktion
+  /// den Eintrag, ohne Timer, Pausen oder andere Felder anzufassen.
+  Future<bool> setWorkLocations(List<String> locations) =>
+      _runAction(() => _setWorkLocationsBody(locations));
+
+  Future<bool> _setWorkLocationsBody(List<String> locations) async {
+    if (!await _ensureCurrentDay()) return false;
+    final ctx = _beginAction();
+    final updatedEntry = state.workEntry
+        .copyWith(workLocations: normalizeWorkLocations(locations));
+    if (updatedEntry.workStart == null) {
+      if (!ref.mounted || ctx.gen != _initGen) return true;
+      state = state.copyWith(workEntry: updatedEntry);
+      return true;
+    }
+    return _recalculateStateAndSave(updatedEntry, ctx: ctx);
+  }
+
   Future<bool> setManualStartTime(TimeOfDay time) =>
       _runAction(() => _setManualStartTimeBody(time));
 
@@ -1182,6 +1219,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
       description: state.workEntry.description,
       type: state.workEntry.type,
       isHomeOffice: state.workEntry.isHomeOffice,
+      workLocations: state.workEntry.workLocations,
     );
 
     final ok = await _recalculateStateAndSave(updatedEntry, ctx: ctx);

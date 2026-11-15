@@ -1,0 +1,77 @@
+<div class="trend-layout">
+  <mat-button-toggle-group class="trend-range" hideSingleSelectionIndicator
+                           [value]="svc.granularity()"
+                           (change)="onGranularity($event.value)"
+                           [attr.aria-label]="'reports.trendRangeAria' | translate">
+    <mat-button-toggle value="week">{{ 'reports.trendRangeWeeks' | translate }}</mat-button-toggle>
+    <mat-button-toggle value="month">{{ 'reports.trendRangeMonths' | translate }}</mat-button-toggle>
+  </mat-button-toggle-group>
+
+  @switch (svc.state().status) {
+    @case ('error') {
+      <div class="trend-card trend-error" role="alert">
+        <mat-icon aria-hidden="true">error_outline</mat-icon>
+        <span>{{ 'reports.trendLoadError' | translate }}</span>
+        <button mat-stroked-button type="button" (click)="svc.retry()">
+          <mat-icon aria-hidden="true">refresh</mat-icon>
+          {{ 'leave.retry' | translate }}
+        </button>
+      </div>
+    }
+
+    @case ('data') {
+      @if (svc.isEmpty()) {
+        <div class="trend-card trend-empty" role="status">
+          <mat-icon aria-hidden="true">insights</mat-icon>
+          <p>{{ (isWeek() ? 'reports.trendEmptyWeeks' : 'reports.trendEmptyMonths') | translate }}</p>
+        </div>
+      } @else {
+        <section class="trend-card trend-kpi" [attr.aria-label]="'reports.trendWeekTitle' | translate">
+          <h3 class="trend-title">{{ 'reports.trendWeekTitle' | translate }}</h3>
+          @if (weeklyTrend(); as t) {
+            <p class="trend-kpi-main">
+              <mat-icon aria-hidden="true">{{ trendIcon() }}</mat-icon>
+              <span>{{ 'reports.trendWeekDelta' | translate: { delta: formatSigned(t.delta), count: t.comparedWeeks } }}</span>
+            </p>
+            <p class="trend-sub">
+              {{ 'reports.trendWeekDetail' | translate: { week: lastWeekLabel(), worked: formatDuration(t.lastWeekWorked), average: formatDuration(t.averageWorked) } }}
+            </p>
+          } @else {
+            <p class="trend-sub">{{ 'reports.trendWeekTooLittle' | translate }}</p>
+          }
+        </section>
+
+        <section class="trend-card trend-kpi trend-forecast" [attr.aria-label]="'reports.trendForecastTitle' | translate">
+          <h3 class="trend-title">{{ 'reports.trendForecastTitle' | translate }}</h3>
+          @if (forecastTexts(); as ft) {
+            <p class="trend-kpi-main">
+              <mat-icon aria-hidden="true">{{ forecastTrendIcon() }}</mat-icon>
+              <span>{{ ft.main }}</span>
+            </p>
+            <p class="trend-sub">{{ ft.detail }}</p>
+            <p class="trend-note">{{ 'reports.trendForecastNote' | translate }}</p>
+          } @else {
+            <p class="trend-sub">{{ 'reports.trendForecastMissing' | translate }}</p>
+          }
+        </section>
+
+        <section class="trend-card">
+          <h3 class="trend-title">{{ workedLabels().title }}</h3>
+          <app-bar-chart [points]="workedPoints()" [labels]="workedLabels()" />
+        </section>
+
+        <section class="trend-card">
+          <h3 class="trend-title">{{ overtimeLabels().title }}</h3>
+          <p class="trend-sub">{{ 'reports.trendOvertimeHint' | translate: { from: windowStart() } }}</p>
+          <app-line-chart [points]="overtimePoints()" [labels]="overtimeLabels()" />
+        </section>
+      }
+    }
+
+    @default {
+      <div class="trend-loading" role="status" [attr.aria-label]="'reports.trendLoading' | translate">
+        <mat-spinner diameter="40" aria-hidden="true" />
+      </div>
+    }
+  }
+</div>

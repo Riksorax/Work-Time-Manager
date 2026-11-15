@@ -277,6 +277,33 @@ public class RepositoryIntegrationTests(FirestoreEmulatorFixture fixture)
     }
 
     [SkippableFact]
+    public async Task WorkEntry_GetRange_SpansYearBoundary_FiltersRange_IsolatesProfile()
+    {
+        RequireEmulator();
+        var repo = new WorkEntryRepository(fixture.Db!);
+        var uid = NewUid();
+        WorkEntryDto Vac(int y, int m, int d) => new()
+        {
+            Id = $"{y:D4}-{m:D2}-{d:D2}",
+            Date = new DateTimeOffset(y, m, d, 0, 0, 0, TimeSpan.Zero),
+            Type = "vacation",
+        };
+
+        await repo.SaveAsync(uid, Vac(2026, 11, 30), null, Ct); // vor dem Zeitraum, gleicher Monat
+        await repo.SaveAsync(uid, Vac(2026, 12, 7), null, Ct);
+        await repo.SaveAsync(uid, Vac(2027, 1, 4), null, Ct);
+        await repo.SaveAsync(uid, Vac(2027, 2, 15), null, Ct);
+        await repo.SaveAsync(uid, Vac(2027, 2, 16), null, Ct); // nach dem Zeitraum
+        await repo.SaveAsync(uid, Vac(2027, 1, 5), "p1", Ct);
+
+        var range = await repo.GetRangeAsync(uid, new DateOnly(2026, 12, 1), new DateOnly(2027, 2, 15), null, Ct);
+
+        Assert.Equal(new[] { "2026-12-07", "2027-01-04", "2027-02-15" }, range.Select(e => e.Id));
+        var profile = await repo.GetRangeAsync(uid, new DateOnly(2026, 12, 1), new DateOnly(2027, 2, 15), "p1", Ct);
+        Assert.Equal("2027-01-05", Assert.Single(profile).Id);
+    }
+
+    [SkippableFact]
     public async Task Profile_DefaultsToNonPremium_WhenMissing()
     {
         RequireEmulator();
@@ -402,6 +429,149 @@ public class RepositoryIntegrationTests(FirestoreEmulatorFixture fixture)
 
         Assert.True((await repo.GetDayAsync(uid, 2026, 6, 5, null, Ct))!.IsHomeOffice);
         Assert.False((await repo.GetDayAsync(uid, 2026, 6, 5, "second", Ct))!.IsHomeOffice);
+    }
+
+    // ── Arbeitsorte (#526) ─────────────────────────────────────────────────
+
+    private static WorkEntryDto WlEntry(IReadOnlyList<string>? locations, int startHour = 8) => new()
+    {
+        Id = "2026-06-05",
+        Date = new DateTimeOffset(2026, 6, 5, 0, 0, 0, TimeSpan.Zero),
+        WorkStart = new DateTimeOffset(2026, 6, 5, startHour, 0, 0, TimeSpan.Zero),
+        WorkLocations = locations,
+    };
+
+    private async Task<Dictionary<string, object>> RawDay(string uid, string? profileId)
+    {
+        var user = fixture.Db!.Collection("users").Document(uid);
+        var col = profileId is null
+            ? user.Collection("work_entries")
+            : user.Collection("profiles").Document(profileId).Collection("work_entries");
+        var snapshot = await col.Document("2026-06").GetSnapshotAsync(Ct);
+        var days = snapshot.GetValue<Dictionary<string, object>>("days");
+        return Assert.IsType<Dictionary<string, object>>(days["5"]);
+    }
+
+    [SkippableFact]
+    public async Task WorkEntry_WorkLocations_RoundTrip_KeepsOrder()
+    {
+        RequireEmulator();
+        var repo = new WorkEntryRepository(fixture.Db!);
+        var uid = NewUid();
+
+        await repo.SaveAsync(uid, WlEntry(new[] { "Kunde A", "Büro" }), null, Ct);
+
+        var day = await repo.GetDayAsync(uid, 2026, 6, 5, null, Ct);
+        Assert.Equal(new[] { "Kunde A", "Büro" }, day!.WorkLocations);
+    }
+
+    [SkippableFact]
+    public async Task WorkEntry_PutWithoutWorkLocations_KeepsStoredList()
+    {
+        RequireEmulator();
+        var repo = new WorkEntryRepository(fixture.Db!);
+        var uid = NewUid();
+        await repo.SaveAsync(uid, WlEntry(new[] { "Kunde A" }), null, Ct);
+
+        await repo.SaveAsync(uid, WlEntry(null, startHour: 9), null, Ct);
+
+        var day = await repo.GetDayAsync(uid, 2026, 6, 5, null, Ct);
+        Assert.Equal(new[] { "Kunde A" }, day!.WorkLocations);
+        Assert.Equal(new DateTimeOffset(2026, 6, 5, 9, 0, 0, TimeSpan.Zero), day.WorkStart);
+    }
+
+    [SkippableFact]
+    public async Task WorkEntry_PutEmptyWorkLocations_RemovesField()
+    {
+        RequireEmulator();
+        var repo = new WorkEntryRepository(fixture.Db!);
+        var uid = NewUid();
+        await repo.SaveAsync(uid, WlEntry(new[] { "Kunde A" }), null, Ct);
+
+        await repo.SaveAsync(uid, WlEntry(Array.Empty<string>(), startHour: 9), null, Ct);
+
+        var day = await repo.GetDayAsync(uid, 2026, 6, 5, null, Ct);
+        Assert.Empty(day!.WorkLocations!);
+        Assert.Equal(new DateTimeOffset(2026, 6, 5, 9, 0, 0, TimeSpan.Zero), day.WorkStart);
+        Assert.False((await RawDay(uid, null)).ContainsKey("workLocations"));
+    }
+
+    [SkippableFact]
+    public async Task WorkEntry_PutEmptyWorkLocations_OnNewDocument_LeavesFieldAbsent()
+    {
+        RequireEmulator();
+        var repo = new WorkEntryRepository(fixture.Db!);
+        var uid = NewUid();
+
+        await repo.SaveAsync(uid, WlEntry(Array.Empty<string>()), null, Ct);
+
+        Assert.False((await RawDay(uid, null)).ContainsKey("workLocations"));
+    }
+
+    [SkippableFact]
+    public async Task WorkEntry_PutReplacesStoredList()
+    {
+        RequireEmulator();
+        var repo = new WorkEntryRepository(fixture.Db!);
+        var uid = NewUid();
+        await repo.SaveAsync(uid, WlEntry(new[] { "Kunde A", "Büro" }), null, Ct);
+
+        await repo.SaveAsync(uid, WlEntry(new[] { "Zuhause" }), null, Ct);
+
+        Assert.Equal(new[] { "Zuhause" }, (await repo.GetDayAsync(uid, 2026, 6, 5, null, Ct))!.WorkLocations);
+    }
+
+    [SkippableFact]
+    public async Task WorkEntry_LegacyDocument_ReadsEmptyList_AndStaysFieldFreeAfterPutWithoutField()
+    {
+        RequireEmulator();
+        var repo = new WorkEntryRepository(fixture.Db!);
+        var uid = NewUid();
+        await repo.SaveAsync(uid, WlEntry(null), null, Ct);
+
+        var day = await repo.GetDayAsync(uid, 2026, 6, 5, null, Ct);
+        Assert.Empty(day!.WorkLocations!);
+        Assert.False((await RawDay(uid, null)).ContainsKey("workLocations"));
+    }
+
+    [SkippableFact]
+    public async Task WorkEntry_WorkLocations_AreIsolatedPerProfile()
+    {
+        RequireEmulator();
+        var repo = new WorkEntryRepository(fixture.Db!);
+        var uid = NewUid();
+
+        await repo.SaveAsync(uid, WlEntry(new[] { "Kunde A" }), null, Ct);
+        await repo.SaveAsync(uid, WlEntry(new[] { "Büro" }), "second", Ct);
+        await repo.SaveAsync(uid, WlEntry(Array.Empty<string>()), "second", Ct);
+
+        Assert.Equal(new[] { "Kunde A" }, (await repo.GetDayAsync(uid, 2026, 6, 5, null, Ct))!.WorkLocations);
+        Assert.Empty((await repo.GetDayAsync(uid, 2026, 6, 5, "second", Ct))!.WorkLocations!);
+        Assert.False((await RawDay(uid, "second")).ContainsKey("workLocations"));
+    }
+
+    [SkippableFact]
+    public async Task Settings_DashboardFlags_DefaultsRoundTripAndKeepOnPutWithoutFields()
+    {
+        RequireEmulator();
+        var repo = new SettingsRepository(fixture.Db!);
+        var uid = NewUid();
+
+        await repo.SaveAsync(uid, new SettingsDto { WeeklyTargetHours = 36 }, null, Ct);
+        var defaults = await repo.GetAsync(uid, null, Ct);
+        Assert.False(defaults.ShowWorkLocationOnDashboard);
+        Assert.True(defaults.ShowHomeOfficeOnDashboard);
+
+        await repo.SaveAsync(uid, new SettingsDto
+        {
+            ShowWorkLocationOnDashboard = true,
+            ShowHomeOfficeOnDashboard = false,
+        }, null, Ct);
+        await repo.SaveAsync(uid, new SettingsDto { WeeklyTargetHours = 30 }, null, Ct); // alter Client
+
+        var kept = await repo.GetAsync(uid, null, Ct);
+        Assert.True(kept.ShowWorkLocationOnDashboard);
+        Assert.False(kept.ShowHomeOfficeOnDashboard);
     }
 
     [SkippableFact]

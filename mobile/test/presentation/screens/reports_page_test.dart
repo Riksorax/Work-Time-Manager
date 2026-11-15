@@ -24,6 +24,8 @@ import 'package:flutter_work_time/presentation/view_models/reports_view_model.da
 import 'package:flutter_work_time/presentation/view_models/settings_view_model.dart';
 
 import 'reports_page_test.mocks.dart';
+import '../../support/trend_fixture.dart';
+import '../../support/yearly_comparison_fixture.dart';
 import '../view_models/reports_view_model_test.mocks.dart';
 import '../view_models/dashboard_view_model_test.mocks.dart'
     hide MockSettingsRepository;
@@ -288,9 +290,9 @@ void main() {
     testWidgets(
         'Jahres-Tab laedt das Jahr aus der Uhr, nicht aus DateTime.now()',
         (tester) async {
-      final api = MockApiClient();
-      when(api.getMonthlyReport(any, any, profileId: anyNamed('profileId')))
-          .thenAnswer((_) async => {'monthlyOvertimeMs': 0});
+      // Angemeldet kommen die Jahreswerte vom Backend (#530).
+      final api =
+          FakeYearlyComparisonApi((c) async => yearlyComparisonJsonFor(c));
       final reportsViewModel = FakeReportsViewModel(
         initialState: ReportsState.initial(DateTime(2026, 10, 2))
             .copyWith(isLoading: false),
@@ -313,8 +315,11 @@ void main() {
       await tester.tap(find.text('Jährlich'));
       await tester.pumpAndSettle();
 
-      verify(mockWorkRepository.getWorkEntriesForMonth(2027, 1)).called(1);
-      verifyNever(mockWorkRepository.getWorkEntriesForMonth(2026, 12));
+      expect(api.totalsCalls.map((c) => c.year), [2027]);
+      // Die Vergleichskarte fragt das laufende Jahr bis heute an.
+      expect(api.calls.where((c) => c.until != null).map((c) => c.until),
+          [DateTime(2027, 1, 4)]);
+      expect(api.calls.where((c) => c.year == 2026), isEmpty);
     });
 
     testWidgets('Insights-Tab zeigt Platzhalter ohne Datenbasis',
@@ -334,6 +339,11 @@ void main() {
         settingsViewModel: settingsViewModel,
         authState:
             const AsyncValue.data(UserEntity(id: '1', email: 'test@test.com')),
+        // Trend (#531) steht oben im Insights-Tab: leere Antwort statt API.
+        extraOverrides: [
+          apiClientProvider.overrideWithValue(FakeTrendApi(
+              (c) async => emptyTrendJson(c.date, c.granularity.apiValue))),
+        ],
       ));
       await tester.pumpAndSettle();
 
@@ -384,6 +394,11 @@ void main() {
         settingsViewModel: settingsViewModel,
         authState:
             const AsyncValue.data(UserEntity(id: '1', email: 'test@test.com')),
+        // Trend (#531) steht oben im Insights-Tab: leere Antwort statt API.
+        extraOverrides: [
+          apiClientProvider.overrideWithValue(FakeTrendApi(
+              (c) async => emptyTrendJson(c.date, c.granularity.apiValue))),
+        ],
       ));
       await tester.pumpAndSettle();
 

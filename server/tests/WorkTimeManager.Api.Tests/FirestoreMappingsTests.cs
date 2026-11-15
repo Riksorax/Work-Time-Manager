@@ -119,12 +119,12 @@ public class FirestoreMappingsTests
     }
 
     [Fact]
-    public void DayMergeFields_CoversAllDayDataProperties_ExceptHomeOffice()
+    public void DayMergeFields_CoversAllDayDataProperties_ExceptOptionalFlags()
     {
         var expected = typeof(DayData).GetProperties()
             .Select(p => p.GetCustomAttributes(typeof(FirestorePropertyAttribute), false)
                 .Cast<FirestorePropertyAttribute>().Single().Name ?? p.Name)
-            .Where(n => n != "isHomeOffice")
+            .Where(n => n is not ("isHomeOffice" or "workLocations"))
             .Select(n => $"days.5.{n}")
             .OrderBy(n => n, StringComparer.Ordinal);
 
@@ -280,4 +280,159 @@ public class FirestoreMappingsTests
     [InlineData("atlantis", false)]
     public void IsValidBundesland_NullEmptyOrWhitelist(string? value, bool expected) =>
         Assert.Equal(expected, FirestoreMappings.IsValidBundesland(value));
+
+    // ── Arbeitsorte (#526) ──────────────────────────────────────────────────
+
+    private static WorkEntryDto WlDto(IReadOnlyList<string>? locations) =>
+        new() { Id = "2026-06-05", Date = HoDate.ToDateTimeOffset(), WorkLocations = locations };
+
+    [Fact]
+    public void WorkLocations_RoundTrip_PreservesOrder()
+    {
+        var doc = FirestoreMappings.ToDocument(WlDto(new[] { "Kunde A", "Büro" }));
+        var dto = FirestoreMappings.ToDto(doc, "2026-06-05");
+        Assert.Equal(new[] { "Kunde A", "Büro" }, dto.WorkLocations);
+    }
+
+    [Fact]
+    public void WorkLocations_MissingField_MapsToEmptyList_NotNull()
+    {
+        var dto = FirestoreMappings.ToDto(new DayData { Date = HoDate, WorkLocations = null }, "2026-06-05");
+        Assert.NotNull(dto.WorkLocations);
+        Assert.Empty(dto.WorkLocations!);
+    }
+
+    [Fact]
+    public void DayMergeFields_WithoutWorkLocations_OmitsPath()
+    {
+        Assert.DoesNotContain("days.5.workLocations", FirestoreMappings.DayMergeFields(WlDto(null), "5"));
+    }
+
+    [Fact]
+    public void DayMergeFields_WithWorkLocations_IncludesPath()
+    {
+        Assert.Contains("days.5.workLocations", FirestoreMappings.DayMergeFields(WlDto(new[] { "Büro" }), "5"));
+    }
+
+    [Fact]
+    public void DayMergeFields_WithEmptyWorkLocations_IncludesPath_AndIsDelete()
+    {
+        var dto = WlDto(Array.Empty<string>());
+        Assert.Contains("days.5.workLocations", FirestoreMappings.DayMergeFields(dto, "5"));
+        Assert.True(FirestoreMappings.IsWorkLocationsDelete(dto));
+        Assert.Null(FirestoreMappings.ToDocument(dto).WorkLocations);
+    }
+
+    [Fact]
+    public void IsWorkLocationsDelete_OnlyForEmptyList()
+    {
+        Assert.False(FirestoreMappings.IsWorkLocationsDelete(WlDto(null)));
+        Assert.False(FirestoreMappings.IsWorkLocationsDelete(WlDto(new[] { "Büro" })));
+    }
+
+    [Fact]
+    public void WorkLocations_Normalize_TrimsDedupesCaseInsensitive_KeepsOrderAndFirst()
+    {
+        var input = new[] { " Kunde A ", "büro", "kunde a", "Büro", "Zuhause" };
+        var expected = new[] { "Kunde A", "büro", "Zuhause" };
+        Assert.Equal(expected, FirestoreMappings.NormalizeWorkLocations(input));
+        Assert.Equal(expected, FirestoreMappings.ToDocument(WlDto(input)).WorkLocations);
+    }
+
+    [Fact]
+    public void WorkLocations_Normalize_NullStaysNull() =>
+        Assert.Null(FirestoreMappings.NormalizeWorkLocations(null));
+
+    [Fact]
+    public void IsValidWorkLocations_NullAndEmpty_AreValid()
+    {
+        Assert.True(FirestoreMappings.IsValidWorkLocations(null));
+        Assert.True(FirestoreMappings.IsValidWorkLocations(Array.Empty<string>()));
+    }
+
+    [Fact]
+    public void IsValidWorkLocations_CountLimit_FiveOkSixInvalid()
+    {
+        Assert.True(FirestoreMappings.IsValidWorkLocations(new[] { "a", "b", "c", "d", "e" }));
+        Assert.False(FirestoreMappings.IsValidWorkLocations(new[] { "a", "b", "c", "d", "e", "f" }));
+    }
+
+    [Fact]
+    public void IsValidWorkLocations_CountLimit_AppliesAfterDeduplication()
+    {
+        Assert.True(FirestoreMappings.IsValidWorkLocations(new[] { "a", "b", "c", "d", "e", "A", " b " }));
+    }
+
+    [Fact]
+    public void IsValidWorkLocations_LengthLimit_SixtyOkSixtyOneInvalid_AfterTrim()
+    {
+        Assert.True(FirestoreMappings.IsValidWorkLocations(new[] { new string('x', 60) }));
+        Assert.True(FirestoreMappings.IsValidWorkLocations(new[] { " " + new string('x', 60) + " " }));
+        Assert.False(FirestoreMappings.IsValidWorkLocations(new[] { new string('x', 61) }));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void IsValidWorkLocations_EmptyEntry_IsInvalid(string entry) =>
+        Assert.False(FirestoreMappings.IsValidWorkLocations(new[] { "Büro", entry }));
+
+    [Fact]
+    public void IsValidWorkLocations_NullEntry_IsInvalid() =>
+        Assert.False(FirestoreMappings.IsValidWorkLocations(new string[] { null! }));
+
+    [Fact]
+    public void WorkLocations_JsonWithoutField_DeserializesToNull()
+    {
+        var dto = System.Text.Json.JsonSerializer.Deserialize<WorkEntryDto>(
+            "{\"id\":\"2026-06-05\",\"date\":\"2026-06-05T00:00:00Z\"}",
+            new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
+        Assert.Null(dto!.WorkLocations);
+        Assert.DoesNotContain("days.5.workLocations", FirestoreMappings.DayMergeFields(dto, "5"));
+    }
+
+    // ── Dashboard-Einstellungen (#526) ──────────────────────────────────────
+
+    [Fact]
+    public void Settings_MissingDashboardFlags_UseDefaults()
+    {
+        var dto = FirestoreMappings.ToDto(new SettingsDocument());
+        Assert.False(dto.ShowWorkLocationOnDashboard);
+        Assert.True(dto.ShowHomeOfficeOnDashboard);
+    }
+
+    [Fact]
+    public void Settings_StoredDashboardFlags_AreReturned()
+    {
+        var dto = FirestoreMappings.ToDto(new SettingsDocument
+        {
+            ShowWorkLocationOnDashboard = true,
+            ShowHomeOfficeOnDashboard = false,
+        });
+        Assert.True(dto.ShowWorkLocationOnDashboard);
+        Assert.False(dto.ShowHomeOfficeOnDashboard);
+    }
+
+    [Fact]
+    public void Settings_PutWithoutDashboardFlags_DoesNotMergeThem()
+    {
+        var dto = System.Text.Json.JsonSerializer.Deserialize<SettingsDto>(
+            "{\"weeklyTargetHours\":36}",
+            new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web))!;
+        var fields = FirestoreMappings.SettingsMergeFields(dto);
+        Assert.DoesNotContain("showWorkLocationOnDashboard", fields);
+        Assert.DoesNotContain("showHomeOfficeOnDashboard", fields);
+    }
+
+    [Fact]
+    public void Settings_PutWithDashboardFlags_MergesThem_EvenWhenFalse()
+    {
+        var dto = new SettingsDto { ShowWorkLocationOnDashboard = false, ShowHomeOfficeOnDashboard = false };
+        var fields = FirestoreMappings.SettingsMergeFields(dto);
+        Assert.Contains("showWorkLocationOnDashboard", fields);
+        Assert.Contains("showHomeOfficeOnDashboard", fields);
+        var doc = FirestoreMappings.ToDocument(dto);
+        Assert.False(doc.ShowWorkLocationOnDashboard);
+        Assert.False(doc.ShowHomeOfficeOnDashboard);
+    }
 }

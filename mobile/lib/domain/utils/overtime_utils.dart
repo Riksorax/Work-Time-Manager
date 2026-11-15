@@ -73,6 +73,15 @@ Duration effectiveTargetForDate({
   );
 }
 
+/// Manuelle Überstunden des Eintrags (`manualOvertimeMinutes`), fehlend = 0.
+///
+/// Gehören zum Tagesanteil am Gleitzeit-Saldo: `Netto - Soll + manuell`, wie
+/// Web-Dashboard, Backend (`ReportCalculator.CalculateDailyStat`) und Berichte
+/// (#538). Dashboard (Anzeige, Saldo-Write, Basis-Rechnung beim Laden) und
+/// `CloseOpenWorkEntry` nutzen diese eine Stelle.
+Duration manualOvertimeOf(WorkEntryEntity entry) =>
+    entry.manualOvertime ?? Duration.zero;
+
 /// Ab diesem Alter wird "Jetzt" als Ende eines offenen Eintrags nicht mehr
 /// angeboten (#385): es entstünde eine riesige Dauer.
 const Duration openEntryMaxNowAge = Duration(hours: 24);

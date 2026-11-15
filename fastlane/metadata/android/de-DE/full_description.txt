@@ -1,50 +1,54 @@
-Behalte deine Arbeitszeit, Pausen und Überstunden jederzeit im Blick – mit der modernen App zur Arbeitszeiterfassung. Einfach als digitale Stempeluhr nutzen, Stundenzettel erstellen und dein Gleitzeitkonto automatisch berechnen lassen. Kostenlos und sofort ohne Anmeldung startklar!
+Behalte deine Arbeitszeit, Pausen und Überstunden im Blick: Work Time Manager ist Stempeluhr, Stundenzettel und Gleitzeitkonto in einer App. Die Grundfunktionen sind kostenlos und sofort ohne Anmeldung nutzbar.
 
-⏱ ZEITERFASSUNG, STEMPELUHR & HOME-SCREEN-WIDGET
-Starte und stoppe deine Arbeitszeiterfassung mit nur einem Tippen wie an einer Stechuhr – direkt in der App, über das Android Home-Screen-Widget oder per App-Icon-Shortcut. Work Time Manager erfasst deine Arbeitsstunden präzise, zeigt die voraussichtliche Feierabendzeit für dein Tagessoll an und berechnet dein Überstundensaldo automatisch in Echtzeit. Vergangene Arbeitstage sowie Homeoffice-Tage kannst du jederzeit im Kalender eintragen oder bearbeiten.
+⏱ ZEITERFASSUNG MIT EINEM TIPPEN
+Starte und stoppe deinen Arbeitstag in der App, über das Home-Screen-Widget oder per App-Icon-Shortcut. Die App zeigt deine Arbeitszeit, die voraussichtliche Feierabendzeit und dein Überstunden-Saldo live an. Vergessene Tage trägst du im Kalender nach oder bearbeitest sie jederzeit.
 
-☕ AUTOMATISCHE PAUSENBERECHNUNG NACH ARBZG
-Pausen nach dem deutschen Arbeitszeitgesetz (ArbZG) werden beim Stoppen automatisch abgezogen: 30 Minuten ab 6 Stunden Arbeitszeit, 45 Minuten ab 9 Stunden. Eigene Pausen lassen sich live per Pausen-Timer erfassen oder nachträglich frei anpassen.
+☕ PAUSEN AUTOMATISCH
+Fehlen beim Stoppen Pausen, ergänzt die App sie automatisch: 30 Minuten ab 6 Stunden, 45 Minuten ab 9 Stunden Arbeitszeit. Eigene Pausen erfasst du live per Pausen-Timer oder trägst sie nachträglich ein.
 
-📊 ÜBERSTUNDENKONTO, GLEITZEIT & STUNDENRECHNER
-Dein persönliches Überstundenkonto und Gleitzeitkonto zeigt dir sofort den Vergleich aus Sollstunden und Ist-Stunden. Sieh auf einen Blick, wie viele Überstunden du aufgebaut hast oder ob Minusstunden bestehen. Optional warnt dich die App automatisch beim Überschreiten deiner individuellen Überstunden- oder Minusstunden-Grenze.
+📊 ÜBERSTUNDEN & GLEITZEIT
+Dein Gleitzeitkonto vergleicht Soll- und Ist-Stunden. Auf Wunsch warnt dich die App, wenn du deine eigene Grenze für Über- oder Minusstunden erreichst, und erinnert dich an fehlenden Arbeitsbeginn, fehlendes Arbeitsende oder fehlende Pausen.
 
-📄 STUNDENZETTEL, HOMEOFFICE-AUSWERTUNG & PDF-EXPORT
-Erstelle übersichtliche Auswertungen deiner geleisteten Arbeitsstunden:
-• Tagesberichte & Kalenderübersicht (dauerhaft kostenlos)
-• Wochenberichte, Monatsberichte & Jahresberichte (Premium)
-• PDF-Export: Exportiere deinen Stundenzettel, Arbeitszeitnachweis und die Homeoffice-Auswertung (z. B. für Steuererklärung oder Arbeitgeber) als PDF
-• Produktivitäts-Insights & Wochenreflexion für deine Arbeitswoche
+🏠 HOME-OFFICE & ARBEITSORTE
+Markiere Home-Office-Tage mit einem Tippen. Je Tag kannst du einen oder mehrere Arbeitsorte eintragen, z. B. Büro, Kunde oder Baustelle, und sie auf Wunsch im Dashboard anzeigen.
 
-🗓 GESETZLICHE FEIERTAGE & URLAUBSKONTO
-Wähle dein Bundesland (alle 16 Bundesländer integriert) und lasse gesetzliche Feiertage automatisch berücksichtigen. Verwalte deinen Jahresurlaub mit Resturlaub-Anzeige und trage Urlaubstage, Krankheitstage und Sonderzeiten per Schnell-Eintrag bequem für ganze Wochen ein.
+🗓 FEIERTAGE, URLAUB & KRANKHEIT
+Wähle dein Bundesland, dann berücksichtigt die App die gesetzlichen Feiertage automatisch. Urlaubs- und Krankheitstage trägst du per Schnell-Eintrag ein, auch für mehrere Tage auf einmal. Deinen Resturlaub siehst du in den Einstellungen.
 
-👥 MEHRERE ARBEITSZEIT-PROFILE (HAUPTJOB & NEBENJOB)
-Du hast mehrere Arbeitgeber, einen Nebenjob oder getrennte Projekte? Lege separate Arbeitszeit-Profile mit eigenen Sollstunden, Arbeitstagen und getrennten Zeitkonten an (Premium).
+📈 BERICHTE, TREND & PROGNOSE (PREMIUM)
+• Wochen-, Monats- und Jahresberichte mit Arbeitszeit und Überstunden
+• Jahres-Tab mit Urlaubs-, Krankheits- und Feiertagen und dem Vergleich mit dem Vorjahr
+• Trend der letzten 12 Wochen oder 12 Monate mit Diagrammen für Arbeitszeit und Überstunden
+• Prognose deines Überstunden-Saldos zum Jahresende
+• Insights: Auswertung nach Wochentag, Heatmap nach Startzeit und ein Hinweis, wenn du viele Arbeitstage am Stück über deinem Soll liegst
+• Wochen-Reflexion: Halte fest, was gut lief und was schwer war
 
-💻 CLOUD-SYNC & WEB-APP FÜR DEN BROWSER
-Ohne Anmeldung werden alle Daten sicher lokal auf deinem Smartphone gespeichert. Optional kannst du dich per Google-Konto anmelden, deine Zeiterfassung verschlüsselt in der Cloud synchronisieren und nahtlos auch am PC im Browser unter work-time-manager.app nutzen.
+📄 PDF-AUSWERTUNGEN (PREMIUM)
+Exportiere als PDF: Wochen-, Monats- und Jahresbericht, die Home-Office-Auswertung für Monat oder Jahr und die Urlaubs- und Krankheitsauswertung, z. B. für deine Unterlagen oder deinen Arbeitgeber.
 
-🔒 DATENSCHUTZ, APP-SPERRE & DARK MODE
-• DSGVO-konform: Keine Werbung, kein Datenverkauf an Dritte
-• App-Sperre: Schütze deine Arbeitszeiten optional per PIN, Fingerabdruck oder Gesichtserkennung (Biometrie)
-• Individuelles Arbeitszeitmodell: Perfekt für Vollzeit, Teilzeit, Gleitzeit, Schichtarbeit, Vertrauensarbeitszeit und Homeoffice
-• Modernes Material Design 3 mit automatischem Dark Mode
+👥 ARBEITSZEIT-PROFILE (PREMIUM)
+Hauptjob und Nebenjob oder getrennte Projekte? Lege zusätzliche Profile mit eigenen Sollstunden, Arbeitstagen und getrennten Zeitkonten an.
+
+🎙 GOOGLE ASSISTANT (ANDROID)
+Starte, pausiere und beende den Timer per Sprachbefehl. Mit Premium fragst du auch dein Überstunden-Saldo, deinen Resturlaub und deinen Wochen-Trend ab.
+
+💻 CLOUD-SYNC & WEB-APP
+Ohne Anmeldung bleiben deine Daten auf deinem Gerät. Mit deinem Google-Konto synchronisierst du sie und nutzt die Zeiterfassung auch im Browser unter work-time-manager.app.
+
+🔒 DATENSCHUTZ & APP-SPERRE
+• Keine Werbung, kein Verkauf deiner Daten
+• App-Sperre per PIN, Fingerabdruck oder Gesichtserkennung
+• Für Vollzeit, Teilzeit, Gleitzeit, Schichtarbeit und Home-Office
+• Helles und dunkles Design, auf Deutsch und Englisch
 
 ---
 
-🆓 KOSTENLOS NUTZBAR
-Stempeluhr, Arbeitstimer, automatische Pausenberechnung, Überstundenkonto, Feiertage nach Bundesland, App-Sperre und Tagesberichte sind dauerhaft kostenlos – ohne Account-Zwang.
+🆓 KOSTENLOS
+Stempeluhr mit Widget und Shortcuts, automatische Pausen, Überstunden- und Gleitzeitkonto, Kalender und Tagesansicht, Home-Office und Arbeitsorte, Feiertage nach Bundesland, Urlaub und Krankheit per Schnell-Eintrag, Resturlaub, Warnungen und Erinnerungen, Timer per Google Assistant, App-Sperre, Cloud-Sync und Web-App.
 
-⭐ PREMIUM-FEATURES
-Wochen-, Monats- und Jahresberichte, PDF-Stundenzettel-Export, detaillierte Insights, Wochenreflexion sowie zusätzliche Arbeitszeit-Profile.
+⭐ PREMIUM (MIT ANMELDUNG)
+Wochen-, Monats- und Jahresberichte, Jahresvergleich, Trend und Prognose, Insights, Wochen-Reflexion, PDF-Auswertungen, zusätzliche Arbeitszeit-Profile und Sprachabfragen per Google Assistant.
 
 ---
-
-Ideal für:
-• Arbeitnehmer mit Gleitzeit, Vertrauensarbeitszeit oder Schichtarbeit
-• Teilzeitkräfte, Minijobber & Werkstudenten
-• Selbstständige, Freiberufler und Handwerker
-• Alle, die ihre Arbeitszeit erfassen und Überstunden berechnen möchten
 
 Hinweis: Work Time Manager dient der persönlichen Arbeitszeitübersicht und ersetzt keine gesetzlich vorgeschriebene betriebliche Zeiterfassung.

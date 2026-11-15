@@ -72,7 +72,7 @@ Flutter:          Angular:
 ─────────────     ───────────────
 CalendarView      <mat-calendar> oder eigene Grid-Impl
 ListTile          <mat-list-item>
-BarChart          Angular Material + eigene SVG oder ng2-charts
+BarChart          eigene SVG-Komponente (shared/components/charts/), keine Chart-Bibliothek
 ```
 
 ### SettingsPage
@@ -83,3 +83,17 @@ SwitchListTile    <mat-slide-toggle> in <mat-list>
 TextField         <mat-form-field> + <input matInput>
 DropdownButton    <mat-select>
 ```
+
+## Diagramme (Web, Muster seit #531)
+
+- **Eigene SVG-Komponenten** unter `web/src/app/shared/components/charts/` (`BarChartComponent`, `LineChartComponent`, Basis
+  `ChartBase`); keine Chart-Bibliothek, keine neue Abhängigkeit. Werte kommen fertig vom Backend, der Client skaliert und
+  formatiert nur (`shared/utils/chart-scale.util.ts`).
+- **Eingabe:** `points: ChartPoint[]` (Kurz- und Langbezeichnung, Wert, optional Soll bzw. Zusatzwert, `hasData`, `partial`) und
+  übersetzte `labels: ChartLabels` von der aufrufenden Komponente.
+- **Lesbarkeit:** Pixelbreite per `ResizeObserver` statt `viewBox`; Achsenbeschriftungen werden auf Handy-Breite ausgedünnt; Lücken
+  und laufender Zeitraum sind über Form erkennbar (gestrichelt, hohl), nicht nur über Farbe, und stehen in der Legende.
+- **Barrierefreiheit:** SVG `role="group"` mit `aria-label`, jede Spalte `role="img"` mit Werten im `aria-label`; ein Tab-Stopp je
+  Diagramm (Roving tabindex, Pfeile/Home/End), Hover/Fokus füllen eine Detailzeile; Textalternative als visuell versteckte Tabelle.
+- **Farben:** nur `--mat-sys-*` (Balken/Linie `primary`, Soll `on-surface`, Raster `outline-variant`, Nulllinie und Achsen
+  `on-surface-variant`), dadurch hell und dunkel ohne eigene Regeln.

@@ -1,0 +1,81 @@
+:host { display: block; }
+
+.trend-layout {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.trend-range { align-self: flex-start; }
+
+.trend-card {
+  background: var(--mat-sys-surface-container-low);
+  border-radius: 16px;
+  padding: 16px;
+  min-width: 0;
+  box-sizing: border-box;
+
+  @media (min-width: 768px) { padding: 20px 24px; }
+}
+
+.trend-title {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.trend-sub {
+  margin: 0 0 8px;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.875rem;
+}
+
+.trend-kpi-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 4px;
+  font-size: 1.125rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+
+  @media (max-width: 600px) { font-size: 1rem; }
+
+  mat-icon { color: var(--mat-sys-primary); flex: none; }
+}
+
+.trend-kpi .trend-sub { margin: 0; }
+
+.trend-forecast .trend-sub { margin: 0 0 8px; }
+
+.trend-note {
+  margin: 0;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.75rem;
+}
+
+.trend-loading {
+  display: flex;
+  justify-content: center;
+  padding: 48px 0;
+}
+
+.trend-error {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+
+  > mat-icon { color: var(--mat-sys-error); }
+}
+
+.trend-empty {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--mat-sys-on-surface-variant);
+
+  p { margin: 0; }
+}

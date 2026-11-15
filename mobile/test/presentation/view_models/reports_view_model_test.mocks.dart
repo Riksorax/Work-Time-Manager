@@ -499,6 +499,46 @@ class MockSettingsRepository extends _i1.Mock
         returnValue: _i4.Future<void>.value(),
         returnValueForMissingStub: _i4.Future<void>.value(),
       ) as _i4.Future<void>);
+
+  @override
+  bool getShowWorkLocationOnDashboard() => (super.noSuchMethod(
+        Invocation.method(
+          #getShowWorkLocationOnDashboard,
+          [],
+        ),
+        returnValue: false,
+      ) as bool);
+
+  @override
+  _i4.Future<void> setShowWorkLocationOnDashboard(bool? value) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #setShowWorkLocationOnDashboard,
+          [value],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
+
+  @override
+  bool getShowHomeOfficeOnDashboard() => (super.noSuchMethod(
+        Invocation.method(
+          #getShowHomeOfficeOnDashboard,
+          [],
+        ),
+        returnValue: false,
+      ) as bool);
+
+  @override
+  _i4.Future<void> setShowHomeOfficeOnDashboard(bool? value) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #setShowHomeOfficeOnDashboard,
+          [value],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
 }
 
 /// A class which mocks [ApiClient].
@@ -697,6 +737,21 @@ class MockApiClient extends _i1.Mock implements _i9.ApiClient {
             year,
             month,
           ],
+          {#profileId: profileId},
+        ),
+        returnValue:
+            _i4.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+      ) as _i4.Future<Map<String, dynamic>>);
+
+  @override
+  _i4.Future<Map<String, dynamic>> getYearlyLeave(
+    int? year, {
+    String? profileId,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getYearlyLeave,
+          [year],
           {#profileId: profileId},
         ),
         returnValue:

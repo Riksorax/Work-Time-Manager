@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_work_time/domain/entities/work_entry_entity.dart';
+import 'package:flutter_work_time/domain/entities/break_entity.dart';
+import 'package:flutter_work_time/domain/utils/report_calculator.dart';
 import 'package:flutter_work_time/domain/utils/yearly_report_utils.dart';
 
 void main() {
@@ -110,6 +112,55 @@ void main() {
 
       // Soll für 1 Arbeitstag: 8h, IST: 8h + 2h manuell = +2h Überstunden
       expect(summary.overtime, const Duration(hours: 2));
+    });
+  });
+
+  group('calculateCanonicalMonthSummary (#530)', () {
+    const settings =
+        ReportSettings(weeklyTargetHours: 40, workdays: [1, 2, 3, 4, 5]);
+
+    test('entspricht calculateMonthlyReport (netto, Überstunden, Tage)', () {
+      final entries = [
+        // Mo 2.3.2026: 9 h brutto, 30 min Pause
+        workEntry(DateTime(2026, 3, 2), hours: 9).copyWith(breaks: [
+          BreakEntity(
+              id: 'b',
+              name: 'Pause',
+              start: DateTime(2026, 3, 2, 12),
+              end: DateTime(2026, 3, 2, 12, 30)),
+        ]),
+        // Sa 7.3.2026: Zusatztag ohne Soll
+        workEntry(DateTime(2026, 3, 7), hours: 2),
+        specialEntry(DateTime(2026, 3, 9), WorkEntryType.vacation),
+        // Krank am Sonntag: zählt als gearbeitet und Soll
+        specialEntry(DateTime(2026, 3, 8), WorkEntryType.sick),
+        specialEntry(DateTime(2026, 3, 10), WorkEntryType.holiday),
+      ];
+      final s = calculateCanonicalMonthSummary(
+          year: 2026, month: 3, entriesForMonth: entries, settings: settings);
+      final r = calculateMonthlyReport(
+          entries, DateTime(2026, 3), settings, Duration.zero);
+
+      expect(s.month, 3);
+      expect(s.netWorkDuration, r.totalWorked - r.totalBreaks);
+      expect(s.overtime, r.monthlyOvertime);
+      expect(s.workDays, r.workDays);
+      // 8:30 + 2:00 + 3 x 8:00 Abwesenheit
+      expect(s.netWorkDuration, const Duration(hours: 34, minutes: 30));
+      // Soll: Mo + 3 Abwesenheitstage = 32 h; Sa ohne Soll
+      expect(s.overtime, const Duration(hours: 2, minutes: 30));
+      expect(s.workDays, 5);
+      expect(s.vacationDays, 1);
+      expect(s.sickDays, 1);
+      expect(s.holidayDays, 1);
+    });
+
+    test('leerer Monat', () {
+      final s = calculateCanonicalMonthSummary(
+          year: 2026, month: 2, entriesForMonth: const [], settings: settings);
+      expect(s.netWorkDuration, Duration.zero);
+      expect(s.overtime, Duration.zero);
+      expect(s.workDays, 0);
     });
   });
 }

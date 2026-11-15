@@ -110,6 +110,32 @@ void main() {
         const Duration(hours: 2) + const Duration(hours: 1, minutes: 15));
   });
 
+  test(
+      'Saldo mit manuellen Überstunden: alt + Netto - Soll + manuell (#538, '
+      'wie Web retroDeltaMs)', () async {
+    overtime.stored = const Duration(hours: 2);
+    final e =
+        openEntry(friday).copyWith(manualOvertime: const Duration(minutes: 30));
+    seed(e);
+    // 10 h brutto, 45 min Auto-Pause -> 9:15 netto, Soll 8:00 -> +1:15,
+    // manuell +0:30 -> Delta +1:45.
+    await build()(entry: e, end: DateTime(2026, 10, 2, 18), dailyTarget: eight);
+    expect(overtime.savedOvertimes.single,
+        const Duration(hours: 2) + const Duration(hours: 1, minutes: 45));
+    expect(work.saved.single.manualOvertime, const Duration(minutes: 30));
+  });
+
+  test('manuelle Überstunden kommen aus dem frischen Stand (#538)', () async {
+    overtime.stored = Duration.zero;
+    final passed = openEntry(friday);
+    seed(passed.copyWith(manualOvertime: const Duration(minutes: -20)));
+    // 4 h Netto - 8 h - 0:20 = -4:20
+    await build()(
+        entry: passed, end: DateTime(2026, 10, 2, 12), dailyTarget: eight);
+    expect(overtime.savedOvertimes.single,
+        const Duration(hours: -4, minutes: -20));
+  });
+
   test('Saldo am Zusatztag (Soll 0): volle Netto-Dauer, Pause abgezogen',
       () async {
     overtime.stored = const Duration(minutes: 30);

@@ -167,6 +167,21 @@ void main() {
       expect(s.gateway.saves, hasLength(1));
       expect(s.gateway.last['status'], 'running');
     }, setUp: (h) => h.seed(entryOf(mo, start: at(7, 30))));
+
+    // #538: der Tagessaldo enthält manuelle Überstunden; das Tagessoll im
+    // Widget bleibt trotzdem das Soll (8 h), nicht Soll - manuell.
+    widgetScenario('Tagessoll mit manuellen Überstunden bleibt 8 h', at(12),
+        (s) {
+      startSync(s);
+      expect(s.gateway.last['status'], 'running');
+      expect(s.gateway.last['targetMinutes'], 480);
+
+      s.h.act(s.h.vm.startOrStopTimer);
+      expect(s.gateway.last['status'], 'stopped');
+      expect(s.gateway.last['targetMinutes'], 480);
+    },
+        setUp: (h) => h.seed(entryOf(mo, start: at(8))
+            .copyWith(manualOvertime: const Duration(minutes: 30))));
   });
 
   group('Auth und Profil', () {

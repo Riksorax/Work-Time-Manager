@@ -20,6 +20,7 @@ import {
   BatchQuickEntryDialogResult,
 } from './components/batch-quick-entry-dialog/batch-quick-entry-dialog';
 import { ReportsService } from './reports.service';
+import { LanguageService } from '../../core/services/language';
 import { WebPremiumService } from '../../core/services/web-premium';
 import { WorkEntry, WorkEntryType } from '../../shared/models/index';
 import { toDateKey } from '../../domain/services/report-calculator';
@@ -27,6 +28,13 @@ import { Router } from '@angular/router';
 import { LeaveBalanceService } from '../../core/services/leave-balance';
 import { LeaveBalanceCardComponent } from '../../shared/components/leave-balance-card/leave-balance-card';
 import { HomeOfficeCardComponent } from '../../shared/components/home-office-card/home-office-card';
+import { YearlyComparisonCardComponent } from '../../shared/components/yearly-comparison-card/yearly-comparison-card';
+import { YearlyComparisonLockedComponent } from '../../shared/components/yearly-comparison-card/yearly-comparison-locked';
+import { formatDurationHm, formatSignedDurationHm } from '../../shared/utils/duration-format.util';
+import { TrendViewComponent } from './components/trend-view/trend-view';
+import { TrendViewService } from './components/trend-view/trend-view.service';
+import { LeaveReportPrintComponent } from './components/leave-report-print/leave-report-print';
+import { LeaveReportPrintService } from './components/leave-report-print/leave-report-print.service';
 
 @Component({
   selector: 'app-reports',
@@ -41,8 +49,15 @@ import { HomeOfficeCardComponent } from '../../shared/components/home-office-car
     CalendarComponent,
     LeaveBalanceCardComponent,
     HomeOfficeCardComponent,
+    YearlyComparisonCardComponent,
+    YearlyComparisonLockedComponent,
+    TrendViewComponent,
+    LeaveReportPrintComponent,
     TranslatePipe,
   ],
+  // Trend (#531): Zustand (Wochen/Monate) lebt mit der Berichtsseite, geladen wird nur im sichtbaren Tab.
+  // Urlaubs-/Krankheitsauswertung (#284): Lade- und Druckzustand lebt mit der Berichtsseite.
+  providers: [TrendViewService, LeaveReportPrintService],
   templateUrl: './reports.html',
   styleUrl: './reports.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -50,11 +65,13 @@ import { HomeOfficeCardComponent } from '../../shared/components/home-office-car
 export class ReportsComponent {
   protected readonly svc        = inject(ReportsService);
   protected readonly leave      = inject(LeaveBalanceService);
+  protected readonly leavePrint = inject(LeaveReportPrintService);
   private  readonly router      = inject(Router);
   private  readonly premiumSvc  = inject(WebPremiumService);
   private  readonly dialog      = inject(MatDialog);
   private  readonly snackbar    = inject(MatSnackBar);
   private  readonly translate   = inject(TranslateService);
+  private  readonly language    = inject(LanguageService);
   private  readonly injector    = inject(Injector);
   private  readonly document    = inject(DOCUMENT);
   private  readonly multiSelectToggle = viewChild('multiSelectToggle', { read: ElementRef<HTMLElement> });
@@ -90,7 +107,24 @@ export class ReportsComponent {
       await this.onPresentPaywall();
       return;
     }
+    // Eine vorher gedruckte Urlaubs-/Krankheitsauswertung darf hier nicht erscheinen (#284).
+    this.leavePrint.endPrintMode();
     this.document.defaultView?.print();
+  }
+
+  /**
+   * Urlaubs- und Krankheitsauswertung drucken (#284): Premium, sonst Paywall. Lädt Jahr und aktives Profil frisch vom
+   * Backend und druckt erst danach; scheitert das Laden, gibt es eine Meldung und keinen Druckdialog.
+   */
+  async onPrintLeave(): Promise<void> {
+    if (!this.svc.isPremium()) {
+      await this.onPresentPaywall();
+      return;
+    }
+    const result = await this.leavePrint.print(this.leave.year());
+    if (result === 'error') {
+      this.snackbar.open(this.translate.instant('leave.printLoadError'), 'OK', { duration: 4000 });
+    }
   }
 
   async onPresentPaywall(): Promise<void> {
@@ -107,21 +141,25 @@ export class ReportsComponent {
 
   // ── Template helpers ────────────────────────────────────────────────────────
 
+  /** Kurzer Wochentag und Tag der Berichtszeile in der App-Sprache („Mo. 2.“ / „Mon 2.“); `LOCALE_ID` bleibt fest Deutsch (#551). */
+  dayLabel(date: Date): string {
+    // Mit `day` formatiert, damit der Wochentag in Formatform erscheint („Mo.“ statt der Alleinstehend-Form „Mo“).
+    const parts = new Intl.DateTimeFormat(this.language.locale(), { weekday: 'short', day: 'numeric' }).formatToParts(date);
+    const part = (type: string): string => parts.find(p => p.type === type)?.value ?? '';
+    return `${part('weekday')} ${part('day')}.`;
+  }
+
+  /** Ausgeschriebener Wochentag mit Datum für das `aria-label` der Berichtszeile in der App-Sprache. */
+  dayAriaLabel(date: Date): string {
+    return new Intl.DateTimeFormat(this.language.locale(), { weekday: 'long', day: 'numeric', month: 'long' }).format(date);
+  }
+
   formatDuration(ms: number): string {
-    if (!isFinite(ms)) return '00:00';
-    const abs = Math.abs(ms);
-    const h   = Math.floor(abs / 3600000);
-    const m   = Math.floor((abs % 3600000) / 60000);
-    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    return formatDurationHm(ms);
   }
 
   formatOvertime(ms: number): string {
-    if (!isFinite(ms)) return '+00:00';
-    const sign = ms >= 0 ? '+' : '-';
-    const abs  = Math.abs(ms);
-    const h    = Math.floor(abs / 3600000);
-    const m    = Math.floor((abs % 3600000) / 60000);
-    return `${sign}${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    return formatSignedDurationHm(ms);
   }
 
   entryTypeLabel(type: WorkEntryType): string {

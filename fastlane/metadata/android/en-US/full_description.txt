@@ -1,43 +1,53 @@
-Track your work hours, breaks, and overtime effortlessly – with a modern, easy-to-use work time tracker and digital time clock. Create timesheets, manage your flextime balance, and calculate overtime automatically. Free to use and ready immediately without sign-up!
+Keep track of your working hours, breaks, and overtime: Work Time Manager is a time clock, timesheet, and flextime account in one app. The core features are free and ready to use right away without signing in.
 
-⏱ WORK TIME TRACKER & DIGITAL TIME CLOCK
-Start and stop your work timer with a single tap. Work Time Manager tracks your working hours accurately, shows your projected end-of-day time, and calculates your overtime balance in real time. Forgot to clock in? Easily add or edit start times, end times, and past workdays in the calendar at any time.
+⏱ ONE-TAP TIME TRACKING
+Start and stop your workday in the app, from the home screen widget, or with an app icon shortcut. The app shows your working time, your expected end of day, and your overtime balance live. Add forgotten days in the calendar or edit them at any time.
 
-☕ AUTOMATIC BREAK CALCULATION
-Statutory breaks under German labor law (ArbZG) are calculated automatically when stopping the timer: 30 minutes after 6 hours of work, 45 minutes after 9 hours. You can also track custom breaks live or edit them manually at any time.
+☕ AUTOMATIC BREAKS
+If breaks are missing when you stop the timer, the app adds them automatically: 30 minutes after 6 hours, 45 minutes after 9 hours of work. Track your own breaks live with the break timer or add them later.
 
-📊 OVERTIME TRACKER & FLEXTIME BALANCE
-Your personal overtime account compares target hours vs. actual hours worked at a glance. Always know how much overtime you have accumulated or how many hours remain. Optional notifications warn you when exceeding custom overtime or undertime thresholds.
+📊 OVERTIME & FLEXTIME
+Your flextime account compares target and actual hours. If you like, the app warns you when you reach your own overtime or undertime limit, and reminds you of a missing start of work, end of work, or break.
 
-📄 TIMESHEETS, REPORTS & PDF EXPORT
-Generate clear reports of your working hours:
-• Daily reports & calendar overview (free forever)
-• Weekly, monthly & yearly reports (Premium)
-• PDF Export: Export and print clean PDF timesheets and work time records for your files or employer
-• Productivity insights & weekly reflection to better understand your work-life balance
+🏠 HOME OFFICE & WORK LOCATIONS
+Mark home office days with one tap. Add one or more work locations per day, such as office, client, or construction site, and show them on the dashboard if you like.
 
-🗓 PUBLIC HOLIDAYS & QUICK ENTRY FOR VACATION
-Select your German federal state (all 16 states supported) to automatically account for public holidays. Log vacation days, sick leave, and special entries for single days or entire weeks at once using Batch Quick Entry.
+🗓 PUBLIC HOLIDAYS, VACATION & SICK LEAVE
+Select your German federal state and the app takes public holidays into account automatically. Log vacation and sick days with Quick Entry, also for several days at once. Your remaining leave is shown in the settings.
 
-👥 MULTIPLE WORK PROFILES (MAIN JOB & SIDE JOB)
-Working multiple jobs, freelance projects, or separate employers? Create independent work profiles with their own target hours, workdays, and overtime balances (Premium).
+📈 REPORTS, TREND & FORECAST (PREMIUM)
+• Weekly, monthly, and yearly reports with working time and overtime
+• Year tab with vacation, sick, and public holiday days and a comparison with the previous year
+• Trend over the last 12 weeks or 12 months with charts for working time and overtime
+• Forecast of your overtime balance at the end of the year
+• Insights: analysis by weekday, heatmap by start time, and a notice when you have worked above your target for many workdays in a row
+• Weekly reflection: note what went well and what was hard
 
-💻 CLOUD SYNC & WEB APP FOR BROWSER
-Without sign-in, all data is stored safely and locally on your device. Optionally sign in with your Google account to sync your work hours across devices and access the web app on your PC at work-time-manager.app.
+📄 PDF REPORTS (PREMIUM)
+Export as PDF: weekly, monthly, and yearly reports, the home office report for a month or year, and the vacation and sick leave report, e.g. for your records or your employer.
 
-🔒 PRIVACY, APP LOCK & DARK MODE
-• GDPR compliant: No ads, no selling of personal data
-• App Lock: Protect your timesheet with PIN, fingerprint, or face unlock (biometrics)
-• Flexible schedules: Ideal for full-time, part-time, flextime, shift work, and remote work
-• Clean Material Design 3 interface with automatic Dark Mode
+👥 WORK PROFILES (PREMIUM)
+Main job and side job, or separate projects? Create additional profiles with their own target hours, workdays, and separate time accounts.
+
+🎙 GOOGLE ASSISTANT (ANDROID)
+Start, pause, and stop the timer by voice. With Premium you can also ask for your overtime balance, your remaining leave, and your weekly trend.
+
+💻 CLOUD SYNC & WEB APP
+Without signing in, your data stays on your device. Sign in with your Google account to sync it and use time tracking in your browser at work-time-manager.app.
+
+🔒 PRIVACY & APP LOCK
+• No ads, no selling of your data
+• App lock with PIN, fingerprint, or face unlock
+• For full-time, part-time, flextime, shift work, and home office
+• Light and dark design, in English and German
 
 ---
 
-🆓 FREE FEATURES
-Time clock timer, automatic break calculation, overtime balance, public holidays by state, biometric app lock, and daily reports are permanently free – no account required.
+🆓 FREE
+Time clock with widget and shortcuts, automatic breaks, overtime and flextime account, calendar and daily view, home office and work locations, public holidays by state, vacation and sick leave with Quick Entry, remaining leave, warnings and reminders, timer via Google Assistant, app lock, cloud sync, and web app.
 
-⭐ PREMIUM FEATURES
-Weekly, monthly, and yearly reports, PDF timesheet export, productivity insights, weekly reflection, and multiple work profiles.
+⭐ PREMIUM (SIGN-IN REQUIRED)
+Weekly, monthly, and yearly reports, year comparison, trend and forecast, insights, weekly reflection, PDF reports, additional work profiles, and voice queries via Google Assistant.
 
 ---
 

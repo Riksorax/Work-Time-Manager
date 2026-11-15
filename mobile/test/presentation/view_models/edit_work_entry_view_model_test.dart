@@ -207,6 +207,68 @@ void main() {
       });
     });
 
+    group('workLocations (#526)', () {
+      WorkEntryEntity capture() =>
+          verify(mockCallback.call(captureAny)).captured.single
+              as WorkEntryEntity;
+      const two = ['Büro', 'Kunde A'];
+
+      test('Initialzustand bereinigt, setWorkLocations ändert den State', () {
+        final entry =
+            initialEntry.copyWith(workLocations: const [' Büro ', 'büro']);
+        final p = editWorkEntryViewModelProvider(entry);
+        expect(container.read(p).workLocations, ['Büro']);
+        container.read(p.notifier).setWorkLocations(const ['A', 'a', 'B']);
+        expect(container.read(p).workLocations, ['A', 'B']);
+      });
+
+      test('saveChanges übergibt die Orte bei Typ Arbeit', () async {
+        final vm = container
+            .read(editWorkEntryViewModelProvider(initialEntry).notifier);
+        vm.setWorkLocations(two);
+        await vm.saveChanges();
+        expect(capture().workLocations, two);
+      });
+
+      test('alle Orte entfernt: [] (löscht)', () async {
+        final entry = initialEntry.copyWith(workLocations: two);
+        final vm =
+            container.read(editWorkEntryViewModelProvider(entry).notifier);
+        vm.setWorkLocations(const []);
+        await vm.saveChanges();
+        final saved = capture();
+        expect(saved.workLocations, isNotNull);
+        expect(saved.workLocations, isEmpty);
+      });
+
+      test('frischer Eintrag (Orte null) ohne Orte bleibt null', () async {
+        await container
+            .read(editWorkEntryViewModelProvider(initialEntry).notifier)
+            .saveChanges();
+        expect(capture().workLocations, isNull);
+      });
+
+      test('bei Typ Urlaub bleibt der Originalwert', () async {
+        final entry = initialEntry.copyWith(workLocations: two);
+        final vm =
+            container.read(editWorkEntryViewModelProvider(entry).notifier);
+        vm.setType(WorkEntryType.vacation);
+        vm.setWorkLocations(const ['Anders']);
+        await vm.saveChanges();
+        final saved = capture();
+        expect(saved.type, WorkEntryType.vacation);
+        expect(saved.workLocations, two);
+      });
+
+      test('bei Typ Urlaub bleibt auch null erhalten', () async {
+        final vm = container
+            .read(editWorkEntryViewModelProvider(initialEntry).notifier);
+        vm.setType(WorkEntryType.sick);
+        await vm.saveChanges();
+        expect(capture().workLocations, isNull);
+      });
+    });
+
     test('saveChanges should not save if work start is missing for type work',
         () async {
       final entryWithoutStart =

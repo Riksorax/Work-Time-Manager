@@ -44,7 +44,7 @@ describe('DashboardComponent Home-Office-Toggle (#277)', () => {
           isLoading: signal(false), holidayToday: signal(null), isLoggedIn: signal(false), isSaving,
           netDuration: signal(0), grossDuration: signal(0), dailyOvertime: signal(0), totalOvertime: signal(0),
           isTimerRunning: signal(false), isBreakRunning: signal(false), expectedEndTime: signal(null),
-          expectedEndTotalZero: signal(null), breaks: signal([]), workEntry, setHomeOffice,
+          expectedEndTotalZero: signal(null), showWorkLocation: signal(false), showHomeOffice: signal(true), breaks: signal([]), workEntry, setHomeOffice,
         } },
         { provide: OpenEntryService, useValue: createFakeOpenEntry() },
         { provide: Router, useValue: { navigate: vi.fn() } },

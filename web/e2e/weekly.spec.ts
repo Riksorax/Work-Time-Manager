@@ -70,11 +70,11 @@ test.describe('Layout mit Konto', () => {
       expect(box!.x + box!.width).toBeLessThanOrEqual(width);
     });
 
-    test(`Reports: alle vier Tabs sind bei ${width}px ohne Blättern sichtbar`, async ({ page, account }) => {
+    test(`Reports: alle fünf Tabs sind bei ${width}px ohne Blättern sichtbar`, async ({ page, account }) => {
       await page.setViewportSize({ width, height: 800 });
       await account.signIn({ path: '/reports' });
-      for (const name of ['Täglich', 'Wöchentlich', 'Monatlich', 'Jahr']) {
-        const box = await page.getByRole('tab', { name }).boundingBox();
+      for (const name of ['Täglich', 'Wöchentlich', 'Monatlich', 'Jahr', 'Trend']) {
+        const box = await page.getByRole('tab', { name, exact: true }).boundingBox();
         expect(box!.x, `${name} links`).toBeGreaterThanOrEqual(0);
         expect(box!.x + box!.width, `${name} rechts`).toBeLessThanOrEqual(width);
       }

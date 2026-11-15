@@ -1,0 +1,153 @@
+:host { display: block; }
+
+.yc-card {
+  background: var(--mat-sys-surface-container-low);
+  border-radius: 16px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-sizing: border-box;
+  min-height: 72px;
+
+  @media (min-width: 768px) { padding: 20px 24px; }
+}
+
+.yc-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.yc-icon { color: var(--mat-sys-primary); }
+
+.yc-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.yc-until {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.875rem;
+
+  mat-icon { font-size: 18px; width: 18px; height: 18px; }
+}
+
+.yc-muted,
+.yc-note {
+  margin: 0;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.yc-note { font-size: 0.75rem; }
+
+.yc-loading { display: flex; justify-content: center; }
+
+.yc-error {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+// ── Tabelle ──────────────────────────────────────────────────────────────────
+.yc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+
+  th, td {
+    padding: 6px 0 6px 12px;
+    text-align: right;
+    vertical-align: top;
+    border-bottom: 1px solid var(--mat-sys-outline-variant);
+  }
+
+  th:first-child, td:first-child { padding-left: 0; }
+
+  thead th {
+    font-weight: 500;
+    font-size: 0.875rem;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  tbody th {
+    text-align: left;
+    font-weight: 400;
+  }
+
+  tbody tr:last-child > * { border-bottom: none; }
+
+  .yc-corner { text-align: left; }
+}
+
+.yc-diff {
+  white-space: nowrap;
+}
+
+.yc-percent {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.yc-nodata {
+  color: var(--mat-sys-on-surface-variant);
+  font-style: italic;
+}
+
+// Handy-Breite: Kennzahl als eigene Zeile über den drei Werten, kein horizontales Scrollen. Die Tabellensemantik
+// bleibt über die expliziten Rollen im Template erhalten.
+@media screen and (max-width: 479px) {
+  .yc-table {
+    display: block;
+
+    thead, tbody { display: block; }
+
+    tr {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      column-gap: 8px;
+      border-bottom: 1px solid var(--mat-sys-outline-variant);
+      padding: 6px 0;
+    }
+
+    tbody tr:last-child { border-bottom: none; }
+
+    th, td {
+      display: block;
+      padding: 0;
+      border-bottom: none;
+      text-align: right;
+    }
+
+    // Die Ecke „Kennzahl“ bleibt für Screenreader, belegt aber keine Spalte.
+    .yc-corner {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+    }
+
+    tbody th {
+      grid-column: 1 / -1;
+      text-align: left;
+      font-weight: 500;
+      margin-bottom: 2px;
+    }
+  }
+
+  .yc-diff { white-space: normal; }
+}
+
+@media print {
+  // Wie die übrigen Karten des Druckbereichs, nur nicht über eine Seitengrenze teilen.
+  .yc-card { break-inside: avoid; }
+}

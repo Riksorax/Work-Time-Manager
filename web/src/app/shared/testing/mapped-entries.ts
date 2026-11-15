@@ -17,6 +17,8 @@ export interface EntryDtoFixture {
   isManuallyEntered?: boolean;
   manualOvertimeMinutes?: number | null;
   description?: string | null;
+  isHomeOffice?: boolean | null;
+  workLocations?: string[] | null;
   breaks?: { id: string; name: string; isAutomatic: boolean; start: string; end: string | null }[];
 }
 

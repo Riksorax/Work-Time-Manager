@@ -491,6 +491,58 @@ final class TimerActionInboxProvider extends $FunctionalProvider<
 
 String _$timerActionInboxHash() => r'362a5e83cc486bf5ccffd0d6c82c76494285bfc4';
 
+/// Briefkasten für Sprachabfragen des Assistant (#287). Prozessweites
+/// Singleton wie [timerActionInbox]; im Test überschreibbar.
+
+@ProviderFor(assistantQueryInbox)
+const assistantQueryInboxProvider = AssistantQueryInboxProvider._();
+
+/// Briefkasten für Sprachabfragen des Assistant (#287). Prozessweites
+/// Singleton wie [timerActionInbox]; im Test überschreibbar.
+
+final class AssistantQueryInboxProvider extends $FunctionalProvider<
+    AssistantQueryInbox,
+    AssistantQueryInbox,
+    AssistantQueryInbox> with $Provider<AssistantQueryInbox> {
+  /// Briefkasten für Sprachabfragen des Assistant (#287). Prozessweites
+  /// Singleton wie [timerActionInbox]; im Test überschreibbar.
+  const AssistantQueryInboxProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'assistantQueryInboxProvider',
+          isAutoDispose: false,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$assistantQueryInboxHash();
+
+  @$internal
+  @override
+  $ProviderElement<AssistantQueryInbox> $createElement(
+          $ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  AssistantQueryInbox create(Ref ref) {
+    return assistantQueryInbox(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(AssistantQueryInbox value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<AssistantQueryInbox>(value),
+    );
+  }
+}
+
+String _$assistantQueryInboxHash() =>
+    r'd0ff67499a8d42f8ce4afdcded1a21cec559c593';
+
 /// App-Icon-Shortcuts „Einstempeln“/„Ausstempeln“ (#274, nur Android).
 
 @ProviderFor(shortcutService)
@@ -535,6 +587,56 @@ final class ShortcutServiceProvider extends $FunctionalProvider<ShortcutService,
 }
 
 String _$shortcutServiceHash() => r'6d96e1bd51bc4ec3b55e6a463315b28199275232';
+
+/// PDF-Export der Berichte; im Test überschreibbar, damit Widget-Tests die
+/// übergebenen Werte prüfen können (#535).
+
+@ProviderFor(pdfReportService)
+const pdfReportServiceProvider = PdfReportServiceProvider._();
+
+/// PDF-Export der Berichte; im Test überschreibbar, damit Widget-Tests die
+/// übergebenen Werte prüfen können (#535).
+
+final class PdfReportServiceProvider extends $FunctionalProvider<
+    PdfReportService,
+    PdfReportService,
+    PdfReportService> with $Provider<PdfReportService> {
+  /// PDF-Export der Berichte; im Test überschreibbar, damit Widget-Tests die
+  /// übergebenen Werte prüfen können (#535).
+  const PdfReportServiceProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'pdfReportServiceProvider',
+          isAutoDispose: false,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$pdfReportServiceHash();
+
+  @$internal
+  @override
+  $ProviderElement<PdfReportService> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  PdfReportService create(Ref ref) {
+    return pdfReportService(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(PdfReportService value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<PdfReportService>(value),
+    );
+  }
+}
+
+String _$pdfReportServiceHash() => r'88c0a03f7d8f8b52daef3a5f0c7509d6346b31d2';
 
 @ProviderFor(authRepository)
 const authRepositoryProvider = AuthRepositoryProvider._();
@@ -660,7 +762,62 @@ final class WorkRepositoryProvider
   }
 }
 
-String _$workRepositoryHash() => r'3b59252ad86522d920133f40d32b0057570fb130';
+String _$workRepositoryHash() => r'f3376fefe33d50129e6b958abc0fb29eeb0cf412';
+
+/// Verlauf der Arbeitsorte je Nutzer und Profil (#526) für die Vorschläge.
+/// Wird aus den Einträgen gespeist, die [workRepository] ohnehin liest oder
+/// speichert (kein zusätzlicher Lesezugriff).
+
+@ProviderFor(workLocationHistory)
+const workLocationHistoryProvider = WorkLocationHistoryProvider._();
+
+/// Verlauf der Arbeitsorte je Nutzer und Profil (#526) für die Vorschläge.
+/// Wird aus den Einträgen gespeist, die [workRepository] ohnehin liest oder
+/// speichert (kein zusätzlicher Lesezugriff).
+
+final class WorkLocationHistoryProvider extends $FunctionalProvider<
+    WorkLocationHistory,
+    WorkLocationHistory,
+    WorkLocationHistory> with $Provider<WorkLocationHistory> {
+  /// Verlauf der Arbeitsorte je Nutzer und Profil (#526) für die Vorschläge.
+  /// Wird aus den Einträgen gespeist, die [workRepository] ohnehin liest oder
+  /// speichert (kein zusätzlicher Lesezugriff).
+  const WorkLocationHistoryProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'workLocationHistoryProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$workLocationHistoryHash();
+
+  @$internal
+  @override
+  $ProviderElement<WorkLocationHistory> $createElement(
+          $ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  WorkLocationHistory create(Ref ref) {
+    return workLocationHistory(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(WorkLocationHistory value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<WorkLocationHistory>(value),
+    );
+  }
+}
+
+String _$workLocationHistoryHash() =>
+    r'db28968532097b08fc5261b3b803569166634880';
 
 @ProviderFor(overtimeRepository)
 const overtimeRepositoryProvider = OvertimeRepositoryProvider._();

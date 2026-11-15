@@ -17,6 +17,12 @@ public sealed record SettingsDto
     /// <summary>Standard-Urlaubsanspruch, wenn das Feld nie gesetzt wurde (#278).</summary>
     public const int DefaultVacationDaysPerYear = 30;
 
+    /// <summary>Standard, wenn <c>showWorkLocationOnDashboard</c> nie gesetzt wurde (#526).</summary>
+    public const bool DefaultShowWorkLocationOnDashboard = false;
+
+    /// <summary>Standard, wenn <c>showHomeOfficeOnDashboard</c> nie gesetzt wurde (#526).</summary>
+    public const bool DefaultShowHomeOfficeOnDashboard = true;
+
     /// <summary>
     /// Urlaubsanspruch in ganzen Tagen pro Jahr (0-366, #278). Im GET immer gesetzt (fehlt das
     /// Feld im Dokument: 30). Im PUT optional: <c>null</c> (alte Clients) lässt den gespeicherten
@@ -30,4 +36,16 @@ public sealed record SettingsDto
     /// Wert unangetastet, <c>""</c> löscht das Feld, ein ungültiger Wert ergibt 400.
     /// </summary>
     public string? Bundesland { get; init; }
+
+    /// <summary>
+    /// Arbeitsort im Dashboard anzeigen (#526). Im GET immer ein konkreter Wert (fehlt im Dokument:
+    /// <c>false</c>). Im PUT: <c>null</c>/fehlend lässt den gespeicherten Wert unangetastet.
+    /// </summary>
+    public bool? ShowWorkLocationOnDashboard { get; init; }
+
+    /// <summary>
+    /// Home-Office im Dashboard anzeigen (#526). Im GET immer ein konkreter Wert (fehlt im Dokument:
+    /// <c>true</c>). Im PUT: <c>null</c>/fehlend lässt den gespeicherten Wert unangetastet.
+    /// </summary>
+    public bool? ShowHomeOfficeOnDashboard { get; init; }
 }

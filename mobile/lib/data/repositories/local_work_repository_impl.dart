@@ -7,6 +7,7 @@ import 'package:flutter_work_time/core/utils/time_precision.dart';
 import '../../domain/entities/break_entity.dart';
 import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/repositories/work_repository.dart';
+import '../../domain/utils/work_locations.dart';
 import '../models/work_entry_model.dart';
 
 /// Lokales Repository, das Arbeitseinträge in SharedPreferences speichert.
@@ -57,11 +58,20 @@ class LocalWorkRepositoryImpl implements WorkRepository {
             )
           : WorkEntryType.work,
       isHomeOffice: data['isHomeOffice'] as bool? ?? false,
+      workLocations: readWorkLocations(data['workLocations']),
     );
   }
 
-  /// Konvertiert WorkEntryEntity zu lokalen JSON-Daten
-  Map<String, dynamic> _toLocalJson(WorkEntryEntity entry) {
+  /// Konvertiert WorkEntryEntity zu lokalen JSON-Daten.
+  ///
+  /// Arbeitsorte (#526) wie im API-Vertrag: `null` behält die bisher
+  /// gespeicherten Orte ([previous] = bisheriger Tageseintrag), `[]` entfernt
+  /// das Feld, eine Liste ersetzt es (bereinigt).
+  Map<String, dynamic> _toLocalJson(WorkEntryEntity entry,
+      [Map<String, dynamic>? previous]) {
+    final locations = entry.workLocations != null
+        ? normalizeWorkLocations(entry.workLocations)
+        : readWorkLocations(previous?['workLocations']);
     return {
       'workStart': roundToMinuteOrNull(entry.workStart)?.toIso8601String(),
       'workEnd': roundToMinuteOrNull(entry.workEnd)?.toIso8601String(),
@@ -73,6 +83,7 @@ class LocalWorkRepositoryImpl implements WorkRepository {
       'isManuallyEntered': entry.isManuallyEntered,
       'type': entry.type.name,
       'isHomeOffice': entry.isHomeOffice,
+      if (locations.isNotEmpty) 'workLocations': locations,
     };
   }
 
@@ -218,7 +229,10 @@ class LocalWorkRepositoryImpl implements WorkRepository {
 
     // Füge/Update den Tag
     final daysMap = monthData['days'] as Map<String, dynamic>;
-    daysMap[dayKey] = _toLocalJson(entry);
+    final previousRaw = daysMap[dayKey];
+    final dayJson = _toLocalJson(entry,
+        previousRaw is Map ? Map<String, dynamic>.from(previousRaw) : null);
+    daysMap[dayKey] = dayJson;
 
     // Speichere zurück
     try {
@@ -228,8 +242,7 @@ class LocalWorkRepositoryImpl implements WorkRepository {
       await _addMonthKeyToIndex(monthKey);
 
       logger.i('[LocalWorkRepository] Erfolgreich gespeichert: ${entry.date}');
-      logger.i(
-          '[LocalWorkRepository] Gespeicherte Daten: ${_toLocalJson(entry)}');
+      logger.i('[LocalWorkRepository] Gespeicherte Daten: $dayJson');
     } catch (e) {
       logger.e('[LocalWorkRepository] Fehler beim Speichern: $e');
       rethrow;

@@ -34,6 +34,11 @@ function mergeSettings(raw: Partial<UserSettings> & { workdaysPerWeek?: number }
     workdays: normalizeWorkdays(merged.workdays),
     vacationDaysPerYear: normalizeVacationDays(raw.vacationDaysPerYear),
     bundesland: normalizeBundesland(raw.bundesland),
+    // Dashboard-Anzeige (#526): fehlt/ungültig = Standard (Ort aus, Home-Office an)
+    showWorkLocationOnDashboard: typeof raw.showWorkLocationOnDashboard === 'boolean'
+      ? raw.showWorkLocationOnDashboard : DEFAULT_SETTINGS.showWorkLocationOnDashboard,
+    showHomeOfficeOnDashboard: typeof raw.showHomeOfficeOnDashboard === 'boolean'
+      ? raw.showHomeOfficeOnDashboard : DEFAULT_SETTINGS.showHomeOfficeOnDashboard,
   };
 }
 
