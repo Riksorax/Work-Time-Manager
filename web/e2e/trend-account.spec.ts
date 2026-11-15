@@ -115,9 +115,11 @@ test('Premium: Prognose-Karte läuft bei 320 px nicht über, axe ohne Befund', a
   await openTrend(page);
   const card = page.locator('app-trend-view .trend-forecast');
   await expect(card).toBeVisible();
-  const box = await card.boundingBox();
-  expect(box!.x).toBeGreaterThanOrEqual(0);
-  expect(box!.x + box!.width).toBeLessThanOrEqual(320);
+  // Der Tab-Inhalt gleitet beim Wechsel herein: erst messen, wenn die Karte ihre Endlage erreicht hat.
+  await expect.poll(async () => {
+    const box = await card.boundingBox();
+    return box ? box.x >= 0 && box.x + box.width <= 320 : false;
+  }, { timeout: 5000 }).toBe(true);
   expect(await card.evaluate(e => e.scrollWidth <= e.clientWidth)).toBe(true);
   const result = await new AxeBuilder({ page }).include('app-trend-view .trend-forecast').withTags(['wcag2a', 'wcag2aa']).analyze();
   expect(result.violations.map(v => v.id)).toEqual([]);
