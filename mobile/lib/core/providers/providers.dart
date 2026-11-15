@@ -237,6 +237,8 @@ OvertimeRepository overtimeRepository(Ref ref) {
           dataSource: ref.watch(apiDataSourceProvider),
           userId: userId,
           profileId: profileId,
+          // Zuletzt bekannter Saldo je Nutzer und Profil für Offline (#573).
+          prefs: prefs,
         )
       : localRepository;
 

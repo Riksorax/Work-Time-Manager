@@ -1,6 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
 
+import '../../domain/entities/overtime_freshness.dart';
 import '../../domain/repositories/overtime_repository.dart';
 import 'package:flutter_work_time/core/utils/time_precision.dart';
 
@@ -13,6 +14,10 @@ class LocalOvertimeRepositoryImpl implements OvertimeRepository {
   final SharedPreferences _prefs;
 
   LocalOvertimeRepositoryImpl(this._prefs);
+
+  /// Lokal (Gast-Modus) ist der Saldo immer aktuell (#573).
+  @override
+  OvertimeFreshness get overtimeFreshness => OvertimeFreshness.current;
 
   @override
   Duration getOvertime() {

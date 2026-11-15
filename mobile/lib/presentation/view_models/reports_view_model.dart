@@ -9,6 +9,8 @@ import 'package:flutter_work_time/core/utils/time_precision.dart';
 
 import '../../core/providers/providers.dart' as core_providers;
 import '../../core/providers/today_provider.dart';
+import '../../core/utils/network_error.dart';
+import '../../domain/entities/overtime_freshness.dart';
 import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/services/break_calculator_service.dart';
 import '../../domain/utils/entry_day.dart';
@@ -76,18 +78,33 @@ class ReportsViewModel extends Notifier<ReportsState> {
   void _updateCalculatedReports() {
     final day = state.selectedDay ?? ref.read<DateTime>(todayProvider);
     // Lokale Berechnung als Sofortanzeige und Fallback (offline / nicht eingeloggt).
+    final monthly = _calculateMonthlyReport();
     state = state.copyWith(
       isLoading: false,
       dailyReportState: _calculateDailyReport(day),
       weeklyReportState: _calculateWeeklyReport(day),
-      monthlyReportState: _calculateMonthlyReport(),
+      monthlyReportState: monthly,
       homeOfficeDays: _calculateHomeOfficeDays(),
       workLocationDays: workLocationsByDay(_monthlyEntries),
+      // Erst nach dem Lesen des Saldos (#573): das Repository kennt dann die
+      // Herkunft (aktuell, zuletzt bekannter Stand, unbekannt).
+      overtimeFreshness: _storedOvertimeFreshness(),
     );
+    // Ließen sich die Einträge nicht laden, scheitert auch der Bericht vom
+    // Server (#573): kein zweiter vergeblicher Abruf.
+    if (state.loadFailure != ReportsLoadFailure.none) return;
     // Eingeloggt: server-berechnete Werte (zentrale, korrigierte Logik) laden und
     // die lokalen überschreiben. Schlägt der Abruf fehl (401/offline), bleibt der
     // lokale Fallback bestehen.
     unawaited(_loadReportsFromApi(day));
+  }
+
+  /// Lädt den gewählten Monat neu („Erneut versuchen“ nach einem Ladefehler,
+  /// #573).
+  Future<void> retry() {
+    final day = state.selectedDay ?? ref.read<DateTime>(todayProvider);
+    final month = state.selectedMonth ?? DateTime(day.year, day.month);
+    return _loadWorkEntriesForMonth(month.year, month.month);
   }
 
   /// Tage der geladenen Monatseinträge mit Typ Arbeit und Home-Office-Flag
@@ -116,10 +133,18 @@ class ReportsViewModel extends Notifier<ReportsState> {
         dailyReportState: _dailyFromApi(day, results[0]),
         weeklyReportState: _weeklyFromApi(results[1]),
         monthlyReportState: _monthlyFromApi(results[2]),
+        // Gesamtüberstunden kommen jetzt vom Server.
+        overtimeFreshness: OvertimeFreshness.current,
       );
     } catch (e) {
-      logger.w(
-          '[ReportsViewModel] API-Reports nicht geladen, lokaler Fallback: $e');
+      if (isExpectedLoadFailure(e)) {
+        // Ohne Netz ist das kein App-Fehler (#506, #573): nur info.
+        logger.i('[ReportsViewModel] API-Reports nicht geladen '
+            '(${errorLabel(e)}), lokaler Fallback');
+      } else {
+        logger.w('[ReportsViewModel] API-Reports nicht geladen '
+            '(${errorLabel(e)}), lokaler Fallback');
+      }
     }
   }
 
@@ -289,7 +314,11 @@ class ReportsViewModel extends Notifier<ReportsState> {
       final workRepository = ref.read(core_providers.workRepositoryProvider);
       final entries = await workRepository.getWorkEntriesForMonth(year, month);
       _monthlyEntries = entries;
+      if (ref.mounted) {
+        state = state.copyWith(loadFailure: ReportsLoadFailure.none);
+      }
     } catch (e, stackTrace) {
+      var failure = ReportsLoadFailure.none;
       // Prüfe, ob es sich um einen Permission-Fehler handelt
       final errorMessage = e.toString();
       if (errorMessage.contains('permission-denied')) {
@@ -297,15 +326,20 @@ class ReportsViewModel extends Notifier<ReportsState> {
             '[ReportsViewModel] Firebase Permission-Fehler erkannt - User wahrscheinlich nicht eingeloggt. Verwende leere Daten.');
       } else if (isExpectedLoadFailure(e)) {
         // Verbindungsabbruch/Offline ist kein App-Fehler (#506): nur info,
-        // da ab warning an Crashlytics gemeldet wird.
-        logger.i(
-            '[ReportsViewModel] Netzwerkfehler beim Laden der Arbeitseinträge: $e');
+        // da ab warning an Crashlytics gemeldet wird. Ohne angemeldeten
+        // Nutzer (#522) lädt der Auth-Wechsel ohnehin neu.
+        logger.i('[ReportsViewModel] Arbeitseinträge nicht ladbar '
+            '(${errorLabel(e)})');
+        if (isTransientNetworkError(e)) failure = ReportsLoadFailure.offline;
       } else {
-        logger.e('Fehler beim Laden der Arbeitseinträge: $e',
+        logger.e(
+            'Fehler beim Laden der Arbeitseinträge (${errorLabel(e)})',
             stackTrace: stackTrace);
+        failure = ReportsLoadFailure.failed;
       }
       _monthlyEntries =
           []; // Stelle sicher, dass die Liste bei einem Fehler leer ist
+      if (ref.mounted) state = state.copyWith(loadFailure: failure);
     } finally {
       // Dieser Block wird immer ausgeführt.
       // _updateCalculatedReports setzt isLoading auf false und aktualisiert alle Report-States.
@@ -334,6 +368,17 @@ class ReportsViewModel extends Notifier<ReportsState> {
     } catch (e) {
       logger.w('[ReportsViewModel] Gleitzeit-Saldo nicht lesbar, 0: $e');
       return Duration.zero;
+    }
+  }
+
+  /// Herkunft des Saldos aus [_storedOvertime] (#573).
+  OvertimeFreshness _storedOvertimeFreshness() {
+    try {
+      return ref
+          .read(core_providers.overtimeRepositoryProvider)
+          .overtimeFreshness;
+    } catch (_) {
+      return OvertimeFreshness.unknown;
     }
   }
 
