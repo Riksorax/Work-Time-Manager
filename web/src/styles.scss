@@ -130,4 +130,15 @@ body {
   .month-nav button {
     display: none !important;
   }
+
+  // Die Tab- und Sidenav-Container sind positioniert und schneiden ab (`overflow: hidden`, Höhe nur der Tab-Leiste):
+  // ohne diese Regel bezog sich `.print-area` auf den Tab-Inhalt und wurde nach der Überschrift abgeschnitten (#530).
+  .mat-mdc-tab-body-wrapper,
+  .mat-mdc-tab-body,
+  .mat-mdc-tab-body-content,
+  .mat-drawer-container,
+  .mat-drawer-content {
+    position: static !important;
+    overflow: visible !important;
+  }
 }

@@ -488,6 +488,19 @@
                                     (retry)="leave.refresh()"
                                     (editEntitlement)="goToSettings()" />
 
+            <!-- Jahresvergleich mit dem Vorjahr (#530): Premium, Werte vom Backend; sonst kompakte gesperrte Karte. -->
+            @if (svc.isPremium()) {
+              <app-yearly-comparison-card [year]="leave.year()" />
+            } @else {
+              <app-yearly-comparison-locked [loggedIn]="svc.isLoggedIn()"
+                                            [canPurchase]="isRcConfigured"
+                                            [purchasing]="isPurchasing()"
+                                            [restoring]="isRestoring()"
+                                            (unlock)="onPresentPaywall()"
+                                            (restore)="onRestorePurchases()"
+                                            (login)="onLogin()" />
+            }
+
             @if (svc.isPremium()) {
               <app-home-office-card class="home-office-card" [year]="leave.year()" />
             }

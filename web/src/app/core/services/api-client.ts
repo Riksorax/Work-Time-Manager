@@ -7,6 +7,7 @@ import { Break, Bundesland, UserSettings, WorkEntry, WorkEntryType, WorkProfile 
 import { YearlyLeaveReport } from '../../domain/models/leave.models';
 import { DailyStat, MonthlyReport, WeeklyReport } from '../../domain/models/reports.models';
 import { TrendGranularity, TrendReport } from '../../domain/models/trend.models';
+import { YearlyComparison } from '../../domain/models/yearly-comparison.models';
 import { calendarDateFromUtcMidnight, parseEntryId } from '../../shared/utils/entry-day.util';
 import {
   roundToMinute,
@@ -249,6 +250,16 @@ export class ApiClient {
 
   getYearlyLeave(year: number, profileId?: string): Observable<YearlyLeaveReport> {
     return this.http.get<YearlyLeaveReport>(`${this.base}/reports/yearly/${year}`, { params: this._params(profileId) });
+  }
+
+  /**
+   * Jahresvergleich mit dem Vorjahr (#530): `year` 2001–2100. `until` (`MM-dd`) nur für das laufende Jahr mitgeben
+   * (Stichtagsvergleich, das Backend nutzt keine Server-Uhr); ohne `until` gilt das ganze Jahr.
+   */
+  getYearlyComparison(year: number, until?: string, profileId?: string): Observable<YearlyComparison> {
+    let params = this._params(profileId) ?? new HttpParams();
+    if (until) params = params.set('until', until);
+    return this.http.get<YearlyComparison>(`${this.base}/reports/yearly-comparison/${year}`, { params });
   }
 
   private _params(profileId?: string): HttpParams | undefined {

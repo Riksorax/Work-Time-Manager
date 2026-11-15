@@ -15,6 +15,10 @@ import { WorkEntry } from '../../shared/models/index';
 import { WorkEntryService } from '../../core/services/work-entry';
 import { WorkProfileService } from '../../core/services/work-profile';
 import { createFakeWorkProfile } from '../../shared/testing/work-profile-fake';
+import { NEVER, of } from 'rxjs';
+import { AuthService } from '../../core/auth/auth';
+import { ApiClient } from '../../core/services/api-client';
+import { ProfileService } from '../../core/services/profile';
 import de from '../../../../public/i18n/de.json';
 
 /** Tab „Trend“ (#531): Gate wie Wochen-/Monatsbericht, die Ansicht (und damit der API-Aufruf) nur für Premium. */
@@ -57,6 +61,10 @@ describe('ReportsComponent: Tab Trend (#531)', () => {
         // Jahres-Tab (Premium): Home-Office-Karte wird eager angelegt.
         { provide: WorkEntryService, useValue: { getEntriesForMonthOnce: async () => [] } },
         { provide: WorkProfileService, useValue: createFakeWorkProfile() },
+        // Jahres-Tab (Premium, #530): Jahresvergleichskarte; die Antwort bleibt hier offen.
+        { provide: AuthService, useValue: { user$: of(loggedIn ? { uid: 'u1' } : null) } },
+        { provide: ProfileService, useValue: { isPremium: signal(premium) } },
+        { provide: ApiClient, useValue: { getYearlyComparison: () => NEVER } },
         { provide: Router, useValue: { navigate: vi.fn() } },
         { provide: MatDialog, useValue: {} },
         { provide: MatSnackBar, useValue: { open: vi.fn() } },
