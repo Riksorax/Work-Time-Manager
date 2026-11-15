@@ -1,0 +1,75 @@
+@let r = report();
+<h2 class="lr-title">{{ 'leave.reportTitle' | translate: { year: r.year } }}</h2>
+<p class="lr-meta">
+  @if (data().profileName; as name) {
+    <span>{{ 'leave.reportProfile' | translate: { name } }}</span>
+  }
+  <span>{{ 'leave.reportCreated' | translate: { date: createdAt() } }}</span>
+</p>
+
+<dl class="lr-summary">
+  <div><dt>{{ 'leave.reportVacationTaken' | translate }}</dt><dd>{{ count(r.vacationDaysTaken) }}</dd></div>
+  <div><dt>{{ 'leave.reportSickDays' | translate }}</dt><dd>{{ count(r.sickDays) }}</dd></div>
+  @if (data().isCurrentYear) {
+    <div><dt>{{ 'leave.reportEntitlement' | translate }}</dt><dd>{{ count(r.vacationDaysPerYear) }}</dd></div>
+    <div><dt>{{ 'leave.remainingTitle' | translate }}</dt><dd>{{ count(r.vacationDaysRemaining) }}</dd></div>
+  }
+</dl>
+@if (!data().isCurrentYear) {
+  <p class="lr-note">{{ 'leave.reportPastYearNote' | translate }}</p>
+}
+@if (isEmpty()) {
+  <p class="lr-empty">{{ 'leave.reportEmpty' | translate: { year: r.year } }}</p>
+}
+
+@if (months().length) {
+  <table class="lr-table">
+    <caption>{{ 'leave.reportMonthsCaption' | translate }}</caption>
+    <thead>
+      <tr>
+        <th scope="col">{{ 'leave.reportMonth' | translate }}</th>
+        <th scope="col">{{ 'leave.reportVacationDays' | translate }}</th>
+        <th scope="col">{{ 'leave.reportSickDays' | translate }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (m of months(); track m.month) {
+        <tr><th scope="row">{{ m.name }}</th><td>{{ m.vacationDays }}</td><td>{{ m.sickDays }}</td></tr>
+      }
+    </tbody>
+    <tfoot>
+      <tr>
+        <th scope="row">{{ 'leave.reportTotal' | translate }}</th>
+        <td>{{ count(r.vacationDaysTaken) }}</td>
+        <td>{{ count(r.sickDays) }}</td>
+      </tr>
+    </tfoot>
+  </table>
+}
+
+@if (!isEmpty()) {
+  <div class="lr-periods">
+    <section>
+      <h3>{{ 'leave.reportVacationPeriods' | translate }}</h3>
+      <ul class="lr-vacation">
+        @for (p of vacationPeriods(); track p.key) {
+          <li>{{ p.range }} ({{ (p.one ? 'leave.reportDaysOne' : 'leave.reportDaysOther') | translate: { days: p.days } }})</li>
+        } @empty {
+          <li>{{ 'leave.reportNoPeriods' | translate }}</li>
+        }
+      </ul>
+    </section>
+    <section>
+      <h3>{{ 'leave.reportSickPeriods' | translate }}</h3>
+      <ul class="lr-sick">
+        @for (p of sickPeriods(); track p.key) {
+          <li>{{ p.range }} ({{ (p.one ? 'leave.reportDaysOne' : 'leave.reportDaysOther') | translate: { days: p.days } }})</li>
+        } @empty {
+          <li>{{ 'leave.reportNoPeriods' | translate }}</li>
+        }
+      </ul>
+    </section>
+  </div>
+}
+
+<p class="lr-footnote">{{ 'leave.reportFootnote' | translate }}</p>

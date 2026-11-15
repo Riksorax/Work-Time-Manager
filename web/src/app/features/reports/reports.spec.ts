@@ -8,6 +8,7 @@ import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { Router } from '@angular/router';
 import { of } from 'rxjs';
 import { ReportsComponent } from './reports';
+import { LeaveReportPrintService } from './components/leave-report-print/leave-report-print.service';
 import { ReportsService } from './reports.service';
 import { LeaveBalanceService } from '../../core/services/leave-balance';
 import { WebPremiumService } from '../../core/services/web-premium';
@@ -18,7 +19,8 @@ import { WorkEntry } from '../../shared/models/index';
 describe('ReportsComponent.goToSettings', () => {
   it('navigiert zu /settings', () => {
     const navigate = vi.fn();
-    TestBed.overrideComponent(ReportsComponent, { set: { template: '', imports: [] } });
+    TestBed.overrideComponent(ReportsComponent, { set: { template: '', imports: [],
+      providers: [{ provide: LeaveReportPrintService, useValue: { endPrintMode: vi.fn() } }] } });
     TestBed.configureTestingModule({
       providers: [
         { provide: ReportsService, useValue: {} },
@@ -39,7 +41,8 @@ describe('ReportsComponent.goToSettings', () => {
 describe('ReportsComponent.openQuickEntryDialog: Home-Office unangetastet (#277)', () => {
   it('der Schnelleintrag setzt isHomeOffice nicht (undefined)', async () => {
     const saveEntry = vi.fn().mockResolvedValue(undefined);
-    TestBed.overrideComponent(ReportsComponent, { set: { template: '', imports: [] } });
+    TestBed.overrideComponent(ReportsComponent, { set: { template: '', imports: [],
+      providers: [{ provide: LeaveReportPrintService, useValue: { endPrintMode: vi.fn() } }] } });
     TestBed.configureTestingModule({
       providers: [
         { provide: ReportsService, useValue: { selectedDate: () => new Date(2026, 5, 5), saveEntry } },
@@ -105,6 +108,9 @@ describe('ReportsComponent - Mehrfachauswahl-Toggle (#377)', () => {
       selectDate: vi.fn(),
       onMonthChanged: vi.fn(),
     };
+    TestBed.overrideComponent(ReportsComponent, { add: { providers: [
+      { provide: LeaveReportPrintService, useValue: { loading: signal(false), data: signal(null), endPrintMode: vi.fn() } },
+    ] } });
     await TestBed.configureTestingModule({
       imports: [ReportsComponent],
       providers: [
@@ -200,7 +206,8 @@ describe('ReportsComponent.onPrintYear (#483)', () => {
 
   function create(isPremium: boolean, presentPaywall = vi.fn().mockResolvedValue(false)) {
     const print = vi.spyOn(window, 'print').mockImplementation(() => undefined);
-    TestBed.overrideComponent(ReportsComponent, { set: { template: '', imports: [] } });
+    TestBed.overrideComponent(ReportsComponent, { set: { template: '', imports: [],
+      providers: [{ provide: LeaveReportPrintService, useValue: { endPrintMode: vi.fn() } }] } });
     TestBed.configureTestingModule({
       providers: [
         { provide: ReportsService, useValue: { isPremium: () => isPremium } },

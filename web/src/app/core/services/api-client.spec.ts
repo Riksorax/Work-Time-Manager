@@ -21,14 +21,41 @@ describe('ApiClient.getYearlyLeave', () => {
 
   afterEach(() => http.verify());
 
-  it('ruft den Endpunkt ohne profileId-Parameter auf und reicht die Antwort unverändert durch', () => {
+  it('ruft den Endpunkt ohne profileId-Parameter auf; ohne Aufschlüsselung (älteres Backend) gelten leere Listen', () => {
     let result: YearlyLeaveReport | undefined;
     api.getYearlyLeave(2026).subscribe(r => (result = r));
     const req = http.expectOne(r => r.url.endsWith('/api/reports/yearly/2026'));
     expect(req.request.method).toBe('GET');
     expect(req.request.params.has('profileId')).toBe(false);
     req.flush(dto);
-    expect(result).toEqual(dto);
+    expect(result).toEqual({ ...dto, months: [], vacationPeriods: [], sickPeriods: [] });
+  });
+
+  it('reicht Monate und Zeiträume (#284) unverändert durch, Kalendertage bleiben Text', () => {
+    const full: YearlyLeaveReport = {
+      ...dto,
+      vacationDaysTaken: 12, sickDays: 3,
+      months: Array.from({ length: 12 }, (_, i) => ({
+        month: i + 1, vacationDays: i === 7 ? 12 : 0, sickDays: i === 1 ? 3 : 0,
+      })),
+      vacationPeriods: [{ start: '2026-08-03', end: '2026-08-14', days: 12 }],
+      sickPeriods: [{ start: '2026-02-10', end: '2026-02-12', days: 3 }],
+    };
+    let result: YearlyLeaveReport | undefined;
+    api.getYearlyLeave(2026).subscribe(r => (result = r));
+    http.expectOne(r => r.url.endsWith('/api/reports/yearly/2026')).flush(full);
+    expect(result).toEqual(full);
+    expect(result?.vacationPeriods?.[0].start).toBe('2026-08-03');
+  });
+
+  it('ergänzt nur fehlende Listen, vorhandene bleiben erhalten', () => {
+    let result: YearlyLeaveReport | undefined;
+    api.getYearlyLeave(2026).subscribe(r => (result = r));
+    http.expectOne(r => r.url.endsWith('/api/reports/yearly/2026'))
+      .flush({ ...dto, sickPeriods: [{ start: '2026-02-10', end: '2026-02-10', days: 1 }] });
+    expect(result?.months).toEqual([]);
+    expect(result?.vacationPeriods).toEqual([]);
+    expect(result?.sickPeriods).toEqual([{ start: '2026-02-10', end: '2026-02-10', days: 1 }]);
   });
 
   it('setzt profileId, falls angegeben', () => {

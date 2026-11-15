@@ -248,8 +248,19 @@ export class ApiClient {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
+  /**
+   * Jahres-Urlaubsübersicht. Die Aufschlüsselung (`months`, `vacationPeriods`, `sickPeriods`, #284) kommt fertig vom
+   * Backend; fehlt ein Feld (älteres Backend), gilt eine leere Liste.
+   */
   getYearlyLeave(year: number, profileId?: string): Observable<YearlyLeaveReport> {
-    return this.http.get<YearlyLeaveReport>(`${this.base}/reports/yearly/${year}`, { params: this._params(profileId) });
+    return this.http.get<YearlyLeaveReport>(`${this.base}/reports/yearly/${year}`, { params: this._params(profileId) }).pipe(
+      map(dto => ({
+        ...dto,
+        months: dto.months ?? [],
+        vacationPeriods: dto.vacationPeriods ?? [],
+        sickPeriods: dto.sickPeriods ?? [],
+      })),
+    );
   }
 
   /**

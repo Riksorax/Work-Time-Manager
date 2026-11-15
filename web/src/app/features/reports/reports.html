@@ -505,11 +505,29 @@
               <app-home-office-card class="home-office-card" [year]="leave.year()" />
             }
 
-            <button mat-stroked-button class="print-button no-print" type="button" (click)="onPrintYear()">
-              <mat-icon>{{ svc.isPremium() ? 'picture_as_pdf' : 'lock' }}</mat-icon>
-              {{ (svc.isPremium() ? 'reports.printYearButton' : 'reports.printYearPremiumButton') | translate }}
-            </button>
+            <div class="print-actions no-print">
+              <button mat-stroked-button type="button" (click)="onPrintYear()">
+                <mat-icon>{{ svc.isPremium() ? 'picture_as_pdf' : 'lock' }}</mat-icon>
+                {{ (svc.isPremium() ? 'reports.printYearButton' : 'reports.printYearPremiumButton') | translate }}
+              </button>
+              <!-- Urlaubs- und Krankheitsauswertung (#284): Premium, nur angemeldet (Werte vom Backend). -->
+              @if (svc.isLoggedIn()) {
+                <button mat-stroked-button type="button" class="leave-print-button"
+                        [disabled]="leavePrint.loading()" (click)="onPrintLeave()">
+                  @if (leavePrint.loading()) {
+                    <mat-spinner matButtonIcon diameter="18" aria-hidden="true" />
+                  } @else {
+                    <mat-icon>{{ svc.isPremium() ? 'print' : 'lock' }}</mat-icon>
+                  }
+                  {{ (leavePrint.loading() ? 'leave.printLoading'
+                      : svc.isPremium() ? 'leave.printButton' : 'leave.printPremiumButton') | translate }}
+                </button>
+              }
+            </div>
           </div>
+          @if (leavePrint.data(); as data) {
+            <app-leave-report-print [data]="data" />
+          }
         </div>
       </mat-tab>
 

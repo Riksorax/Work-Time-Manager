@@ -18,6 +18,7 @@ import { createFakeWorkProfile } from '../../shared/testing/work-profile-fake';
 import { NEVER, of } from 'rxjs';
 import { AuthService } from '../../core/auth/auth';
 import { ApiClient } from '../../core/services/api-client';
+import { LeaveReportPrintService } from './components/leave-report-print/leave-report-print.service';
 import { ProfileService } from '../../core/services/profile';
 import de from '../../../../public/i18n/de.json';
 
@@ -39,7 +40,10 @@ describe('ReportsComponent: Tab Trend (#531)', () => {
       setGranularity: vi.fn(),
       retry: vi.fn(),
     };
-    TestBed.overrideComponent(ReportsComponent, { set: { providers: [{ provide: TrendViewService, useValue: trend }] } });
+    TestBed.overrideComponent(ReportsComponent, { set: { providers: [
+      { provide: TrendViewService, useValue: trend },
+      { provide: LeaveReportPrintService, useValue: { loading: signal(false), data: signal(null), endPrintMode: vi.fn() } },
+    ] } });
     TestBed.configureTestingModule({
       imports: [ReportsComponent, NoopAnimationsModule],
       providers: [
