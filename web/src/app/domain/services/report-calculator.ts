@@ -108,6 +108,7 @@ export function calculateWeeklyReport(
   const workDaySet = new Set<string>();
   const absenceDaySet = new Set<string>();
   const dayMap = new Map<string, number>();
+  const dayBreaks = new Map<string, number>();
 
   for (const entry of weekEntries) {
     const key = entryDayKey(entry);
@@ -133,6 +134,7 @@ export function calculateWeeklyReport(
     totalBreaks += breaks;
     manualMs   += (entry.manualOvertimeMinutes ?? 0) * 60000;
     dayMap.set(key, (dayMap.get(key) ?? 0) + worked);
+    dayBreaks.set(key, (dayBreaks.get(key) ?? 0) + breaks);
   }
 
   // Soll: Arbeitstage an Vertrags-Wochentagen und jeder Abwesenheitstag (#535), jeder Tag einmal
@@ -143,8 +145,9 @@ export function calculateWeeklyReport(
   const overtime      = netWork - weekTarget + manualMs;
   const avgPerDay     = workDaySet.size > 0 ? netWork / workDaySet.size : 0;
 
+  // Netto je Tag = brutto − Pausen, nicht bei 0 gekappt (wie das Backend, #551)
   const days: WeeklyReportDay[] = Array.from(dayMap.entries())
-    .map(([k, worked]) => ({ date: keyToDate(k), worked }))
+    .map(([k, worked]) => ({ date: keyToDate(k), worked, netWorked: worked - (dayBreaks.get(k) ?? 0) }))
     .sort((a, b) => a.date.getTime() - b.date.getTime());
 
   return {
@@ -172,6 +175,7 @@ export function calculateMonthlyReport(
   const weekWorkDays = new Map<number, Set<string>>();
   const weekTotals   = new Map<number, number>();
   const dayMap       = new Map<string, number>();
+  const dayBreaks    = new Map<string, number>();
   const absenceDays  = new Set<string>();
 
   let totalWorked = 0;
@@ -204,6 +208,7 @@ export function calculateMonthlyReport(
     totalBreaks += breaks;
     manualMs    += (entry.manualOvertimeMinutes ?? 0) * 60000;
     dayMap.set(key,     (dayMap.get(key)     ?? 0) + worked);
+    dayBreaks.set(key,  (dayBreaks.get(key)  ?? 0) + breaks);
     weekTotals.set(weekNum, (weekTotals.get(weekNum) ?? 0) + worked);
   }
 
@@ -225,12 +230,23 @@ export function calculateMonthlyReport(
   const avgPerDay  = workDays  > 0 ? netWork / workDays  : 0;
   const avgPerWeek = numWeeks  > 0 ? netWork / numWeeks  : 0;
 
+  // Netto je Tag/Woche = brutto − Pausen, nicht bei 0 gekappt (wie das Backend, #551)
+  const weekBreaks = new Map<number, number>();
+  for (const [k, br] of dayBreaks) {
+    const wn = getIsoWeekNumber(keyToDate(k));
+    weekBreaks.set(wn, (weekBreaks.get(wn) ?? 0) + br);
+  }
+
   const weeks: MonthlyReportWeek[] = Array.from(weekTotals.entries())
-    .map(([weekNumber, totalWorkedW]) => ({ weekNumber, totalWorked: totalWorkedW }))
+    .map(([weekNumber, totalWorkedW]) => ({
+      weekNumber,
+      totalWorked: totalWorkedW,
+      netWorked: totalWorkedW - (weekBreaks.get(weekNumber) ?? 0),
+    }))
     .sort((a, b) => a.weekNumber - b.weekNumber);
 
   const days: MonthlyReportDay[] = Array.from(dayMap.entries())
-    .map(([k, worked]) => ({ date: keyToDate(k), worked }))
+    .map(([k, worked]) => ({ date: keyToDate(k), worked, netWorked: worked - (dayBreaks.get(k) ?? 0) }))
     .sort((a, b) => a.date.getTime() - b.date.getTime());
 
   return {

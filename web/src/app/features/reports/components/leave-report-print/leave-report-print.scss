@@ -1,0 +1,60 @@
+// Nur im Druck sichtbar (Papier): feste, kontraststarke Farben statt Theme-Tokens, damit der Dunkelmodus nicht hell auf
+// weiß druckt.
+:host {
+  color: #000;
+  font-size: 11pt;
+  line-height: 1.4;
+}
+
+.lr-title { margin: 0 0 4px; font-size: 18pt; font-weight: 600; }
+
+.lr-meta {
+  margin: 0 0 16px;
+  color: #444;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+
+.lr-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 32px;
+  margin: 0 0 8px;
+
+  dt { color: #444; }
+  dd { margin: 0; font-size: 16pt; font-weight: 600; }
+}
+
+.lr-note, .lr-empty { margin: 8px 0; }
+
+.lr-table {
+  width: 100%;
+  margin: 16px 0;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+  break-inside: avoid;
+
+  caption { text-align: left; font-weight: 600; padding-bottom: 4px; }
+  th, td { padding: 3px 8px; border-bottom: 1px solid #ccc; text-align: right; }
+  th:first-child { text-align: left; font-weight: 400; }
+  thead th { font-weight: 600; border-bottom: 1px solid #000; }
+  tfoot th, tfoot td { font-weight: 600; border-top: 1px solid #000; border-bottom: 0; }
+}
+
+.lr-periods {
+  display: flex;
+  gap: 32px;
+
+  section { flex: 1; break-inside: avoid; }
+  h3 { margin: 0 0 4px; font-size: 12pt; font-weight: 600; }
+  ul { margin: 0; padding-left: 20px; }
+}
+
+.lr-footnote {
+  margin: 16px 0 0;
+  padding-top: 8px;
+  border-top: 1px solid #ccc;
+  color: #444;
+  font-size: 9pt;
+}

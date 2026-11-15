@@ -34,6 +34,10 @@ describe('ApiClient.getTrendReport: Bucket-Grenzen als lokaler Kalendertag (#531
           workedMs: 0, targetMs: 0, overtimeMs: 0, cumulativeOvertimeMs: 0, hasData: false },
       ],
       weeklyTrend: null,
+      forecast: {
+        targetDate: '2026-12-31', currentBalanceMs: 0, averageWeeklyOvertimeMs: 0, weeksUsed: 4,
+        remainingWeeks: 0, projectedBalanceMs: 0,
+      },
     });
     return result;
   }
@@ -49,5 +53,11 @@ describe('ApiClient.getTrendReport: Bucket-Grenzen als lokaler Kalendertag (#531
     const b = load().buckets[1];
     expect(b.start.getTime()).toBe(new Date(2026, 2, 1).getTime());
     expect(b.end.getTime()).toBe(new Date(2026, 2, 31).getTime());
+  });
+
+  it('Prognose-Zieldatum 31.12.2026 ist in jeder Zone der lokale Kalendertag (#532)', () => {
+    const f = load().forecast!;
+    expect(toDateKey(f.targetDate)).toBe('2026-12-31');
+    expect(f.targetDate.getTime()).toBe(new Date(2026, 11, 31).getTime());
   });
 });

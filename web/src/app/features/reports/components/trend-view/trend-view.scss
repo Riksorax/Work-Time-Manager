@@ -48,6 +48,14 @@
 
 .trend-kpi .trend-sub { margin: 0; }
 
+.trend-forecast .trend-sub { margin: 0 0 8px; }
+
+.trend-note {
+  margin: 0;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.75rem;
+}
+
 .trend-loading {
   display: flex;
   justify-content: center;

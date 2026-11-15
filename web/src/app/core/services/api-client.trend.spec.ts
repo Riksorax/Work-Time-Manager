@@ -67,4 +67,40 @@ describe('ApiClient.getTrendReport (#531)', () => {
     http.expectOne(r => r.url.includes('/api/reports/trend/')).flush({ granularity: 'month', buckets: [], weeklyTrend: null });
     expect(result!.weeklyTrend).toBeNull();
   });
+
+  describe('forecast (#532)', () => {
+    function load(body: Record<string, unknown>): TrendReport {
+      let result!: TrendReport;
+      api.getTrendReport(new Date(2026, 10, 9), 'week').subscribe(r => (result = r));
+      http.expectOne(r => r.url.includes('/api/reports/trend/')).flush({ granularity: 'week', buckets: [], weeklyTrend: null, ...body });
+      return result;
+    }
+
+    it('bildet die Prognose ohne Umrechnung ab (ms, Restwochen ungerundet, targetDate als lokaler Kalendertag)', () => {
+      const r = load({
+        forecast: {
+          targetDate: '2026-12-31', currentBalanceMs: 67_500_000, averageWeeklyOvertimeMs: 4_500_000,
+          weeksUsed: 6, remainingWeeks: 7.142857, projectedBalanceMs: 117_000_000,
+        },
+      });
+      expect(r.forecast).toEqual({
+        targetDate: new Date(2026, 11, 31), currentBalance: 67_500_000, averageWeeklyOvertime: 4_500_000,
+        weeksUsed: 6, remainingWeeks: 7.142857, projectedBalance: 117_000_000,
+      });
+    });
+
+    it('forecast = null bleibt null', () => {
+      expect(load({ forecast: null }).forecast).toBeNull();
+    });
+
+    it('fehlendes Feld (älteres Backend) gilt als null', () => {
+      expect(load({}).forecast).toBeNull();
+    });
+
+    it('unlesbares targetDate gilt als null', () => {
+      expect(load({
+        forecast: { targetDate: 'x', currentBalanceMs: 0, averageWeeklyOvertimeMs: 0, weeksUsed: 4, remainingWeeks: 1, projectedBalanceMs: 0 },
+      }).forecast).toBeNull();
+    });
+  });
 });
