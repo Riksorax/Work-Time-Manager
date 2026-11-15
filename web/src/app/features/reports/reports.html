@@ -302,9 +302,9 @@
                 @for (day of svc.weeklyReport().days; track day.date.getTime()) {
                   <button class="day-row"
                           (click)="svc.selectDate(day.date); onTabChange(0)"
-                          [attr.aria-label]="'reports.dayRowAria' | translate: { weekday: (day.date | date:'EEEE d. MMMM'), duration: formatDuration(day.netWorked) }"
+                          [attr.aria-label]="'reports.dayRowAria' | translate: { weekday: dayAriaLabel(day.date), duration: formatDuration(day.netWorked) }"
                           role="listitem">
-                    <span class="day-name">{{ day.date | date:'EEE d.' }}</span>
+                    <span class="day-name">{{ dayLabel(day.date) }}</span>
                     <span class="day-duration">{{ day.netWorked > 0 ? formatDuration(day.netWorked) : '—' }}</span>
                     <mat-icon class="day-arrow" aria-hidden="true">chevron_right</mat-icon>
                   </button>
@@ -446,9 +446,9 @@
                 @for (day of svc.monthlyReport().days; track day.date.getTime()) {
                   <button class="day-row"
                           (click)="svc.selectDate(day.date); onTabChange(0)"
-                          [attr.aria-label]="'reports.dayRowAria' | translate: { weekday: (day.date | date:'EEEE d. MMMM'), duration: formatDuration(day.netWorked) }"
+                          [attr.aria-label]="'reports.dayRowAria' | translate: { weekday: dayAriaLabel(day.date), duration: formatDuration(day.netWorked) }"
                           role="listitem">
-                    <span class="day-name">{{ day.date | date:'EEE d.' }}</span>
+                    <span class="day-name">{{ dayLabel(day.date) }}</span>
                     <span class="day-duration">{{ day.netWorked > 0 ? formatDuration(day.netWorked) : '—' }}</span>
                     <mat-icon class="day-arrow" aria-hidden="true">chevron_right</mat-icon>
                   </button>

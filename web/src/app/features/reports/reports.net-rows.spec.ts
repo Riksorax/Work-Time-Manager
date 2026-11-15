@@ -125,4 +125,21 @@ describe('ReportsComponent: Zeilen der Berichte zeigen Netto (#551)', () => {
     expect(values[1]).toBe('00:30');
     expect(texts('.week-overview-duration')).toEqual([values[0]]);
   });
+
+  it('Wochentage der Zeilen folgen der App-Sprache (de „Mo. 9.“, en „Mon 9.“), auch im aria-label', async () => {
+    await mount(1);
+    expect(texts('.day-name')[0]).toBe('Mo. 9.');
+    expect(root().querySelector('.day-row')!.getAttribute('aria-label')).toContain('Montag');
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('en', {});
+    translate.use('en');
+    for (let i = 0; i < 3; i++) {
+      fixture.detectChanges();
+      TestBed.tick();
+      await Promise.resolve();
+    }
+    fixture.detectChanges();
+    expect(texts('.day-name')[0]).toBe('Mon 9.');
+    expect(root().querySelector('.day-row')!.getAttribute('aria-label')).toContain('Monday');
+  });
 });

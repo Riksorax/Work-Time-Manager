@@ -140,6 +140,7 @@ Die Zeilen der Berichte zeigen **netto** (ohne Pausen): Tage im Wochen- und Mona
 und Wochen im Monatsbericht (`week.netWorked`). `worked`/`totalWorked` bleiben brutto im Modell. Die Karte „Gesamtarbeitszeit“ (Wochen- und Monatsbericht) zeigt `totalWorked − totalBreaks` (netto, wie das Backend es definiert), „Gesamtpausen“ steht als eigene Zeile darunter; die Zeilensumme entspricht damit der Gesamtarbeitszeit (Tage mit Netto ≤ 0 zeigen „—“, zählen in der Summe aber mit).
 - **Vertrag:** `ReportDayDto.netWorkedMs`/`ReportWeekDto.netWorkedMs` (additiv). `ApiClient` liest `netWorkedMs ?? workedMs`
   (älteres Backend: Rückfall auf brutto, kein 0). Tag-Netto = brutto − abgeschlossene Pausen, **nicht bei 0 gekappt**.
+- **Wochentage:** `ReportsComponent.dayLabel`/`dayAriaLabel` formatieren Wochentag und Datum der Zeilen per `Intl` mit `LanguageService.locale()` (`LOCALE_ID` bleibt fest Deutsch, die `date`-Pipe zeigte in der englischen Ansicht deutsche Wochentage). Andere `date`-Pipes der Berichte (Kopfzeilen, Monatsname) sind weiter an `LOCALE_ID` gebunden.
 - **Gäste:** `report-calculator.ts` rechnet dieselben Werte (`dayBreaks`); Parität über `cases.json`.
 - **Tests:** `api-client.reports.net.spec.ts`, `reports.net-rows.spec.ts`, `report-calculator.spec.ts`, Parität.
 
