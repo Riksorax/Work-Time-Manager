@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_work_time/core/utils/api_errors.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
 import 'package:flutter_work_time/core/utils/time_precision.dart';
 
@@ -329,8 +330,14 @@ class DashboardViewModel extends Notifier<DashboardState> {
       _startTimerIfNeeded();
     } catch (e, st) {
       // Nur der aktuelle Lauf darf den Zustand ändern. Keine Nutzerdaten loggen.
-      logger.e('[Dashboard] Laden fehlgeschlagen (${e.runtimeType})',
-          stackTrace: st);
+      if (isExpectedLoadFailure(e)) {
+        // Verbindungsabbruch (#506) oder Laden kurz nach dem Abmelden (#522,
+        // #571) ist kein App-Fehler: nur info, keine Meldung an Crashlytics.
+        logger.i('[Dashboard] Laden nicht möglich (${e.runtimeType})');
+      } else {
+        logger.e('[Dashboard] Laden fehlgeschlagen (${e.runtimeType})',
+            stackTrace: st);
+      }
       if (!stale()) {
         _loadedOk = false;
         state = state.copyWith(isLoading: false);
