@@ -250,6 +250,22 @@ jobs:
           --only firestore --project worktime-test --config ../web/firebase.json
           "dotnet test WorkTimeManager.slnx --no-build --configuration Release"
 
+  # Store-Sync-Skript (#559): Logik für Texte und Screenshots ohne Netz testen.
+  # Keine Abhängigkeiten, kein npm ci; läuft parallel in wenigen Sekunden.
+  store-metadata:
+    name: Store-Sync-Skript Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Test
+        run: node --test .github/scripts/sync-store-metadata.test.mjs
+
   # Branding-Pipeline (#437): die eingecheckten Logo-Assets müssen zu branding/src/*.svg passen.
   # Läuft immer (wenige Sekunden), damit auch ein von Hand geänderter Zielasset auffällt.
   branding:
