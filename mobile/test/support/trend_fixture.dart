@@ -48,15 +48,45 @@ String utcMidnightIso(DateTime d) =>
 
 String isoWeekKey(DateTime d) => '${isoWeekYear(d)}-W${_pad(isoWeekNumber(d))}';
 
+/// Prognose zum Jahresende (#532) in der Antwort: wie `forecastMock` in
+/// `web/e2e/trend-data.ts`.
+enum ForecastMock { positive, negative, none }
+
+/// `OvertimeForecastDto` für das Jahr [year]: 6 Wochen, 7 Restwochen; Zahlen
+/// fest, nicht aus dem Datum abgeleitet (wie `web/e2e/trend-data.ts`).
+/// Positiv: Saldo +18:45, Schnitt +1:15, Prognose +27:30; negativ: -2:30,
+/// -0:45, -7:45. Die benannten Parameter überschreiben einzelne Werte.
+Map<String, dynamic> forecastJson(
+  int year, {
+  bool negative = false,
+  double? remainingWeeks,
+  double? currentHours,
+  double? projectedHours,
+}) =>
+    {
+      'targetDate': '$year-12-31',
+      'currentBalanceMs':
+          ((currentHours ?? (negative ? -2.5 : 18.75)) * _hour).round(),
+      'averageWeeklyOvertimeMs': ((negative ? -0.75 : 1.25) * _hour).round(),
+      'weeksUsed': 6,
+      'remainingWeeks': remainingWeeks ?? 7,
+      'projectedBalanceMs':
+          ((projectedHours ?? (negative ? -7.75 : 27.5)) * _hour).round(),
+    };
+
 /// Antwort für den Bezugstag [ref] und [granularity] (`week`/`month`):
 /// 12 Zeiträume, älteste zuerst. [gaps] = Indizes ohne Einträge (0 = älteste),
-/// [workedHours] = Arbeitszeit je Zeitraum, [weeklyTrend] `false` = `null`.
+/// [workedHours] = Arbeitszeit je Zeitraum, [weeklyTrend] `false` = `null`,
+/// [forecast] = Prognose (#532, bei beiden Granularitäten gleich),
+/// [forecastOverride] ersetzt sie ganz.
 Map<String, dynamic> trendJson(
   DateTime ref,
   String granularity, {
   Set<int> gaps = const {},
   List<double>? workedHours,
   bool weeklyTrend = true,
+  ForecastMock forecast = ForecastMock.positive,
+  Map<String, dynamic>? forecastOverride,
 }) {
   final worked =
       workedHours ?? (granularity == 'week' ? weekHours : monthHours);
@@ -110,13 +140,21 @@ Map<String, dynamic> trendJson(
             'comparedWeeks': 4,
           }
         : null,
+    'forecast': forecastOverride ??
+        switch (forecast) {
+          ForecastMock.positive => forecastJson(ref.year),
+          ForecastMock.negative => forecastJson(ref.year, negative: true),
+          ForecastMock.none => null,
+        },
   };
 }
 
 /// Kein Zeitraum mit Einträgen.
 Map<String, dynamic> emptyTrendJson(DateTime ref, String granularity) =>
     trendJson(ref, granularity,
-        gaps: {for (var i = 0; i < 12; i++) i}, weeklyTrend: false);
+        gaps: {for (var i = 0; i < 12; i++) i},
+        weeklyTrend: false,
+        forecast: ForecastMock.none);
 
 typedef TrendCall = ({
   DateTime date,

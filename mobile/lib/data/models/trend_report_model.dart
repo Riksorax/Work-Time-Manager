@@ -8,6 +8,11 @@ import '../../domain/utils/entry_day.dart';
 /// ([calendarDateFromUtcMidnight]), nie über `.toLocal()`: westlich von UTC
 /// wäre das der Vortag (#418). Dauern kommen in Millisekunden. Fehlende Felder
 /// gelten als 0 bzw. `false`; unbekannte Felder werden ignoriert.
+///
+/// `forecast` (#532): fehlt das Feld (älteres Backend), ist es kein Objekt
+/// oder ist `targetDate` kein gültiger Kalendertag, gilt `null`. `targetDate`
+/// (`yyyy-MM-dd`, ein Zeitanteil wird ignoriert) wird in seine Teile zerlegt
+/// und als lokale Mitternacht gebaut, nie über eine Zeitzone gelesen.
 TrendReport trendReportFromJson(
   Map<String, dynamic> json, {
   required TrendGranularity requested,
@@ -24,6 +29,7 @@ TrendReport trendReportFromJson(
     granularity: granularity,
     buckets: buckets,
     weeklyTrend: wt is Map<String, dynamic> ? _weeklyTrendFromJson(wt) : null,
+    forecast: _forecastFromJson(json['forecast']),
   );
 }
 
@@ -50,3 +56,20 @@ WeeklyTrend _weeklyTrendFromJson(Map<String, dynamic> j) => WeeklyTrend(
       delta: _ms(j['deltaMs']),
       comparedWeeks: (j['comparedWeeks'] as num?)?.toInt() ?? 0,
     );
+
+OvertimeForecast? _forecastFromJson(dynamic j) {
+  if (j is! Map<String, dynamic>) return null;
+  final raw = j['targetDate'];
+  final targetDate = raw is String && raw.length >= 10
+      ? localDateFromEntryId(raw.substring(0, 10))
+      : null;
+  if (targetDate == null) return null;
+  return OvertimeForecast(
+    targetDate: targetDate,
+    currentBalance: _ms(j['currentBalanceMs']),
+    averageWeeklyOvertime: _ms(j['averageWeeklyOvertimeMs']),
+    weeksUsed: (j['weeksUsed'] as num?)?.toInt() ?? 0,
+    remainingWeeks: (j['remainingWeeks'] as num?)?.toDouble() ?? 0,
+    projectedBalance: _ms(j['projectedBalanceMs']),
+  );
+}

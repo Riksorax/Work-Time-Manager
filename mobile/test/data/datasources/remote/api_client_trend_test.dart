@@ -129,6 +129,85 @@ void main() {
       expect(b.weekNumber, isNull);
     });
 
+    group('Prognose zum Jahresende (#532)', () {
+      Future<TrendReport> read(Object? forecast, {bool omit = false}) async {
+        final json = trendJson(DateTime(2026, 11, 12), 'week');
+        if (omit) {
+          json.remove('forecast');
+        } else {
+          json['forecast'] = forecast;
+        }
+        http_.nextResponse = http.Response(jsonEncode(json), 200);
+        return api.getTrendReport(
+            DateTime(2026, 11, 12), TrendGranularity.week);
+      }
+
+      test('gesetzt: alle Werte, Zieltag als Kalendertag', () async {
+        final f = (await read(forecastJson(2026, remainingWeeks: 7.142857)))
+            .forecast!;
+        expect(f.targetDate, DateTime(2026, 12, 31));
+        expect(f.currentBalance, const Duration(hours: 18, minutes: 45));
+        expect(f.averageWeeklyOvertime, const Duration(hours: 1, minutes: 15));
+        expect(f.weeksUsed, 6);
+        expect(f.remainingWeeks, closeTo(7.142857, 1e-9));
+        expect(f.projectedBalance, const Duration(hours: 27, minutes: 30));
+      });
+
+      test('negativ und Restwochen als ganze Zahl', () async {
+        final f = (await read(forecastJson(2026, negative: true))).forecast!;
+        expect(f.currentBalance, const Duration(hours: -2, minutes: -30));
+        expect(f.averageWeeklyOvertime, const Duration(minutes: -45));
+        expect(f.projectedBalance, const Duration(hours: -7, minutes: -45));
+        expect(f.remainingWeeks, 7.0);
+      });
+
+      test('null: keine Prognose', () async {
+        expect((await read(null)).forecast, isNull);
+      });
+
+      test('Feld fehlt (älteres Backend): keine Prognose', () async {
+        final r = await read(null, omit: true);
+        expect(r.forecast, isNull);
+        expect(r.weeklyTrend, isNotNull);
+      });
+
+      test('Zieltag mit Zeitanteil zählt als Kalendertag', () async {
+        final f = (await read(forecastJson(2026)
+              ..['targetDate'] = '2026-12-31T00:00:00+00:00'))
+            .forecast!;
+        expect(f.targetDate, DateTime(2026, 12, 31));
+      });
+
+      for (final bad in [
+        '31.12.2026',
+        '2026-13-01',
+        '2026-02-30',
+        '',
+        42,
+        null
+      ]) {
+        test('unlesbarer Zieltag ($bad): keine Prognose, Rest bleibt',
+            () async {
+          final r = await read(forecastJson(2026)..['targetDate'] = bad);
+          expect(r.forecast, isNull);
+          expect(r.buckets, hasLength(12));
+        });
+      }
+
+      test('kein Objekt: keine Prognose', () async {
+        expect((await read('2026-12-31')).forecast, isNull);
+      });
+
+      test('fehlende Zahlen gelten als 0', () async {
+        final f = (await read({'targetDate': '2027-12-31'})).forecast!;
+        expect(f.targetDate, DateTime(2027, 12, 31));
+        expect(f.currentBalance, Duration.zero);
+        expect(f.weeksUsed, 0);
+        expect(f.remainingWeeks, 0);
+        expect(f.projectedBalance, Duration.zero);
+      });
+    });
+
     test('HTTP-Fehler: ApiException mit Status', () async {
       http_.nextResponse = http.Response('nope', 500);
       await expectLater(

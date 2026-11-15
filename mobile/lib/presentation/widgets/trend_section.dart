@@ -245,6 +245,8 @@ class TrendSection extends ConsumerWidget {
         ),
       ),
       const SizedBox(height: 8),
+      _ForecastCard(forecast: report.forecast),
+      const SizedBox(height: 8),
       Card(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 16, 12, 12),
@@ -305,5 +307,138 @@ class TrendSection extends ConsumerWidget {
         ),
       ),
     ];
+  }
+}
+
+/// Texte der Prognose-Karte (#532): Haupt- und Detailzeile. Reine
+/// Darstellung wie im Web (`trend-view.ts`, `forecastTexts`): Restwochen nur
+/// gerundet angezeigt, `< 1` → „weniger als eine Woche“, `0` → „das Jahr endet
+/// heute“ (die Prognose entspricht dann dem Saldo). Datum zweistellig numerisch
+/// in der App-Sprache (`DateFormat.yMd` mit `dd`/`MM`: „31.12.2026“,
+/// „12/31/2026“).
+({String main, String detail}) forecastTexts(
+  OvertimeForecast f,
+  AppLocalizations l10n,
+  String locale,
+) {
+  final pattern = DateFormat.yMd(locale)
+      .pattern!
+      .replaceAll(RegExp('d+'), 'dd')
+      .replaceAll(RegExp('M+'), 'MM');
+  final date = DateFormat(pattern, locale).format(f.targetDate);
+  final balance = formatSignedDurationHm(f.projectedBalance);
+  final current = formatSignedDurationHm(f.currentBalance);
+  final rest = f.remainingWeeks;
+  if (rest <= 0) {
+    return (
+      main: l10n.trendForecastMainNow(date, balance),
+      detail: l10n.trendForecastDetailEnd(
+        current,
+        l10n.trendForecastRemainingNone,
+      ),
+    );
+  }
+  final rounded = rest.round();
+  final remaining = rest < 1
+      ? l10n.trendForecastRemainingLess
+      : rounded <= 1
+          ? l10n.trendForecastRemainingOne
+          : l10n.trendForecastRemainingMany(rounded);
+  return (
+    main: l10n.trendForecastMain(balance, date),
+    detail: l10n.trendForecastDetail(
+      current,
+      formatSignedDurationHm(f.averageWeeklyOvertime),
+      f.weeksUsed,
+      remaining,
+    ),
+  );
+}
+
+/// Karte „Prognose zum Jahresende“ (#532) direkt unter dem Wochen-Trend, im
+/// selben Stil. Neutral ohne Wertungsfarbe; das Icon folgt dem Vorzeichen von
+/// Prognose minus Saldo. [forecast] `null` → Hinweis „fehlen noch Daten“.
+/// Für Screenreader ein zusammenhängender Text.
+class _ForecastCard extends StatelessWidget {
+  const _ForecastCard({required this.forecast});
+
+  final OvertimeForecast? forecast;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final locale = Localizations.localeOf(context).toString();
+    final titleStyle = theme.textTheme.titleSmall?.copyWith(
+      fontWeight: FontWeight.bold,
+    );
+    final subStyle = theme.textTheme.bodySmall?.copyWith(
+      color: cs.onSurfaceVariant,
+    );
+    final f = forecast;
+    final texts = f == null ? null : forecastTexts(f, l10n, locale);
+    final delta =
+        f == null ? Duration.zero : f.projectedBalance - f.currentBalance;
+    final label = texts == null
+        ? '${l10n.trendForecastTitle}. ${l10n.trendForecastMissing}'
+        : '${l10n.trendForecastTitle}. ${texts.main}. ${texts.detail}. '
+            '${l10n.trendForecastNote}';
+
+    return Card(
+      key: const ValueKey('trend-forecast'),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Semantics(
+          container: true,
+          label: label,
+          child: ExcludeSemantics(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(l10n.trendForecastTitle, style: titleStyle),
+                const SizedBox(height: 6),
+                if (texts != null) ...[
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        delta > Duration.zero
+                            ? Icons.trending_up
+                            : delta < Duration.zero
+                                ? Icons.trending_down
+                                : Icons.trending_flat,
+                        size: 20,
+                        color: cs.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          texts.main,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(texts.detail, style: subStyle),
+                  const SizedBox(height: 8),
+                  Text(
+                    l10n.trendForecastNote,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: cs.onSurfaceVariant,
+                      fontSize: 11,
+                    ),
+                  ),
+                ] else
+                  Text(l10n.trendForecastMissing, style: subStyle),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
