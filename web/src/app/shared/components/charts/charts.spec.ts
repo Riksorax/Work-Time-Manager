@@ -87,7 +87,10 @@ describe('BarChartComponent (#531)', () => {
       expect(allFinite(el)).toBe(true);
       const heights = [...el.querySelectorAll('.chart-slot .chart-bar')].map(b => Number(b.getAttribute('height')));
       expect(heights.every(h => h >= 0)).toBe(true);
-      expect(el.querySelectorAll('.chart-grid text').length).toBeLessThanOrEqual(5);
+      // 4 bis 6 Teilstriche (Nachbesserung zu #531: Obergrenze nah am größten Wert).
+      const ticks = el.querySelectorAll('.chart-grid text').length;
+      expect(ticks).toBeGreaterThanOrEqual(4);
+      expect(ticks).toBeLessThanOrEqual(6);
     }
   });
 

@@ -27,6 +27,8 @@ import { Router } from '@angular/router';
 import { LeaveBalanceService } from '../../core/services/leave-balance';
 import { LeaveBalanceCardComponent } from '../../shared/components/leave-balance-card/leave-balance-card';
 import { HomeOfficeCardComponent } from '../../shared/components/home-office-card/home-office-card';
+import { YearlyComparisonCardComponent } from '../../shared/components/yearly-comparison-card/yearly-comparison-card';
+import { YearlyComparisonLockedComponent } from '../../shared/components/yearly-comparison-card/yearly-comparison-locked';
 import { formatDurationHm, formatSignedDurationHm } from '../../shared/utils/duration-format.util';
 import { TrendViewComponent } from './components/trend-view/trend-view';
 import { TrendViewService } from './components/trend-view/trend-view.service';
@@ -44,6 +46,8 @@ import { TrendViewService } from './components/trend-view/trend-view.service';
     CalendarComponent,
     LeaveBalanceCardComponent,
     HomeOfficeCardComponent,
+    YearlyComparisonCardComponent,
+    YearlyComparisonLockedComponent,
     TrendViewComponent,
     TranslatePipe,
   ],
