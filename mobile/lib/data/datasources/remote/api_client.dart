@@ -8,6 +8,8 @@ import 'package:flutter_work_time/core/config/api_config.dart';
 import 'package:flutter_work_time/core/utils/api_errors.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
 import '../../../domain/entities/break_entity.dart';
+import '../../../domain/entities/trend_report.dart';
+import '../../models/trend_report_model.dart';
 import '../../../domain/entities/work_entry_entity.dart';
 import '../../../domain/utils/entry_day.dart';
 import '../../../domain/utils/work_locations.dart';
@@ -172,6 +174,25 @@ class ApiClient {
   /// `vacationDaysRemaining`, `sickDays`; weitere Felder sind möglich.
   Future<Map<String, dynamic>> getYearlyLeave(int year, {String? profileId}) =>
       _getJson('/reports/yearly/$year', 'getYearlyLeave', profileId);
+
+  /// Trend (#531): `GET /api/reports/trend/{y}/{m}/{d}?granularity=…`.
+  /// [date] ist der Bezugstag des Clients (lokaler Kalendertag aus
+  /// `todayProvider`); nur seine Kalenderfelder gehen in den Pfad.
+  Future<TrendReport> getTrendReport(
+      DateTime date, TrendGranularity granularity,
+      {String? profileId}) async {
+    final base = _uri(
+        '/reports/trend/${date.year}/${date.month}/${date.day}', profileId);
+    final uri = base.replace(queryParameters: {
+      ...base.queryParameters,
+      'granularity': granularity.apiValue,
+    });
+    const op = 'getTrendReport';
+    final res = await _http.get(uri, headers: await _headers(op));
+    if (res.statusCode != 200) _fail(op, res);
+    return trendReportFromJson(jsonDecode(res.body) as Map<String, dynamic>,
+        requested: granularity);
+  }
 
   Future<Map<String, dynamic>> _getJson(String path, String op,
       [String? profileId]) async {

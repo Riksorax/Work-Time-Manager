@@ -24,6 +24,7 @@ import 'package:flutter_work_time/presentation/view_models/reports_view_model.da
 import 'package:flutter_work_time/presentation/view_models/settings_view_model.dart';
 
 import 'reports_page_test.mocks.dart';
+import '../../support/trend_fixture.dart';
 import '../view_models/reports_view_model_test.mocks.dart';
 import '../view_models/dashboard_view_model_test.mocks.dart'
     hide MockSettingsRepository;
@@ -334,6 +335,11 @@ void main() {
         settingsViewModel: settingsViewModel,
         authState:
             const AsyncValue.data(UserEntity(id: '1', email: 'test@test.com')),
+        // Trend (#531) steht oben im Insights-Tab: leere Antwort statt API.
+        extraOverrides: [
+          apiClientProvider.overrideWithValue(FakeTrendApi(
+              (c) async => emptyTrendJson(c.date, c.granularity.apiValue))),
+        ],
       ));
       await tester.pumpAndSettle();
 
@@ -384,6 +390,11 @@ void main() {
         settingsViewModel: settingsViewModel,
         authState:
             const AsyncValue.data(UserEntity(id: '1', email: 'test@test.com')),
+        // Trend (#531) steht oben im Insights-Tab: leere Antwort statt API.
+        extraOverrides: [
+          apiClientProvider.overrideWithValue(FakeTrendApi(
+              (c) async => emptyTrendJson(c.date, c.granularity.apiValue))),
+        ],
       ));
       await tester.pumpAndSettle();
 
