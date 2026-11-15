@@ -40,6 +40,8 @@ import '../widgets/common/sheet_insets.dart';
 import '../widgets/edit_work_entry_modal.dart';
 import '../widgets/quick_entry_dialog.dart';
 import '../widgets/report_action_row.dart';
+import '../widgets/trend_section.dart';
+import '../state/insights_state.dart';
 import '../widgets/batch_quick_entry_dialog.dart';
 import '../widgets/weekly_reflection_dialog.dart';
 import '../widgets/work_profile_switcher.dart';
@@ -468,17 +470,21 @@ class DailyReportView extends ConsumerWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              isSpecialType
-                                  ? _getWorkEntryTypeLabel(
-                                      l10n, displayEntry.type)
-                                  : isIncomplete
-                                      ? l10n.reportsEntryIncompleteTitle
-                                      : l10n.workTimeLabel(workedDuration
-                                          .toString()
-                                          .split('.')
-                                          .first),
-                              style: Theme.of(context).textTheme.titleMedium,
+                            // Flexible: auf 320 px lief der Titel neben den
+                            // beiden Icon-Buttons knapp über (#531).
+                            Flexible(
+                              child: Text(
+                                isSpecialType
+                                    ? _getWorkEntryTypeLabel(
+                                        l10n, displayEntry.type)
+                                    : isIncomplete
+                                        ? l10n.reportsEntryIncompleteTitle
+                                        : l10n.workTimeLabel(workedDuration
+                                            .toString()
+                                            .split('.')
+                                            .first),
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
                             ),
                             Row(
                               children: [
@@ -1377,7 +1383,9 @@ class MonthlyReportView extends ConsumerWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(l10n.avgWorkPerWeekLabel),
+                      // Flexible: auf 320 px lief die englische Zeile
+                      // „Avg. work time per week:“ knapp über (#531).
+                      Flexible(child: Text(l10n.avgWorkPerWeekLabel)),
                       Text(monthlyReport.avgWorkDurationPerWeek
                           .toString()
                           .split('.')
@@ -1827,115 +1835,123 @@ class _InsightsViewState extends ConsumerState<InsightsView> {
     _loadIfNeeded();
     final insightsState = ref.watch(insightsViewModelProvider);
 
-    if (insightsState.isLoading) {
-      return const LoadingIndicator();
-    }
-
-    if (insightsState.hasNoData) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Text(
-            l10n.notEnoughDataInsights,
-            textAlign: TextAlign.center,
-          ),
-        ),
-      );
-    }
-
+    // Trend (#531) steht oben, vor den vorhandenen Insights, und hat eigene
+    // Lade-/Fehler-/Leerzustände; die Insights darunter unverändert.
     return ResponsiveCenter(
       child: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
-          if (insightsState.burnoutStatus.isWarning)
-            Card(
-              color: Theme.of(context).colorScheme.errorContainer,
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  children: [
-                    Icon(Icons.warning_amber_rounded,
-                        color: Theme.of(context).colorScheme.onErrorContainer),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        l10n.burnoutWarning(
-                            '${insightsState.burnoutStatus.currentStreak}'),
-                        style: TextStyle(
-                            color:
-                                Theme.of(context).colorScheme.onErrorContainer),
-                      ),
-                    ),
-                  ],
-                ),
+          const TrendSection(),
+          const SizedBox(height: 24),
+          if (insightsState.isLoading)
+            const Padding(
+              padding: EdgeInsets.all(24.0),
+              child: LoadingIndicator(),
+            )
+          else if (insightsState.hasNoData)
+            Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Text(
+                l10n.notEnoughDataInsights,
+                textAlign: TextAlign.center,
               ),
-            ),
-          if (insightsState.burnoutStatus.isWarning) const SizedBox(height: 16),
-          if (insightsState.weekdayAverages.isNotEmpty) ...[
-            _InsightSectionHeader(
-              title: l10n.weekdayAnalysisTitle,
-              explanation: l10n.weekdayAnalysisExplanation,
-            ),
-            const SizedBox(height: 8),
-            Card(
-              child: Column(
-                children: [
-                  for (final weekdayAverage in insightsState.weekdayAverages)
-                    ListTile(
-                      title: Text(
-                          weekdayShortLabel(weekdayAverage.weekday, locale)),
-                      subtitle: Text(l10n.avgWorkTimeWithCount(
-                          weekdayAverage.averageWorkDuration
-                              .toString()
-                              .split('.')
-                              .first,
-                          weekdayAverage.sampleCount)),
-                      trailing: Text(
-                        _formatSignedDuration(
-                            weekdayAverage.deviationFromOverallAverage),
-                        style: TextStyle(
-                          color: weekdayAverage
-                                  .deviationFromOverallAverage.isNegative
-                              ? Colors.blue
-                              : Colors.orange,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-          ],
-          if (insightsState.heatmap.isNotEmpty) ...[
-            _InsightSectionHeader(
-              title: l10n.productivityHeatmapTitle,
-              explanation: l10n.productivityHeatmapExplanation,
-            ),
-            const SizedBox(height: 8),
-            Card(
-              child: Column(
-                children: [
-                  for (final bucket in insightsState.heatmap)
-                    ListTile(
-                      title: Text(l10n.startHourLabel(
-                          bucket.startHour.toString().padLeft(2, '0'))),
-                      subtitle: Text(l10n.sampleCountLabel(bucket.sampleCount)),
-                      trailing: Text(
-                        _formatSignedDuration(bucket.averageOvertime),
-                        style: TextStyle(
-                          color: bucket.averageOvertime.isNegative
-                              ? Colors.red
-                              : Colors.green,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ],
+            )
+          else
+            ..._insightSections(context, l10n, locale, insightsState),
         ],
       ),
     );
+  }
+
+  List<Widget> _insightSections(BuildContext context, AppLocalizations l10n,
+      String locale, InsightsState insightsState) {
+    return [
+      if (insightsState.burnoutStatus.isWarning)
+        Card(
+          color: Theme.of(context).colorScheme.errorContainer,
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                Icon(Icons.warning_amber_rounded,
+                    color: Theme.of(context).colorScheme.onErrorContainer),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    l10n.burnoutWarning(
+                        '${insightsState.burnoutStatus.currentStreak}'),
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onErrorContainer),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      if (insightsState.burnoutStatus.isWarning) const SizedBox(height: 16),
+      if (insightsState.weekdayAverages.isNotEmpty) ...[
+        _InsightSectionHeader(
+          title: l10n.weekdayAnalysisTitle,
+          explanation: l10n.weekdayAnalysisExplanation,
+        ),
+        const SizedBox(height: 8),
+        Card(
+          child: Column(
+            children: [
+              for (final weekdayAverage in insightsState.weekdayAverages)
+                ListTile(
+                  title:
+                      Text(weekdayShortLabel(weekdayAverage.weekday, locale)),
+                  subtitle: Text(l10n.avgWorkTimeWithCount(
+                      weekdayAverage.averageWorkDuration
+                          .toString()
+                          .split('.')
+                          .first,
+                      weekdayAverage.sampleCount)),
+                  trailing: Text(
+                    _formatSignedDuration(
+                        weekdayAverage.deviationFromOverallAverage),
+                    style: TextStyle(
+                      color:
+                          weekdayAverage.deviationFromOverallAverage.isNegative
+                              ? Colors.blue
+                              : Colors.orange,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+      ],
+      if (insightsState.heatmap.isNotEmpty) ...[
+        _InsightSectionHeader(
+          title: l10n.productivityHeatmapTitle,
+          explanation: l10n.productivityHeatmapExplanation,
+        ),
+        const SizedBox(height: 8),
+        Card(
+          child: Column(
+            children: [
+              for (final bucket in insightsState.heatmap)
+                ListTile(
+                  title: Text(l10n.startHourLabel(
+                      bucket.startHour.toString().padLeft(2, '0'))),
+                  subtitle: Text(l10n.sampleCountLabel(bucket.sampleCount)),
+                  trailing: Text(
+                    _formatSignedDuration(bucket.averageOvertime),
+                    style: TextStyle(
+                      color: bucket.averageOvertime.isNegative
+                          ? Colors.red
+                          : Colors.green,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    ];
   }
 }
 
@@ -1952,8 +1968,12 @@ class _InsightSectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Text(title,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        // Flexible: lange Titel brechen um statt überzulaufen (#531).
+        Flexible(
+          child: Text(title,
+              style:
+                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        ),
         const SizedBox(width: 4),
         Tooltip(
           message: explanation,
