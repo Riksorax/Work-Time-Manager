@@ -1,0 +1,24 @@
+# Ersetzungen vor der Sprachsynthese (#575). Die Untertitel zeigen weiter den
+# Originaltext; nur die Stimme bekommt die ersetzte Fassung.
+# Reihenfolge zählt: von oben nach unten, jede Regel auf das Ergebnis der vorigen.
+# `muster` ist ein regulärer Ausdruck (Python `re`), `ersatz` darf \1, \2 nutzen.
+# Zahlen in Gruppen spricht das Skript als deutsches Zahlwort (zahlwort: true).
+regeln:
+  # Saldo "+12:45 Stunden" -> "plus zwölf Stunden fünfundvierzig"
+  - muster: '\+(\d{1,3}):(\d{2}) Stunden'
+    ersatz: 'plus \1 Stunden \2'
+    zahlwort: true
+  - muster: '[-−](\d{1,3}):(\d{2}) Stunden'
+    ersatz: 'minus \1 Stunden \2'
+    zahlwort: true
+  # Uhrzeit "16:40 Uhr" -> "sechzehn Uhr vierzig"; volle Stunde ohne Minuten
+  - muster: '(\d{1,2}):00 Uhr'
+    ersatz: '\1 Uhr'
+    zahlwort: true
+  - muster: '(\d{1,2}):(\d{2}) Uhr'
+    ersatz: '\1 Uhr \2'
+    zahlwort: true
+  # übrige ganze Zahlen ("30 Minuten", "6 Stunden")
+  - muster: '\b(\d{1,4})\b'
+    ersatz: '\1'
+    zahlwort: true
