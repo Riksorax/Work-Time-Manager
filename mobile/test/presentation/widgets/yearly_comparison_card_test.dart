@@ -13,6 +13,7 @@ import 'package:flutter_work_time/core/providers/providers.dart';
 import 'package:flutter_work_time/core/providers/subscription_provider.dart';
 import 'package:flutter_work_time/core/theme/app_theme.dart';
 import 'package:flutter_work_time/domain/entities/user_entity.dart';
+import 'package:flutter_work_time/domain/entities/work_entry_entity.dart';
 import 'package:flutter_work_time/l10n/app_localizations.dart';
 import 'package:flutter_work_time/presentation/screens/reports_page.dart';
 import 'package:flutter_work_time/presentation/widgets/premium_blur_gate.dart';
@@ -91,6 +92,7 @@ void main() {
     bool premium = true,
     UserEntity? user = _user,
     int? year,
+    FakeWorkRepository? work,
   }) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = Size(width, 3200);
@@ -107,7 +109,7 @@ void main() {
         authStateProvider.overrideWithValue(AsyncValue<UserEntity?>.data(user)),
         isPremiumProvider.overrideWithValue(premium),
         activeEntitlementProvider.overrideWithValue(null),
-        workRepositoryProvider.overrideWithValue(FakeWorkRepository()),
+        workRepositoryProvider.overrideWithValue(work ?? FakeWorkRepository()),
         settingsRepositoryProvider.overrideWithValue(FakeSettingsRepository()),
         overtimeRepositoryProvider.overrideWithValue(FakeOvertimeRepository()),
       ],
@@ -375,10 +377,32 @@ void main() {
       expect(find.text('Dezember'), findsOneWidget);
     });
 
-    testWidgets('Fehler der Jahreswerte: Hinweis mit „Erneut versuchen“',
+    testWidgets('Jahreswerte nicht vom Backend: lokale Werte, kein Fehler',
         (t) async {
+      final work = FakeWorkRepository();
+      work.store['2026-03-02'] = WorkEntryEntity(
+        id: '2026-03-02',
+        date: DateTime(2026, 3, 2),
+        workStart: DateTime(2026, 3, 2, 8),
+        workEnd: DateTime(2026, 3, 2, 17),
+      );
+      await pump(t,
+          work: work, handler: _totals((_) => throw Exception('boom')));
+      expect(find.text('Der Jahresbericht konnte nicht geladen werden.'),
+          findsNothing);
+      // Lokal gerechnet: 9:00 netto, 1 Arbeitstag, +1:00.
+      expect(find.text('9:00:00'), findsOneWidget);
+      expect(find.text('Monatsübersicht:'), findsOneWidget);
+      expect(find.text('Als PDF exportieren'), findsOneWidget);
+      expect(work.monthReads, hasLength(12));
+      expect(card(), findsOneWidget);
+    });
+
+    testWidgets('Backend und lokale Rechnung scheitern: Fehler, erneut',
+        (t) async {
+      final work = FakeWorkRepository()..failReads = true;
       var fail = true;
-      final api = await pump(t, handler: _totals((c) {
+      final api = await pump(t, work: work, handler: _totals((c) {
         if (fail) throw Exception('boom');
         return yearlyComparisonJsonFor(c);
       }));

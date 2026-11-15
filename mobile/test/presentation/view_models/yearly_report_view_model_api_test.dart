@@ -160,7 +160,7 @@ void main() {
     expect(s.months[2].workDays, 1);
   });
 
-  test('Jahr außerhalb 2001–2100: keine Anfrage, leer, kein Fehler', () async {
+  test('Jahr außerhalb 2001–2100: keine Anfrage, lokal gerechnet', () async {
     await ready();
     await vm().loadYear(2000);
     final s = container.read(yearlyReportViewModelProvider);
@@ -217,23 +217,71 @@ void main() {
     expect(api.calls, isEmpty);
   });
 
-  group('Fehler', () {
+  group('Fehler: lokaler Ersatz', () {
     final events = <LogEvent>[];
     captureLogs(events);
 
-    test('API-Fehler: Fehlerzustand ohne lokalen Ersatz, gemeldet; erneut',
-        () async {
+    /// Ein Arbeitstag (8 h) und ein Urlaubstag im März 2026.
+    void seedMarch() {
+      seed['2026-03-02'] = WorkEntryEntity(
+        id: '2026-03-02',
+        date: DateTime(2026, 3, 2),
+        workStart: DateTime(2026, 3, 2, 8),
+        workEnd: DateTime(2026, 3, 2, 16),
+      );
+      seed['2026-03-03'] = WorkEntryEntity(
+        id: '2026-03-03',
+        date: DateTime(2026, 3, 3),
+        type: WorkEntryType.vacation,
+      );
+    }
+
+    test('API-Fehler: lokale Werte statt Fehlerzustand, gemeldet', () async {
+      seedMarch();
       await ready();
       api.handler = (_) async => throw const ApiException('x', 500);
+      await vm().loadYear(2026);
+      final s = container.read(yearlyReportViewModelProvider);
+      expect(s.hasError, isFalse);
+      expect(s.isLoading, isFalse);
+      expect(work.monthReads, hasLength(12));
+      expect(s.totals, isNull, reason: 'lokal gerechnet');
+      // Kanonische Rechnung: Urlaub zählt als gearbeitet (Tagessoll 8 h) und
+      // als Soll; 8 h Arbeit am Soll-Tag ergeben 0 Überstunden.
+      expect(s.totalNetWorkDuration, _hour * 16);
+      expect(s.totalOvertime, Duration.zero);
+      expect(s.totalWorkDays, 2);
+      expect(s.totalVacationDays, 1);
+      expect(s.months[2].netWorkDuration, _hour * 16);
+      expect(reported(events, 'YearlyReportViewModel').map((e) => e.level),
+          [Level.error]);
+      expect(reported(events, 'YearlyReportViewModel').single.message,
+          allOf(contains('500'), contains('lokaler Ersatz')));
+    });
+
+    for (final e in transientNetworkErrors.entries) {
+      test(
+          'erwartbarer Netzwerkfehler (${e.key}): lokale Werte, nicht gemeldet',
+          () async {
+        seedMarch();
+        await ready();
+        api.handler = (_) async => throw e.value;
+        await vm().loadYear(2026);
+        final s = container.read(yearlyReportViewModelProvider);
+        expect(s.hasError, isFalse);
+        expect(s.totalWorkDays, 2);
+        expect(reported(events, 'YearlyReportViewModel'), isEmpty);
+      });
+    }
+
+    test('API und lokale Rechnung scheitern: Fehlerzustand; erneut', () async {
+      await ready();
+      api.handler = (_) async => throw transientNetworkErrors.values.first;
+      work.failReads = true;
       await vm().loadYear(2026);
       var s = container.read(yearlyReportViewModelProvider);
       expect(s.hasError, isTrue);
       expect(s.isLoading, isFalse);
-      expect(work.monthReads, isEmpty);
-      expect(reported(events, 'YearlyReportViewModel').map((e) => e.level),
-          [Level.error]);
-      expect(reported(events, 'YearlyReportViewModel').single.message,
-          contains('500'));
 
       api.handler = (c) async => yearlyComparisonJsonFor(c);
       await vm().loadYear(2026);
@@ -242,22 +290,35 @@ void main() {
       expect(s.totalWorkDays, 214);
     });
 
-    for (final e in transientNetworkErrors.entries) {
-      test('erwartbarer Netzwerkfehler (${e.key}): Fehler, nicht gemeldet',
-          () async {
-        await ready();
-        api.handler = (_) async => throw e.value;
-        await vm().loadYear(2026);
-        expect(container.read(yearlyReportViewModelProvider).hasError, isTrue);
-        expect(reported(events, 'YearlyReportViewModel'), isEmpty);
-      });
-    }
+    test('überholter Ersatz: Jahreswechsel während der lokalen Rechnung',
+        () async {
+      seedMarch();
+      await ready();
+      api.handler = (c) async {
+        if (c.year == 2026) throw const ApiException('x', 503);
+        return yearlyComparisonJsonFor(c);
+      };
+      work.holdReads = true;
+      unawaited(vm().loadYear(2026));
+      await settle();
+      expect(work.pendingReads, isNotEmpty, reason: 'Ersatz läuft');
+      await vm().loadYear(2025);
+      work.holdReads = false;
+      for (final c in work.pendingReads) {
+        c.complete();
+      }
+      await settle();
+      final s = container.read(yearlyReportViewModelProvider);
+      expect(s.year, 2025);
+      expect(s.totalWorkDays, 214, reason: 'Backend-Werte 2025 bleiben');
+    });
 
-    test('NotSignedInException: kein Fehlerzustand, nicht gemeldet', () async {
+    test('NotSignedInException: kein Fehlerzustand, kein Ersatz', () async {
       await ready();
       api.handler = (_) async => throw const NotSignedInException('x');
       await vm().loadYear(2026);
       expect(container.read(yearlyReportViewModelProvider).hasError, isFalse);
+      expect(work.monthReads, isEmpty);
       expect(reported(events, 'YearlyReportViewModel'), isEmpty);
     });
   });

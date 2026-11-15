@@ -372,8 +372,10 @@ List<ComparisonRow> comparisonRows(
   ];
 }
 
-/// Stichtag `MM-dd` der Antwort als kurzes Datum in der App-Sprache
-/// („15.11.“ bzw. „11/15“), sonst `null`. Reine Darstellung; kein Bezug zur
+/// Stichtag `MM-dd` der Antwort als kurzes Datum in der App-Sprache mit
+/// führenden Nullen wie im Web („05.03.“ bzw. „03/05“), sonst `null`. Das
+/// Muster kommt aus `DateFormat.Md` der Sprache; nur Tag und Monat werden auf
+/// zwei Stellen gebracht. Reine Darstellung; kein Bezug zur
 /// Uhr oder Zeitzone (2000 ist ein Schaltjahr, `02-29` bleibt gültig).
 String? formatComparisonUntil(String? until, String locale) {
   final match =
@@ -383,5 +385,7 @@ String? formatComparisonUntil(String? until, String locale) {
   final day = int.parse(match.group(2)!);
   final date = DateTime(2000, month, day);
   if (date.month != month || date.day != day) return null;
-  return DateFormat.Md(locale).format(date);
+  final pattern = DateFormat.Md(locale).pattern!.replaceAllMapped(
+      RegExp(r'M+|d+'), (m) => m[0]!.length == 1 ? m[0]! * 2 : m[0]!);
+  return DateFormat(pattern, locale).format(date);
 }

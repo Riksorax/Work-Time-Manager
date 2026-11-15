@@ -56,9 +56,12 @@ void main() {
 
   test('Anzeige des Stichtags hängt nicht von der Zone ab', () {
     // `MM-dd` der Antwort wird ohne Uhr gelesen; 02-29 bleibt gültig.
-    expect(formatComparisonUntil('01-01', 'de'), '1.1.');
-    expect(formatComparisonUntil('02-29', 'de'), '29.2.');
+    expect(formatComparisonUntil('01-01', 'de'), '01.01.');
+    expect(formatComparisonUntil('03-05', 'de'), '05.03.');
+    expect(formatComparisonUntil('03-05', 'en'), '03/05');
+    expect(formatComparisonUntil('02-29', 'de'), '29.02.');
     expect(formatComparisonUntil('11-15', 'en'), '11/15');
+    expect(formatComparisonUntil('11-15', 'de'), '15.11.');
     expect(formatComparisonUntil('02-30', 'de'), isNull);
     expect(formatComparisonUntil('2026-11-15', 'de'), isNull);
     expect(formatComparisonUntil(null, 'de'), isNull);
