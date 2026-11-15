@@ -1,7 +1,7 @@
 import { AxeBuilder } from '@axe-core/playwright';
 import { Page, Route } from '@playwright/test';
 import { EMULATORS_ENABLED, expect, test } from './account';
-import { trendResponse } from './trend-data';
+import { TrendMockOptions, trendResponse } from './trend-data';
 
 /** Tab „Trend“ (#531) mit Konto: Premium sieht die Diagramme (gemockte API-Antwort), Free die gesperrte Karte. */
 
@@ -17,7 +17,7 @@ const CORS = {
 };
 
 /** Ersetzt den Trend-Endpunkt des Fake-Backends (später registrierte Routen haben Vorrang) und zählt die Aufrufe. */
-async function mockTrend(page: Page): Promise<string[]> {
+async function mockTrend(page: Page, opts: TrendMockOptions = {}): Promise<string[]> {
   const calls: string[] = [];
   await page.route('http://localhost:5100/api/reports/trend/**', async (route: Route) => {
     if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: CORS });
@@ -27,7 +27,7 @@ async function mockTrend(page: Page): Promise<string[]> {
     return route.fulfill({
       status: 200,
       headers: { ...CORS, 'content-type': 'application/json' },
-      body: JSON.stringify(trendResponse(y, m, d, url.searchParams.get('granularity') ?? 'week', { gaps: [3] })),
+      body: JSON.stringify(trendResponse(y, m, d, url.searchParams.get('granularity') ?? 'week', { gaps: [3], ...opts })),
     });
   });
   return calls;
@@ -72,6 +72,55 @@ test('Premium: axe ohne ernste Verstöße in der Trend-Ansicht', async ({ page, 
     .filter(v => v.impact === 'serious' || v.impact === 'critical')
     .map(v => `${v.id}: ${v.nodes.slice(0, 3).map(n => n.target.join(' ')).join(' | ')}`);
   expect(serious).toEqual([]);
+});
+
+test('Premium: Prognose zum Jahresende unter dem Wochen-Trend, in beiden Zeitfenstern gleich', async ({ page, account }) => {
+  await mockTrend(page);
+  await account.setPremium(true);
+  await account.signIn({ path: '/reports' });
+  await openTrend(page);
+
+  const card = page.locator('app-trend-view .trend-forecast');
+  await expect(card.getByRole('heading', { name: 'Prognose zum Jahresende' })).toBeVisible();
+  await expect(card).toContainText(/Voraussichtlich \+27:30 h zum 31\.12\.\d{4}/);
+  await expect(card).toContainText('Aktueller Saldo +18:45 h · im Schnitt +01:15 h pro Woche (letzte 6 Wochen) · noch rund 7 Wochen');
+  await expect(card).toContainText('Geplanter Urlaub und Feiertage sind nicht berücksichtigt.');
+  const before = await card.innerText();
+
+  await page.locator('app-trend-view').getByRole('radio', { name: '12 Monate' }).click();
+  await expect(page.getByRole('heading', { name: 'Arbeitszeit je Monat' })).toBeVisible();
+  expect(await card.innerText()).toBe(before);
+});
+
+test('Premium: negative Prognose mit Minus, ohne Prognose ein Hinweis', async ({ page, account }) => {
+  await mockTrend(page, { forecast: 'negative' });
+  await account.setPremium(true);
+  await account.signIn({ path: '/reports' });
+  await openTrend(page);
+  await expect(page.locator('app-trend-view .trend-forecast')).toContainText(/Voraussichtlich -07:45 h zum 31\.12\.\d{4}/);
+
+  await mockTrend(page, { forecast: null });
+  await page.reload();
+  await openTrend(page);
+  const card = page.locator('app-trend-view .trend-forecast');
+  await expect(card).toContainText('Für eine Prognose fehlen noch Daten (mindestens 4 der letzten 8 Wochen mit Einträgen).');
+  await expect(card).not.toContainText('Voraussichtlich');
+});
+
+test('Premium: Prognose-Karte läuft bei 320 px nicht über, axe ohne Befund', async ({ page, account }) => {
+  await mockTrend(page);
+  await account.setPremium(true);
+  await page.setViewportSize({ width: 320, height: 800 });
+  await account.signIn({ path: '/reports' });
+  await openTrend(page);
+  const card = page.locator('app-trend-view .trend-forecast');
+  await expect(card).toBeVisible();
+  const box = await card.boundingBox();
+  expect(box!.x).toBeGreaterThanOrEqual(0);
+  expect(box!.x + box!.width).toBeLessThanOrEqual(320);
+  expect(await card.evaluate(e => e.scrollWidth <= e.clientWidth)).toBe(true);
+  const result = await new AxeBuilder({ page }).include('app-trend-view .trend-forecast').withTags(['wcag2a', 'wcag2aa']).analyze();
+  expect(result.violations.map(v => v.id)).toEqual([]);
 });
 
 test('Free: gesperrte Karte, kein Aufruf des Trend-Endpunkts', async ({ page, account }) => {

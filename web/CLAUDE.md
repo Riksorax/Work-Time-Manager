@@ -61,7 +61,7 @@ domain/
 ├── models/
 │   ├── reports.models.ts  DailyStat, WeeklyReport, MonthlyReport
 │   ├── leave.models.ts    YearlyLeaveReport (1:1 Backend-DTO), LeaveMonth, LeavePeriod (#284)
-│   ├── trend.models.ts    TrendReport, TrendBucket, WeeklyTrend (#531, 1:1 Backend-DTO ohne `Ms`-Suffix)
+│   ├── trend.models.ts    TrendReport, TrendBucket, WeeklyTrend, OvertimeForecast (#531/#532, 1:1 Backend-DTO ohne `Ms`-Suffix)
 │   └── yearly-comparison.models.ts  YearlyComparison, YearlySummary, YearlyDelta (#530, 1:1 Backend-DTO mit `Ms`-Suffix)
 ├── services/
 │   ├── break-calculator.ts   Pure — Pflichtpausen (30min/6h, 45min/9h)
@@ -161,6 +161,12 @@ der Trend hat ein eigenes Zeitfenster (12 Wochen/12 Monate bis heute) und hängt
 - **Inhalt:** Wochen-Trend als Text (`weeklyTrend`, `comparedWeeks` aus der Antwort; `null` → Hinweis „zu wenig Daten“),
   Balken Arbeitszeit netto mit Soll-Marke, Linie „Überstunden im Zeitraum“ (`cumulativeOvertimeMs`, ab 0, ausdrücklich nicht der
   Gleitzeit-Saldo). Der letzte Bucket gilt als laufend.
+- **Prognose zum Jahresende (#532):** Karte direkt unter dem Wochen-Trend (nur Trend-Ansicht, nicht im Dashboard), Text ohne Diagramm,
+  neutral ohne Wertungsfarbe (Icon trending_up/down/flat nach Vorzeichen von Prognose minus Saldo). `forecast` der Antwort ist bei
+  beiden Granularitäten gleich; fehlt es (älteres Backend) oder ist es `null`, steht der Hinweis „Für eine Prognose fehlen noch Daten“.
+  `targetDate` (`yyyy-MM-dd`) wird als lokaler Kalendertag zerlegt (Zonen-Test `api-client.trend.tz.spec.ts`), nie über eine Zeitzone gelesen.
+  Der Client rechnet nichts: Restwochen nur gerundet angezeigt (`< 1` → „weniger als eine Woche“, `0` → „das Jahr endet heute“ und
+  die Prognose entspricht dem Saldo). Urlaub und Feiertage sind nicht berücksichtigt (Hinweis in der Karte). Texte `reports.trendForecast*`.
 - **Diagramme (`shared/components/charts/`):** eigene SVG-Komponenten, keine Chart-Bibliothek. Breite per `ResizeObserver` in Pixeln
   (kein `viewBox`, damit die Schrift auf dem Handy nicht schrumpft), Achsenbeschriftungen werden bei schmaler Breite ausgedünnt
   (der jüngste Zeitraum bleibt). Lücke (`hasData = false`): Balken gestrichelte Grundlinie, Linie hohler Punkt; laufender Zeitraum:

@@ -29,9 +29,30 @@ export interface WeeklyTrend {
   comparedWeeks: number;
 }
 
+/**
+ * Überstunden-Prognose zum Jahresende (#532), 1:1 aus `OvertimeForecastDto` des Backends. Der Client rechnet nichts.
+ * Geplanter Urlaub und Feiertage im Rest des Jahres sind nicht berücksichtigt.
+ */
+export interface OvertimeForecast {
+  /** 31.12. des Jahres des Bezugstags als lokale Mitternacht (Kalendertag, nicht über eine Zeitzone gelesen). */
+  targetDate: Date;
+  /** Gespeicherter Gleitzeit-Saldo. */
+  currentBalance: number;
+  /** Mittel der Wochen-Überstunden über die eingerechneten Wochen. */
+  averageWeeklyOvertime: number;
+  /** Eingerechnete Wochen (4–8). */
+  weeksUsed: number;
+  /** Kalendertage bis einschließlich 31.12. / 7, nicht gerundet (am 31.12. 0). */
+  remainingWeeks: number;
+  /** Aktueller Saldo + Mittel × Restwochen. */
+  projectedBalance: number;
+}
+
 export interface TrendReport {
   granularity: TrendGranularity;
   /** Immer 12, älteste zuerst; der letzte enthält den Bezugstag und ist ggf. unvollständig. */
   buckets: TrendBucket[];
   weeklyTrend: WeeklyTrend | null;
+  /** Bei beiden Granularitäten gleich; `null` bei zu wenig Daten oder fehlendem Feld (älteres Backend). */
+  forecast: OvertimeForecast | null;
 }

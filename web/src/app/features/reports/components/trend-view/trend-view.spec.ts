@@ -9,7 +9,7 @@ import { ApiClient } from '../../../../core/services/api-client';
 import { ProfileService } from '../../../../core/services/profile';
 import { TodayService } from '../../../../core/services/today';
 import { WorkProfileService } from '../../../../core/services/work-profile';
-import { TrendBucket, TrendGranularity, TrendReport, WeeklyTrend } from '../../../../domain/models/trend.models';
+import { OvertimeForecast, TrendBucket, TrendGranularity, TrendReport, WeeklyTrend } from '../../../../domain/models/trend.models';
 import { FakeWorkProfile, createFakeWorkProfile } from '../../../../shared/testing/work-profile-fake';
 import de from '../../../../../../public/i18n/de.json';
 import en from '../../../../../../public/i18n/en.json';
@@ -32,8 +32,20 @@ function buckets(g: TrendGranularity, hasData: (i: number) => boolean = () => tr
 
 const TREND: WeeklyTrend = { lastWeekKey: '2026-W45', lastWeekWorked: 41.5 * H, averageWorked: 39 * H, delta: 2.5 * H, comparedWeeks: 4 };
 
-function report(g: TrendGranularity, weeklyTrend: WeeklyTrend | null = TREND, hasData?: (i: number) => boolean): TrendReport {
-  return { granularity: g, buckets: buckets(g, hasData), weeklyTrend };
+const FORECAST: OvertimeForecast = {
+  targetDate: new Date(2026, 11, 31), currentBalance: 18.75 * H, averageWeeklyOvertime: 1.25 * H,
+  weeksUsed: 6, remainingWeeks: 7.14, projectedBalance: 32.5 * H,
+};
+
+function forecast(over: Partial<OvertimeForecast> = {}): OvertimeForecast {
+  return { ...FORECAST, ...over };
+}
+
+function report(
+  g: TrendGranularity, weeklyTrend: WeeklyTrend | null = TREND, hasData?: (i: number) => boolean,
+  fc: OvertimeForecast | null = FORECAST,
+): TrendReport {
+  return { granularity: g, buckets: buckets(g, hasData), weeklyTrend, forecast: fc };
 }
 
 interface World {
@@ -249,5 +261,86 @@ describe('TrendViewComponent (#531)', () => {
     fixture.detectChanges();
     expect(text()).toContain('compared with the average of the previous 4 weeks');
     expect(text()).toContain('Working time per week');
+  });
+
+  describe('Karte „Prognose zum Jahresende“ (#532)', () => {
+    const card = (): HTMLElement => el().querySelector('.trend-forecast') as HTMLElement;
+    const cardText = (): string => card().textContent?.replace(/\s+/g, ' ') ?? '';
+
+    it('positive Prognose: Hauptzeile, Herleitung, Hinweis; Karte direkt unter dem Wochen-Trend', () => {
+      mount((_d, g) => of(report(g)));
+      expect(card().querySelector('h3')?.textContent).toContain('Prognose zum Jahresende');
+      expect(card().getAttribute('aria-label')).toBe('Prognose zum Jahresende');
+      expect(cardText()).toContain('Voraussichtlich +32:30 h zum 31.12.2026');
+      expect(cardText()).toContain('Aktueller Saldo +18:45 h · im Schnitt +01:15 h pro Woche (letzte 6 Wochen) · noch rund 7 Wochen');
+      expect(cardText()).toContain('Hochrechnung aus deinen letzten Wochen. Geplanter Urlaub und Feiertage sind nicht berücksichtigt.');
+      expect(card().previousElementSibling?.textContent).toContain('Wochen-Trend');
+      expect(card().querySelector('mat-icon')?.textContent?.trim()).toBe('trending_up');
+    });
+
+    it('negative Prognose: Vorzeichen minus, Icon trending_down', () => {
+      mount((_d, g) => of(report(g, TREND, undefined, forecast({
+        currentBalance: -2 * H, averageWeeklyOvertime: -0.5 * H, projectedBalance: -5.5 * H,
+      }))));
+      expect(cardText()).toContain('Voraussichtlich -05:30 h zum 31.12.2026');
+      expect(cardText()).toContain('Aktueller Saldo -02:00 h · im Schnitt -00:30 h pro Woche');
+      expect(card().querySelector('mat-icon')?.textContent?.trim()).toBe('trending_down');
+    });
+
+    it('Prognose 0: +00:00 h, Icon trending_flat', () => {
+      mount((_d, g) => of(report(g, TREND, undefined, forecast({
+        currentBalance: 0, averageWeeklyOvertime: 0, projectedBalance: 0,
+      }))));
+      expect(cardText()).toContain('Voraussichtlich +00:00 h zum 31.12.2026');
+      expect(card().querySelector('mat-icon')?.textContent?.trim()).toBe('trending_flat');
+    });
+
+    it('forecast = null: Hinweis auf fehlende Daten, Diagramme bleiben', () => {
+      mount((_d, g) => of(report(g, TREND, undefined, null)));
+      expect(cardText()).toContain('Für eine Prognose fehlen noch Daten (mindestens 4 der letzten 8 Wochen mit Einträgen).');
+      expect(cardText()).not.toContain('Voraussichtlich');
+      expect(cardText()).not.toContain('Hochrechnung');
+      expect(el().querySelector('app-bar-chart')).not.toBeNull();
+    });
+
+    it('Restwochen: gerundet, 1 Woche, unter einer Woche, 0', () => {
+      const detail = (remainingWeeks: number): string => {
+        TestBed.resetTestingModule();
+        mount((_d, g) => of(report(g, TREND, undefined, forecast({ remainingWeeks }))));
+        return cardText();
+      };
+      expect(detail(7.14)).toContain('noch rund 7 Wochen');
+      expect(detail(7.6)).toContain('noch rund 8 Wochen');
+      expect(detail(1.2)).toContain('noch rund 1 Woche');
+      expect(detail(0.857)).toContain('weniger als eine Woche');
+      const end = detail(0);
+      expect(end).toContain('das Jahr endet heute');
+      expect(end).toContain('entspricht die Prognose dem aktuellen Saldo: +32:30 h');
+      expect(end).not.toContain('pro Woche');
+    });
+
+    it('Granularität Monate: Karte bleibt gleich', () => {
+      mount((_d, g) => of(report(g)));
+      const before = cardText();
+      (el().querySelectorAll<HTMLButtonElement>('mat-button-toggle button')[1]).click();
+      TestBed.tick();
+      fixture.detectChanges();
+      expect(cardText()).toBe(before);
+    });
+
+    it('Leerzustand zeigt keine Karte', () => {
+      mount((_d, g) => of(report(g, null, () => false, null)));
+      expect(el().querySelector('.trend-forecast')).toBeNull();
+    });
+
+    it('Englisch: Texte und Datum in der App-Sprache', () => {
+      mount((_d, g) => of(report(g)));
+      TestBed.inject(TranslateService).use('en');
+      fixture.detectChanges();
+      expect(cardText()).toContain('Year-end forecast');
+      expect(cardText()).toContain('Expected +32:30 h by 12/31/2026');
+      expect(cardText()).toContain('Current balance +18:45 h · on average +01:15 h per week (last 6 weeks) · about 7 weeks left');
+      expect(cardText()).toContain('Planned vacation and public holidays are not included.');
+    });
   });
 });

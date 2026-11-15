@@ -6,7 +6,7 @@ import { normalizeWorkLocations, readWorkLocations } from '../../shared/utils/wo
 import { Break, Bundesland, UserSettings, WorkEntry, WorkEntryType, WorkProfile } from '../../shared/models';
 import { YearlyLeaveReport } from '../../domain/models/leave.models';
 import { DailyStat, MonthlyReport, WeeklyReport } from '../../domain/models/reports.models';
-import { TrendGranularity, TrendReport } from '../../domain/models/trend.models';
+import { OvertimeForecast, TrendGranularity, TrendReport } from '../../domain/models/trend.models';
 import { YearlyComparison } from '../../domain/models/yearly-comparison.models';
 import { calendarDateFromUtcMidnight, parseEntryId } from '../../shared/utils/entry-day.util';
 import {
@@ -64,7 +64,33 @@ interface TrendBucketDto {
 interface WeeklyTrendDto {
   lastWeekKey: string; lastWeekWorkedMs: number; averageWorkedMs: number; deltaMs: number; comparedWeeks: number;
 }
-interface TrendReportDto { granularity: TrendGranularity; buckets: TrendBucketDto[]; weeklyTrend: WeeklyTrendDto | null; }
+interface OvertimeForecastDto {
+  targetDate: string; currentBalanceMs: number; averageWeeklyOvertimeMs: number; weeksUsed: number;
+  remainingWeeks: number; projectedBalanceMs: number;
+}
+interface TrendReportDto {
+  granularity: TrendGranularity; buckets: TrendBucketDto[]; weeklyTrend: WeeklyTrendDto | null;
+  forecast?: OvertimeForecastDto | null;
+}
+
+/** `yyyy-MM-dd` (ggf. mit Zeitanteil) als lokale Mitternacht dieses Kalendertags; ungültig → `null`. */
+function calendarDayFromIso(value: string | null | undefined): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(value ?? '');
+  return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : null;
+}
+
+function mapForecast(dto: OvertimeForecastDto | null | undefined): OvertimeForecast | null {
+  const targetDate = dto ? calendarDayFromIso(dto.targetDate) : null;
+  if (!dto || !targetDate) return null;
+  return {
+    targetDate,
+    currentBalance: dto.currentBalanceMs,
+    averageWeeklyOvertime: dto.averageWeeklyOvertimeMs,
+    weeksUsed: dto.weeksUsed,
+    remainingWeeks: dto.remainingWeeks,
+    projectedBalance: dto.projectedBalanceMs,
+  };
+}
 
 /**
  * Typisierter Client für die .NET-Backend-API. Übernimmt das Mapping zwischen
@@ -255,6 +281,7 @@ export class ApiClient {
               comparedWeeks: dto.weeklyTrend.comparedWeeks,
             }
           : null,
+        forecast: mapForecast(dto.forecast),
       }))
     );
   }
