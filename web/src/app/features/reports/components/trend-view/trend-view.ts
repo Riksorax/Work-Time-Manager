@@ -143,6 +143,40 @@ export class TrendViewComponent {
     return d > 0 ? 'trending_up' : d < 0 ? 'trending_down' : 'trending_flat';
   });
 
+  // ── Prognose zum Jahresende (#532) ─────────────────────────────────────────────
+
+  protected readonly forecast = computed(() => this.svc.report()?.forecast ?? null);
+
+  protected readonly forecastTrendIcon = computed(() => {
+    const f = this.forecast();
+    if (!f) return 'trending_flat';
+    const delta = f.projectedBalance - f.currentBalance;
+    return delta > 0 ? 'trending_up' : delta < 0 ? 'trending_down' : 'trending_flat';
+  });
+
+  protected readonly forecastTexts = computed(() => {
+    const f = this.forecast();
+    if (!f) return null;
+    this.locale();
+    const date = new Intl.DateTimeFormat(this.locale(), { day: '2-digit', month: '2-digit', year: 'numeric' })
+      .format(f.targetDate);
+    const balance = this.formatSigned(f.projectedBalance);
+    const rest = f.remainingWeeks;
+    const rounded = Math.round(rest);
+    const remainingKey = rest <= 0 ? 'None' : rest < 1 ? 'Less' : rounded <= 1 ? 'One' : 'Many';
+    const remaining = this.translate.instant(`reports.trendForecastRemaining${remainingKey}`, { count: rounded });
+    const atEnd = rest <= 0;
+    return {
+      main: this.translate.instant(atEnd ? 'reports.trendForecastMainNow' : 'reports.trendForecastMain', { balance, date }),
+      detail: this.translate.instant(atEnd ? 'reports.trendForecastDetailEnd' : 'reports.trendForecastDetail', {
+        balance: this.formatSigned(f.currentBalance),
+        average: this.formatSigned(f.averageWeeklyOvertime),
+        weeks: f.weeksUsed,
+        remaining,
+      }),
+    };
+  });
+
   protected formatDuration(ms: number): string {
     return formatDurationHm(ms);
   }
