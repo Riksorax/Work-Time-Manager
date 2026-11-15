@@ -6,6 +6,7 @@ import '../../core/providers/clock_provider.dart';
 import '../../core/providers/providers.dart' show workLocationHistoryProvider;
 import '../../core/utils/time_format.dart';
 import '../../domain/entities/break_entity.dart';
+import '../../domain/entities/overtime_freshness.dart';
 import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/services/break_calculator_service.dart';
 import '../../domain/utils/break_duration.dart';
@@ -18,6 +19,7 @@ import '../view_models/settings_view_model.dart';
 import '../view_models/timer_action_view_model.dart';
 import '../widgets/assistant_query_sheet.dart';
 import '../widgets/common/dashboard_save_feedback.dart';
+import '../widgets/common/overtime_freshness_hint.dart';
 import '../widgets/common/responsive_center.dart';
 import '../widgets/edit_break_modal.dart';
 import '../widgets/holiday_banner.dart';
@@ -163,7 +165,16 @@ class DashboardScreen extends ConsumerWidget {
           final overtimeStats = Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildOvertime(context, totalOvertime, l10n.overtimeTotalLabel),
+              // Ohne Netz: zuletzt bekannter Saldo mit Hinweis, unbekannt als
+              // Strich (#573).
+              if (dashboardState.overtimeFreshness ==
+                      OvertimeFreshness.unknown &&
+                  dashboardState.totalOvertime == null)
+                _buildUnknownOvertime(context, l10n.overtimeTotalLabel)
+              else
+                _buildOvertime(context, totalOvertime, l10n.overtimeTotalLabel),
+              OvertimeFreshnessHint(
+                  freshness: dashboardState.overtimeFreshness),
               const SizedBox(height: 16),
               _buildOvertime(context, dashboardState.dailyOvertime,
                   l10n.overtimeTodayLabel),
@@ -329,6 +340,17 @@ class DashboardScreen extends ConsumerWidget {
           );
         },
       ),
+    );
+  }
+
+  Widget _buildUnknownOvertime(BuildContext context, String title) {
+    return Column(
+      children: [
+        Text(title, style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 4),
+        UnknownOvertimeValue(
+            style: Theme.of(context).textTheme.headlineMedium),
+      ],
     );
   }
 

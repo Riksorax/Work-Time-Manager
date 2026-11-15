@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 
+import '../../domain/entities/overtime_freshness.dart';
 import '../../domain/entities/work_entry_entity.dart';
 
 class DashboardState extends Equatable {
@@ -23,6 +24,11 @@ class DashboardState extends Equatable {
   /// Die UI deaktiviert dann die Schreib-Buttons.
   final bool isSaving;
 
+  /// Herkunft des Saldos in [totalOvertime] (#573): `cached` = ohne Netz der
+  /// zuletzt bekannte Stand, `unknown` = ohne Netz und ohne gemerkten Stand
+  /// ([totalOvertime] ist dann `null`).
+  final OvertimeFreshness overtimeFreshness;
+
   const DashboardState({
     required this.workEntry,
     required this.elapsedTime,
@@ -36,6 +42,7 @@ class DashboardState extends Equatable {
     this.expectedEndTotalZero,
     this.isExtraDay = false,
     this.isSaving = false,
+    this.overtimeFreshness = OvertimeFreshness.current,
   });
 
   /// [now] ist die Uhr (Default `DateTime.now()`); das ViewModel reicht
@@ -74,6 +81,7 @@ class DashboardState extends Equatable {
     DateTime? expectedEndTotalZero,
     bool? isExtraDay,
     bool? isSaving,
+    OvertimeFreshness? overtimeFreshness,
   }) {
     return DashboardState(
       workEntry: workEntry ?? this.workEntry,
@@ -88,6 +96,7 @@ class DashboardState extends Equatable {
       expectedEndTotalZero: expectedEndTotalZero ?? this.expectedEndTotalZero,
       isExtraDay: isExtraDay ?? this.isExtraDay,
       isSaving: isSaving ?? this.isSaving,
+      overtimeFreshness: overtimeFreshness ?? this.overtimeFreshness,
     );
   }
 
@@ -105,5 +114,6 @@ class DashboardState extends Equatable {
         expectedEndTotalZero,
         isExtraDay,
         isSaving,
+        overtimeFreshness,
       ];
 }

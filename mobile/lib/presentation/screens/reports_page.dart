@@ -17,6 +17,7 @@ import '../../core/providers/subscription_provider.dart';
 import '../../core/providers/today_provider.dart';
 import '../../core/services/pdf_report_service.dart';
 import '../../core/utils/api_errors.dart';
+import '../../domain/entities/overtime_freshness.dart';
 import '../../domain/entities/work_profile_entity.dart';
 
 import '../../domain/entities/work_entry_extensions.dart';
@@ -42,7 +43,9 @@ import '../view_models/reports_view_model.dart';
 import '../view_models/settings_view_model.dart';
 import '../view_models/yearly_report_view_model.dart';
 import '../view_models/auth_view_model.dart';
+import '../widgets/common/load_failure_notice.dart';
 import '../widgets/common/loading_indicator.dart';
+import '../widgets/common/overtime_freshness_hint.dart';
 import '../widgets/common/sheet_insets.dart';
 import '../widgets/edit_work_entry_modal.dart';
 import '../widgets/quick_entry_dialog.dart';
@@ -303,7 +306,7 @@ class DailyReportView extends ConsumerWidget {
           ],
         );
 
-        final detailsWidget = Column(
+        final dailyDetails = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
@@ -615,6 +618,13 @@ class DailyReportView extends ConsumerWidget {
           ],
         );
 
+        // Ohne ladbare Einträge (#573): Kalender bleibt, statt Nullwerten
+        // ein Hinweis mit „Erneut versuchen“.
+        final Widget detailsWidget =
+            reportsState.loadFailure == ReportsLoadFailure.none
+                ? dailyDetails
+                : _ReportsLoadFailureNotice(failure: reportsState.loadFailure);
+
         return ResponsiveCenter(
           maxContentWidth: 1200, // Increased for side-by-side view
           child: LayoutBuilder(
@@ -656,9 +666,7 @@ class DailyReportView extends ConsumerWidget {
         );
       },
       loading: () => const LoadingIndicator(),
-      error: (error, stackTrace) => Center(
-        child: Text(l10n.errorLoadingSettings('$error')),
-      ),
+      error: (_, __) => const _SettingsLoadError(),
     );
   }
 }
@@ -732,6 +740,9 @@ class WeeklyReportView extends ConsumerWidget {
         data: (_) {
           if (reportsState.isLoading) {
             return const LoadingIndicator();
+          }
+          if (reportsState.loadFailure != ReportsLoadFailure.none) {
+            return _ReportsLoadFailureView(failure: reportsState.loadFailure);
           }
 
           final weeklyReport = reportsState.weeklyReportState;
@@ -928,9 +939,7 @@ class WeeklyReportView extends ConsumerWidget {
           ));
         },
         loading: () => const LoadingIndicator(),
-        error: (error, stackTrace) => Center(
-              child: Text(l10n.errorLoadingSettings('$error')),
-            ));
+        error: (_, __) => const _SettingsLoadError());
   }
 }
 
@@ -1350,6 +1359,37 @@ class MonthlyReportView extends ConsumerWidget {
     }
 
     final monthlyReport = reportsState.monthlyReportState;
+    final overtimeFreshness = reportsState.overtimeFreshness;
+    final unknownTotal = overtimeFreshness == OvertimeFreshness.unknown;
+    // „Gesamt-Überstunden“ = Gleitzeit-Saldo; ohne Netz der zuletzt bekannte
+    // Stand mit Hinweis, unbekannt als Strich (#573).
+    final totalOvertimeStyle = TextStyle(
+        color: monthlyReport.totalOvertime.isNegative
+            ? Colors.red
+            : Colors.green,
+        fontWeight: FontWeight.bold);
+    final Widget totalOvertimeValue = unknownTotal
+        ? const UnknownOvertimeValue(
+            style: TextStyle(fontWeight: FontWeight.bold))
+        : Text(_formatDuration(monthlyReport.totalOvertime),
+            style: totalOvertimeStyle);
+    final totalOvertimeRow = Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Flexible(
+              child: Text(l10n.totalOvertimeColonLabel,
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+            ),
+            totalOvertimeValue,
+          ],
+        ),
+        OvertimeFreshnessHint(
+            freshness: overtimeFreshness, alignment: MainAxisAlignment.end),
+      ],
+    );
     final selectedMonth =
         reportsState.selectedMonth ?? ref.read<DateTime>(todayProvider);
     final month = DateFormat.yMMMM(locale)
@@ -1358,6 +1398,18 @@ class MonthlyReportView extends ConsumerWidget {
     final settingsValue = ref.watch(settingsViewModelProvider);
     return settingsValue.when(
       data: (_) {
+        if (reportsState.loadFailure != ReportsLoadFailure.none) {
+          // Ohne Einträge ist nur der Gleitzeit-Saldo bekannt (#573).
+          return _ReportsLoadFailureView(
+            failure: reportsState.loadFailure,
+            footer: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: totalOvertimeRow,
+              ),
+            ),
+          );
+        }
         // Überstunden und Arbeitszeit kommen aus dem Monatsbericht des
         // ViewModels (angemeldet vom Backend), die Oberfläche rechnet nicht
         // selbst (#535).
@@ -1502,19 +1554,7 @@ class MonthlyReportView extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(l10n.totalOvertimeColonLabel,
-                          style: const TextStyle(fontWeight: FontWeight.bold)),
-                      Text(_formatDuration(monthlyReport.totalOvertime),
-                          style: TextStyle(
-                              color: monthlyReport.totalOvertime.isNegative
-                                  ? Colors.red
-                                  : Colors.green,
-                              fontWeight: FontWeight.bold)),
-                    ],
-                  ),
+                  totalOvertimeRow,
                 ],
               ),
             ),
@@ -1577,9 +1617,7 @@ class MonthlyReportView extends ConsumerWidget {
         );
       },
       loading: () => const LoadingIndicator(),
-      error: (error, stackTrace) => Center(
-        child: Text(l10n.errorLoadingSettings('$error')),
-      ),
+      error: (_, __) => const _SettingsLoadError(),
     );
   }
 }
@@ -3220,6 +3258,69 @@ class YearlyLeaveRows extends ConsumerWidget {
         row(l10n.vacationEntitlementLabel, '${balance.entitlement}'),
         row(l10n.remainingVacationTitle, '${balance.remaining}'),
       ],
+    );
+  }
+}
+
+/// Unerwarteter Ladefehler der Einstellungen in den Berichten (#573): eine
+/// verständliche Meldung mit „Erneut versuchen“ statt des Ausnahmetexts.
+class _SettingsLoadError extends ConsumerWidget {
+  const _SettingsLoadError();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: LoadFailureNotice(
+          message: AppLocalizations.of(context).errorLoadingSettings,
+          onRetry: () => ref.read(settingsViewModelProvider.notifier).reload(),
+        ),
+      ),
+    );
+  }
+}
+
+/// Hinweis, wenn die Einträge des Monats nicht ladbar sind (#573): „Keine
+/// Verbindung“ bzw. eine allgemeine Meldung, „Erneut versuchen“ lädt neu.
+class _ReportsLoadFailureNotice extends ConsumerWidget {
+  const _ReportsLoadFailureNotice({required this.failure});
+
+  final ReportsLoadFailure failure;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final offline = failure == ReportsLoadFailure.offline;
+    return LoadFailureNotice(
+      offline: offline,
+      message: offline ? l10n.reportsOfflineText : l10n.reportsLoadErrorText,
+      onRetry: () => ref.read(reportsViewModelProvider.notifier).retry(),
+    );
+  }
+}
+
+/// Wochen- und Monats-Tab ohne ladbare Einträge (#573): Hinweis statt
+/// Nullwerten, optional darunter [footer].
+class _ReportsLoadFailureView extends StatelessWidget {
+  const _ReportsLoadFailureView({required this.failure, this.footer});
+
+  final ReportsLoadFailure failure;
+  final Widget? footer;
+
+  @override
+  Widget build(BuildContext context) {
+    return ResponsiveCenter(
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          _ReportsLoadFailureNotice(failure: failure),
+          if (footer != null) ...[
+            const SizedBox(height: 16),
+            footer!,
+          ],
+        ],
+      ),
     );
   }
 }

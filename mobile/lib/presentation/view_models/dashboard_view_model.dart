@@ -11,6 +11,7 @@ import '../../core/providers/clock_provider.dart';
 import '../../core/providers/providers.dart';
 import '../../core/providers/today_provider.dart';
 import '../../domain/entities/break_entity.dart';
+import '../../domain/entities/overtime_freshness.dart';
 import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/entities/work_profile_entity.dart';
 import '../../domain/repositories/overtime_repository.dart';
@@ -323,6 +324,8 @@ class DashboardViewModel extends Notifier<DashboardState> {
         isExtraDay: isExtraDay,
         // Ein Reinit mitten in einer Aktion darf die UI nicht entsperren.
         isSaving: _busy,
+        // Ohne Netz liefert das Repository den zuletzt bekannten Stand (#573).
+        overtimeFreshness: overtimeRepository.overtimeFreshness,
       );
       _loadedOk = true;
       await _recalculateStateAndSave(workEntry, save: false);
@@ -341,7 +344,34 @@ class DashboardViewModel extends Notifier<DashboardState> {
       if (!stale()) {
         _loadedOk = false;
         state = state.copyWith(isLoading: false);
+        // Ohne Netz bleibt der Tag unbekannt (angemeldet kommen Einträge nur
+        // über die API, Schreibaktionen brechen über `_ensureCurrentDay` ab).
+        // Den Gleitzeit-Saldo zeigt das Dashboard trotzdem: den zuletzt
+        // bekannten Stand mit Hinweis, sonst „unbekannt“ statt +00:00 (#573).
+        if (isExpectedLoadFailure(e)) await _showRememberedOvertime(stale);
       }
+    }
+  }
+
+  /// Nur Anzeige nach einem erwartbaren Ladefehler (#573): setzt
+  /// `totalOvertime` auf den Saldo, den das Repository ohne Netz liefert
+  /// (zuletzt bekannter Stand), bzw. markiert ihn als unbekannt. Schreibt
+  /// nichts und fasst die Basis (`initialOvertime`) nicht an.
+  Future<void> _showRememberedOvertime(bool Function() stale) async {
+    final overtimeRepository = ref.read(overtimeRepositoryProvider);
+    try {
+      final stored = await overtimeRepository.ensureOvertimeLoaded();
+      if (stale()) return;
+      state = state.copyWith(
+        totalOvertime: stored,
+        overtimeFreshness: overtimeRepository.overtimeFreshness,
+      );
+    } catch (e) {
+      if (stale()) return;
+      logger.i('[Dashboard] Saldo nicht ladbar (${errorLabel(e)})');
+      // Ohne gemerkten Stand wurde der Saldo in dieser Sitzung nie geladen;
+      // `totalOvertime` ist dann ohnehin `null`.
+      state = state.copyWith(overtimeFreshness: OvertimeFreshness.unknown);
     }
   }
 
