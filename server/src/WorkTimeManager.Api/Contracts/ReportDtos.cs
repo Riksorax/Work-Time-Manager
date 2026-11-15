@@ -77,7 +77,8 @@ public sealed record LeavePeriodDto(DateOnly Start, DateOnly End, int Days);
 /// <summary>
 /// Verlauf von Arbeitszeit und Überstunden über 12 Wochen bzw. 12 Monate (#531). Alle Zeitwerte in
 /// Millisekunden. Es gibt keine Historie des Gleitzeit-Saldos: <see cref="TrendBucketDto.CumulativeOvertimeMs"/>
-/// summiert nur die Überstunden im Zeitfenster ab 0, der gespeicherte Saldo fließt nirgends ein.
+/// summiert nur die Überstunden im Zeitfenster ab 0; der gespeicherte Saldo fließt nur in
+/// <see cref="Forecast"/> ein (#532).
 /// </summary>
 public sealed record TrendReportDto
 {
@@ -92,6 +93,45 @@ public sealed record TrendReportDto
     /// <c>null</c>, wenn die letzte Woche keine Einträge hat oder weniger als zwei Vergleichswochen Einträge haben.
     /// </summary>
     public WeeklyTrendDto? WeeklyTrend { get; init; }
+
+    /// <summary>
+    /// Hochrechnung des Gleitzeit-Saldos zum 31.12. des Bezugsjahres (#532); bei beiden Granularitäten gesetzt und
+    /// identisch. <c>null</c>, wenn in den acht abgeschlossenen ISO-Wochen vor der Woche des Bezugstags weniger als
+    /// vier Wochen Einträge haben. Additiv, ältere Clients ignorieren das Feld.
+    /// </summary>
+    public OvertimeForecastDto? Forecast { get; init; }
+}
+
+/// <summary>
+/// Überstunden-Prognose zum Jahresende (#532). Zeitwerte in Millisekunden. Geplanter Urlaub und Feiertage im Rest
+/// des Jahres werden nicht gesondert berücksichtigt.
+/// </summary>
+public sealed record OvertimeForecastDto
+{
+    /// <summary>31.12. des Jahres des Bezugstags (JSON <c>yyyy-MM-dd</c>).</summary>
+    public DateOnly TargetDate { get; init; }
+
+    /// <summary>Gespeicherter Gleitzeit-Saldo (<c>overtime/balance</c>, Minuten × 60 000).</summary>
+    public long CurrentBalanceMs { get; init; }
+
+    /// <summary>
+    /// Mittel der Wochen-Überstunden (<c>OvertimeMs</c> wie im Wochenbericht, inkl. manueller Überstunden) über die
+    /// eingerechneten Wochen; nur zur Anzeige kaufmännisch auf ganze Millisekunden gerundet (.5 von der Null weg).
+    /// </summary>
+    public long AverageWeeklyOvertimeMs { get; init; }
+
+    /// <summary>Zahl der eingerechneten Wochen mit Einträgen (4–8) aus den acht Wochen vor der Woche des Bezugstags.</summary>
+    public int WeeksUsed { get; init; }
+
+    /// <summary>Kalendertage nach dem Bezugstag bis einschließlich 31.12., geteilt durch 7, nicht gerundet (am 31.12. 0).</summary>
+    public double RemainingWeeks { get; init; }
+
+    /// <summary>
+    /// <see cref="CurrentBalanceMs"/> + Mittel × <see cref="RemainingWeeks"/>. Gerechnet mit dem <b>ungerundeten</b>
+    /// Mittel (nicht mit <see cref="AverageWeeklyOvertimeMs"/>), erst das Ergebnis wird kaufmännisch auf ganze
+    /// Millisekunden gerundet (.5 von der Null weg).
+    /// </summary>
+    public long ProjectedBalanceMs { get; init; }
 }
 
 /// <summary>
