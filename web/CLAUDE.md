@@ -60,8 +60,9 @@ core/
 domain/
 ├── models/
 │   ├── reports.models.ts  DailyStat, WeeklyReport, MonthlyReport
-│   ├── leave.models.ts    YearlyLeaveReport (1:1 Backend-DTO)
-│   └── trend.models.ts    TrendReport, TrendBucket, WeeklyTrend (#531, 1:1 Backend-DTO ohne `Ms`-Suffix)
+│   ├── leave.models.ts    YearlyLeaveReport (1:1 Backend-DTO), LeaveMonth, LeavePeriod (#284)
+│   ├── trend.models.ts    TrendReport, TrendBucket, WeeklyTrend (#531, 1:1 Backend-DTO ohne `Ms`-Suffix)
+│   └── yearly-comparison.models.ts  YearlyComparison, YearlySummary, YearlyDelta (#530, 1:1 Backend-DTO mit `Ms`-Suffix)
 ├── services/
 │   ├── break-calculator.ts   Pure — Pflichtpausen (30min/6h, 45min/9h)
 │   ├── report-calculator.ts  Pure — ISO-8601-Wochennummer, DailyStat, Weekly/MonthlyReport; Parität zum Backend über `testdata/report-parity/` (`report-calculator.parity.tz.spec.ts`, #535)
@@ -72,7 +73,7 @@ domain/
 
 features/
 ├── dashboard/      DashboardComponent + DashboardService (Timer, Pausen, Überstunden); `OpenEntryService` + `OpenEntryCloseService` + Beenden-Dialog (offene Einträge vor heute, #385)
-├── reports/        ReportsComponent + ReportsService (Täglich/Wöchentlich/Monatlich/Jahr/Trend, Premium-Gate); Trend-Ansicht `components/trend-view/` (#531, siehe „Trend-Ansicht“); Mehrfachauswahl-Modus im Service: `toggleMultiSelect`, idempotentes `endMultiSelect`, `removeDatesFromSelection`, Modus endet nach erfolgreichem Batch-Speichern (#377)
+├── reports/        ReportsComponent + ReportsService (Täglich/Wöchentlich/Monatlich/Jahr/Trend, Premium-Gate); Trend-Ansicht `components/trend-view/` (#531, siehe „Trend-Ansicht“); Urlaubs-/Krankheitsauswertung `components/leave-report-print/` (#284, siehe dort); Mehrfachauswahl-Modus im Service: `toggleMultiSelect`, idempotentes `endMultiSelect`, `removeDatesFromSelection`, Modus endet nach erfolgreichem Batch-Speichern (#377)
 └── settings/       SettingsComponent + SettingsPageService (Profil, Arbeitszeit, Gleitzeit, Sync, Theme)
 
 shared/
@@ -82,6 +83,7 @@ shared/
 │   ├── work-locations-input/   WorkLocationsInputComponent (#526) — Orte als `mat-chip-set` + `matInput` mit `matAutocomplete`, `model` `locations`, `commitPending()`; bewusst kein `mat-chip-grid` (axe `aria-required-children`)
 │   ├── work-locations-dialog/  WorkLocationsDialogComponent (#526) — Dialog des Dashboard-Buttons „Arbeitsort hinzufügen“ (hinzufügen, entfernen, speichern, abbrechen); Vorschlagsliste ist beim Öffnen zu und geht erst bei Tippen, Klick oder Pfeil-Taste auf (`matAutocompleteDisabled` über das Signal `locked`, `reveal()` setzt `autocompleteDisabled` sofort und ruft `openPanel()`), nach Hinzufügen/Auswählen schließt sie wieder. Escape bei offener Liste schließt nur die Liste (Capture-Listener am Host, der das Event stoppt und `closePanel()` ruft: der Autocomplete schließt die Liste im keydown am Feld synchron, danach hielte der Overlay-Dispatcher des Dialogs das Escape für sein eigenes), das zweite bricht den Dialog ab
 │   ├── home-office-card/       HomeOfficeCardComponent — Home-Office-Jahresauswertung (#283/#483, Premium im Jahres-Tab): lädt zwölf Monate über `getEntriesForMonthOnce`, Zählregel `domain/services/home-office-stats.ts` (Port von Mobile `home_office_stats.dart`: nur `work` mit Start, Dedup über `entryDayKey`, ein Flag macht den Tag zum Home-Office-Tag). Druck: Jahres-Tab ist `.print-area`, Button „Als PDF speichern“ ruft `window.print()` (Premium, sonst Paywall)
+│   ├── yearly-comparison-card/ YearlyComparisonCardComponent + YearlyComparisonLockedComponent — Jahresvergleich mit dem Vorjahr (#530, Premium im Jahres-Tab), siehe „Jahresvergleich (#530)“
 │   ├── leave-balance-card/     LeaveBalanceCardComponent — reine Darstellung der Urlaubsübersicht (Settings, Reports; bewusst nicht im Dashboard: dort schob sie Start-/Endzeit und den Start-Button unter den sichtbaren Bereich)
 │   ├── holiday-banner/         HolidayBannerComponent — „Heute ist Feiertag: …“ (#279), rein informativ
 │   ├── open-entry-banner/      OpenEntryBannerComponent — Hinweis auf offenen Eintrag vor heute mit „Beenden“/„Später“ und optional „Fortsetzen“ (#385), rein darstellend
@@ -93,7 +95,7 @@ shared/
 │   ├── bundesland.util.ts       Pure — isBundesland / normalizeBundesland
 │   ├── work-locations.util.ts   Pure (#526) — `normalizeWorkLocations`, `readWorkLocations`, `addWorkLocation` (Fehler empty/duplicate/tooLong/max), `suggestWorkLocations` (zuletzt verwendet zuerst, höchstens 10, ohne gewählte); Grenzen 5 Orte à 60 Zeichen
 │   ├── entry-day.util.ts        Pure (#407) — Kalendertag eines Eintrags: `entryDay(entry)`/`entryDayKey(entry)` (für Verbraucher), `localDateFromEntryId`, `parseEntryId` (gültige `yyyy-MM-dd`-Id oder `null`), `calendarDateFromUtcMidnight` (lokale Mitternacht aus den UTC-Feldern, für Lesegrenzen)
-│   ├── chart-scale.util.ts      Pure (#531) — `ChartPoint`/`ChartLabels`, `niceScale` (runde Teilstriche, 0 immer enthalten), `formatAxisHours`, `axisLabelStep` (Beschriftungen ausdünnen)
+│   ├── chart-scale.util.ts      Pure (#531) — `ChartPoint`/`ChartLabels`, `niceScale` (0 immer enthalten; kleinste „schöne“ Schrittweite mit 4 bis 6 Teilstrichen: 5/10/15/30 min, ab 1 h 1/2/2,5/5/10 × 10ⁿ h, damit die Grenzen nah an den Werten inkl. Soll liegen, z. B. 44 h mit Soll 40 h → 0 bis 50 h; sehr kleine Werte werden auf 4 Teilstriche aufgefüllt), `formatAxisHours`, `axisLabelStep` (Beschriftungen ausdünnen)
 │   ├── duration-format.util.ts  Pure (#531) — `formatDurationHm`/`formatSignedDurationHm` (Format der Berichte `HH:MM`/`±HH:MM`, von `ReportsComponent` mitgenutzt)
 │   ├── promise-timeout.util.ts  Pure (#426) — `withTimeout(promise, ms)` + `PromiseTimeoutError`, Timer immer mit `clearTimeout`
 │   ├── calendar-keyboard.util.ts  Pure — Kalender-Tastenlogik (#377): `isCalendarNavKey`, `nextFocusDate`, `rangeKeys`, `rangeDiff`
@@ -160,6 +162,59 @@ der Trend hat ein eigenes Zeitfenster (12 Wochen/12 Monate bis heute) und hängt
 - **Tests:** `api-client.trend*.spec.ts`, `chart-scale.util.spec.ts`, `charts.spec.ts`, `trend-view.spec.ts`, `reports.trend.spec.ts`;
   E2E `e2e/trend.spec.ts` (ohne Konto) und `e2e/trend-account.spec.ts` (Emulatoren; Trend-Endpunkt per `page.route` gemockt,
   Testdaten `e2e/trend-data.ts`).
+
+### Jahresvergleich (#530)
+
+Karte „Vergleich {Jahr} mit {Vorjahr}“ im Jahres-Tab der Berichte (Premium), zwischen Urlaubs- und Home-Office-Karte. Kein
+neuer Tab, keine Diagramme, die Monatswerte (`months`) werden nicht angezeigt.
+- **Gate** in `reports.html`: `svc.isPremium()` → `YearlyComparisonCardComponent`; angemeldet ohne Premium → kompakte gesperrte
+  Karte (`YearlyComparisonLockedComponent`, gleicher Ordner, „Premium freischalten“ nur mit konfiguriertem RC Billing, dazu „Kauf wiederherstellen“);
+  nicht angemeldet → dieselbe Karte mit „Anmelden“. Gesperrte Karten sind `no-print`.
+- **Laden** (in der Karte, Input `year` = `leave.year()`): nur angemeldet + Premium, `ApiClient.getYearlyComparison(year, until?,
+  profileId?)` → `GET /api/reports/yearly-comparison/{year}?until=MM-dd`. „Heute“ kommt aus `LEAVE_NOW` (dieselbe Uhr wie
+  `LeaveBalanceService.isCurrentYear`); `until` = heutiger Tag genau dann, wenn das gewählte Jahr das laufende ist. Jahres- und
+  Profilwechsel laden neu. Jahr < 2001 (Backend nimmt 2001–2100 an): keine Anfrage, Hinweis. Keine Rechnung, kein
+  Offline-Fallback: `loading`/`error` (mit „Erneut versuchen“)/`data`; `current.hasData = false` → Leerzustand.
+- **Darstellung:** echte Tabelle (Spalten Kennzahl, Jahr, Vorjahr, Differenz; Zeilenköpfe Arbeitszeit netto, Überstunden,
+  Arbeits-, Urlaubs-, Krankheits-, Feiertage; versteckte `caption`). Differenzen nur mit Vorzeichen, ohne Wertungsfarbe; Dauern
+  über `duration-format.util` (`HH:MM`, Differenz 0 ohne Vorzeichen), Prozent mit einer Nachkommastelle in der App-Sprache
+  (`workedPercent = null` → kein Prozent). `previous.hasData = false` → Spalte „keine Daten“, Differenz „–“ (Screenreader „keine
+  Differenz“). Stichtag-Hinweis aus dem `until` der Antwort („jeweils bis 15.11.“). Unter 480 px steht die Kennzahl als eigene Zeile
+  über den drei Werten (CSS-Grid je Zeile); weil `display` der Tabellenelemente sich ändert, tragen sie explizite ARIA-Rollen.
+- **Druck:** die Karte liegt in `.print-area`. Die Druckregel in `styles.scss` setzt Tab- und Sidenav-Container auf
+  `position: static; overflow: visible` (vorher schnitt der Tab-Inhalt den Druckbereich nach der Überschrift ab).
+- **Tests:** `api-client.yearly-comparison.spec.ts`, `yearly-comparison-card.spec.ts`, `reports.yearly-comparison.spec.ts`;
+  E2E `e2e/yearly-comparison-account.spec.ts` (Emulatoren, Endpunkt per `page.route` gemockt, Testdaten
+  `e2e/yearly-comparison-data.ts`, inkl. Druck-Treffertest und axe).
+
+### Urlaubs- und Krankheitsauswertung drucken (#284)
+
+Button „Urlaub/Krank drucken“ im Jahres-Tab neben „Als PDF speichern / Drucken“ (`.print-actions`, umbrechend; nur angemeldet,
+Gast-Modus ohne Button). Ohne Premium Paywall wie beim Jahresdruck. Eigene Druckansicht, kein Bildschirm-Inhalt.
+- **Ablauf** (`LeaveReportPrintService`, von `ReportsComponent` bereitgestellt): Profil und Profilname zum Klick festhalten,
+  `ApiClient.getYearlyLeave(year, profileId?)` frisch laden (Button gesperrt, Spinner, „Wird geladen …“; Doppelklick = `busy`),
+  Daten setzen, per `afterNextRender` auf das Rendern warten, dann `window.print()`. Fehler → Snackbar `leave.printLoadError`,
+  kein Druckdialog. „Heute“/laufendes Jahr und Erstellungsdatum aus `LEAVE_NOW`.
+- **Vertrag:** `GET /api/reports/yearly/{year}` liefert zusätzlich `months` (12), `vacationPeriods`, `sickPeriods`
+  (`start`/`end` als Kalendertag `yyyy-MM-dd`, beschnitten und sortiert). `getYearlyLeave` setzt fehlende Listen (älteres
+  Backend) auf `[]`; die lokale Rechnung (`leave-calculator.ts`, Gast) liefert sie nicht (Felder optional). Der Client rechnet
+  nichts nach: Summenzeile = `vacationDaysTaken`/`sickDays`, leer = beide 0.
+- **Darstellung** (`LeaveReportPrintComponent`, Host `print-only leave-print`): Titel, Profilname (nur Zusatzprofil),
+  Erstellungsdatum; Summen (Anspruch/Resturlaub nur im laufenden Jahr, sonst Hinweis); Monatstabelle mit Summenzeile (ohne
+  `months` keine Tabelle); Zeiträume getrennt nach Urlaub/Krank („03.08.–14.08. (12 Tage)“, ein Tag „10.02. (1 Tag)“, Datumsformat
+  per `Intl` in der App-Sprache, Kalendertage zerlegt statt `new Date(iso)`, Zonen-Test `leave-report-print.tz.spec.ts`);
+  leeres Jahr mit Hinweis; Fußnote zur Zählregel. Feste Druckfarben (auch im Dunkelmodus schwarz auf weiß).
+- **Getrennter Druck:** Die Ansicht liegt außerhalb von `.print-area`. `styles.scss` blendet `.leave-print` im Druck immer aus,
+  außer `<html>` trägt `print-leave-report` (`LEAVE_PRINT_CLASS`); dann wird `.print-area` ausgeblendet. Die Klasse setzt der
+  Service direkt vor `print()` und entfernt sie bei `afterprint`, vor dem Jahresdruck (`onPrintYear` → `endPrintMode()`) und beim
+  Verlassen der Seite. Die Überschrift des Jahresdrucks heißt seitdem „Jahresauswertung {Jahr}“ (`reports.printTitle`).
+- **Style-Budget:** `reports.scss` ist am 8-kB-Limit; `.print-actions` teilt sich die Regel mit `.day-header-actions`, der
+  Spinner-Abstand steht in `styles.scss`. Neue Styles für den Jahres-Tab gehören in eigene Komponenten.
+- **Tests:** `api-client.spec.ts`, `leave-report-print.spec.ts`, `leave-report-print.tz.spec.ts`, `leave-report-print.service.spec.ts`,
+  `reports.leave-print.spec.ts`; E2E `e2e/leave-report-account.spec.ts` (Emulatoren, Endpunkt per `page.route` gemockt, Testdaten
+  `e2e/leave-report-data.ts`; Druck beider Richtungen mit Treffertest und `page.pdf`-Seitenzahl, Fehler ohne Druck, 320 px, axe,
+  Free mit Paywall) und `e2e/print.spec.ts` (Gast ohne Button). Im E2E erst klicken, wenn der Button den Premium-Text zeigt: das
+  Premium-Flag kommt nach dem Rendern aus Firestore.
 
 ### Feiertage (#279)
 

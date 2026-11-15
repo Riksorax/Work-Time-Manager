@@ -45,7 +45,7 @@ Firestore-Integrationstests übersprungen (`SkippableFact`) — das ist erwartet
 | GET | `/api/reports/weekly/{year}/{month}/{day}` | Wochenbericht |
 | GET | `/api/reports/monthly/{year}/{month}` | Monatsbericht |
 | GET | `/api/reports/yearly/{year}` | Jahresauswertung Urlaub/Krank (#278): `{year, vacationDaysPerYear, vacationDaysTaken, vacationDaysRemaining, sickDays, months[12]{month, vacationDays, sickDays}, vacationPeriods[], sickPeriods[]{start, end, days}}` (#284, additiv); Rest kann negativ sein, `holiday` zählt nicht, Jahr 2000–2100 |
-| GET | `/api/reports/trend/{year}/{month}/{day}?granularity=week\|month` | Trend (#531): 12 Wochen bzw. 12 Monate bis zum Bezugstag + Wochen-Trend; `granularity` Pflicht (sonst 400), Jahr 2000–2100 |
+| GET | `/api/reports/trend/{year}/{month}/{day}?granularity=week\|month` | Trend (#531): 12 Wochen bzw. 12 Monate bis zum Bezugstag + Wochen-Trend + Überstunden-Prognose (#532); `granularity` Pflicht (sonst 400), Jahr 2000–2100 |
 | GET | `/api/reports/yearly-comparison/{year}?until=MM-dd` | Jahresvergleich mit dem Vorjahr (#530): `{until, current, previous, delta}`; `until` optional (ungültig = 400), Jahr 2001–2100 |
 | GET | `/api/work-profiles` | Zusätzliche Arbeitszeit-Profile auflisten (ohne Standard-Profil, siehe #138/#239) |
 | POST | `/api/work-profiles` | Neues Profil anlegen (`{ name }`) |
@@ -108,13 +108,26 @@ ersten/letzten Kalendertags. Jeder Bucket rechnet mit demselben privaten Kern wi
 (`SumPeriod`): `workedMs` ist **netto** (= `TotalWorkedMs − TotalBreaksMs` der Berichte; Urlaub/Krank/Feiertag
 mit Tagessoll), `targetMs` = Soll-Tage × Tagessoll (Regel siehe „Soll-Tage“), `overtimeMs` = `OvertimeMs`
 des Wochen- bzw. `MonthlyOvertimeMs` des Monatsberichts (inkl. manueller Überstunden). **Kein Saldo:** der
-gespeicherte Gleitzeit-Saldo fließt nicht ein, `cumulativeOvertimeMs` ist die laufende Summe ab 0. Buckets ohne
+gespeicherte Gleitzeit-Saldo fließt nicht in die Buckets ein (nur in `forecast`, #532), `cumulativeOvertimeMs` ist die laufende Summe ab 0. Buckets ohne
 Eintrag: `hasData = false`, Werte 0. `weeklyTrend` (bei beiden Granularitäten): letzte abgeschlossene Woche = ISO-Woche
 vor der Woche des Bezugstags, verglichen mit dem Mittel der vier Wochen davor; Wochen ohne Einträge zählen nicht,
 Mittel kaufmännisch auf ganze ms gerundet (`AwayFromZero`), `deltaMs = lastWeekWorkedMs − averageWorkedMs`;
 `null`, wenn die letzte Woche leer ist oder weniger als zwei Vergleichswochen Einträge haben. Es gelten die heutigen
 Einstellungen für den ganzen Zeitraum. Daten über `WorkEntryRepository.GetRangeAsync` (alle berührten
 Monatsdokumente parallel). Kein Premium-Check im Backend.
+
+**Überstunden-Prognose (#532):** `TrendReportDto.forecast` (`OvertimeForecastDto`, additiv,
+`ReportCalculator.CalculateOvertimeForecast`, aufgerufen aus `CalculateTrend`) bei **beiden** Granularitäten identisch:
+`{targetDate, currentBalanceMs, averageWeeklyOvertimeMs, weeksUsed, remainingWeeks, projectedBalanceMs}`. Mittel = Summe der
+Wochen-Überstunden (`SumPeriod`, = `OvertimeMs` des Wochenberichts inkl. manueller Überstunden, Abwesenheit wie #535) der
+Wochen mit Einträgen unter den **acht abgeschlossenen ISO-Wochen vor der Woche des Bezugstags** ÷ deren Zahl (`weeksUsed`);
+die laufende Woche und Wochen ohne Einträge zählen nicht. Weniger als **vier** Wochen mit Einträgen → `forecast: null`.
+`targetDate` = 31.12. des Jahres des Bezugstags (`yyyy-MM-dd`). `remainingWeeks` = Kalendertage nach dem Bezugstag bis
+einschließlich 31.12. ÷ 7, nicht gerundet (am 31.12. 0). `currentBalanceMs` = gespeicherter Saldo (`OvertimeRepository`,
+Minuten × 60 000, parallel zu Einträgen und Einstellungen geladen). `projectedBalanceMs` = Saldo + **ungerundetes** Mittel ×
+`remainingWeeks`, erst dann kaufmännisch auf ganze ms gerundet (`decimal`, `AwayFromZero`); `averageWeeklyOvertimeMs` ist
+das ebenso gerundete Mittel, nur zur Anzeige. Künftiger Urlaub und Feiertage werden nicht berücksichtigt (das sagen die
+Clients). `TrendRange` deckt das Acht-Wochen-Fenster ab. Kein Premium-Check im Backend.
 
 **Jahresvergleich (#530):** `GET /api/reports/yearly-comparison/{year}?until=MM-dd` → `YearlyComparisonDto`
 (`ReportCalculator.CalculateYearlySummary` je Jahr, dann `CalculateYearlyComparison`). Der bestehende

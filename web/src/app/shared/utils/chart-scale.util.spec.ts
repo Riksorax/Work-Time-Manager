@@ -5,52 +5,98 @@ const H = 3_600_000;
 const M = 60_000;
 
 describe('niceScale (#531)', () => {
-  it('leere Liste und nur Nullen: 0 bis 1 h, kein NaN', () => {
+  /** Gemeinsame Eigenschaften jeder Skala: 4 bis 6 Teilstriche, 0 enthalten, gleichmäßige Schritte, Werte abgedeckt. */
+  function expectWellFormed(values: number[]): ReturnType<typeof niceScale> {
+    const s = niceScale(values);
+    expect(s.ticks.length).toBeGreaterThanOrEqual(4);
+    expect(s.ticks.length).toBeLessThanOrEqual(6);
+    expect(s.ticks).toContain(0);
+    expect(s.ticks[0]).toBe(s.min);
+    expect(s.ticks.at(-1)).toBe(s.max);
+    for (let i = 1; i < s.ticks.length; i++) expect(s.ticks[i] - s.ticks[i - 1]).toBe(s.step);
+    expect(s.ticks.every(Number.isFinite)).toBe(true);
+    const finite = values.filter(Number.isFinite);
+    if (finite.length) {
+      expect(s.max).toBeGreaterThanOrEqual(Math.max(...finite));
+      expect(s.min).toBeLessThanOrEqual(Math.min(...finite));
+    }
+    return s;
+  }
+
+  it('leere Liste und nur Nullen: 0 bis 1 h in Viertelstunden, kein NaN', () => {
     for (const values of [[], [0, 0, 0]]) {
-      const s = niceScale(values);
+      const s = expectWellFormed(values);
       expect(s.min).toBe(0);
       expect(s.max).toBe(H);
-      expect(s.ticks.every(Number.isFinite)).toBe(true);
-      expect(s.ticks[0]).toBe(0);
-      expect(s.ticks.at(-1)).toBe(H);
+      expect(s.step).toBe(15 * M);
     }
   });
 
-  it('typische Woche: 0 bis 40/50 h mit runden Schritten, 0 enthalten', () => {
-    const s = niceScale([38 * H, 40 * H, 41.5 * H]);
+  it('max 44 h mit Soll 40 h: Obergrenze 50 h in 10-h-Schritten (vorher 60 h)', () => {
+    const s = expectWellFormed([38.5 * H, 40 * H, 44 * H, 40 * H, 22 * H, 24 * H]);
     expect(s.min).toBe(0);
-    expect(s.max).toBeGreaterThanOrEqual(41.5 * H);
-    expect(s.ticks).toContain(0);
-    expect(s.ticks.length).toBeLessThanOrEqual(5);
-    expect(s.step % H).toBe(0);
+    expect(s.max).toBe(50 * H);
+    expect(s.step).toBe(10 * H);
+    expect(s.ticks).toEqual([0, 10, 20, 30, 40, 50].map(h => h * H));
   });
 
-  it('nur negative Werte: Maximum ist 0, Minimum deckt den kleinsten Wert', () => {
-    const s = niceScale([-3 * H, -12 * H, -0.5 * H]);
+  it('typische Woche bis 41,5 h: Obergrenze 50 h', () => {
+    const s = expectWellFormed([38 * H, 40 * H, 41.5 * H]);
+    expect(s.max).toBe(50 * H);
+  });
+
+  it('Monate um 170 h: Obergrenze 200 h statt 400 h', () => {
+    const s = expectWellFormed([168 * H, 152 * H, 175 * H, 86 * H]);
+    expect(s.max).toBe(200 * H);
+    expect(s.step).toBe(50 * H);
+  });
+
+  it('Schritt 2,5 h, wenn er die Obergrenze näher an den Wert bringt', () => {
+    const s = expectWellFormed([11 * H]);
+    expect(s.step).toBe(2.5 * H);
+    expect(s.max).toBe(12.5 * H);
+  });
+
+  it('nur negative Werte: Maximum ist 0, Minimum nah am kleinsten Wert', () => {
+    const s = expectWellFormed([-3 * H, -12 * H, -0.5 * H]);
     expect(s.max).toBe(0);
-    expect(s.min).toBeLessThanOrEqual(-12 * H);
-    expect(s.ticks).toContain(0);
+    expect(s.min).toBe(-12.5 * H);
+    expect(s.step).toBe(2.5 * H);
   });
 
   it('positive und negative Werte: beide Seiten, 0 als Teilstrich', () => {
-    const s = niceScale([-7 * H, 13 * H]);
-    expect(s.min).toBeLessThanOrEqual(-7 * H);
-    expect(s.max).toBeGreaterThanOrEqual(13 * H);
-    expect(s.ticks).toContain(0);
-    expect(s.ticks.length).toBeLessThanOrEqual(5);
+    const s = expectWellFormed([-7 * H, 13 * H]);
+    expect(s.min).toBe(-10 * H);
+    expect(s.max).toBe(15 * H);
+    expect(s.step).toBe(5 * H);
   });
 
-  it('sehr große Werte und ein einzelner Ausreißer: endlich, höchstens 5 Teilstriche', () => {
-    const s = niceScale([40 * H, 38 * H, 2_000_000 * H]);
-    expect(s.max).toBeGreaterThanOrEqual(2_000_000 * H);
-    expect(s.ticks.length).toBeLessThanOrEqual(5);
-    expect(s.ticks.every(Number.isFinite)).toBe(true);
+  it('Überstunden-Linie zwischen -1,5 h und +5 h: -2 h bis +6 h', () => {
+    const s = expectWellFormed([-1.5 * H, -0.5 * H, 2 * H, 5 * H, 2.5 * H]);
+    expect(s.min).toBe(-2 * H);
+    expect(s.max).toBe(6 * H);
   });
 
-  it('kleine Werte unter einer Stunde: Viertel- bzw. halbe Stunden', () => {
-    const s = niceScale([20 * M]);
-    expect(s.step).toBe(15 * M);
-    expect(s.max).toBe(30 * M);
+  it('sehr große Werte und ein einzelner Ausreißer: endlich, runde Schritte', () => {
+    const s = expectWellFormed([40 * H, 38 * H, 2_000_000 * H]);
+    expect(s.max).toBe(2_000_000 * H);
+    expect(s.step).toBe(500_000 * H);
+  });
+
+  it('kleine Werte unter 2 h: halbe bzw. Viertelstunden, Obergrenze nah am Wert', () => {
+    expect(expectWellFormed([1.5 * H]).max).toBe(1.5 * H);
+    expect(expectWellFormed([1.5 * H]).step).toBe(30 * M);
+    expect(expectWellFormed([20 * M]).max).toBe(20 * M);
+    expect(expectWellFormed([20 * M]).step).toBe(5 * M);
+    const tiny = expectWellFormed([2 * M]);
+    expect(tiny.step).toBe(5 * M);
+    expect(tiny.max).toBe(15 * M);
+  });
+
+  it('alle Schritte sind ganze Minuten', () => {
+    for (const v of [7 * M, 50 * M, 3.3 * H, 27 * H, 333 * H, -9 * H]) {
+      expect(expectWellFormed([v]).step % M).toBe(0);
+    }
   });
 
   it('nicht endliche Werte zählen als 0', () => {

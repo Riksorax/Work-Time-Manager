@@ -27,9 +27,13 @@ import { Router } from '@angular/router';
 import { LeaveBalanceService } from '../../core/services/leave-balance';
 import { LeaveBalanceCardComponent } from '../../shared/components/leave-balance-card/leave-balance-card';
 import { HomeOfficeCardComponent } from '../../shared/components/home-office-card/home-office-card';
+import { YearlyComparisonCardComponent } from '../../shared/components/yearly-comparison-card/yearly-comparison-card';
+import { YearlyComparisonLockedComponent } from '../../shared/components/yearly-comparison-card/yearly-comparison-locked';
 import { formatDurationHm, formatSignedDurationHm } from '../../shared/utils/duration-format.util';
 import { TrendViewComponent } from './components/trend-view/trend-view';
 import { TrendViewService } from './components/trend-view/trend-view.service';
+import { LeaveReportPrintComponent } from './components/leave-report-print/leave-report-print';
+import { LeaveReportPrintService } from './components/leave-report-print/leave-report-print.service';
 
 @Component({
   selector: 'app-reports',
@@ -44,11 +48,15 @@ import { TrendViewService } from './components/trend-view/trend-view.service';
     CalendarComponent,
     LeaveBalanceCardComponent,
     HomeOfficeCardComponent,
+    YearlyComparisonCardComponent,
+    YearlyComparisonLockedComponent,
     TrendViewComponent,
+    LeaveReportPrintComponent,
     TranslatePipe,
   ],
   // Trend (#531): Zustand (Wochen/Monate) lebt mit der Berichtsseite, geladen wird nur im sichtbaren Tab.
-  providers: [TrendViewService],
+  // Urlaubs-/Krankheitsauswertung (#284): Lade- und Druckzustand lebt mit der Berichtsseite.
+  providers: [TrendViewService, LeaveReportPrintService],
   templateUrl: './reports.html',
   styleUrl: './reports.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -56,6 +64,7 @@ import { TrendViewService } from './components/trend-view/trend-view.service';
 export class ReportsComponent {
   protected readonly svc        = inject(ReportsService);
   protected readonly leave      = inject(LeaveBalanceService);
+  protected readonly leavePrint = inject(LeaveReportPrintService);
   private  readonly router      = inject(Router);
   private  readonly premiumSvc  = inject(WebPremiumService);
   private  readonly dialog      = inject(MatDialog);
@@ -96,7 +105,24 @@ export class ReportsComponent {
       await this.onPresentPaywall();
       return;
     }
+    // Eine vorher gedruckte Urlaubs-/Krankheitsauswertung darf hier nicht erscheinen (#284).
+    this.leavePrint.endPrintMode();
     this.document.defaultView?.print();
+  }
+
+  /**
+   * Urlaubs- und Krankheitsauswertung drucken (#284): Premium, sonst Paywall. Lädt Jahr und aktives Profil frisch vom
+   * Backend und druckt erst danach; scheitert das Laden, gibt es eine Meldung und keinen Druckdialog.
+   */
+  async onPrintLeave(): Promise<void> {
+    if (!this.svc.isPremium()) {
+      await this.onPresentPaywall();
+      return;
+    }
+    const result = await this.leavePrint.print(this.leave.year());
+    if (result === 'error') {
+      this.snackbar.open(this.translate.instant('leave.printLoadError'), 'OK', { duration: 4000 });
+    }
   }
 
   async onPresentPaywall(): Promise<void> {

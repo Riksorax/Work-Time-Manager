@@ -48,36 +48,53 @@ export interface LinearScale {
   ticks: number[];
 }
 
-/** Schrittweiten der Achse: 15 und 30 Minuten, danach 1, 2, 5 × 10ⁿ Stunden. */
+/** Teilstriche je Achse: mindestens 4, höchstens 6 (also 3 bis 5 Abstände). */
+const MIN_INTERVALS = 3;
+const MAX_INTERVALS = 5;
+
+/**
+ * „Schöne“ Schrittweiten der Achse, aufsteigend: unter einer Stunde 5, 10, 15 und 30 Minuten (ganze Minuten), ab einer
+ * Stunde 1, 2, 2,5, 5 und 10 × 10ⁿ Stunden.
+ */
 function* candidateSteps(): Generator<number> {
-  yield 15 * MINUTE;
-  yield 30 * MINUTE;
+  for (const minutes of [5, 10, 15, 30]) yield minutes * MINUTE;
   for (let mag = 1; mag < 1e12; mag *= 10) {
-    for (const m of [1, 2, 5]) yield m * mag * HOUR;
+    for (const m of [1, 2, 2.5, 5]) yield m * mag * HOUR;
   }
 }
 
 /**
- * Lineare Skala mit „runden“ Teilstrichen, die 0 immer enthält (Balken und Nulllinie). Robust für leere Listen,
- * nur Nullen (dann 0 bis 1 h), nur negative Werte, sehr große Werte und nicht endliche Werte (zählen als 0).
+ * Lineare Skala mit „runden“ Teilstrichen, die 0 immer enthält (Balken und Nulllinie). Gewählt wird die kleinste
+ * schöne Schrittweite, mit der höchstens 5 Abstände (6 Teilstriche) reichen: so liegen Ober- und Untergrenze nah am
+ * größten bzw. kleinsten Wert (z. B. 44 h mit Soll 40 h → 0 bis 50 h). Bei sehr kleinen Werten wird auf mindestens
+ * 3 Abstände (4 Teilstriche) aufgefüllt. Robust für leere Listen, nur Nullen (dann 0 bis 1 h), nur negative Werte,
+ * sehr große Werte und nicht endliche Werte (zählen als 0).
  */
-export function niceScale(values: readonly number[], maxIntervals = 4): LinearScale {
+export function niceScale(values: readonly number[]): LinearScale {
   const finite = values.map(v => (Number.isFinite(v) ? v : 0));
   const lo = Math.min(0, ...finite) + 0;
   let hi = Math.max(0, ...finite) + 0;
   if (hi === lo) hi = HOUR;
-  let chosen = HOUR;
-  for (const step of candidateSteps()) {
-    chosen = step;
-    const min = Math.floor(lo / step) * step;
-    const max = Math.ceil(hi / step) * step;
-    if ((max - min) / step <= maxIntervals) break;
+  let step = HOUR;
+  let min = 0;
+  let max = HOUR;
+  for (const candidate of candidateSteps()) {
+    step = candidate;
+    min = Math.floor(lo / step) * step;
+    max = Math.ceil(hi / step) * step;
+    if (Math.round((max - min) / step) <= MAX_INTERVALS) break;
   }
-  const min = Math.floor(lo / chosen) * chosen + 0;
-  const max = Math.ceil(hi / chosen) * chosen + 0;
+  // Nur bei Werten unter der kleinsten Schrittweite: auf der Seite der Werte auffüllen (0 bleibt Grenze).
+  const missing = MIN_INTERVALS - Math.round((max - min) / step);
+  if (missing > 0) {
+    if (max > 0 || min === 0) max += missing * step;
+    else min -= missing * step;
+  }
+  min += 0;
+  max += 0;
   const ticks: number[] = [];
-  for (let t = min; t <= max + chosen / 2; t += chosen) ticks.push(Math.round(t) + 0);
-  return { min, max, step: chosen, ticks };
+  for (let t = min; t <= max + step / 2; t += step) ticks.push(Math.round(t) + 0);
+  return { min, max, step, ticks };
 }
 
 /** Achsenbeschriftung in Stunden: „40 h“, „0:30 h“; mit `signed` „+10 h“ / „-5 h“ (0 ohne Vorzeichen). */
