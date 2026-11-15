@@ -65,7 +65,7 @@ domain/
 │   └── yearly-comparison.models.ts  YearlyComparison, YearlySummary, YearlyDelta (#530, 1:1 Backend-DTO mit `Ms`-Suffix)
 ├── services/
 │   ├── break-calculator.ts   Pure — Pflichtpausen (30min/6h, 45min/9h)
-│   ├── report-calculator.ts  Pure — ISO-8601-Wochennummer, DailyStat, Weekly/MonthlyReport; Parität zum Backend über `testdata/report-parity/` (`report-calculator.parity.tz.spec.ts`, #535)
+│   ├── report-calculator.ts  Pure — ISO-8601-Wochennummer, DailyStat, Weekly/MonthlyReport; Parität zum Backend über `testdata/report-parity/` (`report-calculator.parity.tz.spec.ts`, #535, seit #551 inkl. `netWorkedMs`)
 │   └── leave-calculator.ts   Pure — calculateYearlyLeave (Urlaubs-/Kranktage je Jahr, anonyme Nutzer)
 └── utils/
     ├── overtime.utils.ts  Pure — getEffectiveDailyTarget, getWeekEntriesForDate, isSameDay
@@ -133,6 +133,16 @@ runInInjectionContext(this.injector, () => {
 ```
 
 **Nie `docData` / `collectionData` verwenden** — rxfire-Bug mit DocumentReference. Stattdessen eigene `new Observable(observer => { runInInjectionContext(...) })`.
+
+### Netto-Zeilen der Berichte (#551)
+
+Die Zeilen der Berichte zeigen **netto** (ohne Pausen): Tage im Wochen- und Monatsbericht (`day.netWorked`, auch `aria-label`)
+und Wochen im Monatsbericht (`week.netWorked`). `worked`/`totalWorked` bleiben brutto im Modell. Die Karte „Gesamtarbeitszeit“ (Wochen- und Monatsbericht) zeigt `totalWorked − totalBreaks` (netto, wie das Backend es definiert), „Gesamtpausen“ steht als eigene Zeile darunter; die Zeilensumme entspricht damit der Gesamtarbeitszeit (Tage mit Netto ≤ 0 zeigen „—“, zählen in der Summe aber mit).
+- **Vertrag:** `ReportDayDto.netWorkedMs`/`ReportWeekDto.netWorkedMs` (additiv). `ApiClient` liest `netWorkedMs ?? workedMs`
+  (älteres Backend: Rückfall auf brutto, kein 0). Tag-Netto = brutto − abgeschlossene Pausen, **nicht bei 0 gekappt**.
+- **Wochentage:** `ReportsComponent.dayLabel`/`dayAriaLabel` formatieren Wochentag und Datum der Zeilen per `Intl` mit `LanguageService.locale()` (`LOCALE_ID` bleibt fest Deutsch, die `date`-Pipe zeigte in der englischen Ansicht deutsche Wochentage). Andere `date`-Pipes der Berichte (Kopfzeilen, Monatsname) sind weiter an `LOCALE_ID` gebunden.
+- **Gäste:** `report-calculator.ts` rechnet dieselben Werte (`dayBreaks`); Parität über `cases.json`.
+- **Tests:** `api-client.reports.net.spec.ts`, `reports.net-rows.spec.ts`, `report-calculator.spec.ts`, Parität.
 
 ### Trend-Ansicht (#531)
 

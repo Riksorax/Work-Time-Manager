@@ -20,6 +20,7 @@ import {
   BatchQuickEntryDialogResult,
 } from './components/batch-quick-entry-dialog/batch-quick-entry-dialog';
 import { ReportsService } from './reports.service';
+import { LanguageService } from '../../core/services/language';
 import { WebPremiumService } from '../../core/services/web-premium';
 import { WorkEntry, WorkEntryType } from '../../shared/models/index';
 import { toDateKey } from '../../domain/services/report-calculator';
@@ -70,6 +71,7 @@ export class ReportsComponent {
   private  readonly dialog      = inject(MatDialog);
   private  readonly snackbar    = inject(MatSnackBar);
   private  readonly translate   = inject(TranslateService);
+  private  readonly language    = inject(LanguageService);
   private  readonly injector    = inject(Injector);
   private  readonly document    = inject(DOCUMENT);
   private  readonly multiSelectToggle = viewChild('multiSelectToggle', { read: ElementRef<HTMLElement> });
@@ -138,6 +140,19 @@ export class ReportsComponent {
   }
 
   // ── Template helpers ────────────────────────────────────────────────────────
+
+  /** Kurzer Wochentag und Tag der Berichtszeile in der App-Sprache („Mo. 2.“ / „Mon 2.“); `LOCALE_ID` bleibt fest Deutsch (#551). */
+  dayLabel(date: Date): string {
+    // Mit `day` formatiert, damit der Wochentag in Formatform erscheint („Mo.“ statt der Alleinstehend-Form „Mo“).
+    const parts = new Intl.DateTimeFormat(this.language.locale(), { weekday: 'short', day: 'numeric' }).formatToParts(date);
+    const part = (type: string): string => parts.find(p => p.type === type)?.value ?? '';
+    return `${part('weekday')} ${part('day')}.`;
+  }
+
+  /** Ausgeschriebener Wochentag mit Datum für das `aria-label` der Berichtszeile in der App-Sprache. */
+  dayAriaLabel(date: Date): string {
+    return new Intl.DateTimeFormat(this.language.locale(), { weekday: 'long', day: 'numeric', month: 'long' }).format(date);
+  }
 
   formatDuration(ms: number): string {
     return formatDurationHm(ms);

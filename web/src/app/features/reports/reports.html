@@ -274,7 +274,7 @@
               <div class="summary-card">
                 <div class="summary-row">
                   <span class="summary-label">{{ 'reports.totalWorkTimeLabel' | translate }}</span>
-                  <span class="summary-value">{{ formatDuration(svc.weeklyReport().totalWorked) }}</span>
+                  <span class="summary-value">{{ formatDuration(svc.weeklyReport().totalWorked - svc.weeklyReport().totalBreaks) }}</span>
                 </div>
                 <div class="summary-row">
                   <span class="summary-label">{{ 'reports.totalBreaksLabel' | translate }}</span>
@@ -302,10 +302,10 @@
                 @for (day of svc.weeklyReport().days; track day.date.getTime()) {
                   <button class="day-row"
                           (click)="svc.selectDate(day.date); onTabChange(0)"
-                          [attr.aria-label]="'reports.dayRowAria' | translate: { weekday: (day.date | date:'EEEE d. MMMM'), duration: formatDuration(day.worked) }"
+                          [attr.aria-label]="'reports.dayRowAria' | translate: { weekday: dayAriaLabel(day.date), duration: formatDuration(day.netWorked) }"
                           role="listitem">
-                    <span class="day-name">{{ day.date | date:'EEE d.' }}</span>
-                    <span class="day-duration">{{ day.worked > 0 ? formatDuration(day.worked) : '—' }}</span>
+                    <span class="day-name">{{ dayLabel(day.date) }}</span>
+                    <span class="day-duration">{{ day.netWorked > 0 ? formatDuration(day.netWorked) : '—' }}</span>
                     <mat-icon class="day-arrow" aria-hidden="true">chevron_right</mat-icon>
                   </button>
                 }
@@ -394,7 +394,7 @@
               <div class="summary-card">
                 <div class="summary-row">
                   <span class="summary-label">{{ 'reports.totalWorkTimeLabel' | translate }}</span>
-                  <span class="summary-value">{{ formatDuration(svc.monthlyReport().totalWorked) }}</span>
+                  <span class="summary-value">{{ formatDuration(svc.monthlyReport().totalWorked - svc.monthlyReport().totalBreaks) }}</span>
                 </div>
                 <div class="summary-row">
                   <span class="summary-label">{{ 'reports.totalBreaksLabel' | translate }}</span>
@@ -435,7 +435,7 @@
                 @for (week of svc.monthlyReport().weeks; track week.weekNumber) {
                   <div class="week-overview-row" role="listitem">
                     <span class="kw-badge">{{ 'reports.calendarWeek' | translate: { number: week.weekNumber } }}</span>
-                    <span class="week-overview-duration">{{ formatDuration(week.totalWorked) }}</span>
+                    <span class="week-overview-duration">{{ formatDuration(week.netWorked) }}</span>
                   </div>
                 }
               </div>
@@ -446,10 +446,10 @@
                 @for (day of svc.monthlyReport().days; track day.date.getTime()) {
                   <button class="day-row"
                           (click)="svc.selectDate(day.date); onTabChange(0)"
-                          [attr.aria-label]="'reports.dayRowAria' | translate: { weekday: (day.date | date:'EEEE d. MMMM'), duration: formatDuration(day.worked) }"
+                          [attr.aria-label]="'reports.dayRowAria' | translate: { weekday: dayAriaLabel(day.date), duration: formatDuration(day.netWorked) }"
                           role="listitem">
-                    <span class="day-name">{{ day.date | date:'EEE d.' }}</span>
-                    <span class="day-duration">{{ day.worked > 0 ? formatDuration(day.worked) : '—' }}</span>
+                    <span class="day-name">{{ dayLabel(day.date) }}</span>
+                    <span class="day-duration">{{ day.netWorked > 0 ? formatDuration(day.netWorked) : '—' }}</span>
                     <mat-icon class="day-arrow" aria-hidden="true">chevron_right</mat-icon>
                   </button>
                 }
