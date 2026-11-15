@@ -1,0 +1,23 @@
+{
+  "name": "worktimemanager-shorts",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Video-Shorts: Videobeschreibung (YAML) + Ton nach MP4 (Remotion, ffmpeg)",
+  "scripts": {
+    "render": "node render.mjs",
+    "platzhalter": "node render.mjs --platzhalter",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@remotion/bundler": "4.0.543",
+    "@remotion/renderer": "4.0.543",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "remotion": "4.0.543",
+    "yaml": "2.9.1"
+  }
+}
