@@ -7,10 +7,17 @@ import 'package:flutter_work_time/core/utils/time_format.dart';
 import 'package:intl/intl.dart';
 import '../../core/providers/clock_provider.dart';
 import '../../core/providers/providers.dart'
-    show pdfReportServiceProvider, workRepositoryProvider;
+    show
+        activeWorkProfileIdProvider,
+        apiClientProvider,
+        pdfReportServiceProvider,
+        workProfilesProvider,
+        workRepositoryProvider;
 import '../../core/providers/subscription_provider.dart';
 import '../../core/providers/today_provider.dart';
 import '../../core/services/pdf_report_service.dart';
+import '../../core/utils/api_errors.dart';
+import '../../domain/entities/work_profile_entity.dart';
 
 import '../../domain/entities/work_entry_extensions.dart';
 import '../../domain/utils/date_utils.dart';
@@ -40,6 +47,7 @@ import '../widgets/common/sheet_insets.dart';
 import '../widgets/edit_work_entry_modal.dart';
 import '../widgets/quick_entry_dialog.dart';
 import '../widgets/report_action_row.dart';
+import '../widgets/report_export_menu.dart';
 import '../widgets/trend_section.dart';
 import '../widgets/yearly_comparison_card.dart';
 import '../state/insights_state.dart';
@@ -1188,6 +1196,84 @@ Future<void> _exportHomeOfficeYearPdf({
   }
 }
 
+/// Exportiert die Urlaubs- und Krankheitsauswertung eines Jahres als PDF
+/// (#284). Lädt die Werte frisch vom Backend (gewähltes Jahr, aktives
+/// Profil); die App rechnet nichts nach. Scheitert das Laden, gibt es kein
+/// PDF, sondern die Snackbar `pdfExportFailed`. „Heute“ (Erstellungsdatum,
+/// laufendes Jahr) kommt aus `todayProvider`.
+Future<void> _exportLeaveReportPdf({
+  required BuildContext context,
+  required WidgetRef ref,
+  required int year,
+}) async {
+  final messenger = ScaffoldMessenger.of(context);
+  final l10n = AppLocalizations.of(context);
+  final locale = Localizations.localeOf(context).toString();
+  final api = ref.read(apiClientProvider);
+  final profileId = ref.read(activeWorkProfileIdProvider);
+  final today = ref.read(todayProvider);
+  final service = ref.read(pdfReportServiceProvider);
+  try {
+    final profileName = await _exportProfileName(ref, profileId);
+    final report = await api.getYearlyLeaveReport(year, profileId: profileId);
+    await service.exportLeaveReport(
+      l10n: l10n,
+      locale: locale,
+      report: report,
+      isCurrentYear: year == today.year,
+      createdOn: today,
+      profileName: profileName,
+    );
+  } catch (e, st) {
+    if (isExpectedLoadFailure(e)) {
+      // Verbindungsabbruch/abgemeldet ist kein App-Fehler (#506, #522).
+      logger.i('[PDF-Export] Urlaubsauswertung nicht ladbar: ${errorLabel(e)}');
+    } else {
+      logger.e(
+          '[PDF-Export] Urlaubsauswertung fehlgeschlagen: ${errorLabel(e)}',
+          stackTrace: st);
+    }
+    if (context.mounted) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).pdfExportFailed('$e')),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+}
+
+const _profileNameTimeout = Duration(seconds: 3);
+
+/// Name des aktiven Arbeitszeit-Profils für die PDF-Kopfzeile, `null` beim
+/// Standard-Profil. Ist die Profil-Liste nicht (rechtzeitig) ladbar, entfällt
+/// die Zeile; das PDF entsteht trotzdem. Das Zeitlimit ist nötig, weil
+/// Riverpod einen fehlgeschlagenen Provider mehrfach neu versucht und `.future`
+/// so lange wartet.
+Future<String?> _exportProfileName(WidgetRef ref, String? profileId) async {
+  if (profileId == null || profileId == WorkProfileEntity.defaultProfileId) {
+    return null;
+  }
+  // Hält den (autoDispose-)Provider während des Wartens am Leben.
+  final sub = ref.listenManual(workProfilesProvider, (_, __) {});
+  try {
+    final profiles = ref.read(workProfilesProvider).value ??
+        await ref
+            .read(workProfilesProvider.future)
+            .timeout(_profileNameTimeout);
+    for (final p in profiles) {
+      if (p.id == profileId) return p.name;
+    }
+    return null;
+  } catch (e) {
+    logger.i('[PDF-Export] Profilname nicht ladbar: ${errorLabel(e)}');
+    return null;
+  } finally {
+    sub.close();
+  }
+}
+
 class MonthlyReportView extends ConsumerWidget {
   const MonthlyReportView({super.key});
 
@@ -1619,27 +1705,40 @@ class _YearlyReportViewState extends ConsumerState<YearlyReportView> {
             ],
           ),
           if (!yearlyState.hasError)
+            // Drei PDF-Auswertungen (#284): ein Button mit Menü statt einer
+            // umbrechenden Button-Zeile.
             Align(
               alignment: Alignment.centerRight,
-              child: Wrap(
-                alignment: WrapAlignment.end,
-                children: [
-                  TextButton.icon(
-                    onPressed: () => _exportYearlyReportPdf(
+              child: ReportExportMenu(
+                key: const ValueKey('yearlyExportMenu'),
+                label: l10n.exportPdfShortButton,
+                tooltip: l10n.exportPdfMenuTooltip,
+                items: [
+                  ReportExportMenuItem(
+                    icon: Icons.picture_as_pdf_outlined,
+                    label: l10n.exportYearlyReportPdfButton,
+                    onSelected: () => _exportYearlyReportPdf(
                       context: context,
                       yearlyReport: yearlyState,
                     ),
-                    icon: const Icon(Icons.picture_as_pdf_outlined),
-                    label: Text(l10n.exportAsPdfButton),
                   ),
-                  TextButton.icon(
-                    onPressed: () => _exportHomeOfficeYearPdf(
+                  ReportExportMenuItem(
+                    icon: Icons.home_work_outlined,
+                    label: l10n.exportHomeOfficePdfButton,
+                    onSelected: () => _exportHomeOfficeYearPdf(
                       context: context,
                       ref: ref,
                       year: yearlyState.year,
                     ),
-                    icon: const Icon(Icons.home_work_outlined),
-                    label: Text(l10n.exportHomeOfficePdfButton),
+                  ),
+                  ReportExportMenuItem(
+                    icon: Icons.event_busy_outlined,
+                    label: l10n.exportLeaveReportPdfButton,
+                    onSelected: () => _exportLeaveReportPdf(
+                      context: context,
+                      ref: ref,
+                      year: yearlyState.year,
+                    ),
                   ),
                 ],
               ),

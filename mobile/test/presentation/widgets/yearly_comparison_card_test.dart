@@ -393,7 +393,8 @@ void main() {
       // Lokal gerechnet: 9:00 netto, 1 Arbeitstag, +1:00.
       expect(find.text('9:00:00'), findsOneWidget);
       expect(find.text('Monatsübersicht:'), findsOneWidget);
-      expect(find.text('Als PDF exportieren'), findsOneWidget);
+      // Export-Button des Jahres-Tabs (Menü, #284).
+      expect(find.text('PDF-Export'), findsOneWidget);
       expect(work.monthReads, hasLength(12));
       expect(card(), findsOneWidget);
     });
@@ -409,7 +410,7 @@ void main() {
       expect(find.text('Der Jahresbericht konnte nicht geladen werden.'),
           findsOneWidget);
       expect(find.text('Monatsübersicht:'), findsNothing);
-      expect(find.text('Als PDF exportieren'), findsNothing);
+      expect(find.text('PDF-Export'), findsNothing);
       // Die Vergleichskarte lädt unabhängig davon.
       expect(card(), findsOneWidget);
 

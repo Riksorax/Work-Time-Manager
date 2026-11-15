@@ -10,8 +10,10 @@ import 'package:flutter_work_time/core/utils/logger.dart';
 import '../../../domain/entities/break_entity.dart';
 import '../../../domain/entities/trend_report.dart';
 import '../../../domain/entities/yearly_comparison.dart';
+import '../../../domain/entities/yearly_leave_report.dart';
 import '../../models/trend_report_model.dart';
 import '../../models/yearly_comparison_model.dart';
+import '../../models/yearly_leave_report_model.dart';
 import '../../../domain/entities/work_entry_entity.dart';
 import '../../../domain/utils/entry_day.dart';
 import '../../../domain/utils/work_locations.dart';
@@ -176,6 +178,16 @@ class ApiClient {
   /// `vacationDaysRemaining`, `sickDays`; weitere Felder sind möglich.
   Future<Map<String, dynamic>> getYearlyLeave(int year, {String? profileId}) =>
       _getJson('/reports/yearly/$year', 'getYearlyLeave', profileId);
+
+  /// Urlaubs- und Krankheitsauswertung (#284), derselbe Endpunkt wie
+  /// [getYearlyLeave], gelesen über die typisierte Lesegrenze
+  /// `yearlyLeaveReportFromJson` (Monate, Zeiträume als Kalendertage).
+  Future<YearlyLeaveReport> getYearlyLeaveReport(int year,
+      {String? profileId}) async {
+    final json = await _getJson(
+        '/reports/yearly/$year', 'getYearlyLeaveReport', profileId);
+    return yearlyLeaveReportFromJson(json, requestedYear: year);
+  }
 
   /// Trend (#531): `GET /api/reports/trend/{y}/{m}/{d}?granularity=…`.
   /// [date] ist der Bezugstag des Clients (lokaler Kalendertag aus
