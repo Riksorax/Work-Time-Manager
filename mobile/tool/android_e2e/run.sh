@@ -87,7 +87,14 @@ log "#287: Sprachabfragen bei laufendem Timer verändern den Eintrag nicht"
 for query in "Wochen-Trend:query_trend" "Überstunden:query_overtime" "Resturlaub:query_leave" "leave work:null"; do
   phrase=${query%%:*}; id=${query##*:}
   assistant "$phrase"
-  if adb logcat -d | grep "WtmAssistant" | grep -q -- "-> $id"; then
+  # Die Logzeile erscheint erst, wenn die App den Intent verarbeitet hat: bis zu 10 s warten
+  # statt einmal sofort zu prüfen (sonst schlägt der Schritt je nach Timing fälschlich fehl).
+  matched=0
+  for _ in $(seq 1 20); do
+    if adb logcat -d | grep "WtmAssistant" | grep -q -- "-> $id"; then matched=1; break; fi
+    sleep 0.5
+  done
+  if [ "$matched" = 1 ]; then
     log "OK   Assistant '$phrase' -> $id"
   else
     log "FAIL Assistant '$phrase': erwartet -> $id"

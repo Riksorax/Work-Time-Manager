@@ -15,8 +15,12 @@ void main() {
     }
   });
 
-  test('Trend, unbekannt, leer und null ergeben keine Abfrage', () {
-    expect(assistantQueryFromId(queryTrendId), isNull);
+  test('query_trend ist seit Teil B von #287 die Trend-Abfrage', () {
+    expect(assistantQueryFromId(queryTrendId), AssistantQuery.trend);
+    expect(assistantQueryId(AssistantQuery.trend), queryTrendId);
+  });
+
+  test('unbekannt, leer und null ergeben keine Abfrage', () {
     expect(assistantQueryFromId('query_irgendwas'), isNull);
     expect(assistantQueryFromId(''), isNull);
     expect(assistantQueryFromId(null), isNull);

@@ -29,8 +29,7 @@ class ShortcutService {
   /// direkt nach `initialize` an den Handler. Unbekannte Typen werden ignoriert.
   ///
   /// Sprachabfragen des Assistant (#287, `query_*`) gehen an [onQuery], nie an
-  /// [onAction]. Die Trend-Abfrage (`query_trend`) wird bis Teil B von #287
-  /// still verworfen (nur Log), ohne halbfertige Ansicht.
+  /// [onAction] (auch `query_trend`, Teil B von #287).
   Future<void> initialize(
     void Function(TimerAction action) onAction, {
     void Function(AssistantQuery query)? onQuery,
@@ -50,11 +49,6 @@ class ShortcutService {
             return;
           }
           onQuery(query);
-          return;
-        }
-        if (type == queryTrendId) {
-          logger.i('[ShortcutService] Abfrage $type noch nicht verfügbar, '
-              'verworfen');
           return;
         }
         logger.w('[ShortcutService] Unbekannter Shortcut ignoriert: $type');

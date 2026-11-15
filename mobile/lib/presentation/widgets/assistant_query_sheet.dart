@@ -10,9 +10,11 @@ import '../../domain/utils/leave_balance_utils.dart';
 import '../../l10n/app_localizations.dart';
 import '../screens/login_page.dart';
 import '../view_models/dashboard_view_model.dart';
+import '../view_models/assistant_weekly_trend_provider.dart';
 import '../view_models/leave_balance_view_model.dart';
 import 'common/paywall_launcher.dart';
 import 'common/sheet_insets.dart';
+import 'trend_section.dart';
 
 /// Route des offenen Antwort-Sheets (höchstens eins zur Zeit).
 Route<void>? _openRoute;
@@ -71,6 +73,9 @@ String formatOvertimeLikeDashboard(Duration overtime) {
 ///   heutiger Tag), derselbe Wert wie im Dashboard.
 /// - Resturlaub: verbleibende Tage und Anspruch aus
 ///   [leaveBalanceViewModelProvider] (laufendes Jahr).
+/// - Wochen-Trend: `weeklyTrend` aus dem Trend-Endpunkt
+///   ([assistantWeeklyTrendProvider]), Wortlaut wie die Karte „Wochen-Trend“
+///   der Trend-Ansicht ([weeklyTrendTexts]); `null` → „zu wenig Daten“.
 ///
 /// Reihenfolge der Zustände: nicht angemeldet -> Hinweis auf Anmeldung;
 /// ohne Premium -> Hinweis mit Paywall; sonst Laden/Fehler/Wert. Ist nicht das
@@ -91,6 +96,7 @@ class AssistantQuerySheet extends ConsumerWidget {
     final title = switch (query) {
       AssistantQuery.overtime => l10n.overtimeTotalLabel,
       AssistantQuery.leave => l10n.remainingVacationTitle,
+      AssistantQuery.trend => l10n.trendWeekTitle,
     };
 
     final Widget body;
@@ -110,7 +116,9 @@ class AssistantQuerySheet extends ConsumerWidget {
     } else if (!ref.watch(isPremiumProvider)) {
       body = _hint(
         context,
-        text: l10n.assistantQueryPremiumHint,
+        text: query == AssistantQuery.trend
+            ? l10n.assistantQueryTrendPremiumHint
+            : l10n.assistantQueryPremiumHint,
         buttonLabel: l10n.unlockPremiumButton,
         icon: Icons.workspace_premium,
         // Auf Web gibt es keinen Kauf; der Assistant ist ohnehin nur Android.
@@ -120,6 +128,7 @@ class AssistantQuerySheet extends ConsumerWidget {
       body = switch (query) {
         AssistantQuery.overtime => const _OvertimeAnswer(),
         AssistantQuery.leave => const _LeaveAnswer(),
+        AssistantQuery.trend => const _TrendAnswer(),
       };
     }
 
@@ -291,6 +300,64 @@ class _LeaveAnswer extends ConsumerWidget {
         Text(l10n.assistantQueryLeaveYear(balance.year),
             style: theme.textTheme.bodyMedium
                 ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+      ],
+    );
+  }
+}
+
+/// Wochen-Trend (#287, Teil B): dieselbe Quelle und derselbe Wortlaut wie die
+/// Karte „Wochen-Trend“ der Trend-Ansicht, neutral ohne Wertungsfarbe.
+class _TrendAnswer extends ConsumerWidget {
+  const _TrendAnswer();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final trend = ref.watch(assistantWeeklyTrendProvider);
+    if (trend.hasError && !trend.isLoading) {
+      // Geloggt hat der Provider.
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l10n.trendLoadError,
+              style: theme.textTheme.bodyLarge?.copyWith(color: cs.error)),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: () => ref.invalidate(assistantWeeklyTrendProvider),
+            child: Text(l10n.retryButton),
+          ),
+        ],
+      );
+    }
+    if (!trend.hasValue || trend.isLoading) return const _Loading();
+    final wt = trend.value;
+    if (wt == null) {
+      return Text(l10n.trendWeekTooLittle, style: theme.textTheme.bodyLarge);
+    }
+    final texts = weeklyTrendTexts(wt, l10n);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Icon(trendIcon(wt.delta),
+                  size: 28, color: cs.onSurfaceVariant),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(texts.delta, style: theme.textTheme.headlineSmall),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(texts.detail,
+            style: theme.textTheme.bodyMedium
+                ?.copyWith(color: cs.onSurfaceVariant)),
       ],
     );
   }
