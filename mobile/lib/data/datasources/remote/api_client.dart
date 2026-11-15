@@ -9,7 +9,9 @@ import 'package:flutter_work_time/core/utils/api_errors.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
 import '../../../domain/entities/break_entity.dart';
 import '../../../domain/entities/trend_report.dart';
+import '../../../domain/entities/yearly_comparison.dart';
 import '../../models/trend_report_model.dart';
+import '../../models/yearly_comparison_model.dart';
 import '../../../domain/entities/work_entry_entity.dart';
 import '../../../domain/utils/entry_day.dart';
 import '../../../domain/utils/work_locations.dart';
@@ -192,6 +194,31 @@ class ApiClient {
     if (res.statusCode != 200) _fail(op, res);
     return trendReportFromJson(jsonDecode(res.body) as Map<String, dynamic>,
         requested: granularity);
+  }
+
+  /// Jahresvergleich mit dem Vorjahr (#530):
+  /// `GET /api/reports/yearly-comparison/{year}?until=MM-dd`.
+  ///
+  /// [until] ist der Stichtag als lokaler Kalendertag (z. B. heute aus
+  /// `todayProvider`); nur Monat und Tag seiner lokalen Felder gehen als
+  /// `MM-dd` in die Anfrage. Ohne [until] gilt das ganze Jahr. Ob ein Stichtag
+  /// mitgeht (nur im laufenden Jahr), entscheidet der Aufrufer.
+  Future<YearlyComparison> getYearlyComparison(int year,
+      {DateTime? until, String? profileId}) async {
+    final base = _uri('/reports/yearly-comparison/$year', profileId);
+    final uri = until == null
+        ? base
+        : base.replace(queryParameters: {
+            ...base.queryParameters,
+            'until': '${until.month.toString().padLeft(2, '0')}-'
+                '${until.day.toString().padLeft(2, '0')}',
+          });
+    const op = 'getYearlyComparison';
+    final res = await _http.get(uri, headers: await _headers(op));
+    if (res.statusCode != 200) _fail(op, res);
+    return yearlyComparisonFromJson(
+        jsonDecode(res.body) as Map<String, dynamic>,
+        requestedYear: year);
   }
 
   Future<Map<String, dynamic>> _getJson(String path, String op,

@@ -1,6 +1,38 @@
 import '../entities/work_entry_entity.dart';
 import 'entry_day.dart';
 import 'iso_week.dart';
+import 'report_calculator.dart';
+
+/// Monatswerte des Jahresberichts über die kanonische Berichtsrechnung (#530;
+/// lokaler Ersatz bei Ladefehler und Gast-Modus): dieselben Felder wie die
+/// `months` von `GET /api/reports/yearly-comparison/{year}`, also
+/// [calculateMonthlyReport] je Monat (netto = Arbeitszeit − Pausen,
+/// Abwesenheit mit Tagessoll als gearbeitet und Soll, Überstunden des Monats
+/// inkl. manueller, Arbeitstage). Urlaubs-, Krankheits- und Feiertage zählen
+/// wie im Backend je Eintrag einen Tag (auch am Wochenende).
+///
+/// [entriesForMonth] sind die Einträge des Monats [month] von [year]; es wird
+/// nicht gefiltert (wie [calculateMonthlyReport]).
+MonthSummary calculateCanonicalMonthSummary({
+  required int year,
+  required int month,
+  required List<WorkEntryEntity> entriesForMonth,
+  required ReportSettings settings,
+}) {
+  final r = calculateMonthlyReport(
+      entriesForMonth, DateTime(year, month), settings, Duration.zero);
+  int count(WorkEntryType type) =>
+      entriesForMonth.where((e) => e.type == type).length;
+  return MonthSummary(
+    month: month,
+    netWorkDuration: r.totalWorked - r.totalBreaks,
+    overtime: r.monthlyOvertime,
+    workDays: r.workDays,
+    vacationDays: count(WorkEntryType.vacation),
+    sickDays: count(WorkEntryType.sick),
+    holidayDays: count(WorkEntryType.holiday),
+  );
+}
 
 /// Aggregierte Kennzahlen für einen einzelnen Monat innerhalb des
 /// Jahresberichts (siehe #136).

@@ -41,6 +41,7 @@ import '../widgets/edit_work_entry_modal.dart';
 import '../widgets/quick_entry_dialog.dart';
 import '../widgets/report_action_row.dart';
 import '../widgets/trend_section.dart';
+import '../widgets/yearly_comparison_card.dart';
 import '../state/insights_state.dart';
 import '../widgets/batch_quick_entry_dialog.dart';
 import '../widgets/weekly_reflection_dialog.dart';
@@ -1585,6 +1586,11 @@ class _YearlyReportViewState extends ConsumerState<YearlyReportView> {
     final monthNames = List.generate(
         12, (i) => DateFormat.MMMM(locale).format(DateTime(2024, i + 1)));
 
+    // Jahresvergleich mit dem Vorjahr (#530): eigene Karte mit eigenem Lade-,
+    // Fehler- und Leerzustand; der Tab ist schon hinter Anmeldung + Premium.
+    const comparisonCard =
+        YearlyComparisonCard(key: ValueKey('yearlyComparisonCard'));
+
     return ResponsiveCenter(
       child: ListView(
         padding: const EdgeInsets.all(16.0),
@@ -1612,37 +1618,64 @@ class _YearlyReportViewState extends ConsumerState<YearlyReportView> {
               ),
             ],
           ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Wrap(
-              alignment: WrapAlignment.end,
-              children: [
-                TextButton.icon(
-                  onPressed: () => _exportYearlyReportPdf(
-                    context: context,
-                    yearlyReport: yearlyState,
+          if (!yearlyState.hasError)
+            Align(
+              alignment: Alignment.centerRight,
+              child: Wrap(
+                alignment: WrapAlignment.end,
+                children: [
+                  TextButton.icon(
+                    onPressed: () => _exportYearlyReportPdf(
+                      context: context,
+                      yearlyReport: yearlyState,
+                    ),
+                    icon: const Icon(Icons.picture_as_pdf_outlined),
+                    label: Text(l10n.exportAsPdfButton),
                   ),
-                  icon: const Icon(Icons.picture_as_pdf_outlined),
-                  label: Text(l10n.exportAsPdfButton),
-                ),
-                TextButton.icon(
-                  onPressed: () => _exportHomeOfficeYearPdf(
-                    context: context,
-                    ref: ref,
-                    year: yearlyState.year,
+                  TextButton.icon(
+                    onPressed: () => _exportHomeOfficeYearPdf(
+                      context: context,
+                      ref: ref,
+                      year: yearlyState.year,
+                    ),
+                    icon: const Icon(Icons.home_work_outlined),
+                    label: Text(l10n.exportHomeOfficePdfButton),
                   ),
-                  icon: const Icon(Icons.home_work_outlined),
-                  label: Text(l10n.exportHomeOfficePdfButton),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
           const SizedBox(height: 8),
-          if (yearlyState.totalWorkDays == 0 &&
+          if (yearlyState.hasError) ...[
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    Icon(Icons.error_outline,
+                        color: Theme.of(context).colorScheme.error),
+                    const SizedBox(height: 8),
+                    Text(l10n.yearlyReportLoadError,
+                        textAlign: TextAlign.center),
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: () =>
+                          yearlyNotifier.loadYear(yearlyState.year),
+                      icon: const Icon(Icons.refresh),
+                      label: Text(l10n.retryButton),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            comparisonCard,
+          ] else if (yearlyState.totalWorkDays == 0 &&
               yearlyState.totalVacationDays == 0 &&
-              yearlyState.totalSickDays == 0)
-            Center(child: Text(l10n.noDataForYear))
-          else ...[
+              yearlyState.totalSickDays == 0) ...[
+            Center(child: Text(l10n.noDataForYear)),
+            const SizedBox(height: 16),
+            comparisonCard,
+          ] else ...[
             // Statistikkarte
             Card(
               child: Padding(
@@ -1718,16 +1751,23 @@ class _YearlyReportViewState extends ConsumerState<YearlyReportView> {
                 ),
               ),
             ),
+            const SizedBox(height: 16),
+            comparisonCard,
             const SizedBox(height: 24),
             Text(l10n.monthOverviewTitle,
                 style:
                     const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
             const SizedBox(height: 8),
             for (final monthSummary in yearlyState.months)
+              // Die Monatswerte des Backends (#530) enthalten keine Urlaubs-/
+              // Kranktage je Monat; ein Monat nur mit Abwesenheit hat dort
+              // aber Arbeitszeit (Tagessoll) und bleibt so sichtbar.
               if (monthSummary.workDays > 0 ||
                   monthSummary.vacationDays > 0 ||
                   monthSummary.sickDays > 0 ||
-                  monthSummary.holidayDays > 0)
+                  monthSummary.holidayDays > 0 ||
+                  monthSummary.netWorkDuration != Duration.zero ||
+                  monthSummary.overtime != Duration.zero)
                 Card(
                   margin: const EdgeInsets.symmetric(vertical: 4.0),
                   child: ListTile(
