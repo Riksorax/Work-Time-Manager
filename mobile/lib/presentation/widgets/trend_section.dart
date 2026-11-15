@@ -209,19 +209,14 @@ class TrendSection extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Icon(
-                        wt.delta > Duration.zero
-                            ? Icons.trending_up
-                            : wt.delta < Duration.zero
-                                ? Icons.trending_down
-                                : Icons.trending_flat,
+                        trendIcon(wt.delta),
                         size: 20,
                         color: cs.onSurfaceVariant,
                       ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          l10n.trendWeekDelta(formatSignedDurationHm(wt.delta),
-                              wt.comparedWeeks),
+                          weeklyTrendTexts(wt, l10n).delta,
                           style: theme.textTheme.bodyMedium
                               ?.copyWith(fontWeight: FontWeight.w500),
                         ),
@@ -230,11 +225,7 @@ class TrendSection extends ConsumerWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    l10n.trendWeekDetail(
-                      l10n.trendWeekAxis(wt.lastWeekNumber ?? 0),
-                      formatDurationHm(wt.lastWeekWorked),
-                      formatDurationHm(wt.averageWorked),
-                    ),
+                    weeklyTrendTexts(wt, l10n).detail,
                     style: subStyle,
                   ),
                 ] else
@@ -309,6 +300,29 @@ class TrendSection extends ConsumerWidget {
     ];
   }
 }
+
+/// Trend-Icon nach dem Vorzeichen von [delta] (neutral, ohne Wertung).
+IconData trendIcon(Duration delta) => delta > Duration.zero
+    ? Icons.trending_up
+    : delta < Duration.zero
+        ? Icons.trending_down
+        : Icons.trending_flat;
+
+/// Texte des Wochen-Trends (#531): Abweichung („+02:30 h gegenüber dem
+/// Durchschnitt der letzten 4 Wochen“) und Detailzeile („KW 45: 41:30 h ·
+/// Durchschnitt 39:00 h“). Eine Quelle für die Karte der Trend-Ansicht und die
+/// Sprachabfrage „Wochen-Trend“ (#287), damit beide denselben Wortlaut haben.
+({String delta, String detail}) weeklyTrendTexts(
+        WeeklyTrend wt, AppLocalizations l10n) =>
+    (
+      delta: l10n.trendWeekDelta(
+          formatSignedDurationHm(wt.delta), wt.comparedWeeks),
+      detail: l10n.trendWeekDetail(
+        l10n.trendWeekAxis(wt.lastWeekNumber ?? 0),
+        formatDurationHm(wt.lastWeekWorked),
+        formatDurationHm(wt.averageWorked),
+      ),
+    );
 
 /// Texte der Prognose-Karte (#532): Haupt- und Detailzeile. Reine
 /// Darstellung wie im Web (`trend-view.ts`, `forecastTexts`): Restwochen nur
@@ -403,11 +417,7 @@ class _ForecastCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Icon(
-                        delta > Duration.zero
-                            ? Icons.trending_up
-                            : delta < Duration.zero
-                                ? Icons.trending_down
-                                : Icons.trending_flat,
+                        trendIcon(delta),
                         size: 20,
                         color: cs.onSurfaceVariant,
                       ),

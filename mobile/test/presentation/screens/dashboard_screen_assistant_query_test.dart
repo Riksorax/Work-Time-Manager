@@ -10,6 +10,7 @@ import 'package:flutter_work_time/core/services/shortcut_service.dart';
 import 'package:flutter_work_time/core/services/timer_action_inbox.dart';
 import 'package:flutter_work_time/domain/entities/bundesland.dart';
 import 'package:flutter_work_time/domain/entities/settings_entity.dart';
+import 'package:flutter_work_time/domain/entities/trend_report.dart';
 import 'package:flutter_work_time/domain/entities/user_entity.dart';
 import 'package:flutter_work_time/domain/entities/work_entry_entity.dart';
 import 'package:flutter_work_time/domain/entities/work_profile_entity.dart';
@@ -30,6 +31,7 @@ import 'package:quick_actions/quick_actions.dart';
 import '../../support/dashboard_harness.dart';
 import '../../support/fake_clock.dart';
 import '../../support/fake_repositories.dart';
+import '../../support/trend_fixture.dart';
 
 // Sprachabfragen (#287) mit echtem DashboardViewModel und Fake-Repos: die
 // Abfrage oeffnet nur die Antwort-Ansicht und veraendert keine Daten, auch
@@ -87,9 +89,12 @@ void main() {
   late TimerActionInbox timerInbox;
   late _FakeQuickActions quickActions;
   late bool locked;
+  late FakeTrendApi trendApi;
   ProviderContainer? current;
 
   setUp(() {
+    trendApi =
+        FakeTrendApi((c) async => trendJson(c.date, c.granularity.apiValue));
     work = FakeWorkRepository()..store[dayKey(mo)] = entryOf(mo, start: start);
     overtime = FakeOvertimeRepository()..stored = const Duration(minutes: 120);
     inboxClock = FakeClock(DateTime.utc(2026, 10, 5, 15));
@@ -122,6 +127,7 @@ void main() {
       clockProvider.overrideWithValue(() => now),
       assistantQueryInboxProvider.overrideWithValue(queryInbox),
       timerActionInboxProvider.overrideWithValue(timerInbox),
+      apiClientProvider.overrideWithValue(trendApi),
     ]);
     current = container;
     // Wie main.dart: beide ViewModels der Aktionen von außen am Leben halten.
@@ -181,9 +187,12 @@ void main() {
     expect(before.workStart, start);
     expect(before.workEnd, isNull);
 
-    // Trend: in Teil A still verworfen, keine Ansicht, kein Stop.
+    // Trend (#287 Teil B): Antwort-Ansicht, kein Stop („Wochen-Trend“
+    // enthält das Stop-Wort „end“).
     await speak(tester, 'query_trend');
-    expect(find.byType(AssistantQuerySheet), findsNothing);
+    expect(find.byType(AssistantQuerySheet), findsOneWidget);
+    expect(find.text(de.trendWeekTitle), findsWidgets);
+    await closeSheet(tester);
 
     await speak(tester, 'query_overtime');
     expect(find.byType(AssistantQuerySheet), findsOneWidget);
@@ -206,6 +215,40 @@ void main() {
     expect(timerInbox.hasPending, isFalse);
     expect(container.read(timerActionViewModelProvider).handled, 0,
         reason: 'keine Timer-Aktion ausgeloest');
+    expect(find.text('Zeiterfassung beenden'), findsOneWidget);
+    await unmount(tester);
+  });
+
+  testWidgets(
+      'laufender Timer + Wochen-Trend: Antwort mit Daten, Timer läuft weiter',
+      (tester) async {
+    final container = await pump(tester);
+    final before = container.read(dashboardViewModelProvider).workEntry;
+
+    await speak(tester, 'query_trend');
+    await tester.pump();
+
+    expect(find.byType(AssistantQuerySheet), findsOneWidget);
+    expect(
+        find.text('+02:30 h gegenüber dem Durchschnitt der letzten 4 Wochen'),
+        findsOneWidget);
+    // Bezugstag = heute aus todayProvider (Uhr Mo 05.10.2026), 12 Wochen.
+    expect(trendApi.calls.single.date, mo);
+    expect(trendApi.calls.single.granularity, TrendGranularity.week);
+
+    // Weiterlaufen lassen: ein fälschlicher Stop liefe asynchron.
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(seconds: 1));
+    }
+    final after = container.read(dashboardViewModelProvider).workEntry;
+    expect(after.workStart, before.workStart);
+    expect(after.workEnd, isNull, reason: 'Wochen-Trend stempelt nicht aus');
+    expect(after.breaks, before.breaks);
+    expect(work.saved, isEmpty);
+    expect(overtime.savedOvertimes, isEmpty);
+    expect(timerInbox.hasPending, isFalse);
+    expect(container.read(timerActionViewModelProvider).handled, 0);
+    await closeSheet(tester);
     expect(find.text('Zeiterfassung beenden'), findsOneWidget);
     await unmount(tester);
   });

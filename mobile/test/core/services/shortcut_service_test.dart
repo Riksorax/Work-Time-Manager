@@ -126,13 +126,14 @@ void main() {
       expect(received, isEmpty);
     });
 
-    test('query_trend wird in Teil A still verworfen', () async {
+    test('query_trend geht an onQuery, nie an onAction (kein Ausstempeln)',
+        () async {
       await service.initialize(received.add, onQuery: queries.add);
 
       fake.handler!('query_trend');
 
-      expect(queries, isEmpty);
-      expect(received, isEmpty);
+      expect(queries, [AssistantQuery.trend]);
+      expect(received, isEmpty, reason: 'keine Timer-Aktion, v. a. kein Stop');
     });
 
     test('Timer-Ids gehen weiter an onAction, nie an onQuery', () async {
