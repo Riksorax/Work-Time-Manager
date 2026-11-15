@@ -95,6 +95,12 @@ body {
   padding-top: 8px;
 }
 
+// Ladezustand des Buttons „Urlaub/Krank drucken“ (#284): Abstand zwischen Spinner und Text wie bei einem Icon. Global,
+// weil das Style-Budget von `reports.scss` ausgeschöpft ist.
+.leave-print-button .mat-mdc-progress-spinner {
+  margin-right: 8px;
+}
+
 // Druck (#483): Es wird nur der mit `.print-area` markierte Bereich gedruckt (Jahresauswertung in den Berichten,
 // als PDF über den Druckdialog des Browsers). Alles andere ist unsichtbar; `.print-only` erscheint nur im Druck.
 .print-only {
@@ -129,5 +135,41 @@ body {
 
   .month-nav button {
     display: none !important;
+  }
+
+  // Die Tab- und Sidenav-Container sind positioniert und schneiden ab (`overflow: hidden`, Höhe nur der Tab-Leiste):
+  // ohne diese Regel bezog sich `.print-area` auf den Tab-Inhalt und wurde nach der Überschrift abgeschnitten (#530).
+  .mat-mdc-tab-body-wrapper,
+  .mat-mdc-tab-body,
+  .mat-mdc-tab-body-content,
+  .mat-drawer-container,
+  .mat-drawer-content {
+    position: static !important;
+    overflow: visible !important;
+  }
+
+  // Urlaubs- und Krankheitsauswertung (#284): eigener Druck. Ohne Druckmodus erscheint sie nie (auch nicht beim Druck
+  // des Jahres-Tabs); im Druckmodus (`html.print-leave-report`, `LeaveReportPrintService`) erscheint nur sie.
+  .leave-print {
+    display: none !important;
+  }
+
+  html.print-leave-report {
+    .print-area {
+      display: none !important;
+    }
+
+    .leave-print {
+      display: block !important;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+    }
+
+    .leave-print,
+    .leave-print * {
+      visibility: visible;
+    }
   }
 }
