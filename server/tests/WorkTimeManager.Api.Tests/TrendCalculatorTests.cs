@@ -67,7 +67,7 @@ public class TrendCalculatorTests
     public void Week_Always12Buckets_OldestFirst_LastContainsReference()
     {
         var trend = ReportCalculator.CalculateTrend(
-            Array.Empty<WorkEntryDto>(), new DateOnly(2026, 11, 14), TrendGranularity.Week, Settings);
+            Array.Empty<WorkEntryDto>(), new DateOnly(2026, 11, 14), TrendGranularity.Week, Settings, storedOvertimeMs: 0);
 
         Assert.Equal("week", trend.Granularity);
         Assert.Equal(12, trend.Buckets.Count);
@@ -93,7 +93,7 @@ public class TrendCalculatorTests
     public void Month_Always12Buckets_OldestFirst_LastContainsReference()
     {
         var trend = ReportCalculator.CalculateTrend(
-            Array.Empty<WorkEntryDto>(), new DateOnly(2026, 11, 14), TrendGranularity.Month, Settings);
+            Array.Empty<WorkEntryDto>(), new DateOnly(2026, 11, 14), TrendGranularity.Month, Settings, storedOvertimeMs: 0);
 
         Assert.Equal("month", trend.Granularity);
         Assert.Equal(12, trend.Buckets.Count);
@@ -113,7 +113,7 @@ public class TrendCalculatorTests
     {
         // Mi 06.01.2027 liegt in 2027-W01 (Mo 04.01.2027); 2026 hat eine KW 53 (Mo 28.12.2026 – So 03.01.2027).
         var trend = ReportCalculator.CalculateTrend(
-            Array.Empty<WorkEntryDto>(), new DateOnly(2027, 1, 6), TrendGranularity.Week, Settings);
+            Array.Empty<WorkEntryDto>(), new DateOnly(2027, 1, 6), TrendGranularity.Week, Settings, storedOvertimeMs: 0);
 
         Assert.Equal(
             new[] { "2026-W51", "2026-W52", "2026-W53", "2027-W01" },
@@ -127,7 +127,7 @@ public class TrendCalculatorTests
     {
         // Mo 29.12.2025 gehört zu 2026-W01; die Woche davor ist 2025-W52.
         var trend = ReportCalculator.CalculateTrend(
-            Array.Empty<WorkEntryDto>(), new DateOnly(2025, 12, 29), TrendGranularity.Week, Settings);
+            Array.Empty<WorkEntryDto>(), new DateOnly(2025, 12, 29), TrendGranularity.Week, Settings, storedOvertimeMs: 0);
 
         Assert.Equal("2026-W01", trend.Buckets[11].Key);
         Assert.Equal(Utc(2025, 12, 29), trend.Buckets[11].Start);
@@ -139,7 +139,7 @@ public class TrendCalculatorTests
     public void Month_YearBoundary()
     {
         var trend = ReportCalculator.CalculateTrend(
-            Array.Empty<WorkEntryDto>(), new DateOnly(2027, 2, 10), TrendGranularity.Month, Settings);
+            Array.Empty<WorkEntryDto>(), new DateOnly(2027, 2, 10), TrendGranularity.Month, Settings, storedOvertimeMs: 0);
 
         Assert.Equal("2026-03", trend.Buckets[0].Key);
         Assert.Equal("2026-12", trend.Buckets[9].Key);
@@ -153,7 +153,7 @@ public class TrendCalculatorTests
     {
         // Woche Mo 30.03.2026 – So 05.04.2026.
         var entries = new[] { Work(2026, 3, 31, 8, 16), Work(2026, 4, 1, 8, 18) };
-        var trend = ReportCalculator.CalculateTrend(entries, new DateOnly(2026, 4, 1), TrendGranularity.Week, Settings);
+        var trend = ReportCalculator.CalculateTrend(entries, new DateOnly(2026, 4, 1), TrendGranularity.Week, Settings, storedOvertimeMs: 0);
 
         var last = trend.Buckets[11];
         Assert.Equal("2026-W14", last.Key);
@@ -168,7 +168,7 @@ public class TrendCalculatorTests
     {
         // So 15.11.2026 ist der letzte Tag von 2026-W46; Sonntag ist kein Vertrags-Wochentag (Soll 0).
         var trend = ReportCalculator.CalculateTrend(
-            new[] { Work(2026, 11, 15, 10, 12) }, new DateOnly(2026, 11, 15), TrendGranularity.Week, Settings);
+            new[] { Work(2026, 11, 15, 10, 12) }, new DateOnly(2026, 11, 15), TrendGranularity.Week, Settings, storedOvertimeMs: 0);
 
         var last = trend.Buckets[11];
         Assert.Equal("2026-W46", last.Key);
@@ -188,7 +188,7 @@ public class TrendCalculatorTests
             Work(2026, 11, 9, 8, 14),  // W46: 6 h → −2 h
             Work(2026, 11, 10, 8, 15), // W46: 7 h → −1 h
         };
-        var trend = ReportCalculator.CalculateTrend(entries, new DateOnly(2026, 11, 13), TrendGranularity.Week, Settings);
+        var trend = ReportCalculator.CalculateTrend(entries, new DateOnly(2026, 11, 13), TrendGranularity.Week, Settings, storedOvertimeMs: 0);
 
         for (var i = 0; i < 9; i++)
         {
@@ -223,7 +223,7 @@ public class TrendCalculatorTests
             Work(2026, 11, 2, 8, 17, breakMinutes: 30),  // Nov: 8,5 h netto
             Leave(2026, 11, 3, "vacation"),              // Nov: 8 h (Tagessoll)
         };
-        var trend = ReportCalculator.CalculateTrend(entries, new DateOnly(2026, 11, 14), TrendGranularity.Month, Settings);
+        var trend = ReportCalculator.CalculateTrend(entries, new DateOnly(2026, 11, 14), TrendGranularity.Month, Settings, storedOvertimeMs: 0);
 
         var oct = trend.Buckets[10];
         Assert.Equal("2026-10", oct.Key);
@@ -252,7 +252,7 @@ public class TrendCalculatorTests
             Open(2026, 11, 13, 8), // ohne Ende: 0 h, Soll zählt
         };
         var reference = new DateOnly(2026, 11, 13);
-        var trend = ReportCalculator.CalculateTrend(entries, reference, TrendGranularity.Week, Settings);
+        var trend = ReportCalculator.CalculateTrend(entries, reference, TrendGranularity.Week, Settings, storedOvertimeMs: 0);
         var weekly = ReportCalculator.CalculateWeeklyReport(entries, reference, Settings);
 
         var last = trend.Buckets[11];
@@ -292,7 +292,7 @@ public class TrendCalculatorTests
     public void Parity_WeekBuckets_MatchWeeklyReport()
     {
         var entries = MixedEntries();
-        var trend = ReportCalculator.CalculateTrend(entries, new DateOnly(2027, 1, 20), TrendGranularity.Week, OddSettings);
+        var trend = ReportCalculator.CalculateTrend(entries, new DateOnly(2027, 1, 20), TrendGranularity.Week, OddSettings, storedOvertimeMs: 0);
 
         Assert.Contains(trend.Buckets, b => !b.HasData); // KW 50 (07.–13.12.2026) ist leer
         foreach (var b in trend.Buckets)
@@ -310,7 +310,7 @@ public class TrendCalculatorTests
     public void Parity_MonthBuckets_MatchMonthlyReport_WithoutStoredBalance()
     {
         var entries = MixedEntries();
-        var trend = ReportCalculator.CalculateTrend(entries, new DateOnly(2027, 1, 20), TrendGranularity.Month, OddSettings);
+        var trend = ReportCalculator.CalculateTrend(entries, new DateOnly(2027, 1, 20), TrendGranularity.Month, OddSettings, storedOvertimeMs: 0);
 
         long cumulative = 0;
         foreach (var b in trend.Buckets)
@@ -345,7 +345,7 @@ public class TrendCalculatorTests
             Work(2026, 11, 3, 8, 16),                   // W45: 8 h
             Work(2026, 11, 9, 6, 20),                   // W46: laufende Woche, zählt nicht
         };
-        var t = ReportCalculator.CalculateTrend(entries, TrendRef, TrendGranularity.Week, Settings).WeeklyTrend;
+        var t = ReportCalculator.CalculateTrend(entries, TrendRef, TrendGranularity.Week, Settings, storedOvertimeMs: 0).WeeklyTrend;
 
         Assert.NotNull(t);
         Assert.Equal("2026-W45", t.LastWeekKey);
@@ -365,7 +365,7 @@ public class TrendCalculatorTests
             Work(2026, 10, 26, 8, 16), // W44: 8 h  (W43 leer)
             Work(2026, 11, 2, 8, 16),  // W45: 8 h
         };
-        var t = ReportCalculator.CalculateTrend(entries, TrendRef, TrendGranularity.Week, Settings).WeeklyTrend;
+        var t = ReportCalculator.CalculateTrend(entries, TrendRef, TrendGranularity.Week, Settings, storedOvertimeMs: 0).WeeklyTrend;
 
         Assert.NotNull(t);
         Assert.Equal(3, t.ComparedWeeks);
@@ -382,7 +382,7 @@ public class TrendCalculatorTests
             WorkMs(2026, 10, 26, 8 * H + 1), // W44
             WorkMs(2026, 11, 2, 9 * H),      // W45
         };
-        var t = ReportCalculator.CalculateTrend(entries, TrendRef, TrendGranularity.Week, Settings).WeeklyTrend;
+        var t = ReportCalculator.CalculateTrend(entries, TrendRef, TrendGranularity.Week, Settings, storedOvertimeMs: 0).WeeklyTrend;
 
         Assert.NotNull(t);
         Assert.Equal(2, t.ComparedWeeks);
@@ -400,7 +400,7 @@ public class TrendCalculatorTests
             WorkMs(2026, 10, 26, 8 * H + 1), // Mittel 8 h + 0,33 ms → 8 h
             WorkMs(2026, 11, 2, 8 * H),
         };
-        var t = ReportCalculator.CalculateTrend(entries, TrendRef, TrendGranularity.Week, Settings).WeeklyTrend;
+        var t = ReportCalculator.CalculateTrend(entries, TrendRef, TrendGranularity.Week, Settings, storedOvertimeMs: 0).WeeklyTrend;
 
         Assert.NotNull(t);
         Assert.Equal(8 * H, t.AverageWorkedMs);
@@ -411,7 +411,7 @@ public class TrendCalculatorTests
     public void WeeklyTrend_OnlyOneComparisonWeek_IsNull()
     {
         var entries = new[] { Work(2026, 10, 26, 8, 16), Work(2026, 11, 2, 8, 16) };
-        Assert.Null(ReportCalculator.CalculateTrend(entries, TrendRef, TrendGranularity.Week, Settings).WeeklyTrend);
+        Assert.Null(ReportCalculator.CalculateTrend(entries, TrendRef, TrendGranularity.Week, Settings, storedOvertimeMs: 0).WeeklyTrend);
     }
 
     [Fact]
@@ -423,7 +423,7 @@ public class TrendCalculatorTests
             Work(2026, 10, 19, 8, 18), Work(2026, 10, 26, 8, 16),
             Work(2026, 11, 9, 8, 16), // nur laufende Woche
         };
-        Assert.Null(ReportCalculator.CalculateTrend(entries, TrendRef, TrendGranularity.Week, Settings).WeeklyTrend);
+        Assert.Null(ReportCalculator.CalculateTrend(entries, TrendRef, TrendGranularity.Week, Settings, storedOvertimeMs: 0).WeeklyTrend);
     }
 
     [Fact]
@@ -432,8 +432,8 @@ public class TrendCalculatorTests
         var entries = MixedEntries();
         foreach (var reference in new[] { new DateOnly(2026, 11, 11), new DateOnly(2027, 1, 4), new DateOnly(2026, 9, 30) })
         {
-            var week = ReportCalculator.CalculateTrend(entries, reference, TrendGranularity.Week, OddSettings).WeeklyTrend;
-            var month = ReportCalculator.CalculateTrend(entries, reference, TrendGranularity.Month, OddSettings).WeeklyTrend;
+            var week = ReportCalculator.CalculateTrend(entries, reference, TrendGranularity.Week, OddSettings, storedOvertimeMs: 0).WeeklyTrend;
+            var month = ReportCalculator.CalculateTrend(entries, reference, TrendGranularity.Month, OddSettings, storedOvertimeMs: 0).WeeklyTrend;
             Assert.NotNull(week);
             Assert.Equal(week, month);
         }
@@ -447,13 +447,336 @@ public class TrendCalculatorTests
         {
             Work(2026, 12, 14, 8, 16), Work(2026, 12, 21, 8, 16), Work(2026, 12, 30, 8, 17),
         };
-        var t = ReportCalculator.CalculateTrend(entries, new DateOnly(2027, 1, 4), TrendGranularity.Month, Settings).WeeklyTrend;
+        var t = ReportCalculator.CalculateTrend(entries, new DateOnly(2027, 1, 4), TrendGranularity.Month, Settings, storedOvertimeMs: 0).WeeklyTrend;
 
         Assert.NotNull(t);
         Assert.Equal("2026-W53", t.LastWeekKey);
         Assert.Equal(9 * H, t.LastWeekWorkedMs);
         Assert.Equal(2, t.ComparedWeeks);
         Assert.Equal(8 * H, t.AverageWorkedMs);
+    }
+
+    // ── Überstunden-Prognose (#532) ────────────────────────────────────────
+
+    /// <summary>Bezugstag Sa 14.11.2026 (W46, Mo 09.11.): Fenster W38–W45, 47 Tage bis 31.12.</summary>
+    private static readonly DateOnly ForecastRef = new(2026, 11, 14);
+
+    private static OvertimeForecastDto? Forecast(
+        IReadOnlyList<WorkEntryDto> entries, DateOnly reference, long storedMs = 0, SettingsDto? settings = null) =>
+        ReportCalculator.CalculateTrend(entries, reference, TrendGranularity.Week, settings ?? Settings, storedMs).Forecast;
+
+    /// <summary>Je ein Montag mit 8 h + <paramref name="overtimeMs"/> (Tagessoll 8 h) in den angegebenen Wochen.</summary>
+    private static List<WorkEntryDto> MondaysWithOvertime(DateOnly firstMonday, params long[] overtimeMs) =>
+        overtimeMs.Select((o, i) =>
+        {
+            var d = firstMonday.AddDays(7 * i);
+            return WorkMs(d.Year, d.Month, d.Day, 8 * H + o);
+        }).ToList();
+
+    [Fact]
+    public void Forecast_Normal_EightWeeks_HandCalculated()
+    {
+        var entries = new List<WorkEntryDto>
+        {
+            Work(2026, 9, 7, 8, 20),    // W37: vor dem Fenster, zählt nicht
+            Work(2026, 9, 14, 8, 17),   // W38: +1 h
+            Work(2026, 9, 21, 8, 18),   // W39: +2 h
+            Work(2026, 9, 28, 8, 16),   // W40:  0
+            Work(2026, 10, 5, 8, 15),   // W41: −1 h
+            Work(2026, 10, 12, 8, 19),  // W42: +3 h
+            Work(2026, 10, 19, 8, 17),  // W43: +1 h
+            Work(2026, 10, 26, 8, 18),  // W44: +2 h
+            Work(2026, 11, 2, 8, 16),   // W45:  0
+            Work(2026, 11, 9, 6, 20),   // W46: laufende Woche (+6 h), zählt nicht
+        };
+
+        var f = Forecast(entries, ForecastRef, storedMs: 600 * 60_000L);
+
+        // Summe 8 h über 8 Wochen → Mittel 1 h. 15.11.–31.12. = 16 + 31 = 47 Tage → 47/7 Wochen.
+        // 10 h + 1 h × 47/7 = 36 000 000 + 169 200 000/7 = 36 000 000 + 24 171 428,571… = 60 171 428,571… → 60 171 429.
+        Assert.NotNull(f);
+        Assert.Equal(new DateOnly(2026, 12, 31), f.TargetDate);
+        Assert.Equal(10 * H, f.CurrentBalanceMs);
+        Assert.Equal(1 * H, f.AverageWeeklyOvertimeMs);
+        Assert.Equal(8, f.WeeksUsed);
+        Assert.Equal(47 / 7.0, f.RemainingWeeks);
+        Assert.Equal(60_171_429L, f.ProjectedBalanceMs);
+    }
+
+    [Fact]
+    public void Forecast_ExactlyFourWeeks_GapsNotCounted()
+    {
+        // W38, W40, W43, W45 mit Einträgen; W39, W41, W42, W44 leer.
+        var entries = new[]
+        {
+            Work(2026, 9, 14, 8, 18),  // +2 h
+            Work(2026, 9, 28, 8, 16),  //  0
+            Work(2026, 10, 19, 8, 17), // +1 h
+            Work(2026, 11, 2, 8, 17),  // +1 h
+        };
+
+        var f = Forecast(entries, ForecastRef);
+
+        Assert.NotNull(f);
+        Assert.Equal(4, f.WeeksUsed);
+        Assert.Equal(H, f.AverageWeeklyOvertimeMs); // 4 h ÷ 4, nicht ÷ 8
+        Assert.Equal((long)Math.Round(H * 47m / 7m, MidpointRounding.AwayFromZero), f.ProjectedBalanceMs);
+    }
+
+    [Fact]
+    public void Forecast_OnlyThreeWeeks_IsNull()
+    {
+        var entries = new[] { Work(2026, 9, 14, 8, 18), Work(2026, 10, 19, 8, 17), Work(2026, 11, 2, 8, 17) };
+        Assert.Null(Forecast(entries, ForecastRef, storedMs: 5 * H));
+    }
+
+    [Fact]
+    public void Forecast_NoEntries_IsNull()
+    {
+        Assert.Null(Forecast(Array.Empty<WorkEntryDto>(), ForecastRef));
+    }
+
+    [Fact]
+    public void Forecast_CurrentWeekDoesNotCount()
+    {
+        // Drei Wochen im Fenster plus Einträge in der laufenden Woche (Mo 09.11. und der Bezugstag selbst).
+        var entries = new List<WorkEntryDto>
+        {
+            Work(2026, 10, 5, 8, 16), Work(2026, 10, 19, 8, 16), Work(2026, 11, 2, 8, 16),
+            Work(2026, 11, 9, 8, 20), Work(2026, 11, 14, 8, 20),
+        };
+        Assert.Null(Forecast(entries, ForecastRef));
+
+        // Mit einer vierten Fensterwoche: Mittel nur aus dem Fenster (0), die laufende Woche (+16 h) zählt nicht.
+        entries.Add(Work(2026, 10, 26, 8, 16));
+        var f = Forecast(entries, ForecastRef, storedMs: 3 * H);
+        Assert.NotNull(f);
+        Assert.Equal(4, f.WeeksUsed);
+        Assert.Equal(0, f.AverageWeeklyOvertimeMs);
+        Assert.Equal(3 * H, f.ProjectedBalanceMs);
+    }
+
+    [Fact]
+    public void Forecast_WindowIsEightWeeks_NinthWeekBackIgnored()
+    {
+        // W37 (Mo 07.09.) liegt neun Wochen vor W46 und zählt nicht; im Fenster nur drei Wochen.
+        var entries = new[]
+        {
+            Work(2026, 9, 7, 8, 16), Work(2026, 9, 14, 8, 16), Work(2026, 10, 12, 8, 16), Work(2026, 11, 2, 8, 16),
+        };
+        Assert.Null(Forecast(entries, ForecastRef));
+    }
+
+    [Fact]
+    public void Forecast_NegativeAverage_NegativeBalance()
+    {
+        // Vier Wochen mit je −30 min → Mittel −0,5 h; Saldo −2 h.
+        var entries = MondaysWithOvertime(new DateOnly(2026, 10, 12), -H / 2, -H / 2, -H / 2, -H / 2);
+        var f = Forecast(entries, ForecastRef, storedMs: -120 * 60_000L);
+
+        // −7 200 000 + (−1 800 000 × 47/7 = −12 085 714,285…) = −19 285 714,285… → −19 285 714.
+        Assert.NotNull(f);
+        Assert.Equal(-2 * H, f.CurrentBalanceMs);
+        Assert.Equal(-H / 2, f.AverageWeeklyOvertimeMs);
+        Assert.Equal(-19_285_714L, f.ProjectedBalanceMs);
+    }
+
+    [Fact]
+    public void Forecast_AverageZero_ProjectedEqualsBalance()
+    {
+        var entries = MondaysWithOvertime(new DateOnly(2026, 9, 14), H, -H, 2 * H, -2 * H, 0);
+        var f = Forecast(entries, ForecastRef, storedMs: -45 * 60_000L);
+
+        Assert.NotNull(f);
+        Assert.Equal(5, f.WeeksUsed);
+        Assert.Equal(0, f.AverageWeeklyOvertimeMs);
+        Assert.Equal(-45 * 60_000L, f.ProjectedBalanceMs);
+    }
+
+    [Fact]
+    public void Forecast_ReferenceDec31_NoRemainingWeeks()
+    {
+        // Do 31.12.2026 liegt in 2026-W53 (Mo 28.12.); Fenster W45–W52.
+        var entries = MondaysWithOvertime(new DateOnly(2026, 11, 30), H, H, H, H);
+        var f = Forecast(entries, new DateOnly(2026, 12, 31), storedMs: 7 * H);
+
+        Assert.NotNull(f);
+        Assert.Equal(new DateOnly(2026, 12, 31), f.TargetDate);
+        Assert.Equal(0.0, f.RemainingWeeks);
+        Assert.Equal(H, f.AverageWeeklyOvertimeMs);
+        Assert.Equal(7 * H, f.ProjectedBalanceMs);
+    }
+
+    [Fact]
+    public void Forecast_ReferenceDec30_OneDayLeft()
+    {
+        var entries = MondaysWithOvertime(new DateOnly(2026, 11, 30), 7 * H, 7 * H, 7 * H, 7 * H);
+        var f = Forecast(entries, new DateOnly(2026, 12, 30), storedMs: H);
+
+        Assert.NotNull(f);
+        Assert.Equal(1 / 7.0, f.RemainingWeeks);
+        Assert.Equal(2 * H, f.ProjectedBalanceMs); // 1 h + 7 h × 1/7
+    }
+
+    [Fact]
+    public void Forecast_ReferenceJan1_WindowInPreviousYear_CurrentIsoWeekAcrossYearExcluded()
+    {
+        // Fr 01.01.2027 liegt in 2026-W53 (Mo 28.12.2026 – So 03.01.2027). Fenster W45–W52 von 2026.
+        var entries = MondaysWithOvertime(new DateOnly(2026, 11, 30), H, H, H, H); // W49–W52
+        entries.Add(Work(2026, 12, 29, 8, 20)); // Di 29.12.2026: Vorjahr, aber laufende ISO-Woche → zählt nicht
+        var f = Forecast(entries, new DateOnly(2027, 1, 1), storedMs: 0);
+
+        Assert.NotNull(f);
+        Assert.Equal(4, f.WeeksUsed);
+        Assert.Equal(H, f.AverageWeeklyOvertimeMs);
+        Assert.Equal(new DateOnly(2027, 12, 31), f.TargetDate);
+        Assert.Equal(364 / 7.0, f.RemainingWeeks); // 02.01.–31.12.2027 = 364 Tage = 52 Wochen
+        Assert.Equal(52 * H, f.ProjectedBalanceMs);
+    }
+
+    [Fact]
+    public void Forecast_ReferenceInIsoWeek01_Week53OfPreviousYearCounts()
+    {
+        // Mo 04.01.2027 (2027-W01): die Woche davor ist 2026-W53 (Mo 28.12.2026).
+        var entries = MondaysWithOvertime(new DateOnly(2026, 12, 7), 0, 0, 0, 4 * H); // W50, W51, W52, W53
+        var f = Forecast(entries, new DateOnly(2027, 1, 4));
+
+        Assert.NotNull(f);
+        Assert.Equal(4, f.WeeksUsed);
+        Assert.Equal(H, f.AverageWeeklyOvertimeMs);
+        Assert.Equal(361 / 7.0, f.RemainingWeeks); // 05.01.–31.12.2027
+    }
+
+    [Fact]
+    public void Forecast_LeapYear_CountsFeb29()
+    {
+        var entries = MondaysWithOvertime(new DateOnly(2028, 1, 31), 0, 0, 0, 0);
+        var leap = Forecast(entries, new DateOnly(2028, 2, 28));
+        Assert.NotNull(leap);
+        Assert.Equal(307 / 7.0, leap.RemainingWeeks); // 29.02. + März–Dezember (306)
+
+        var plain = Forecast(MondaysWithOvertime(new DateOnly(2027, 1, 25), 0, 0, 0, 0), new DateOnly(2027, 2, 28));
+        Assert.NotNull(plain);
+        Assert.Equal(306 / 7.0, plain.RemainingWeeks);
+    }
+
+    [Fact]
+    public void Forecast_ProjectionUsesUnroundedAverage()
+    {
+        // Do 03.12.2026: 28 Tage bis 31.12. = 4 Wochen. Wochen +1, 0, 0, 0 ms → Mittel 0,25 ms (angezeigt 0).
+        // Ungerundet: 0 + 0,25 × 4 = 1 ms; mit dem gerundeten Mittel wären es 0 ms.
+        var entries = MondaysWithOvertime(new DateOnly(2026, 11, 2), 1, 0, 0, 0);
+        var f = Forecast(entries, new DateOnly(2026, 12, 3));
+
+        Assert.NotNull(f);
+        Assert.Equal(4.0, f.RemainingWeeks);
+        Assert.Equal(0, f.AverageWeeklyOvertimeMs);
+        Assert.Equal(1, f.ProjectedBalanceMs);
+    }
+
+    [Theory]
+    [InlineData(1, 1, 1)]    // +0,5 ms → +1 (Mittel), Prognose +0,5 → +1
+    [InlineData(-1, -1, -1)] // −0,5 ms → −1, Prognose −0,5 → −1 (von der Null weg)
+    public void Forecast_RoundsHalfAwayFromZero(long weekMs, long expectedAverage, long expectedProjected)
+    {
+        // Do 24.12.2026: 7 Tage bis 31.12. = 1 Woche. Vier Wochen: weekMs, weekMs, 0, 0 → Mittel weekMs/2.
+        var entries = MondaysWithOvertime(new DateOnly(2026, 11, 23), weekMs, weekMs, 0, 0);
+        var f = Forecast(entries, new DateOnly(2026, 12, 24));
+
+        Assert.NotNull(f);
+        Assert.Equal(1.0, f.RemainingWeeks);
+        Assert.Equal(expectedAverage, f.AverageWeeklyOvertimeMs);
+        Assert.Equal(expectedProjected, f.ProjectedBalanceMs);
+    }
+
+    [Fact]
+    public void Forecast_AbsencesAndManualOvertime_FollowWeeklyReport()
+    {
+        var entries = new List<WorkEntryDto>();
+        for (var d = 12; d <= 16; d++) entries.Add(Leave(2026, 10, d, "vacation"));            // W42: 0
+        entries.Add(Work(2026, 10, 19, 8, 16, manualMinutes: 30));                              // W43: +0,5 h
+        entries.Add(Leave(2026, 10, 26, "holiday"));                                            // W44: Feiertag 0
+        entries.Add(Work(2026, 10, 27, 8, 18));                                                 //      +2 h
+        entries.Add(Leave(2026, 11, 7, "sick"));                                                // W45: Krank am Samstag 0
+
+        var f = Forecast(entries, ForecastRef);
+
+        Assert.NotNull(f);
+        Assert.Equal(4, f.WeeksUsed);
+        Assert.Equal(2_250_000L, f.AverageWeeklyOvertimeMs); // 2,5 h ÷ 4 = 0,625 h
+
+        var weekly = new[] { new DateOnly(2026, 10, 12), new DateOnly(2026, 10, 19), new DateOnly(2026, 10, 26), new DateOnly(2026, 11, 2) }
+            .Select(d => ReportCalculator.CalculateWeeklyReport(entries, d, Settings).OvertimeMs)
+            .ToList();
+        Assert.Equal(new[] { 0L, H / 2, 2 * H, 0L }, weekly);
+        Assert.Equal((long)weekly.Average(), f.AverageWeeklyOvertimeMs);
+    }
+
+    [Fact]
+    public void Forecast_IdenticalForWeekAndMonth()
+    {
+        var entries = MixedEntries();
+        var references = new[]
+        {
+            new DateOnly(2026, 11, 11), new DateOnly(2026, 12, 31), new DateOnly(2027, 1, 1),
+            new DateOnly(2027, 1, 20), new DateOnly(2026, 10, 1),
+        };
+        foreach (var reference in references)
+        {
+            var week = ReportCalculator.CalculateTrend(entries, reference, TrendGranularity.Week, OddSettings, 123 * 60_000L).Forecast;
+            var month = ReportCalculator.CalculateTrend(entries, reference, TrendGranularity.Month, OddSettings, 123 * 60_000L).Forecast;
+            Assert.NotNull(week);
+            Assert.Equal(week, month);
+            Assert.Equal(week, ReportCalculator.CalculateOvertimeForecast(entries, reference, OddSettings, 123 * 60_000L));
+        }
+    }
+
+    [Fact]
+    public void TrendRange_CoversForecastWindow()
+    {
+        for (var reference = new DateOnly(2026, 1, 1); reference <= new DateOnly(2028, 12, 31); reference = reference.AddDays(1))
+        {
+            var windowStart = ReportCalculator.WeekBounds(reference).Start.AddDays(-7 * 8);
+            foreach (var g in new[] { TrendGranularity.Week, TrendGranularity.Month })
+            {
+                var (from, to) = ReportCalculator.TrendRange(reference, g);
+                Assert.True(from <= windowStart, $"{reference} {g}: {from} > {windowStart}");
+                Assert.True(to >= reference);
+            }
+        }
+    }
+
+    [Fact]
+    public void Forecast_WithEntriesLimitedToTrendRange_MatchesFullData()
+    {
+        var entries = MixedEntries();
+        var reference = new DateOnly(2027, 1, 20);
+        foreach (var g in new[] { TrendGranularity.Week, TrendGranularity.Month })
+        {
+            var (from, to) = ReportCalculator.TrendRange(reference, g);
+            var limited = entries.Where(e => Day(e.Date) >= from && Day(e.Date) <= to).ToList();
+            Assert.Equal(
+                ReportCalculator.CalculateOvertimeForecast(entries, reference, OddSettings, 0),
+                ReportCalculator.CalculateTrend(limited, reference, g, OddSettings, 0).Forecast);
+        }
+    }
+
+    [Fact]
+    public void Forecast_Serialization_IsoDayCamelCaseAndNull()
+    {
+        var options = new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web);
+        var entries = MondaysWithOvertime(new DateOnly(2026, 9, 14), H, 2 * H, 0, -H, 3 * H, H, 2 * H, 0);
+        var trend = ReportCalculator.CalculateTrend(entries, ForecastRef, TrendGranularity.Week, Settings, 10 * H);
+        var json = System.Text.Json.JsonSerializer.Serialize(trend, options);
+
+        Assert.Contains(
+            "\"forecast\":{\"targetDate\":\"2026-12-31\",\"currentBalanceMs\":36000000,\"averageWeeklyOvertimeMs\":3600000,"
+            + "\"weeksUsed\":8,\"remainingWeeks\":6.714285714285714,\"projectedBalanceMs\":60171429}",
+            json);
+
+        var empty = ReportCalculator.CalculateTrend(
+            Array.Empty<WorkEntryDto>(), ForecastRef, TrendGranularity.Month, Settings, 10 * H);
+        Assert.Contains("\"forecast\":null", System.Text.Json.JsonSerializer.Serialize(empty, options));
     }
 
     // ── Zeitraum, Repository-Monate, Validierung ───────────────────────────
