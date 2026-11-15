@@ -555,5 +555,7 @@
   "reportsLoadErrorText": "The reports could not be loaded.",
   "overtimeStaleHint": "Offline – last synced value",
   "overtimeUnknownHint": "Offline – no value saved yet",
-  "overtimeUnknownValue": "unknown"
+  "overtimeUnknownValue": "unknown",
+  "dashboardOfflineText": "Today's times can't be loaded right now.",
+  "dashboardLoadErrorText": "The dashboard could not be loaded."
 }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_work_time/core/utils/api_errors.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
+import 'package:flutter_work_time/core/utils/network_error.dart';
 import 'package:flutter_work_time/core/utils/time_precision.dart';
 
 import '../../core/providers/app_review_provider.dart';
@@ -343,7 +344,14 @@ class DashboardViewModel extends Notifier<DashboardState> {
       }
       if (!stale()) {
         _loadedOk = false;
-        state = state.copyWith(isLoading: false);
+        // Hinweis mit „Erneut versuchen“ (#573); ohne angemeldeten Nutzer
+        // (kurz nach dem Abmelden) lädt der Auth-Wechsel ohnehin neu.
+        final failure = isTransientNetworkError(e)
+            ? DashboardLoadFailure.offline
+            : (isExpectedLoadFailure(e)
+                ? DashboardLoadFailure.none
+                : DashboardLoadFailure.failed);
+        state = state.copyWith(isLoading: false, loadFailure: failure);
         // Ohne Netz bleibt der Tag unbekannt (angemeldet kommen Einträge nur
         // über die API, Schreibaktionen brechen über `_ensureCurrentDay` ab).
         // Den Gleitzeit-Saldo zeigt das Dashboard trotzdem: den zuletzt
@@ -351,6 +359,15 @@ class DashboardViewModel extends Notifier<DashboardState> {
         if (isExpectedLoadFailure(e)) await _showRememberedOvertime(stale);
       }
     }
+  }
+
+  /// „Erneut versuchen“ nach einem Ladefehler (#573): lädt den Tag neu. Wie
+  /// beim Retry in `_ensureCurrentDay` gilt die normale Heuristik (der
+  /// Platzhalter ist heute). Schreibt nichts.
+  Future<void> retryLoad() {
+    if (!ref.mounted) return Future.value();
+    state = state.copyWith(isLoading: true);
+    return _init();
   }
 
   /// Nur Anzeige nach einem erwartbaren Ladefehler (#573): setzt

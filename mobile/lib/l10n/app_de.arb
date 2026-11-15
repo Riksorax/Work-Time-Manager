@@ -1568,5 +1568,9 @@
   "overtimeUnknownHint": "Offline – noch kein Stand gespeichert",
   "@overtimeUnknownHint": {"description": "Kleiner Hinweis unter dem Gleitzeit-Saldo, wenn ohne Netz kein gemerkter Stand vorliegt; statt des Werts steht „—“ (#573)."},
   "overtimeUnknownValue": "unbekannt",
-  "@overtimeUnknownValue": {"description": "Screenreader-Text für den Strich „—“, wenn der Gleitzeit-Saldo ohne Netz unbekannt ist (#573)."}
+  "@overtimeUnknownValue": {"description": "Screenreader-Text für den Strich „—“, wenn ein Wert ohne Netz unbekannt ist (Gleitzeit-Saldo, Zeit im Dashboard; #573)."},
+  "dashboardOfflineText": "Die heutigen Zeiten können gerade nicht geladen werden.",
+  "@dashboardOfflineText": {"description": "Satz unter „Keine Verbindung“ im Dashboard, wenn der heutige Eintrag angemeldet ohne Netz nicht geladen werden kann (#573); daneben „Erneut versuchen“."},
+  "dashboardLoadErrorText": "Das Dashboard konnte nicht geladen werden.",
+  "@dashboardLoadErrorText": {"description": "Hinweis im Dashboard bei einem unerwarteten Ladefehler des heutigen Eintrags (#573); daneben „Erneut versuchen“."}
 }
