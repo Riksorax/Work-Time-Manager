@@ -107,8 +107,8 @@ void main() {
 
       ds.offline = true;
       final restarted = repo('u1');
-      expect(await restarted.ensureOvertimeLoaded(),
-          const Duration(minutes: -95));
+      expect(
+          await restarted.ensureOvertimeLoaded(), const Duration(minutes: -95));
       expect(await restarted.ensureLastUpdateLoaded(), lastUpdate);
       expect(restarted.overtimeFreshness, OvertimeFreshness.cached);
     });
@@ -117,7 +117,8 @@ void main() {
         () async {
       ds.offline = true;
       final r = repo('u1');
-      await expectLater(r.ensureOvertimeLoaded(), throwsA(isA<SocketException>()));
+      await expectLater(
+          r.ensureOvertimeLoaded(), throwsA(isA<SocketException>()));
       expect(r.overtimeFreshness, OvertimeFreshness.unknown);
       expect(reported(logs, 'Overtime'), isEmpty);
     });
@@ -138,8 +139,7 @@ void main() {
       await repo('u1').ensureOvertimeLoaded();
       ds.failWith = const ApiException('getOvertime', 500);
       final r = repo('u1');
-      await expectLater(
-          r.ensureOvertimeLoaded(), throwsA(isA<ApiException>()));
+      await expectLater(r.ensureOvertimeLoaded(), throwsA(isA<ApiException>()));
       expect(r.overtimeFreshness, isNot(OvertimeFreshness.cached));
     });
 

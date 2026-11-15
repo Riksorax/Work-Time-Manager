@@ -348,8 +348,7 @@ class DashboardScreen extends ConsumerWidget {
       children: [
         Text(title, style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 4),
-        UnknownOvertimeValue(
-            style: Theme.of(context).textTheme.headlineMedium),
+        UnknownOvertimeValue(style: Theme.of(context).textTheme.headlineMedium),
       ],
     );
   }

@@ -1364,9 +1364,8 @@ class MonthlyReportView extends ConsumerWidget {
     // „Gesamt-Überstunden“ = Gleitzeit-Saldo; ohne Netz der zuletzt bekannte
     // Stand mit Hinweis, unbekannt als Strich (#573).
     final totalOvertimeStyle = TextStyle(
-        color: monthlyReport.totalOvertime.isNegative
-            ? Colors.red
-            : Colors.green,
+        color:
+            monthlyReport.totalOvertime.isNegative ? Colors.red : Colors.green,
         fontWeight: FontWeight.bold);
     final Widget totalOvertimeValue = unknownTotal
         ? const UnknownOvertimeValue(

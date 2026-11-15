@@ -150,7 +150,9 @@ class SettingsPage extends ConsumerWidget {
             ),
             const Divider(height: 1),
             const SizedBox(height: 16),
-            _buildOvertimeBalance(context, settingsState.overtimeBalance,
+            _buildOvertimeBalance(
+                context,
+                settingsState.overtimeBalance,
                 settingsState.lastOvertimeUpdate,
                 settingsState.overtimeFreshness),
             const SizedBox(height: 16),

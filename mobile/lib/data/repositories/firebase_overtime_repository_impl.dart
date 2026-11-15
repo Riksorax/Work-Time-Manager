@@ -55,8 +55,7 @@ class FirebaseOvertimeRepositoryImpl implements OvertimeRepository {
       'last_known_overtime_minutes_${_suffix(userId, profileId)}';
 
   /// Schlüssel des gemerkten `lastUpdated` je Nutzer und Profil (#573).
-  static String lastUpdateKeyFor(
-          {required String userId, String? profileId}) =>
+  static String lastUpdateKeyFor({required String userId, String? profileId}) =>
       'last_known_overtime_updated_${_suffix(userId, profileId)}';
 
   String get _minutesKey =>

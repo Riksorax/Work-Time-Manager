@@ -332,8 +332,7 @@ class ReportsViewModel extends Notifier<ReportsState> {
             '(${errorLabel(e)})');
         if (isTransientNetworkError(e)) failure = ReportsLoadFailure.offline;
       } else {
-        logger.e(
-            'Fehler beim Laden der Arbeitseinträge (${errorLabel(e)})',
+        logger.e('Fehler beim Laden der Arbeitseinträge (${errorLabel(e)})',
             stackTrace: stackTrace);
         failure = ReportsLoadFailure.failed;
       }

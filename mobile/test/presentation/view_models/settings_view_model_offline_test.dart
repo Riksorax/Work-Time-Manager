@@ -79,16 +79,16 @@ void main() {
   ProviderContainer start({String uid = 'u1', String? profileId}) {
     final c = ProviderContainer(overrides: [
       settingsRepositoryProvider.overrideWithValue(settings),
-      overtimeRepositoryProvider.overrideWith((ref) =>
-          HybridOvertimeRepositoryImpl(
-            firebaseRepository: FirebaseOvertimeRepositoryImpl(
-                dataSource: ds,
+      overtimeRepositoryProvider
+          .overrideWith((ref) => HybridOvertimeRepositoryImpl(
+                firebaseRepository: FirebaseOvertimeRepositoryImpl(
+                    dataSource: ds,
+                    userId: uid,
+                    profileId: profileId,
+                    prefs: prefs),
+                localRepository: LocalOvertimeRepositoryImpl(prefs),
                 userId: uid,
-                profileId: profileId,
-                prefs: prefs),
-            localRepository: LocalOvertimeRepositoryImpl(prefs),
-            userId: uid,
-          )),
+              )),
       leaveBalanceViewModelProvider.overrideWith(_Leave.new),
     ]);
     addTearDown(c.dispose);
@@ -103,7 +103,8 @@ void main() {
   }
 
   group('Einstellungen ohne Netz (#573)', () {
-    test('ohne gemerkten Saldo: data mit lokalen Einstellungen, Saldo unbekannt',
+    test(
+        'ohne gemerkten Saldo: data mit lokalen Einstellungen, Saldo unbekannt',
         () async {
       ds.offline = true;
       final c = start();
