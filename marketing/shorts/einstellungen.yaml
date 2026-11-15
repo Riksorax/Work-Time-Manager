@@ -1,0 +1,29 @@
+# Einstellungen für alle Videos (#575). Gelesen von `render.mjs` und `tts/synth.py`.
+
+# Sprachsynthese. Die Stimme ist noch nicht gewählt (Hörtest S0); bis dahin Piper.
+# engine: piper | chatterbox. `stimme` ist bei Piper der Modellname unter tts/stimmen/,
+# `sprecher` die Sprecher-Nummer bei Modellen mit mehreren Sprechern (sonst leer).
+# Bei Chatterbox ist `stimme` der Pfad einer WAV-Vorlage (leer = Standardstimme).
+stimme:
+  engine: piper
+  stimme: de_DE-thorsten-high
+  sprecher:
+
+# Bild
+fps: 30
+breite: 1080
+hoehe: 1920
+
+# Zeit in Sekunden. Die Länge der Sätze kommt aus dem Ton (out/<id>/stimme/dauer.json).
+vorlauf: 0.3            # Szene steht, bevor der erste Satz beginnt
+pause_nach_satz: 0.25   # zwischen zwei Sätzen einer Szene
+nachlauf: 0.3           # nach dem letzten Satz einer Szene
+schluss_dauer: 2.5      # Mindestdauer der Schlusskarte
+
+# Untertitel: höchstens zwei Zeilen mit je so vielen Zeichen; längere Sätze werden geteilt.
+untertitel_zeichen: 30
+
+# Ton
+lautheit_lufs: -14
+spitze_db: -1.5         # Begrenzer
+musik_db: -20           # Musik unter der Stimme
