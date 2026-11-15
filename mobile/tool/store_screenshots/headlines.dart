@@ -1,4 +1,5 @@
-// Überschriften der Play-Store-Screenshots, Variante B (#559).
+// Überschriften der Play-Store-Screenshots, Variante B (#559, nur mit
+// `--dart-define=STORE_HEADLINE_OUT=<ordner>`; Standard im Store ist A).
 //
 // Bewusst nicht in den ARB-Dateien der App: Es sind Store-Texte, keine
 // App-Texte. Reihenfolge = Bildnummer (1.png … 8.png). Eine Zeile; zu lange

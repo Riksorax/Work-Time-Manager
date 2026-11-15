@@ -4,10 +4,10 @@
 //
 //   flutter test tool/store_screenshots
 //
-// Schreibt Variante B („mit Überschrift“) nach
+// Schreibt Variante A („schlicht“, nur der App-Bildschirm, formatfüllend) nach
 // `../fastlane/metadata/android/{de-DE,en-US}/images/phoneScreenshots/1.png … 8.png`.
-// Mit `--dart-define=STORE_PLAIN_OUT=<ordner>` zusätzlich Variante A
-// („schlicht“, nur der App-Bildschirm) nach `<ordner>/{de-DE,en-US}/`.
+// Mit `--dart-define=STORE_HEADLINE_OUT=<ordner>` zusätzlich Variante B
+// („mit Überschrift“) nach `<ordner>/{de-DE,en-US}/`, nie nach fastlane.
 // Liegt außerhalb von `test/` und läuft deshalb nicht im normalen
 // `flutter test` mit. Details: `mobile/CLAUDE.md`, „Store-Screenshots (#559)“.
 
@@ -52,7 +52,8 @@ const _height = 1920;
 const _logicalWidth = 412.0;
 const _dpr = _width / _logicalWidth;
 
-const _plainOut = String.fromEnvironment('STORE_PLAIN_OUT');
+/// Ordner für Variante B (mit Überschrift); leer = B wird nicht erzeugt.
+const _headlineOut = String.fromEnvironment('STORE_HEADLINE_OUT');
 
 const _storeFolders = {'de': 'de-DE', 'en': 'en-US'};
 
@@ -327,11 +328,12 @@ void main() {
         final motif = _motifs[i];
         final screen = await _renderScreen(t, motif, locale);
         final folder = _storeFolders[locale]!;
-        if (_plainOut.isNotEmpty) {
-          await _writePng(t, screen, '$_plainOut/$folder/$number.png');
-        }
+        await _writePng(t, screen,
+            '../fastlane/metadata/android/$folder/images/phoneScreenshots/$number.png');
+        if (_headlineOut.isEmpty) return;
 
         // Variante B als eigenes Bild in Pixeln (dpr 1).
+        debugDisableShadows = false;
         t.view.devicePixelRatio = 1;
         t.view.physicalSize = const Size(_width * 1.0, _height * 1.0);
         final key = GlobalKey();
@@ -342,8 +344,7 @@ void main() {
         ));
         await t.pump();
         final framed = _exact(await _capture(t, key, 1));
-        await _writePng(t, framed,
-            '../fastlane/metadata/android/$folder/images/phoneScreenshots/$number.png');
+        await _writePng(t, framed, '$_headlineOut/$folder/$number.png');
         debugDisableShadows = true;
       });
     }
@@ -429,6 +430,7 @@ Future<ui.Image> _renderScreen(
   await _settle(t, 2);
 
   final screen = _exact(await _capture(t, key, _dpr));
+  debugDisableShadows = true;
 
   await t.pumpWidget(const SizedBox.shrink());
   container.dispose();
