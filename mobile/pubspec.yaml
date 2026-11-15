@@ -72,6 +72,8 @@ dependencies:
   local_auth: ^3.0.2
   crypto: ^3.0.6
   home_widget: ^0.10.0
+  # Diagramme der Trend-Ansicht (#531); reines Dart, keine Android-Regeln
+  fl_chart: ^1.3.1
 
 dependency_overrides:
   meta: ^1.17.0
