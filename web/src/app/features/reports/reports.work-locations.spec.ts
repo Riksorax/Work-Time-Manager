@@ -7,6 +7,7 @@ import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { Router } from '@angular/router';
 import { ReportsComponent } from './reports';
 import { ReportsService } from './reports.service';
+import { LeaveReportPrintService } from './components/leave-report-print/leave-report-print.service';
 import { LeaveBalanceService } from '../../core/services/leave-balance';
 import { WebPremiumService } from '../../core/services/web-premium';
 import { DailyStat } from '../../domain/models/reports.models';
@@ -42,6 +43,10 @@ describe('ReportsComponent: Arbeitsorte in der Eintragskarte (#526)', () => {
       selectDate: vi.fn(), onMonthChanged: vi.fn(), toggleMultiSelect: vi.fn(), endMultiSelect: vi.fn(),
       removeDatesFromSelection: vi.fn(), addDateRangeSelection: vi.fn(),
     };
+    // Urlaubs-/Krankheitsdruck (#284) ist hier nicht Gegenstand: Service ohne Abhängigkeiten ersetzen.
+    TestBed.overrideComponent(ReportsComponent, { add: { providers: [
+      { provide: LeaveReportPrintService, useValue: { loading: signal(false), data: signal(null), endPrintMode: vi.fn() } },
+    ] } });
     await TestBed.configureTestingModule({
       imports: [ReportsComponent],
       providers: [

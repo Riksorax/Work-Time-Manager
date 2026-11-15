@@ -6,7 +6,10 @@ export interface DailyStat {
 
 export interface WeeklyReportDay {
   date: Date;
+  /** Brutto (Start bis Ende, inkl. Pausen). */
   worked: number;
+  /** Netto: brutto − abgeschlossene Pausen des Tages (#551), nicht bei 0 gekappt. Fehlt das Feld im Backend, gilt brutto. */
+  netWorked: number;
 }
 
 export interface WeeklyReport {
@@ -24,11 +27,15 @@ export interface WeeklyReport {
 export interface MonthlyReportWeek {
   weekNumber: number;
   totalWorked: number;
+  /** Netto der Woche (ohne Pausen, nur Tage des Monats, #551). Fehlt das Feld im Backend, gilt brutto. */
+  netWorked: number;
 }
 
 export interface MonthlyReportDay {
   date: Date;
   worked: number;
+  /** Netto des Tages (#551), siehe `WeeklyReportDay.netWorked`. */
+  netWorked: number;
 }
 
 export interface MonthlyReport {

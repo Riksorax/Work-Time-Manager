@@ -7,6 +7,7 @@ import { Break, Bundesland, UserSettings, WorkEntry, WorkEntryType, WorkProfile 
 import { YearlyLeaveReport } from '../../domain/models/leave.models';
 import { DailyStat, MonthlyReport, WeeklyReport } from '../../domain/models/reports.models';
 import { TrendGranularity, TrendReport } from '../../domain/models/trend.models';
+import { YearlyComparison } from '../../domain/models/yearly-comparison.models';
 import { calendarDateFromUtcMidnight, parseEntryId } from '../../shared/utils/entry-day.util';
 import {
   roundToMinute,
@@ -43,13 +44,14 @@ interface OvertimeDto { minutes: number; lastUpdated: string | null; }
 interface ProfileDto { uid: string; isPremium: boolean; }
 interface WorkProfileDto { id: string; name: string; }
 interface DailyStatDto { targetMs: number; workedMs: number; overtimeMs: number; }
-interface ReportDayDto { date: string; workedMs: number; }
+/** `netWorkedMs` additiv (#551): fehlt es (älteres Backend), gilt der Brutto-Wert. */
+interface ReportDayDto { date: string; workedMs: number; netWorkedMs?: number | null; }
 interface WeeklyReportDto {
   weekNumber: number; start: string; end: string;
   totalWorkedMs: number; totalBreaksMs: number; workDays: number;
   avgPerDayMs: number; overtimeMs: number; days: ReportDayDto[];
 }
-interface ReportWeekDto { weekNumber: number; totalWorkedMs: number; }
+interface ReportWeekDto { weekNumber: number; totalWorkedMs: number; netWorkedMs?: number | null; }
 interface MonthlyReportDto {
   month: string; totalWorkedMs: number; totalBreaksMs: number; workDays: number;
   avgPerDayMs: number; avgPerWeekMs: number; monthlyOvertimeMs: number;
@@ -190,7 +192,11 @@ export class ApiClient {
         workDays: dto.workDays,
         avgPerDay: dto.avgPerDayMs,
         overtime: dto.overtimeMs,
-        days: dto.days.map(d => ({ date: calendarDateFromUtcMidnight(new Date(d.date)), worked: d.workedMs })),
+        days: dto.days.map(d => ({
+          date: calendarDateFromUtcMidnight(new Date(d.date)),
+          worked: d.workedMs,
+          netWorked: d.netWorkedMs ?? d.workedMs,
+        })),
       }))
     );
   }
@@ -206,8 +212,16 @@ export class ApiClient {
         avgPerWeek: dto.avgPerWeekMs,
         monthlyOvertime: dto.monthlyOvertimeMs,
         totalOvertime: dto.totalOvertimeMs,
-        weeks: dto.weeks.map(w => ({ weekNumber: w.weekNumber, totalWorked: w.totalWorkedMs })),
-        days: dto.days.map(d => ({ date: calendarDateFromUtcMidnight(new Date(d.date)), worked: d.workedMs })),
+        weeks: dto.weeks.map(w => ({
+          weekNumber: w.weekNumber,
+          totalWorked: w.totalWorkedMs,
+          netWorked: w.netWorkedMs ?? w.totalWorkedMs,
+        })),
+        days: dto.days.map(d => ({
+          date: calendarDateFromUtcMidnight(new Date(d.date)),
+          worked: d.workedMs,
+          netWorked: d.netWorkedMs ?? d.workedMs,
+        })),
       }))
     );
   }
@@ -247,8 +261,29 @@ export class ApiClient {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
+  /**
+   * Jahres-Urlaubsübersicht. Die Aufschlüsselung (`months`, `vacationPeriods`, `sickPeriods`, #284) kommt fertig vom
+   * Backend; fehlt ein Feld (älteres Backend), gilt eine leere Liste.
+   */
   getYearlyLeave(year: number, profileId?: string): Observable<YearlyLeaveReport> {
-    return this.http.get<YearlyLeaveReport>(`${this.base}/reports/yearly/${year}`, { params: this._params(profileId) });
+    return this.http.get<YearlyLeaveReport>(`${this.base}/reports/yearly/${year}`, { params: this._params(profileId) }).pipe(
+      map(dto => ({
+        ...dto,
+        months: dto.months ?? [],
+        vacationPeriods: dto.vacationPeriods ?? [],
+        sickPeriods: dto.sickPeriods ?? [],
+      })),
+    );
+  }
+
+  /**
+   * Jahresvergleich mit dem Vorjahr (#530): `year` 2001–2100. `until` (`MM-dd`) nur für das laufende Jahr mitgeben
+   * (Stichtagsvergleich, das Backend nutzt keine Server-Uhr); ohne `until` gilt das ganze Jahr.
+   */
+  getYearlyComparison(year: number, until?: string, profileId?: string): Observable<YearlyComparison> {
+    let params = this._params(profileId) ?? new HttpParams();
+    if (until) params = params.set('until', until);
+    return this.http.get<YearlyComparison>(`${this.base}/reports/yearly-comparison/${year}`, { params });
   }
 
   private _params(profileId?: string): HttpParams | undefined {

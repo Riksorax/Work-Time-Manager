@@ -1,5 +1,5 @@
 import { getIsoWeekNumber, calculateDailyStat, calculateWeeklyReport, calculateMonthlyReport } from './report-calculator';
-import { DEFAULT_SETTINGS, WorkEntry, WorkEntryType, UserSettings } from '../../shared/models/index';
+import { Break, DEFAULT_SETTINGS, WorkEntry, WorkEntryType, UserSettings } from '../../shared/models/index';
 
 // 8h daily target (40h / 5d)
 const DAILY_MS = 8 * 3600000;
@@ -339,6 +339,53 @@ describe('ReportCalculatorService', () => {
       const report = calculateMonthlyReport(entries, d(2026, 4, 1), DEFAULT_SETTINGS, 0);
       expect(report.weeks.length).toBe(1);
       expect(report.weeks[0].totalWorked).toBe(8 * 3600000);
+    });
+  });
+
+  // ─── Netto je Zeile (#551) ───────────────────────────────────────────────────
+  describe('Netto je Tag und Woche (#551)', () => {
+    const brk = (day: number, h: number, min: number, lenMin: number) => ({
+      id: `b${day}${h}${min}`, name: 'Pause', isAutomatic: false,
+      start: d(2026, 4, day, h, min), end: d(2026, 4, day, h, min + lenMin),
+    });
+    const entry = (day: number, breaks: Break[]) =>
+      makeWorkEntry({ date: d(2026, 4, day), workStart: d(2026, 4, day, 8), workEnd: d(2026, 4, day, 17), breaks });
+
+    it('Woche: Tag netto = brutto − Pausen, brutto bleibt', () => {
+      const r = calculateWeeklyReport([entry(21, [brk(21, 12, 0, 30)])], d(2026, 4, 21), DEFAULT_SETTINGS);
+      expect(r.days[0].worked).toBe(9 * 3600000);
+      expect(r.days[0].netWorked).toBe(8.5 * 3600000);
+    });
+
+    it('Woche: offene Pause zählt nicht, Tag ohne Pause netto = brutto', () => {
+      const open = { id: 'o', name: 'Pause', isAutomatic: false, start: d(2026, 4, 21, 12), end: undefined };
+      const r = calculateWeeklyReport([entry(21, [open]), entry(22, [])], d(2026, 4, 21), DEFAULT_SETTINGS);
+      expect(r.days.map(x => x.netWorked)).toEqual([9 * 3600000, 9 * 3600000]);
+    });
+
+    it('Woche: Pausen länger als die Arbeitszeit werden nicht bei 0 gekappt (wie das Backend)', () => {
+      const e = makeWorkEntry({
+        date: d(2026, 4, 21), workStart: d(2026, 4, 21, 8), workEnd: d(2026, 4, 21, 9),
+        breaks: [brk(21, 8, 0, 30), brk(21, 8, 30, 30), brk(21, 9, 0, 30)],
+      });
+      const r = calculateWeeklyReport([e], d(2026, 4, 21), DEFAULT_SETTINGS);
+      expect(r.days[0].netWorked).toBe(-30 * 60000);
+    });
+
+    it('Woche: Urlaub zählt mit dem Tagessoll, netto = brutto', () => {
+      const v = makeWorkEntry({ date: d(2026, 4, 21), type: WorkEntryType.Vacation });
+      const r = calculateWeeklyReport([v], d(2026, 4, 21), DEFAULT_SETTINGS);
+      expect(r.days[0].netWorked).toBe(DAILY_MS);
+      expect(r.days[0].worked).toBe(DAILY_MS);
+    });
+
+    it('Monat: Tage und Wochen netto; Summe der Wochen-Netto = Gesamt − Pausen', () => {
+      const entries = [entry(20, [brk(20, 12, 0, 30)]), entry(21, [brk(21, 12, 0, 45)]), entry(28, [brk(28, 12, 0, 30)])];
+      const r = calculateMonthlyReport(entries, d(2026, 4, 1), DEFAULT_SETTINGS, 0);
+      expect(r.days.map(x => x.netWorked)).toEqual([8.5 * 3600000, 8.25 * 3600000, 8.5 * 3600000]);
+      expect(r.weeks.map(w => w.totalWorked)).toEqual([18 * 3600000, 9 * 3600000]);
+      expect(r.weeks.map(w => w.netWorked)).toEqual([16.75 * 3600000, 8.5 * 3600000]);
+      expect(r.weeks.reduce((s, w) => s + w.netWorked, 0)).toBe(r.totalWorked - r.totalBreaks);
     });
   });
 
