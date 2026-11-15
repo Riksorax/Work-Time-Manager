@@ -58,6 +58,7 @@ lädt den Inhalt beim Play-Upload automatisch als Änderungsprotokoll mit hoch.
 
 | Version | Charakter | Datum |
 | --- | --- | --- |
+| 1.9.0 | Lea | 2026-11-15 |
 | 1.8.4 | Ienzo | 2026-11-14 |
 | 1.8.3 | Ienzo | 2026-11-13 |
 | 1.8.2 | Ienzo | 2026-11-13 |
@@ -119,7 +120,6 @@ Isa/Saix). Ist eine Variante vergeben, sollte die andere nicht mehr
 verwendet werden, auch wenn die Prüfung sie formal durchlässt.
 
 - Isa
-- Lea
 - Even
 - Aeleus
 - Dilan
