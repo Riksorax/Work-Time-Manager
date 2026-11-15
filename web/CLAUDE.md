@@ -65,7 +65,7 @@ domain/
 │   └── yearly-comparison.models.ts  YearlyComparison, YearlySummary, YearlyDelta (#530, 1:1 Backend-DTO mit `Ms`-Suffix)
 ├── services/
 │   ├── break-calculator.ts   Pure — Pflichtpausen (30min/6h, 45min/9h)
-│   ├── report-calculator.ts  Pure — ISO-8601-Wochennummer, DailyStat, Weekly/MonthlyReport; Parität zum Backend über `testdata/report-parity/` (`report-calculator.parity.tz.spec.ts`, #535)
+│   ├── report-calculator.ts  Pure — ISO-8601-Wochennummer, DailyStat, Weekly/MonthlyReport; Parität zum Backend über `testdata/report-parity/` (`report-calculator.parity.tz.spec.ts`, #535, seit #551 inkl. `netWorkedMs`)
 │   └── leave-calculator.ts   Pure — calculateYearlyLeave (Urlaubs-/Kranktage je Jahr, anonyme Nutzer)
 └── utils/
     ├── overtime.utils.ts  Pure — getEffectiveDailyTarget, getWeekEntriesForDate, isSameDay
@@ -133,6 +133,15 @@ runInInjectionContext(this.injector, () => {
 ```
 
 **Nie `docData` / `collectionData` verwenden** — rxfire-Bug mit DocumentReference. Stattdessen eigene `new Observable(observer => { runInInjectionContext(...) })`.
+
+### Netto-Zeilen der Berichte (#551)
+
+Die Zeilen der Berichte zeigen **netto** (ohne Pausen): Tage im Wochen- und Monatsbericht (`day.netWorked`, auch `aria-label`)
+und Wochen im Monatsbericht (`week.netWorked`). `worked`/`totalWorked` bleiben brutto im Modell (Summenkarte unverändert).
+- **Vertrag:** `ReportDayDto.netWorkedMs`/`ReportWeekDto.netWorkedMs` (additiv). `ApiClient` liest `netWorkedMs ?? workedMs`
+  (älteres Backend: Rückfall auf brutto, kein 0). Tag-Netto = brutto − abgeschlossene Pausen, **nicht bei 0 gekappt**.
+- **Gäste:** `report-calculator.ts` rechnet dieselben Werte (`dayBreaks`); Parität über `cases.json`.
+- **Tests:** `api-client.reports.net.spec.ts`, `reports.net-rows.spec.ts`, `report-calculator.spec.ts`, Parität.
 
 ### Trend-Ansicht (#531)
 

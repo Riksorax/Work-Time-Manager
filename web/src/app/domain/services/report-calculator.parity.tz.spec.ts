@@ -12,7 +12,7 @@ import parityFile from '../../../../../testdata/report-parity/cases.json';
  * lokale Mitternacht, das Backend UTC-Mitternacht desselben Tages. `totalOvertimeMs` ist seit #535 (Teil 1b) Teil der Fälle.
  */
 
-interface ReportDayJson { date: string; workedMs: number }
+interface ReportDayJson { date: string; workedMs: number; netWorkedMs: number }
 
 interface ParityCase {
   name: string;
@@ -43,7 +43,7 @@ interface ParityCase {
       avgPerWeekMs: number;
       monthlyOvertimeMs: number;
       totalOvertimeMs: number;
-      weeks: { weekNumber: number; totalWorkedMs: number }[];
+      weeks: { weekNumber: number; totalWorkedMs: number; netWorkedMs: number }[];
       days: ReportDayJson[];
     };
   };
@@ -95,12 +95,12 @@ describe('Report-Parität Web ↔ Backend (#535, testdata/report-parity)', () =>
           workDays: r.workDays,
           avgPerDayMs: r.avgPerDay,
           overtimeMs: r.overtime,
-          days: r.days.map(d => ({ date: toDateKey(d.date), workedMs: d.worked })),
+          days: r.days.map(d => ({ date: toDateKey(d.date), workedMs: d.worked, netWorkedMs: d.netWorked })),
         }).toEqual({
           ...e,
           start: dayOf(e.start),
           end: dayOf(e.end),
-          days: e.days.map(d => ({ date: dayOf(d.date), workedMs: d.workedMs })),
+          days: e.days.map(d => ({ ...d, date: dayOf(d.date) })),
         });
       });
 
@@ -116,14 +116,13 @@ describe('Report-Parität Web ↔ Backend (#535, testdata/report-parity)', () =>
           avgPerWeekMs: r.avgPerWeek,
           monthlyOvertimeMs: r.monthlyOvertime,
           totalOvertimeMs: r.totalOvertime,
-          weeks: r.weeks.map(w => ({ weekNumber: w.weekNumber, totalWorkedMs: w.totalWorked })),
-          days: r.days.map(d => ({ date: toDateKey(d.date), workedMs: d.worked })),
+          weeks: r.weeks.map(w => ({ weekNumber: w.weekNumber, totalWorkedMs: w.totalWorked, netWorkedMs: w.netWorked })),
+          days: r.days.map(d => ({ date: toDateKey(d.date), workedMs: d.worked, netWorkedMs: d.netWorked })),
         }).toEqual({
           ...e,
           month: dayOf(e.month),
-          // netWorkedMs (je Woche/Tag) wird mit #551 Web/Mobile aktiviert; bis dahin bewusst ignoriert.
-          weeks: e.weeks.map(w => ({ weekNumber: w.weekNumber, totalWorkedMs: w.totalWorkedMs })),
-          days: e.days.map(d => ({ date: dayOf(d.date), workedMs: d.workedMs })),
+          weeks: e.weeks,
+          days: e.days.map(d => ({ ...d, date: dayOf(d.date) })),
         });
       });
     });
