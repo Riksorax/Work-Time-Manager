@@ -24,9 +24,9 @@ import 'package:flutter_work_time/domain/utils/german_holidays.dart';
 import 'package:flutter_work_time/domain/utils/iso_week.dart';
 import 'package:flutter_work_time/domain/utils/report_calculator.dart';
 
-/// Feste Uhr aller Bilder: Mittwoch, 11.11.2026, 14:20 Uhr (laufender Tag
-/// mit Timer, die Vorwoche KW 45 ist vollständig).
-final storeNow = DateTime(2026, 11, 11, 14, 20);
+/// Feste Uhr aller Bilder: Mittwoch, 11.11.2026, 16:40 Uhr (laufender Tag
+/// mit Timer kurz nach dem Tagessoll, die Vorwoche KW 45 ist vollständig).
+final storeNow = DateTime(2026, 11, 11, 16, 40);
 final storeToday = DateTime(storeNow.year, storeNow.month, storeNow.day);
 
 /// Tag, den Tages- und Wochenbericht zeigen (Mittwoch der KW 45).
@@ -48,12 +48,19 @@ class StoreTexts {
     required this.client,
     required this.lunch,
     required this.coffee,
+    required this.warehouse,
+    required this.fair,
   });
 
   final String office;
   final String client;
   final String lunch;
   final String coffee;
+
+  /// Weitere Orte (gelegentlich), erscheinen als Vorschläge im Blatt
+  /// „Arbeitsorte“.
+  final String warehouse;
+  final String fair;
 }
 
 const storeTextsDe = StoreTexts(
@@ -61,6 +68,8 @@ const storeTextsDe = StoreTexts(
   client: 'Kunde',
   lunch: 'Mittagspause',
   coffee: 'Kaffeepause',
+  warehouse: 'Lager',
+  fair: 'Messe',
 );
 
 const storeTextsEn = StoreTexts(
@@ -68,6 +77,8 @@ const storeTextsEn = StoreTexts(
   client: 'Client',
   lunch: 'Lunch',
   coffee: 'Coffee break',
+  warehouse: 'Warehouse',
+  fair: 'Trade fair',
 );
 
 StoreTexts storeTextsFor(String locale) =>
@@ -108,7 +119,8 @@ DateTime _at(DateTime d, int minutes) =>
 
 /// Arbeitstag nach festem Muster mit etwas Streuung (Zufall mit dem Datum als
 /// Startwert, also bei jedem Lauf gleich): Di und Do Home-Office, Mo und Fr
-/// im Büro, mittwochs Büro und nachmittags beim Kunden. Freitags kürzer,
+/// im Büro (montags in geraden Wochen auch im Lager, am ersten Freitag im
+/// Monat auf der Messe), mittwochs Büro und nachmittags beim Kunden. Freitags kürzer,
 /// mittwochs länger, im Schnitt ein paar Minuten über dem Soll.
 WorkEntryEntity _workDay(DateTime d, StoreTexts t) {
   final rnd = Random(d.year * 10000 + d.month * 100 + d.day);
@@ -151,12 +163,16 @@ WorkEntryEntity _workDay(DateTime d, StoreTexts t) {
         ? const []
         : wd == 3
             ? [t.office, t.client]
-            : [t.office],
+            : wd == 1 && isoWeekNumber(d).isEven
+                ? [t.office, t.warehouse]
+                : wd == 5 && d.day <= 7
+                    ? [t.office, t.fair]
+                    : [t.office],
   );
 }
 
 /// Der laufende Tag [storeToday]: Start 7:52, Mittagspause 12:10–12:40,
-/// Timer läuft (kein Ende). Mittwoch: Büro und Kunde.
+/// Timer läuft (kein Ende). Vormittags Home-Office, danach Büro und Kunde.
 WorkEntryEntity storeTodayEntry(StoreTexts t) => WorkEntryEntity(
       id: storeDayKey(storeToday),
       date: storeToday,
@@ -169,6 +185,7 @@ WorkEntryEntity storeTodayEntry(StoreTexts t) => WorkEntryEntity(
           end: _at(storeToday, 12 * 60 + 40),
         ),
       ],
+      isHomeOffice: true,
       workLocations: [t.office, t.client],
     );
 

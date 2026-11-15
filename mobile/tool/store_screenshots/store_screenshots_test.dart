@@ -24,6 +24,7 @@ import 'package:flutter_work_time/core/providers/providers.dart';
 import 'package:flutter_work_time/core/providers/subscription_provider.dart';
 import 'package:flutter_work_time/core/services/version_service.dart';
 import 'package:flutter_work_time/core/theme/app_theme.dart';
+import 'package:flutter_work_time/data/repositories/work_location_history.dart';
 import 'package:flutter_work_time/domain/entities/settings_entity.dart';
 import 'package:flutter_work_time/domain/entities/user_entity.dart';
 import 'package:flutter_work_time/domain/entities/work_profile_entity.dart';
@@ -34,6 +35,7 @@ import 'package:flutter_work_time/presentation/state/settings_state.dart';
 import 'package:flutter_work_time/presentation/view_models/open_entry_view_model.dart';
 import 'package:flutter_work_time/presentation/view_models/reports_view_model.dart';
 import 'package:flutter_work_time/presentation/view_models/settings_view_model.dart';
+import 'package:flutter_work_time/presentation/widgets/dashboard_work_locations.dart';
 import 'package:flutter_work_time/presentation/widgets/yearly_comparison_card.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -195,10 +197,14 @@ final _motifs = <_Motif>[
       await _settle(t, 4);
     },
   ),
-  // 7 Dashboard: Arbeitsorte und Home-Office.
+  // 7 Blatt „Arbeitsorte“ über dem Dashboard; dahinter bleiben Orte und der
+  // eingeschaltete Home-Office-Schalter sichtbar. Ohne geöffnete Vorschläge:
+  // die Liste öffnet nach oben und verdeckt sonst die eingetragenen Orte.
   _Motif(
     act: (t, c) async {
-      await _scrollTo(t, find.text(_l10n(t).startTimeLabel), alignment: 0.02);
+      await _scrollTo(t, find.text(_l10n(t).overtimeTodayLabel), alignment: 0);
+      await t.tap(find.byType(DashboardWorkLocations));
+      await _settle(t, 6);
     },
   ),
   // 8 wie 1 im Dunkelmodus.
@@ -362,6 +368,10 @@ Future<ui.Image> _renderScreen(
   SharedPreferences.setMockInitialValues({});
   final prefs = await SharedPreferences.getInstance();
   final work = FakeWorkRepository()..store.addAll(entries);
+  // Ortsverlauf (Vorschläge im Blatt „Arbeitsorte“) wie in der App aus den
+  // gelesenen Einträgen.
+  final history = WorkLocationHistory(prefs, userId: _user.id)
+    ..record(entries.values);
   final overtime = FakeOvertimeRepository()
     ..stored = balance
     ..lastUpdate = storeToday;
@@ -390,6 +400,7 @@ Future<ui.Image> _renderScreen(
     workProfilesProvider
         .overrideWith((ref) async => const <WorkProfileEntity>[]),
     versionServiceProvider.overrideWithValue(_NoUpdate()),
+    workLocationHistoryProvider.overrideWithValue(history),
   ]);
   if (motif.tab != null) {
     container.read(pendingReportTabIndexProvider.notifier).state = motif.tab;
