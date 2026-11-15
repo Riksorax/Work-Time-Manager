@@ -119,6 +119,7 @@ void main() {
               {
                 'weekNumber': w.weekNumber,
                 'totalWorkedMs': w.totalWorked.inMilliseconds,
+                'netWorkedMs': w.netWorked.inMilliseconds,
               },
           ],
           'days': _days(r.days),
@@ -127,15 +128,8 @@ void main() {
           'month': _dayOf(e['month']),
           'avgPerDayMs': (e['avgPerDayMs'] as num).toDouble(),
           'avgPerWeekMs': (e['avgPerWeekMs'] as num).toDouble(),
-          // netWorkedMs (je Woche/Tag) wird mit #551 Web/Mobile aktiviert; bis dahin bewusst ignoriert.
-          'weeks': [
-            for (final w
-                in (e['weeks'] as List<dynamic>).cast<Map<String, dynamic>>())
-              {
-                'weekNumber': w['weekNumber'],
-                'totalWorkedMs': w['totalWorkedMs'],
-              },
-          ],
+          // netWorkedMs je Woche und Tag wird seit #551 mit verglichen.
+          'weeks': e['weeks'],
           'days': _expectedDays(e['days']),
         });
       });
@@ -175,7 +169,11 @@ String _dayOf(Object? iso) => (iso as String).substring(0, 10);
 
 List<Map<String, Object>> _days(List<ReportDay> days) => [
       for (final d in days)
-        {'date': _key(d.date), 'workedMs': d.worked.inMilliseconds},
+        {
+          'date': _key(d.date),
+          'workedMs': d.worked.inMilliseconds,
+          'netWorkedMs': d.netWorked.inMilliseconds,
+        },
     ];
 
 List<Map<String, Object>> _expectedDays(Object? days) => [
@@ -183,5 +181,6 @@ List<Map<String, Object>> _expectedDays(Object? days) => [
         {
           'date': _dayOf(d['date']),
           'workedMs': (d['workedMs'] as num).toInt(),
+          'netWorkedMs': (d['netWorkedMs'] as num).toInt(),
         },
     ];

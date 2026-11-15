@@ -274,6 +274,72 @@ void main() {
     }
   });
 
+  group('Netto-Zeilen in Wochen- und Monatsbericht (#551)', () {
+    for (final (locale, column, weekday) in [
+      ('de', 'Arbeitszeit', 'Montag'),
+      ('en', 'Work time', 'Monday'),
+    ]) {
+      final l10n = locale == 'de' ? AppLocalizationsDe() : AppLocalizationsEn();
+
+      test('Tagestabelle: Spalte „$column“, Werte unverändert ($locale)', () {
+        final data = PdfReportService.dailyTableData({
+          DateTime(2026, 10, 5): const Duration(hours: 7, minutes: 45),
+        }, l10n: l10n, locale: locale);
+        expect(data.first, [
+          locale == 'de' ? 'Datum' : 'Date',
+          locale == 'de' ? 'Wochentag' : 'Weekday',
+          column,
+        ]);
+        expect(data[1], ['05.10.2026', weekday, '07:45']);
+        expect(data.first.join(), isNot(contains('inkl. Pausen')));
+        expect(data.first.join(), isNot(contains('incl. breaks')));
+      });
+
+      test('Tag mit netto ≤ 0 steht als „—“ wie in der App ($locale)', () {
+        final data = PdfReportService.dailyTableData({
+          DateTime(2026, 10, 8): Duration.zero,
+          DateTime(2026, 10, 9): const Duration(minutes: -30),
+        }, l10n: l10n, locale: locale);
+        expect(data[1][2], '—');
+        expect(data[2][2], '—');
+      });
+
+      test('Wochentabelle: Spalte „$column“, nach Woche sortiert ($locale)',
+          () {
+        final data = PdfReportService.weeklyTableData({
+          41: const Duration(hours: 15, minutes: 30),
+          40: const Duration(hours: 8),
+        }, l10n: l10n);
+        expect(data.first, [
+          locale == 'de' ? 'Kalenderwoche' : 'Calendar week',
+          column,
+        ]);
+        expect(data.skip(1).map((r) => r[1]), ['08:00', '15:30']);
+      });
+    }
+
+    test('Abschnittsüberschriften ohne Zusatz (de/en)', () {
+      final de = AppLocalizationsDe();
+      final en = AppLocalizationsEn();
+      expect(
+        [
+          de.pdfDailyWorkTimeTitle,
+          de.pdfWeeklyOverviewTitle,
+          de.pdfDayOverviewTitle
+        ],
+        ['Arbeitszeit pro Tag', 'Wochenübersicht', 'Tagesübersicht'],
+      );
+      expect(
+        [
+          en.pdfDailyWorkTimeTitle,
+          en.pdfWeeklyOverviewTitle,
+          en.pdfDayOverviewTitle
+        ],
+        ['Work time per day', 'Week overview', 'Day overview'],
+      );
+    });
+  });
+
   group('Urlaubs- und Krankheitsauswertung (#284)', () {
     final report = yearlyLeaveReportFromJson(yearlyLeaveReportJson(2026),
         requestedYear: 2026);

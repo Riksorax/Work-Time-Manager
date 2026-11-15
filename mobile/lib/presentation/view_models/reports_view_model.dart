@@ -126,6 +126,12 @@ class ReportsViewModel extends Notifier<ReportsState> {
   Duration _msDur(dynamic v) =>
       Duration(milliseconds: (v as num?)?.toInt() ?? 0);
 
+  /// Netto eines Berichtstags/einer Berichtswoche (#551). Additives Feld:
+  /// fehlt `netWorkedMs` oder ist es `null` (älteres Backend), gilt der
+  /// Brutto-Wert aus [grossKey] (kein Absturz, keine 0).
+  Duration _netMsDur(Map<String, dynamic> json, String grossKey) =>
+      _msDur(json['netWorkedMs'] ?? json[grossKey]);
+
   /// Berichtstage des Backends (`days[].date`) sind immer UTC-Mitternacht des
   /// Kalendertags; `.toLocal()` ergäbe westlich von UTC den Vortag (#418).
   DateTime _dayKey(String iso) =>
@@ -160,6 +166,11 @@ class ReportsViewModel extends Notifier<ReportsState> {
         for (final d in (json['days'] as List<dynamic>? ?? []))
           _dayKey(d['date'] as String): _msDur(d['workedMs']),
       },
+      dailyNetWork: {
+        for (final d in (json['days'] as List<dynamic>? ?? []))
+          _dayKey(d['date'] as String):
+              _netMsDur(d as Map<String, dynamic>, 'workedMs'),
+      },
     );
   }
 
@@ -182,6 +193,16 @@ class ReportsViewModel extends Notifier<ReportsState> {
       dailyWork: {
         for (final d in (json['days'] as List<dynamic>? ?? []))
           _dayKey(d['date'] as String): _msDur(d['workedMs']),
+      },
+      weeklyNetWork: {
+        for (final w in (json['weeks'] as List<dynamic>? ?? []))
+          (w['weekNumber'] as num).toInt():
+              _netMsDur(w as Map<String, dynamic>, 'totalWorkedMs'),
+      },
+      dailyNetWork: {
+        for (final d in (json['days'] as List<dynamic>? ?? []))
+          _dayKey(d['date'] as String):
+              _netMsDur(d as Map<String, dynamic>, 'workedMs'),
       },
     );
   }
@@ -377,7 +398,7 @@ class ReportsViewModel extends Notifier<ReportsState> {
   }
 
   /// Lokaler Wochenbericht über die kanonische Rechnung (#535); Abbildung
-  /// wie [_weeklyFromApi] (brutto, Tageswerte brutto).
+  /// wie [_weeklyFromApi] (Summen brutto/netto, Tageswerte brutto und netto).
   ///
   /// Grundlage sind nur die geladenen Monatseinträge: Eine Woche über den
   /// Monatswechsel enthält lokal nur die Tage des geladenen Monats.
@@ -391,6 +412,7 @@ class ReportsViewModel extends Notifier<ReportsState> {
       overtime: r.overtime,
       workDays: r.workDays,
       dailyWork: {for (final d in r.days) d.date: d.worked},
+      dailyNetWork: {for (final d in r.days) d.date: d.netWorked},
     );
   }
 
@@ -412,6 +434,8 @@ class ReportsViewModel extends Notifier<ReportsState> {
       avgWorkDurationPerWeek: _msDur(r.avgPerWeekMs),
       weeklyWork: {for (final w in r.weeks) w.weekNumber: w.totalWorked},
       dailyWork: {for (final d in r.days) d.date: d.worked},
+      weeklyNetWork: {for (final w in r.weeks) w.weekNumber: w.netWorked},
+      dailyNetWork: {for (final d in r.days) d.date: d.netWorked},
     );
   }
 
