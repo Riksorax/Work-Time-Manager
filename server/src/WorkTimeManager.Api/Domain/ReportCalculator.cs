@@ -198,16 +198,20 @@ public static class ReportCalculator
 
     private const int TrendBucketCount = 12;
     private const int TrendComparisonWeeks = 4;
+    private const int ForecastWindowWeeks = 8;
+    private const int ForecastMinWeeks = 4;
 
     /// <summary>
     /// Verlauf über 12 Wochen bzw. 12 Monate bis einschließlich der Woche/des Monats von
     /// <paramref name="referenceDate"/> (#531). Jeder Bucket rechnet mit demselben Kern wie Wochen- bzw.
     /// Monatsbericht (<see cref="SumPeriod"/>); <c>workedMs</c> ist netto. Der gespeicherte Gleitzeit-Saldo
-    /// fließt nicht ein, <c>cumulativeOvertimeMs</c> beginnt bei 0. Dazu der Wochen-Trend (bei beiden
-    /// Granularitäten). <paramref name="entries"/> muss mindestens <see cref="TrendRange"/> abdecken.
+    /// fließt nicht in die Buckets ein, <c>cumulativeOvertimeMs</c> beginnt bei 0. Dazu der Wochen-Trend und die
+    /// Überstunden-Prognose (#532, einzige Stelle, die <paramref name="storedOvertimeMs"/> nutzt), beide bei beiden
+    /// Granularitäten. <paramref name="entries"/> muss mindestens <see cref="TrendRange"/> abdecken.
     /// </summary>
     public static TrendReportDto CalculateTrend(
-        IReadOnlyList<WorkEntryDto> entries, DateOnly referenceDate, TrendGranularity granularity, SettingsDto settings)
+        IReadOnlyList<WorkEntryDto> entries, DateOnly referenceDate, TrendGranularity granularity, SettingsDto settings,
+        long storedOvertimeMs)
     {
         var buckets = new List<TrendBucketDto>(TrendBucketCount);
         long cumulative = 0;
@@ -233,19 +237,61 @@ public static class ReportCalculator
             Granularity = granularity == TrendGranularity.Week ? "week" : "month",
             Buckets = buckets,
             WeeklyTrend = CalculateWeeklyTrend(entries, referenceDate, settings),
+            Forecast = CalculateOvertimeForecast(entries, referenceDate, settings, storedOvertimeMs),
         };
     }
 
     /// <summary>
-    /// Kalendertage, die der Trend braucht: alle Buckets und die Wochen des Wochen-Trends
-    /// (letzte abgeschlossene Woche + vier Vergleichswochen).
+    /// Kalendertage, die der Trend braucht: alle Buckets, die Wochen des Wochen-Trends (letzte abgeschlossene
+    /// Woche + vier Vergleichswochen) und die acht Wochen der Prognose (#532).
     /// </summary>
     public static (DateOnly From, DateOnly To) TrendRange(DateOnly referenceDate, TrendGranularity granularity)
     {
         var periods = TrendPeriods(referenceDate, granularity);
-        var comparisonStart = WeekBounds(referenceDate).Start.AddDays(-7 * (TrendComparisonWeeks + 1));
-        var from = periods[0].Start < comparisonStart ? periods[0].Start : comparisonStart;
+        var weeksBack = Math.Max(TrendComparisonWeeks + 1, ForecastWindowWeeks);
+        var weeksStart = WeekBounds(referenceDate).Start.AddDays(-7 * weeksBack);
+        var from = periods[0].Start < weeksStart ? periods[0].Start : weeksStart;
         return (from, periods[^1].End);
+    }
+
+    /// <summary>
+    /// Überstunden-Prognose zum 31.12. des Jahres von <paramref name="referenceDate"/> (#532).
+    /// Mittel = Summe der Wochen-Überstunden (<see cref="SumPeriod"/>, wie <c>WeeklyReportDto.OvertimeMs</c>) der
+    /// Wochen mit Einträgen unter den acht abgeschlossenen ISO-Wochen vor der Woche des Bezugstags ÷ deren Zahl;
+    /// die laufende Woche zählt nicht. <c>null</c> bei weniger als vier solchen Wochen. Verbleibende Wochen =
+    /// Kalendertage nach dem Bezugstag bis einschließlich 31.12. ÷ 7 (nicht gerundet). Prognose =
+    /// <paramref name="storedOvertimeMs"/> + <b>ungerundetes</b> Mittel × verbleibende Wochen, das Ergebnis
+    /// kaufmännisch auf ganze Millisekunden gerundet (.5 von der Null weg); das ausgegebene Mittel wird nur für
+    /// die Anzeige gerundet. Rechnung in <c>decimal</c>, damit Halbwerte exakt bleiben.
+    /// </summary>
+    public static OvertimeForecastDto? CalculateOvertimeForecast(
+        IReadOnlyList<WorkEntryDto> entries, DateOnly referenceDate, SettingsDto settings, long storedOvertimeMs)
+    {
+        var currentWeekStart = WeekBounds(referenceDate).Start;
+        var weeks = Enumerable.Range(1, ForecastWindowWeeks)
+            .Select(i => currentWeekStart.AddDays(-7 * i))
+            .Select(start => SumPeriod(FilterByRange(entries, start, start.AddDays(6)), settings))
+            .Where(t => t.HasData)
+            .Select(t => t.OvertimeMs)
+            .ToList();
+        if (weeks.Count < ForecastMinWeeks) return null;
+
+        var targetDate = new DateOnly(referenceDate.Year, 12, 31);
+        var remainingDays = targetDate.DayNumber - referenceDate.DayNumber;
+        decimal sum = weeks.Sum();
+        var average = sum / weeks.Count;
+        // sum × Tage ÷ (Wochen × 7) statt average × (Tage ÷ 7): eine Division, kein Zwischenrunden.
+        var projected = storedOvertimeMs + sum * remainingDays / (weeks.Count * 7m);
+
+        return new OvertimeForecastDto
+        {
+            TargetDate = targetDate,
+            CurrentBalanceMs = storedOvertimeMs,
+            AverageWeeklyOvertimeMs = (long)Math.Round(average, MidpointRounding.AwayFromZero),
+            WeeksUsed = weeks.Count,
+            RemainingWeeks = remainingDays / 7.0,
+            ProjectedBalanceMs = (long)Math.Round(projected, MidpointRounding.AwayFromZero),
+        };
     }
 
     /// <summary>ISO-Wochenschlüssel <c>yyyy-Www</c> mit ISO-Wochenjahr (Mo 29.12.2025 → <c>2026-W01</c>).</summary>

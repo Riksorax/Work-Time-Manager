@@ -273,6 +273,16 @@ export class ApiClient {
     return this.http.get<YearlyComparison>(`${this.base}/reports/yearly-comparison/${year}`, { params });
   }
 
+  /**
+   * Jahresvergleich mit dem Vorjahr (#530): `year` 2001–2100. `until` (`MM-dd`) nur für das laufende Jahr mitgeben
+   * (Stichtagsvergleich, das Backend nutzt keine Server-Uhr); ohne `until` gilt das ganze Jahr.
+   */
+  getYearlyComparison(year: number, until?: string, profileId?: string): Observable<YearlyComparison> {
+    let params = this._params(profileId) ?? new HttpParams();
+    if (until) params = params.set('until', until);
+    return this.http.get<YearlyComparison>(`${this.base}/reports/yearly-comparison/${year}`, { params });
+  }
+
   private _params(profileId?: string): HttpParams | undefined {
     return profileId ? new HttpParams().set('profileId', profileId) : undefined;
   }
