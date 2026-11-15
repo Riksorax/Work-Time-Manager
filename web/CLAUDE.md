@@ -60,7 +60,7 @@ core/
 domain/
 ├── models/
 │   ├── reports.models.ts  DailyStat, WeeklyReport, MonthlyReport
-│   ├── leave.models.ts    YearlyLeaveReport (1:1 Backend-DTO)
+│   ├── leave.models.ts    YearlyLeaveReport (1:1 Backend-DTO), LeaveMonth, LeavePeriod (#284)
 │   ├── trend.models.ts    TrendReport, TrendBucket, WeeklyTrend (#531, 1:1 Backend-DTO ohne `Ms`-Suffix)
 │   └── yearly-comparison.models.ts  YearlyComparison, YearlySummary, YearlyDelta (#530, 1:1 Backend-DTO mit `Ms`-Suffix)
 ├── services/
@@ -73,7 +73,7 @@ domain/
 
 features/
 ├── dashboard/      DashboardComponent + DashboardService (Timer, Pausen, Überstunden); `OpenEntryService` + `OpenEntryCloseService` + Beenden-Dialog (offene Einträge vor heute, #385)
-├── reports/        ReportsComponent + ReportsService (Täglich/Wöchentlich/Monatlich/Jahr/Trend, Premium-Gate); Trend-Ansicht `components/trend-view/` (#531, siehe „Trend-Ansicht“); Mehrfachauswahl-Modus im Service: `toggleMultiSelect`, idempotentes `endMultiSelect`, `removeDatesFromSelection`, Modus endet nach erfolgreichem Batch-Speichern (#377)
+├── reports/        ReportsComponent + ReportsService (Täglich/Wöchentlich/Monatlich/Jahr/Trend, Premium-Gate); Trend-Ansicht `components/trend-view/` (#531, siehe „Trend-Ansicht“); Urlaubs-/Krankheitsauswertung `components/leave-report-print/` (#284, siehe dort); Mehrfachauswahl-Modus im Service: `toggleMultiSelect`, idempotentes `endMultiSelect`, `removeDatesFromSelection`, Modus endet nach erfolgreichem Batch-Speichern (#377)
 └── settings/       SettingsComponent + SettingsPageService (Profil, Arbeitszeit, Gleitzeit, Sync, Theme)
 
 shared/
@@ -186,6 +186,35 @@ neuer Tab, keine Diagramme, die Monatswerte (`months`) werden nicht angezeigt.
 - **Tests:** `api-client.yearly-comparison.spec.ts`, `yearly-comparison-card.spec.ts`, `reports.yearly-comparison.spec.ts`;
   E2E `e2e/yearly-comparison-account.spec.ts` (Emulatoren, Endpunkt per `page.route` gemockt, Testdaten
   `e2e/yearly-comparison-data.ts`, inkl. Druck-Treffertest und axe).
+
+### Urlaubs- und Krankheitsauswertung drucken (#284)
+
+Button „Urlaub/Krank drucken“ im Jahres-Tab neben „Als PDF speichern / Drucken“ (`.print-actions`, umbrechend; nur angemeldet,
+Gast-Modus ohne Button). Ohne Premium Paywall wie beim Jahresdruck. Eigene Druckansicht, kein Bildschirm-Inhalt.
+- **Ablauf** (`LeaveReportPrintService`, von `ReportsComponent` bereitgestellt): Profil und Profilname zum Klick festhalten,
+  `ApiClient.getYearlyLeave(year, profileId?)` frisch laden (Button gesperrt, Spinner, „Wird geladen …“; Doppelklick = `busy`),
+  Daten setzen, per `afterNextRender` auf das Rendern warten, dann `window.print()`. Fehler → Snackbar `leave.printLoadError`,
+  kein Druckdialog. „Heute“/laufendes Jahr und Erstellungsdatum aus `LEAVE_NOW`.
+- **Vertrag:** `GET /api/reports/yearly/{year}` liefert zusätzlich `months` (12), `vacationPeriods`, `sickPeriods`
+  (`start`/`end` als Kalendertag `yyyy-MM-dd`, beschnitten und sortiert). `getYearlyLeave` setzt fehlende Listen (älteres
+  Backend) auf `[]`; die lokale Rechnung (`leave-calculator.ts`, Gast) liefert sie nicht (Felder optional). Der Client rechnet
+  nichts nach: Summenzeile = `vacationDaysTaken`/`sickDays`, leer = beide 0.
+- **Darstellung** (`LeaveReportPrintComponent`, Host `print-only leave-print`): Titel, Profilname (nur Zusatzprofil),
+  Erstellungsdatum; Summen (Anspruch/Resturlaub nur im laufenden Jahr, sonst Hinweis); Monatstabelle mit Summenzeile (ohne
+  `months` keine Tabelle); Zeiträume getrennt nach Urlaub/Krank („03.08.–14.08. (12 Tage)“, ein Tag „10.02. (1 Tag)“, Datumsformat
+  per `Intl` in der App-Sprache, Kalendertage zerlegt statt `new Date(iso)`, Zonen-Test `leave-report-print.tz.spec.ts`);
+  leeres Jahr mit Hinweis; Fußnote zur Zählregel. Feste Druckfarben (auch im Dunkelmodus schwarz auf weiß).
+- **Getrennter Druck:** Die Ansicht liegt außerhalb von `.print-area`. `styles.scss` blendet `.leave-print` im Druck immer aus,
+  außer `<html>` trägt `print-leave-report` (`LEAVE_PRINT_CLASS`); dann wird `.print-area` ausgeblendet. Die Klasse setzt der
+  Service direkt vor `print()` und entfernt sie bei `afterprint`, vor dem Jahresdruck (`onPrintYear` → `endPrintMode()`) und beim
+  Verlassen der Seite. Die Überschrift des Jahresdrucks heißt seitdem „Jahresauswertung {Jahr}“ (`reports.printTitle`).
+- **Style-Budget:** `reports.scss` ist am 8-kB-Limit; `.print-actions` teilt sich die Regel mit `.day-header-actions`, der
+  Spinner-Abstand steht in `styles.scss`. Neue Styles für den Jahres-Tab gehören in eigene Komponenten.
+- **Tests:** `api-client.spec.ts`, `leave-report-print.spec.ts`, `leave-report-print.tz.spec.ts`, `leave-report-print.service.spec.ts`,
+  `reports.leave-print.spec.ts`; E2E `e2e/leave-report-account.spec.ts` (Emulatoren, Endpunkt per `page.route` gemockt, Testdaten
+  `e2e/leave-report-data.ts`; Druck beider Richtungen mit Treffertest und `page.pdf`-Seitenzahl, Fehler ohne Druck, 320 px, axe,
+  Free mit Paywall) und `e2e/print.spec.ts` (Gast ohne Button). Im E2E erst klicken, wenn der Button den Premium-Text zeigt: das
+  Premium-Flag kommt nach dem Rendern aus Firestore.
 
 ### Feiertage (#279)
 
