@@ -72,6 +72,9 @@ class _StateViewModel extends ReportsViewModel {
           totalOvertime: const Duration(hours: 123, minutes: 45),
           weeklyWork: {41: const Duration(hours: 40)},
           dailyWork: {_day: const Duration(hours: 10, minutes: 47)},
+          // Zeilen netto (#551).
+          weeklyNetWork: {41: const Duration(hours: 38)},
+          dailyNetWork: {_day: const Duration(hours: 10, minutes: 2)},
         ),
       );
 

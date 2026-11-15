@@ -262,4 +262,138 @@ void main() {
       expect(r.overtime, const Duration(minutes: 960 - 1126));
     });
   });
+
+  group('7 – Netto je Tag und Woche (#551)', () {
+    BreakEntity brk(int month, int day, int hour, {int? endMinute}) =>
+        BreakEntity(
+          id: 'b$hour',
+          name: 'Pause',
+          start: DateTime(2026, month, day, hour),
+          end: endMinute == null
+              ? null
+              : DateTime(2026, month, day, hour, endMinute),
+        );
+
+    test('Tag: netto = brutto − Pausen, mehrere Einträge am Tag addiert', () {
+      final r = calculateWeeklyReport(
+        [
+          work(1, endHour: 17, breakMinutes: 45),
+          WorkEntryEntity(
+            id: '2026-06-01-b',
+            date: DateTime(2026, 6, 1),
+            workStart: DateTime(2026, 6, 1, 18),
+            workEnd: DateTime(2026, 6, 1, 20),
+            breaks: [brk(6, 1, 19, endMinute: 15)],
+          ),
+        ],
+        DateTime(2026, 6, 3),
+        fullTime,
+      );
+      final day = r.days.single;
+      expect(day.worked, const Duration(hours: 11));
+      expect(day.netWorked, const Duration(hours: 10));
+    });
+
+    test('offene Pause zählt nicht (nur abgeschlossene Pausen)', () {
+      final r = calculateWeeklyReport(
+        [
+          WorkEntryEntity(
+            id: id(6, 2),
+            date: DateTime(2026, 6, 2),
+            workStart: DateTime(2026, 6, 2, 8),
+            workEnd: DateTime(2026, 6, 2, 16),
+            breaks: [
+              brk(6, 2, 10, endMinute: 30),
+              brk(6, 2, 12), // ohne Ende
+            ],
+          ),
+        ],
+        DateTime(2026, 6, 2),
+        fullTime,
+      );
+      expect(r.days.single.worked, const Duration(hours: 8));
+      expect(r.days.single.netWorked, const Duration(hours: 7, minutes: 30));
+    });
+
+    test('Eintrag ohne Ende mit Pause: netto negativ, nicht bei 0 gekappt', () {
+      final r = calculateWeeklyReport(
+        [
+          WorkEntryEntity(
+            id: id(6, 3),
+            date: DateTime(2026, 6, 3),
+            workStart: DateTime(2026, 6, 3, 8),
+            breaks: [brk(6, 3, 10, endMinute: 30)],
+          ),
+        ],
+        DateTime(2026, 6, 3),
+        fullTime,
+      );
+      expect(r.days.single.worked, Duration.zero);
+      expect(r.days.single.netWorked, const Duration(minutes: -30));
+    });
+
+    test('Abwesenheitstag: netto = brutto = Tagessoll', () {
+      final r = calculateMonthlyReport(
+        [absence(1, WorkEntryType.vacation), absence(6, WorkEntryType.sick)],
+        DateTime(2026, 6),
+        fullTime,
+        Duration.zero,
+      );
+      expect(r.days.map((d) => (d.worked, d.netWorked)), [
+        (const Duration(hours: 8), const Duration(hours: 8)),
+        (const Duration(hours: 8), const Duration(hours: 8)),
+      ]);
+      expect(r.weeks.single.netWorked, const Duration(hours: 16));
+    });
+
+    test('Woche über die Monatsgrenze: Monat zählt nur seine Tage', () {
+      // KW 27: Mo 29.06. und Di 30.06. im Juni, Mi 01.07. im Juli.
+      final june = [
+        work(29, endHour: 17, breakMinutes: 60),
+        work(30, breakMinutes: 30),
+      ];
+      final july = [work(1, month: 7, breakMinutes: 15)];
+
+      final monthly = calculateMonthlyReport(
+          june, DateTime(2026, 6), fullTime, Duration.zero);
+      final week = monthly.weeks.single;
+      expect(week.weekNumber, 27);
+      expect(week.totalWorked, const Duration(hours: 17));
+      expect(week.netWorked, const Duration(hours: 15, minutes: 30));
+
+      final weekly = calculateWeeklyReport(
+          [...june, ...july], DateTime(2026, 7, 1), fullTime);
+      expect(weekly.days.map((d) => d.netWorked), [
+        const Duration(hours: 8),
+        const Duration(hours: 7, minutes: 30),
+        const Duration(hours: 7, minutes: 45),
+      ]);
+    });
+
+    test('Summe der Tage = netto des Zeitraums (Woche und Monat)', () {
+      final entries = [
+        work(1, endHour: 17, breakMinutes: 60),
+        work(2, breakMinutes: 30),
+        absence(3, WorkEntryType.holiday),
+        WorkEntryEntity(
+          id: id(6, 4),
+          date: DateTime(2026, 6, 4),
+          workStart: DateTime(2026, 6, 4, 8),
+          breaks: [brk(6, 4, 10, endMinute: 20)],
+        ),
+        work(8, breakMinutes: 45),
+      ];
+      final weekly =
+          calculateWeeklyReport(entries, DateTime(2026, 6, 1), fullTime);
+      expect(
+        weekly.days.fold(Duration.zero, (s, d) => s + d.netWorked),
+        weekly.totalWorked - weekly.totalBreaks,
+      );
+      final monthly = calculateMonthlyReport(
+          entries, DateTime(2026, 6), fullTime, Duration.zero);
+      final net = monthly.totalWorked - monthly.totalBreaks;
+      expect(monthly.days.fold(Duration.zero, (s, d) => s + d.netWorked), net);
+      expect(monthly.weeks.fold(Duration.zero, (s, w) => s + w.netWorked), net);
+    });
+  });
 }

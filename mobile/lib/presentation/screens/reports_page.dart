@@ -899,10 +899,11 @@ class WeeklyReportView extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      Text(l10n.dailyAttendanceLabel,
+                      Text(l10n.dailyWorkTimeLabel,
                           style: const TextStyle(fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
-                      ...weeklyReport.dailyWork.entries.map((entry) {
+                      // Netto je Tag (#551); Summe = Gesamte Arbeitszeit.
+                      ...weeklyReport.dailyNetWork.entries.map((entry) {
                         final date = entry.key;
                         final duration = entry.value;
                         return GestureDetector(
@@ -915,8 +916,7 @@ class WeeklyReportView extends ConsumerWidget {
                               title: Text(DateFormat.EEEE(locale).format(date)),
                               subtitle:
                                   Text(DateFormat.yMMMd(locale).format(date)),
-                              trailing:
-                                  Text(duration.toString().split('.').first),
+                              trailing: Text(_formatDayNet(duration)),
                             ),
                           ),
                         );
@@ -933,6 +933,12 @@ class WeeklyReportView extends ConsumerWidget {
             ));
   }
 }
+
+/// Netto eines Berichtstags (#551) wie die Web-Zeilen: ≤ 0 (z. B. ein noch
+/// offener Eintrag mit abgeschlossener Pause) als „—“, sonst `h:mm:ss`. Der
+/// Wert zählt in „Gesamte Arbeitszeit“ trotzdem mit (Backend-Regel).
+String _formatDayNet(Duration net) =>
+    net > Duration.zero ? net.toString().split('.').first : '—';
 
 void _showDayEntriesBottomSheet(
     BuildContext context, WidgetRef ref, DateTime date) {
@@ -1002,7 +1008,8 @@ Future<void> _exportWeeklyReportPdf({
       totalBreakDuration: weeklyReport.totalBreakDuration,
       averageWorkDuration: weeklyReport.averageWorkDuration,
       overtime: weeklyReport.overtime,
-      dailyWork: weeklyReport.dailyWork,
+      // Netto je Tag wie die Anzeige (#551).
+      dailyWork: weeklyReport.dailyNetWork,
       // Arbeitsorte der geladenen Einträge (#526), nur Anzeige.
       dailyLocations: dailyLocations,
     );
@@ -1043,8 +1050,9 @@ Future<void> _exportMonthlyReportPdf({
       avgWorkDurationPerWeek: monthlyReport.avgWorkDurationPerWeek,
       monthlyOvertime: monthlyReport.overtime,
       totalOvertime: monthlyReport.totalOvertime,
-      weeklyWork: monthlyReport.weeklyWork,
-      dailyWork: monthlyReport.dailyWork,
+      // Netto je Woche und Tag wie die Anzeige (#551).
+      weeklyWork: monthlyReport.weeklyNetWork,
+      dailyWork: monthlyReport.dailyNetWork,
       // Arbeitsorte der geladenen Einträge (#526), nur Anzeige.
       dailyLocations: dailyLocations,
     );
@@ -1518,8 +1526,8 @@ class MonthlyReportView extends ConsumerWidget {
                   const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)));
           monthChildren.add(const SizedBox(height: 8));
 
-          // Weekly entries
-          for (final entry in monthlyReport.weeklyWork.entries) {
+          // Wochenzeilen netto (#551), nur Tage des Monats.
+          for (final entry in monthlyReport.weeklyNetWork.entries) {
             final weekNumber = entry.key;
             final duration = entry.value;
             monthChildren.add(Card(
@@ -1539,8 +1547,8 @@ class MonthlyReportView extends ConsumerWidget {
                   const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)));
           monthChildren.add(const SizedBox(height: 8));
 
-          // Daily entries
-          for (final entry in monthlyReport.dailyWork.entries) {
+          // Tageszeilen netto (#551); Summe = Gesamte Arbeitszeit.
+          for (final entry in monthlyReport.dailyNetWork.entries) {
             final date = entry.key;
             final duration = entry.value;
             monthChildren.add(
@@ -1553,7 +1561,7 @@ class MonthlyReportView extends ConsumerWidget {
                   child: ListTile(
                     title: Text(DateFormat.EEEE(locale).format(date)),
                     subtitle: Text(DateFormat.yMMMd(locale).format(date)),
-                    trailing: Text(duration.toString().split('.').first),
+                    trailing: Text(_formatDayNet(duration)),
                   ),
                 ),
               ),

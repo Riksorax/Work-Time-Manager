@@ -752,6 +752,93 @@ void main() {
         expect(d.worked, const Duration(hours: 9));
         expect(d.overtime, const Duration(hours: 1, minutes: 27));
       });
+
+      group('Netto je Tag und Woche aus der API (#551)', () {
+        int ms(int h, [int m = 0]) =>
+            Duration(hours: h, minutes: m).inMilliseconds;
+
+        // Tag 1: Feld gesetzt; Tag 2: Feld fehlt (älteres Backend);
+        // Tag 3: Feld null; Tag 4: negativ (Eintrag ohne Ende mit Pause).
+        final days = [
+          {
+            'date': '2026-06-01T00:00:00Z',
+            'workedMs': ms(9),
+            'netWorkedMs': ms(8),
+          },
+          {'date': '2026-06-02T00:00:00Z', 'workedMs': ms(8)},
+          {
+            'date': '2026-06-03T00:00:00Z',
+            'workedMs': ms(7, 30),
+            'netWorkedMs': null,
+          },
+          {
+            'date': '2026-06-04T00:00:00Z',
+            'workedMs': 0,
+            'netWorkedMs': -ms(0, 30),
+          },
+        ];
+
+        Future<ReportsState> loadWith() async {
+          rebuildContainerWithActiveProfile(null);
+          final now = _fixedNow;
+          when(mockWorkRepository.getWorkEntriesForMonth(now.year, now.month))
+              .thenAnswer((_) async => []);
+          when(mockApiClient.getDailyReport(now.year, now.month, now.day,
+                  profileId: null))
+              .thenAnswer((_) async => {'workDays': 0});
+          when(mockApiClient.getWeeklyReport(now.year, now.month, now.day,
+                  profileId: null))
+              .thenAnswer((_) async => {'workDays': 4, 'days': days});
+          when(mockApiClient.getMonthlyReport(now.year, now.month,
+                  profileId: null))
+              .thenAnswer((_) async => {
+                    'workDays': 4,
+                    'weeks': [
+                      {
+                        'weekNumber': 23,
+                        'totalWorkedMs': ms(24, 30),
+                        'netWorkedMs': ms(23),
+                      },
+                      {'weekNumber': 24, 'totalWorkedMs': ms(8)},
+                      {
+                        'weekNumber': 25,
+                        'totalWorkedMs': ms(4),
+                        'netWorkedMs': null,
+                      },
+                    ],
+                    'days': days,
+                  });
+          container.read(reportsViewModelProvider.notifier);
+          await Future.delayed(Duration.zero);
+          await Future.delayed(Duration.zero);
+          return container.read(reportsViewModelProvider);
+        }
+
+        final expectedDays = {
+          DateTime(2026, 6, 1): const Duration(hours: 8),
+          DateTime(2026, 6, 2): const Duration(hours: 8), // Rückfall brutto
+          DateTime(2026, 6, 3): const Duration(hours: 7, minutes: 30),
+          DateTime(2026, 6, 4): const Duration(minutes: -30), // nicht gekappt
+        };
+
+        test('Wochenbericht: netWorkedMs, sonst brutto', () async {
+          final w = (await loadWith()).weeklyReportState;
+          expect(w.dailyNetWork, expectedDays);
+          // Brutto bleibt unverändert im State.
+          expect(w.dailyWork[DateTime(2026, 6, 1)], const Duration(hours: 9));
+        });
+
+        test('Monatsbericht: Wochen und Tage netto, sonst brutto', () async {
+          final m = (await loadWith()).monthlyReportState;
+          expect(m.weeklyNetWork, {
+            23: const Duration(hours: 23),
+            24: const Duration(hours: 8),
+            25: const Duration(hours: 4),
+          });
+          expect(m.weeklyWork[23], const Duration(hours: 24, minutes: 30));
+          expect(m.dailyNetWork, expectedDays);
+        });
+      });
     });
 
     group('Lokale Rechnung wie das Backend (#535)', () {
@@ -821,6 +908,11 @@ void main() {
           DateTime(2026, 6, 1): const Duration(hours: 9, minutes: 30),
           DateTime(2026, 6, 2): const Duration(hours: 8),
         });
+        // Netto je Tag (#551): Pause abgezogen, Urlaub mit dem Tagessoll.
+        expect(w.dailyNetWork, {
+          DateTime(2026, 6, 1): const Duration(hours: 8, minutes: 30),
+          DateTime(2026, 6, 2): const Duration(hours: 8),
+        });
       });
 
       test('Monatsbericht: Gesamtüberstunden = gespeicherter Saldo', () async {
@@ -831,6 +923,11 @@ void main() {
         expect(
             m.avgWorkDurationPerWeek, const Duration(hours: 16, minutes: 30));
         expect(m.weeklyWork, {23: const Duration(hours: 17, minutes: 30)});
+        expect(m.weeklyNetWork, {23: const Duration(hours: 16, minutes: 30)});
+        expect(m.dailyNetWork, {
+          DateTime(2026, 6, 1): const Duration(hours: 8, minutes: 30),
+          DateTime(2026, 6, 2): const Duration(hours: 8),
+        });
       });
     });
   });

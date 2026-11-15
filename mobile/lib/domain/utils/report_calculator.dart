@@ -11,6 +11,8 @@
 /// Regeln (kanonisch, siehe `server/CLAUDE.md`, „Rechenlogik“):
 /// - Arbeit brutto (Start→Ende) und Pausen getrennt; Einträge ohne Ende
 ///   zählen brutto 0, ihre abgeschlossenen Pausen aber mit.
+/// - Netto je Tag/Woche (#551) = brutto − abgeschlossene Pausen, nicht bei 0
+///   gekappt; die Summe der Tage ergibt das Netto des Zeitraums.
 /// - Urlaub/Krank/Feiertag zählen mit dem Tagessoll als geleistet, als
 ///   Arbeitstag und immer als Soll, auch an einem freien Wochentag.
 /// - Soll = Zahl der Soll-Tage × Tagessoll; Soll-Tage sind Tage mit
@@ -63,15 +65,34 @@ class ReportDay {
   final DateTime date;
   final Duration worked;
 
-  const ReportDay({required this.date, required this.worked});
+  /// Netto (#551): [worked] − abgeschlossene Pausen des Tages, **nicht** bei 0
+  /// gekappt (ein Eintrag ohne Ende mit Pause ergibt einen negativen Wert,
+  /// wie im Backend); immer ≤ [worked].
+  final Duration netWorked;
+
+  const ReportDay({
+    required this.date,
+    required this.worked,
+    required this.netWorked,
+  });
 }
 
-/// Eine ISO-Woche im Monatsbericht (Backend `ReportWeekDto`); brutto.
+/// Eine ISO-Woche im Monatsbericht (Backend `ReportWeekDto`).
 class ReportWeek {
   final int weekNumber;
+
+  /// Brutto, nur Tage des Monats.
   final Duration totalWorked;
 
-  const ReportWeek({required this.weekNumber, required this.totalWorked});
+  /// Netto (#551): Summe von [ReportDay.netWorked] der Tage dieser Woche im
+  /// Monat.
+  final Duration netWorked;
+
+  const ReportWeek({
+    required this.weekNumber,
+    required this.totalWorked,
+    required this.netWorked,
+  });
 }
 
 /// Wochenbericht (Backend `WeeklyReportDto`).
@@ -232,11 +253,14 @@ MonthlyReport calculateMonthlyReport(
   final t = _sumPeriod(entries, settings);
   final days = t.sortedDays;
 
-  // Jeder Tag gehört zu genau einer ISO-KW; Summen je KW aus der Tages-Map.
+  // Jeder Tag gehört zu genau einer ISO-KW; Summen je KW aus der Tages-Map
+  // (brutto und netto, #551).
   final weekTotals = <int, Duration>{};
+  final weekNet = <int, Duration>{};
   for (final d in days) {
     final week = isoWeekNumber(d.date);
     weekTotals[week] = (weekTotals[week] ?? Duration.zero) + d.worked;
+    weekNet[week] = (weekNet[week] ?? Duration.zero) + d.netWorked;
   }
   final weekNumbers = weekTotals.keys.toList()..sort();
   final numWeeks = weekNumbers.length;
@@ -254,7 +278,11 @@ MonthlyReport calculateMonthlyReport(
     totalOvertime: storedOvertime,
     weeks: [
       for (final w in weekNumbers)
-        ReportWeek(weekNumber: w, totalWorked: weekTotals[w]!),
+        ReportWeek(
+          weekNumber: w,
+          totalWorked: weekTotals[w]!,
+          netWorked: weekNet[w]!,
+        ),
     ],
     days: days,
   );
@@ -269,6 +297,9 @@ class _PeriodTotals {
   final Set<DateTime> workDays;
   final Map<DateTime, Duration> dayMap;
 
+  /// Abgeschlossene Pausen je Tag (Backend `DayBreaks`, #551).
+  final Map<DateTime, Duration> dayBreaks;
+
   const _PeriodTotals({
     required this.grossWorked,
     required this.breaks,
@@ -276,6 +307,7 @@ class _PeriodTotals {
     required this.target,
     required this.workDays,
     required this.dayMap,
+    required this.dayBreaks,
   });
 
   Duration get netWorked => grossWorked - breaks;
@@ -284,7 +316,14 @@ class _PeriodTotals {
 
   List<ReportDay> get sortedDays {
     final keys = dayMap.keys.toList()..sort();
-    return [for (final k in keys) ReportDay(date: k, worked: dayMap[k]!)];
+    return [
+      for (final k in keys)
+        ReportDay(
+          date: k,
+          worked: dayMap[k]!,
+          netWorked: dayMap[k]! - (dayBreaks[k] ?? Duration.zero),
+        ),
+    ];
   }
 }
 
@@ -300,22 +339,27 @@ _PeriodTotals _sumPeriod(
   final workDays = <DateTime>{};
   final absenceDays = <DateTime>{};
   final dayMap = <DateTime, Duration>{};
+  final dayBreaks = <DateTime, Duration>{};
 
   for (final entry in entries) {
     final key = entryDay(entry);
     Duration worked;
+    var entryBreaks = Duration.zero;
     if (entry.type != WorkEntryType.work) {
       worked = daily;
       workDays.add(key);
       absenceDays.add(key);
     } else {
-      breaks += entry.totalBreakTime;
+      // Nur abgeschlossene Pausen (`BreakEntity.duration` ist ohne Ende 0).
+      entryBreaks = entry.totalBreakTime;
       worked = entry.totalWorkTime;
       if (entry.workStart != null) workDays.add(key);
     }
     gross += worked;
+    breaks += entryBreaks;
     manual += entry.manualOvertime ?? Duration.zero;
     dayMap[key] = (dayMap[key] ?? Duration.zero) + worked;
+    dayBreaks[key] = (dayBreaks[key] ?? Duration.zero) + entryBreaks;
   }
 
   final targetDays = workDays
@@ -329,6 +373,7 @@ _PeriodTotals _sumPeriod(
     target: daily * targetDays,
     workDays: workDays,
     dayMap: dayMap,
+    dayBreaks: dayBreaks,
   );
 }
 

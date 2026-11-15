@@ -69,6 +69,9 @@ class _RecordingPdf extends PdfReportService {
   Duration? monthlyTotalOvertime;
   Map<DateTime, List<String>>? weeklyLocations;
   Map<DateTime, List<String>>? monthlyLocations;
+  Map<DateTime, Duration>? weeklyDays;
+  Map<int, Duration>? monthlyWeeks;
+  Map<DateTime, Duration>? monthlyDays;
 
   @override
   Future<void> exportWeeklyReport({
@@ -86,6 +89,7 @@ class _RecordingPdf extends PdfReportService {
     Map<DateTime, List<String>> dailyLocations = const {},
   }) async {
     weeklyLocations = dailyLocations;
+    weeklyDays = dailyWork;
     weeklyTotal = totalWorkDuration;
     weeklyOvertime = overtime;
   }
@@ -107,6 +111,8 @@ class _RecordingPdf extends PdfReportService {
     Map<DateTime, List<String>> dailyLocations = const {},
   }) async {
     monthlyLocations = dailyLocations;
+    monthlyWeeks = weeklyWork;
+    monthlyDays = dailyWork;
     monthlyTotal = totalWorkDuration;
     this.monthlyOvertime = monthlyOvertime;
     monthlyTotalOvertime = totalOvertime;
@@ -297,6 +303,10 @@ void main() {
         DateTime(2026, 10, 5): const Duration(hours: 8),
         DateTime(2026, 10, 6): const Duration(hours: 8),
       },
+      dailyNetWork: {
+        DateTime(2026, 10, 5): const Duration(hours: 7, minutes: 30),
+        DateTime(2026, 10, 6): const Duration(hours: 7, minutes: 15),
+      },
     );
 
     testWidgets('zeigt Überstunden und Netto aus dem State', (tester) async {
@@ -306,8 +316,12 @@ void main() {
       expect(find.text('+07:13'), findsOneWidget); // Überstunden
       expect(find.text('16:00:00'), findsNothing); // Summe der Tageswerte
       expect(find.text('+00:00'), findsNothing); // 2 x (8:00 - 8:00)
-      expect(find.text('Anwesenheit pro Tag (inkl. Pausen):'), findsOneWidget);
-      expect(find.text('8:00:00'), findsNWidgets(2)); // Tageszeilen brutto
+      // Seit #551 netto und ohne Zusatz „(inkl. Pausen)“.
+      expect(find.text('Arbeitszeit pro Tag:'), findsOneWidget);
+      expect(find.textContaining('inkl. Pausen'), findsNothing);
+      expect(find.text('7:30:00'), findsOneWidget); // Tageszeilen netto
+      expect(find.text('7:15:00'), findsOneWidget);
+      expect(find.text('8:00:00'), findsNothing); // brutto nicht mehr
     });
 
     testWidgets('PDF bekommt dieselben Werte wie die Anzeige', (tester) async {
@@ -317,6 +331,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(pdf.weeklyTotal, const Duration(hours: 12, minutes: 34));
       expect(pdf.weeklyOvertime, const Duration(hours: 7, minutes: 13));
+      // Tageszeilen netto wie die Anzeige (#551).
+      expect(pdf.weeklyDays, weekly.dailyNetWork);
     });
 
     testWidgets('PDF bekommt die Arbeitsorte der geladenen Einträge (#526)',
@@ -351,10 +367,13 @@ void main() {
       expect(find.text('+03:15'), findsOneWidget);
       expect(find.text('-03:15'), findsNothing); // alte Widget-Rechnung
       expect(find.text('36:45:00'), findsNothing); // brutto als Summe
-      // Tageszeilen brutto: Mo 8:30, Di 9:45, Mi 8:00, Do 8:30, Sa 2:00
-      expect(find.text('8:30:00'), findsNWidgets(2));
-      expect(find.text('9:45:00'), findsOneWidget);
+      // Tageszeilen netto (#551): Mo 8:00, Di 9:00, Mi 8:00 (Urlaub),
+      // Do 8:00, Sa 2:00; Summe 35:00 = Gesamte Arbeitszeit.
+      expect(find.text('8:00:00'), findsNWidgets(3));
+      expect(find.text('9:00:00'), findsOneWidget);
       expect(find.text('2:00:00'), findsOneWidget);
+      expect(find.text('8:30:00'), findsNothing); // brutto Mo/Do
+      expect(find.text('9:45:00'), findsNothing); // brutto Di
     });
 
     testWidgets('angemeldet: Werte der API-Antwort', (tester) async {
@@ -411,6 +430,10 @@ void main() {
       workDays: 3,
       weeklyWork: {41: const Duration(hours: 8)},
       dailyWork: {DateTime(2026, 10, 5): const Duration(hours: 8)},
+      weeklyNetWork: {41: const Duration(hours: 7, minutes: 11)},
+      dailyNetWork: {
+        DateTime(2026, 10, 5): const Duration(hours: 7, minutes: 22)
+      },
     );
 
     testWidgets('zeigt Überstunden und Netto aus dem State', (tester) async {
@@ -420,9 +443,13 @@ void main() {
       expect(find.text('-02:22'), findsOneWidget);
       expect(find.text('+05:00'), findsOneWidget); // Gesamt = Saldo
       expect(find.text('+00:00'), findsNothing); // 8:00 - 8:00
-      // Wochen- und Tageszeilen sind brutto und so beschriftet (#535).
-      expect(find.text('Wochenübersicht (inkl. Pausen):'), findsOneWidget);
-      expect(find.text('Tagesübersicht (inkl. Pausen):'), findsOneWidget);
+      // Wochen- und Tageszeilen sind seit #551 netto, ohne Zusatz.
+      expect(find.text('Wochenübersicht:'), findsOneWidget);
+      expect(find.text('Tagesübersicht:'), findsOneWidget);
+      expect(find.textContaining('inkl. Pausen'), findsNothing);
+      expect(find.text('7:11:00'), findsOneWidget); // KW 41 netto
+      expect(find.text('7:22:00'), findsOneWidget); // 05.10. netto
+      expect(find.text('8:00:00'), findsNothing); // brutto nicht mehr
     });
 
     // Schmale Breite mit echten Schriften: Screenshot (Testschrift Ahem ist
@@ -432,8 +459,9 @@ void main() {
           state: stateWith(monthly: monthly),
           tab: 2,
           locale: const Locale('en'));
-      expect(find.text('Week overview (incl. breaks):'), findsOneWidget);
-      expect(find.text('Day overview (incl. breaks):'), findsOneWidget);
+      expect(find.text('Week overview:'), findsOneWidget);
+      expect(find.text('Day overview:'), findsOneWidget);
+      expect(find.textContaining('incl. breaks'), findsNothing);
       expect(tester.takeException(), isNull);
     });
 
@@ -445,6 +473,9 @@ void main() {
       expect(pdf.monthlyTotal, const Duration(hours: 99, minutes: 1));
       expect(pdf.monthlyOvertime, const Duration(hours: -2, minutes: -22));
       expect(pdf.monthlyTotalOvertime, const Duration(hours: 5));
+      // Wochen- und Tageszeilen netto wie die Anzeige (#551).
+      expect(pdf.monthlyWeeks, monthly.weeklyNetWork);
+      expect(pdf.monthlyDays, monthly.dailyNetWork);
     });
 
     testWidgets(
@@ -452,8 +483,9 @@ void main() {
         (tester) async {
       await pump(tester, entries: _week(), tab: 2);
 
-      // Gesamte Arbeitszeit netto und Ø pro Woche (nur KW 41 im Monat).
-      expect(find.text('35:00:00'), findsNWidgets(2));
+      // Gesamte Arbeitszeit netto, Ø pro Woche (nur KW 41 im Monat) und
+      // seit #551 die Wochenzeile KW 41 (netto).
+      expect(find.text('35:00:00'), findsNWidgets(3));
       expect(find.text('+03:15'), findsOneWidget); // Überstunden Monat
       expect(find.text('+12:30'), findsOneWidget); // gespeicherter Saldo
       expect(find.text('-03:15'), findsNothing);

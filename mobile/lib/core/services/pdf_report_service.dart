@@ -74,6 +74,10 @@ class PdfReportService {
   /// „Arbeitsort“ dazu (Orte durch Komma getrennt); sonst bleibt die Tabelle
   /// wie bisher (keine leere Spalte). Tage werden über Jahr/Monat/Tag
   /// zugeordnet.
+  ///
+  /// [dailyWork] ist seit #551 **netto** je Tag (Spalte „Arbeitszeit“). Ein
+  /// Tag mit netto ≤ 0 (z. B. ein noch offener Eintrag mit abgeschlossener
+  /// Pause) steht wie in der App als „—“; in der Summe zählt er mit.
   @visibleForTesting
   static List<List<String>> dailyTableData(
     Map<DateTime, Duration> dailyWork, {
@@ -95,15 +99,15 @@ class PdfReportService {
       [
         l10n.pdfDateColumn,
         l10n.pdfWeekdayColumn,
-        // Tageswerte sind brutto (#535).
-        l10n.pdfAttendanceColumn,
+        // Tageswerte sind netto (#551).
+        l10n.pdfWorkTimeColumn,
         if (withLocations) l10n.pdfWorkLocationColumn,
       ],
       for (final entry in sortedEntries)
         [
           dateFmt.format(entry.key),
           DateFormat.EEEE(locale).format(entry.key),
-          _fmtDurationStatic(entry.value),
+          entry.value > Duration.zero ? _fmtDurationStatic(entry.value) : '—',
           if (withLocations) locationsByDay[dayOf(entry.key)] ?? '',
         ],
     ];
@@ -185,7 +189,7 @@ class PdfReportService {
             (l10n.pdfOvertimeLabel, _fmtSignedDuration(overtime)),
           ]),
           pw.SizedBox(height: 20),
-          pw.Text(l10n.pdfDailyAttendanceTitle,
+          pw.Text(l10n.pdfDailyWorkTimeTitle,
               style:
                   pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
           pw.SizedBox(height: 8),
@@ -201,21 +205,32 @@ class PdfReportService {
     );
   }
 
-  pw.Widget _weeklyTable(
+  /// Kopf und Zeilen der Wochentabelle im Monatsbericht als Text; Werte
+  /// netto je ISO-Woche, nur Tage des Monats (#551), nach Woche sortiert.
+  @visibleForTesting
+  static List<List<String>> weeklyTableData(
     Map<int, Duration> weeklyWork, {
     required AppLocalizations l10n,
   }) {
     final sortedEntries = weeklyWork.entries.toList()
       ..sort((a, b) => a.key.compareTo(b.key));
+    return [
+      [l10n.pdfCalendarWeekColumn, l10n.pdfWorkTimeColumn],
+      for (final entry in sortedEntries)
+        [l10n.weekNumberLabel(entry.key), _fmtDurationStatic(entry.value)],
+    ];
+  }
+
+  pw.Widget _weeklyTable(
+    Map<int, Duration> weeklyWork, {
+    required AppLocalizations l10n,
+  }) {
+    final data = weeklyTableData(weeklyWork, l10n: l10n);
     return pw.TableHelper.fromTextArray(
-      // Wochenwerte sind brutto (#535).
-      headers: [l10n.pdfCalendarWeekColumn, l10n.pdfAttendanceColumn],
+      headers: data.first,
       cellAlignments: {0: pw.Alignment.centerLeft, 1: pw.Alignment.centerRight},
       cellPadding: const pw.EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-      data: [
-        for (final entry in sortedEntries)
-          [l10n.weekNumberLabel(entry.key), _fmtDuration(entry.value)],
-      ],
+      data: data.skip(1).toList(),
     );
   }
 
