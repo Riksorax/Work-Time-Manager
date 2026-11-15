@@ -1,12 +1,14 @@
 # Einstellungen für alle Videos (#575). Gelesen von `render.mjs` und `tts/synth.py`.
 
-# Sprachsynthese. Die Stimme ist noch nicht gewählt (Hörtest S0); bis dahin Piper.
-# engine: piper | chatterbox. `stimme` ist bei Piper der Modellname unter tts/stimmen/,
+# Sprachsynthese. Ergebnis des Hörtests (S0): OmniVoice; welche der drei Stimmen, ist noch offen.
+# engine: omnivoice | piper | chatterbox. Bei OmniVoice ist `stimme` der Name einer Vorlage unter
+# tts/referenz/ (<name>.wav + <name>.txt): omnivoice-mann, omnivoice-frau, omnivoice-mann-tief.
+# Bei Piper ist `stimme` der Modellname unter tts/stimmen/,
 # `sprecher` die Sprecher-Nummer bei Modellen mit mehreren Sprechern (sonst leer).
 # Bei Chatterbox ist `stimme` der Pfad einer WAV-Vorlage (leer = Standardstimme).
 stimme:
-  engine: piper
-  stimme: de_DE-thorsten-high
+  engine: omnivoice
+  stimme: omnivoice-mann
   sprecher:
 
 # Bild

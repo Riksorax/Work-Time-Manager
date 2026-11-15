@@ -49,8 +49,11 @@ function browser() {
 
 function python() {
   if (process.env.SHORTS_PYTHON) return process.env.SHORTS_PYTHON;
-  const venv = path.join(HIER, 'tts', '.venv-piper', 'bin', 'python');
-  return fs.existsSync(venv) ? venv : 'python3';
+  for (const name of ['.venv-omnivoice', '.venv-piper']) {
+    const kandidat = path.join(HIER, 'tts', name, 'bin', 'python');
+    if (fs.existsSync(kandidat)) return kandidat;
+  }
+  return 'python3';
 }
 
 /** Ordner mit allem, was die Komposition lädt: Schrift und Logo aus dem Repo, die App-Bilder. */
@@ -80,7 +83,7 @@ async function rendereVideo({ id, sprache }, einstellungen) {
   try {
     execFileSync(python(), [path.join(HIER, 'tts', 'synth.py'), datei, '--aus', stimmen], { stdio: 'inherit' });
   } catch {
-    throw new Abbruch('Sprachsynthese gescheitert (tts/synth.py, siehe Meldung oben). Python mit piper-tts und pyyaml über SHORTS_PYTHON angeben.');
+    throw new Abbruch('Sprachsynthese gescheitert (tts/synth.py, siehe Meldung oben). Python mit der Engine aus einstellungen.yaml und pyyaml über SHORTS_PYTHON angeben.');
   }
   const dauerJson = JSON.parse(fs.readFileSync(path.join(stimmen, 'dauer.json'), 'utf8'));
   const dauern = pruefeDauern(beschreibung, dauerJson, (name) => fs.existsSync(path.join(stimmen, name)));

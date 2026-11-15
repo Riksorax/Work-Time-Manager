@@ -1,0 +1,47 @@
+# Video 1, Pilotvideo (#575, S3). Free-Funktionen: Start per Tipp, voraussichtlicher Feierabend,
+# Überstunden live, automatisch ergänzte Pause. Aussagen geprüft gegen
+# fastlane/metadata/android/de-DE/full_description.txt („Zeiterfassung mit einem Tippen“, „Pausen automatisch“).
+id: feierabend
+titel: Wann ist Feierabend?
+
+ausschnitte:
+  start: { x: 0.08, y: 0.855, breite: 0.84, hoehe: 0.065 }
+  feierabend: { x: 0.1, y: 0.37, breite: 0.8, hoehe: 0.14 }
+  ueberstunden: { x: 0.1, y: 0.26, breite: 0.8, hoehe: 0.2 }
+  pause: { x: 0.08, y: 0.63, breite: 0.84, hoehe: 0.18 }
+
+szenen:
+  - art: aufhaenger
+    text: Wann hast du heute eigentlich Feierabend?
+    saetze:
+      - Wann hast du heute eigentlich Feierabend?
+
+  - art: app
+    bild: dashboard_vor_start.png
+    tipp: { auf: start, bei: 0.6 }
+    saetze:
+      - Morgens tippst du einmal auf Start.
+
+  - art: app
+    bild: dashboard_timer_laeuft.png
+    zoom: { auf: feierabend, faktor: 1.5 }
+    einblendung: Feierabend heute um 16:22 Uhr
+    saetze:
+      - Die App rechnet aus, wann du fertig bist. Heute um 16:22 Uhr.
+
+  - art: app
+    bild: dashboard_timer_laeuft.png
+    zoom: { auf: ueberstunden, faktor: 1.4 }
+    saetze:
+      - Bleibst du länger, siehst du deine Überstunden sofort.
+
+  - art: app
+    bild: stop_pause_ergaenzt.png
+    zoom: { auf: pause, faktor: 1.3 }
+    einblendung: Pause automatisch ergänzt
+    saetze:
+      - Und vergessene Pausen ergänzt die App von selbst.
+
+  - art: schluss
+    saetze:
+      - Work Time Manager. Kostenlos bei Google Play.

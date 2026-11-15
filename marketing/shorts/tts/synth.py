@@ -82,7 +82,33 @@ def chatterbox(auftraege: list[tuple[str, Path]], stimme: dict) -> None:
         torchaudio.save(str(ziel), ton, modell.sr, encoding="PCM_S", bits_per_sample=16)
 
 
-ENGINES: dict[str, Engine] = {"piper": piper, "chatterbox": chatterbox}
+def omnivoice(auftraege: list[tuple[str, Path]], stimme: dict) -> None:
+    """OmniVoice mit fester Stimmvorlage.
+
+    `stimme` ist der Name einer Vorlage unter `tts/referenz/`: `<name>.wav`
+    und `<name>.txt` (der darin gesprochene Text). Jeder Satz wird als Klon
+    dieser Vorlage erzeugt, damit die Stimme über alle Sätze und Videos gleich
+    bleibt; ein Stimmentwurf per Beschreibung fiele bei jedem Satz anders aus.
+    """
+    import soundfile
+    import torch
+    from omnivoice import OmniVoice
+
+    name = stimme.get("stimme")
+    wav, txt = HIER / "referenz" / f"{name}.wav", HIER / "referenz" / f"{name}.txt"
+    if not name or not wav.exists() or not txt.exists():
+        raise FileNotFoundError(f"Stimmvorlage fehlt: {wav} und {txt} werden gebraucht")
+    modell = OmniVoice.from_pretrained("k2-fsa/OmniVoice", device_map="cpu", dtype=torch.float32)
+    vorlage = modell.create_voice_clone_prompt(
+        ref_audio=str(wav), ref_text=txt.read_text(encoding="utf-8").strip()
+    )
+    for nr, (text, ziel) in enumerate(auftraege):
+        torch.manual_seed(nr)  # gleicher Text, gleiche Vorlage -> gleiches Ergebnis
+        ton = modell.generate(text=text, language="German", voice_clone_prompt=vorlage)
+        soundfile.write(str(ziel), ton[0], 24000, subtype="PCM_16")
+
+
+ENGINES: dict[str, Engine] = {"piper": piper, "chatterbox": chatterbox, "omnivoice": omnivoice}
 
 
 def vertone(

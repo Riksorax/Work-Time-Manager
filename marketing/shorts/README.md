@@ -3,8 +3,8 @@
 Pipeline für Kurzvideos (TikTok, Reels, Shorts) aus echten App-Bildschirmen und synthetischer Sprecherstimme.
 Plan, Regeln und Reihenfolge: Issue #575 und `thoughts/video-shorts-plan.md`.
 
-Stand: Schritt S0 (Hörtest der Stimmen) und S1 (Videokomposition, Grundgerüst). Die Stimme ist noch nicht gewählt,
-bis dahin spricht Piper `de_DE-thorsten-high`. Echte Videos folgen ab S3.
+Stand: S0 (Hörtest der Stimmen), S1 (Videokomposition) und S2 (App-Bilder) sind umgesetzt. Die Stimme kommt von
+OmniVoice (Ergebnis des Hörtests, siehe `tts/LIZENZEN.md`).
 
 ## Video rendern
 
@@ -15,9 +15,10 @@ npm run render -- probe        # videos/de/probe.yaml -> out/probe.mp4
 npm test                       # Schema, Zeitberechnung, Lage der Bausteine (node --test)
 ```
 
-Voraussetzungen: Node 20 oder neuer, `ffmpeg` im Pfad, ein Python mit `piper-tts` und `pyyaml` (die Umgebung
-`tts/.venv-piper` aus dem Hörtest wird von selbst gefunden, sonst `SHORTS_PYTHON=/pfad/zu/python`) und die
-Piper-Stimme unter `tts/stimmen/` (lädt `python hoertest.py piper`). Als Browser dient das vorinstallierte Chromium
+Voraussetzungen: Node 20 oder neuer, `ffmpeg` im Pfad, ein Python mit der gewählten Engine und `pyyaml`
+(`tts/.venv-omnivoice` bzw. `tts/.venv-piper` werden von selbst gefunden, sonst `SHORTS_PYTHON=/pfad/zu/python`).
+OmniVoice einrichten: `python3 -m venv tts/.venv-omnivoice && tts/.venv-omnivoice/bin/pip install --extra-index-url
+https://download.pytorch.org/whl/cpu -r tts/requirements-omnivoice.txt`; das Modell (ca. 3 GB) lädt der erste Lauf. Als Browser dient das vorinstallierte Chromium
 der Cloud-Umgebung (`/opt/pw-browsers/chromium`) oder der Pfad in `SHORTS_CHROMIUM`; fehlt beides, lädt Remotion
 beim ersten Lauf selbst einen Browser.
 
@@ -111,8 +112,10 @@ Maße: `src/layout.mjs`. Farben, Schrift und Logo liest `lib/marke.mjs` aus `bra
 python tts/synth.py videos/de/probe.yaml      # macht `npm run render` von selbst
 ```
 
-- Engine und Stimme stehen in `einstellungen.yaml` unter `stimme:` (oder `--engine`, `--stimme`). Standard bis zur
-  Wahl im Hörtest: Piper `de_DE-thorsten-high`. `chatterbox` ist als zweite Engine angelegt.
+- Engine und Stimme stehen in `einstellungen.yaml` unter `stimme:` (oder `--engine`, `--stimme`). Standard:
+  OmniVoice mit einer festen Stimmvorlage aus `tts/referenz/` (`<name>.wav` und `<name>.txt` mit dem gesprochenen
+  Text); jeder Satz entsteht als Klon dieser Vorlage, damit die Stimme über alle Videos gleich bleibt. `piper` und
+  `chatterbox` bleiben als Engines wählbar. Ohne Grafikkarte braucht OmniVoice knapp eine Minute je Satz.
 - Die Sätze werden über alle Szenen durchnummeriert (`01.wav`, `02.wav`, …).
 - Eigene Aufnahme oder anderer Dienst: Liegt `videos/de/<id>/stimme/<nr>.wav` (PCM-WAV), wird diese Datei genommen
   statt synthetisiert; ihre Länge bestimmt die Szenendauer.
