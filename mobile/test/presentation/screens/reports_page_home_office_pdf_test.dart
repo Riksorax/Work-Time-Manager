@@ -17,10 +17,12 @@ import 'package:flutter_work_time/presentation/state/settings_state.dart';
 import 'package:flutter_work_time/presentation/state/yearly_report_state.dart';
 import 'package:flutter_work_time/presentation/view_models/reports_view_model.dart';
 import 'package:flutter_work_time/presentation/view_models/settings_view_model.dart';
+import 'package:flutter_work_time/presentation/view_models/yearly_comparison_view_model.dart';
 import 'package:flutter_work_time/presentation/view_models/yearly_report_view_model.dart';
 
 import '../../support/fake_printing_platform.dart';
 import '../../support/fake_repositories.dart';
+import '../../support/yearly_comparison_fixture.dart';
 
 class _FakeReportsViewModel extends ReportsViewModel {
   @override
@@ -104,6 +106,9 @@ void main() {
           reportsViewModelProvider.overrideWith(_FakeReportsViewModel.new),
           settingsViewModelProvider.overrideWith(_FakeSettingsViewModel.new),
           yearlyReportViewModelProvider.overrideWith(_FakeYearlyViewModel.new),
+          // Vergleichskarte (#530) steht im Jahres-Tab: fester Ladezustand.
+          yearlyComparisonViewModelProvider
+              .overrideWith(FakeYearlyComparisonViewModel.new),
         ],
         child: MaterialApp(
           locale: Locale(locale),
