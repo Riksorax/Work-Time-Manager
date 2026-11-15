@@ -473,7 +473,7 @@
   "assistantQueryProfileLabel": "Profile: {name}",
   "assistantQueryPremiumHint": "Answers to voice queries are a Premium feature.",
   "assistantQueryTrendPremiumHint": "The weekly trend is a Premium feature.",
-  "assistantQueryLoginHint":"Sign in to check your overtime and remaining vacation.",
+  "assistantQueryLoginHint": "Sign in to check your working time data.",
   "assistantQueryOvertimeError": "Could not load overtime.",
   "assistantQueryLeaveYear": "Year {year}",
   "workLocationAddButton": "Add work location",

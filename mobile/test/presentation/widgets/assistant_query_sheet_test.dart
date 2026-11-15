@@ -369,7 +369,9 @@ void main() {
         (tester) async {
       await open(tester, AssistantQuery.trend, signedIn: false);
 
-      expect(find.text(de.assistantQueryLoginHint), findsOneWidget);
+      expect(find.text('Melde dich an, um deine Arbeitszeit-Daten abzufragen.'),
+          findsOneWidget);
+      expect(find.textContaining('Resturlaub'), findsNothing);
       expect(find.text(de.loginButton), findsOneWidget);
       expect(trendApi.calls, isEmpty);
     });
@@ -429,6 +431,9 @@ void main() {
           signedIn: false, premium: false);
 
       expect(find.text(de.assistantQueryLoginHint), findsOneWidget);
+      // Allgemein formuliert, passt zu allen Abfragen (auch Wochen-Trend).
+      expect(find.text('Melde dich an, um deine Arbeitszeit-Daten abzufragen.'),
+          findsOneWidget);
       expect(find.text(de.assistantQueryPremiumHint), findsNothing);
       expect(find.text('+02:30'), findsNothing);
 
@@ -443,6 +448,8 @@ void main() {
       await open(tester, AssistantQuery.leave, signedIn: false, locale: 'en');
 
       expect(find.text(en.assistantQueryLoginHint), findsOneWidget);
+      expect(find.text('Sign in to check your working time data.'),
+          findsOneWidget);
       expect(find.text(en.loginButton), findsOneWidget);
     });
   });
