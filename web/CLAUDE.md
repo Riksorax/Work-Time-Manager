@@ -93,7 +93,7 @@ shared/
 │   ├── bundesland.util.ts       Pure — isBundesland / normalizeBundesland
 │   ├── work-locations.util.ts   Pure (#526) — `normalizeWorkLocations`, `readWorkLocations`, `addWorkLocation` (Fehler empty/duplicate/tooLong/max), `suggestWorkLocations` (zuletzt verwendet zuerst, höchstens 10, ohne gewählte); Grenzen 5 Orte à 60 Zeichen
 │   ├── entry-day.util.ts        Pure (#407) — Kalendertag eines Eintrags: `entryDay(entry)`/`entryDayKey(entry)` (für Verbraucher), `localDateFromEntryId`, `parseEntryId` (gültige `yyyy-MM-dd`-Id oder `null`), `calendarDateFromUtcMidnight` (lokale Mitternacht aus den UTC-Feldern, für Lesegrenzen)
-│   ├── chart-scale.util.ts      Pure (#531) — `ChartPoint`/`ChartLabels`, `niceScale` (runde Teilstriche, 0 immer enthalten), `formatAxisHours`, `axisLabelStep` (Beschriftungen ausdünnen)
+│   ├── chart-scale.util.ts      Pure (#531) — `ChartPoint`/`ChartLabels`, `niceScale` (0 immer enthalten; kleinste „schöne“ Schrittweite mit 4 bis 6 Teilstrichen: 5/10/15/30 min, ab 1 h 1/2/2,5/5/10 × 10ⁿ h, damit die Grenzen nah an den Werten inkl. Soll liegen, z. B. 44 h mit Soll 40 h → 0 bis 50 h; sehr kleine Werte werden auf 4 Teilstriche aufgefüllt), `formatAxisHours`, `axisLabelStep` (Beschriftungen ausdünnen)
 │   ├── duration-format.util.ts  Pure (#531) — `formatDurationHm`/`formatSignedDurationHm` (Format der Berichte `HH:MM`/`±HH:MM`, von `ReportsComponent` mitgenutzt)
 │   ├── promise-timeout.util.ts  Pure (#426) — `withTimeout(promise, ms)` + `PromiseTimeoutError`, Timer immer mit `clearTimeout`
 │   ├── calendar-keyboard.util.ts  Pure — Kalender-Tastenlogik (#377): `isCalendarNavKey`, `nextFocusDate`, `rangeKeys`, `rangeDiff`
