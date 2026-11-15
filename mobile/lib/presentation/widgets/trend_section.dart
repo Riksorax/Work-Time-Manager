@@ -192,45 +192,54 @@ class TrendSection extends ConsumerWidget {
     final subStyle =
         theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant);
     final wt = report.weeklyTrend;
+    final wtTexts = wt == null ? null : weeklyTrendTexts(wt, l10n);
+    // Für Screenreader ein zusammenhängender Text wie bei der Prognose-Karte.
+    final wtLabel = wtTexts == null
+        ? '${l10n.trendWeekTitle}. ${l10n.trendWeekTooLittle}'
+        : '${l10n.trendWeekTitle}. ${wtTexts.delta}. ${wtTexts.detail}';
 
     return [
       Card(
+        key: const ValueKey('trend-weekly'),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Semantics(
             container: true,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(l10n.trendWeekTitle, style: titleStyle),
-                const SizedBox(height: 6),
-                if (wt != null) ...[
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        trendIcon(wt.delta),
-                        size: 20,
-                        color: cs.onSurfaceVariant,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          weeklyTrendTexts(wt, l10n).delta,
-                          style: theme.textTheme.bodyMedium
-                              ?.copyWith(fontWeight: FontWeight.w500),
+            label: wtLabel,
+            child: ExcludeSemantics(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(l10n.trendWeekTitle, style: titleStyle),
+                  const SizedBox(height: 6),
+                  if (wt != null && wtTexts != null) ...[
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          trendIcon(wt.delta),
+                          size: 20,
+                          color: cs.onSurfaceVariant,
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    weeklyTrendTexts(wt, l10n).detail,
-                    style: subStyle,
-                  ),
-                ] else
-                  Text(l10n.trendWeekTooLittle, style: subStyle),
-              ],
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            wtTexts.delta,
+                            style: theme.textTheme.bodyMedium
+                                ?.copyWith(fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      wtTexts.detail,
+                      style: subStyle,
+                    ),
+                  ] else
+                    Text(l10n.trendWeekTooLittle, style: subStyle),
+                ],
+              ),
             ),
           ),
         ),

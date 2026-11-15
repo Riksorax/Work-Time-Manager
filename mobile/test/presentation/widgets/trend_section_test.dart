@@ -152,6 +152,35 @@ void main() {
       expect(find.text('Arbeitszeit je Woche'), findsOneWidget);
     });
 
+    testWidgets('Screenreader: Wochen-Trend ist ein zusammenhängender Text',
+        (t) async {
+      final handle = t.ensureSemantics();
+      await _pump(t);
+      expect(
+          find.bySemanticsLabel('Wochen-Trend. +02:30 h gegenüber dem '
+              'Durchschnitt der letzten 4 Wochen. KW 45: 41:30 h · '
+              'Durchschnitt 39:00 h'),
+          findsOneWidget);
+      // Die Einzeltexte sind nicht zusätzlich eigene Screenreader-Knoten.
+      expect(find.bySemanticsLabel('KW 45: 41:30 h · Durchschnitt 39:00 h'),
+          findsNothing);
+      handle.dispose();
+    });
+
+    testWidgets('Screenreader: Wochen-Trend null (en)', (t) async {
+      final handle = t.ensureSemantics();
+      await _pump(t,
+          locale: 'en',
+          handler: (c) async =>
+              trendJson(c.date, c.granularity.apiValue, weeklyTrend: false));
+      expect(
+          find.bySemanticsLabel(
+              'Weekly trend. There is not enough data for the weekly trend '
+              'yet.'),
+          findsOneWidget);
+      handle.dispose();
+    });
+
     testWidgets('Laden: Ladeindikator mit Screenreader-Text', (t) async {
       final handle = t.ensureSemantics();
       await _pump(t, handler: _never);
