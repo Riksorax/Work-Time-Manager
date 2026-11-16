@@ -32,7 +32,9 @@ szenen:
   # Zustand. „bei“ hält das Bild vor dem Wisch so lange an, bis der Tipp auf das Wort fällt.
   - art: app
     folge: start_morgens
-    zoom: { auf: start_knopf, faktor: 1.15, dauer: 0.8 }
+    # Ohne eigene Kamerafahrt: Der echte Wisch ist die einzige Bewegung, die Kamera geht nur ruhig
+    # auf die volle Ansicht zurück.
+    zoom: { auf: timer_vor_start, faktor: 1.0, dauer: 0.5 }
     tipp: { auf: start_knopf, bei: 0.79 }
     saetze:
       - Morgens einmal auf Start tippen.

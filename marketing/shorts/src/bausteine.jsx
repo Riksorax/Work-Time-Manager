@@ -108,18 +108,20 @@ const Stern = () => (
  * App-Bild zu sehen ist.
  */
 const Tipp = ({ x, y, ab, farbe, dunkel }) => {
-  const t = useCurrentFrame() - ab + 4; // der Punkt erscheint kurz vor dem Tipp
-  if (t < 0 || t >= 9) return null;
+  // Der Punkt erscheint 10 Bilder vor dem Tipp (so lange steht die Seite nach dem Wisch ruhig)
+  // und drückt dann; so sieht man, wohin der Finger geht, bevor sich das Bild ändert.
+  const t = useCurrentFrame() - ab + 10;
+  if (t < 0 || t >= 15) return null;
   // Punkt und Ring sind kurz nach dem Tipp wieder weg: Danach ändert sich das Bild darunter
   // (der Knopf wechselt den Zustand und kann dabei verrutschen).
-  const punkt = interpolate(t, [0, 3, 7, 9], [0, 1, 1, 0], fest);
-  const druck = interpolate(t, [0, 2, 4, 8], [1.3, 1.15, 0.8, 1], fest);
-  const ring = interpolate(t, [4, 9], [0.7, 1.9], { ...fest, easing: aus });
+  const punkt = interpolate(t, [0, 4, 13, 15], [0, 1, 1, 0], fest);
+  const druck = interpolate(t, [0, 5, 8, 10, 14], [1.35, 1.15, 1.15, 0.8, 1], fest);
+  const ring = interpolate(t, [10, 15], [0.7, 1.9], { ...fest, easing: aus });
   const r = 75;
   const kreis = { position: 'absolute', left: x - r, top: y - r, width: 2 * r, height: 2 * r, borderRadius: '50%', boxSizing: 'border-box' };
   return (
     <>
-      <div style={{ ...kreis, border: `10px solid ${farbe}`, boxShadow: `0 0 0 3px ${dunkel}, inset 0 0 0 3px ${dunkel}`, transform: `scale(${ring})`, opacity: interpolate(t, [3.9, 4, 7, 9], [0, 0.95, 0.75, 0], fest) }} />
+      <div style={{ ...kreis, border: `10px solid ${farbe}`, boxShadow: `0 0 0 3px ${dunkel}, inset 0 0 0 3px ${dunkel}`, transform: `scale(${ring})`, opacity: interpolate(t, [9.9, 10, 13, 15], [0, 0.95, 0.75, 0], fest) }} />
       <div style={{ ...kreis, background: 'rgba(13,71,161,.6)', border: '7px solid #fff', boxShadow: `0 0 0 4px ${dunkel}, 0 8px 26px rgba(0,0,0,.5)`, transform: `scale(${druck})`, opacity: punkt }} />
     </>
   );
@@ -200,13 +202,13 @@ export const AppSzene = ({ szene, vorher, erste, marke, texte, bilder }) => {
         </div>
       </AbsoluteFill>
       {/* Aufhänger: leichte neutrale Abdunklung, die App bleibt erkennbar; die Frage steht auf einer Platte. */}
-      {frage > 0 && <AbsoluteFill style={{ background: '#000', opacity: 0.2 * frage * interpolate(bild, [0, 6], [0.4, 1], fest) }} />}
+      {frage > 0 && <AbsoluteFill style={{ background: '#000', opacity: 0.2 * frage }} />}
       {frage > 0 && (
         <div
           style={{ position: 'absolute', left: PLATTE.links, width: PLATTE.breite, top: flaeche.oben, height: flaeche.unten - flaeche.oben, display: 'flex', flexDirection: 'column', justifyContent: { oben: 'flex-start', mitte: 'center', unten: 'flex-end' }[flaeche.anker] }}
         >
           <div
-            style={{ ...platte, padding: '36px 36px 44px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', opacity: frage * interpolate(bild, [0, 5], [0, 1], fest), transform: `translateY(${(1 - frageHerein) * 110 + (1 - frage) * 40}px) scale(${0.92 + 0.08 * frageHerein + 0.02 * interpolate(bild, [9, ende], [0, 1], fest)})` }}
+            style={{ ...platte, padding: '36px 36px 44px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', opacity: frage, transform: `translateY(${(1 - frageHerein) * 30 + (1 - frage) * 40}px) scale(${0.97 + 0.03 * frageHerein + 0.02 * interpolate(bild, [9, ende], [0, 1], fest)})` }}
           >
             <Marke farben={marke.akzent} abstand={36} breite={interpolate(bild, [3, 16], [40, 160], { ...fest, easing: aus })} />
             <div style={{ fontSize: aufhaengerSchrift(szene.aufhaenger), fontWeight: 700, lineHeight: 1.14, textWrap: 'balance' }}>{szene.aufhaenger}</div>
