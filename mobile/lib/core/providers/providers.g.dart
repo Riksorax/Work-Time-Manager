@@ -861,7 +861,7 @@ final class OvertimeRepositoryProvider extends $FunctionalProvider<
 }
 
 String _$overtimeRepositoryHash() =>
-    r'90083d8e68d3fe9421241d48ced57f08dc652192';
+    r'd45cb4f06f4abf81a872edcb28f5d71aa452124b';
 
 /// `null`, wenn kein Nutzer eingeloggt ist - anders als [WorkRepository]/
 /// [OvertimeRepository] ohne Local-Fallback, da Wochen-Reflexionen ein

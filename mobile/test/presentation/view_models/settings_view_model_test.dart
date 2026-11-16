@@ -7,6 +7,7 @@ import 'package:flutter_work_time/core/providers/providers.dart';
 import 'package:flutter_work_time/core/providers/settings_sync_provider.dart';
 import 'package:flutter_work_time/core/utils/api_errors.dart';
 import 'package:flutter_work_time/domain/entities/bundesland.dart';
+import 'package:flutter_work_time/domain/entities/overtime_freshness.dart';
 import 'package:flutter_work_time/domain/repositories/overtime_repository.dart';
 import 'package:flutter_work_time/domain/repositories/settings_repository.dart';
 import 'package:flutter_work_time/presentation/state/leave_balance_state.dart';
@@ -37,6 +38,7 @@ void main() {
     when(overtime.ensureOvertimeLoaded())
         .thenAnswer((_) async => Duration.zero);
     when(overtime.ensureLastUpdateLoaded()).thenAnswer((_) async => null);
+    when(overtime.overtimeFreshness).thenReturn(OvertimeFreshness.current);
     when(settings.getTargetWeeklyHours()).thenReturn(40);
     when(settings.getWorkdays()).thenReturn([1, 2, 3, 4, 5]);
     when(settings.getNotificationsEnabled()).thenReturn(false);
@@ -75,7 +77,7 @@ void main() {
 
   test(
       'Laden ohne angemeldeten Nutzer (beim Abmelden): kein Fehlerzustand, '
-      'der Auth-Wechsel lädt neu', () async {
+      'lokale Einstellungen mit unbekanntem Saldo (#573)', () async {
     when(overtime.ensureOvertimeLoaded())
         .thenThrow(const NotSignedInException('getOvertime'));
 
@@ -83,7 +85,9 @@ void main() {
 
     final state = container.read(settingsViewModelProvider);
     expect(state.hasError, isFalse);
-    expect(state.isLoading, isTrue);
+    expect(state.requireValue.overtimeBalance, isNull);
+    expect(state.requireValue.overtimeFreshness, OvertimeFreshness.unknown);
+    expect(state.requireValue.settings.vacationDaysPerYear, 28);
   });
 
   test('anderer Ladefehler bleibt ein Fehlerzustand', () async {

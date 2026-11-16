@@ -7,6 +7,8 @@ import 'dart:async' as _i4;
 
 import 'package:flutter_work_time/domain/entities/app_theme_mode.dart' as _i3;
 import 'package:flutter_work_time/domain/entities/bundesland.dart' as _i6;
+import 'package:flutter_work_time/domain/entities/overtime_freshness.dart'
+    as _i8;
 import 'package:flutter_work_time/domain/repositories/overtime_repository.dart'
     as _i7;
 import 'package:flutter_work_time/domain/repositories/settings_repository.dart'
@@ -479,6 +481,12 @@ class MockOvertimeRepository extends _i1.Mock
   MockOvertimeRepository() {
     _i1.throwOnMissingStub(this);
   }
+
+  @override
+  _i8.OvertimeFreshness get overtimeFreshness => (super.noSuchMethod(
+        Invocation.getter(#overtimeFreshness),
+        returnValue: _i8.OvertimeFreshness.current,
+      ) as _i8.OvertimeFreshness);
 
   @override
   Duration getOvertime() => (super.noSuchMethod(

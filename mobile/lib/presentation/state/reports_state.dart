@@ -1,9 +1,23 @@
 import 'package:equatable/equatable.dart';
+import '../../domain/entities/overtime_freshness.dart';
 import '../../domain/entities/work_entry_entity.dart';
 import 'monthly_report_state.dart';
 import 'weekly_report_state.dart';
 
 enum ReportType { daily, weekly, monthly }
+
+/// Die Einträge des Monats ließen sich nicht laden (#573). Angemeldet kommen
+/// sie nur über die API; ohne Netz gibt es keine Einträge und damit auch keine
+/// lokal berechneten Werte.
+enum ReportsLoadFailure {
+  none,
+
+  /// Erwartbarer Netzwerkfehler (`isTransientNetworkError`): „Keine Verbindung“.
+  offline,
+
+  /// Anderer Fehler: allgemeine Meldung.
+  failed,
+}
 
 class ReportsState extends Equatable {
   final bool isLoading;
@@ -29,6 +43,14 @@ class ReportsState extends Equatable {
   final Set<DateTime> selectedDates;
   final bool multiSelectMode;
 
+  /// Ladefehler der Monatseinträge (#573); die Oberfläche zeigt dann einen
+  /// Hinweis mit „Erneut versuchen“ statt Nullwerten.
+  final ReportsLoadFailure loadFailure;
+
+  /// Herkunft der Monats-Gesamtüberstunden (#573): `cached`/`unknown`, solange
+  /// sie lokal aus dem gemerkten Saldo stammen; `current` nach der API-Antwort.
+  final OvertimeFreshness overtimeFreshness;
+
   const ReportsState({
     this.isLoading = false,
     required this.focusedDay,
@@ -43,6 +65,8 @@ class ReportsState extends Equatable {
     this.monthlyReportState = MonthlyReportState.initial,
     this.selectedDates = const {},
     this.multiSelectMode = false,
+    this.loadFailure = ReportsLoadFailure.none,
+    this.overtimeFreshness = OvertimeFreshness.current,
   });
 
   /// Startzustand für den lokalen Tag [today] (aus `todayProvider`, #387).
@@ -72,6 +96,8 @@ class ReportsState extends Equatable {
     MonthlyReportState? monthlyReportState,
     Set<DateTime>? selectedDates,
     bool? multiSelectMode,
+    ReportsLoadFailure? loadFailure,
+    OvertimeFreshness? overtimeFreshness,
   }) {
     return ReportsState(
       isLoading: isLoading ?? this.isLoading,
@@ -87,6 +113,8 @@ class ReportsState extends Equatable {
       monthlyReportState: monthlyReportState ?? this.monthlyReportState,
       selectedDates: selectedDates ?? this.selectedDates,
       multiSelectMode: multiSelectMode ?? this.multiSelectMode,
+      loadFailure: loadFailure ?? this.loadFailure,
+      overtimeFreshness: overtimeFreshness ?? this.overtimeFreshness,
     );
   }
 
@@ -105,6 +133,8 @@ class ReportsState extends Equatable {
         monthlyReportState,
         selectedDates,
         multiSelectMode,
+        loadFailure,
+        overtimeFreshness,
       ];
 }
 

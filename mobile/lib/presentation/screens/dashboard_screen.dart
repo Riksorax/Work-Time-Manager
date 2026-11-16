@@ -6,6 +6,7 @@ import '../../core/providers/clock_provider.dart';
 import '../../core/providers/providers.dart' show workLocationHistoryProvider;
 import '../../core/utils/time_format.dart';
 import '../../domain/entities/break_entity.dart';
+import '../../domain/entities/overtime_freshness.dart';
 import '../../domain/entities/work_entry_entity.dart';
 import '../../domain/services/break_calculator_service.dart';
 import '../../domain/utils/break_duration.dart';
@@ -17,7 +18,10 @@ import '../view_models/dashboard_view_model.dart';
 import '../view_models/settings_view_model.dart';
 import '../view_models/timer_action_view_model.dart';
 import '../widgets/assistant_query_sheet.dart';
+import '../state/dashboard_state.dart';
 import '../widgets/common/dashboard_save_feedback.dart';
+import '../widgets/common/load_failure_notice.dart';
+import '../widgets/common/overtime_freshness_hint.dart';
 import '../widgets/common/responsive_center.dart';
 import '../widgets/edit_break_modal.dart';
 import '../widgets/holiday_banner.dart';
@@ -94,7 +98,11 @@ class DashboardScreen extends ConsumerWidget {
     final workEntry = dashboardState.workEntry;
     // Eine Schreibaktion läuft (#413): Schreib-Eingaben sind deaktiviert, der
     // VM-Guard verwirft weitere Aufrufe ohnehin still.
-    final isSaving = dashboardState.isSaving;
+    // Heutiger Tag nicht ladbar (#573): Hinweis oben, alle Eingaben gesperrt
+    // wie während einer Schreibaktion, statt erst beim Tippen zu scheitern.
+    final loadFailure = dashboardState.loadFailure;
+    final loadFailed = loadFailure != DashboardLoadFailure.none;
+    final isSaving = dashboardState.isSaving || loadFailed;
     final settings = ref.watch(settingsViewModelProvider).value?.settings;
     final use24HourFormat = settings?.use24HourFormat ?? true;
     // Dashboard-Anzeige (#526): wirkt nur hier, nicht im Bearbeiten-Dialog
@@ -146,24 +154,43 @@ class DashboardScreen extends ConsumerWidget {
           final timerDisplay = Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                _formatDuration(netDuration),
-                style: Theme.of(context).textTheme.displayLarge,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                l10n.grossAttendance(_formatDuration(grossDuration)),
-                style: Theme.of(context).textTheme.titleMedium,
-                textAlign: TextAlign.center,
-              ),
+              // Ohne geladenen Tag ist die Zeit unbekannt: „—“ statt
+              // 00:00:00 (ein laufender Eintrag sähe sonst verloren aus).
+              if (loadFailed)
+                Center(
+                  child: UnknownOvertimeValue(
+                      style: Theme.of(context).textTheme.displayLarge),
+                )
+              else ...[
+                Text(
+                  _formatDuration(netDuration),
+                  style: Theme.of(context).textTheme.displayLarge,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  l10n.grossAttendance(_formatDuration(grossDuration)),
+                  style: Theme.of(context).textTheme.titleMedium,
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ],
           );
 
           final overtimeStats = Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildOvertime(context, totalOvertime, l10n.overtimeTotalLabel),
+              // Ohne Netz: zuletzt bekannter Saldo mit Hinweis, unbekannt als
+              // Strich (#573).
+              if ((loadFailed ||
+                      dashboardState.overtimeFreshness ==
+                          OvertimeFreshness.unknown) &&
+                  dashboardState.totalOvertime == null)
+                _buildUnknownOvertime(context, l10n.overtimeTotalLabel)
+              else
+                _buildOvertime(context, totalOvertime, l10n.overtimeTotalLabel),
+              OvertimeFreshnessHint(
+                  freshness: dashboardState.overtimeFreshness),
               const SizedBox(height: 16),
               _buildOvertime(context, dashboardState.dailyOvertime,
                   l10n.overtimeTodayLabel),
@@ -280,6 +307,7 @@ class DashboardScreen extends ConsumerWidget {
                   ? Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        if (loadFailed) _loadNotice(context, ref, loadFailure),
                         const HolidayBanner(),
                         const OpenEntryBanner(),
                         Row(
@@ -313,6 +341,7 @@ class DashboardScreen extends ConsumerWidget {
                   : Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        if (loadFailed) _loadNotice(context, ref, loadFailure),
                         const HolidayBanner(),
                         const OpenEntryBanner(),
                         timerDisplay,
@@ -329,6 +358,30 @@ class DashboardScreen extends ConsumerWidget {
           );
         },
       ),
+    );
+  }
+
+  /// Kompakter Hinweis, wenn der heutige Tag nicht ladbar ist (#573).
+  Widget _loadNotice(
+      BuildContext context, WidgetRef ref, DashboardLoadFailure failure) {
+    final l10n = AppLocalizations.of(context);
+    final offline = failure == DashboardLoadFailure.offline;
+    return LoadFailureNotice(
+      compact: true,
+      offline: offline,
+      message:
+          offline ? l10n.dashboardOfflineText : l10n.dashboardLoadErrorText,
+      onRetry: () => ref.read(dashboardViewModelProvider.notifier).retryLoad(),
+    );
+  }
+
+  Widget _buildUnknownOvertime(BuildContext context, String title) {
+    return Column(
+      children: [
+        Text(title, style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 4),
+        UnknownOvertimeValue(style: Theme.of(context).textTheme.headlineMedium),
+      ],
     );
   }
 
@@ -410,7 +463,9 @@ class DashboardScreen extends ConsumerWidget {
   Widget _buildBreaksSection(BuildContext context, WidgetRef ref,
       List<BreakEntity> breaks, bool use24HourFormat) {
     final dashboardViewModel = ref.read(dashboardViewModelProvider.notifier);
-    final isSaving = ref.watch(dashboardViewModelProvider).isSaving;
+    final state = ref.watch(dashboardViewModelProvider);
+    final isSaving =
+        state.isSaving || state.loadFailure != DashboardLoadFailure.none;
     final l10n = AppLocalizations.of(context);
     // Läuft eine Pause, baut der 1-s-Timer des Dashboards die Liste neu auf: die Dauer zählt mit.
     final now = ref.read(clockProvider)();

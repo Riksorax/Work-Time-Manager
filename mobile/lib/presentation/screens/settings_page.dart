@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../domain/entities/overtime_freshness.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -27,6 +28,8 @@ import '../widgets/edit_workdays_modal.dart';
 import '../widgets/leave_balance_card.dart';
 import '../widgets/notification_settings_dialog.dart';
 import '../widgets/pin_setup_dialog.dart';
+import '../widgets/common/load_failure_notice.dart';
+import '../widgets/common/overtime_freshness_hint.dart';
 import '../widgets/common/responsive_center.dart';
 import '../widgets/work_profile_switcher.dart';
 import 'app_info_page.dart';
@@ -49,7 +52,19 @@ class SettingsPage extends ConsumerWidget {
       ),
       body: settingsValue.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text(l10n.errorPrefix('$err'))),
+        // Unerwarteter Ladefehler (#573): verständliche Meldung mit „Erneut
+        // versuchen“ statt des Ausnahmetexts (ohne Netz bleibt der Zustand
+        // `data`, siehe SettingsViewModel).
+        error: (_, __) => Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: LoadFailureNotice(
+              message: l10n.errorLoadingSettings,
+              onRetry: () =>
+                  ref.read(settingsViewModelProvider.notifier).reload(),
+            ),
+          ),
+        ),
         data: (settingsState) {
           final settings = settingsState.settings;
 
@@ -135,8 +150,11 @@ class SettingsPage extends ConsumerWidget {
             ),
             const Divider(height: 1),
             const SizedBox(height: 16),
-            _buildOvertimeBalance(context, settingsState.overtimeBalance,
-                settingsState.lastOvertimeUpdate),
+            _buildOvertimeBalance(
+                context,
+                settingsState.overtimeBalance,
+                settingsState.lastOvertimeUpdate,
+                settingsState.overtimeFreshness),
             const SizedBox(height: 16),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -546,17 +564,30 @@ class SettingsPage extends ConsumerWidget {
     }
   }
 
-  Widget _buildOvertimeBalance(
-      BuildContext context, Duration overtimeBalance, DateTime? lastUpdate) {
-    final bool isNegative = overtimeBalance.isNegative;
-    final Duration absDuration = overtimeBalance.abs();
-
-    String twoDigits(int n) => n.toString().padLeft(2, '0');
-    final hours = twoDigits(absDuration.inHours);
-    final minutes = twoDigits(absDuration.inMinutes.remainder(60));
-    final sign = isNegative ? '-' : '+';
-    final formattedOvertime = '$sign$hours:$minutes';
+  /// Gleitzeit-Saldo; [overtimeBalance] `null` = unbekannt (ohne Netz und
+  /// ohne gemerkten Stand, #573): Strich statt „+00:00“, darunter der Hinweis.
+  Widget _buildOvertimeBalance(BuildContext context, Duration? overtimeBalance,
+      DateTime? lastUpdate, OvertimeFreshness freshness) {
     final l10n = AppLocalizations.of(context);
+    final Widget value;
+    if (overtimeBalance == null) {
+      value = UnknownOvertimeValue(
+          style: Theme.of(context).textTheme.headlineMedium);
+    } else {
+      final bool isNegative = overtimeBalance.isNegative;
+      final Duration absDuration = overtimeBalance.abs();
+
+      String twoDigits(int n) => n.toString().padLeft(2, '0');
+      final hours = twoDigits(absDuration.inHours);
+      final minutes = twoDigits(absDuration.inMinutes.remainder(60));
+      final sign = isNegative ? '-' : '+';
+      value = Text(
+        '$sign$hours:$minutes',
+        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+              color: isNegative ? Colors.red : Colors.green,
+            ),
+      );
+    }
 
     return Column(
       children: [
@@ -565,12 +596,11 @@ class SettingsPage extends ConsumerWidget {
           style: Theme.of(context).textTheme.titleMedium,
         ),
         const SizedBox(height: 4),
-        Text(
-          formattedOvertime,
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                color: isNegative ? Colors.red : Colors.green,
-              ),
-        ),
+        value,
+        OvertimeFreshnessHint(
+            freshness: overtimeBalance == null
+                ? OvertimeFreshness.unknown
+                : freshness),
         if (lastUpdate != null && lastUpdate.isAfter(DateTime(2000))) ...[
           const SizedBox(height: 4),
           Text(
