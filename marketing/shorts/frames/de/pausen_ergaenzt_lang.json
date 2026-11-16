@@ -1,12 +1,12 @@
 {
   "fps": 30,
-  "bilder": 285,
+  "bilder": 307,
   "marken": {
-    "wisch_hoch": 107,
-    "tipp": 142,
-    "beendet": 148,
-    "wisch_karten": 152,
-    "ergaenzt": 164
+    "wisch_hoch": 129,
+    "tipp": 164,
+    "beendet": 170,
+    "wisch_karten": 174,
+    "ergaenzt": 186
   },
   "ausschnitte": {
     "timer_brutto": {

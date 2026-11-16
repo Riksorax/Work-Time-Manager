@@ -29,9 +29,9 @@ szenen:
     # (beide 09:38, also keine Pause) und „Überstunden Gesamt“ bleiben über der Platte frei; die
     # Platte beginnt in der Lücke darunter.
     zoom: { auf: timer_bis_gesamt, faktor: 1.0 }
-    aufhaenger: "Du hast über 9 Stunden\ngearbeitet, ohne Pause.\nUnd jetzt?"
+    aufhaenger: "Über 9 Stunden gearbeitet.\nKeine Pause eingetragen.\nUnd jetzt?"
     saetze:
-      - Du hast über 9 Stunden gearbeitet, ohne Pause. Und jetzt?
+      - Du hast über 9 Stunden gearbeitet. Keine Pause eingetragen. Und jetzt?
 
   - art: app
     folge: pausen_ergaenzt_lang

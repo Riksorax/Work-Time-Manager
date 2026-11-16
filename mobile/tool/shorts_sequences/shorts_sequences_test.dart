@@ -743,16 +743,16 @@ void main() {
   // freie Fläche, dort steht die Seite bis zum Ende.
   testWidgets('pausen_ergaenzt_lang',
       timeout: const Timeout(Duration(minutes: 30)), (t) async {
-    // Abgestimmt auf den Ton des Videos: der Finger setzt bei Bild 142 auf
+    // Abgestimmt auf den Ton des Videos: der Finger setzt bei Bild 164 auf
     // („Beenden“ im zweiten Satz).
-    const idle = 107; // 3,6 s ruhig am Seitenanfang
+    const idle = 129; // 4,3 s ruhig am Seitenanfang
     const swipe = 13; // Finger zieht 0,43 s
     const settle = 21; // Ausschwingen und Ruhe bis zum Tipp (0,7 s)
     const rest = 9; // davon mindestens 0,3 s ohne jede Bewegung
     const press = 6; // Finger 0,2 s auf dem Knopf
     const show = 4; // die Karten erscheinen, die Seite steht kurz (0,13 s)
     const drag = 12; // Finger zieht die Karten 0,4 s hoch
-    const length = 285; // 9,5 s
+    const length = 307; // 10,2 s
     const leadIn = Duration(seconds: 2);
     const freeTop = 0.15;
     const freeBottom = 0.75;
