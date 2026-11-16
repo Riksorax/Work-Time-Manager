@@ -7,9 +7,11 @@ import '../../core/providers/app_lock_provider.dart';
 import '../../core/providers/providers.dart' as core_providers;
 import '../../core/providers/settings_sync_provider.dart';
 import '../../core/utils/api_errors.dart';
+import '../../core/utils/logger.dart';
 import '../../core/utils/timezone_utils.dart';
 import '../../domain/entities/app_theme_mode.dart';
 import '../../domain/entities/bundesland.dart';
+import '../../domain/entities/overtime_freshness.dart';
 import '../../domain/entities/settings_entity.dart';
 import '../../domain/repositories/settings_repository.dart';
 import '../../domain/utils/leave_balance_utils.dart';
@@ -177,6 +179,13 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
     return const AsyncValue.loading();
   }
 
+  /// Lädt die Einstellungen neu, z. B. über „Erneut versuchen“ nach einem
+  /// Ladefehler (#573).
+  Future<void> reload() async {
+    state = const AsyncValue.loading();
+    await _init();
+  }
+
   Future<void> _init() async {
     try {
       final overtimeRepository =
@@ -184,9 +193,25 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
       final settingsRepository =
           ref.read(core_providers.settingsRepositoryProvider);
 
-      final overtimeBalance = await overtimeRepository.ensureOvertimeLoaded();
-      final lastOvertimeUpdate =
-          await overtimeRepository.ensureLastUpdateLoaded();
+      // Der Saldo kommt angemeldet vom Server, alles andere liegt lokal.
+      // Ohne Netz (erwartbarer Ladefehler) liefert das Repository den
+      // zuletzt bekannten Stand; gibt es keinen, ist der Saldo unbekannt.
+      // Die übrigen Einstellungen scheitern daran nie (#573).
+      Duration? overtimeBalance;
+      DateTime? lastOvertimeUpdate;
+      OvertimeFreshness overtimeFreshness;
+      try {
+        overtimeBalance = await overtimeRepository.ensureOvertimeLoaded();
+        lastOvertimeUpdate = await overtimeRepository.ensureLastUpdateLoaded();
+        overtimeFreshness = overtimeRepository.overtimeFreshness;
+      } catch (e) {
+        if (!isExpectedLoadFailure(e)) rethrow;
+        logger.i('[SettingsViewModel] Gleitzeit-Saldo nicht ladbar '
+            '(${errorLabel(e)}), Einstellungen lokal');
+        overtimeBalance = null;
+        lastOvertimeUpdate = null;
+        overtimeFreshness = OvertimeFreshness.unknown;
+      }
       final weeklyTargetHours = settingsRepository.getTargetWeeklyHours();
       final workdays = settingsRepository.getWorkdays();
       final notificationsEnabled = settingsRepository.getNotificationsEnabled();
@@ -243,14 +268,15 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
         settings: settings,
         overtimeBalance: overtimeBalance,
         lastOvertimeUpdate: lastOvertimeUpdate,
+        overtimeFreshness: overtimeFreshness,
       ));
     } catch (e, st) {
-      // Beim Abmelden oder Löschen des Kontos ist der Nutzer in Firebase schon
-      // weg, die Repositories zeigen aber noch auf die API. Der Auth-Status
-      // zieht gleich nach und lädt neu; bis dahin den bisherigen Zustand
-      // behalten. Sonst blitzt in den Einstellungen kurz „Fehler:
-      // [firebase_auth/no-current-user] …“ auf.
-      if (e is NotSignedInException) return;
+      // Unerwarteter Fehler: Fehlerzustand (die Oberfläche zeigt eine
+      // verständliche Meldung mit „Erneut versuchen“, nie den Ausnahmetext).
+      // Keine Nutzerdaten loggen.
+      logger.e(
+          '[SettingsViewModel] Einstellungen nicht geladen (${errorLabel(e)})',
+          stackTrace: st);
       state = AsyncValue.error(e, st);
     }
   }
@@ -262,6 +288,7 @@ class SettingsViewModel extends Notifier<AsyncValue<SettingsState>> {
     state = state.whenData((value) => value.copyWith(
           overtimeBalance: overtime,
           lastOvertimeUpdate: now,
+          overtimeFreshness: OvertimeFreshness.current,
         ));
     ref
         .read(dashboardViewModelProvider.notifier)

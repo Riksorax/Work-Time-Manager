@@ -1,3 +1,4 @@
+import '../../domain/entities/overtime_freshness.dart';
 import '../../domain/repositories/overtime_repository.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
 
@@ -25,6 +26,10 @@ class HybridOvertimeRepositoryImpl implements OvertimeRepository {
       return _localRepository;
     }
   }
+
+  @override
+  OvertimeFreshness get overtimeFreshness =>
+      _activeRepository.overtimeFreshness;
 
   @override
   Duration getOvertime() {

@@ -1,6 +1,14 @@
+import '../entities/overtime_freshness.dart';
+
 /// Das Repository für die Verwaltung des Überstundensaldos.
 /// Es entkoppelt die Anwendungslogik von der konkreten Datenspeicherung.
 abstract class OvertimeRepository {
+  /// Herkunft des zuletzt gelieferten Saldos (#573): angemeldet ohne Netz
+  /// [OvertimeFreshness.cached] (zuletzt bekannter Stand) bzw.
+  /// [OvertimeFreshness.unknown] (kein gemerkter Stand). Lokale
+  /// Implementierungen sind immer [OvertimeFreshness.current].
+  OvertimeFreshness get overtimeFreshness => OvertimeFreshness.current;
+
   /// Ruft den aktuellen Überstundensaldo ab (synchron, aus Cache).
   Duration getOvertime();
 

@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:flutter_work_time/core/providers/providers.dart';
+import 'package:flutter_work_time/domain/entities/overtime_freshness.dart';
 import 'package:flutter_work_time/domain/entities/work_entry_entity.dart';
 import 'package:flutter_work_time/domain/repositories/overtime_repository.dart';
 import 'package:flutter_work_time/domain/repositories/settings_repository.dart';
@@ -58,6 +59,8 @@ void main() {
         .thenAnswer((_) async => Duration.zero);
     when(mockOvertimeRepository.ensureLastUpdateLoaded())
         .thenAnswer((_) async => null);
+    when(mockOvertimeRepository.overtimeFreshness)
+        .thenReturn(OvertimeFreshness.current);
     when(mockGetOvertime()).thenReturn(Duration.zero);
   });
 

@@ -55,7 +55,6 @@
   "minutesLabel": "Minutes (0-59)",
   "minutesHelperText": "Leave empty for 0 minutes",
   "resetToZeroAction": "Reset to 0",
-  "errorPrefix": "Error: {error}",
   "weeklyTargetHoursTitle": "Target weekly hours",
   "weeklyTargetHoursValue": "{hours} h/week",
   "workdaysTitle": "Workdays",
@@ -193,7 +192,7 @@
   "breakValueLabel": "Break: {value}",
   "manualAdjustmentLabel": "Manual adjustment: {value}",
   "overtimeValueLabel": "Overtime: {value}",
-  "errorLoadingSettings": "Error loading settings: {error}",
+  "errorLoadingSettings": "Settings could not be loaded.",
   "loginRequiredWeekly": "Sign-in required for weekly reports",
   "weeklyReportsFeatureTitle": "Weekly reports",
   "weeklyReportsFeatureText": "Keep a full overview of your weekly overtime and work patterns.",
@@ -550,5 +549,13 @@
   "yearCompareNoDiff": "no difference",
   "yearCompareNoPrevious": "There are no entries for {previous}, so there is no difference.",
   "yearCompareNote": "Overtime of the year, not your flexitime balance. Your current settings apply to both years.",
-  "yearlyReportLoadError": "The yearly report could not be loaded."
+  "yearlyReportLoadError": "The yearly report could not be loaded.",
+  "reportsOfflineTitle": "No connection",
+  "reportsOfflineText": "When you're signed in, the app loads your reports from the server. Check your internet connection and try again.",
+  "reportsLoadErrorText": "The reports could not be loaded.",
+  "overtimeStaleHint": "Offline – last synced value",
+  "overtimeUnknownHint": "Offline – no value saved yet",
+  "overtimeUnknownValue": "unknown",
+  "dashboardOfflineText": "Today's times can't be loaded right now.",
+  "dashboardLoadErrorText": "The dashboard could not be loaded."
 }

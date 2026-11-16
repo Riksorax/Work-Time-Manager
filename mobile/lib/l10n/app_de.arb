@@ -227,11 +227,6 @@
   "@resetToZeroAction": {
     "description": "Beschriftung des Buttons zum Zurücksetzen der Gleitzeit-Bilanz auf 0."
   },
-  "errorPrefix": "Fehler: {error}",
-  "@errorPrefix": {
-    "description": "Generisches Fehler-Präfix vor einer Fehlermeldung.",
-    "placeholders": { "error": { "type": "String" } }
-  },
   "weeklyTargetHoursTitle": "Soll-Arbeitsstunden",
   "@weeklyTargetHoursTitle": {
     "description": "Titel der Einstellungszeile für die wöchentliche Soll-Arbeitszeit."
@@ -727,10 +722,9 @@
     "description": "Anzeige der Überstunden eines Eintrags.",
     "placeholders": { "value": { "type": "String" } }
   },
-  "errorLoadingSettings": "Fehler beim Laden der Einstellungen: {error}",
+  "errorLoadingSettings": "Die Einstellungen konnten nicht geladen werden.",
   "@errorLoadingSettings": {
-    "description": "Fehlermeldung, wenn die Einstellungen für einen Bericht nicht geladen werden konnten.",
-    "placeholders": { "error": { "type": "String" } }
+    "description": "Meldung, wenn die Einstellungen unerwartet nicht geladen werden konnten (Berichte, Einstellungsseite; #573: ohne Ausnahmetext, darunter „Erneut versuchen“)."
   },
   "loginRequiredWeekly": "Anmeldung erforderlich für Wochenberichte",
   "@loginRequiredWeekly": { "description": "Hinweis, dass Wochenberichte eine Anmeldung erfordern." },
@@ -1562,5 +1556,21 @@
   "yearCompareNote": "Überstunden des Jahres, nicht dein Gleitzeit-Saldo. Für beide Jahre gelten deine heutigen Einstellungen.",
   "@yearCompareNote": {"description": "Hinweis unter der Vergleichskarte (#530)."},
   "yearlyReportLoadError": "Der Jahresbericht konnte nicht geladen werden.",
-  "@yearlyReportLoadError": {"description": "Fehlerzustand des Jahres-Tabs (#530), wenn die Jahreswerte vom Backend nicht geladen werden konnten; darunter „Erneut versuchen“."}
+  "@yearlyReportLoadError": {"description": "Fehlerzustand des Jahres-Tabs (#530), wenn die Jahreswerte vom Backend nicht geladen werden konnten; darunter „Erneut versuchen“."},
+  "reportsOfflineTitle": "Keine Verbindung",
+  "@reportsOfflineTitle": {"description": "Titel in Täglich/Wöchentlich/Monatlich, wenn die Einträge angemeldet ohne Netz nicht geladen werden konnten (#573); darunter „Erneut versuchen“."},
+  "reportsOfflineText": "Angemeldet lädt die App deine Berichte vom Server. Prüfe deine Internetverbindung und versuche es erneut.",
+  "@reportsOfflineText": {"description": "Erklärung unter „Keine Verbindung“ in den Berichten (#573)."},
+  "reportsLoadErrorText": "Die Berichte konnten nicht geladen werden.",
+  "@reportsLoadErrorText": {"description": "Meldung in Täglich/Wöchentlich/Monatlich bei einem unerwarteten Ladefehler der Einträge (#573); darunter „Erneut versuchen“."},
+  "overtimeStaleHint": "Offline – Stand vom letzten Abruf",
+  "@overtimeStaleHint": {"description": "Kleiner Hinweis unter dem Gleitzeit-Saldo (Dashboard, Einstellungen, Monatsbericht), wenn ohne Netz der zuletzt bekannte Stand gezeigt wird (#573)."},
+  "overtimeUnknownHint": "Offline – noch kein Stand gespeichert",
+  "@overtimeUnknownHint": {"description": "Kleiner Hinweis unter dem Gleitzeit-Saldo, wenn ohne Netz kein gemerkter Stand vorliegt; statt des Werts steht „—“ (#573)."},
+  "overtimeUnknownValue": "unbekannt",
+  "@overtimeUnknownValue": {"description": "Screenreader-Text für den Strich „—“, wenn ein Wert ohne Netz unbekannt ist (Gleitzeit-Saldo, Zeit im Dashboard; #573)."},
+  "dashboardOfflineText": "Die heutigen Zeiten können gerade nicht geladen werden.",
+  "@dashboardOfflineText": {"description": "Satz unter „Keine Verbindung“ im Dashboard, wenn der heutige Eintrag angemeldet ohne Netz nicht geladen werden kann (#573); daneben „Erneut versuchen“."},
+  "dashboardLoadErrorText": "Das Dashboard konnte nicht geladen werden.",
+  "@dashboardLoadErrorText": {"description": "Hinweis im Dashboard bei einem unerwarteten Ladefehler des heutigen Eintrags (#573); daneben „Erneut versuchen“."}
 }
