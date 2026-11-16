@@ -179,6 +179,9 @@ export const AppSzene = ({ szene, vorher, erste, marke, texte, bilder }) => {
   // Schnitt auf eine neue Quelle: Das Bild setzt sich kurz von etwas größer auf seine Lage (deckt also immer).
   const herein = useHerein(erste || szene.fortsetzung, 7);
   const text = interpolate(bild, [1, 9], [0, 1], { ...fest, easing: aus });
+  // Premium-Kennzeichen: Setzt die Szene eine Premium-Szene mit derselben Quelle fort (kein Schnitt),
+  // steht es schon und blendet nicht neu ein.
+  const kennzeichen = szene.fortsetzung && vorher?.premium && !vorher.einblendung === !szene.einblendung ? 1 : text;
 
   const ende = szene.aufhaenger ? Math.min(szene.frames, szene.aufhaengerBis + 3) : 0;
   const frage = szene.aufhaenger ? interpolate(bild, [ende - 5, ende], [1, 0], fest) : 0;
@@ -232,7 +235,7 @@ export const AppSzene = ({ szene, vorher, erste, marke, texte, bilder }) => {
       )}
       {szene.premium && (
         <div
-          style={{ position: 'absolute', right: PLATTE.links, top: szene.einblendung ? EINBLENDUNG.oben + EINBLENDUNG.hoehe + 20 : FREI.oben + RAND, height: 76, padding: '0 34px 0 26px', borderRadius: 38, display: 'flex', alignItems: 'center', background: verlauf(marke.akzent), fontSize: 42, fontWeight: 700, boxShadow: '0 0 0 4px rgba(255,255,255,.9), 0 10px 28px rgba(0,0,0,.35)', opacity: text, transform: `scale(${0.8 + 0.2 * text})` }}
+          style={{ position: 'absolute', right: PLATTE.links, top: szene.einblendung ? EINBLENDUNG.oben + EINBLENDUNG.hoehe + 20 : FREI.oben + RAND, height: 76, padding: '0 34px 0 26px', borderRadius: 38, display: 'flex', alignItems: 'center', background: verlauf(marke.akzent), fontSize: 42, fontWeight: 700, boxShadow: '0 0 0 4px rgba(255,255,255,.9), 0 10px 28px rgba(0,0,0,.35)', opacity: kennzeichen, transform: `scale(${0.8 + 0.2 * kennzeichen})` }}
         >
           <Stern />
           {texte.premium}

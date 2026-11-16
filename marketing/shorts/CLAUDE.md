@@ -138,6 +138,8 @@ sagen, dass es so geprüft wurde.
 | Frage „diese Woche … im Büro“, Antwort war der Gesamtsaldo, im Bild war der Home-Office-Schalter an (`ueberstunden`, erster Entwurf) | Kriterien 4 und 5: Frage aus dem lesen, was im Bild steht |
 | Rote Zahl ohne Beschriftung schaute unter der Platte hervor (`ueberstunden`, erster Entwurf) | Kriterium 6 |
 | Schnitt vom Dashboard in den Insights-Tab ohne sichtbaren Wechsel (`ueberstunden`, erster Entwurf) | Kriterium 7: eine Seite je Video |
+| Platte war höher als gerechnet und schnitt die Beschriftung „Startzeit“ an (`ueberstunden`) | Höhe ≈ 130 px (Innenabstand und Marke) + 3,42 × Schrift bei drei Zeilen (120 px Schrift: 540 px; 92 px: 444 px); sie wächst während der Frage von Skala 0,97 auf 1,02 um ihre Mitte. Beide Lagen müssen in die Lücken passen; über die Länge der längsten Zeile (`aufhaengerSchrift`) die Höhe wählen, über `hoehe` des `zoom`-Ausschnitts die Lage. Ränder mit Standbildern nachmessen |
+| Premium-Kennzeichen lag nach dem Wisch über einer Textzeile und blendete beim Szenenwechsel neu ein (`prognose`) | Wischweg so wählen, dass neben dem Kennzeichen (y 280 bis 356, rechts) nur eine kurze Überschrift steht; bei Fortsetzung derselben Folge bleibt es jetzt stehen |
 
 ## Bekannte Grenzen und offene Punkte
 
@@ -147,7 +149,8 @@ sagen, dass es so geprüft wurde.
 - **Zeile „Mit Gleitzeit-Bilanz auf 0 …“** steht direkt unter der Feierabend-Zeile und zeigt oft eine Uhrzeit in
   der Vergangenheit. Das Schild rahmt beide Zeilen; die zweite nie eigens hervorheben.
 - **Platte des Aufhängers** ist zu 88 % deckend: Die verdeckten App-Zeilen scheinen schwach durch (in
-  `pausen` „Heutige Überstunden +00:48“ und die Feierabend-Zeilen). Eine Änderung in `src/bausteine.jsx` träfe
+  `pausen` „Heutige Überstunden +00:48“ und die Feierabend-Zeilen, in `ueberstunden` „+19:35“ hinter der ersten
+  Zeile der Frage, in `prognose` die Texte der Prognose-Karte). Eine Änderung in `src/bausteine.jsx` träfe
   alle Videos.
 - **Ergebnis vor dem Schild:** Zeigt die App das Ergebnis erst nach einem Tipp, ist es zwischen Tipp und Schild
   kurz ohne Hervorhebung zu sehen (in `pausen` rund 1,3 s, davon 0,5 s halb in der Schutzzone, bis der Wisch die
@@ -164,38 +167,3 @@ sagen, dass es so geprüft wurde.
   neu prüfen.
 - **Reichweite:** Ob ein Video Installationen bringt, zeigt erst das Posten. Mehrere Varianten derselben Aussage
   sind erwünscht; welche läuft, entscheidet der Inhaber nach den Zahlen der Plattform.
-
-## Offene Nachbesserung: `ueberstunden` (Entwurf auf dem Branch `shorts-ueberstunden`)
-
-Dieser Abschnitt ist ein Arbeitsauftrag und wird gelöscht, sobald er erledigt ist. Der erste Entwurf (16,6 s,
-Bildfolge `ueberstunden_trend`, Dashboard aus `feierabend_mittags`) ist technisch sauber (Format, Lautheit, Pausen,
-Ton, Werte aus der App), verstößt aber gegen die Kriterien 1, 2, 3, 4, 6 und 7. Nachbesserung: **in zwei Videos
-teilen.**
-
-**Video A `ueberstunden` (Free): Wie viele Überstunden hast du?**
-- Eine Seite: Dashboard. Antwort ist „Überstunden Gesamt“ (Beschriftung der App als kleine Zeile des Schilds).
-- Neuer Zustand statt `feierabend_mittags`: ein Zeitpunkt, an dem „Heutige Überstunden“ nicht rot ist (z. B. die
-  Lage aus `pause_ergaenzt` vor dem Beenden: 16:40 Uhr, Timer läuft, „Heutige Überstunden“ +00:48 grün,
-  „Überstunden Gesamt“ +19:35). Dafür eine eigene kurze Folge ohne Geste aufnehmen (Vorbild `feierabend_mittags`,
-  7 s, Timer tickt) und die Werte ablesen.
-- Frage passend zum Bild und zum Gesamtsaldo, mit direkter Anrede, drei feste Zeilen, z. B. „Du machst öfter
-  länger. / Wie viele Überstunden / hast du wirklich?“ Kein „diese Woche“, kein „im Büro“ (der Home-Office-Schalter
-  und die Orte stehen im Bild).
-- Die Platte liegt über „Überstunden Gesamt“ und beginnt und endet in einer Lücke (gemessene Lücken stehen in der
-  Tabelle „Lehren“); prüfen, dass darunter keine Zahl ohne Beschriftung hervorschaut.
-- Sätze: Frage, ein Satz mit der Zahl („Dein Gleitzeitkonto zählt mit. Aktuell +19:35 Stunden.“ ist in Ordnung und
-  liegt schon vertont vor), Schlusskarte. Ziel 11 bis 13 s.
-
-**Video B `prognose` (Premium): Wo stehst du am Jahresende?**
-- Eine Seite: Berichte, Reiter „Insights“. Die Folge `ueberstunden_trend` kann bleiben (echter Wisch zur Karte
-  „Prognose zum Jahresende“); sie beginnt dann das Video, die Frage liegt als Platte über dem ersten Bild, das Schild
-  „Prognose zum Jahresende / +21:31 h“ kommt nach der Marke `prognose`. Falls die 0,5 s Ruhe am Anfang für die Frage
-  nicht reichen: den Anfang der Folge verlängern (Konstante `idle`), nicht das Bild anhalten.
-- `premium: true` in jeder App-Szene; der Satz nennt Premium („Mit Premium siehst du …“).
-- Frage z. B. „Du sammelst Überstunden. / Wo stehst du / am Jahresende?“ Die Antwort ist eine Hochrechnung: Der Satz
-  sagt „Prognose“ oder „voraussichtlich“, nie „du hast“.
-- Ziel 11 bis 14 s.
-
-Für beide: Prüfliste und harte Kriterien vollständig abarbeiten und je Kriterium berichten. Die fertigen Dateien
-unter `out/` nicht einchecken (auf dem Entwurfs-Branch liegen `out/ueberstunden.mp4` und die Tondateien nur zur
-Sicherung; vor einem Merge wieder entfernen: `git rm -r --cached marketing/shorts/out`).

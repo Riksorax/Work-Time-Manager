@@ -1,42 +1,48 @@
-# Video 3 (#575, S4): Gleitzeitkonto (Free) und Prognose zum Jahresende (Premium).
-# Aussagen geprüft gegen fastlane/metadata/android/de-DE/full_description.txt:
-# - Free: „Die App zeigt deine Arbeitszeit, die voraussichtliche Feierabendzeit und dein
-#   Überstunden-Saldo live an.“ und „Dein Gleitzeitkonto vergleicht Soll- und Ist-Stunden.“
-# - Premium (Abschnitt „Berichte, Trend & Prognose (Premium)“): „Prognose deines
-#   Überstunden-Saldos zum Jahresende“.
-# Die Folge feierabend_mittags zeigt den laufenden Tag mit „Überstunden Gesamt +19:35“,
-# ueberstunden_trend wischt im Tab „Insights“ auf die Karte „Prognose zum Jahresende“
-# („Voraussichtlich +21:31 h zum 31.12.2026“).
+# Video 3a (#575, S4): Gleitzeitkonto (Free). Eine Aussage: die App zählt deine Überstunden mit.
+# Aussage geprüft gegen fastlane/metadata/android/de-DE/full_description.txt: „Die App zeigt deine
+# Arbeitszeit, die voraussichtliche Feierabendzeit und dein Überstunden-Saldo live an.“ und
+# „Dein Gleitzeitkonto vergleicht Soll- und Ist-Stunden.“
+# Die Folge ueberstunden_nachmittags zeigt den laufenden Tag des Store-Datensatzes (abgelesen mit
+# SHORTS_SEQUENCE_TRACE): 16:40 Uhr, Beginn 07:52, Mittagspause 30 Minuten, Timer 08:18:00 bis
+# 08:18:08, Brutto 08:48:0x, „Überstunden Gesamt“ +19:35, „Heutige Überstunden“ +00:18 (grün),
+# „Voraussichtlicher Feierabend (±0): 16:22 Uhr“, Home-Office-Schalter an, Orte Büro und Kunde.
+# Die Frage behauptet deshalb weder Büro noch einen Zeitraum: Antwort ist der Gesamtsaldo.
 id: ueberstunden
-titel: Wie viele Überstunden hast du wirklich?
+titel: Du machst oft Überstunden – wie viele hast du insgesamt?
 
 ausschnitte:
-  # Timer und Brutto-Zeile: Die Platte mit der Frage sitzt direkt darunter (ab y 495 px) und
-  # verdeckt „Überstunden Gesamt +19:35“ (y 510 bis 667 px) sowie „Heutige Überstunden“.
-  timer_bis_brutto: { x: 0.1, y: 0.0965, breite: 0.8, hoehe: 0.130 }
+  # Timer bis in die Brutto-Zeile; nur Ziel der stehenden Kamera, ohne Rahmen. Die Platte mit der
+  # Frage beginnt 60 px darunter. Sie ist mit Marke und drei Zeilen (120 px Schrift) rund 540 px
+  # hoch und wächst während der Frage von Skala 0,97 auf 1,02 (Mitte y 731): Sie reicht dabei von
+  # y 456–469 bis y 993–1007 und liegt immer in den Lücken unter der Brutto-Zeile (bis y 434) und
+  # über dem Startzeit-Feld (Beschriftung ab y 1030). Sie deckt „Überstunden Gesamt“, „Heutige
+  # Überstunden“ und beide Feierabend-Zeilen ganz (Lage gemessen in ueberstunden_nachmittags.json).
+  ueber_platte: { x: 0.1, y: 0.0965, breite: 0.8, hoehe: 0.1124 }
+  # „Überstunden Gesamt“ mit Wert (ueberstunden_gesamt der Folge: x 0,3135 bis 0,6869), links und
+  # rechts je 20 px breiter, damit der Rahmen die Beschriftung nicht berührt. Höhe wie gemessen:
+  # Davon hängt die Lage des Schilds ab.
+  gesamt_rahmen: { x: 0.295, y: 0.2657, breite: 0.4105, hoehe: 0.0815 }
 
 szenen:
   - art: app
-    folge: feierabend_mittags
-    zoom: { auf: timer_bis_brutto, faktor: 1.0 }
-    aufhaenger: "Du warst diese Woche\nlänger im Büro.\nWie viele Überstunden hast du?"
+    folge: ueberstunden_nachmittags
+    # Faktor 1: Die Kamera steht, damit die Platte die Antwort vom ersten Bild an verdeckt;
+    # Bewegung kommt vom tickenden Timer. Die Platte ist kürzer als der Satz (drei Zeilen mit
+    # großer Schrift, damit sie bis zur Lücke über dem Startzeit-Feld reicht).
+    zoom: { auf: ueber_platte, faktor: 1.0 }
+    aufhaenger: "Du machst oft\nÜberstunden.\nWie viele?"
     saetze:
-      - Du warst diese Woche länger im Büro. Wie viele Überstunden hast du?
+      - Du machst oft Überstunden. Aber wie viele hast du eigentlich insgesamt?
 
   - art: app
-    folge: feierabend_mittags
-    zoom: { auf: ueberstunden_gesamt, faktor: 1.0 }
-    hervorhebung: { auf: ueberstunden_gesamt, zeile: Überstunden Gesamt, wert: "+19:35", bei: 0.12 }
+    folge: ueberstunden_nachmittags
+    # Faktor 1.25: Das Schild (36 px unter „Überstunden Gesamt“, 396 px hoch) endet dann in der
+    # Lücke über dem Startzeit-Feld und deckt „Heutige Überstunden +00:18“ (grün) und die
+    # Feierabend-Zeilen ganz; bei Faktor 1 schnitte es das Startzeit-Feld.
+    zoom: { auf: ueberstunden_gesamt, faktor: 1.25, dauer: 0.6 }
+    hervorhebung: { auf: gesamt_rahmen, zeile: Überstunden Gesamt, wert: "+19:35", bei: 0.12 }
     saetze:
-      - Dein Gleitzeitkonto zählt mit. Aktuell +19:35 Stunden.
-
-  - art: app
-    folge: ueberstunden_trend
-    premium: true
-    zoom: { auf: prognose_karte, faktor: 1.0 }
-    hervorhebung: { auf: prognose_karte, zeile: Prognose zum Jahresende, wert: "+21:31 h", nach: prognose, bei: 0 }
-    saetze:
-      - Mit Premium siehst du auch deine Prognose fürs Jahresende. +21:31 Stunden.
+      - Dein Gleitzeitkonto zählt jeden Tag mit. Aktuell +19:35 Stunden.
 
   - art: schluss
     saetze:

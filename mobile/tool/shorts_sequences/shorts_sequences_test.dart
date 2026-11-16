@@ -961,14 +961,139 @@ void main() {
     await rec.app.close();
   });
 
-  // Berichte -> Insights: beginnt oben, ruhiger Wisch nach unten zu
-  // Wochen-Trend und „Prognose zum Jahresende“ (Premium).
+  // Video `ueberstunden` (Gleitzeitkonto, Free): der laufende Tag der
+  // Store-Bilder um 16:40 Uhr (Beginn 7:52 Uhr, Mittagspause 30 Minuten,
+  // Timer läuft, „Heutige Überstunden“ im Plus). Die Seite steht 9 s ruhig
+  // am Seitenanfang, nur Timer und Brutto-Zeile zählen. Keine Geste.
+  testWidgets('ueberstunden_nachmittags',
+      timeout: const Timeout(Duration(minutes: 30)), (t) async {
+    const length = 9 * _fps; // 9 s
+    // Wie in `feierabend_mittags`: 2 s vom Öffnen bis zum ersten Bild, damit
+    // die Schläge des Timers auf die vollen Sekunden der Folge fallen.
+    const leadIn = Duration(seconds: 2);
+
+    final today = storeTodayEntry(storeTextsDe);
+    final rec = _Recorder(t, 'ueberstunden_nachmittags', startsAt: storeNow);
+    final watch = t.binding.clock.stopwatch()..start();
+    rec.app = await openAppScreen(t, const ScreenMotif(), _locale,
+        clock: rec.clock, entries: shortsEntries(today));
+    final opened = watch.elapsed;
+    expect(opened, lessThan(leadIn));
+    await t.pump(leadIn - opened);
+    final l10n = l10nOf(t);
+
+    final stopButton = find.widgetWithText(
+        ElevatedButton, l10n.stopTimeTracking,
+        skipOffstage: true);
+    expect(stopButton, findsOneWidget);
+    final scroll = Scrollable.of(t.element(stopButton)).position;
+
+    /// Anwesenheit und Netto-Arbeitszeit [seconds] nach Beginn der Folge,
+    /// aus dem Eintrag gerechnet (eine abgeschlossene Pause).
+    expect(today.breaks, hasLength(1));
+    final lunch =
+        today.breaks.single.end!.difference(today.breaks.single.start);
+    Duration gross(int seconds) =>
+        storeNow.difference(today.workStart!) + Duration(seconds: seconds);
+    Duration net(int seconds) => gross(seconds) - lunch;
+    // Der Tag liegt über dem Soll: „Heutige Überstunden“ ist nicht rot.
+    expect(net(0), greaterThan(const Duration(hours: 8)));
+
+    Rect field(String label) => t.getRect(find
+        .ancestor(of: find.text(label), matching: find.byType(InputDecorator))
+        .first);
+    Map<String, Rect> measure(int seconds) => {
+          'timer': _textRect(t, find.text(_hms(net(seconds)))),
+          'brutto_zeile': _textRect(
+              t, find.text(l10n.grossAttendance(_hms(gross(seconds))))),
+          'ueberstunden_gesamt': _overtimeRect(t, l10n.overtimeTotalLabel),
+          'heutige_ueberstunden': _overtimeRect(t, l10n.overtimeTodayLabel),
+          'feierabend_zeile':
+              _textRect(t, find.textContaining(l10n.expectedEndTime(''))),
+          'gleitzeit_null_zeile': _textRect(
+              t, find.textContaining(l10n.expectedEndTimeWithBalance(''))),
+          'startzeit_feld': field(l10n.startTimeLabel),
+          'endzeit_feld': field(l10n.endTimeLabel),
+        };
+
+    /// Was die App gerade anzeigt (für den Sprechtext des Videos): alle
+    /// Texte des Dashboards von oben nach unten, dazu die Zeitfelder.
+    void trace(String when) {
+      if (!_trace) return;
+      final dashboard = find.byType(DashboardScreen);
+      final texts = t
+          .widgetList<RichText>(
+              find.descendant(of: dashboard, matching: find.byType(RichText)))
+          .map((r) => r.text.toPlainText())
+          .where((s) => s.trim().isNotEmpty && s.codeUnitAt(0) < 0xE000)
+          .join(' | ');
+      final fields = t
+          .widgetList<EditableText>(find.descendant(
+              of: dashboard, matching: find.byType(EditableText)))
+          .map((e) => e.controller.text)
+          .join(' | ');
+      final colors = [
+        for (final label in [l10n.overtimeTotalLabel, l10n.overtimeTodayLabel])
+          '$label: ${t.widgetList<Text>(find.descendant(of: find.ancestor(of: find.text(label), matching: find.byType(Column)).first, matching: find.byType(Text))).map((w) => '${w.data} ${w.style?.color}').join(', ')}',
+      ];
+      debugPrint('$when (Uhr ${rec.clock()}): $texts || Felder: $fields '
+          '|| Farben: $colors');
+    }
+
+    expect(scroll.pixels, 0);
+    final regions = measure(0);
+    trace('Bild 0');
+    if (_trace) {
+      for (final e in regions.entries) {
+        debugPrint('${e.key}: y ${(e.value.top * screenDpr).round()} bis '
+            '${(e.value.bottom * screenDpr).round()} px');
+      }
+    }
+    for (var i = 0; i < length; i++) {
+      await rec.record(1);
+      final frame = rec.frames - 1;
+      expect(find.byType(SnackBar), findsNothing, reason: 'Bild $frame');
+      expect(t.takeException(), isNull, reason: 'Bild $frame');
+      expect(scroll.pixels, 0, reason: 'Bild $frame');
+      // Zu jeder vollen Sekunde zeigen Timer und Brutto-Zeile genau diese
+      // Sekunde, dazwischen die davor.
+      final seconds = frame ~/ _fps;
+      expect(find.text(_hms(net(seconds))), findsOneWidget,
+          reason: 'Bild $frame');
+      expect(
+          find.text(l10n.grossAttendance(_hms(gross(seconds)))), findsOneWidget,
+          reason: 'Bild $frame');
+    }
+    expect(rec.frames, length);
+    expect(rec.clock(), storeNow.add(_timeOf(length - 1)));
+    expect(stopButton, findsOneWidget);
+    expect(measure((length - 1) ~/ _fps), regions);
+    trace('Bild ${length - 1}');
+
+    await rec.finish(marks: const {}, regions: regions);
+    await rec.app.close();
+  });
+
+  // Video `prognose` (Premium): Berichte, Reiter „Insights“. Die Seite steht
+  // am Anfang, solange die Frage läuft (die Platte des Videos deckt dabei die
+  // Karte „Prognose zum Jahresende“); dann holt ein ruhiger Wisch ohne
+  // Ausschwingen die Karte nach oben, dort steht die Seite bis zum Ende.
   testWidgets('ueberstunden_trend',
       timeout: const Timeout(Duration(minutes: 30)), (t) async {
-    const idle = 15; // 0,5 s ruhig am Seitenanfang
-    const drag = 18; // Finger zieht 0,6 s weich nach unten
-    const length = 150; // 5,0 s
-    const trendSwipeDistance = 175.0;
+    // Abgestimmt auf den Ton des Videos: Der Finger setzt mit dem Ende der
+    // Frage auf (Bild 79, die Platte blendet bis Bild 82 aus).
+    const idle = 79; // 2,6 s ruhig am Seitenanfang
+    const drag = 18; // Finger zieht 0,6 s weich nach oben
+    const length = 265; // 8,8 s
+    // Weg des Fingers: Die Seite scrollt um die Berührungsschwelle weniger
+    // (rund 18 logische Pixel). Danach steht die Überschrift „Wochen-Trend“
+    // auf Höhe des Premium-Kennzeichens im Video (rechts daneben ist die
+    // Zeile leer), die Zeilen der Karte darunter.
+    const trendSwipeDistance = 138.0;
+    const videoTop = 250 / 1920;
+    const videoBottom = 1500 / 1920;
+    // Premium-Kennzeichen des Videos: y 280 bis 356 von 1920, rechts.
+    const badgeBottom = 356 / 1920;
 
     final rec = _Recorder(t, 'ueberstunden_trend', startsAt: shortsAfterLunch);
     rec.app = await openAppScreen(t, const ScreenMotif(tab: 4), _locale,
@@ -977,9 +1102,36 @@ void main() {
     final regions = <String, Rect>{};
     final marks = <String, int>{};
 
+    final weeklyCard = find.byKey(const ValueKey('trend-weekly'));
     final forecastCard = find.byKey(const ValueKey('trend-forecast'));
+    final chartCard = find
+        .ancestor(
+            of: find.text(l10n.trendWorkedTitleWeek),
+            matching: find.byType(Card))
+        .first;
+    expect(weeklyCard, findsOneWidget);
     expect(forecastCard, findsOneWidget);
     final scroll = Scrollable.of(t.element(forecastCard)).position;
+
+    /// Texte einer Karte, von oben nach unten (für den Sprechtext).
+    String texts(Finder card) => t
+        .widgetList<RichText>(
+            find.descendant(of: card, matching: find.byType(RichText)))
+        .map((r) => r.text.toPlainText())
+        .where((s) => s.trim().isNotEmpty && s.codeUnitAt(0) < 0xE000)
+        .join(' | ');
+    void trace(String when) {
+      if (!_trace) return;
+      String px(Rect r) => 'y ${(r.top * screenDpr).round()} bis '
+          '${(r.bottom * screenDpr).round()} px';
+      debugPrint('$when (Uhr ${rec.clock()}, Scroll '
+          '${scroll.pixels.toStringAsFixed(1)}/'
+          '${scroll.maxScrollExtent.toStringAsFixed(1)}): '
+          'Wochen-Trend ${px(t.getRect(weeklyCard))}: ${texts(weeklyCard)} '
+          '|| Prognose ${px(t.getRect(forecastCard))}: '
+          '${texts(forecastCard)} || Diagramm ab '
+          '${px(t.getRect(chartCard))}');
+    }
 
     final positions = <double>[];
     Future<void> frame() async {
@@ -990,36 +1142,62 @@ void main() {
       expect(t.takeException(), isNull, reason: 'Bild ${rec.frames - 1}');
     }
 
+    // ── Seitenanfang: Lage der Karten im ersten Bild ───────────────────
     expect(scroll.pixels, 0);
+    regions['wochen_trend_oben'] = t.getRect(weeklyCard);
+    regions['prognose_karte_oben'] = t.getRect(forecastCard);
+    regions['diagramm_oben'] = t.getRect(chartCard);
+    trace('Bild 0');
     for (var i = 0; i < idle; i++) {
       await frame();
     }
+    expect(positions, everyElement(0.0));
 
+    // ── ruhiger Wisch: die Prognose-Karte rückt nach oben ──────────────
     marks['wisch'] = await _dragBy(
         t, rec, frame, _at(0.5, 0.7), -trendSwipeDistance,
         frames: drag, hold: 2);
     while (scroll.isScrollingNotifier.value || t.binding.hasScheduledFrame) {
+      expect(rec.frames - marks['wisch']!, lessThan(2 * _fps),
+          reason: 'Seite kommt nicht zur Ruhe');
       await frame();
     }
+    // Erstes Bild, ab dem die Seite an ihrer endgültigen Stelle steht.
     var settled = rec.frames - 1;
     while (settled > 0 && positions[settled - 1] == scroll.pixels) {
       settled--;
     }
     marks['prognose'] = settled;
+    trace('prognose');
 
     final cardRect = t.getRect(forecastCard);
-    final weekTitleRect = t.getRect(find.text(l10n.trendWeekTitle));
-    if (_trace) {
-      debugPrint(
-          'ueberstunden_trend: scroll=${scroll.pixels}/${scroll.maxScrollExtent}, '
-          'weekTitle=$weekTitleRect, forecastCard=$cardRect');
-    }
+    final cardPart = _fraction(cardRect);
+    expect(cardPart['y'], greaterThanOrEqualTo(videoTop));
+    expect(cardPart['y']! + cardPart['hoehe']!, lessThanOrEqualTo(videoBottom),
+        reason: 'Prognose-Karte liegt nicht in der freien Fläche des Videos');
     regions['prognose_karte'] = cardRect;
+    // Neben dem Premium-Kennzeichen steht nur die Überschrift „Wochen-Trend“
+    // (unter der Leiste der Reiter); alle Zeilen darunter beginnen erst unter
+    // dem Kennzeichen.
+    final weekTitle = _fraction(_textRect(t, find.text(l10n.trendWeekTitle)));
+    expect(weekTitle['y'], greaterThanOrEqualTo(videoTop));
+    for (final e in find
+        .descendant(of: weeklyCard, matching: find.byType(RichText))
+        .evaluate()) {
+      final text = (e.widget as RichText).text.toPlainText();
+      if (text == l10n.trendWeekTitle) continue;
+      expect(_fraction(_textRect(t, find.byWidget(e.widget)))['y'],
+          greaterThanOrEqualTo(badgeBottom),
+          reason: '„$text“ liegt unter dem Premium-Kennzeichen');
+    }
 
+    // ── die Seite steht bis zum Ende ───────────────────────────────────
     while (rec.frames < length) {
       await frame();
     }
     expect(positions.skip(settled), everyElement(positions[settled]));
+    expect(t.getRect(forecastCard), cardRect);
+    trace('Bild ${length - 1}');
 
     await rec.finish(marks: marks, regions: regions);
     await rec.app.close();
