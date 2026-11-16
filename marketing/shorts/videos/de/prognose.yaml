@@ -8,7 +8,7 @@
 # Woche (letzte 8 Wochen) · noch rund 7 Wochen“, „Hochrechnung aus deinen letzten Wochen. Geplanter
 # Urlaub und Feiertage sind nicht berücksichtigt.“ Der Satz sagt deshalb „voraussichtlich“.
 id: prognose
-titel: Du bist im Plus – wo stehst du dann am Jahresende?
+titel: Du hast gut 19 Überstunden – wo stehst du am Jahresende?
 
 ausschnitte:
   # Seitenanfang bis in die Karte „Wochen-Trend“; nur Ziel der stehenden Kamera, ohne Rahmen. Die
@@ -28,9 +28,9 @@ szenen:
     # Platte und Ton gleich. Die längste Zeile (17 Zeichen) bestimmt die Schrift und damit die Höhe
     # der Platte; mit 16 oder 18 Zeichen bliebe für die beiden Lücken kaum Spiel.
     zoom: { auf: bis_wochen_trend, faktor: 1.0 }
-    aufhaenger: "Du bist im Plus.\nWo stehst du dann\nam Jahresende?"
+    aufhaenger: "Du hast gut 19\nÜberstunden. Und\nam Jahresende?"
     saetze:
-      - Du bist im Plus. Wo stehst du dann am Jahresende?
+      - Du hast gut 19 Überstunden. Wo stehst du am Jahresende?
 
   - art: app
     folge: ueberstunden_trend

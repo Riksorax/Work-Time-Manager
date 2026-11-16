@@ -1081,10 +1081,10 @@ void main() {
   testWidgets('ueberstunden_trend',
       timeout: const Timeout(Duration(minutes: 30)), (t) async {
     // Abgestimmt auf den Ton des Videos: Der Finger setzt mit dem Ende der
-    // Frage auf (Bild 79, die Platte blendet bis Bild 82 aus).
-    const idle = 79; // 2,6 s ruhig am Seitenanfang
+    // Frage auf (Bild 97, die Platte blendet bis Bild 100 aus).
+    const idle = 97; // 3,2 s ruhig am Seitenanfang
     const drag = 18; // Finger zieht 0,6 s weich nach oben
-    const length = 265; // 8,8 s
+    const length = 283; // 9,4 s
     // Weg des Fingers: Die Seite scrollt um die Berührungsschwelle weniger
     // (rund 18 logische Pixel). Danach steht die Überschrift „Wochen-Trend“
     // auf Höhe des Premium-Kennzeichens im Video (rechts daneben ist die

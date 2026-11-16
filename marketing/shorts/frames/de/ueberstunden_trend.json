@@ -1,9 +1,9 @@
 {
   "fps": 30,
-  "bilder": 265,
+  "bilder": 283,
   "marken": {
-    "wisch": 79,
-    "prognose": 97
+    "wisch": 97,
+    "prognose": 115
   },
   "ausschnitte": {
     "wochen_trend_oben": {
