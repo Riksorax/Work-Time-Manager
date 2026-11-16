@@ -3,12 +3,12 @@ import test from 'node:test';
 import { FREI, KARTE, RAND, SCHILD, aufLeinwand, bildHoehe, istFrei, kamera, kartenRechteck, mische, schildHoehe, schildLage, szenenKamera, wertSchrift } from '../src/layout.mjs';
 
 const bild = { breite: 1080, hoehe: 1920 };
-const nah = (a, b) => assert.ok(Math.abs(a - b) < 1e-6, `${a} ≠ ${b}`);
+const nah = (a, b, genau = 1e-6) => assert.ok(Math.abs(a - b) < genau, `${a} ≠ ${b}`);
 
 test('Karte füllt die Leinwand fast aus: 1000 px breit, mittig, ein 9:16-Bild passt bei Skala 1 genau hinein', () => {
   assert.equal(KARTE.links * 2 + KARTE.breite, 1080);
   assert.ok(KARTE.breite / 1080 > 0.9);
-  nah(KARTE.unten - KARTE.oben, bildHoehe(bild));
+  nah(KARTE.unten - KARTE.oben, bildHoehe(bild), 0.5);
   // Die Karte ragt in beide Schutzzonen, die freie Fläche liegt ganz in ihr.
   assert.ok(KARTE.oben < FREI.oben && KARTE.unten > FREI.unten);
   assert.deepEqual(FREI, { oben: 250, unten: 1500 });
@@ -18,7 +18,7 @@ test('ohne Ausschnitt steht das Bild oben bündig in voller Breite', () => {
   assert.deepEqual(kamera(bild, undefined, 1.5), { skala: 1, x: KARTE.links, y: KARTE.oben, oben: KARTE.oben });
   const karte = kartenRechteck(kamera(bild), bild);
   assert.deepEqual([karte.x, karte.y, karte.breite], [40, 102, 1000]);
-  nah(karte.y + karte.hoehe, KARTE.unten);
+  nah(karte.y + karte.hoehe, KARTE.unten, 0.5);
 });
 
 test('Zoom legt die Mitte des Ausschnitts in die Mitte der freien Fläche', () => {

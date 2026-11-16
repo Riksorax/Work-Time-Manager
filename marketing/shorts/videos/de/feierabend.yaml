@@ -1,46 +1,38 @@
-# Video 1, Pilotvideo (#575, S3). Free-Funktionen: Start per Tipp, voraussichtlicher Feierabend,
-# Überstunden live, automatisch ergänzte Pause. Aussagen geprüft gegen
-# fastlane/metadata/android/de-DE/full_description.txt („Zeiterfassung mit einem Tippen“, „Pausen automatisch“).
+# Video 1, Pilotvideo (#575, S3). Eine Aussage: Start per Tipp, die App nennt sofort den
+# voraussichtlichen Feierabend. Aussagen geprüft gegen
+# fastlane/metadata/android/de-DE/full_description.txt („Zeiterfassung mit einem Tippen“).
+# Die Ausschnitte (start_knopf, timer, feierabend_zeile …) stehen in frames/de/start_morgens.json.
 id: feierabend
 titel: Wann ist Feierabend?
 
 ausschnitte:
-  start: { x: 0.08, y: 0.855, breite: 0.84, hoehe: 0.065 }
-  feierabend: { x: 0.1, y: 0.37, breite: 0.8, hoehe: 0.14 }
-  ueberstunden: { x: 0.1, y: 0.26, breite: 0.8, hoehe: 0.2 }
-  pause: { x: 0.08, y: 0.63, breite: 0.84, hoehe: 0.18 }
+  # Timer bis Feierabend-Zeile: Das zeigt die Kamera, während das Schild erscheint.
+  timer_bis_feierabend: { x: 0.1, y: 0.09, breite: 0.8, hoehe: 0.4 }
 
 szenen:
-  - art: aufhaenger
-    text: Wann hast du heute eigentlich Feierabend?
+  # Die App morgens vor dem Start, die Frage liegt darüber. Die Folge steht auf ihrem ersten Bild.
+  - art: app
+    folge: start_morgens
+    bis: 0
+    aufhaenger: Wann hast du heute eigentlich Feierabend?
     saetze:
       - Wann hast du heute eigentlich Feierabend?
 
+  # Kamera auf den Start-Knopf, Tipp, die App wechselt den Zustand.
   - art: app
-    bild: dashboard_vor_start.png
-    tipp: { auf: start, bei: 0.6 }
+    folge: start_morgens
+    zoom: { auf: start_knopf, faktor: 1.0, dauer: 0.5 }
+    tipp: { auf: start_knopf, bei: 0.6 }
     saetze:
-      - Morgens tippst du einmal auf Start.
+      - Morgens einmal auf Start tippen.
 
+  # Zurück auf Timer und Feierabend-Zeile, das Schild wächst aus der Zeile.
   - art: app
-    bild: dashboard_timer_laeuft.png
-    zoom: { auf: feierabend, faktor: 1.5 }
-    einblendung: Feierabend heute um 16:22 Uhr
+    folge: start_morgens
+    zoom: { auf: timer_bis_feierabend, faktor: 1.0, dauer: 0.5 }
+    hervorhebung: { auf: feierabend_zeile, zeile: Feierabend heute, wert: "16:22 Uhr", bei: 0.3 }
     saetze:
-      - Die App rechnet aus, wann du fertig bist. Heute um 16:22 Uhr.
-
-  - art: app
-    bild: dashboard_timer_laeuft.png
-    zoom: { auf: ueberstunden, faktor: 1.4 }
-    saetze:
-      - Bleibst du länger, siehst du deine Überstunden sofort.
-
-  - art: app
-    bild: stop_pause_ergaenzt.png
-    zoom: { auf: pause, faktor: 1.3 }
-    einblendung: Pause automatisch ergänzt
-    saetze:
-      - Und vergessene Pausen ergänzt die App von selbst.
+      - Die App sagt dir sofort, wann du fertig bist. Heute um 16:22 Uhr.
 
   - art: schluss
     saetze:

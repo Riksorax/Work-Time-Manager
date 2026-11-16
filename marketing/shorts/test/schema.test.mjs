@@ -46,8 +46,8 @@ test('unbekanntes Feld im Kopf, in der Szene, im Zoom und im Ausschnitt', () => 
   szene.szenen[1].zoomm = {};
   fehlerVon(szene, /Szene 2 \(app\): unbekanntes Feld „zoomm“/);
   const zoom = gueltig();
-  zoom.szenen[1].zoom.dauer = 1;
-  fehlerVon(zoom, /zoom: unbekanntes Feld „dauer“/);
+  zoom.szenen[1].zoom.tempo = 1;
+  fehlerVon(zoom, /zoom: unbekanntes Feld „tempo“/);
   const ausschnitt = gueltig();
   ausschnitt.ausschnitte.knopf.z = 1;
   fehlerVon(ausschnitt, /Ausschnitt „knopf“: unbekanntes Feld „z“/);
