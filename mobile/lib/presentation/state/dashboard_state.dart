@@ -1,6 +1,20 @@
 import 'package:equatable/equatable.dart';
 
+import '../../domain/entities/overtime_freshness.dart';
 import '../../domain/entities/work_entry_entity.dart';
+
+/// Der heutige Eintrag ließ sich nicht laden (#573). Angemeldet kommt er nur
+/// über die API; das Dashboard zeigt dann einen Hinweis mit „Erneut
+/// versuchen“ und sperrt die Eingaben, bis der Tag geladen ist.
+enum DashboardLoadFailure {
+  none,
+
+  /// Erwartbarer Netzwerkfehler: „Keine Verbindung“.
+  offline,
+
+  /// Anderer Fehler: „Das Dashboard konnte nicht geladen werden.“
+  failed,
+}
 
 class DashboardState extends Equatable {
   final WorkEntryEntity workEntry;
@@ -23,6 +37,14 @@ class DashboardState extends Equatable {
   /// Die UI deaktiviert dann die Schreib-Buttons.
   final bool isSaving;
 
+  /// Herkunft des Saldos in [totalOvertime] (#573): `cached` = ohne Netz der
+  /// zuletzt bekannte Stand, `unknown` = ohne Netz und ohne gemerkten Stand
+  /// ([totalOvertime] ist dann `null`).
+  final OvertimeFreshness overtimeFreshness;
+
+  /// Ladefehler des heutigen Tages (#573).
+  final DashboardLoadFailure loadFailure;
+
   const DashboardState({
     required this.workEntry,
     required this.elapsedTime,
@@ -36,6 +58,8 @@ class DashboardState extends Equatable {
     this.expectedEndTotalZero,
     this.isExtraDay = false,
     this.isSaving = false,
+    this.overtimeFreshness = OvertimeFreshness.current,
+    this.loadFailure = DashboardLoadFailure.none,
   });
 
   /// [now] ist die Uhr (Default `DateTime.now()`); das ViewModel reicht
@@ -74,6 +98,8 @@ class DashboardState extends Equatable {
     DateTime? expectedEndTotalZero,
     bool? isExtraDay,
     bool? isSaving,
+    OvertimeFreshness? overtimeFreshness,
+    DashboardLoadFailure? loadFailure,
   }) {
     return DashboardState(
       workEntry: workEntry ?? this.workEntry,
@@ -88,6 +114,8 @@ class DashboardState extends Equatable {
       expectedEndTotalZero: expectedEndTotalZero ?? this.expectedEndTotalZero,
       isExtraDay: isExtraDay ?? this.isExtraDay,
       isSaving: isSaving ?? this.isSaving,
+      overtimeFreshness: overtimeFreshness ?? this.overtimeFreshness,
+      loadFailure: loadFailure ?? this.loadFailure,
     );
   }
 
@@ -105,5 +133,7 @@ class DashboardState extends Equatable {
         expectedEndTotalZero,
         isExtraDay,
         isSaving,
+        overtimeFreshness,
+        loadFailure,
       ];
 }

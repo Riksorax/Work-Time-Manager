@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_work_time/core/providers/providers.dart';
 import 'package:flutter_work_time/domain/entities/app_theme_mode.dart';
 import 'package:flutter_work_time/domain/entities/bundesland.dart';
+import 'package:flutter_work_time/domain/entities/overtime_freshness.dart';
 import 'package:flutter_work_time/domain/entities/work_entry_entity.dart';
 import 'package:flutter_work_time/domain/repositories/overtime_repository.dart';
 import 'package:flutter_work_time/domain/repositories/settings_repository.dart';
@@ -45,6 +46,9 @@ class _FakeWorkRepository implements WorkRepository {
 class _DelayedOvertimeRepository implements OvertimeRepository {
   Duration _overtime = Duration.zero;
   DateTime? _lastUpdate;
+
+  @override
+  OvertimeFreshness get overtimeFreshness => OvertimeFreshness.current;
 
   @override
   Duration getOvertime() => _overtime;

@@ -3,8 +3,10 @@
 // Do not manually edit this file.
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'dart:async' as _i3;
+import 'dart:async' as _i4;
 
+import 'package:flutter_work_time/domain/entities/overtime_freshness.dart'
+    as _i3;
 import 'package:flutter_work_time/domain/repositories/overtime_repository.dart'
     as _i2;
 import 'package:mockito/mockito.dart' as _i1;
@@ -44,6 +46,12 @@ class MockOvertimeRepository extends _i1.Mock
   }
 
   @override
+  _i3.OvertimeFreshness get overtimeFreshness => (super.noSuchMethod(
+        Invocation.getter(#overtimeFreshness),
+        returnValue: _i3.OvertimeFreshness.current,
+      ) as _i3.OvertimeFreshness);
+
+  @override
   Duration getOvertime() => (super.noSuchMethod(
         Invocation.method(
           #getOvertime,
@@ -59,7 +67,7 @@ class MockOvertimeRepository extends _i1.Mock
       ) as Duration);
 
   @override
-  _i3.Future<void> saveOvertime(
+  _i4.Future<void> saveOvertime(
     Duration? overtime, {
     bool? keepLastUpdated = false,
   }) =>
@@ -69,41 +77,41 @@ class MockOvertimeRepository extends _i1.Mock
           [overtime],
           {#keepLastUpdated: keepLastUpdated},
         ),
-        returnValue: _i3.Future<void>.value(),
-        returnValueForMissingStub: _i3.Future<void>.value(),
-      ) as _i3.Future<void>);
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
 
   @override
-  _i3.Future<void> saveLastUpdateDate(DateTime? date) => (super.noSuchMethod(
+  _i4.Future<void> saveLastUpdateDate(DateTime? date) => (super.noSuchMethod(
         Invocation.method(
           #saveLastUpdateDate,
           [date],
         ),
-        returnValue: _i3.Future<void>.value(),
-        returnValueForMissingStub: _i3.Future<void>.value(),
-      ) as _i3.Future<void>);
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
 
   @override
-  _i3.Future<Duration> ensureOvertimeLoaded() => (super.noSuchMethod(
+  _i4.Future<Duration> ensureOvertimeLoaded() => (super.noSuchMethod(
         Invocation.method(
           #ensureOvertimeLoaded,
           [],
         ),
-        returnValue: _i3.Future<Duration>.value(_FakeDuration_0(
+        returnValue: _i4.Future<Duration>.value(_FakeDuration_0(
           this,
           Invocation.method(
             #ensureOvertimeLoaded,
             [],
           ),
         )),
-      ) as _i3.Future<Duration>);
+      ) as _i4.Future<Duration>);
 
   @override
-  _i3.Future<DateTime?> ensureLastUpdateLoaded() => (super.noSuchMethod(
+  _i4.Future<DateTime?> ensureLastUpdateLoaded() => (super.noSuchMethod(
         Invocation.method(
           #ensureLastUpdateLoaded,
           [],
         ),
-        returnValue: _i3.Future<DateTime?>.value(),
-      ) as _i3.Future<DateTime?>);
+        returnValue: _i4.Future<DateTime?>.value(),
+      ) as _i4.Future<DateTime?>);
 }

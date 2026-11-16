@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter_work_time/domain/entities/overtime_freshness.dart';
 import 'package:flutter_work_time/domain/entities/work_entry_entity.dart';
 import 'package:flutter_work_time/domain/repositories/overtime_repository.dart';
 import 'package:flutter_work_time/domain/repositories/settings_repository.dart';
@@ -40,7 +41,8 @@ class FakeWorkRepository implements WorkRepository {
   /// Monate (`yyyy-MM`), deren Lesen fehlschlägt (#385).
   final Set<String> failMonths = {};
 
-  /// Fehler, den ein fehlschlagender Monats-Read wirft (Standard: generische Exception).
+  /// Fehler, den ein fehlschlagender Read (Tag oder Monat) wirft (Standard:
+  /// generische Exception).
   Object? readError;
   bool failReads = false;
   bool failSaves = false;
@@ -73,7 +75,7 @@ class FakeWorkRepository implements WorkRepository {
       pendingReads.add(c);
       await c.future;
     }
-    if (failReads) throw Exception('offline');
+    if (failReads) throw readError ?? Exception('offline');
     return store[key] ??
         WorkEntryEntity(
             id: key, date: DateTime(date.year, date.month, date.day));
@@ -170,6 +172,17 @@ class FakeOvertimeRepository implements OvertimeRepository {
   /// Wenn gesetzt, wirft `saveLastUpdateDate` (schreibt dann nichts, #412).
   bool failSaveLastUpdate = false;
 
+  /// Herkunft des Saldos (#573), z. B. `cached` für „ohne Netz, zuletzt
+  /// bekannter Stand“.
+  OvertimeFreshness freshness = OvertimeFreshness.current;
+
+  /// Wenn gesetzt, wirft `ensureOvertimeLoaded` genau diesen Fehler (#573,
+  /// z. B. ein Netzwerkfehler ohne gemerkten Saldo).
+  Object? loadError;
+
+  @override
+  OvertimeFreshness get overtimeFreshness => freshness;
+
   @override
   Duration getOvertime() => stored;
 
@@ -211,6 +224,8 @@ class FakeOvertimeRepository implements OvertimeRepository {
     final hold = holdOvertimeLoad;
     if (hold != null) await hold.future;
     if (failReads) throw Exception('offline');
+    final error = loadError;
+    if (error != null) throw error;
     return stored;
   }
 
