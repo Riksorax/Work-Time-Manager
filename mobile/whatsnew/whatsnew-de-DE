@@ -1,9 +1,6 @@
-Das ist neu in 1.9:
-• Arbeitsorte: mehrere Orte pro Tag, auf Wunsch im Dashboard
-• Trend: Arbeitszeit und Überstunden der letzten 12 Wochen oder Monate als Diagramm
-• Prognose deines Überstunden-Saldos zum Jahresende
-• Jahresvergleich mit dem Vorjahr
-• Urlaubs- und Krankheitsauswertung als PDF
-• Google Assistant: Überstunden, Resturlaub und Wochen-Trend abfragen
-• Berichte zeigen die Arbeitszeit ohne Pausen
-• Genauere Berechnung und mehr Stabilität
+Das ist neu in 1.9.1:
+• Ohne Internet zeigt die App jetzt einen klaren Hinweis „Keine Verbindung“ statt einer Fehlermeldung
+• Dein Überstunden-Saldo bleibt auch ohne Internet sichtbar (Stand vom letzten Abruf)
+• Mehr Stabilität
+
+Neu in 1.9: Arbeitsorte, Trend mit Diagrammen, Prognose zum Jahresende, Jahresvergleich, Urlaubs- und Krankheitsauswertung als PDF, Abfragen per Google Assistant
