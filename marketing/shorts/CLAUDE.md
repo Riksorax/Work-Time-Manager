@@ -36,6 +36,9 @@ zweite Form: Bedienung zeigen, mit echter Wischgeste und Tipp.
    als Kommentar an den Anfang der YAML schreiben.
 2. **Situation festlegen:** Welche Frage stellt sich jemand, und welche Stelle der App beantwortet sie? Gesucht ist
    ein krummer, alltäglicher Fall (später gekommen, lange Pause), nicht der glatte, den man im Kopf rechnet.
+   Enthält das Video eine Geste oder einen Tipp, zuerst nur den Ton erzeugen
+   (`python tts/synth.py videos/de/<id>.yaml`): Die Satzlängen aus `out/<id>/stimme/dauer.json` braucht man, um
+   Wisch und Tipp in der Folge auf das richtige Wort zu legen.
 3. **Bildfolge aus der App** in `mobile/tool/shorts_sequences/` ergänzen (Vorbild `feierabend_mittags`): Eintrag
    und feste Uhr in `shorts_data.dart`, 30 Bilder/s, Uhr läuft je Bild weiter. **Den angezeigten Wert ablesen,
    nicht ausrechnen** (`--dart-define=SHORTS_SEQUENCE_TRACE=true` gibt die Texte aus) und im Code nachsehen, wie
@@ -83,6 +86,9 @@ sagen, dass es so geprüft wurde.
 | Tipp auf einen Knopf am unteren Bildrand | echte Wischgeste davor, Tipp in der freien Mitte |
 | Die Antwort war vor dem Schild schon lesbar | Platte liegt über der Antwortzeile, Kamera steht dabei still (`zoom.faktor: 1.0`) |
 | Frage brach mitten im Satz um | feste Zeilen mit `\n` im `aufhaenger` |
+| Platte schnitt halbe App-Zeilen oben und unten an (`pausen`) | `zoom`-Ausschnitt so wählen, dass die Platte (ca. 350 px bei drei Zeilen) in einer Lücke der App beginnt und endet; am Standbild in voller Größe prüfen |
+| Wisch begann auf einem Schalter, die Zeile leuchtete auf (`pausen`) | Wischgesten auf einer leeren Stelle beginnen (neben einer Überschrift) |
+| Schild ließ links ein „P“ der Überschrift stehen (`pausen`, Zoom 1.08) | Zoom nur so weit, dass das Schild (x 70 bis 1010) die Nachbarzeilen ganz deckt |
 
 ## Bekannte Grenzen und offene Punkte
 
@@ -91,6 +97,12 @@ sagen, dass es so geprüft wurde.
   `mobile/tool/shared/screen_renderer.dart`, damit die Store-Screenshots gleich bleiben.
 - **Zeile „Mit Gleitzeit-Bilanz auf 0 …“** steht direkt unter der Feierabend-Zeile und zeigt oft eine Uhrzeit in
   der Vergangenheit. Das Schild rahmt beide Zeilen; die zweite nie eigens hervorheben.
+- **Platte des Aufhängers** ist zu 88 % deckend: Die verdeckten App-Zeilen scheinen schwach durch (in
+  `pausen` „Heutige Überstunden +00:48“ und die Feierabend-Zeilen). Eine Änderung in `src/bausteine.jsx` träfe
+  alle Videos.
+- **Ergebnis vor dem Schild:** Zeigt die App das Ergebnis erst nach einem Tipp, ist es zwischen Tipp und Schild
+  kurz ohne Hervorhebung zu sehen (in `pausen` rund 1,3 s, davon 0,5 s halb in der Schutzzone, bis der Wisch die
+  Karte hochholt). Das ist der echte Ablauf; das Schild kommt mit `nach` so früh wie möglich.
 - **Rechenzeit:** OmniVoice braucht ohne Grafikkarte knapp eine Minute je Satz. Unveränderte Sätze unter
   `out/<id>/stimme/` werden wiederverwendet; den Ordner nicht ohne Grund löschen.
 - **Lizenzen:** `tts/LIZENZEN.md` (OmniVoice mit Auflagen), Remotion kostenlos für Einzelpersonen; vor Remotion 5
