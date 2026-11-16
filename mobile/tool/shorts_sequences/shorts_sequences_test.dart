@@ -9,7 +9,8 @@
 // `../marketing/shorts/frames/de/`. Die Einzelbilder liegen nur in einem
 // temporären Ordner; `--dart-define=SHORTS_SEQUENCE_FRAMES=<ordner>` behält
 // sie als `<ordner>/<name>/00000.png …`, `--dart-define=FFMPEG=<pfad>` wählt
-// ein anderes ffmpeg. Getrennt von den Standbildern
+// ein anderes ffmpeg, `--dart-define=SHORTS_SEQUENCE_TRACE=true` gibt je Bild
+// die Scroll-Position aus. Getrennt von den Standbildern
 // (`tool/shorts_frames`), weil der Lauf länger dauert. Details:
 // `mobile/CLAUDE.md`, „App-Bilder für Kurzvideos (#575)“.
 
@@ -29,6 +30,16 @@ const _out = '../marketing/shorts/frames/$_locale';
 const _fps = 30;
 const _keepFrames = String.fromEnvironment('SHORTS_SEQUENCE_FRAMES');
 const _ffmpeg = String.fromEnvironment('FFMPEG', defaultValue: 'ffmpeg');
+
+/// `--dart-define=SHORTS_SEQUENCE_TRACE=true` gibt je Bild die Scroll-Position
+/// aus (zum Abstimmen der Wischgesten).
+const _trace = bool.fromEnvironment('SHORTS_SEQUENCE_TRACE');
+
+/// Weg des Fingers bei den beiden Wischgesten in logischen Pixeln. So
+/// gewählt, dass das Ausschwingen die Seite gerade bis ans Ende bzw. an den
+/// Anfang trägt und dort weich ankommt (Seite scrollt vor dem Start 193,6).
+const _swipeUpDistance = 158.0;
+const _swipeDownDistance = 160.0;
 
 /// Zeit des Bildes [frame] seit Beginn der Folge. Auf Mikrosekunden gerundet;
 /// 30 Bilder ergeben trotzdem genau eine Sekunde.
@@ -163,17 +174,27 @@ void main() {
     await initializeDateFormatting(_locale, null);
   });
 
-  // Morgens: Dashboard steht ruhig, Tipp auf „Zeiterfassung starten“, danach
-  // läuft der Timer im Sekundentakt.
+  // Morgens: Dashboard steht ruhig, Wisch nach oben bis zum Knopf
+  // „Zeiterfassung starten“ (er liegt am Seitenanfang im unteren Bereich,
+  // den TikTok/Instagram mit ihren Bedienelementen überdecken), Tipp, Wisch
+  // zurück an den Seitenanfang, dort läuft der Timer im Sekundentakt.
   testWidgets('start_morgens', timeout: const Timeout(Duration(minutes: 30)),
       (t) async {
-    const idle = 45; // 1,5 s ruhig stehen
+    const idle = 30; // 1,0 s ruhig stehen
+    const swipe = 13; // Finger zieht 0,43 s
+    const settle = 21; // Ausschwingen und Ruhe bis zum Tipp (0,7 s)
+    const rest = 9; // davon mindestens 0,3 s ohne jede Bewegung
     const press = 6; // Finger 0,2 s auf dem Knopf
-    const seconds = 5; // so viele Sekunden zählt der Timer hoch …
-    const tail = 15; // … und die letzte bleibt noch 0,5 s stehen
+    const hold = 18; // 0,6 s „Zeiterfassung beenden“ zeigen
+    const top = 150; // 5 s am Seitenanfang
     // Bild, mit dem der Finger loslässt. In diesem Augenblick ist es genau
-    // 7:52:00 Uhr, die Folge beginnt entsprechend früher.
-    const release = idle + press - 1;
+    // 7:52:00 Uhr (die App rundet die Startzeit auf die Minute), die Folge
+    // beginnt entsprechend früher.
+    const release = idle + 1 + swipe + settle + press - 1;
+    // Freie Mitte des Videos: oben verdecken die Plattformen bis y ≈ 0,13,
+    // unten ab y ≈ 0,78.
+    const freeTop = 0.15;
+    const freeBottom = 0.75;
 
     final rec = _Recorder(t, 'start_morgens',
         startsAt: shortsStart.subtract(_timeOf(release)));
@@ -181,48 +202,140 @@ void main() {
         clock: rec.clock, entries: shortsEntries(null));
     final l10n = l10nOf(t);
     final regions = <String, Rect>{};
+    final marks = <String, int>{};
 
-    // ── vor dem Start ──────────────────────────────────────────────────
     final startButton = find.widgetWithText(
         ElevatedButton, l10n.startTimeTracking,
         skipOffstage: true);
+    final stopButton = find.widgetWithText(
+        ElevatedButton, l10n.stopTimeTracking,
+        skipOffstage: true);
     expect(startButton, findsOneWidget);
-    regions['start_knopf'] = t.getRect(startButton);
-    regions['timer_vor_start'] = _textRect(t, find.text(_timer(0)));
-    regions['ueberstunden_gesamt_vor_start'] =
-        _overtimeRect(t, l10n.overtimeTotalLabel);
-    regions['heutige_ueberstunden_vor_start'] =
-        _overtimeRect(t, l10n.overtimeTodayLabel);
-    await rec.record(idle);
+    final scroll = Scrollable.of(t.element(startButton)).position;
 
-    // ── Tipp: Finger auf den Text des Knopfs (die untere Leiste verdeckt
-    // dessen unteren Rand), halten, loslassen ─────────────────────────────
-    final tapFrame = rec.frames;
-    final finger =
-        await t.startGesture(t.getCenter(find.text(l10n.startTimeTracking)));
-    await rec.record(press);
-    expect(rec.frames - 1, release);
-    expect(rec.clock(), shortsStart);
-    await finger.up();
+    /// Die Seite steht: kein Scrollen, kein Ausschwingen, keine Animation.
+    bool quiet() =>
+        !scroll.isScrollingNotifier.value && !t.binding.hasScheduledFrame;
 
-    // ── nach dem Start: der Timer der App (`Timer.periodic`, 1 s) tickt ──
-    int? startedFrame;
-    for (var i = 0; i < seconds * _fps + tail; i++) {
+    /// Nimmt ein Bild auf und prüft, was in jedem Bild gelten muss: keine
+    /// Fehlermeldung, kein Überlauf, und zu jeder vollen Sekunde nach dem
+    /// Loslassen zeigt der Timer genau diese Sekunde.
+    Future<void> frame() async {
       await rec.record(1);
       final frame = rec.frames - 1;
-      if (startedFrame == null &&
-          find.text(l10n.stopTimeTracking).evaluate().isNotEmpty) {
-        startedFrame = frame;
+      if (_trace) {
+        debugPrint('Bild $frame: ${scroll.pixels.toStringAsFixed(1)}'
+            '${quiet() ? '' : ' bewegt'}');
       }
-      expect(find.byType(SnackBar), findsNothing);
+      expect(find.byType(SnackBar), findsNothing, reason: 'Bild $frame');
+      expect(t.takeException(), isNull, reason: 'Bild $frame');
       final sinceRelease = frame - release;
-      if (sinceRelease % _fps == 0) {
+      if (sinceRelease > 0 && sinceRelease % _fps == 0) {
         expect(find.text(_timer(sinceRelease ~/ _fps)), findsOneWidget,
             reason: 'Bild $frame');
       }
     }
-    expect(startedFrame, isNotNull, reason: 'Timer wurde nicht gestartet');
-    expect(t.takeException(), isNull);
+
+    /// Echte Wischgeste: Finger bei [from] aufsetzen, in [swipe] Bildern um
+    /// [dy] ziehen (zum Ende etwas schneller) und in der Bewegung abheben,
+    /// sodass die Seite ausschwingt. Die Zeitstempel der Zeigerereignisse
+    /// sind die Zeiten der Bilder, daraus bestimmt Flutter die
+    /// Geschwindigkeit beim Abheben. Gibt die Nummer des Bildes zurück, mit
+    /// dem der Finger aufsetzt.
+    Future<int> swipeBy(Offset from, double dy) async {
+      const speedup = 0.1;
+      final first = rec.frames;
+      final finger = await t.createGesture();
+      await finger.down(from, timeStamp: _timeOf(first));
+      await frame();
+      for (var i = 1; i <= swipe; i++) {
+        final u = i / swipe;
+        final part = (1 - speedup) * u + speedup * u * u;
+        await finger.moveTo(from + Offset(0, dy * part),
+            timeStamp: _timeOf(first + i));
+        // Abheben noch vor dem letzten Bild der Geste: Das Ausschwingen
+        // beginnt dann mit diesem Bild und schließt ohne Standbild an.
+        if (i == swipe) await finger.up(timeStamp: _timeOf(first + i));
+        await frame();
+      }
+      return first;
+    }
+
+    Offset at(double x, double y) =>
+        Offset(screenLogicalWidth * x, screenHeight / screenDpr * y);
+
+    // ── vor dem Start, Seitenanfang ────────────────────────────────────
+    expect(scroll.pixels, 0);
+    regions['timer_vor_start'] = _textRect(t, find.text(_timer(0)));
+    for (var i = 0; i < idle; i++) {
+      await frame();
+    }
+
+    // ── Wisch nach oben bis ans Seitenende: weiter kann die Seite vor dem
+    // Start nicht scrollen, der Knopf steht dann in der freien Mitte ──────
+    marks['wisch_hoch'] = await swipeBy(at(0.75, 0.68), -_swipeUpDistance);
+    var quietFrames = 0;
+    for (var i = 0; i < settle; i++) {
+      await frame();
+      quietFrames = quiet() ? quietFrames + 1 : 0;
+    }
+    expect(quietFrames, greaterThanOrEqualTo(rest),
+        reason: 'Seite steht vor dem Tipp nicht lange genug ruhig');
+    expect(scroll.pixels, scroll.maxScrollExtent);
+
+    // ── Tipp auf den Knopf: Finger aufsetzen, halten, loslassen ─────────
+    final startRect = t.getRect(startButton);
+    regions['start_knopf'] = startRect;
+    final startPart = _fraction(startRect);
+    expect(startPart['y'], greaterThanOrEqualTo(freeTop));
+    expect(startPart['y']! + startPart['hoehe']!, lessThanOrEqualTo(freeBottom),
+        reason: 'Start-Knopf liegt beim Tipp nicht in der freien Mitte');
+    marks['tipp'] = rec.frames;
+    final finger = await t.createGesture();
+    await finger.down(startRect.center, timeStamp: _timeOf(rec.frames));
+    for (var i = 0; i < press; i++) {
+      await frame();
+    }
+    expect(rec.frames - 1, release);
+    expect(rec.clock(), shortsStart);
+    await finger.up(timeStamp: _timeOf(release));
+
+    // ── nach dem Start: der Timer der App (`Timer.periodic`, 1 s) tickt,
+    // der Knopf heißt jetzt „Zeiterfassung beenden“ ──────────────────────
+    while (stopButton.evaluate().isEmpty) {
+      expect(rec.frames - release, lessThan(_fps),
+          reason: 'Timer wurde nicht gestartet');
+      await frame();
+    }
+    marks['gestartet'] = rec.frames - 1;
+    expect(startButton, findsNothing);
+    final stopRect = t.getRect(stopButton);
+    regions['beenden_knopf'] = stopRect;
+    final stopPart = _fraction(stopRect);
+    expect(stopPart['y'], greaterThanOrEqualTo(freeTop));
+    expect(stopPart['y']! + stopPart['hoehe']!, lessThanOrEqualTo(freeBottom),
+        reason: 'Beenden-Knopf liegt nicht in der freien Mitte');
+    for (var i = 1; i < hold; i++) {
+      await frame();
+    }
+    expect(t.getRect(stopButton), stopRect);
+
+    // ── Wisch zurück an den Seitenanfang ───────────────────────────────
+    marks['wisch_runter'] = await swipeBy(at(0.75, 0.36), _swipeDownDistance);
+    while (scroll.pixels != 0 || !quiet()) {
+      expect(rec.frames - marks['wisch_runter']!, lessThan(3 * _fps),
+          reason: 'Seite kommt nicht am Anfang zur Ruhe');
+      await frame();
+    }
+    // Das zuletzt aufgenommene Bild zeigt die Seite schon ruhig am Anfang.
+    marks['oben'] = rec.frames - 1;
+
+    // ── am Seitenanfang: der Timer zählt weiter ────────────────────────
+    for (var i = 1; i < top; i++) {
+      await frame();
+    }
+    expect(scroll.pixels, 0);
+    final seconds = (rec.frames - 1 - release) ~/ _fps;
 
     regions['timer'] = _textRect(t, find.text(_timer(seconds)));
     regions['brutto_zeile'] =
@@ -239,11 +352,7 @@ void main() {
             matching: find.byType(InputDecorator))
         .first);
 
-    await finger.removePointer();
-    await rec.finish(
-      marks: {'tipp': tapFrame, 'gestartet': startedFrame!},
-      regions: regions,
-    );
+    await rec.finish(marks: marks, regions: regions);
     await rec.app.close();
   });
 }

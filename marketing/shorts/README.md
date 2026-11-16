@@ -12,6 +12,7 @@ OmniVoice (Ergebnis des Hörtests, siehe `tts/LIZENZEN.md`).
 cd marketing/shorts
 npm ci
 npm run render -- probe        # videos/de/probe.yaml -> out/probe.mp4
+npm run render -- probe --standbilder 0,45,120   # nur diese Bilder als PNG nach out/probe/standbilder/ (zum Prüfen, Sekunden statt Minuten)
 npm test                       # Schema, Zeitberechnung, Lage der Bausteine, Tonmischung (node --test)
 ```
 
@@ -67,22 +68,23 @@ musik: ruhig.mp3              # optional, Datei aus musik/; fehlt sie, entsteht 
 ausschnitte:                  # benannte Rechtecke im App-Bild, Anteil von Breite und Höhe (0 bis 1)
   oben: { x: 0.1, y: 0.1, breite: 0.8, hoehe: 0.4 }
 szenen:
-  - art: app                  # App ab dem ersten Bild, die Frage liegt darüber
+  - art: app                  # App ab dem ersten Bild, die Frage steht auf einer Platte darüber
     folge: start_morgens
-    bis: 0
+    bis: wisch_hoch           # Seitenanfang; die Folge bleibt vor der Wischgeste stehen
+    zoom: { auf: timer_vor_start, faktor: 1.08, dauer: 2.4 }
     aufhaenger: Wann hast du heute eigentlich Feierabend?
     saetze:
       - Wann hast du heute eigentlich Feierabend?
-  - art: app                  # dieselbe Folge läuft weiter, kein Übergang
+  - art: app                  # dieselbe Folge läuft weiter, kein Übergang: Wisch, Tipp, Wechsel
     folge: start_morgens
-    zoom: { auf: start_knopf, faktor: 1.0 }
-    tipp: { auf: start_knopf }
+    zoom: { auf: start_knopf, faktor: 1.15 }
+    tipp: { auf: start_knopf, bei: 0.79 }
     saetze:
       - Morgens einmal auf Start tippen.
-  - art: app
+  - art: app                  # Wisch zurück, das Schild kommt, sobald die Seite oben steht
     folge: start_morgens
     zoom: { auf: oben, faktor: 1.1 }
-    hervorhebung: { auf: feierabend_zeile, zeile: Feierabend heute, wert: "16:22 Uhr" }
+    hervorhebung: { auf: feierabend_zeile, zeile: Feierabend heute, wert: "16:22 Uhr", nach: oben }
     saetze:
       - Die App sagt dir sofort, wann du fertig bist. Heute um 16:22 Uhr.
   - art: schluss
@@ -104,11 +106,11 @@ Felder je Art:
 |---|---|---|
 | `app` | `bild` oder `folge` (genau eines) | `bild`: PNG-Dateiname aus `frames/de/`. `folge`: Name einer Bildfolge, siehe unten |
 | `app` | `ab`, `bis` | nur mit `folge`: gezeigter Abschnitt, je eine Bildnummer (ab 0) oder der Name einer Marke. Ohne `ab` beginnt die Folge bei Bild 0 bzw. setzt dort fort, wo die Szene davor mit derselben Folge aufgehört hat. Ohne `bis` läuft sie bis zum letzten Bild. Ist die Szene länger als der Abschnitt, bleibt das letzte Bild stehen (`bis: 0` = Standbild des ersten Bilds) |
-| `app` | `zoom: { auf, faktor, dauer }` | Kamerafahrt auf den Ausschnitt `auf`; `faktor` 1 bis 2.5 (Standard 1.25), `dauer` der Fahrt in Sekunden (Standard 0.6). Liegt der Ausschnitt sonst in einer Schutzzone (Knopf am unteren Bildrand), rückt das Bild so weit, dass er frei liegt, auch bei `faktor: 1`. Ohne `zoom` zeigt die Szene das Bild in voller Breite |
+| `app` | `zoom: { auf, faktor, dauer }` | Kamerafahrt auf den Ausschnitt `auf`; `faktor` 1 bis 2.5 (Standard 1.25), `dauer` der Fahrt in Sekunden (Standard 0.6). Das Bild deckt die Leinwand dabei immer ganz: Ein Ausschnitt am Bildrand (Knopf ganz unten) kommt deshalb nicht aus der Schutzzone, dafür braucht es eine Folge, die die Seite hochwischt. Ohne `zoom` ist das Bild deckungsgleich mit der Leinwand |
 | `app` | `tipp: { auf, bei }` | Tipp-Markierung in der Mitte des Ausschnitts, dazu ein Klick im Ton. Bei `bild`: `bei` ist der Zeitpunkt als Anteil der Szenendauer (Standard 0.5). Bei `folge`: Der Zeitpunkt ist die Marke `tipp` der Folge; `bei` ist optional und hält das erste Bild so lange an, bis die Marke auf diesen Anteil fällt (früher als von selbst kommt der Tipp nie) |
-| `app` | `aufhaenger` | Frage in großer Schrift über dem abgedunkelten, unscharfen App-Bild, höchstens 60 Zeichen. Verschwindet nach dem ersten Satz der Szene. Für die erste Szene: Die App ist ab dem ersten Bild zu sehen |
-| `app` | `hervorhebung: { auf, zeile, wert, bei }` | Kernaussage als großes Schild: `zeile` klein (optional, höchstens 28 Zeichen), `wert` sehr groß (höchstens 12 Zeichen, in Anführungszeichen). Der Ausschnitt `auf` bekommt einen Rahmen, das Schild wächst daraus hervor und zeigt mit einer Spitze darauf. Es liegt direkt unter dem Ausschnitt (sonst darüber), nie in einer Schutzzone, und verdeckt dort die App. `bei`: Beginn als Anteil der Szenendauer (Standard 0.2) |
-| `app` | `einblendung` | Text über dem App-Bild, höchstens 44 Zeichen; die Karte beginnt dann tiefer. Nicht zusammen mit `aufhaenger` |
+| `app` | `aufhaenger` | Frage in großer Schrift auf einer dunklen Platte über der App, höchstens 60 Zeichen. Die App bleibt dahinter erkennbar (nur leicht und neutral abgedunkelt, nicht unscharf). Mit `zoom` sitzt die Platte so, dass der angefahrene Ausschnitt (z. B. der große Timer) frei bleibt. Sie kommt in den ersten Bildern herein und verschwindet nach dem ersten Satz der Szene |
+| `app` | `hervorhebung: { auf, zeile, wert, bei }` | Kernaussage als großes Schild: `zeile` klein (optional, höchstens 28 Zeichen), `wert` sehr groß (höchstens 12 Zeichen, in Anführungszeichen). Der Ausschnitt `auf` bekommt einen Rahmen, das Schild wächst daraus hervor und zeigt mit einer Spitze darauf. Es liegt direkt unter dem Ausschnitt (sonst darüber), nie in einer Schutzzone, und verdeckt dort die App; was sichtbar bleiben soll, muss also über dem Ausschnitt stehen. `bei`: Beginn als Anteil der Szenendauer (Standard 0.2). `nach` (nur mit `folge`): Name einer Marke; das Schild erscheint frühestens 10 Bilder, nachdem die Folge sie erreicht hat (z. B. `oben`: Seite steht nach dem Zurückwischen wieder am Anfang). Wird die Marke in der Szene nicht erreicht, ist das ein Fehler |
+| `app` | `einblendung` | Text auf einer dunklen Platte am oberen Rand der freien Fläche, höchstens 44 Zeichen; die Kamerafahrt zielt dann auf die Fläche darunter. Nicht zusammen mit `aufhaenger` |
 | `app` | `premium` | `true` zeigt das Premium-Kennzeichen (Pflicht bei Premium-Funktionen, Regel 2 im Plan) |
 | `schluss` | – | Logo auf weißem Träger, „Kostenlos bei Google Play“, `work-time-manager.app`; ohne Satz 2,5 s |
 | `teaser` | `text` (Pflicht) | Text unter dem Schild „Kommt bald“; kein Datum, keine Oberfläche der neuen Funktion |
@@ -125,9 +127,9 @@ und `frames/de/<name>.json`:
 ```json
 {
   "fps": 30,
-  "bilder": 216,
-  "marken": { "tipp": 45, "gestartet": 51 },
-  "ausschnitte": { "start_knopf": { "x": 0.08, "y": 0.86, "breite": 0.84, "hoehe": 0.07 } }
+  "bilder": 266,
+  "marken": { "wisch_hoch": 30, "tipp": 68, "gestartet": 74, "wisch_runter": 92, "oben": 116 },
+  "ausschnitte": { "start_knopf": { "x": 0.08, "y": 0.59, "breite": 0.84, "hoehe": 0.07 } }
 }
 ```
 
@@ -137,6 +139,13 @@ nacheinander mit derselben Folge (oder demselben Bild) gelten als ein Stück: ke
 durch, die Kamera fährt von der Lage der Szene davor weiter. `frames/de/platzhalter_folge.*` gehört zum Probevideo
 (`npm run platzhalter-folge`, aus zwei App-Bildern, ohne echte Bewegung).
 
+Die Folge läuft immer in Echtzeit, eine Geste wird nie schneller abgespielt oder abgeschnitten. Passen Szenendauer
+(aus dem Ton) und Abschnitt nicht zusammen, steht ein ruhiges Bild: am Ende des Abschnitts (`bis`), am Anfang der
+Szene (`tipp.bei` hält das erste Bild, bis der Tipp auf das gewünschte Wort fällt), und `hervorhebung.nach` wartet
+mit dem Schild, bis die Seite steht. Ausschnitte einer Folge mit Wischgeste gelten für einen Zustand (`start_knopf`:
+Lage beim Tipp; `timer`, `feierabend_zeile`: Seite am Anfang). `render.mjs` gibt den Zeitplan je Szene aus
+(Bildnummern, Abschnitt der Folge, Tipp, Schild).
+
 #### Zeit und Tempo
 
 Jede Szene mit Sätzen dauert Vorlauf + Sätze mit Pause dazwischen + Nachlauf. Die Satz-Dateien sind bis auf
@@ -145,25 +154,39 @@ liegen zwischen zwei Sätzen im fertigen Video rund 0,3 s Stille. Diese Werte, B
 das Tipp-Geräusch (`tipp_ton: false` schaltet es ab) stehen in `einstellungen.yaml`. Nachmessen:
 `ffmpeg -i out/<id>.mp4 -af silencedetect=noise=-40dB:d=0.1 -f null -`.
 
-Szenen wechseln mit hartem Schnitt. Eine neue Karte kommt in 5 Bildern herein, nichts blendet aus.
+Szenen wechseln mit hartem Schnitt. Ein neues App-Bild setzt sich in 7 Bildern von 3,5 % größer auf seine Lage,
+Karten ohne App kommen in 5 bis 8 Bildern herein.
 
 #### Bild und Maße
 
 Leinwand 1080 × 1920. Oben 250 px und unten 420 px sind Schutzzonen (dort liegen die Bedienelemente der
 Plattformen); die freie Fläche dazwischen reicht von y = 250 bis 1500.
 
-- **App-Karte:** x 40 bis 1040 (1000 px, 93 % der Breite), y 102 bis 1880, runde Ecken (48 px), Schatten. Ein
-  Bild im Format 9:16 passt bei Skala 1 genau hinein. Die Karte ragt oben und unten in die Schutzzonen; Aufhänger,
-  Schild, Einblendung, Premium-Kennzeichen und das Ziel jeder Kamerafahrt liegen in der freien Fläche.
-- **Kamerafahrt:** Die Mitte des Ausschnitts kommt in die Mitte der freien Fläche (y = 875), soweit das Bild die
-  Karte dabei ausfüllt. Ein Ausschnitt hält 40 px Abstand zu den Schutzzonen; dafür darf das Bild über den
-  Kartenrahmen hinaus rücken, die Karte endet dann früher.
+- **App bildfüllend** (Entscheidung vom 16.11.2026): In App-Szenen füllt die App die ganze Leinwand, ohne Rahmen,
+  Karte, Schatten, runde Ecken und ohne Markengrund. Ein Bild im Format 9:16 ist bei Skala 1 deckungsgleich mit der
+  Leinwand (x 0 bis 1080, y 0 bis 1920); ein anderes Format wird so skaliert, dass es die Leinwand deckt. Die App
+  ragt damit in beide Schutzzonen; Tipp, Schild, Aufhänger, Einblendung und Premium-Kennzeichen liegen in der
+  freien Fläche. Der blaue Markengrund bleibt den Karten ohne App (Schlusskarte, Teaser, Aufhänger-Karte).
+- **Kamerafahrt:** Skala 1 bis 2.5. Die Mitte des Ausschnitts kommt in die Mitte der freien Fläche (y = 875), aber
+  nur so weit, wie das Bild die Leinwand ganz deckt (x ≤ 0, y ≤ 0, rechte und untere Kante außerhalb oder am Rand);
+  das gilt auch für jede Zwischenlage der Fahrt. Es ist nie Rand oder Hintergrund zu sehen. Folge: Was im Bild in
+  den obersten 250 px oder untersten 420 px steht, lässt sich nicht in die freie Fläche schieben (bei Skala 1.1
+  liegt der große Timer der App bei y 204 bis 396, sein oberer Rand also in der oberen Schutzzone).
+- **Aufhänger:** dunkle Platte (x 50 bis 1030, 980 px, Ecken 40 px), Schrift 86 bis 120 px je nach Länge. Ohne
+  `zoom` mittig in der freien Fläche; mit `zoom` im größeren freien Teil neben dem Ausschnitt (60 px Abstand), am
+  abgewandten Ende, 40 px vor der Schutzzone. Das App-Bild ist währenddessen um 20 % neutral abgedunkelt.
+- **Einblendung:** dieselbe Platte, y 280 bis 480, Schrift 60 px. Das Premium-Kennzeichen sitzt rechts bei y 280,
+  mit Einblendung darunter (y 500).
 - **Schild der Hervorhebung:** x 70 bis 1010 (940 px), Zeile 58 px, Zahl bis 210 px (bei „16:22 Uhr“ 166 px,
   Schild 346 px hoch), 36 px unter dem Ausschnitt.
-- **Aufhänger:** 88 bis 124 px je nach Länge, mittig in der freien Fläche.
-- **Schlusskarte:** Logo 364 px auf weißem Kreis (400 px), Name 88 px, Knopf 60 px, Adresse 54 px.
+- **Tipp-Markierung:** Punkt 150 px (halbdurchsichtig blau, weißer und dunkler Rand), Ring bis 300 px; beides
+  wächst mit der Skala der Kamera. Der Punkt erscheint 4 Bilder vor dem Tipp und ist 6 Bilder danach weg, der Ring
+  beginnt mit dem Tipp und ist 8 Bilder danach weg (danach wechselt die App den Zustand, der Knopf kann verrutschen).
+- **Schlusskarte:** Logo 364 px auf weißem Kreis (400 px), Name 88 px, Knopf 60 px, Adresse 54 px. Nach dem
+  Hereinkommen (20 Bilder) bewegt sie sich weiter: Die Karte wächst über die ganze Szene um 4,5 %, das Logo
+  schwebt um ±7 px, der Knopf pulsiert um 2,2 % (Periode 1,5 s).
 
-Maße und Rechenwege: `src/layout.mjs`. `render.mjs` meldet einen Hinweis, wenn Tipp oder Hervorhebung am Ende der
+Maße und Rechenwege: `src/layout.mjs`. `render.mjs` meldet einen Hinweis, wenn Tipp oder Quelle der Hervorhebung am Ende der
 Kamerafahrt in einer Schutzzone liegen. Farben, Schrift und Logo liest `lib/marke.mjs` aus `branding/src/` und
 `mobile/assets/fonts/`; sie sind hier nicht noch einmal festgelegt. Feste Texte der Bausteine: `src/texte.mjs`.
 

@@ -1,34 +1,31 @@
 {
   "fps": 30,
-  "bilder": 216,
+  "bilder": 264,
   "marken": {
-    "tipp": 45,
-    "gestartet": 51
+    "wisch_hoch": 30,
+    "tipp": 65,
+    "gestartet": 71,
+    "wisch_runter": 89,
+    "oben": 114
   },
   "ausschnitte": {
-    "start_knopf": {
-      "x": 0.0777,
-      "y": 0.8574,
-      "breite": 0.8447,
-      "hoehe": 0.071
-    },
     "timer_vor_start": {
       "x": 0.2359,
       "y": 0.0965,
       "breite": 0.5283,
       "hoehe": 0.0912
     },
-    "ueberstunden_gesamt_vor_start": {
-      "x": 0.3135,
-      "y": 0.2657,
-      "breite": 0.3734,
-      "hoehe": 0.0815
+    "start_knopf": {
+      "x": 0.0777,
+      "y": 0.5931,
+      "breite": 0.8447,
+      "hoehe": 0.071
     },
-    "heutige_ueberstunden_vor_start": {
-      "x": 0.313,
-      "y": 0.3749,
-      "breite": 0.3744,
-      "hoehe": 0.0815
+    "beenden_knopf": {
+      "x": 0.0777,
+      "y": 0.6437,
+      "breite": 0.8447,
+      "hoehe": 0.071
     },
     "timer": {
       "x": 0.2359,

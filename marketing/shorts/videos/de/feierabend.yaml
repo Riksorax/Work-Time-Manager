@@ -1,7 +1,12 @@
 # Video 1, Pilotvideo (#575, S3). Eine Aussage: Start per Tipp, die App nennt sofort den
 # voraussichtlichen Feierabend. Aussagen geprüft gegen
 # fastlane/metadata/android/de-DE/full_description.txt („Zeiterfassung mit einem Tippen“).
-# Die Ausschnitte (start_knopf, timer, feierabend_zeile …) stehen in frames/de/start_morgens.json.
+#
+# Die Folge start_morgens läuft in Echtzeit durch alle drei App-Szenen (Marken und Ausschnitte:
+# frames/de/start_morgens.json): Ruhe am Seitenanfang → Wisch nach oben → Tipp auf den
+# Start-Knopf → Wisch zurück → Timer tickt. Wo Ton und Folge nicht zusammenpassen, steht ein
+# ruhiges Bild (Seitenanfang vor dem Start, Knopf vor dem Wisch); die Geste wird nie schneller
+# abgespielt oder abgeschnitten.
 id: feierabend
 titel: Wann ist Feierabend?
 
@@ -9,33 +14,35 @@ ausschnitte:
   # Timer bis Feierabend-Zeile: Das zeigt die Kamera, während das Schild erscheint.
   timer_bis_feierabend: { x: 0.1, y: 0.1, breite: 0.8, hoehe: 0.4 }
   # Beide Zeilen unter „Heutige Überstunden“ (feierabend_zeile + gleitzeit_null_zeile der Folge):
-  # Das Schild sitzt direkt darunter und schneidet so keine Zeile halb an.
+  # Das Schild sitzt direkt darunter, die Zeile „Heutige Überstunden“ mit ihrer Zahl bleibt frei.
   feierabend_zeilen: { x: 0.19, y: 0.4635, breite: 0.62, hoehe: 0.0466 }
 
 szenen:
-  # Die App morgens vor dem Start, die Frage liegt darüber. Die Folge steht auf ihrem ersten Bild,
-  # die Kamera fährt langsam heran.
+  # Seitenanfang vor dem Start, die Frage steht auf einer Platte unter dem Timer. Die Folge läuft
+  # bis zum Beginn des Wischs und bleibt dort stehen, die Kamera fährt langsam heran.
   - art: app
     folge: start_morgens
-    bis: 0
+    bis: wisch_hoch
     zoom: { auf: timer_vor_start, faktor: 1.08, dauer: 2.4 }
     aufhaenger: Wann hast du heute eigentlich Feierabend?
     saetze:
       - Wann hast du heute eigentlich Feierabend?
 
-  # Kamera auf den Start-Knopf, Tipp, die App wechselt den Zustand.
+  # Wisch nach oben, Tipp auf den Start-Knopf (auf dem Wort „tippen“), die App wechselt den
+  # Zustand. „bei“ hält das Bild vor dem Wisch so lange an, bis der Tipp auf das Wort fällt.
   - art: app
     folge: start_morgens
-    zoom: { auf: start_knopf, faktor: 1.0, dauer: 0.5 }
-    tipp: { auf: start_knopf, bei: 0.6 }
+    zoom: { auf: start_knopf, faktor: 1.15, dauer: 0.8 }
+    tipp: { auf: start_knopf, bei: 0.79 }
     saetze:
       - Morgens einmal auf Start tippen.
 
-  # Zurück auf Timer und Feierabend-Zeile, das Schild wächst aus der Zeile.
+  # Wisch zurück an den Seitenanfang, der Timer tickt. Das Schild wächst aus der Feierabend-Zeile,
+  # sobald die Seite wieder oben steht (Marke „oben“).
   - art: app
     folge: start_morgens
-    zoom: { auf: timer_bis_feierabend, faktor: 1.1, dauer: 0.5 }
-    hervorhebung: { auf: feierabend_zeilen, zeile: Feierabend heute, wert: "16:22 Uhr", bei: 0.3 }
+    zoom: { auf: timer_bis_feierabend, faktor: 1.1, dauer: 0.9 }
+    hervorhebung: { auf: feierabend_zeilen, zeile: Feierabend heute, wert: "16:22 Uhr", bei: 0.3, nach: oben }
     saetze:
       - Die App sagt dir sofort, wann du fertig bist. Heute um 16:22 Uhr.
 

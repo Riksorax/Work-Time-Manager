@@ -1,16 +1,19 @@
-// Bausteine der Videos. Wichtiger Text bleibt außerhalb der Schutzzonen (oben 250 px,
-// unten 420 px); nur das App-Bild darf hineinragen. Szenen wechseln mit hartem Schnitt, neue
-// Inhalte kommen mit einer kurzen Bewegung herein, nichts blendet aus.
+// Bausteine der Videos. Wichtiger Inhalt bleibt außerhalb der Schutzzonen (oben 250 px,
+// unten 420 px). In App-Szenen füllt die App das ganze Bild, ohne Rahmen und ohne Hintergrund;
+// Text darüber steht auf einer dunklen Platte. Szenen wechseln mit hartem Schnitt, neue Inhalte
+// kommen mit einer kurzen Bewegung herein.
 import React from 'react';
 import { AbsoluteFill, Easing, Freeze, Img, OffthreadVideo, interpolate, staticFile, useCurrentFrame } from 'remotion';
 import { folgeBild } from '../lib/zeit.mjs';
-import { FREI, KARTE, SCHILD, SCHUTZ_OBEN, SCHUTZ_UNTEN, aufLeinwand, bildHoehe, kamera, kartenRechteck, mische, schildLage, szenenKamera, wertSchrift } from './layout.mjs';
+import { EINBLENDUNG, FREI, PLATTE, RAND, SCHILD, SCHUTZ_OBEN, SCHUTZ_UNTEN, aufLeinwand, aufhaengerFlaeche, aufhaengerSchrift, bildMass, kamera, mische, schildLage, szenenKamera, wertSchrift } from './layout.mjs';
 
 const fest = { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' };
 const weich = Easing.inOut(Easing.cubic);
 const aus = Easing.out(Easing.cubic);
 const federnd = Easing.out(Easing.back(1.5));
 const verlauf = (farben, winkel = 135) => `linear-gradient(${winkel}deg, ${farben[0]}, ${farben[1]})`;
+/** Dunkle, neutrale Platte hinter Text über der App: lesbar auf hellem wie auf dunklem App-Bild. */
+const platte = { background: 'rgba(12,18,30,.88)', borderRadius: PLATTE.radius, boxShadow: '0 18px 50px rgba(0,0,0,.4)', boxSizing: 'border-box' };
 
 /** Kurze Bewegung beim Schnitt auf eine neue Szene. Die erste Szene steht ab dem ersten Bild (Vorschaubild). */
 function useHerein(erste, bilder = 5) {
@@ -27,7 +30,7 @@ const Mitte = ({ children, style }) => (
   </AbsoluteFill>
 );
 
-const Marke = ({ farben, breite = 160 }) => <div style={{ width: breite, height: 16, borderRadius: 8, background: verlauf(farben, 90), marginBottom: 56 }} />;
+const Marke = ({ farben, breite = 160, abstand = 56 }) => <div style={{ width: breite, height: 16, borderRadius: 8, background: verlauf(farben, 90), marginBottom: abstand }} />;
 
 const grossSchrift = (text) => (text.length <= 28 ? 124 : text.length <= 48 ? 108 : 88);
 
@@ -61,25 +64,30 @@ export const Teaser = ({ szene, erste, marke, texte }) => {
 
 /**
  * Schlusskarte: Logo auf weißem Träger, Name, Handlungsaufruf und Adresse. Logo und Knopf
- * kommen mit einer kurzen Bewegung herein, der Knopf zieht danach einmal die Aufmerksamkeit.
+ * kommen mit einer kurzen Bewegung herein. Danach steht die Karte nicht starr: Sie wächst sehr
+ * langsam, das Logo schwebt leicht und der Knopf pulsiert sanft.
  */
-export const Schlusskarte = ({ marke, texte }) => {
+export const Schlusskarte = ({ szene, marke, texte }) => {
   const bild = useCurrentFrame();
   const t = (ab, dauer = 10, easing = aus) => interpolate(bild, [ab, ab + dauer], [0, 1], { ...fest, easing });
   const hoch = (ab) => ({ opacity: t(ab, 6), transform: `translateY(${(1 - t(ab)) * 60}px)` });
   const logo = t(0, 12, federnd);
   const knopf = t(8, 12, federnd);
-  const puls = interpolate(bild, [34, 40, 48], [1, 1.06, 1], { ...fest, easing: weich });
+  // Fortlaufende Bewegung, beginnt weich nach dem Hereinkommen.
+  const ruhe = interpolate(bild, [20, 40], [0, 1], { ...fest, easing: weich });
+  const welle = (periode, versatz = 0) => Math.sin(((bild - 20 - versatz) / periode) * 2 * Math.PI);
+  const puls = 1 + ruhe * 0.022 * (0.5 - 0.5 * Math.cos(((bild - 20) / 44) * 2 * Math.PI));
+  const wachsen = 1 + 0.045 * interpolate(bild, [0, Math.max(60, szene?.frames ?? 75)], [0, 1], fest);
   return (
-    <Mitte>
+    <Mitte style={{ transform: `scale(${wachsen})` }}>
       <div
-        style={{ width: 400, height: 400, borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 24px 60px rgba(0,0,0,.35)', opacity: interpolate(bild, [-2, 3], [0, 1], fest), transform: `scale(${0.5 + 0.5 * logo}) rotate(${(1 - logo) * -20}deg)` }}
+        style={{ width: 400, height: 400, borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 24px 60px rgba(0,0,0,.35)', opacity: interpolate(bild, [-2, 3], [0, 1], fest), transform: `translateY(${ruhe * 7 * welle(84)}px) scale(${0.5 + 0.5 * logo}) rotate(${(1 - logo) * -20}deg)` }}
       >
         <Img src={staticFile('logo.svg')} style={{ width: 364, height: 364 }} />
       </div>
       <div style={{ fontSize: 88, fontWeight: 700, marginTop: 52, ...hoch(4) }}>{marke.name}</div>
       <div
-        style={{ background: '#fff', color: marke.grund[1], borderRadius: 999, padding: '30px 64px', fontSize: 60, fontWeight: 700, marginTop: 80, whiteSpace: 'nowrap', boxShadow: '0 16px 40px rgba(0,0,0,.3)', opacity: t(8, 4), transform: `scale(${(0.6 + 0.4 * knopf) * puls})` }}
+        style={{ background: '#fff', color: marke.grund[1], borderRadius: 999, padding: '30px 64px', fontSize: 60, fontWeight: 700, marginTop: 80, whiteSpace: 'nowrap', boxShadow: `0 16px ${40 + ruhe * 14 * (puls - 1) / 0.022}px rgba(0,0,0,.3)`, opacity: t(8, 4), transform: `scale(${(0.6 + 0.4 * knopf) * puls})` }}
       >
         {texte.schlussAufruf}
       </div>
@@ -94,19 +102,25 @@ const Stern = () => (
   </svg>
 );
 
-/** Tipp-Markierung: Punkt mit Ring, der sich einmal ausbreitet. Liegt im Bild und wandert mit der Kamera. */
-const Tipp = ({ x, y, ab, farbe }) => {
+/**
+ * Tipp-Markierung: Punkt mit Ring, der sich ab dem Tipp einmal kurz ausbreitet. Liegt im Bild und wandert mit der
+ * Kamera. Dunkler Punkt mit weißem und dunklem Rand, damit er auf hellem wie auf dunklem
+ * App-Bild zu sehen ist.
+ */
+const Tipp = ({ x, y, ab, farbe, dunkel }) => {
   const t = useCurrentFrame() - ab + 4; // der Punkt erscheint kurz vor dem Tipp
-  if (t < 0 || t > 18) return null;
-  // Der Punkt ist kurz nach dem Tipp wieder weg: Danach ändert sich das Bild darunter.
+  if (t < 0 || t > 12) return null;
+  // Punkt und Ring sind kurz nach dem Tipp wieder weg: Danach ändert sich das Bild darunter
+  // (der Knopf wechselt den Zustand und kann dabei verrutschen).
   const punkt = interpolate(t, [0, 3, 7, 10], [0, 1, 1, 0], fest);
-  const druck = interpolate(t, [2, 4, 8], [1.15, 0.8, 1], fest);
-  const ring = interpolate(t, [4, 18], [0.7, 2.4], { ...fest, easing: aus });
-  const kreis = { position: 'absolute', left: x - 60, top: y - 60, width: 120, height: 120, borderRadius: '50%' };
+  const druck = interpolate(t, [0, 2, 4, 8], [1.3, 1.15, 0.8, 1], fest);
+  const ring = interpolate(t, [4, 12], [0.7, 2], { ...fest, easing: aus });
+  const r = 75;
+  const kreis = { position: 'absolute', left: x - r, top: y - r, width: 2 * r, height: 2 * r, borderRadius: '50%', boxSizing: 'border-box' };
   return (
     <>
-      <div style={{ ...kreis, border: `8px solid ${farbe}`, transform: `scale(${ring})`, opacity: interpolate(t, [4, 18], [0.9, 0], fest) }} />
-      <div style={{ ...kreis, background: 'rgba(13,71,161,.5)', border: '6px solid #fff', boxShadow: '0 6px 22px rgba(0,0,0,.45)', transform: `scale(${druck})`, opacity: punkt }} />
+      <div style={{ ...kreis, border: `10px solid ${farbe}`, boxShadow: `0 0 0 3px ${dunkel}, inset 0 0 0 3px ${dunkel}`, transform: `scale(${ring})`, opacity: interpolate(t, [3.9, 4, 8, 12], [0, 0.95, 0.8, 0], fest) }} />
+      <div style={{ ...kreis, background: 'rgba(13,71,161,.6)', border: '7px solid #fff', boxShadow: `0 0 0 4px ${dunkel}, 0 8px 26px rgba(0,0,0,.5)`, transform: `scale(${druck})`, opacity: punkt }} />
     </>
   );
 };
@@ -147,43 +161,34 @@ const Hervorhebung = ({ hervorhebung, quelle, lage, marke }) => {
 };
 
 /**
- * Szene mit App-Bild oder Bildfolge: große Karte auf Markengrund, Kamerafahrt auf den benannten
- * Ausschnitt, optional Aufhänger über dem Bild, Tipp-Markierung, Hervorhebung, Texteinblendung
- * und Premium-Kennzeichen. Setzt die Szene die Quelle der Szene davor fort, gibt es keinen
- * Übergang: Die Kamera fährt von deren Lage weiter.
+ * Szene mit App-Bild oder Bildfolge: Die App füllt die ganze Leinwand (kein Rahmen, kein
+ * Hintergrund), die Kamera fährt auf den benannten Ausschnitt und deckt die Leinwand dabei immer.
+ * Optional Aufhänger, Tipp-Markierung, Hervorhebung, Texteinblendung und Premium-Kennzeichen.
+ * Setzt die Szene die Quelle der Szene davor fort, gibt es keinen Übergang: Die Kamera fährt von
+ * deren Lage weiter.
  */
 export const AppSzene = ({ szene, vorher, erste, marke, texte, bilder }) => {
   const bild = useCurrentFrame();
   const mass = bilder[szene.quelle];
+  const gross = bildMass(mass);
   const ziel = szenenKamera(szene, mass);
-  const start = szene.fortsetzung ? szenenKamera(vorher, mass) : kamera(mass, undefined, 1, ziel.oben);
+  const start = szene.fortsetzung ? szenenKamera(vorher, mass) : kamera(mass);
   const lage = mische(start, ziel, interpolate(bild, [0, szene.zoomBilder], [0, 1], { ...fest, easing: weich }));
-  const karte = kartenRechteck(lage, mass);
-  const hoehe = bildHoehe(mass);
-  const herein = useHerein(erste || szene.fortsetzung);
-  const text = interpolate(bild, [2, 10], [0, 1], { ...fest, easing: aus });
+  // Schnitt auf eine neue Quelle: Das Bild setzt sich kurz von etwas größer auf seine Lage (deckt also immer).
+  const herein = useHerein(erste || szene.fortsetzung, 7);
+  const text = interpolate(bild, [1, 9], [0, 1], { ...fest, easing: aus });
 
   const ende = szene.aufhaenger ? Math.min(szene.frames, szene.aufhaengerBis + 3) : 0;
-  const frage = szene.aufhaenger ? interpolate(bild, [ende - 6, ende], [1, 0], fest) : 0;
-  const frageHerein = erste ? 1 : interpolate(bild, [0, 8], [0, 1], { ...fest, easing: aus });
-  const mitte = (r) => ({ x: (r.x + r.breite / 2) * KARTE.breite, y: (r.y + r.hoehe / 2) * hoehe });
+  const frage = szene.aufhaenger ? interpolate(bild, [ende - 5, ende], [1, 0], fest) : 0;
+  const frageHerein = interpolate(bild, [0, 9], [0, 1], { ...fest, easing: aus });
+  const flaeche = szene.aufhaenger && aufhaengerFlaeche(szene.zoom ? aufLeinwand(ziel, mass, szene.zoom.rechteck) : undefined);
+  const mitte = (r) => ({ x: (r.x + r.breite / 2) * gross.breite, y: (r.y + r.hoehe / 2) * gross.hoehe });
   const tipp = szene.tipp && mitte(szene.tipp.rechteck);
 
   return (
-    <AbsoluteFill>
-      {szene.einblendung && (
-        <div
-          style={{ position: 'absolute', top: SCHUTZ_OBEN + 10, left: 70, right: 70, height: KARTE.obenMitEinblendung - SCHUTZ_OBEN - 40, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', fontSize: 60, fontWeight: 700, lineHeight: 1.15, opacity: text, transform: `translateY(${(1 - text) * -24}px)` }}
-        >
-          {szene.einblendung}
-        </div>
-      )}
-      <div
-        style={{ position: 'absolute', left: karte.x, top: karte.y, width: karte.breite, height: karte.hoehe, borderRadius: KARTE.radius, overflow: 'hidden', background: '#fff', boxShadow: '0 30px 80px rgba(0,0,0,.45)', opacity: herein, transform: `scale(${0.96 + 0.04 * herein})` }}
-      >
-        <div
-          style={{ position: 'absolute', left: lage.x - karte.x, top: lage.y - karte.y, width: KARTE.breite, height: hoehe, transformOrigin: '0 0', transform: `scale(${lage.skala})`, filter: frage > 0 ? `blur(${6 * frage}px)` : undefined }}
-        >
+    <AbsoluteFill style={{ overflow: 'hidden', background: '#fff' }}>
+      <AbsoluteFill style={{ transform: `scale(${1.035 - 0.035 * herein})` }}>
+        <div style={{ position: 'absolute', left: lage.x, top: lage.y, width: gross.breite, height: gross.hoehe, transformOrigin: '0 0', transform: `scale(${lage.skala})` }}>
           {szene.folge ? (
             <Freeze frame={folgeBild(szene, bild)}>
               <OffthreadVideo src={staticFile(`frames/${szene.quelle}`)} muted style={{ width: '100%', height: '100%', display: 'block' }} />
@@ -191,15 +196,29 @@ export const AppSzene = ({ szene, vorher, erste, marke, texte, bilder }) => {
           ) : (
             <Img src={staticFile(`frames/${szene.quelle}`)} style={{ width: '100%', height: '100%', display: 'block' }} />
           )}
-          {tipp && <Tipp x={tipp.x} y={tipp.y} ab={szene.tippBild} farbe={marke.akzent[0]} />}
+          {tipp && <Tipp x={tipp.x} y={tipp.y} ab={szene.tippBild} farbe={marke.akzent[0]} dunkel={marke.grund[1]} />}
         </div>
-        {frage > 0 && <AbsoluteFill style={{ background: marke.grund[1], opacity: 0.8 * frage }} />}
-      </div>
+      </AbsoluteFill>
+      {/* Aufhänger: leichte neutrale Abdunklung, die App bleibt erkennbar; die Frage steht auf einer Platte. */}
+      {frage > 0 && <AbsoluteFill style={{ background: '#000', opacity: 0.2 * frage * interpolate(bild, [0, 6], [0.4, 1], fest) }} />}
       {frage > 0 && (
-        <Mitte style={{ opacity: frage * frageHerein, transform: `scale(${1.05 - 0.05 * frageHerein + 0.04 * interpolate(bild, [0, ende], [0, 1], fest)})` }}>
-          <Marke farben={marke.akzent} breite={interpolate(bild, [0, 14], [60, 160], { ...fest, easing: aus })} />
-          <div style={{ fontSize: grossSchrift(szene.aufhaenger), fontWeight: 700, lineHeight: 1.14, textShadow: '0 4px 24px rgba(0,0,0,.45)' }}>{szene.aufhaenger}</div>
-        </Mitte>
+        <div
+          style={{ position: 'absolute', left: PLATTE.links, width: PLATTE.breite, top: flaeche.oben, height: flaeche.unten - flaeche.oben, display: 'flex', flexDirection: 'column', justifyContent: { oben: 'flex-start', mitte: 'center', unten: 'flex-end' }[flaeche.anker] }}
+        >
+          <div
+            style={{ ...platte, padding: '36px 36px 44px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', opacity: frage * interpolate(bild, [0, 5], [0, 1], fest), transform: `translateY(${(1 - frageHerein) * 110 + (1 - frage) * 40}px) scale(${0.92 + 0.08 * frageHerein + 0.02 * interpolate(bild, [9, ende], [0, 1], fest)})` }}
+          >
+            <Marke farben={marke.akzent} abstand={36} breite={interpolate(bild, [3, 16], [40, 160], { ...fest, easing: aus })} />
+            <div style={{ fontSize: aufhaengerSchrift(szene.aufhaenger), fontWeight: 700, lineHeight: 1.14, textWrap: 'balance' }}>{szene.aufhaenger}</div>
+          </div>
+        </div>
+      )}
+      {szene.einblendung && (
+        <div
+          style={{ ...platte, position: 'absolute', top: EINBLENDUNG.oben, left: PLATTE.links, width: PLATTE.breite, height: EINBLENDUNG.hoehe, padding: '0 36px', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', fontSize: 60, fontWeight: 700, lineHeight: 1.15, textWrap: 'balance', opacity: text, transform: `translateY(${(1 - text) * -40}px)` }}
+        >
+          {szene.einblendung}
+        </div>
       )}
       {szene.hervorhebung && (
         <Hervorhebung
@@ -211,7 +230,7 @@ export const AppSzene = ({ szene, vorher, erste, marke, texte, bilder }) => {
       )}
       {szene.premium && (
         <div
-          style={{ position: 'absolute', right: KARTE.links - 14, top: Math.max(karte.y - 14, FREI.oben + 10), height: 76, padding: '0 34px 0 26px', borderRadius: 38, display: 'flex', alignItems: 'center', background: verlauf(marke.akzent), fontSize: 42, fontWeight: 700, boxShadow: '0 10px 28px rgba(0,0,0,.35)', opacity: text, transform: `scale(${0.8 + 0.2 * text})` }}
+          style={{ position: 'absolute', right: PLATTE.links, top: szene.einblendung ? EINBLENDUNG.oben + EINBLENDUNG.hoehe + 20 : FREI.oben + RAND, height: 76, padding: '0 34px 0 26px', borderRadius: 38, display: 'flex', alignItems: 'center', background: verlauf(marke.akzent), fontSize: 42, fontWeight: 700, boxShadow: '0 0 0 4px rgba(255,255,255,.9), 0 10px 28px rgba(0,0,0,.35)', opacity: text, transform: `scale(${0.8 + 0.2 * text})` }}
         >
           <Stern />
           {texte.premium}

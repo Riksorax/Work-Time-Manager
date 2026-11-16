@@ -11,6 +11,9 @@ export const STANDARD = {
   schluss_dauer: 2.5,
 };
 
+/** So viele Bilder nach einer Marke beginnt eine Hervorhebung mit `nach` frühestens (Rahmen erscheint 8 Bilder davor). */
+export const NACH_MARKE = 10;
+
 /**
  * Berechnet den Ablauf des Videos in Bildern.
  *
@@ -28,7 +31,8 @@ export const STANDARD = {
  *   `halten` Bildern läuft sie bis `folgeBis` und bleibt dort stehen. Ohne `ab` setzt die Szene
  *   dort fort, wo die Szene davor mit derselben Folge aufgehört hat.
  * - `aufhaengerBis`: Ende des Aufhängers über dem App-Bild (Ende des ersten Satzes).
- * - `hervorhebung.abBild`: Beginn der Hervorhebung.
+ * - `hervorhebung.abBild`: Beginn der Hervorhebung (Anteil `bei`; mit `nach` frühestens kurz
+ *   nachdem die Folge diese Marke erreicht hat).
  *
  * `plan.tipps` nennt die Zeitpunkte aller Tipps in Sekunden (für das Tipp-Geräusch).
  *
@@ -85,6 +89,13 @@ export function berechneZeitplan(beschreibung, dauern, einstellungen = {}) {
         ergebnis.halten = halten;
         // Bild der Folge am Ende der Szene: dort setzt die nächste Szene fort.
         ergebnis.folgeEnde = Math.min(ergebnis.folgeBis, ab + Math.max(0, frames - halten));
+        const nach = szene.hervorhebung?.nachMarke;
+        if (nach !== undefined) {
+          // Die Marke liegt schon hinter der Szene (nach < ab): Das Schild beginnt wie mit „bei“ allein.
+          const erreicht = nach - ab + halten;
+          if (nach > ergebnis.folgeBis || erreicht >= frames) fehler.push(`${ort}, hervorhebung: Die Marke „${szene.hervorhebung.nach}“ (Bild ${nach}) wird in der Szene nicht erreicht (Szene zu kurz oder „bis“ zu früh)`);
+          else ergebnis.hervorhebung.abBild = Math.max(ergebnis.hervorhebung.abBild, erreicht + NACH_MARKE);
+        }
       } else if (szene.tipp) ergebnis.tippBild = Math.min(frames - 1, Math.round(szene.tipp.bei * frames));
       if (ergebnis.tippBild !== undefined) tipps.push((von + ergebnis.tippBild) / e.fps);
     }

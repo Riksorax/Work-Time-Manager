@@ -1,4 +1,5 @@
 // Rendert ein Video: `npm run render -- <id> [--sprache de]` (Beschreibung: README.md).
+// Mit `--standbilder 0,45,120` entstehen statt des Videos nur diese Bilder als PNG (zum Prüfen).
 //
 // Ablauf: Videobeschreibung prüfen → Stimme je Satz (tts/synth.py) → Zeitplan aus den
 // Satzlängen → Tonspur (ffmpeg) → Bild (Remotion) → beides zu out/<id>.mp4 verbinden.
@@ -12,7 +13,7 @@ import { LOGO, SCHRIFT_DATEIEN, ladeMarke } from './lib/marke.mjs';
 import { BeschreibungsFehler, pruefeBeschreibung, pruefeDauern } from './lib/schema.mjs';
 import { baueTonspur, messeLautheit, verbinde } from './lib/ton.mjs';
 import { berechneZeitplan } from './lib/zeit.mjs';
-import { aufLeinwand, istFrei, szenenKamera } from './src/layout.mjs';
+import { aufLeinwand, deckt, istFrei, szenenKamera } from './src/layout.mjs';
 import { TEXTE } from './src/texte.mjs';
 
 const HIER = import.meta.dirname;
@@ -21,14 +22,18 @@ const VORINSTALLIERT = '/opt/pw-browsers/chromium'; // Cloud-Umgebung (Playwrigh
 class Abbruch extends Error {}
 
 function argumente(argv) {
-  const ergebnis = { sprache: 'de', platzhalter: false, id: undefined };
+  const ergebnis = { sprache: 'de', platzhalter: false, id: undefined, standbilder: undefined };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--sprache' && argv[i + 1]) ergebnis.sprache = argv[++i];
+    else if (argv[i] === '--standbilder' && argv[i + 1]) {
+      ergebnis.standbilder = argv[++i].split(',').map(Number);
+      if (!ergebnis.standbilder.every((n) => Number.isInteger(n) && n >= 0)) throw new Abbruch('--standbilder erwartet Bildnummern, durch Komma getrennt (z. B. 0,45,120)');
+    }
     else if (argv[i] === '--platzhalter') ergebnis.platzhalter = true;
     else if (!argv[i].startsWith('-') && ergebnis.id === undefined) ergebnis.id = argv[i];
     else throw new Abbruch(`Unbekanntes Argument „${argv[i]}“`);
   }
-  if (!ergebnis.platzhalter && !ergebnis.id) throw new Abbruch('Aufruf: npm run render -- <id> [--sprache de]');
+  if (!ergebnis.platzhalter && !ergebnis.id) throw new Abbruch('Aufruf: npm run render -- <id> [--sprache de] [--standbilder 0,45,120]');
   return ergebnis;
 }
 
@@ -60,14 +65,18 @@ function liesFolge(ordner, name) {
   }
 }
 
-/** Hinweis, wenn Tipp oder Hervorhebung am Ende der Kamerafahrt in einer Schutzzone liegen. */
+/**
+ * Hinweise zur Lage am Ende der Kamerafahrt: Tipp oder Quelle der Hervorhebung in einer
+ * Schutzzone, und (zur Sicherheit) ein Bild, das die Leinwand nicht ganz deckt.
+ */
 function pruefeSchutzzonen(plan, masse) {
   plan.szenen.forEach((szene, i) => {
     if (szene.art !== 'app') return;
     const lage = szenenKamera(szene, masse[szene.quelle]);
+    if (!deckt(lage, masse[szene.quelle])) console.warn(`Hinweis: Szene ${i + 1}: Das Bild deckt die Leinwand nicht ganz.`);
     for (const feld of ['tipp', 'hervorhebung']) {
       if (szene[feld] && !istFrei(aufLeinwand(lage, masse[szene.quelle], szene[feld].rechteck))) {
-        console.warn(`Hinweis: Szene ${i + 1}: Der Ausschnitt „${szene[feld].auf}“ (${feld}) liegt in einer Schutzzone. Mit „zoom“ auf diesen Ausschnitt rückt er in die freie Fläche.`);
+        console.warn(`Hinweis: Szene ${i + 1}: Der Ausschnitt „${szene[feld].auf}“ (${feld}) liegt in einer Schutzzone. Das Bild füllt die Leinwand und rückt nicht darüber hinaus; nimm ein Bild oder eine Folge, in der die Stelle höher bzw. tiefer steht (Wischgeste), oder einen größeren Zoom-Faktor.`);
       }
     }
   });
@@ -98,7 +107,7 @@ function stelleBereit(ordner, bilder) {
   for (const [name, datei] of bilder) fs.copyFileSync(datei, path.join(ordner, 'frames', name));
 }
 
-async function rendereVideo({ id, sprache }, einstellungen) {
+async function rendereVideo({ id, sprache, standbilder }, einstellungen) {
   const texte = TEXTE[sprache];
   if (!texte) throw new Abbruch(`Sprache „${sprache}“ kennt src/texte.mjs nicht`);
   const datei = path.join(HIER, 'videos', sprache, `${id}.yaml`);
@@ -124,6 +133,12 @@ async function rendereVideo({ id, sprache }, einstellungen) {
   for (const d of dauern.values()) d.datei = path.join(stimmen, d.datei);
   const plan = berechneZeitplan(beschreibung, dauern, einstellungen);
   console.log(`Zeitplan: ${plan.szenen.length} Szenen, ${plan.frames} Bilder, ${plan.sekunden.toFixed(2)} s`);
+  plan.szenen.forEach((s, i) => {
+    const folge = s.folge ? `, Folge ${s.folgeAb}–${s.folgeEnde}${s.halten ? ` (erstes Bild ${s.halten} Bilder gehalten)` : ''}` : '';
+    const tipp = s.tippBild !== undefined ? `, Tipp bei Bild ${s.von + s.tippBild}` : '';
+    const schild = s.hervorhebung ? `, Schild ab Bild ${s.von + s.hervorhebung.abBild}` : '';
+    console.log(`  Szene ${i + 1} (${s.art}): Bild ${s.von}–${s.von + s.frames - 1}${folge}${tipp}${schild}`);
+  });
 
   let musik;
   if (beschreibung.musik) {
@@ -165,6 +180,16 @@ async function rendereVideo({ id, sprache }, einstellungen) {
   };
   const optionen = { serveUrl, inputProps, logLevel: 'error', ...browser() };
   const composition = await selectComposition({ ...optionen, id: 'video' });
+  if (standbilder) {
+    const ordner = path.join(aus, 'standbilder');
+    fs.mkdirSync(ordner, { recursive: true });
+    for (const nr of standbilder.filter((n) => n < plan.frames)) {
+      const output = path.join(ordner, `${String(nr).padStart(4, '0')}.png`);
+      await renderStill({ ...optionen, composition, frame: nr, output, imageFormat: 'png' });
+      console.log(`  ${path.relative(HIER, output)}`);
+    }
+    return;
+  }
   const stumm = path.join(aus, 'bild.mp4');
   let gemeldet = -1;
   await renderMedia({

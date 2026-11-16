@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { pruefeBeschreibung } from '../lib/schema.mjs';
-import { berechneZeitplan, folgeBild } from '../lib/zeit.mjs';
+import { NACH_MARKE, berechneZeitplan, folgeBild } from '../lib/zeit.mjs';
 
 const beschreibung = () =>
   pruefeBeschreibung({
@@ -176,4 +176,27 @@ test('Aufhänger über dem App-Bild endet mit dem ersten Satz, Hervorhebung begi
   assert.equal(plan.szenen[1].zoomBilder, 30);
   // „bis: 0“ friert das erste Bild ein, die nächste Szene läuft von dort los
   assert.equal(plan.szenen[1].folgeAb, 0);
+});
+
+test('Hervorhebung mit „nach“: Das Schild wartet, bis die Folge die Marke erreicht hat', () => {
+  const h = (mehr) => ({ auf: 'knopf', wert: '16:22 Uhr', ...mehr });
+  // Szene 2 setzt bei Bild 20 fort, die Marke „gestartet“ (46) ist nach 26 Bildern erreicht.
+  const szenen = (hervorhebung, mehr = {}) => [
+    { art: 'app', folge: 'ablauf', bis: 20, dauer: 1 },
+    { art: 'app', folge: 'ablauf', hervorhebung, dauer: 4, ...mehr },
+  ];
+  // „bei“ allein: 0.1 × 120 Bilder
+  assert.equal(plane(szenen(h({ bei: 0.1 }))).szenen[1].hervorhebung.abBild, 12);
+  // „bei“ läge vor der Marke: Das Schild kommt erst kurz danach
+  assert.equal(plane(szenen(h({ bei: 0.1, nach: 'gestartet' }))).szenen[1].hervorhebung.abBild, 26 + NACH_MARKE);
+  // „bei“ liegt ohnehin später: unverändert
+  assert.equal(plane(szenen(h({ bei: 0.5, nach: 'gestartet' }))).szenen[1].hervorhebung.abBild, 60);
+  // ein angehaltenes erstes Bild (Tipp mit „bei“) verschiebt die Marke mit
+  const gehalten = plane([{ art: 'app', folge: 'ablauf', tipp: { auf: 'knopf', bei: 0.6 }, hervorhebung: h({ bei: 0, nach: 'gestartet' }), dauer: 3 }]).szenen[0];
+  assert.equal(gehalten.hervorhebung.abBild, 46 + gehalten.halten + NACH_MARKE);
+  // Marke liegt schon hinter dem Abschnitt: wie ohne „nach“
+  assert.equal(plane(szenen(h({ bei: 0.1, nach: 'gestartet' }), { ab: 100 })).szenen[1].hervorhebung.abBild, 12);
+  // Marke wird nicht erreicht: Fehler statt eines Schilds an der falschen Stelle
+  assert.throws(() => plane(szenen(h({ nach: 'gestartet' }), { bis: 30 })), /hervorhebung: Die Marke „gestartet“ \(Bild 46\) wird in der Szene nicht erreicht/);
+  assert.throws(() => plane(szenen(h({ nach: 'gestartet' }), { dauer: 0.5 })), /wird in der Szene nicht erreicht/);
 });

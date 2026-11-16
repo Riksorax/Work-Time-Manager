@@ -11,7 +11,8 @@ ausschnitte:
   knopf: { x: 0.1, y: 0.578, breite: 0.8, hoehe: 0.078 }
 
 szenen:
-  # Bildfolge, auf dem ersten Bild angehalten, Aufhänger darüber.
+  # Bildfolge, auf dem ersten Bild angehalten; die App füllt das Bild, der Aufhänger steht auf
+  # einer Platte darüber.
   - art: app
     folge: platzhalter_folge
     bis: 0
@@ -20,6 +21,9 @@ szenen:
       - Läuft die Probe durch?
 
   # Dieselbe Folge läuft weiter (kein Übergang): Kamera auf den Knopf, Tipp an der Marke „tipp“.
+  # Der Knopf steht in der Platzhalter-Folge am unteren Bildrand, also in der Schutzzone: Das
+  # Bild füllt die Leinwand und rückt nicht höher, `render.mjs` meldet dazu einen Hinweis. Eine
+  # echte Folge wischt die Seite vorher hoch (siehe feierabend.yaml).
   - art: app
     folge: platzhalter_folge
     zoom: { auf: start_knopf, faktor: 1.1 }
@@ -27,14 +31,16 @@ szenen:
     saetze:
       - Dieses Bild ist ein Platzhalter, die Länge der Szene kommt aus dem Ton.
 
-  # Hervorhebung: Schild wächst aus dem Ausschnitt. Die Folge ist kürzer als die Szene, ihr letztes Bild bleibt stehen.
+  # Hervorhebung: Schild wächst aus dem Ausschnitt, mit „nach“ erst, wenn die Folge die Marke
+  # erreicht hat. Die Folge ist kürzer als die Szene, ihr letztes Bild bleibt stehen.
   - art: app
     folge: platzhalter_folge
-    hervorhebung: { auf: feierabend_zeile, zeile: Feierabend heute, wert: "16:22 Uhr" }
+    hervorhebung: { auf: feierabend_zeile, zeile: Feierabend heute, wert: "16:22 Uhr", nach: gestartet }
     saetze:
       - Um 16:40 Uhr steht der Saldo bei +12:45 Stunden.
 
-  # Einzelbild mit Zoom, Texteinblendung und Premium-Kennzeichen (harter Schnitt, neue Quelle).
+  # Einzelbild mit Zoom, Texteinblendung (dunkle Platte über der App) und Premium-Kennzeichen
+  # (harter Schnitt, neue Quelle).
   - art: app
     bild: platzhalter.png
     zoom: { auf: mitte }

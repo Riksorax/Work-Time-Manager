@@ -88,7 +88,8 @@ function unbekannte(objekt, erlaubt, ort, fehler) {
  *
  * @param {unknown} daten
  * App-Szenen bekommen `quelle` (Dateiname von Bild oder Folge); `zoom`, `tipp` und
- * `hervorhebung` tragen das aufgelöste `rechteck`, `ab`/`bis` und `tippMarke` sind Bildnummern.
+ * `hervorhebung` tragen das aufgelöste `rechteck`, `ab`/`bis`, `tippMarke` und
+ * `hervorhebung.nachMarke` sind Bildnummern.
  *
  * @param {{id?: string, bildVorhanden?: (name: string) => boolean, folge?: (name: string) => unknown, fps?: number}} [optionen]
  *   `id`: erwartete ID (Dateiname ohne Endung). `bildVorhanden`: prüft `frames/<sprache>/<name>`.
@@ -241,10 +242,10 @@ export function pruefeBeschreibung(daten, optionen = {}) {
         }
         if (s.hervorhebung !== undefined) {
           const h = s.hervorhebung;
-          if (!istObjekt(h)) fehler.push(`${o}: „hervorhebung“ erwartet auf, wert (und optional zeile, bei)`);
+          if (!istObjekt(h)) fehler.push(`${o}: „hervorhebung“ erwartet auf, wert (und optional zeile, bei, nach)`);
           else {
             const oh = `${o}, hervorhebung`;
-            unbekannte(h, ['auf', 'zeile', 'wert', 'bei'], oh, fehler);
+            unbekannte(h, ['auf', 'zeile', 'wert', 'bei', 'nach'], oh, fehler);
             const r = folgeGeladen ? ausschnittVon(h.auf, folge, oh) : undefined;
             if (!istText(h.wert)) fehler.push(`${oh}: „wert“ fehlt (die große Zahl, als Text in Anführungszeichen)`);
             else if (h.wert.trim().length > 12) fehler.push(`${oh}: „wert“ ist länger als 12 Zeichen`);
@@ -254,6 +255,17 @@ export function pruefeBeschreibung(daten, optionen = {}) {
             anteil(bei, oh, 'bei');
             szene.hervorhebung = { auf: h.auf, rechteck: r, wert: istText(h.wert) ? h.wert.trim() : '', bei };
             if (istText(h.zeile)) szene.hervorhebung.zeile = h.zeile.trim();
+            // „nach“: Das Schild kommt erst, wenn die Folge diese Marke erreicht hat (z. B. Seite wieder am Anfang).
+            if (h.nach !== undefined) {
+              if (s.folge === undefined) fehler.push(`${oh}: „nach“ gibt es nur mit „folge“ (Name einer Marke)`);
+              else if (folge) {
+                if (!istText(h.nach) || folge.marken[h.nach] === undefined) fehler.push(`${oh}: „nach“: Marke „${h.nach}“ kennt die Folge nicht`);
+                else {
+                  szene.hervorhebung.nach = h.nach;
+                  szene.hervorhebung.nachMarke = folge.marken[h.nach];
+                }
+              }
+            }
           }
         }
         if (s.premium !== undefined && typeof s.premium !== 'boolean') fehler.push(`${o}: „premium“ muss true oder false sein`);

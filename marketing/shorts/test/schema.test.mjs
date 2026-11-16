@@ -166,6 +166,12 @@ test('Hervorhebung: Ausschnitt und Wert sind Pflicht', () => {
   fehlerVon(mitFolge({ hervorhebung: { ...h, bei: 2 } }), /hervorhebung: „bei“ muss zwischen 0 und 1 liegen/, optionen());
   fehlerVon(mitFolge({ hervorhebung: { ...h, farbe: 'rot' } }), /hervorhebung: unbekanntes Feld „farbe“/, optionen());
   fehlerVon(mitFolge({ hervorhebung: { ...h, wert: '1234567890123' } }), /„wert“ ist länger als 12 Zeichen/, optionen());
+  // „nach“: Marke der Folge, vor der das Schild nicht erscheint
+  assert.equal(pruefeBeschreibung(mitFolge({ hervorhebung: { ...h, nach: 'gestartet' } }), optionen()).szenen[0].hervorhebung.nachMarke, 36);
+  fehlerVon(mitFolge({ hervorhebung: { ...h, nach: 'spaeter' } }), /hervorhebung: „nach“: Marke „spaeter“ kennt die Folge nicht/, optionen());
+  const mitBild = gueltig();
+  mitBild.szenen[1].hervorhebung = { auf: 'knopf', wert: '1', nach: 'gestartet' };
+  fehlerVon(mitBild, /hervorhebung: „nach“ gibt es nur mit „folge“/);
 });
 
 test('mehrere Fehler werden gesammelt gemeldet', () => {
