@@ -23,9 +23,11 @@ from __future__ import annotations
 import argparse
 import array
 import json
+import os
 import shutil
 import subprocess
 import sys
+import time
 import wave
 from pathlib import Path
 from typing import Callable
@@ -138,14 +140,27 @@ def omnivoice(auftraege: list[tuple[str, Path]], stimme: dict) -> None:
     wav, txt = HIER / "referenz" / f"{name}.wav", HIER / "referenz" / f"{name}.txt"
     if not name or not wav.exists() or not txt.exists():
         raise FileNotFoundError(f"Stimmvorlage fehlt: {wav} und {txt} werden gebraucht")
-    modell = OmniVoice.from_pretrained("k2-fsa/OmniVoice", device_map="cpu", dtype=torch.float32)
+    # Gerät: SHORTS_GERAET=cpu|cuda erzwingt eines; sonst die Grafikkarte, wenn PyTorch eine findet
+    # (dafür muss PyTorch mit CUDA installiert sein), andernfalls die CPU. Auf der CPU dauert ein
+    # Satz je nach Rechner eine bis über zehn Minuten.
+    geraet = os.environ.get("SHORTS_GERAET", "").strip().lower()
+    if geraet not in ("cpu", "cuda"):
+        geraet = "cuda" if torch.cuda.is_available() else "cpu"
+    print(f"OmniVoice rechnet auf: {geraet}", flush=True)
+    modell = OmniVoice.from_pretrained(
+        "k2-fsa/OmniVoice",
+        device_map="cuda:0" if geraet == "cuda" else "cpu",
+        dtype=torch.float16 if geraet == "cuda" else torch.float32,
+    )
     vorlage = modell.create_voice_clone_prompt(
         ref_audio=str(wav), ref_text=txt.read_text(encoding="utf-8").strip()
     )
     for nr, (text, ziel) in enumerate(auftraege):
         torch.manual_seed(nr)  # gleicher Text, gleiche Vorlage -> gleiches Ergebnis
+        beginn = time.monotonic()
         ton = modell.generate(text=text, language="German", voice_clone_prompt=vorlage)
         soundfile.write(str(ziel), ton[0], 24000, subtype="PCM_16")
+        print(f"Satz {nr + 1} von {len(auftraege)} vertont ({time.monotonic() - beginn:.0f} s): {ziel.name}", flush=True)
 
 
 ENGINES: dict[str, Engine] = {"piper": piper, "chatterbox": chatterbox, "omnivoice": omnivoice}

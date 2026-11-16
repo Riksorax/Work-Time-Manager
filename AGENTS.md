@@ -43,8 +43,11 @@ Unter Windows liegt das Python der Umgebung unter `tts\.venv-omnivoice\Scripts\p
 `pip` entsprechend unter `Scripts\pip.exe`; `render.mjs` findet beide Lagen von selbst. Die Pipeline ist bisher nur
 unter Linux gelaufen.
 
-Der erste Lauf lädt das Stimmmodell (rund 3 GB). Ohne Grafikkarte braucht die Stimme etwa eine Minute je Satz, auf
-langsameren Rechnern deutlich mehr; den Fortschritt zeigen die Dateien unter `out/<id>/stimme/`. Remotion braucht einen Chromium: entweder den Pfad in
+Der erste Lauf lädt das Stimmmodell (rund 3 GB). Die Stimme rechnet auf der Grafikkarte, wenn PyTorch mit
+CUDA installiert ist (dann statt des CPU-Index oben den passenden CUDA-Index von pytorch.org nehmen; ungetestet),
+sonst auf der CPU: dort je nach Rechner eine bis über fünfzehn Minuten je Satz. `SHORTS_GERAET=cpu|cuda` erzwingt
+ein Gerät. Fertige Sätze liegen unter `out/<id>/stimme/` und werden beim nächsten Lauf wiederverwendet; nur
+geänderte Sätze werden neu gerechnet. Einen laufenden Render deshalb nicht abbrechen. Remotion braucht einen Chromium: entweder den Pfad in
 `SHORTS_CHROMIUM` angeben oder Remotion beim ersten Lauf selbst einen laden lassen.
 
 ```bash

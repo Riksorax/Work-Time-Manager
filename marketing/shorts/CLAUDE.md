@@ -109,7 +109,9 @@ sagen, dass es so geprüft wurde.
   die Marke `ergaenzt` steht auf dem ersten ruhigen Bild und das Schild hat `bei: 0`. Ergebnis 0,87 s
   zwischen dem Erscheinen der Karten und dem Schild, davon 0,53 s mit der zweiten Karte ganz oder teils in der
   Schutzzone (bis die Seite steht).
-- **Rechenzeit:** OmniVoice braucht ohne Grafikkarte knapp eine Minute je Satz. Unveränderte Sätze unter
+- **Rechenzeit:** OmniVoice braucht ohne Grafikkarte in der Cloud-Umgebung eine bis zwei Minuten je Satz, auf einem
+  Windows-Rechner wurden rund 15 Minuten je Satz gemessen. Mit CUDA-PyTorch nutzt `synth.py` die Grafikkarte von
+  selbst (`SHORTS_GERAET=cpu|cuda` erzwingt ein Gerät; der Grafikkarten-Pfad ist ungetestet). Unveränderte Sätze unter
   `out/<id>/stimme/` werden wiederverwendet; den Ordner nicht ohne Grund löschen.
 - **Lizenzen:** `tts/LIZENZEN.md` (OmniVoice mit Auflagen), Remotion kostenlos für Einzelpersonen; vor Remotion 5
   neu prüfen.
