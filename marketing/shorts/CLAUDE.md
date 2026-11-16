@@ -89,6 +89,8 @@ sagen, dass es so geprüft wurde.
 | Platte schnitt halbe App-Zeilen oben und unten an (`pausen`) | `zoom`-Ausschnitt so wählen, dass die Platte (ca. 350 px bei drei Zeilen) in einer Lücke der App beginnt und endet; am Standbild in voller Größe prüfen |
 | Wisch begann auf einem Schalter, die Zeile leuchtete auf (`pausen`) | Wischgesten auf einer leeren Stelle beginnen (neben einer Überschrift) |
 | Schild ließ links ein „P“ der Überschrift stehen (`pausen`, Zoom 1.08) | Zoom nur so weit, dass das Schild (x 70 bis 1010) die Nachbarzeilen ganz deckt |
+| Runde Ecke des Schilds ließ unten links das „P“ von „Pausen“ stehen (`pausen-lang`) | eigenen Ausschnitt in der YAML, oben einige Pixel tiefer als die Quelle: Das Schild rückt mit herunter (es steht 36 px über dem Ausschnitt) |
+| Frage in vier Zeilen passte in keine Lücke der App (`pausen-lang`) | drei Zeilen; die Platte ist bei drei Zeilen gut 350 px hoch, gemessene Lücken am Seitenanfang: unter „+19:35“ (bis y 649) und über „Startzeit“ (ab y 1030) |
 
 ## Bekannte Grenzen und offene Punkte
 
@@ -103,6 +105,10 @@ sagen, dass es so geprüft wurde.
 - **Ergebnis vor dem Schild:** Zeigt die App das Ergebnis erst nach einem Tipp, ist es zwischen Tipp und Schild
   kurz ohne Hervorhebung zu sehen (in `pausen` rund 1,3 s, davon 0,5 s halb in der Schutzzone, bis der Wisch die
   Karte hochholt). Das ist der echte Ablauf; das Schild kommt mit `nach` so früh wie möglich.
+  `pausen-lang` (zwei Karten) kürzt das: Die Folge zieht die Karten mit `_dragBy` ohne Ausschwingen hoch,
+  die Marke `ergaenzt` steht auf dem ersten ruhigen Bild und das Schild hat `bei: 0`. Ergebnis 0,87 s
+  zwischen dem Erscheinen der Karten und dem Schild, davon 0,53 s mit der zweiten Karte ganz oder teils in der
+  Schutzzone (bis die Seite steht).
 - **Rechenzeit:** OmniVoice braucht ohne Grafikkarte knapp eine Minute je Satz. Unveränderte Sätze unter
   `out/<id>/stimme/` werden wiederverwendet; den Ordner nicht ohne Grund löschen.
 - **Lizenzen:** `tts/LIZENZEN.md` (OmniVoice mit Auflagen), Remotion kostenlos für Einzelpersonen; vor Remotion 5

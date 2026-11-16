@@ -49,6 +49,11 @@ const _swipeDownDistance = 160.0;
 const _breakSwipeUpDistance = 201.0;
 const _breakSwipeCardDistance = 36.0;
 
+/// Weg des Fingers in `pausen_ergaenzt_lang`, nachdem die beiden Pausen-Karten
+/// erschienen sind: bis ans neue Seitenende (abgestimmt mit
+/// `SHORTS_SEQUENCE_TRACE`, der Finger hält am Ende an, kein Ausschwingen).
+const _longBreakSwipeCardDistance = 126.5;
+
 /// Zeit des Bildes [frame] seit Beginn der Folge. Auf Mikrosekunden gerundet;
 /// 30 Bilder ergeben trotzdem genau eine Sekunde.
 Duration _timeOf(int frame) =>
@@ -220,6 +225,33 @@ Future<int> _swipeBy(WidgetTester t, _Recorder rec,
     if (i == frames) await finger.up(timeStamp: _timeOf(first + i));
     await frame();
   }
+  return first;
+}
+
+/// Echte Wischgeste ohne Ausschwingen: Finger bei [from] aufsetzen, in
+/// [frames] Bildern weich anfahrend und weich abbremsend um [dy] ziehen,
+/// [hold] Bilder still halten (Flutter misst beim Abheben dann keine
+/// Geschwindigkeit) und abheben. Die Seite steht danach genau dort, wo der
+/// Finger sie hingeschoben hat. Gibt die Nummer des Bildes zurück, mit dem
+/// der Finger aufsetzt.
+Future<int> _dragBy(WidgetTester t, _Recorder rec,
+    Future<void> Function() frame, Offset from, double dy,
+    {required int frames, int hold = 3}) async {
+  final first = rec.frames;
+  final finger = await t.createGesture();
+  await finger.down(from, timeStamp: _timeOf(first));
+  await frame();
+  for (var i = 1; i <= frames; i++) {
+    final u = i / frames;
+    final part = u * u * (3 - 2 * u);
+    await finger.moveTo(from + Offset(0, dy * part),
+        timeStamp: _timeOf(first + i));
+    await frame();
+  }
+  for (var i = 1; i <= hold; i++) {
+    await frame();
+  }
+  await finger.up(timeStamp: _timeOf(rec.frames - 1));
   return first;
 }
 
@@ -695,6 +727,233 @@ void main() {
     // Nach dem Beenden rechnet die App ohne die ergänzte Pause nicht mehr:
     // Netto = Brutto − 30 Minuten.
     expect(find.text(_hms(worked(0) - const Duration(minutes: 30))),
+        findsOneWidget);
+    trace('Bild ${length - 1}');
+
+    await rec.finish(marks: marks, regions: regions);
+    await rec.app.close();
+  });
+
+  // Langer Tag (Video `pausen-lang`): seit 7:52 Uhr ohne Pause, es ist
+  // 17:30 Uhr, also über 9 Stunden. Ablauf wie `pause_ergaenzt`; beim Beenden
+  // ergänzt die App zwei Pausen (`BreakCalculatorService._calculateBreaks`:
+  // ab 9 Stunden Brutto 30 Minuten vier Stunden nach Beginn und 15 Minuten
+  // zwei Stunden nach deren Ende). Die beiden Karten erscheinen am unteren
+  // Rand; ein ruhiger Wisch ohne Ausschwingen holt sie gleich danach in die
+  // freie Fläche, dort steht die Seite bis zum Ende.
+  testWidgets('pausen_ergaenzt_lang',
+      timeout: const Timeout(Duration(minutes: 30)), (t) async {
+    // Abgestimmt auf den Ton des Videos: der Finger setzt bei Bild 142 auf
+    // („Beenden“ im zweiten Satz).
+    const idle = 107; // 3,6 s ruhig am Seitenanfang
+    const swipe = 13; // Finger zieht 0,43 s
+    const settle = 21; // Ausschwingen und Ruhe bis zum Tipp (0,7 s)
+    const rest = 9; // davon mindestens 0,3 s ohne jede Bewegung
+    const press = 6; // Finger 0,2 s auf dem Knopf
+    const show = 4; // die Karten erscheinen, die Seite steht kurz (0,13 s)
+    const drag = 12; // Finger zieht die Karten 0,4 s hoch
+    const length = 285; // 9,5 s
+    const leadIn = Duration(seconds: 2);
+    const freeTop = 0.15;
+    const freeBottom = 0.75;
+    const videoTop = 250 / 1920;
+    const videoBottom = 1500 / 1920;
+
+    final rec =
+        _Recorder(t, 'pausen_ergaenzt_lang', startsAt: shortsLongDayEnd);
+    final watch = t.binding.clock.stopwatch()..start();
+    rec.app = await openAppScreen(t, const ScreenMotif(), _locale,
+        clock: rec.clock, entries: shortsEntries(shortsTodayWithoutBreak()));
+    final opened = watch.elapsed;
+    expect(opened, lessThan(leadIn));
+    await t.pump(leadIn - opened);
+    final l10n = l10nOf(t);
+    final regions = <String, Rect>{};
+    final marks = <String, int>{};
+
+    final stopButton = find.widgetWithText(
+        ElevatedButton, l10n.stopTimeTracking,
+        skipOffstage: true);
+    final startButton = find.widgetWithText(
+        ElevatedButton, l10n.startTimeTracking,
+        skipOffstage: true);
+    final autoCards = find.ancestor(
+        of: find.text(l10n.automaticChipLabel), matching: find.byType(Card));
+    expect(stopButton, findsOneWidget);
+    expect(find.text(l10n.noBreaksYet), findsOneWidget);
+    final scroll = Scrollable.of(t.element(stopButton)).position;
+
+    bool quiet() =>
+        !scroll.isScrollingNotifier.value && !t.binding.hasScheduledFrame;
+
+    /// Lage der Pausen-Karten, von oben nach unten.
+    List<Rect> cardRects() => [
+          for (var i = 0; i < autoCards.evaluate().length; i++)
+            t.getRect(autoCards.at(i)),
+        ]..sort((a, b) => a.top.compareTo(b.top));
+
+    /// Bis zum Beenden: Timer und Brutto-Zeile sind gleich (keine Pause).
+    Duration worked(int seconds) =>
+        shortsLongDayEnd.difference(shortsStart) + Duration(seconds: seconds);
+    expect(worked(0), greaterThan(const Duration(hours: 9)));
+    int? release;
+
+    void trace(String when) {
+      if (!_trace) return;
+      final dashboard = find.byType(DashboardScreen);
+      final texts = t
+          .widgetList<RichText>(
+              find.descendant(of: dashboard, matching: find.byType(RichText)))
+          .map((r) => r.text.toPlainText())
+          .where((s) => s.trim().isNotEmpty && s.codeUnitAt(0) < 0xE000)
+          .join(' | ');
+      final fields = t
+          .widgetList<EditableText>(find.descendant(
+              of: dashboard, matching: find.byType(EditableText)))
+          .map((e) => e.controller.text)
+          .join(' | ');
+      debugPrint('$when (Uhr ${rec.clock()}, Scroll '
+          '${scroll.pixels.toStringAsFixed(1)}/'
+          '${scroll.maxScrollExtent.toStringAsFixed(1)}): $texts '
+          '|| Felder: $fields');
+    }
+
+    /// Scroll-Position je aufgenommenem Bild.
+    final positions = <double>[];
+
+    Future<void> frame() async {
+      await rec.record(1);
+      final frame = rec.frames - 1;
+      positions.add(scroll.pixels);
+      if (_trace) {
+        debugPrint('Bild $frame: ${scroll.pixels.toStringAsFixed(1)}'
+            '/${scroll.maxScrollExtent.toStringAsFixed(1)}'
+            '${quiet() ? '' : ' bewegt'}');
+      }
+      expect(find.byType(SnackBar), findsNothing, reason: 'Bild $frame');
+      expect(t.takeException(), isNull, reason: 'Bild $frame');
+      if (release == null && frame % _fps == 0) {
+        final shown = _hms(worked(frame ~/ _fps));
+        expect(find.text(shown), findsOneWidget, reason: 'Bild $frame');
+        expect(find.text(l10n.grossAttendance(shown)), findsOneWidget,
+            reason: 'Bild $frame');
+      }
+    }
+
+    // ── Seitenanfang: Timer läuft, keine Pause ─────────────────────────
+    expect(scroll.pixels, 0);
+    final timer = find.text(_hms(worked(0)));
+    regions['timer_brutto'] = _textRect(
+        t, find.ancestor(of: timer, matching: find.byType(Column)).first);
+    trace('Bild 0');
+    for (var i = 0; i < idle; i++) {
+      await frame();
+    }
+
+    // ── Wisch nach oben bis ans Seitenende, der Knopf steht in der Mitte ─
+    marks['wisch_hoch'] = await _swipeBy(
+        t, rec, frame, _at(0.75, 0.68), -_breakSwipeUpDistance,
+        frames: swipe);
+    var quietFrames = 0;
+    for (var i = 0; i < settle; i++) {
+      await frame();
+      quietFrames = quiet() ? quietFrames + 1 : 0;
+    }
+    expect(quietFrames, greaterThanOrEqualTo(rest),
+        reason: 'Seite steht vor dem Tipp nicht lange genug ruhig');
+    expect(scroll.pixels, scroll.maxScrollExtent);
+    expect(find.text(l10n.noBreaksYet), findsOneWidget);
+
+    // ── Tipp auf „Zeiterfassung beenden“ ───────────────────────────────
+    final stopRect = t.getRect(stopButton);
+    regions['beenden_knopf'] = stopRect;
+    final stopPart = _fraction(stopRect);
+    expect(stopPart['y'], greaterThanOrEqualTo(freeTop));
+    expect(stopPart['y']! + stopPart['hoehe']!, lessThanOrEqualTo(freeBottom),
+        reason: 'Beenden-Knopf liegt beim Tipp nicht in der freien Mitte');
+    trace('vor dem Tipp');
+    marks['tipp'] = rec.frames;
+    final finger = await t.createGesture();
+    await finger.down(stopRect.center, timeStamp: _timeOf(rec.frames));
+    for (var i = 0; i < press; i++) {
+      await frame();
+    }
+    release = rec.frames - 1;
+    await finger.up(timeStamp: _timeOf(release));
+
+    // ── beendet: die App ergänzt zwei Pausen ───────────────────────────
+    while (autoCards.evaluate().isEmpty) {
+      expect(rec.frames - release, lessThan(_fps),
+          reason: 'Pausen wurden nicht ergänzt');
+      await frame();
+    }
+    marks['beendet'] = rec.frames - 1;
+    expect(stopButton, findsNothing);
+    expect(startButton, findsOneWidget);
+    expect(autoCards, findsNWidgets(2));
+    expect(find.text(l10n.noBreaksYet), findsNothing);
+    trace('beendet');
+    for (var i = 1; i < show; i++) {
+      await frame();
+    }
+
+    // ── ruhiger Wisch: beide Karten rücken in die freie Fläche ─────────
+    marks['wisch_karten'] = await _dragBy(
+        t, rec, frame, _at(0.75, 0.66), -_longBreakSwipeCardDistance,
+        frames: drag, hold: 2);
+    while (!quiet()) {
+      expect(rec.frames - marks['wisch_karten']!, lessThan(2 * _fps),
+          reason: 'Seite kommt nicht zur Ruhe');
+      await frame();
+    }
+    // Erstes Bild, ab dem die Seite an ihrer endgültigen Stelle steht (der
+    // Finger liegt dann noch kurz still auf, bevor er abhebt).
+    var settled = rec.frames - 1;
+    while (positions[settled - 1] == scroll.pixels) {
+      settled--;
+    }
+    marks['ergaenzt'] = settled;
+    trace('ergaenzt');
+    // Am Seitenende oder höchstens 2 logische Pixel davor (der Finger
+    // schiebt die Seite nie über das Ende hinaus, sonst dehnt Android sie).
+    expect(scroll.maxScrollExtent - scroll.pixels, inInclusiveRange(0, 2));
+
+    final cards = cardRects();
+    final both = cards.first.expandToInclude(cards.last);
+    final bothPart = _fraction(both);
+    expect(bothPart['y'], greaterThanOrEqualTo(videoTop));
+    expect(bothPart['y']! + bothPart['hoehe']!, lessThanOrEqualTo(videoBottom),
+        reason: 'Karten liegen nicht in der freien Fläche des Videos');
+    regions['pause_karte_1'] = cards.first;
+    regions['pause_karte_2'] = cards.last;
+    regions['pausen_karten'] = both;
+    // Zeitraum und Dauer der ergänzten Pausen, in der Reihenfolge der Liste.
+    String hm(DateTime d) => '${d.hour.toString().padLeft(2, '0')}:'
+        '${d.minute.toString().padLeft(2, '0')}';
+    String line(DateTime start, int minutes) => '${hm(start)} - '
+        '${hm(start.add(Duration(minutes: minutes)))} · '
+        '${l10n.breakDurationMinutes(minutes)}';
+    final first = shortsStart.add(const Duration(hours: 4));
+    final second = first.add(const Duration(minutes: 30 + 120));
+    final line1 = find.text(line(first, 30));
+    final line2 = find.text(line(second, 15));
+    expect(t.getRect(line1).top, lessThan(t.getRect(line2).top));
+    regions['pause_zeile_1'] = _textRect(t, line1);
+    regions['pause_zeile_2'] = _textRect(t, line2);
+    regions['endzeit_feld'] = t.getRect(find
+        .ancestor(
+            of: find.text(l10n.endTimeLabel),
+            matching: find.byType(InputDecorator))
+        .first);
+
+    // ── die Seite steht bis zum Ende ───────────────────────────────────
+    while (rec.frames < length) {
+      await frame();
+    }
+    expect(positions.skip(settled), everyElement(positions[settled]));
+    expect(cardRects(), cards);
+    // Netto = Brutto − 45 Minuten.
+    expect(find.text(_hms(worked(0) - const Duration(minutes: 45))),
         findsOneWidget);
     trace('Bild ${length - 1}');
 

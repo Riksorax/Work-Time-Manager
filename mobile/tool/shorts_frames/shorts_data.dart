@@ -24,6 +24,10 @@ final shortsNoon = _today(12, 25);
 /// Bildfolge `feierabend_mittags`).
 final shortsAfterLunch = _today(13, 30);
 
+/// Langer Tag: Beginn der Bildfolge `pausen_ergaenzt_lang`, seit 7:52 Uhr
+/// ohne Pause, also über 9 Stunden.
+final shortsLongDayEnd = _today(17, 30);
+
 /// Arbeitsbeginn und Mittagspause des Tages in `feierabend_mittags`.
 final shortsLateStart = _today(8, 7);
 final shortsLunchStart = _today(12, 10);
