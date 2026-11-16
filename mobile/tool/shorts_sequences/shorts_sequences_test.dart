@@ -960,4 +960,68 @@ void main() {
     await rec.finish(marks: marks, regions: regions);
     await rec.app.close();
   });
+
+  // Berichte -> Insights: beginnt oben, ruhiger Wisch nach unten zu
+  // Wochen-Trend und „Prognose zum Jahresende“ (Premium).
+  testWidgets('ueberstunden_trend',
+      timeout: const Timeout(Duration(minutes: 30)), (t) async {
+    const idle = 15; // 0,5 s ruhig am Seitenanfang
+    const drag = 18; // Finger zieht 0,6 s weich nach unten
+    const length = 150; // 5,0 s
+    const trendSwipeDistance = 175.0;
+
+    final rec = _Recorder(t, 'ueberstunden_trend', startsAt: shortsAfterLunch);
+    rec.app = await openAppScreen(t, const ScreenMotif(tab: 4), _locale,
+        clock: rec.clock);
+    final l10n = l10nOf(t);
+    final regions = <String, Rect>{};
+    final marks = <String, int>{};
+
+    final forecastCard = find.byKey(const ValueKey('trend-forecast'));
+    expect(forecastCard, findsOneWidget);
+    final scroll = Scrollable.of(t.element(forecastCard)).position;
+
+    final positions = <double>[];
+    Future<void> frame() async {
+      await rec.record(1);
+      positions.add(scroll.pixels);
+      expect(find.byType(SnackBar), findsNothing,
+          reason: 'Bild ${rec.frames - 1}');
+      expect(t.takeException(), isNull, reason: 'Bild ${rec.frames - 1}');
+    }
+
+    expect(scroll.pixels, 0);
+    for (var i = 0; i < idle; i++) {
+      await frame();
+    }
+
+    marks['wisch'] = await _dragBy(
+        t, rec, frame, _at(0.5, 0.7), -trendSwipeDistance,
+        frames: drag, hold: 2);
+    while (scroll.isScrollingNotifier.value || t.binding.hasScheduledFrame) {
+      await frame();
+    }
+    var settled = rec.frames - 1;
+    while (settled > 0 && positions[settled - 1] == scroll.pixels) {
+      settled--;
+    }
+    marks['prognose'] = settled;
+
+    final cardRect = t.getRect(forecastCard);
+    final weekTitleRect = t.getRect(find.text(l10n.trendWeekTitle));
+    if (_trace) {
+      debugPrint(
+          'ueberstunden_trend: scroll=${scroll.pixels}/${scroll.maxScrollExtent}, '
+          'weekTitle=$weekTitleRect, forecastCard=$cardRect');
+    }
+    regions['prognose_karte'] = cardRect;
+
+    while (rec.frames < length) {
+      await frame();
+    }
+    expect(positions.skip(settled), everyElement(positions[settled]));
+
+    await rec.finish(marks: marks, regions: regions);
+    await rec.app.close();
+  });
 }

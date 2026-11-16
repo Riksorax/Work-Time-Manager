@@ -1,0 +1,43 @@
+# Video 3 (#575, S4): Gleitzeitkonto (Free) und Prognose zum Jahresende (Premium).
+# Aussagen geprüft gegen fastlane/metadata/android/de-DE/full_description.txt:
+# - Free: „Die App zeigt deine Arbeitszeit, die voraussichtliche Feierabendzeit und dein
+#   Überstunden-Saldo live an.“ und „Dein Gleitzeitkonto vergleicht Soll- und Ist-Stunden.“
+# - Premium (Abschnitt „Berichte, Trend & Prognose (Premium)“): „Prognose deines
+#   Überstunden-Saldos zum Jahresende“.
+# Die Folge feierabend_mittags zeigt den laufenden Tag mit „Überstunden Gesamt +19:35“,
+# ueberstunden_trend wischt im Tab „Insights“ auf die Karte „Prognose zum Jahresende“
+# („Voraussichtlich +21:31 h zum 31.12.2026“).
+id: ueberstunden
+titel: Wie viele Überstunden hast du wirklich?
+
+ausschnitte:
+  # Timer und Brutto-Zeile: Die Platte mit der Frage sitzt direkt darunter (ab y 495 px) und
+  # verdeckt „Überstunden Gesamt +19:35“ (y 510 bis 667 px) sowie „Heutige Überstunden“.
+  timer_bis_brutto: { x: 0.1, y: 0.0965, breite: 0.8, hoehe: 0.130 }
+
+szenen:
+  - art: app
+    folge: feierabend_mittags
+    zoom: { auf: timer_bis_brutto, faktor: 1.0 }
+    aufhaenger: "Du warst diese Woche\nlänger im Büro.\nWie viele Überstunden hast du?"
+    saetze:
+      - Du warst diese Woche länger im Büro. Wie viele Überstunden hast du?
+
+  - art: app
+    folge: feierabend_mittags
+    zoom: { auf: ueberstunden_gesamt, faktor: 1.0 }
+    hervorhebung: { auf: ueberstunden_gesamt, zeile: Überstunden Gesamt, wert: "+19:35", bei: 0.12 }
+    saetze:
+      - Dein Gleitzeitkonto zählt mit. Aktuell +19:35 Stunden.
+
+  - art: app
+    folge: ueberstunden_trend
+    premium: true
+    zoom: { auf: prognose_karte, faktor: 1.0 }
+    hervorhebung: { auf: prognose_karte, zeile: Prognose zum Jahresende, wert: "+21:31 h", nach: prognose, bei: 0 }
+    saetze:
+      - Mit Premium siehst du auch deine Prognose fürs Jahresende. +21:31 Stunden.
+
+  - art: schluss
+    saetze:
+      - Work Time Manager. Kostenlos bei Google Play.
