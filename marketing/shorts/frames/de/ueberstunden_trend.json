@@ -1,0 +1,16 @@
+{
+  "fps": 30,
+  "bilder": 150,
+  "marken": {
+    "wisch": 15,
+    "prognose": 33
+  },
+  "ausschnitte": {
+    "prognose_karte": {
+      "x": 0.0777,
+      "y": 0.2663,
+      "breite": 0.8447,
+      "hoehe": 0.2184
+    }
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "stimme": {
+    "engine": "omnivoice",
+    "stimme": "omnivoice-mann",
+    "sprecher": null
+  },
+  "saetze": [
+    {
+      "nr": "01",
+      "datei": "01.wav",
+      "text": "Du warst diese Woche länger im Büro. Wie viele Überstunden hast du?",
+      "sprechtext": "Du warst diese Woche länger im Büro. Wie viele Überstunden hast du?",
+      "quelle": "synthese",
+      "sekunden": 3.346
+    },
+    {
+      "nr": "02",
+      "datei": "02.wav",
+      "text": "Dein Gleitzeitkonto zählt mit. Aktuell +19:35 Stunden.",
+      "sprechtext": "Dein Gleitzeitkonto zählt mit. Aktuell plus neunzehn Stunden fünfunddreißig.",
+      "quelle": "synthese",
+      "sekunden": 4.109
+    },
+    {
+      "nr": "03",
+      "datei": "03.wav",
+      "text": "Mit Premium siehst du auch deine Prognose fürs Jahresende. +21:31 Stunden.",
+      "sprechtext": "Mit Premium siehst du auch deine Prognose fürs Jahresende. plus einundzwanzig Stunden einunddreißig.",
+      "quelle": "synthese",
+      "sekunden": 5.336
+    },
+    {
+      "nr": "04",
+      "datei": "04.wav",
+      "text": "Work Time Manager. Kostenlos bei Google Play.",
+      "sprechtext": "Work Time Manager. Kostenlos bei Google Play.",
+      "quelle": "synthese",
+      "sekunden": 2.413
+    }
+  ]
+}
