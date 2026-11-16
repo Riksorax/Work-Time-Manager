@@ -22,6 +22,9 @@ aber nicht verbauen (Sprache als Ordner bzw. Parameter).
 | Bild | echte App-Bildschirme mit Beispieldaten, per Skript animiert (Zoom, Texteinblendung, Untertitel). Keine KI-generierten Szenen, keine erfundene Oberfläche. |
 | Umfang | Pipeline + 5 Videos, Video 1 ist das Pilotvideo mit Abnahme |
 | Künftige Funktionen | als Teaser „Kommt bald“, ohne Datum |
+| Stimme (15.11.2026) | OmniVoice (Standard-Engine von VoiceStudio) mit fester Stimmvorlage; Piper und Chatterbox sind im Hörtest durchgefallen. Welche der drei Stimmen, ist offen. |
+| Untertitel (16.11.2026) | keine, in keinem Short. Einblendungen und Hervorhebungen einzelner Kernaussagen bleiben. |
+| Bewegung (16.11.2026) | echte Bildfolgen aus der App (Timer tickt, Tipp löst den Zustandswechsel aus) statt Standbilder mit Zoom; die App ist ab dem ersten Bild zu sehen, eine Aussage je Video, Ziel 11 bis 15 Sekunden. |
 
 ## Was es schon gibt (wiederverwenden, nicht neu bauen)
 
@@ -46,7 +49,8 @@ aber nicht verbauen (Sprache als Ordner bzw. Parameter).
    `work-time-manager.app`. Kein Apple-Logo, kein „im App Store“.
 6. **Teaser** zeigen keine nachgebaute Oberfläche einer Funktion, die es noch nicht gibt, und nennen kein Datum.
 7. **Keine echten Daten.** Nur der Datensatz aus `store_data.dart`.
-8. **Sprache:** Du-Form, kurze Sätze, kein Werbe-Superlativ. Sprechtempo so, dass ein Video 20 bis 35 Sekunden dauert.
+8. **Sprache:** Du-Form, kurze Sätze, kein Werbe-Superlativ. Ein Video dauert 11 bis 15 Sekunden (erste Fassung des
+   Plans: 20 bis 35; nach dem ersten Pilotvideo verkürzt).
 
 ## Technisches Format
 
@@ -54,9 +58,9 @@ aber nicht verbauen (Sprache als Ordner bzw. Parameter).
 - Schutzzonen: oben 250 px und unten 420 px ohne wichtigen Text (dort liegen die Bedienelemente der Plattformen).
   Der App-Bildschirm steht deshalb verkleinert (ca. 78 % Breite, abgerundete Ecken, Schatten) auf Markengrund,
   nicht formatfüllend.
-- Aufbau jedes Videos: Aufhänger in den ersten 2 Sekunden (große Schrift, eine Frage oder ein Problem), 3 bis 5
-  Szenen mit je einem App-Bildschirm, Schlusskarte mit Logo und Handlungsaufruf (ca. 2,5 s).
-- Untertitel sind eingebrannt (viele sehen ohne Ton), satzweise, höchstens zwei Zeilen.
+- Aufbau jedes Videos: Aufhänger in den ersten 2 Sekunden als Text über der laufenden App (keine eigene Textkarte),
+  eine Aussage mit zwei bis drei Szenen aus echten Bildfolgen, Schlusskarte mit Logo und Handlungsaufruf (ca. 2,5 s).
+- Keine Untertitel (Entscheidung 16.11.2026). Die Kernaussage steht als große Hervorhebung im Bild.
 - Zeitsteuerung kommt aus dem Ton: Jeder Satz wird einzeln synthetisiert, seine Länge bestimmt die Szenendauer.
   Dadurch braucht es keine nachträgliche Wort-Ausrichtung.
 
