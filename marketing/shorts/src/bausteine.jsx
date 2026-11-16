@@ -109,17 +109,17 @@ const Stern = () => (
  */
 const Tipp = ({ x, y, ab, farbe, dunkel }) => {
   const t = useCurrentFrame() - ab + 4; // der Punkt erscheint kurz vor dem Tipp
-  if (t < 0 || t > 12) return null;
+  if (t < 0 || t >= 9) return null;
   // Punkt und Ring sind kurz nach dem Tipp wieder weg: Danach ändert sich das Bild darunter
   // (der Knopf wechselt den Zustand und kann dabei verrutschen).
-  const punkt = interpolate(t, [0, 3, 7, 10], [0, 1, 1, 0], fest);
+  const punkt = interpolate(t, [0, 3, 7, 9], [0, 1, 1, 0], fest);
   const druck = interpolate(t, [0, 2, 4, 8], [1.3, 1.15, 0.8, 1], fest);
-  const ring = interpolate(t, [4, 12], [0.7, 2], { ...fest, easing: aus });
+  const ring = interpolate(t, [4, 9], [0.7, 1.9], { ...fest, easing: aus });
   const r = 75;
   const kreis = { position: 'absolute', left: x - r, top: y - r, width: 2 * r, height: 2 * r, borderRadius: '50%', boxSizing: 'border-box' };
   return (
     <>
-      <div style={{ ...kreis, border: `10px solid ${farbe}`, boxShadow: `0 0 0 3px ${dunkel}, inset 0 0 0 3px ${dunkel}`, transform: `scale(${ring})`, opacity: interpolate(t, [3.9, 4, 8, 12], [0, 0.95, 0.8, 0], fest) }} />
+      <div style={{ ...kreis, border: `10px solid ${farbe}`, boxShadow: `0 0 0 3px ${dunkel}, inset 0 0 0 3px ${dunkel}`, transform: `scale(${ring})`, opacity: interpolate(t, [3.9, 4, 7, 9], [0, 0.95, 0.75, 0], fest) }} />
       <div style={{ ...kreis, background: 'rgba(13,71,161,.6)', border: '7px solid #fff', boxShadow: `0 0 0 4px ${dunkel}, 0 8px 26px rgba(0,0,0,.5)`, transform: `scale(${druck})`, opacity: punkt }} />
     </>
   );

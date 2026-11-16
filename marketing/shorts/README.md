@@ -179,9 +179,9 @@ Plattformen); die freie Fläche dazwischen reicht von y = 250 bis 1500.
   mit Einblendung darunter (y 500).
 - **Schild der Hervorhebung:** x 70 bis 1010 (940 px), Zeile 58 px, Zahl bis 210 px (bei „16:22 Uhr“ 166 px,
   Schild 346 px hoch), 36 px unter dem Ausschnitt.
-- **Tipp-Markierung:** Punkt 150 px (halbdurchsichtig blau, weißer und dunkler Rand), Ring bis 300 px; beides
-  wächst mit der Skala der Kamera. Der Punkt erscheint 4 Bilder vor dem Tipp und ist 6 Bilder danach weg, der Ring
-  beginnt mit dem Tipp und ist 8 Bilder danach weg (danach wechselt die App den Zustand, der Knopf kann verrutschen).
+- **Tipp-Markierung:** Punkt 150 px (halbdurchsichtig blau, weißer und dunkler Rand), Ring bis 285 px; beides
+  wächst mit der Skala der Kamera. Der Punkt erscheint 4 Bilder vor dem Tipp, der Ring beginnt mit dem Tipp; 5
+  Bilder danach sind beide weg (dann wechselt die App den Zustand, der Knopf kann dabei verrutschen).
 - **Schlusskarte:** Logo 364 px auf weißem Kreis (400 px), Name 88 px, Knopf 60 px, Adresse 54 px. Nach dem
   Hereinkommen (20 Bilder) bewegt sie sich weiter: Die Karte wächst über die ganze Szene um 4,5 %, das Logo
   schwebt um ±7 px, der Knopf pulsiert um 2,2 % (Periode 1,5 s).
