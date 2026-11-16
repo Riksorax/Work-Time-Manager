@@ -50,7 +50,7 @@ Folgen für die Pipeline, unabhängig von der Wahl:
 ## Entscheidung
 
 15.11.2026, Repo-Inhaber: Piper und Chatterbox klingen nicht gut genug; **OmniVoice** ist bisher die beste Stimme.
-Offen ist, welche der drei OmniVoice-Stimmen (Mann, Frau, Mann tief) es wird.
+16.11.2026: Es bleibt bei der Männerstimme (`omnivoice-mann`).
 
 Umsetzung: Ein Stimmentwurf per Beschreibung fällt bei jedem Lauf anders aus. Deshalb liegt je Stimme eine kurze
 Vorlage (ca. 6 s, die ersten beiden Sätze der Hörprobe) unter `referenz/`, und `synth.py` erzeugt jeden Satz als Klon
