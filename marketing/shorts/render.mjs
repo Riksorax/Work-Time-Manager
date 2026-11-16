@@ -91,8 +91,11 @@ function browser() {
 function python() {
   if (process.env.SHORTS_PYTHON) return process.env.SHORTS_PYTHON;
   for (const name of ['.venv-omnivoice', '.venv-piper']) {
-    const kandidat = path.join(HIER, 'tts', name, 'bin', 'python');
-    if (fs.existsSync(kandidat)) return kandidat;
+    // Linux/macOS: bin/python, Windows: Scripts\\python.exe
+    for (const teil of [['bin', 'python'], ['Scripts', 'python.exe']]) {
+      const kandidat = path.join(HIER, 'tts', name, ...teil);
+      if (fs.existsSync(kandidat)) return kandidat;
+    }
   }
   return 'python3';
 }

@@ -39,7 +39,12 @@ python3 -m venv tts/.venv-omnivoice
 tts/.venv-omnivoice/bin/pip install --extra-index-url https://download.pytorch.org/whl/cpu -r tts/requirements-omnivoice.txt
 ```
 
-Der erste Lauf lädt das Stimmmodell (rund 3 GB). Remotion braucht einen Chromium: entweder den Pfad in
+Unter Windows liegt das Python der Umgebung unter `tts\\.venv-omnivoice\\Scripts\\python.exe` (statt `bin/python`) und
+`pip` entsprechend unter `Scripts\\pip.exe`; `render.mjs` findet beide Lagen von selbst. Die Pipeline ist bisher nur
+unter Linux gelaufen.
+
+Der erste Lauf lädt das Stimmmodell (rund 3 GB). Ohne Grafikkarte braucht die Stimme etwa eine Minute je Satz, auf
+langsameren Rechnern deutlich mehr; den Fortschritt zeigen die Dateien unter `out/<id>/stimme/`. Remotion braucht einen Chromium: entweder den Pfad in
 `SHORTS_CHROMIUM` angeben oder Remotion beim ersten Lauf selbst einen laden lassen.
 
 ```bash
