@@ -1,4 +1,5 @@
-// Tonspur mit ffmpeg: Sätze an ihre Startzeit legen, optional Musik darunter, Lautheit einstellen.
+// Tonspur mit ffmpeg: Sätze an ihre Startzeit legen, optional Musik darunter und ein Klick
+// je Tipp, Lautheit einstellen.
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
@@ -13,8 +14,13 @@ async function ffmpeg(args) {
   }
 }
 
-/** Filtergraph der Rohmischung (ohne Lautheitskorrektur). Reine Funktion. */
-export function mischFilter(saetze, sekunden, { musik = false, musikDb = -20 } = {}) {
+/**
+ * Filtergraph der Rohmischung (ohne Lautheitskorrektur). Reine Funktion.
+ *
+ * `tipps`: Zeitpunkte in Sekunden. Der Klick ist keine Tondatei, sondern ein im Filter
+ * erzeugter, schnell abklingender Sinus (ca. 60 ms).
+ */
+export function mischFilter(saetze, sekunden, { musik = false, musikDb = -20, tipps = [], tippDb = -12 } = {}) {
   const teile = [];
   const namen = [];
   saetze.forEach((satz, i) => {
@@ -29,6 +35,13 @@ export function mischFilter(saetze, sekunden, { musik = false, musikDb = -20 } =
     );
     namen.push('[m]');
   }
+  tipps.forEach((zeit, i) => {
+    const ms = Math.round(zeit * 1000);
+    teile.push(
+      `aevalsrc='sin(2*PI*1150*t)*exp(-80*t)':d=0.06:s=48000,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=${tippDb}dB,adelay=${ms}:all=1[t${i}]`,
+    );
+    namen.push(`[t${i}]`);
+  });
   // Stille als Grundlage: legt die Gesamtlänge fest, auch wenn kein Satz gesprochen wird.
   const stille = `anullsrc=r=48000:cl=stereo,atrim=duration=${sekunden.toFixed(3)}[st]`;
   teile.push(stille);
@@ -53,13 +66,14 @@ export async function messeLautheit(datei) {
  * keinen Ton, bleibt sie still.
  *
  * @param {{saetze: {datei: string, tonStart: number}[], sekunden: number, musik?: string,
- *   ziel: string, roh: string, lufs?: number, spitzeDb?: number, musikDb?: number}} auftrag
+ *   ziel: string, roh: string, lufs?: number, spitzeDb?: number, musikDb?: number,
+ *   tipps?: number[], tippDb?: number}} auftrag
  * @returns {Promise<{lufs: number|null, spitze: number|null}>} Messwert der fertigen Spur
  */
-export async function baueTonspur({ saetze, sekunden, musik, ziel, roh, lufs = -14, spitzeDb = -1.5, musikDb = -20 }) {
+export async function baueTonspur({ saetze, sekunden, musik, ziel, roh, lufs = -14, spitzeDb = -1.5, musikDb = -20, tipps = [], tippDb = -12 }) {
   const eingaben = saetze.flatMap((s) => ['-i', s.datei]);
   if (musik) eingaben.push('-stream_loop', '-1', '-i', musik);
-  const filter = mischFilter(saetze, sekunden, { musik: Boolean(musik), musikDb });
+  const filter = mischFilter(saetze, sekunden, { musik: Boolean(musik), musikDb, tipps, tippDb });
   await ffmpeg([...eingaben, '-filter_complex', filter, '-map', '[aus]', '-t', sekunden.toFixed(3), '-c:a', 'pcm_f32le', roh]);
 
   const start = await messeLautheit(roh);

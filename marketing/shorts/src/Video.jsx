@@ -1,12 +1,12 @@
-// Ein Video: Szenen nacheinander auf Markengrund, Untertitel darüber.
+// Ein Video: Szenen nacheinander auf Markengrund, harte Schnitte.
 import React from 'react';
 import { AbsoluteFill, Sequence } from 'remotion';
-import { Aufhaenger, AppSzene, Schlusskarte, Teaser, Untertitel } from './bausteine.jsx';
+import { Aufhaenger, AppSzene, Schlusskarte, Teaser } from './bausteine.jsx';
 import { Schrift } from './schrift.jsx';
 
 const BAUSTEIN = { aufhaenger: Aufhaenger, app: AppSzene, teaser: Teaser, schluss: Schlusskarte };
 
-export const Video = ({ plan, marke, texte, ausschnitte, bilder }) => {
+export const Video = ({ plan, marke, texte, bilder }) => {
   if (!marke) return null;
   const grund = `linear-gradient(160deg, ${marke.grund[0]} 0%, ${marke.grund[1]} 100%)`;
   return (
@@ -16,19 +16,10 @@ export const Video = ({ plan, marke, texte, ausschnitte, bilder }) => {
           const Baustein = BAUSTEIN[szene.art];
           return (
             <Sequence key={i} from={szene.von} durationInFrames={szene.frames}>
-              <Baustein szene={szene} erste={i === 0} marke={marke} texte={texte} ausschnitte={ausschnitte} bilder={bilder} />
+              <Baustein szene={szene} vorher={plan.szenen[i - 1]} erste={i === 0} marke={marke} texte={texte} bilder={bilder} />
             </Sequence>
           );
         })}
-        {plan.szenen.flatMap((szene) =>
-          szene.saetze.flatMap((satz) =>
-            satz.untertitel.map((teil) => (
-              <Sequence key={`${satz.nr}-${teil.von}`} from={teil.von} durationInFrames={teil.frames}>
-                <Untertitel zeilen={teil.zeilen} />
-              </Sequence>
-            )),
-          ),
-        )}
       </AbsoluteFill>
     </Schrift>
   );

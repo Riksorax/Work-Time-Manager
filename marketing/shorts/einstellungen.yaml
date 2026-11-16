@@ -17,15 +17,18 @@ breite: 1080
 hoehe: 1920
 
 # Zeit in Sekunden. Die Länge der Sätze kommt aus dem Ton (out/<id>/stimme/dauer.json).
-vorlauf: 0.3            # Szene steht, bevor der erste Satz beginnt
-pause_nach_satz: 0.25   # zwischen zwei Sätzen einer Szene
-nachlauf: 0.3           # nach dem letzten Satz einer Szene
+# Zwischen zwei Sätzen liegen im fertigen Video rund 0,3 s Stille: `ton_rest` am Ende des einen und
+# am Anfang des nächsten Satzes, dazu `pause_nach_satz` bzw. über eine Szenengrenze `nachlauf` + `vorlauf`.
+ton_rest: 0.05          # so viel Stille bleibt am Anfang und Ende jeder Satz-Datei stehen, der Rest wird abgeschnitten (0 = nicht kürzen)
+vorlauf: 0.1            # Szene steht, bevor der erste Satz beginnt
+pause_nach_satz: 0.2    # zwischen zwei Sätzen einer Szene
+nachlauf: 0.1           # nach dem letzten Satz einer Szene
+schluss_nachlauf: 0.6   # nach dem letzten Satz der Schlusskarte
 schluss_dauer: 2.5      # Mindestdauer der Schlusskarte
-
-# Untertitel: höchstens zwei Zeilen mit je so vielen Zeichen; längere Sätze werden geteilt.
-untertitel_zeichen: 30
 
 # Ton
 lautheit_lufs: -14
 spitze_db: -1.5         # Begrenzer
 musik_db: -20           # Musik unter der Stimme
+tipp_ton: true          # kurzer Klick zum Zeitpunkt jeder Tipp-Markierung (mit ffmpeg erzeugt, keine Tondatei)
+tipp_ton_db: -12        # Pegel des Klicks vor der Lautheitskorrektur

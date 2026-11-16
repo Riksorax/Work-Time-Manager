@@ -27,11 +27,17 @@ function fehlerVon(daten, muster, optionen) {
 
 test('gültige Beschreibung: Standardwerte gesetzt', () => {
   const b = pruefeBeschreibung(gueltig(), { id: 'probe', bildVorhanden: () => true });
-  assert.deepEqual(b.szenen[1].zoom, { auf: 'knopf', faktor: 1.25 });
-  assert.deepEqual(b.szenen[1].tipp, { auf: 'knopf', bei: 0.5 });
+  const knopf = { x: 0.1, y: 0.5, breite: 0.8, hoehe: 0.1 };
+  assert.deepEqual(b.szenen[1].zoom, { auf: 'knopf', faktor: 1.25, dauer: 0.6, rechteck: knopf });
+  assert.deepEqual(b.szenen[1].tipp, { auf: 'knopf', rechteck: knopf, bei: 0.5 });
   assert.equal(b.szenen[1].premium, false);
-  // Untertitel nur dort, wo der Text nicht schon groß im Bild steht
-  assert.deepEqual(b.szenen.map((s) => s.untertitel), [false, true, false]);
+  assert.equal(b.szenen[1].quelle, 'bild.png');
+});
+
+test('Untertitel gibt es nicht mehr: das Feld ist unbekannt', () => {
+  const d = gueltig();
+  d.szenen[1].untertitel = false;
+  fehlerVon(d, /Szene 2 \(app\): unbekanntes Feld „untertitel“/);
 });
 
 test('unbekanntes Feld im Kopf, in der Szene, im Zoom und im Ausschnitt', () => {
@@ -57,7 +63,7 @@ test('fehlendes Bild', () => {
   fehlerVon(gueltig(), /Szene 2 \(app\): Bild „bild.png“ fehlt/, { bildVorhanden: () => false });
   const ohne = gueltig();
   delete ohne.szenen[1].bild;
-  fehlerVon(ohne, /„bild“ fehlt/);
+  fehlerVon(ohne, /braucht genau eines von „bild“ und „folge“/);
   const pfad = gueltig();
   pfad.szenen[1].bild = '../geheim.png';
   fehlerVon(pfad, /ohne Ordner/);
@@ -88,13 +94,78 @@ test('Szene ohne Satz braucht eine Dauer, die Schlusskarte nicht', () => {
 test('Zoom und Tipp verlangen einen beschriebenen Ausschnitt', () => {
   const d = gueltig();
   d.szenen[1].zoom.auf = 'gibtsnicht';
-  fehlerVon(d, /Ausschnitt „gibtsnicht“ ist unter „ausschnitte“ nicht beschrieben/);
+  fehlerVon(d, /Ausschnitt „gibtsnicht“ ist weder unter „ausschnitte“ noch in der Folge beschrieben/);
   const rand = gueltig();
   rand.ausschnitte.knopf.breite = 0.95;
   fehlerVon(rand, /ragt über das Bild hinaus/);
   const faktor = gueltig();
   faktor.szenen[1].zoom.faktor = 4;
   fehlerVon(faktor, /„faktor“ muss zwischen 1 und 2.5/);
+});
+
+// --- Bildfolge, Aufhänger über dem App-Bild, Hervorhebung ---
+
+const FOLGE = {
+  fps: 30,
+  bilder: 120,
+  marken: { tipp: 30, gestartet: 36 },
+  ausschnitte: { start_knopf: { x: 0.1, y: 0.86, breite: 0.8, hoehe: 0.06 }, knopf: { x: 0, y: 0, breite: 0.5, hoehe: 0.5 } },
+};
+const optionen = (folge = FOLGE) => ({ fps: 30, folge: (name) => (name === 'ablauf' ? folge : undefined) });
+const mitFolge = (szene = {}) => ({
+  id: 'probe',
+  ausschnitte: { knopf: { x: 0.1, y: 0.5, breite: 0.8, hoehe: 0.1 } },
+  szenen: [{ art: 'app', folge: 'ablauf', dauer: 2, ...szene }],
+});
+
+test('Folge: Abschnitt als Bildnummer oder Marke, Ausschnitte aus der Folge und aus der Videobeschreibung', () => {
+  const b = pruefeBeschreibung(mitFolge({ ab: 10, bis: 'gestartet', zoom: { auf: 'start_knopf' }, tipp: { auf: 'knopf' } }), optionen());
+  const szene = b.szenen[0];
+  assert.deepEqual([szene.folge, szene.quelle, szene.ab, szene.bis, szene.tippMarke], ['ablauf', 'ablauf.mp4', 10, 36, 30]);
+  assert.deepEqual(szene.zoom.rechteck, FOLGE.ausschnitte.start_knopf);
+  // gleicher Name in beiden: die Videobeschreibung gewinnt; „bei“ hat bei einer Folge keinen Standard
+  assert.deepEqual(szene.tipp, { auf: 'knopf', rechteck: { x: 0.1, y: 0.5, breite: 0.8, hoehe: 0.1 } });
+  // ohne „ab“/„bis“: Fortsetzung bzw. Anfang, bis zum letzten Bild
+  const offen = pruefeBeschreibung(mitFolge(), optionen()).szenen[0];
+  assert.deepEqual([offen.ab, offen.bis], [undefined, 119]);
+});
+
+test('Folge: fehlende Datei, falsche Bildrate, unbekannte Marke, Abschnitt außerhalb', () => {
+  fehlerVon(mitFolge({ folge: 'gibtsnicht' }), /Folge „gibtsnicht“: gibtsnicht.mp4 oder gibtsnicht.json fehlt/, optionen());
+  fehlerVon(mitFolge(), /Folge „ablauf“: „fps“ ist 25, das Video läuft mit 30/, optionen({ ...FOLGE, fps: 25 }));
+  fehlerVon(mitFolge(), /Marke „tipp“ muss eine Bildnummer von 0 bis 119 sein/, optionen({ ...FOLGE, marken: { tipp: 120 } }));
+  fehlerVon(mitFolge(), /Folge „ablauf“, Ausschnitt „a“: Rechteck ist leer oder ragt über das Bild hinaus/, optionen({ ...FOLGE, ausschnitte: { a: { x: 0.5, y: 0, breite: 0.6, hoehe: 0.1 } } }));
+  fehlerVon(mitFolge({ ab: 'spaeter' }), /„ab“: Marke „spaeter“ kennt die Folge nicht/, optionen());
+  fehlerVon(mitFolge({ bis: 120 }), /„bis“ muss eine Bildnummer von 0 bis 119 oder eine Marke sein/, optionen());
+  fehlerVon(mitFolge({ ab: 50, bis: 40 }), /„bis“ liegt vor „ab“/, optionen());
+  fehlerVon(mitFolge({ tipp: { auf: 'knopf' } }), /Der Folge „ablauf“ fehlt die Marke „tipp“/, optionen({ ...FOLGE, marken: {} }));
+  fehlerVon(mitFolge({ folge: '../ablauf' }), /„folge“ muss ein Name ohne Ordner und Endung sein/, optionen());
+});
+
+test('Bild und Folge schließen sich aus; „ab“/„bis“ nur mit Folge', () => {
+  fehlerVon(mitFolge({ bild: 'bild.png' }), /braucht genau eines von „bild“ und „folge“/, optionen());
+  const d = gueltig();
+  d.szenen[1].bis = 5;
+  fehlerVon(d, /„bis“ gibt es nur mit „folge“/);
+});
+
+test('Aufhänger über dem App-Bild', () => {
+  const b = pruefeBeschreibung(mitFolge({ aufhaenger: ' Wann ist Feierabend? ' }), optionen());
+  assert.equal(b.szenen[0].aufhaenger, 'Wann ist Feierabend?');
+  fehlerVon(mitFolge({ aufhaenger: 'x'.repeat(61) }), /„aufhaenger“ ist länger als 60 Zeichen/, optionen());
+  fehlerVon(mitFolge({ aufhaenger: 'Frage?', einblendung: 'Text' }), /„aufhaenger“ und „einblendung“ schließen sich aus/, optionen());
+});
+
+test('Hervorhebung: Ausschnitt und Wert sind Pflicht', () => {
+  const h = { auf: 'start_knopf', zeile: 'Feierabend heute', wert: '16:22 Uhr' };
+  const b = pruefeBeschreibung(mitFolge({ hervorhebung: h }), optionen());
+  assert.deepEqual(b.szenen[0].hervorhebung, { auf: 'start_knopf', rechteck: FOLGE.ausschnitte.start_knopf, wert: '16:22 Uhr', bei: 0.2, zeile: 'Feierabend heute' });
+  fehlerVon(mitFolge({ hervorhebung: { auf: 'start_knopf' } }), /hervorhebung: „wert“ fehlt/, optionen());
+  fehlerVon(mitFolge({ hervorhebung: { ...h, wert: 1622 } }), /hervorhebung: „wert“ fehlt/, optionen());
+  fehlerVon(mitFolge({ hervorhebung: { ...h, auf: 'nirgends' } }), /hervorhebung: Ausschnitt „nirgends“ ist weder/, optionen());
+  fehlerVon(mitFolge({ hervorhebung: { ...h, bei: 2 } }), /hervorhebung: „bei“ muss zwischen 0 und 1 liegen/, optionen());
+  fehlerVon(mitFolge({ hervorhebung: { ...h, farbe: 'rot' } }), /hervorhebung: unbekanntes Feld „farbe“/, optionen());
+  fehlerVon(mitFolge({ hervorhebung: { ...h, wert: '1234567890123' } }), /„wert“ ist länger als 12 Zeichen/, optionen());
 });
 
 test('mehrere Fehler werden gesammelt gemeldet', () => {

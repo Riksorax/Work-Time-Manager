@@ -12,12 +12,16 @@ Liegt unter `videos/de/<id>/stimme/<nr>.wav` schon eine Datei (selbst
 eingesprochen oder von einem anderen Dienst), wird sie genommen statt
 synthetisiert. Engine und Stimme stehen in `einstellungen.yaml` (`stimme:`).
 Die Stimme bekommt den Sprechtext aus `sprechtext.py`, in `dauer.json` steht
-zusätzlich der Originaltext für den Untertitel.
+zusätzlich der Originaltext.
+
+Stille am Anfang und Ende jeder Datei wird bis auf `ton_rest` Sekunden
+(`einstellungen.yaml`) abgeschnitten; `dauer.json` trägt die gekürzte Länge.
 """
 
 from __future__ import annotations
 
 import argparse
+import array
 import json
 import shutil
 import subprocess
@@ -55,6 +59,42 @@ def laenge(datei: Path) -> float:
             return w.getnframes() / w.getframerate()
     except (wave.Error, EOFError) as fehler:
         raise ValueError(f"{datei}: keine lesbare WAV-Datei (PCM erwartet): {fehler}") from fehler
+
+
+def kuerze(datei: Path, rest: float, schwelle_db: float = -42.0) -> bool:
+    """Schneidet Stille am Anfang und Ende ab, bis auf `rest` Sekunden.
+
+    Als Stille gilt alles unter `schwelle_db` relativ zum lautesten Wert der
+    Datei. Nur 16-Bit-PCM; andere Formate und Dateien ohne Ton bleiben, wie sie
+    sind. Ein zweiter Lauf ändert nichts mehr. Gibt zurück, ob gekürzt wurde.
+    """
+    with wave.open(str(datei)) as w:
+        parameter = w.getparams()
+        roh = w.readframes(w.getnframes())
+    if parameter.sampwidth != 2:
+        return False
+    werte = array.array("h")
+    werte.frombytes(roh)
+    if sys.byteorder == "big":
+        werte.byteswap()
+    kanaele = parameter.nchannels
+    spitze = max((abs(wert) for wert in werte), default=0)
+    if spitze == 0:
+        return False
+    schwelle = spitze * 10 ** (schwelle_db / 20)
+    laut = [i for i, wert in enumerate(werte) if abs(wert) > schwelle]
+    puffer = int(rest * parameter.framerate)
+    anfang = max(0, laut[0] // kanaele - puffer)
+    ende = min(len(werte) // kanaele, laut[-1] // kanaele + 1 + puffer)
+    if anfang == 0 and ende == len(werte) // kanaele:
+        return False
+    teil = werte[anfang * kanaele : ende * kanaele]
+    if sys.byteorder == "big":
+        teil.byteswap()
+    with wave.open(str(datei), "wb") as w:
+        w.setparams(parameter)
+        w.writeframes(teil.tobytes())
+    return True
 
 
 def piper(auftraege: list[tuple[str, Path]], stimme: dict) -> None:
@@ -118,8 +158,12 @@ def vertone(
     stimme: dict,
     engines: dict[str, Engine] | None = None,
     regeln: list[dict] | None = None,
+    rest: float = 0.0,
 ) -> dict:
-    """Schreibt die WAV-Dateien und `dauer.json` nach `aus`, gibt den Inhalt zurück."""
+    """Schreibt die WAV-Dateien und `dauer.json` nach `aus`, gibt den Inhalt zurück.
+
+    `rest` größer 0 kürzt die Stille am Anfang und Ende jeder Datei auf diese Länge.
+    """
     engines = ENGINES if engines is None else engines
     if stimme.get("engine") not in engines:
         raise ValueError(f"Unbekannte Engine „{stimme.get('engine')}“ (erlaubt: {', '.join(engines)})")
@@ -155,6 +199,8 @@ def vertone(
         ziel = aus / eintrag["datei"]
         if not ziel.exists():
             raise FileNotFoundError(f"Satz {eintrag['nr']}: die Engine hat {ziel} nicht geschrieben")
+        if rest > 0:
+            kuerze(ziel, rest)
         eintrag["sekunden"] = round(laenge(ziel), 3)
     # Reste eines früheren, längeren Sprechtexts entfernen.
     gueltig = {e["datei"] for e in eintraege}
@@ -186,7 +232,8 @@ def main() -> None:
     video_id = args.beschreibung.stem
     aus = args.aus or WURZEL / "out" / video_id / "stimme"
     try:
-        ergebnis = vertone(beschreibung, args.beschreibung.with_suffix("") / "stimme", aus, stimme)
+        ergebnis = vertone(beschreibung, args.beschreibung.with_suffix("") / "stimme", aus, stimme, rest=float(einstellungen.get("ton_rest") or 0)
+        )
     except (ValueError, FileNotFoundError) as fehler:
         sys.exit(f"Fehler: {fehler}")
     for e in ergebnis["saetze"]:

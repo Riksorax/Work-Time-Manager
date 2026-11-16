@@ -12,6 +12,7 @@ import { LOGO, SCHRIFT_DATEIEN, ladeMarke } from './lib/marke.mjs';
 import { BeschreibungsFehler, pruefeBeschreibung, pruefeDauern } from './lib/schema.mjs';
 import { baueTonspur, messeLautheit, verbinde } from './lib/ton.mjs';
 import { berechneZeitplan } from './lib/zeit.mjs';
+import { aufLeinwand, istFrei, szenenKamera } from './src/layout.mjs';
 import { TEXTE } from './src/texte.mjs';
 
 const HIER = import.meta.dirname;
@@ -41,6 +42,37 @@ function pngMass(datei) {
   return { breite: kopf.readUInt32BE(16), hoehe: kopf.readUInt32BE(20) };
 }
 
+/** Breite und Höhe einer Bildfolge (MP4) über ffprobe. */
+function videoMass(datei) {
+  const text = execFileSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'csv=p=0', datei], { encoding: 'utf8' });
+  const [breite, hoehe] = text.trim().split(',').map(Number);
+  if (!(breite > 0 && hoehe > 0)) throw new Abbruch(`${datei}: Maße nicht lesbar (ffprobe)`);
+  return { breite, hoehe };
+}
+
+/** Begleitdatei einer Bildfolge; `undefined`, wenn MP4 oder JSON fehlen oder das JSON nicht lesbar ist. */
+function liesFolge(ordner, name) {
+  try {
+    if (!fs.existsSync(path.join(ordner, `${name}.mp4`))) return undefined;
+    return JSON.parse(fs.readFileSync(path.join(ordner, `${name}.json`), 'utf8'));
+  } catch {
+    return undefined;
+  }
+}
+
+/** Hinweis, wenn Tipp oder Hervorhebung am Ende der Kamerafahrt in einer Schutzzone liegen. */
+function pruefeSchutzzonen(plan, masse) {
+  plan.szenen.forEach((szene, i) => {
+    if (szene.art !== 'app') return;
+    const lage = szenenKamera(szene, masse[szene.quelle]);
+    for (const feld of ['tipp', 'hervorhebung']) {
+      if (szene[feld] && !istFrei(aufLeinwand(lage, masse[szene.quelle], szene[feld].rechteck))) {
+        console.warn(`Hinweis: Szene ${i + 1}: Der Ausschnitt „${szene[feld].auf}“ (${feld}) liegt in einer Schutzzone. Mit „zoom“ auf diesen Ausschnitt rückt er in die freie Fläche.`);
+      }
+    }
+  });
+}
+
 /** Browser für Remotion: vorgegeben, vorinstalliert oder (ohne beides) Remotions eigener Download. */
 function browser() {
   const pfad = process.env.SHORTS_CHROMIUM || (fs.existsSync(VORINSTALLIERT) ? VORINSTALLIERT : undefined);
@@ -56,7 +88,7 @@ function python() {
   return 'python3';
 }
 
-/** Ordner mit allem, was die Komposition lädt: Schrift und Logo aus dem Repo, die App-Bilder. */
+/** Ordner mit allem, was die Komposition lädt: Schrift und Logo aus dem Repo, App-Bilder und Bildfolgen. */
 function stelleBereit(ordner, bilder) {
   fs.rmSync(ordner, { recursive: true, force: true });
   fs.mkdirSync(path.join(ordner, 'fonts'), { recursive: true });
@@ -75,6 +107,8 @@ async function rendereVideo({ id, sprache }, einstellungen) {
   const beschreibung = pruefeBeschreibung(YAML.parse(fs.readFileSync(datei, 'utf8')), {
     id,
     bildVorhanden: (name) => fs.existsSync(bildPfad(name)),
+    folge: (name) => liesFolge(path.join(HIER, 'frames', sprache), name),
+    fps: einstellungen.fps ?? 30,
   });
 
   const aus = path.join(HIER, 'out', id);
@@ -110,9 +144,13 @@ async function rendereVideo({ id, sprache }, einstellungen) {
     lufs: einstellungen.lautheit_lufs,
     spitzeDb: einstellungen.spitze_db,
     musikDb: einstellungen.musik_db,
+    tipps: einstellungen.tipp_ton === false ? [] : plan.tipps,
+    tippDb: einstellungen.tipp_ton_db,
   });
 
-  const bilder = new Map(beschreibung.szenen.filter((s) => s.art === 'app').map((s) => [s.bild, bildPfad(s.bild)]));
+  const bilder = new Map(beschreibung.szenen.filter((s) => s.art === 'app').map((s) => [s.quelle, bildPfad(s.quelle)]));
+  const masse = Object.fromEntries([...bilder].map(([name, pfad]) => [name, name.endsWith('.mp4') ? videoMass(pfad) : pngMass(pfad)]));
+  pruefeSchutzzonen(plan, masse);
   const publicDir = path.join(aus, 'public');
   stelleBereit(publicDir, bilder);
   console.log('Bild …');
@@ -123,8 +161,7 @@ async function rendereVideo({ id, sprache }, einstellungen) {
     plan,
     marke: ladeMarke(),
     texte,
-    ausschnitte: beschreibung.ausschnitte,
-    bilder: Object.fromEntries([...bilder].map(([name, pfad]) => [name, pngMass(pfad)])),
+    bilder: masse,
   };
   const optionen = { serveUrl, inputProps, logLevel: 'error', ...browser() };
   const composition = await selectComposition({ ...optionen, id: 'video' });

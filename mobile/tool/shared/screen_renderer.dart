@@ -180,24 +180,48 @@ Future<void> writePng(WidgetTester t, ui.Image image, String path) async {
   });
 }
 
-/// Rendert die App (angemeldet, Premium) mit dem Datensatz aus
-/// `store_data.dart` und gibt den Bildschirm als Bild zurück.
+/// Die laufende App eines Bild-Werkzeugs: [capture] nimmt den Bildschirm auf
+/// (beliebig oft, z. B. je Bild einer Folge), [close] räumt am Ende auf.
+class AppScreen {
+  AppScreen._(this._t, this._key, this.container);
+
+  final WidgetTester _t;
+  final GlobalKey _key;
+  final ProviderContainer container;
+
+  Future<ui.Image> capture() async =>
+      exactScreenSize(await captureBoundary(_t, _key, screenDpr));
+
+  Future<void> close() async {
+    debugDisableShadows = true;
+    await _t.pumpWidget(const SizedBox.shrink());
+    container.dispose();
+    await _t.pump(const Duration(seconds: 2));
+  }
+}
+
+/// Startet die App (angemeldet, Premium) mit dem Datensatz aus
+/// `store_data.dart` und lässt sie zur Ruhe kommen.
 ///
 /// Ohne weitere Angaben gilt der Zustand der Store-Screenshots: Uhr
 /// [storeNow], laufender Tag aus `storeTodayEntry`, nur das Standard-Profil.
 /// [now] stellt die feste Uhr um (gleicher Kalendertag wie [storeNow], der
-/// Saldo gilt für dessen Morgen), [entries] ersetzt die Einträge (Saldo und
+/// Saldo gilt für dessen Morgen), [clock] ersetzt sie durch eine laufende
+/// Uhr (Bildfolgen), [entries] ersetzt die Einträge (Saldo und
 /// Backend-Antworten rechnen weiter nur mit den Tagen vor [storeToday]),
 /// [profiles] die Liste der Arbeitszeit-Profile.
-Future<ui.Image> renderAppScreen(
+Future<AppScreen> openAppScreen(
   WidgetTester t,
   ScreenMotif motif,
   String locale, {
   DateTime? now,
+  DateTime Function()? clock,
   Map<String, WorkEntryEntity>? entries,
   List<WorkProfileEntity> profiles = const [],
 }) async {
-  final clock = now ?? storeNow;
+  assert(now == null || clock == null, 'entweder now oder clock');
+  final fixed = now ?? storeNow;
+  clock ??= () => fixed;
   final texts = storeTextsFor(locale);
   entries ??= buildStoreEntries(texts);
   final api = StoreApi(entries);
@@ -230,7 +254,7 @@ Future<ui.Image> renderAppScreen(
   );
 
   final container = ProviderContainer(overrides: [
-    clockProvider.overrideWithValue(() => clock),
+    clockProvider.overrideWithValue(clock),
     sharedPreferencesProvider.overrideWithValue(prefs),
     workRepositoryProvider.overrideWithValue(work),
     overtimeRepositoryProvider.overrideWithValue(overtime),
@@ -271,14 +295,25 @@ Future<ui.Image> renderAppScreen(
     ),
   ));
   await settle(t);
-  if (motif.act != null) await motif.act!(t, container);
+  return AppScreen._(t, key, container);
+}
+
+/// Rendert die App wie [openAppScreen], führt die Aktion des Motivs aus und
+/// gibt den Bildschirm als Bild zurück.
+Future<ui.Image> renderAppScreen(
+  WidgetTester t,
+  ScreenMotif motif,
+  String locale, {
+  DateTime? now,
+  Map<String, WorkEntryEntity>? entries,
+  List<WorkProfileEntity> profiles = const [],
+}) async {
+  final app = await openAppScreen(t, motif, locale,
+      now: now, entries: entries, profiles: profiles);
+  if (motif.act != null) await motif.act!(t, app.container);
   await settle(t, 2);
 
-  final screen = exactScreenSize(await captureBoundary(t, key, screenDpr));
-  debugDisableShadows = true;
-
-  await t.pumpWidget(const SizedBox.shrink());
-  container.dispose();
-  await t.pump(const Duration(seconds: 2));
+  final screen = await app.capture();
+  await app.close();
   return screen;
 }

@@ -1,10 +1,11 @@
+import array
 import json
 import tempfile
 import unittest
 import wave
 from pathlib import Path
 
-from synth import saetze, vertone
+from synth import kuerze, laenge, saetze, vertone
 
 
 def schreibe_wav(datei: Path, sekunden: float, rate: int = 22050) -> None:
@@ -13,6 +14,18 @@ def schreibe_wav(datei: Path, sekunden: float, rate: int = 22050) -> None:
         w.setsampwidth(2)
         w.setframerate(rate)
         w.writeframes(b"\0\0" * int(rate * sekunden))
+
+
+def schreibe_ton(datei: Path, stille_davor: float, ton: float, stille_danach: float, rate: int = 24000) -> None:
+    """Rechteckton zwischen zwei Stücken Stille (mit leisem Grundrauschen)."""
+    leise = array.array("h", [3, -3] * int(rate * 0.5))
+    with wave.open(str(datei), "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(rate)
+        w.writeframes(leise[: int(rate * stille_davor)].tobytes())
+        w.writeframes(array.array("h", [8000, -8000] * int(rate * ton / 2)).tobytes())
+        w.writeframes(leise[: int(rate * stille_danach)].tobytes())
 
 
 BESCHREIBUNG = {
@@ -52,7 +65,7 @@ class VertoneTest(unittest.TestCase):
         self.assertTrue((self.aus / "03.wav").exists())
         self.assertEqual(json.loads((self.aus / "dauer.json").read_text(encoding="utf-8")), ergebnis)
 
-    def test_stimme_bekommt_sprechtext_untertitel_das_original(self):
+    def test_stimme_bekommt_sprechtext_dauer_json_das_original(self):
         ergebnis = self.vertone()
         self.assertEqual(self.gesprochen[1], "Fertig um sechzehn Uhr vierzig.")
         self.assertEqual(ergebnis["saetze"][1]["text"], "Fertig um 16:40 Uhr.")
@@ -78,6 +91,29 @@ class VertoneTest(unittest.TestCase):
         self.vertone()
         self.vertone(stimme={**STIMME, "stimme": "b"})
         self.assertEqual(len(self.gesprochen), 6)
+
+    def test_stille_wird_bis_auf_den_rest_abgeschnitten(self):
+        datei = Path(self.ordner.name) / "ton.wav"
+        schreibe_ton(datei, 0.4, 1.0, 0.3)
+        self.assertTrue(kuerze(datei, 0.05))
+        self.assertAlmostEqual(laenge(datei), 1.1, places=3)
+        # zweiter Lauf ändert nichts, eine Datei ohne Ton bleibt unverändert
+        self.assertFalse(kuerze(datei, 0.05))
+        self.assertAlmostEqual(laenge(datei), 1.1, places=3)
+        schreibe_wav(datei, 1.5)
+        self.assertFalse(kuerze(datei, 0.05))
+        self.assertEqual(laenge(datei), 1.5)
+
+    def test_dauer_json_traegt_die_gekuerzte_laenge(self):
+        def engine(auftraege, stimme):
+            for _, ziel in auftraege:
+                schreibe_ton(ziel, 0.4, 1.0, 0.3)
+
+        ergebnis = vertone(BESCHREIBUNG, self.vorlagen, self.aus, STIMME, engines={"test": engine}, rest=0.05)
+        self.assertEqual([e["sekunden"] for e in ergebnis["saetze"]], [1.1, 1.1, 1.1])
+        self.assertAlmostEqual(laenge(self.aus / "01.wav"), 1.1, places=3)
+        ungekuerzt = vertone(BESCHREIBUNG, self.vorlagen, Path(self.ordner.name) / "roh", STIMME, engines={"test": engine})
+        self.assertEqual(ungekuerzt["saetze"][0]["sekunden"], 1.7)
 
     def test_fehler(self):
         with self.assertRaisesRegex(ValueError, "Unbekannte Engine"):
