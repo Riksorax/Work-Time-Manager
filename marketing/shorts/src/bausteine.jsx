@@ -208,7 +208,7 @@ export const AppSzene = ({ szene, vorher, erste, marke, texte, bilder }) => {
           style={{ position: 'absolute', left: PLATTE.links, width: PLATTE.breite, top: flaeche.oben, height: flaeche.unten - flaeche.oben, display: 'flex', flexDirection: 'column', justifyContent: { oben: 'flex-start', mitte: 'center', unten: 'flex-end' }[szene.aufhaenger.includes('\n') && flaeche.anker === 'unten' ? 'oben' : flaeche.anker] }}
         >
           <div
-            style={{ ...platte, padding: '36px 36px 44px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', opacity: frage, transform: `translateY(${(1 - frageHerein) * 30 + (1 - frage) * 40}px) scale(${0.97 + 0.03 * frageHerein + 0.02 * interpolate(bild, [9, ende], [0, 1], fest)})` }}
+            style={{ ...platte, padding: '36px 36px 44px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', opacity: frage, transform: `translateY(${(1 - frage) * 40}px) scale(${0.97 + 0.03 * frageHerein + 0.02 * interpolate(bild, [9, ende], [0, 1], fest)})` }}
           >
             <Marke farben={marke.akzent} abstand={36} breite={interpolate(bild, [3, 16], [40, 160], { ...fest, easing: aus })} />
             <div style={{ fontSize: aufhaengerSchrift(szene.aufhaenger), fontWeight: 700, lineHeight: 1.14, textWrap: 'balance', whiteSpace: 'pre-line' }}>{szene.aufhaenger}</div>

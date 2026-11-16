@@ -18,7 +18,9 @@ ausschnitte:
 szenen:
   - art: app
     folge: feierabend_mittags
-    zoom: { auf: timer_bis_heute, faktor: 1.06, dauer: 3.5 }
+    # Faktor 1: Die Kamera steht, damit die Platte die Feierabend-Zeile vom ersten Bild an verdeckt;
+    # Bewegung kommt vom tickenden Timer.
+    zoom: { auf: timer_bis_heute, faktor: 1.0 }
     aufhaenger: "8:07 gekommen.\n45 Minuten Pause.\nWann darfst du gehen?"
     saetze:
       - Um 8:07 Uhr gekommen. 45 Minuten Pause. Wann darfst du gehen?

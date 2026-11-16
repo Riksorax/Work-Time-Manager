@@ -4,6 +4,10 @@ Stand: 15.11.2026. Arbeitsplan für ein Modell (Sonnet/Opus 5.5), das die Schrit
 gegen `develop` umsetzt. Jeder Schritt ist für sich lesbar; wer bei Schritt S3 einsteigt, liest „Ziel“,
 „Festlegungen“ und den Schritt selbst.
 
+> **Stand 16.11.2026:** S0 bis S2 sind umgesetzt, das Pilotvideo ist abgenommen (`feierabend-rechnen`). Wie ein
+> neues Video gebaut wird, steht in `marketing/shorts/CLAUDE.md`; diese Anleitung und Issue #575 gehen diesem Plan
+> vor, wo er noch die erste Fassung beschreibt (Standbilder, Remotion-Prüfung, Hörtest).
+
 ## Ziel
 
 Kurzvideos (TikTok, Instagram Reels, YouTube Shorts) bringen neue Nutzer in die App und einen Teil davon ins
