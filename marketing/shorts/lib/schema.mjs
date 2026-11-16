@@ -236,7 +236,7 @@ export function pruefeBeschreibung(daten, optionen = {}) {
         }
         if (s.aufhaenger !== undefined) {
           if (!istText(s.aufhaenger)) fehler.push(`${o}: „aufhaenger“ muss Text sein`);
-          else if (s.aufhaenger.trim().length > 60) fehler.push(`${o}: „aufhaenger“ ist länger als 60 Zeichen`);
+          else if (s.aufhaenger.trim().length > (s.aufhaenger.includes('\n') ? 90 : 60)) fehler.push(`${o}: „aufhaenger“ ist länger als ${s.aufhaenger.includes('\n') ? 90 : 60} Zeichen`);
           else szene.aufhaenger = s.aufhaenger.trim();
           if (s.einblendung !== undefined) fehler.push(`${o}: „aufhaenger“ und „einblendung“ schließen sich aus`);
         }

@@ -9,7 +9,7 @@ für die App-Aufnahmen: `mobile/CLAUDE.md`, „App-Bilder für Kurzvideos (#575)
 Dieses Video hat der Repo-Inhaber am 16.11.2026 abgenommen („echt nice“). Neue Videos folgen seinem Muster:
 
 1. **Problem als Frage, über der laufenden App** (ca. 4 s). Eine Situation, die man kennt, in drei kurzen Zeilen:
-   „8:07 gekommen. / 45 Minuten Pause. / Wann darfst du gehen?“ Die Stimme spricht dieselbe Frage. Die Platte mit
+   „Du bist um 8:07 gekommen. / 45 Minuten Pause. / Wann darfst du gehen?“ (Der Inhaber will die direkte Anrede „Du bist um …“ am Anfang.) Die Stimme spricht dieselbe Frage. Die Platte mit
    der Frage liegt über der Stelle, an der die App die Antwort zeigt.
 2. **Die App hat die Antwort schon** (ca. 4 s). Die Frage verschwindet, ein großes Schild wächst aus der Zeile der
    App heraus: kleine Zeile „Feierabend heute“, große Zahl „16:52 Uhr“. Ein Satz dazu, der die Zahl nennt.

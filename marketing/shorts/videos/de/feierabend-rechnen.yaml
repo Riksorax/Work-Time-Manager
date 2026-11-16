@@ -5,7 +5,7 @@
 # Aussage geprüft gegen fastlane/metadata/android/de-DE/full_description.txt („Die App zeigt deine
 # Arbeitszeit, die voraussichtliche Feierabendzeit und dein Überstunden-Saldo live an“).
 id: feierabend-rechnen
-titel: 8:07 gekommen – wann darfst du gehen?
+titel: Du bist um 8:07 gekommen – wann darfst du gehen?
 
 ausschnitte:
   # Timer bis „Heutige Überstunden“: Die Platte mit der Frage sitzt direkt darunter und liegt damit
@@ -21,9 +21,9 @@ szenen:
     # Faktor 1: Die Kamera steht, damit die Platte die Feierabend-Zeile vom ersten Bild an verdeckt;
     # Bewegung kommt vom tickenden Timer.
     zoom: { auf: timer_bis_heute, faktor: 1.0 }
-    aufhaenger: "8:07 gekommen.\n45 Minuten Pause.\nWann darfst du gehen?"
+    aufhaenger: "Du bist um 8:07 gekommen.\n45 Minuten Pause.\nWann darfst du gehen?"
     saetze:
-      - Um 8:07 Uhr gekommen. 45 Minuten Pause. Wann darfst du gehen?
+      - Du bist um 8:07 Uhr gekommen. 45 Minuten Pause. Wann darfst du gehen?
 
   - art: app
     folge: feierabend_mittags
