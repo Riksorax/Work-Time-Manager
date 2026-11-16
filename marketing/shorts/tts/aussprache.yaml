@@ -1,4 +1,4 @@
-# Ersetzungen vor der Sprachsynthese (#575). Die Untertitel zeigen weiter den
+# Ersetzungen vor der Sprachsynthese (#575). Die Videobeschreibung behält den
 # Originaltext; nur die Stimme bekommt die ersetzte Fassung.
 # Reihenfolge zählt: von oben nach unten, jede Regel auf das Ergebnis der vorigen.
 # `muster` ist ein regulärer Ausdruck (Python `re`), `ersatz` darf \1, \2 nutzen.

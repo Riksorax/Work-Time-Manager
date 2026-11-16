@@ -1,34 +1,52 @@
-# Probevideo für die Pipeline (#575, S1): Platzhalterbild statt App-Bild, wird nicht veröffentlicht.
-# Zeigt jeden Baustein einmal. Aufbau der Felder: README.md, „Videobeschreibung“.
+# Probevideo für die Pipeline (#575, S1): wird nicht veröffentlicht. Zeigt jeden Baustein einmal.
+# Aufbau der Felder: README.md, „Videobeschreibung“. Die Platzhalter-Folge baut
+# `npm run platzhalter-folge`, das Platzhalterbild `npm run platzhalter`.
 id: probe
 titel: Probe der Bausteine
 
-# Benannte Rechtecke im Bild, als Anteil von Breite und Höhe (0 bis 1).
+# Benannte Rechtecke im Bild, als Anteil von Breite und Höhe (0 bis 1). Die Folge bringt
+# eigene mit (frames/de/platzhalter_folge.json: timer, start_knopf, feierabend_zeile).
 ausschnitte:
   mitte: { x: 0.1, y: 0.39, breite: 0.8, hoehe: 0.16 }
   knopf: { x: 0.1, y: 0.578, breite: 0.8, hoehe: 0.078 }
 
 szenen:
-  - art: aufhaenger
-    text: Läuft die Probe durch?
+  # Bildfolge, auf dem ersten Bild angehalten, Aufhänger darüber.
+  - art: app
+    folge: platzhalter_folge
+    bis: 0
+    aufhaenger: Läuft die Probe durch?
     saetze:
       - Läuft die Probe durch?
 
+  # Dieselbe Folge läuft weiter (kein Übergang): Kamera auf den Knopf, Tipp an der Marke „tipp“.
   - art: app
-    bild: platzhalter.png
-    zoom: { auf: knopf, faktor: 1.3 }
-    tipp: { auf: knopf, bei: 0.6 }
+    folge: platzhalter_folge
+    zoom: { auf: start_knopf, faktor: 1.1 }
+    tipp: { auf: start_knopf, bei: 0.5 }
     saetze:
       - Dieses Bild ist ein Platzhalter, die Länge der Szene kommt aus dem Ton.
+
+  # Hervorhebung: Schild wächst aus dem Ausschnitt. Die Folge ist kürzer als die Szene, ihr letztes Bild bleibt stehen.
+  - art: app
+    folge: platzhalter_folge
+    hervorhebung: { auf: feierabend_zeile, zeile: Feierabend heute, wert: "16:22 Uhr" }
+    saetze:
       - Um 16:40 Uhr steht der Saldo bei +12:45 Stunden.
 
+  # Einzelbild mit Zoom, Texteinblendung und Premium-Kennzeichen (harter Schnitt, neue Quelle).
   - art: app
     bild: platzhalter.png
     zoom: { auf: mitte }
+    tipp: { auf: knopf, bei: 0.7 }
     einblendung: Texteinblendung über dem Bild
     premium: true
     saetze:
       - So sieht eine Szene mit Premium-Kennzeichen aus.
+
+  - art: aufhaenger
+    text: Aufhänger als eigene Karte
+    dauer: 1.5
 
   - art: teaser
     text: Hier steht später ein Ausblick.

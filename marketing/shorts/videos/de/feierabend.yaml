@@ -7,13 +7,18 @@ titel: Wann ist Feierabend?
 
 ausschnitte:
   # Timer bis Feierabend-Zeile: Das zeigt die Kamera, während das Schild erscheint.
-  timer_bis_feierabend: { x: 0.1, y: 0.09, breite: 0.8, hoehe: 0.4 }
+  timer_bis_feierabend: { x: 0.1, y: 0.1, breite: 0.8, hoehe: 0.4 }
+  # Beide Zeilen unter „Heutige Überstunden“ (feierabend_zeile + gleitzeit_null_zeile der Folge):
+  # Das Schild sitzt direkt darunter und schneidet so keine Zeile halb an.
+  feierabend_zeilen: { x: 0.19, y: 0.4635, breite: 0.62, hoehe: 0.0466 }
 
 szenen:
-  # Die App morgens vor dem Start, die Frage liegt darüber. Die Folge steht auf ihrem ersten Bild.
+  # Die App morgens vor dem Start, die Frage liegt darüber. Die Folge steht auf ihrem ersten Bild,
+  # die Kamera fährt langsam heran.
   - art: app
     folge: start_morgens
     bis: 0
+    zoom: { auf: timer_vor_start, faktor: 1.08, dauer: 2.4 }
     aufhaenger: Wann hast du heute eigentlich Feierabend?
     saetze:
       - Wann hast du heute eigentlich Feierabend?
@@ -29,8 +34,8 @@ szenen:
   # Zurück auf Timer und Feierabend-Zeile, das Schild wächst aus der Zeile.
   - art: app
     folge: start_morgens
-    zoom: { auf: timer_bis_feierabend, faktor: 1.0, dauer: 0.5 }
-    hervorhebung: { auf: feierabend_zeile, zeile: Feierabend heute, wert: "16:22 Uhr", bei: 0.3 }
+    zoom: { auf: timer_bis_feierabend, faktor: 1.1, dauer: 0.5 }
+    hervorhebung: { auf: feierabend_zeilen, zeile: Feierabend heute, wert: "16:22 Uhr", bei: 0.3 }
     saetze:
       - Die App sagt dir sofort, wann du fertig bist. Heute um 16:22 Uhr.
 

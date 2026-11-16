@@ -7,6 +7,7 @@
   "scripts": {
     "render": "node render.mjs",
     "platzhalter": "node render.mjs --platzhalter",
+    "platzhalter-folge": "node platzhalter-folge.mjs",
     "test": "node --test"
   },
   "engines": {

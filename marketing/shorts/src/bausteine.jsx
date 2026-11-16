@@ -27,7 +27,7 @@ const Mitte = ({ children, style }) => (
   </AbsoluteFill>
 );
 
-const Marke = ({ farben }) => <div style={{ width: 160, height: 16, borderRadius: 8, background: verlauf(farben, 90), marginBottom: 56 }} />;
+const Marke = ({ farben, breite = 160 }) => <div style={{ width: breite, height: 16, borderRadius: 8, background: verlauf(farben, 90), marginBottom: 56 }} />;
 
 const grossSchrift = (text) => (text.length <= 28 ? 124 : text.length <= 48 ? 108 : 88);
 
@@ -73,7 +73,7 @@ export const Schlusskarte = ({ marke, texte }) => {
   return (
     <Mitte>
       <div
-        style={{ width: 400, height: 400, borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 24px 60px rgba(0,0,0,.35)', opacity: t(0, 4), transform: `scale(${0.5 + 0.5 * logo}) rotate(${(1 - logo) * -20}deg)` }}
+        style={{ width: 400, height: 400, borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 24px 60px rgba(0,0,0,.35)', opacity: interpolate(bild, [-2, 3], [0, 1], fest), transform: `scale(${0.5 + 0.5 * logo}) rotate(${(1 - logo) * -20}deg)` }}
       >
         <Img src={staticFile('logo.svg')} style={{ width: 364, height: 364 }} />
       </div>
@@ -97,15 +97,16 @@ const Stern = () => (
 /** Tipp-Markierung: Punkt mit Ring, der sich einmal ausbreitet. Liegt im Bild und wandert mit der Kamera. */
 const Tipp = ({ x, y, ab, farbe }) => {
   const t = useCurrentFrame() - ab + 4; // der Punkt erscheint kurz vor dem Tipp
-  if (t < 0 || t > 26) return null;
-  const punkt = interpolate(t, [0, 4, 16, 24], [0, 1, 1, 0], fest);
+  if (t < 0 || t > 18) return null;
+  // Der Punkt ist kurz nach dem Tipp wieder weg: Danach ändert sich das Bild darunter.
+  const punkt = interpolate(t, [0, 3, 7, 10], [0, 1, 1, 0], fest);
   const druck = interpolate(t, [2, 4, 8], [1.15, 0.8, 1], fest);
-  const ring = interpolate(t, [4, 24], [0.7, 2.6], { ...fest, easing: aus });
+  const ring = interpolate(t, [4, 18], [0.7, 2.4], { ...fest, easing: aus });
   const kreis = { position: 'absolute', left: x - 60, top: y - 60, width: 120, height: 120, borderRadius: '50%' };
   return (
     <>
-      <div style={{ ...kreis, border: `8px solid ${farbe}`, transform: `scale(${ring})`, opacity: interpolate(t, [4, 24], [0.9, 0], fest) }} />
-      <div style={{ ...kreis, background: 'rgba(13,71,161,.35)', border: '6px solid #fff', boxShadow: '0 6px 22px rgba(0,0,0,.45)', transform: `scale(${druck})`, opacity: punkt }} />
+      <div style={{ ...kreis, border: `8px solid ${farbe}`, transform: `scale(${ring})`, opacity: interpolate(t, [4, 18], [0.9, 0], fest) }} />
+      <div style={{ ...kreis, background: 'rgba(13,71,161,.5)', border: '6px solid #fff', boxShadow: '0 6px 22px rgba(0,0,0,.45)', transform: `scale(${druck})`, opacity: punkt }} />
     </>
   );
 };
@@ -195,8 +196,8 @@ export const AppSzene = ({ szene, vorher, erste, marke, texte, bilder }) => {
         {frage > 0 && <AbsoluteFill style={{ background: marke.grund[1], opacity: 0.8 * frage }} />}
       </div>
       {frage > 0 && (
-        <Mitte style={{ opacity: frage * frageHerein, transform: `scale(${1.05 - 0.05 * frageHerein})` }}>
-          <Marke farben={marke.akzent} />
+        <Mitte style={{ opacity: frage * frageHerein, transform: `scale(${1.05 - 0.05 * frageHerein + 0.04 * interpolate(bild, [0, ende], [0, 1], fest)})` }}>
+          <Marke farben={marke.akzent} breite={interpolate(bild, [0, 14], [60, 160], { ...fest, easing: aus })} />
           <div style={{ fontSize: grossSchrift(szene.aufhaenger), fontWeight: 700, lineHeight: 1.14, textShadow: '0 4px 24px rgba(0,0,0,.45)' }}>{szene.aufhaenger}</div>
         </Mitte>
       )}

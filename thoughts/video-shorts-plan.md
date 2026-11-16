@@ -19,7 +19,7 @@ aber nicht verbauen (Sprache als Ordner bzw. Parameter).
 |---|---|
 | Sprache | nur Deutsch |
 | Ton | Sprecherstimme per quelloffener, lokal laufender Sprachsynthese. Erst ein Hörtest (S0), der Inhaber wählt die Stimme. Reicht keine, wird die Stimme getauscht (bezahlter Dienst oder selbst eingesprochen), ohne die Pipeline umzubauen. |
-| Bild | echte App-Bildschirme mit Beispieldaten, per Skript animiert (Zoom, Texteinblendung, Untertitel). Keine KI-generierten Szenen, keine erfundene Oberfläche. |
+| Bild | echte App-Bildschirme mit Beispieldaten, per Skript animiert (echte Bildfolgen, Hervorhebung der Kernaussage). Keine KI-generierten Szenen, keine erfundene Oberfläche. |
 | Umfang | Pipeline + 5 Videos, Video 1 ist das Pilotvideo mit Abnahme |
 | Künftige Funktionen | als Teaser „Kommt bald“, ohne Datum |
 | Stimme (15.11.2026) | OmniVoice (Standard-Engine von VoiceStudio) mit fester Stimmvorlage; Piper und Chatterbox sind im Hörtest durchgefallen. Welche der drei Stimmen, ist offen. |
@@ -69,7 +69,7 @@ aber nicht verbauen (Sprache als Ordner bzw. Parameter).
 ```
 marketing/shorts/
   README.md            Aufruf, Aufbau einer Videobeschreibung, Regeln oben in Kurzform
-  videos/de/<id>.yaml  eine Datei je Video: Szenen, Sprechtext, Bild, Bewegung, Untertitel
+  videos/de/<id>.yaml  eine Datei je Video: Szenen, Sprechtext, Bild oder Bildfolge, Bewegung
   frames/de/           App-Bilder aus dem Flutter-Werkzeug (eingecheckt, wie die Store-Screenshots)
   tts/                 Sprachsynthese: Skript, Aussprache-Liste, Lizenzangaben
   src/                 Videokomposition
@@ -124,7 +124,7 @@ Reihenfolge: S0, S1 und S2 können gleichzeitig starten. S3 braucht alle drei. D
   (`/opt/pw-browsers/chromium`). Scheitert eines von beiden: gleiche Bausteine als HTML/CSS-Seite, Bild für Bild
   mit Playwright aufgenommen und mit `ffmpeg` zusammengesetzt. Die Videobeschreibung bleibt in beiden Fällen gleich.
 - Bausteine: Aufhänger-Karte, Szene mit App-Bild (Einblenden, langsamer Zoom auf einen benannten Ausschnitt,
-  Tipp-Markierung), Texteinblendung, Untertitel, Premium-Kennzeichen, Schlusskarte, Teaser-Karte „Kommt bald“.
+  Tipp-Markierung), Texteinblendung, Hervorhebung, Premium-Kennzeichen, Schlusskarte, Teaser-Karte „Kommt bald“.
 - Farben, Schrift und Logo aus `branding/` beziehen, nicht kopieren und nicht neu festlegen.
 - Videobeschreibung (YAML) mit Schema und Prüfung: unbekannte Felder, fehlendes Bild oder ein Satz ohne Ton sind
   Fehler mit klarer Meldung, kein stilles Weiterrendern.
@@ -158,7 +158,7 @@ Reihenfolge: S0, S1 und S2 können gleichzeitig starten. S3 braucht alle drei. D
 
 - Video 1 aus der Tabelle unten vollständig: Sprechtext, Videobeschreibung, Ton, Rendern, Beitragstext.
 - Vor der Übergabe selbst prüfen: Video Bild für Bild an drei Stellen ansehen (Anfang, Mitte, Schlusskarte),
-  Untertitel decken sich mit dem Ton, nichts liegt in den Schutzzonen, Lautheit stimmt, Länge 20 bis 35 s.
+  die Kernaussage ist auf dem Handy lesbar, nichts Wichtiges liegt in den Schutzzonen, Lautheit stimmt, Länge 11 bis 15 s.
 - **Übergabe:** das MP4 an den Inhaber (`SendUserFile`), dazu der Sprechtext.
 - **Fertig, wenn:** der Inhaber abgenommen hat. Änderungswünsche an Stil und Tempo fließen in die Bausteine aus
   S1, nicht nur in dieses eine Video.
