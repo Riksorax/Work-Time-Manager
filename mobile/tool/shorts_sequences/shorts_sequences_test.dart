@@ -168,6 +168,22 @@ Rect _overtimeRect(WidgetTester t, String label) => _textRect(t,
 
 String _timer(int seconds) => '00:00:${seconds.toString().padLeft(2, '0')}';
 
+/// Dauer wie der Timer des Dashboards: `HH:MM:SS`.
+String _hms(Duration d) {
+  String two(int n) => n.toString().padLeft(2, '0');
+  return '${two(d.inHours)}:${two(d.inMinutes % 60)}:${two(d.inSeconds % 60)}';
+}
+
+/// Sichtbarer Text unter [finder] (genau ein Treffer).
+String _read(WidgetTester t, Finder finder) {
+  expect(finder, findsOneWidget);
+  return t
+      .widgetList<RichText>(find.descendant(
+          of: finder, matching: find.byType(RichText), matchRoot: true))
+      .map((r) => r.text.toPlainText())
+      .join(' | ');
+}
+
 void main() {
   setUpAll(() async {
     await loadScreenFonts();
@@ -353,6 +369,120 @@ void main() {
         .first);
 
     await rec.finish(marks: marks, regions: regions);
+    await rec.app.close();
+  });
+
+  // Früher Nachmittag: um 8:07 Uhr gekommen, 45 Minuten Mittagspause sind
+  // vorbei, der Timer läuft. Die Seite steht 7 s ruhig am Seitenanfang, nur
+  // der Timer zählt im Sekundentakt. Keine Geste: Die Feierabend-Zeilen
+  // stehen schon da, die App hat sie aus dem Eintrag gerechnet.
+  testWidgets('feierabend_mittags',
+      timeout: const Timeout(Duration(minutes: 30)), (t) async {
+    const length = 7 * _fps; // 7 s
+    // Zeit vom Öffnen der App bis zum ersten Bild. Der Timer der App
+    // (`Timer.periodic`, 1 s) beginnt beim Öffnen; nach genau 2 s fällt jeder
+    // seiner Schläge auf eine volle Sekunde der Folge. Die Uhr steht bis zum
+    // ersten Bild auf dem Beginn der Folge.
+    const leadIn = Duration(seconds: 2);
+
+    final rec = _Recorder(t, 'feierabend_mittags', startsAt: shortsAfterLunch);
+    final watch = t.binding.clock.stopwatch()..start();
+    rec.app = await openAppScreen(t, const ScreenMotif(), _locale,
+        clock: rec.clock, entries: shortsEntries(shortsTodayAfterLunch()));
+    final opened = watch.elapsed;
+    expect(opened, lessThan(leadIn));
+    await t.pump(leadIn - opened);
+    final l10n = l10nOf(t);
+
+    final stopButton = find.widgetWithText(
+        ElevatedButton, l10n.stopTimeTracking,
+        skipOffstage: true);
+    expect(stopButton, findsOneWidget);
+    final scroll = Scrollable.of(t.element(stopButton)).position;
+
+    /// Netto-Arbeitszeit und Anwesenheit [seconds] nach Beginn der Folge,
+    /// aus dem Eintrag gerechnet.
+    Duration gross(int seconds) =>
+        shortsAfterLunch.difference(shortsLateStart) +
+        Duration(seconds: seconds);
+    Duration net(int seconds) =>
+        gross(seconds) - shortsLunchEnd.difference(shortsLunchStart);
+
+    Map<String, Rect> measure(int seconds) => {
+          'timer': _textRect(t, find.text(_hms(net(seconds)))),
+          'brutto_zeile': _textRect(
+              t, find.text(l10n.grossAttendance(_hms(gross(seconds))))),
+          'ueberstunden_gesamt': _overtimeRect(t, l10n.overtimeTotalLabel),
+          'heutige_ueberstunden': _overtimeRect(t, l10n.overtimeTodayLabel),
+          'feierabend_zeile':
+              _textRect(t, find.textContaining(l10n.expectedEndTime(''))),
+          'gleitzeit_null_zeile': _textRect(
+              t, find.textContaining(l10n.expectedEndTimeWithBalance(''))),
+          'startzeit_feld': t.getRect(find
+              .ancestor(
+                  of: find.text(l10n.startTimeLabel),
+                  matching: find.byType(InputDecorator))
+              .first),
+        };
+
+    /// Was die App gerade anzeigt (für den Sprechtext des Videos).
+    void trace(String when) {
+      if (!_trace) return;
+      Finder block(String label) => find
+          .ancestor(of: find.text(label), matching: find.byType(Column))
+          .first;
+      final lines = {
+        'Timer': _read(
+            t,
+            find.byWidgetPredicate((w) =>
+                w is Text &&
+                RegExp(r'^\d\d:\d\d:\d\d$').hasMatch(w.data ?? ''))),
+        'Brutto': _read(t, find.textContaining(l10n.grossAttendance(''))),
+        'Gesamt': _read(t, block(l10n.overtimeTotalLabel)),
+        'Heute': _read(t, block(l10n.overtimeTodayLabel)),
+        'Feierabend': _read(t, find.textContaining(l10n.expectedEndTime(''))),
+        'Gleitzeit 0':
+            _read(t, find.textContaining(l10n.expectedEndTimeWithBalance(''))),
+        'Startzeit': t
+            .widget<EditableText>(find.descendant(
+                of: find
+                    .ancestor(
+                        of: find.text(l10n.startTimeLabel),
+                        matching: find.byType(InputDecorator))
+                    .first,
+                matching: find.byType(EditableText)))
+            .controller
+            .text,
+      };
+      debugPrint('$when: $lines');
+    }
+
+    expect(scroll.pixels, 0);
+    final regions = measure(0);
+    trace('Bild 0');
+    for (var i = 0; i < length; i++) {
+      await rec.record(1);
+      final frame = rec.frames - 1;
+      expect(find.byType(SnackBar), findsNothing, reason: 'Bild $frame');
+      expect(t.takeException(), isNull, reason: 'Bild $frame');
+      expect(scroll.pixels, 0, reason: 'Bild $frame');
+      // Zu jeder vollen Sekunde zeigen Timer und Brutto-Zeile genau diese
+      // Sekunde, dazwischen die davor.
+      final seconds = frame ~/ _fps;
+      expect(find.text(_hms(net(seconds))), findsOneWidget,
+          reason: 'Bild $frame');
+      expect(
+          find.text(l10n.grossAttendance(_hms(gross(seconds)))), findsOneWidget,
+          reason: 'Bild $frame');
+    }
+    expect(rec.frames, length);
+    expect(rec.clock(), shortsAfterLunch.add(_timeOf(length - 1)));
+    // Während der ganzen Folge läuft der Timer, nichts verschiebt sich.
+    expect(stopButton, findsOneWidget);
+    expect(measure((length - 1) ~/ _fps), regions);
+    trace('Bild ${length - 1}');
+
+    await rec.finish(marks: const {}, regions: regions);
     await rec.app.close();
   });
 }

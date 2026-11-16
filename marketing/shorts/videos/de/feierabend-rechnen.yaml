@@ -1,0 +1,35 @@
+# Video 1b, Problem-Variante des Pilotvideos (#575, S3): beginnt mit der Rechenaufgabe statt mit
+# der App-Bedienung. Die Folge zeigt den echten Zustand: Beginn 08:07, 45 Minuten Pause genommen,
+# 13:30 Uhr, Timer läuft; die App zeigt „Voraussichtlicher Feierabend (±0): 16:52 Uhr“
+# (Start + Tagessoll + genommene Pause, siehe mobile/CLAUDE.md zu #575).
+# Aussage geprüft gegen fastlane/metadata/android/de-DE/full_description.txt („Die App zeigt deine
+# Arbeitszeit, die voraussichtliche Feierabendzeit und dein Überstunden-Saldo live an“).
+id: feierabend-rechnen
+titel: 8:07 gekommen – wann darfst du gehen?
+
+ausschnitte:
+  # Timer bis „Heutige Überstunden“: Die Platte mit der Frage sitzt direkt darunter und liegt damit
+  # über der Feierabend-Zeile, die Antwort ist erst mit dem Schild zu sehen.
+  timer_bis_heute: { x: 0.1, y: 0.0965, breite: 0.8, hoehe: 0.3275 }
+  timer_bis_feierabend: { x: 0.1, y: 0.1, breite: 0.8, hoehe: 0.4 }
+  # Beide Zeilen unter „Heutige Überstunden“; die Zahl darüber bleibt frei.
+  feierabend_zeilen: { x: 0.19, y: 0.4635, breite: 0.62, hoehe: 0.0466 }
+
+szenen:
+  - art: app
+    folge: feierabend_mittags
+    zoom: { auf: timer_bis_heute, faktor: 1.06, dauer: 3.5 }
+    aufhaenger: "8:07 gekommen.\n45 Minuten Pause.\nWann darfst du gehen?"
+    saetze:
+      - Um 8:07 Uhr gekommen. 45 Minuten Pause. Wann darfst du gehen?
+
+  - art: app
+    folge: feierabend_mittags
+    zoom: { auf: timer_bis_feierabend, faktor: 1.1, dauer: 0.6 }
+    hervorhebung: { auf: feierabend_zeilen, zeile: Feierabend heute, wert: "16:52 Uhr", bei: 0.12 }
+    saetze:
+      - Die App hat es schon ausgerechnet. Heute um 16:52 Uhr.
+
+  - art: schluss
+    saetze:
+      - Work Time Manager. Kostenlos bei Google Play.

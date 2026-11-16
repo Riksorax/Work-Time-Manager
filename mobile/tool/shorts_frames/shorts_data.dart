@@ -20,6 +20,15 @@ final shortsStart = _today(7, 52);
 /// Mittags, 15 Minuten nach Beginn der laufenden Pause.
 final shortsNoon = _today(12, 25);
 
+/// Früher Nachmittag, 35 Minuten nach dem Ende der Mittagspause (Beginn der
+/// Bildfolge `feierabend_mittags`).
+final shortsAfterLunch = _today(13, 30);
+
+/// Arbeitsbeginn und Mittagspause des Tages in `feierabend_mittags`.
+final shortsLateStart = _today(8, 7);
+final shortsLunchStart = _today(12, 10);
+final shortsLunchEnd = _today(12, 55);
+
 /// Der Datensatz mit [today] als heutigem Eintrag; `null` = heute noch
 /// nichts erfasst.
 Map<String, WorkEntryEntity> shortsEntries(WorkEntryEntity? today) {
@@ -42,6 +51,21 @@ WorkEntryEntity shortsTodayBreakRunning() =>
         start: _today(12, 10),
       ),
     ]);
+
+/// Heute läuft der Timer seit 8:07 Uhr, die Mittagspause von 45 Minuten
+/// (12:10 bis 12:55 Uhr) ist abgeschlossen.
+WorkEntryEntity shortsTodayAfterLunch() =>
+    storeTodayEntry(storeTextsDe).copyWith(
+      workStart: shortsLateStart,
+      breaks: [
+        BreakEntity(
+          id: 'l-today',
+          name: storeTextsDe.lunch,
+          start: shortsLunchStart,
+          end: shortsLunchEnd,
+        ),
+      ],
+    );
 
 /// Arbeitszeit-Profile, wie es sie heute gibt: das Standard-Profil (heißt in
 /// der App fest „Standard“) und ein selbst angelegtes. Mehr als ein

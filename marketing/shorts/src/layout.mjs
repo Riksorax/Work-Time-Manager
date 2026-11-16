@@ -116,7 +116,15 @@ export function aufhaengerFlaeche(ziel) {
 }
 
 /** Schriftgröße des Aufhängers je nach Länge. */
-export const aufhaengerSchrift = (text) => (text.length <= 28 ? 120 : text.length <= 48 ? 104 : 86);
+export function aufhaengerSchrift(text) {
+  // Feste Zeilen (Zeilenumbruch im Text): so groß, dass die längste Zeile in die Platte passt
+  // (Open Sans Bold, grob 0,56 em je Zeichen), damit keine Zeile von selbst umbricht.
+  if (text.includes('\n')) {
+    const laengste = Math.max(...text.split('\n').map((zeile) => zeile.trim().length));
+    return Math.min(120, Math.floor((PLATTE.breite - 100) / (0.56 * Math.max(1, laengste))));
+  }
+  return text.length <= 28 ? 120 : text.length <= 48 ? 104 : 86;
+}
 
 /** Schriftgröße der großen Zahl: so groß, wie sie in das Schild passt (Open Sans Bold, grob 0,56 em je Zeichen). */
 export const wertSchrift = (text) => Math.min(SCHILD.wertMax, Math.floor(SCHILD.wertBreite / (0.56 * Math.max(1, text.length))));
