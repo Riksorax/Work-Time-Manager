@@ -30,6 +30,44 @@ zweite Form: Bedienung zeigen, mit echter Wischgeste und Tipp.
   `premium: true` kennzeichnen. Keine Preise, kein iOS, keine Rechts- oder Steuerauskunft. Teaser ohne Datum und
   ohne nachgebaute Oberfläche.
 
+## Harte Kriterien (ein Verstoß heißt: nicht übergeben, erst beheben)
+
+Jedes Kriterium ist am fertigen Video zu prüfen, nicht an der Absicht. Im Bericht je Kriterium eine Zeile: erfüllt
+oder nicht, und woran geprüft.
+
+1. **Eine Aussage, ein Schild.** Ein Video hebt genau eine Zahl oder ein Ergebnis hervor. Zwei Schilder, zwei
+   Funktionen oder „und außerdem …“ sind zwei Videos. Free und Premium nie im selben Video: Ein Premium-Video zeigt
+   nur die Premium-Funktion.
+2. **Länge 11 bis 15 Sekunden** (`ffprobe`). Über 15 Sekunden wird gekürzt, indem Inhalt wegfällt (ein Satz, eine
+   Szene), nie durch schnelleres Sprechen oder kürzere Pausen. Richtwert: Frage bis 4 s, Antwort bis 4 s,
+   Schlusskarte 3 s, höchstens vier Sätze.
+3. **Das Schild verdeckt keine rote Zahl.** Das Schild steht unter seiner Quelle und deckt, was dort liegt. Am
+   Einzelbild in voller Größe mit Schild prüfen, was darunter verschwindet. Liegt dort eine rote Zahl (z. B.
+   „Heutige Überstunden −03:21“ direkt unter „Überstunden Gesamt“), einen anderen Zustand der App aufnehmen, in dem
+   an dieser Stelle nichts Rotes steht (z. B. abends, wenn der Tag im Plus ist), oder die Seite in der Folge so
+   scrollen, dass unter der Quelle nur Eingabefelder oder Listen liegen. Die rote Zahl wegzulassen oder zu
+   überdecken ist keine Lösung.
+4. **Jedes Wort der Frage stimmt mit dem Bild überein.** Vor dem Schreiben der Frage das erste Bild in voller Größe
+   ansehen und alles lesen, was sichtbar bleibt: Tageszeit und Timer-Stand, „Heutige Überstunden“, Orte, der Schalter
+   „Von zu Hause gearbeitet“, Start- und Endzeit. Die Frage darf nichts behaupten, dem das Bild widerspricht
+   („im Büro“ bei eingeschaltetem Home-Office-Schalter; „diese Woche“, wenn die Antwort der Gesamtsaldo ist).
+   Zeitraum der Frage = Zeitraum der gezeigten Zahl.
+5. **Die Frage wird genau von der hervorgehobenen Zahl beantwortet**, mit derselben Einheit und demselben Begriff,
+   den die App an dieser Stelle zeigt (Beschriftung der App als kleine Zeile des Schilds).
+6. **Unter und über der Platte schaut nichts Halbes hervor.** Eine Zahl ohne ihre Beschriftung (oder umgekehrt) am
+   Rand der Platte ist ein Fehler: den `zoom`-Ausschnitt so legen, dass die Platte in einer Lücke beginnt und endet.
+   Die Antwort selbst liegt unter der Platte.
+7. **Eine Seite der App je Video.** Ein Schnitt von einer Seite auf eine andere (Dashboard → Berichte) ohne sichtbare
+   Bedienung wirkt wie ein Sprung. Entweder bleibt das Video auf einer Seite, oder die Bildfolge enthält den echten
+   Wechsel (Tipp auf den Reiter als Teil der Folge).
+8. **Werte abgelesen, Aussage belegt:** Fundstelle aus `full_description.txt` in der YAML, Werte aus dem Trace der
+   Folge.
+9. **Checks ausgeführt und genannt:** `npm test`; nach Änderungen unter `mobile/tool/` zusätzlich
+   `flutter analyze --no-fatal-infos`, `dart format tool`, `dart run custom_lint`, die Folge ein zweites Mal unter
+   einer anderen Zeitzone (`TZ=America/Los_Angeles`, gleiche Prüfsummen) und der Prüfsummenvergleich aller schon
+   vorhandenen Dateien unter `frames/de/` und der Store-Screenshots (vorher/nachher). Was nicht ausgeführt wurde,
+   steht als nicht ausgeführt im Bericht.
+
 ## Ablauf für ein neues Video
 
 1. **Aussage wählen** (Tabelle in #575) und den Satz in `full_description.txt` suchen, der sie deckt. Den Fundort
@@ -46,8 +84,8 @@ zweite Form: Bedienung zeigen, mit echter Wischgeste und Tipp.
    Die Ausschnitte in der JSON kommen aus gemessenen Widget-Positionen.
 4. **Videobeschreibung** `videos/de/<id>.yaml` schreiben. Sätze kurz, Du-Form, Uhrzeiten als „16:52 Uhr“ (die
    Stimme bekommt sie über `tts/aussprache.yaml` ausgeschrieben).
-5. **Rendern:** `SHORTS_PYTHON=<python mit omnivoice> npm run render -- <id>`. Knapp eine Minute je neuem Satz,
-   danach rund eine Minute fürs Bild. Nie zwei Render- oder Syntheseläufe gleichzeitig (Speicher).
+5. **Rendern:** `SHORTS_PYTHON=<python mit omnivoice> npm run render -- <id>`. Je neuem Satz eine bis zwei Minuten in
+   der Cloud-Umgebung (auf langsamen Rechnern bis 15 Minuten), danach rund eine Minute fürs Bild. Nie zwei Render- oder Syntheseläufe gleichzeitig (Speicher).
 6. **Selbst prüfen** (Liste unten), Fehler beheben, neu rendern.
 7. **Abnahme:** MP4 mit `SendUserFile` an den Inhaber, dazu der Sprechtext und was beim Prüfen aufgefallen ist.
    `out/` wird nicht eingecheckt; eingecheckt werden YAML, Bildfolge (`frames/de/<name>.mp4` + `.json`) und Code.
@@ -64,6 +102,10 @@ sagen, dass es so geprüft wurde.
 - **Nichts Wichtiges in den Schutzzonen** (oben 250 px, unten 420 px). `render.mjs` meldet Tipp und Schild dort.
 - **Kein Hintergrund** hinter der App, kein Sprung zwischen Szenen derselben Folge.
 - **Zahlen im Bild widersprechen dem Sprechtext nicht** (Uhrzeit, Timer-Stand, Tageszeit der Situation).
+- **Je Szene ein Einzelbild in voller Größe mit Schild bzw. Platte** und dazu aufschreiben, was Schild und Platte
+  verdecken und was an ihren Rändern hervorschaut (Kriterien 3 und 6). Der verkleinerte Bildbogen reicht dafür nicht.
+- **Frage gegen das erste Bild lesen** (Kriterium 4): Home-Office-Schalter, Orte, rote oder grüne Tageszahl,
+  Tageszeit.
 - **Ton zurücklesen:** das MP4 durch eine Spracherkennung schicken (z. B. `faster-whisper`, Modell „small“, den
   Ton vorher mit ffmpeg auf 16 kHz mono wandeln) und mit dem Sprechtext vergleichen. OmniVoice war bisher
   fehlerfrei, andere Engines fügten Wörter ein.
@@ -91,6 +133,11 @@ sagen, dass es so geprüft wurde.
 | Schild ließ links ein „P“ der Überschrift stehen (`pausen`, Zoom 1.08) | Zoom nur so weit, dass das Schild (x 70 bis 1010) die Nachbarzeilen ganz deckt |
 | Runde Ecke des Schilds ließ unten links das „P“ von „Pausen“ stehen (`pausen-lang`) | eigenen Ausschnitt in der YAML, oben einige Pixel tiefer als die Quelle: Das Schild rückt mit herunter (es steht 36 px über dem Ausschnitt) |
 | Frage in vier Zeilen passte in keine Lücke der App (`pausen-lang`) | drei Zeilen; die Platte ist bei drei Zeilen gut 350 px hoch, gemessene Lücken am Seitenanfang: unter „+19:35“ (bis y 649) und über „Startzeit“ (ab y 1030) |
+| Schild „+19:35“ lag über der roten Zahl „Heutige Überstunden −03:21“ (`ueberstunden`, erster Entwurf) | Kriterium 3: Zustand ohne rote Zahl an dieser Stelle aufnehmen |
+| Zwei Aussagen (Gleitzeitkonto und Prognose) in einem Video, 16,6 s (`ueberstunden`, erster Entwurf) | Kriterien 1 und 2: zwei Videos, eines Free, eines Premium |
+| Frage „diese Woche … im Büro“, Antwort war der Gesamtsaldo, im Bild war der Home-Office-Schalter an (`ueberstunden`, erster Entwurf) | Kriterien 4 und 5: Frage aus dem lesen, was im Bild steht |
+| Rote Zahl ohne Beschriftung schaute unter der Platte hervor (`ueberstunden`, erster Entwurf) | Kriterium 6 |
+| Schnitt vom Dashboard in den Insights-Tab ohne sichtbaren Wechsel (`ueberstunden`, erster Entwurf) | Kriterium 7: eine Seite je Video |
 
 ## Bekannte Grenzen und offene Punkte
 
@@ -117,3 +164,38 @@ sagen, dass es so geprüft wurde.
   neu prüfen.
 - **Reichweite:** Ob ein Video Installationen bringt, zeigt erst das Posten. Mehrere Varianten derselben Aussage
   sind erwünscht; welche läuft, entscheidet der Inhaber nach den Zahlen der Plattform.
+
+## Offene Nachbesserung: `ueberstunden` (Entwurf auf dem Branch `shorts-ueberstunden`)
+
+Dieser Abschnitt ist ein Arbeitsauftrag und wird gelöscht, sobald er erledigt ist. Der erste Entwurf (16,6 s,
+Bildfolge `ueberstunden_trend`, Dashboard aus `feierabend_mittags`) ist technisch sauber (Format, Lautheit, Pausen,
+Ton, Werte aus der App), verstößt aber gegen die Kriterien 1, 2, 3, 4, 6 und 7. Nachbesserung: **in zwei Videos
+teilen.**
+
+**Video A `ueberstunden` (Free): Wie viele Überstunden hast du?**
+- Eine Seite: Dashboard. Antwort ist „Überstunden Gesamt“ (Beschriftung der App als kleine Zeile des Schilds).
+- Neuer Zustand statt `feierabend_mittags`: ein Zeitpunkt, an dem „Heutige Überstunden“ nicht rot ist (z. B. die
+  Lage aus `pause_ergaenzt` vor dem Beenden: 16:40 Uhr, Timer läuft, „Heutige Überstunden“ +00:48 grün,
+  „Überstunden Gesamt“ +19:35). Dafür eine eigene kurze Folge ohne Geste aufnehmen (Vorbild `feierabend_mittags`,
+  7 s, Timer tickt) und die Werte ablesen.
+- Frage passend zum Bild und zum Gesamtsaldo, mit direkter Anrede, drei feste Zeilen, z. B. „Du machst öfter
+  länger. / Wie viele Überstunden / hast du wirklich?“ Kein „diese Woche“, kein „im Büro“ (der Home-Office-Schalter
+  und die Orte stehen im Bild).
+- Die Platte liegt über „Überstunden Gesamt“ und beginnt und endet in einer Lücke (gemessene Lücken stehen in der
+  Tabelle „Lehren“); prüfen, dass darunter keine Zahl ohne Beschriftung hervorschaut.
+- Sätze: Frage, ein Satz mit der Zahl („Dein Gleitzeitkonto zählt mit. Aktuell +19:35 Stunden.“ ist in Ordnung und
+  liegt schon vertont vor), Schlusskarte. Ziel 11 bis 13 s.
+
+**Video B `prognose` (Premium): Wo stehst du am Jahresende?**
+- Eine Seite: Berichte, Reiter „Insights“. Die Folge `ueberstunden_trend` kann bleiben (echter Wisch zur Karte
+  „Prognose zum Jahresende“); sie beginnt dann das Video, die Frage liegt als Platte über dem ersten Bild, das Schild
+  „Prognose zum Jahresende / +21:31 h“ kommt nach der Marke `prognose`. Falls die 0,5 s Ruhe am Anfang für die Frage
+  nicht reichen: den Anfang der Folge verlängern (Konstante `idle`), nicht das Bild anhalten.
+- `premium: true` in jeder App-Szene; der Satz nennt Premium („Mit Premium siehst du …“).
+- Frage z. B. „Du sammelst Überstunden. / Wo stehst du / am Jahresende?“ Die Antwort ist eine Hochrechnung: Der Satz
+  sagt „Prognose“ oder „voraussichtlich“, nie „du hast“.
+- Ziel 11 bis 14 s.
+
+Für beide: Prüfliste und harte Kriterien vollständig abarbeiten und je Kriterium berichten. Die fertigen Dateien
+unter `out/` nicht einchecken (auf dem Entwurfs-Branch liegen `out/ueberstunden.mp4` und die Tondateien nur zur
+Sicherung; vor einem Merge wieder entfernen: `git rm -r --cached marketing/shorts/out`).
