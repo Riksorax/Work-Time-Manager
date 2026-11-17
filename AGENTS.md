@@ -27,6 +27,10 @@ Repo-Inhabers.
 
 ## Kurzvideos (`marketing/shorts/`)
 
+**Stand 17.11.2026:** Die eingestellte Stimme (OmniVoice) ist nur nicht-kommerziell lizenziert. Videos mit ihr
+werden nicht veröffentlicht; Näheres in `marketing/shorts/tts/LIZENZEN.md`. Keine neue Stimm-Engine einsetzen, ohne
+ihre Modellkarte vollständig gelesen und die Lizenz dort eingetragen zu haben.
+
 Die Anleitung ist `marketing/shorts/CLAUDE.md`: abgenommene Vorlage, verbindliche Entscheidungen, Ablauf in Schritten,
 Prüfliste, Lehren aus verworfenen Fassungen. Übersicht und offene Videos: Issue #575.
 

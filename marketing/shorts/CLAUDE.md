@@ -24,7 +24,10 @@ zweite Form: Bedienung zeigen, mit echter Wischgeste und Tipp.
 - **App bildfüllend, kein blauer Hintergrund** in App-Szenen. Nur die Schlusskarte ist die blaue Markenkarte.
 - **Nichts retuschieren.** Rote Zahlen (z. B. „Heutige Überstunden −03:21“) sind normales App-Verhalten und
   bleiben sichtbar; das Schild darf sie nicht überdecken.
-- **Stimme:** OmniVoice, Vorlage `omnivoice-mann` (`einstellungen.yaml`). Nur Deutsch.
+- **Stimme:** Nur Deutsch. **Achtung, Stand 17.11.2026:** Die bisher gewählte Engine OmniVoice darf für Werbung
+  nicht verwendet werden (Modellgewichte CC-BY-NC, siehe `tts/LIZENZEN.md`). Videos mit dieser Stimme werden nicht
+  veröffentlicht; eine neue Stimme ist offen. Bis dahin dient die eingestellte Stimme nur der internen Abnahme von
+  Bild und Tempo.
 - **Echte Bewegung:** Bildfolgen aus der App (Timer tickt, Gesten sind echte Gesten), keine Standbilder mit Zoom.
 - Nur Aussagen, die in `fastlane/metadata/android/de-DE/full_description.txt` stehen. Premium-Funktionen mit
   `premium: true` kennzeichnen. Keine Preise, kein iOS, keine Rechts- oder Steuerauskunft. Teaser ohne Datum und
@@ -163,7 +166,8 @@ sagen, dass es so geprüft wurde.
   Windows-Rechner wurden rund 15 Minuten je Satz gemessen. Mit CUDA-PyTorch nutzt `synth.py` die Grafikkarte von
   selbst (`SHORTS_GERAET=cpu|cuda` erzwingt ein Gerät; der Grafikkarten-Pfad ist ungetestet). Unveränderte Sätze unter
   `out/<id>/stimme/` werden wiederverwendet; den Ordner nicht ohne Grund löschen.
-- **Lizenzen:** `tts/LIZENZEN.md` (OmniVoice mit Auflagen), Remotion kostenlos für Einzelpersonen; vor Remotion 5
-  neu prüfen.
+- **Lizenzen:** `tts/LIZENZEN.md`. OmniVoice ist nicht gewerblich nutzbar (CC-BY-NC, festgestellt am 17.11.2026);
+  eine frühere Fassung nannte es fälschlich nutzbar. Jede Stimm-Engine nur nach vollständigem Lesen von Modellkarte
+  und README einsetzen. Remotion kostenlos für Einzelpersonen; vor Remotion 5 neu prüfen.
 - **Reichweite:** Ob ein Video Installationen bringt, zeigt erst das Posten. Mehrere Varianten derselben Aussage
   sind erwünscht; welche läuft, entscheidet der Inhaber nach den Zahlen der Plattform.

@@ -8,20 +8,27 @@ Abgerufen am 15.11.2026. Die Videos sind Werbung; Programm und Stimmmodell müss
 | Piper, „Thorsten emotional“ (medium, 8 Stimmungen) | wie oben | CC0 | ja | `de/de_DE/thorsten_emotional/medium/MODEL_CARD` |
 | Piper, „Kerstin“ (low) | wie oben | CC0 | ja | `de/de_DE/kerstin/low/MODEL_CARD` |
 | Chatterbox Multilingual 0.1.7 | MIT | MIT | ja | PyPI-Metadaten `chatterbox-tts`; Modellkarte `huggingface.co/ResembleAI/chatterbox` |
-| Qwen3-TTS 1.7B (VoiceDesign, CustomVoice) | Apache-2.0 | Apache-2.0 | ja | Modellkarten `huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-*` |
-| **OmniVoice 0.2.1** (Standard-Engine der App „VoiceStudio“) | Apache-2.0 | Modellkarte ohne Lizenzangabe; der enthaltene Audio-Tokenizer steht unter der „Boson Higgs Audio 2 Community License“ | ja, mit Auflagen (siehe unten) | PyPI-Metadaten `omnivoice`; `huggingface.co/k2-fsa/OmniVoice`, Datei `audio_tokenizer/LICENSE` |
+| Qwen3-TTS 1.7B (VoiceDesign, CustomVoice, Base) und Tokenizer | Apache-2.0 (`github.com/QwenLM/Qwen3-TTS`, Datei `LICENSE`) | Apache-2.0 (Metadatenfeld der Modellkarten; die Modellkarten enthalten keinen einschränkenden Lizenz- oder Nutzungsabschnitt, am 17.11.2026 vollständig durchsucht) | ja | Modellkarten `huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-{VoiceDesign,Base,CustomVoice}` und `Qwen3-TTS-Tokenizer-12Hz` |
+| **OmniVoice 0.2.1** (Standard-Engine der App „VoiceStudio“) | Apache-2.0 | **CC-BY-NC** (Modellkarte, Abschnitt „License“: „The pre-trained model is licensed under the CC-BY-NC due to constraints from its training data (e.g., Emilia)“); der enthaltene Audio-Tokenizer zusätzlich unter der „Boson Higgs Audio 2 Community License“ | **nein** (nur nicht-kommerziell) | `huggingface.co/k2-fsa/OmniVoice`, README, Abschnitt „License“, gelesen am 17.11.2026; PyPI-Metadaten `omnivoice` |
 
 Hinweise:
 
 - Piper steht unter der GPL. Die Pipeline ruft Piper als eigenes Programm auf (`python -m piper`) und liefert es nicht
   mit aus; die erzeugten Tondateien fallen nicht unter die GPL. Piper-Code wird nicht in dieses Repo kopiert.
 - Chatterbox versieht jede Ausgabe mit einem unhörbaren Wasserzeichen (Perth), das sie als KI-erzeugt kennzeichnet.
-- OmniVoice, Lizenz des Audio-Tokenizers (gelesen am 15.11.2026): Nutzung, auch gewerblich, ist gebührenfrei erlaubt.
-  Ab mehr als 100.000 jährlich aktiven Nutzern der eigenen Produkte braucht es eine erweiterte Lizenz von Boson AI
-  (Abschnitt 2). Wer das Modell oder ein Produkt, das es verwendet, weitergibt, muss die Lizenz beilegen und einen
-  Herkunftshinweis zeigen (Abschnitt 1.b.i); dieses Repo gibt das Modell nicht weiter, es wird beim ersten Lauf von
-  Hugging Face geladen. Ausgaben dürfen nicht zum Verbessern anderer Sprachmodelle dienen. Das ist eine Lesart des
-  Lizenztexts, keine Rechtsberatung; die Modellkarte selbst nennt keine Lizenz für die Gewichte.
+- **Korrektur vom 17.11.2026 (Hinweis des Repo-Inhabers):** OmniVoice ist für Werbung nicht nutzbar. Die Modellkarte
+  nennt im Abschnitt „License“ am Ende der Seite CC-BY-NC für das vortrainierte Modell. Die erste Fassung dieser
+  Tabelle (15.11.2026) nannte „Modellkarte ohne Lizenzangabe“ und „ja, mit Auflagen“; das war falsch: Geprüft worden
+  waren nur das Metadatenfeld `license` der Modellkarte (leer), die Apache-Lizenz des Programms und die Lizenz des
+  Audio-Tokenizers, nicht der Text der Modellkarte bis zum Ende. Auch das Lizenzverzeichnis von VoiceStudio führt
+  OmniVoice als nicht-kommerziell.
+- **Folge:** Videos mit OmniVoice-Stimme werden nicht veröffentlicht. Das gilt für alle bis zum 17.11.2026 gerenderten
+  Videos (`feierabend`, `feierabend-rechnen`, `pausen`, `pausen-lang`, `ueberstunden`, `prognose`) und für die
+  Stimmvorlagen unter `referenz/omnivoice-*.wav` (selbst OmniVoice-Ausgaben; nicht als Vorlage für eine andere
+  Engine verwenden). Bild, Bildfolgen und Sprechtexte sind davon nicht betroffen; nur die Tonspur muss neu entstehen.
+- **Regel für jede künftige Engine:** die Modellkarte und das README des Programms vollständig lesen (Abschnitte
+  „License“, „Disclaimer“, Angaben zu Trainingsdaten), nicht nur das Metadatenfeld. Lizenz des Programms und Lizenz
+  der Gewichte getrennt notieren, mit wörtlichem Zitat und Datum.
 - VoiceStudio (debpalash/VoiceStudio, AGPL-3.0) ist eine Desktop-App, die mehrere Engines bündelt. Getestet wurde
   nicht die App, sondern ihre Standard-Engine OmniVoice direkt.
 - Nicht geprüft und nicht verwendet: XTTS-v2 und F5-TTS (laut Plan wegen Lizenzen „nur nicht-kommerziell“ ausgeschlossen;
@@ -49,9 +56,10 @@ Folgen für die Pipeline, unabhängig von der Wahl:
 
 ## Entscheidung
 
-15.11.2026, Repo-Inhaber: Piper und Chatterbox klingen nicht gut genug; **OmniVoice** ist bisher die beste Stimme.
-16.11.2026: Es bleibt bei der Männerstimme (`omnivoice-mann`).
-
-Umsetzung: Ein Stimmentwurf per Beschreibung fällt bei jedem Lauf anders aus. Deshalb liegt je Stimme eine kurze
-Vorlage (ca. 6 s, die ersten beiden Sätze der Hörprobe) unter `referenz/`, und `synth.py` erzeugt jeden Satz als Klon
-dieser Vorlage. Vier Sätze brauchen ohne Grafikkarte rund 3 Minuten; mit der ungekürzten 21-s-Vorlage waren es 8,5.
+- 15.11.2026, Repo-Inhaber: Piper und Chatterbox klingen nicht gut genug; OmniVoice war die beste Stimme.
+- 16.11.2026: Männerstimme (`omnivoice-mann`).
+- **17.11.2026: OmniVoice scheidet wegen der Lizenz (CC-BY-NC) aus.** Eine neue Stimme ist offen. Kandidaten mit
+  Lizenz für gewerbliche Nutzung: Qwen3-TTS (Apache-2.0; im Hörtest fehlerfrei, Stimmentwurf einmal erzeugen und
+  danach mit dem Base-Modell als feste Vorlage klonen), ein bezahlter Dienst mit gewerblicher Lizenz, oder selbst
+  einsprechen (`videos/de/<id>/stimme/<nr>.wav`). Bis zur Entscheidung bleibt `einstellungen.yaml` unverändert, damit
+  die Pipeline lauffähig ist; ihre Ausgabe ist nur für die interne Abnahme von Bild und Tempo.

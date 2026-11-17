@@ -4,7 +4,8 @@ Pipeline für Kurzvideos (TikTok, Reels, Shorts) aus echten App-Bildschirmen und
 Plan, Regeln und Reihenfolge: Issue #575 und `thoughts/video-shorts-plan.md`.
 
 Stand: S0 (Hörtest der Stimmen), S1 (Videokomposition) und S2 (App-Bilder) sind umgesetzt. Die Stimme kommt von
-OmniVoice (Ergebnis des Hörtests, siehe `tts/LIZENZEN.md`).
+OmniVoice (Ergebnis des Hörtests). **OmniVoice ist nur nicht-kommerziell lizenziert (CC-BY-NC, siehe
+`tts/LIZENZEN.md`); Videos mit dieser Stimme dürfen nicht veröffentlicht werden. Eine neue Stimme ist offen.**
 
 ## Video rendern
 

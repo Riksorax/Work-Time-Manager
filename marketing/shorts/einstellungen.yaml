@@ -1,6 +1,8 @@
 # Einstellungen für alle Videos (#575). Gelesen von `render.mjs` und `tts/synth.py`.
 
-# Sprachsynthese. Ergebnis des Hörtests (S0): OmniVoice, Männerstimme (Entscheidung 16.11.2026).
+# Sprachsynthese. ACHTUNG (17.11.2026): OmniVoice ist nur nicht-kommerziell lizenziert (CC-BY-NC, siehe
+# tts/LIZENZEN.md). Videos mit dieser Stimme nicht veröffentlichen; eine neue Stimme ist offen. Die Einstellung
+# bleibt vorerst, damit die Pipeline für die Abnahme von Bild und Tempo lauffähig ist.
 # engine: omnivoice | piper | chatterbox. Bei OmniVoice ist `stimme` der Name einer Vorlage unter
 # tts/referenz/ (<name>.wav + <name>.txt): omnivoice-mann, omnivoice-frau, omnivoice-mann-tief.
 # Bei Piper ist `stimme` der Modellname unter tts/stimmen/,
