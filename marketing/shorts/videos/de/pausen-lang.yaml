@@ -1,0 +1,55 @@
+# Video 2b (#575, S3), zweite Variante von „pausen“: langer Tag über 9 Stunden, die App ergänzt
+# zwei Pausen (30 und 15 Minuten, zusammen 45).
+# Aussage geprüft gegen fastlane/metadata/android/de-DE/full_description.txt, Abschnitt
+# „Pausen automatisch“: „Fehlen beim Stoppen Pausen, ergänzt die App sie automatisch: 30 Minuten ab
+# 6 Stunden, 45 Minuten ab 9 Stunden Arbeitszeit.“ Nur was die App tut, keine Rechtsauskunft.
+# Die Folge pausen_ergaenzt_lang zeigt den echten Ablauf (abgelesen mit SHORTS_SEQUENCE_TRACE): Beginn
+# 07:52, keine Pause, 17:30 Uhr, Timer und Brutto beide 09:38:0x; Wisch, Tipp auf „Zeiterfassung
+# beenden“; danach zwei Karten mit Kennzeichen „Automatisch“: „Mittagspa…“ „11:52 - 12:22 · 30 Min“ und
+# „Kurzpause“ „14:22 - 14:37 · 15 Min“ (Endzeit 17:30, Timer 08:53:00, Heutige Überstunden
+# +01:38 -> +00:53). Die zweite Pause kommt ab 9 Stunden Brutto (Ende − Beginn, 9:00 zählt schon).
+id: pausen-lang
+titel: Über 9 Stunden ohne Pause? Die App ergänzt zwei.
+
+ausschnitte:
+  # Timer bis einschließlich „Überstunden Gesamt“ (Seitenanfang). 10 px kürzer als in `pausen`:
+  # Die Platte (drei Zeilen, 68 px Schrift) ist etwas höher und begänne sonst knapp auf der
+  # Beschriftung „Startzeit“ zu enden; so liegt sie zwischen „+19:35“ und „Startzeit“.
+  timer_bis_gesamt: { x: 0.1, y: 0.0965, breite: 0.8, hoehe: 0.216 }
+  # Beide Pausen-Karten (pausen_karten der Folge: y 0,5283 bis 0,7795), oben 8 px tiefer: Das
+  # Schild steht 36 px über dem Ausschnitt und deckt dann mit seiner runden Ecke auch das „P“ der
+  # Überschrift „Pausen“ ganz (sonst blieb links unten ein Rest stehen). Der Rahmen liegt weiter
+  # über der ersten Karte.
+  karten_schild: { x: 0.0777, y: 0.5325, breite: 0.8447, hoehe: 0.247 }
+
+szenen:
+  - art: app
+    folge: pausen_ergaenzt_lang
+    # Faktor 1: Die Kamera steht, Bewegung kommt vom tickenden Timer. Timer und Brutto-Zeile
+    # (beide 09:38, also keine Pause) und „Überstunden Gesamt“ bleiben über der Platte frei; die
+    # Platte beginnt in der Lücke darunter.
+    zoom: { auf: timer_bis_gesamt, faktor: 1.0 }
+    aufhaenger: "Über 9 Stunden gearbeitet.\nKeine Pause eingetragen.\nUnd jetzt?"
+    saetze:
+      - Du hast über 9 Stunden gearbeitet. Keine Pause eingetragen. Und jetzt?
+
+  - art: app
+    folge: pausen_ergaenzt_lang
+    tipp: { auf: beenden_knopf }
+    saetze:
+      - Tipp einfach auf Beenden.
+
+  - art: app
+    folge: pausen_ergaenzt_lang
+    # Kein Heranfahren: Nach dem ruhigen Wisch stehen beide Karten bei y 0,53 bis 0,78 (1014 bis
+    # 1497 px). Das Schild steht darüber und deckt „Zeiterfassung starten“ und die Überschrift
+    # „Pausen“ ganz; darüber bleiben Endzeit 17:30, die Orte und der Home-Office-Schalter sichtbar. `bei: 0`: Das Schild
+    # kommt so früh, wie die Marke `ergaenzt` es zulässt.
+    zoom: { auf: pausen_karten, faktor: 1.0 }
+    hervorhebung: { auf: karten_schild, zeile: Pausen automatisch ergänzt, wert: "45 Minuten", nach: ergaenzt, bei: 0 }
+    saetze:
+      - Die App ergänzt zwei Pausen von selbst. Zusammen 45 Minuten.
+
+  - art: schluss
+    saetze:
+      - Work Time Manager. Kostenlos bei Google Play.

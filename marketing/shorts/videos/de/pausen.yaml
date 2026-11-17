@@ -1,0 +1,46 @@
+# Video 2 (#575, S3): Die App ergänzt vergessene Pausen von selbst.
+# Aussage geprüft gegen fastlane/metadata/android/de-DE/full_description.txt, Abschnitt
+# „Pausen automatisch“: „Fehlen beim Stoppen Pausen, ergänzt die App sie automatisch: 30 Minuten ab
+# 6 Stunden, 45 Minuten ab 9 Stunden Arbeitszeit.“ Nur was die App tut, keine Rechtsauskunft.
+# Die Folge pause_ergaenzt zeigt den echten Ablauf (abgelesen mit SHORTS_SEQUENCE_TRACE): Beginn
+# 07:52, keine Pause, 16:40 Uhr, Timer und Brutto beide 08:48:0x; Wisch, Tipp auf „Zeiterfassung
+# beenden“; danach steht in der Pausenliste die Karte „Mittagspa…“ mit Kennzeichen „Automatisch“,
+# „11:52 - 12:22 · 30 Min“ (Endzeit 16:40, Timer 08:18:00, Heutige Überstunden +00:48 -> +00:18).
+id: pausen
+titel: Pause vergessen? Die App ergänzt sie.
+
+ausschnitte:
+  # Timer bis einschließlich „Überstunden Gesamt +19:35“ (Seitenanfang).
+  timer_bis_gesamt: { x: 0.1, y: 0.0965, breite: 0.8, hoehe: 0.221 }
+
+szenen:
+  - art: app
+    folge: pause_ergaenzt
+    # Faktor 1: Die Kamera steht, Bewegung kommt vom tickenden Timer. Timer und Brutto-Zeile
+    # (beide gleich, also keine Pause) und „Überstunden Gesamt“ bleiben über der Platte frei; die
+    # Platte beginnt in der Lücke darunter und deckt „Heutige Überstunden“ und die beiden
+    # Feierabend-Zeilen ganz (sonst ragten halbe Zeilen oben und unten heraus).
+    zoom: { auf: timer_bis_gesamt, faktor: 1.0 }
+    aufhaenger: "Du hast durchgearbeitet.\nKeine Pause eingetragen.\nUnd jetzt?"
+    saetze:
+      - Du hast durchgearbeitet. Keine Pause eingetragen. Und jetzt?
+
+  - art: app
+    folge: pause_ergaenzt
+    tipp: { auf: beenden_knopf }
+    saetze:
+      - Tipp einfach auf Beenden.
+
+  - art: app
+    folge: pause_ergaenzt
+    # Kein Heranfahren: Die Karte steht nach dem kurzen Wisch am Seitenende bei y 0,65 bis 0,78
+    # (1254 bis 1495 px), knapp über der unteren Schutzzone. Mit Zoom rückte sie höher, dann ragte
+    # aber links neben dem Schild das „P“ der Überschrift „Pausen“ hervor (1.08 und 1.04 geprüft).
+    zoom: { auf: pause_karte, faktor: 1.0 }
+    hervorhebung: { auf: pause_karte, zeile: Pause automatisch ergänzt, wert: "30 Minuten", nach: ergaenzt }
+    saetze:
+      - Die App ergänzt die Pause von selbst. 30 Minuten.
+
+  - art: schluss
+    saetze:
+      - Work Time Manager. Kostenlos bei Google Play.

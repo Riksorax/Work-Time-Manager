@@ -1,0 +1,47 @@
+# Video 3b (#575, S4): Prognose zum Jahresende (Premium). Eine Aussage, nur der Reiter „Insights“.
+# Aussage geprüft gegen fastlane/metadata/android/de-DE/full_description.txt, Abschnitt
+# „Berichte, Trend & Prognose (Premium)“: „Prognose deines Überstunden-Saldos zum Jahresende“.
+# Die Folge ueberstunden_trend zeigt Berichte -> Insights des Store-Datensatzes (abgelesen mit
+# SHORTS_SEQUENCE_TRACE): Karte „Wochen-Trend“ („+01:02 h gegenüber dem Durchschnitt der letzten
+# 4 Wochen“, „KW 45: 40:50 h · Durchschnitt 39:47 h“), Karte „Prognose zum Jahresende“:
+# „Voraussichtlich +21:31 h zum 31.12.2026“, „Aktueller Saldo +19:35 h · im Schnitt +00:16 h pro
+# Woche (letzte 8 Wochen) · noch rund 7 Wochen“, „Hochrechnung aus deinen letzten Wochen. Geplanter
+# Urlaub und Feiertage sind nicht berücksichtigt.“ Der Satz sagt deshalb „voraussichtlich“.
+id: prognose
+titel: Du hast gut 19 Überstunden – wo stehst du am Jahresende?
+
+ausschnitte:
+  # Seitenanfang bis in die Karte „Wochen-Trend“; nur Ziel der stehenden Kamera, ohne Rahmen. Die
+  # Platte beginnt 60 px darunter. Mit Marke und drei Zeilen (92 px Schrift) ist sie rund 444 px
+  # hoch und wächst während der Frage von Skala 0,97 auf 1,02 (Mitte y 1123): Sie reicht dabei von
+  # y 897–908 bis y 1338–1350, beginnt also immer in der Lücke zwischen „Wochen-Trend“ (Karte bis
+  # y 883) und „Prognose zum Jahresende“ (ab y 922) und endet in der Lücke unter der Prognose-Karte
+  # (bis y 1324, Diagramm ab y 1363). Lage gemessen in ueberstunden_trend.json (Karten mit 10 px
+  # Außenabstand). Die Antwort ist im ersten Bild verdeckt.
+  bis_wochen_trend: { x: 0.1, y: 0.1, breite: 0.8, hoehe: 0.338 }
+
+szenen:
+  - art: app
+    folge: ueberstunden_trend
+    premium: true
+    # Faktor 1: Die Kamera steht; die Folge steht ruhig am Seitenanfang, solange die Frage läuft.
+    # Platte und Ton gleich. Die längste Zeile (17 Zeichen) bestimmt die Schrift und damit die Höhe
+    # der Platte; mit 16 oder 18 Zeichen bliebe für die beiden Lücken kaum Spiel.
+    zoom: { auf: bis_wochen_trend, faktor: 1.0 }
+    aufhaenger: "Du hast gut 19\nÜberstunden. Und\nam Jahresende?"
+    saetze:
+      - Du hast gut 19 Überstunden. Wo stehst du am Jahresende?
+
+  - art: app
+    folge: ueberstunden_trend
+    premium: true
+    # Ruhiger Wisch (ohne Ausschwingen) holt die Karte nach oben; das Schild steht darunter über
+    # dem Diagramm „Arbeitszeit je Woche“ und kommt, sobald die Seite steht.
+    zoom: { auf: prognose_karte, faktor: 1.0 }
+    hervorhebung: { auf: prognose_karte, zeile: Prognose zum Jahresende, wert: "+21:31 h", nach: prognose, bei: 0 }
+    saetze:
+      - Mit Premium siehst du die Prognose. Voraussichtlich +21:31 Stunden zum Jahresende.
+
+  - art: schluss
+    saetze:
+      - Work Time Manager. Kostenlos bei Google Play.

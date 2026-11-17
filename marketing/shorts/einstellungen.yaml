@@ -1,0 +1,36 @@
+# Einstellungen für alle Videos (#575). Gelesen von `render.mjs` und `tts/synth.py`.
+
+# Sprachsynthese. ACHTUNG (17.11.2026): OmniVoice ist nur nicht-kommerziell lizenziert (CC-BY-NC, siehe
+# tts/LIZENZEN.md). Videos mit dieser Stimme nicht veröffentlichen; eine neue Stimme ist offen. Die Einstellung
+# bleibt vorerst, damit die Pipeline für die Abnahme von Bild und Tempo lauffähig ist.
+# engine: omnivoice | piper | chatterbox. Bei OmniVoice ist `stimme` der Name einer Vorlage unter
+# tts/referenz/ (<name>.wav + <name>.txt): omnivoice-mann, omnivoice-frau, omnivoice-mann-tief.
+# Bei Piper ist `stimme` der Modellname unter tts/stimmen/,
+# `sprecher` die Sprecher-Nummer bei Modellen mit mehreren Sprechern (sonst leer).
+# Bei Chatterbox ist `stimme` der Pfad einer WAV-Vorlage (leer = Standardstimme).
+stimme:
+  engine: omnivoice
+  stimme: omnivoice-mann
+  sprecher:
+
+# Bild
+fps: 30
+breite: 1080
+hoehe: 1920
+
+# Zeit in Sekunden. Die Länge der Sätze kommt aus dem Ton (out/<id>/stimme/dauer.json).
+# Zwischen zwei Sätzen liegen im fertigen Video rund 0,3 s Stille: `ton_rest` am Ende des einen und
+# am Anfang des nächsten Satzes, dazu `pause_nach_satz` bzw. über eine Szenengrenze `nachlauf` + `vorlauf`.
+ton_rest: 0.05          # so viel Stille bleibt am Anfang und Ende jeder Satz-Datei stehen, der Rest wird abgeschnitten (0 = nicht kürzen)
+vorlauf: 0.1            # Szene steht, bevor der erste Satz beginnt
+pause_nach_satz: 0.2    # zwischen zwei Sätzen einer Szene
+nachlauf: 0.1           # nach dem letzten Satz einer Szene
+schluss_nachlauf: 0.6   # nach dem letzten Satz der Schlusskarte
+schluss_dauer: 2.5      # Mindestdauer der Schlusskarte
+
+# Ton
+lautheit_lufs: -14
+spitze_db: -1.5         # Begrenzer
+musik_db: -20           # Musik unter der Stimme
+tipp_ton: true          # kurzer Klick zum Zeitpunkt jeder Tipp-Markierung (mit ffmpeg erzeugt, keine Tondatei)
+tipp_ton_db: -12        # Pegel des Klicks vor der Lautheitskorrektur
