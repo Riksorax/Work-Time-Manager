@@ -21,8 +21,10 @@ Gilt, wenn die Hauptsession ein Release oder mehrere Issues gleichzeitig steuert
 - **Ein Schritt = ein Issue-Teil = ein Branch = ein PR gegen `develop`.** Reihenfolge je Issue: Backend → Web → Mobile.
 - **Parallel nur, was keine Dateien teilt.** Die Überschneidungen stehen im Plan-Issue; parallele Agents arbeiten in eigenen
   Worktrees. Schritte, die dieselben Dateien anfassen, laufen nacheinander und bauen auf dem gemergten Vorgänger auf.
-- **Auftrag an einen Agent:** Issue-Nummer, welcher Teil, Branch, die verbindlichen Entscheidungen und der Vertrag aus dem Issue,
-  und was nicht dazugehört. Der Agent liest das Issue selbst; die Hauptsession tippt es nicht ab.
+- **Auftrag an einen Agent:** Issue-Nummer, welcher Teil, Branch (bei Ketten vom noch nicht gemergten Vorgänger-Branch), die
+  verbindlichen Entscheidungen, der Vertrag aus dem Issue und was nicht dazugehört. Phasen-Agents in Cloud-Sessions können
+  GitHub-Issues nicht lesen: Der Auftrag muss deshalb alles enthalten, was sie brauchen. Agents pushen ihren Branch und legen
+  keinen PR an; den PR erstellt die Hauptsession nach eigener Durchsicht des Diffs.
 - **Der Vertrag im Issue ist verbindlich.** Trägt er nicht, hält der Agent an und meldet es; die Hauptsession ändert zuerst
   das Issue (mit Begründung), dann geht es weiter.
 - **Rückfragen:** Fachliche Entscheidungen (Verhalten, Free/Premium, Umfang, Texte mit Außenwirkung) trifft der Repo-Inhaber.
@@ -33,5 +35,10 @@ Gilt, wenn die Hauptsession ein Release oder mehrere Issues gleichzeitig steuert
 - **Screenshots:** Bei UI- und UX-Schritten verlangt die Hauptsession vom Agent Screenshots (Regel in `entscheidungen.md`,
   „Oberfläche“), sieht sie selbst an und zeigt sie dem Repo-Inhaber zusammen mit dem PR. Ohne Screenshots gilt ein solcher
   Schritt nicht als fertig.
-- **Mergen** nur auf ausdrückliche Anweisung des Repo-Inhabers; nach `main` nie ohne sie.
+- **Mergen (Freigabe des Repo-Inhabers vom 14.11.2026):** PRs gegen `develop` darf die Hauptsession selbst mergen (Squash),
+  wenn die CI auf dem aktuellen Stand grün ist und sie den Diff gelesen hat. Schritte mit Oberfläche erst, nachdem der
+  Repo-Inhaber die Screenshots gesehen und freigegeben hat. Nach `main` (Release-PRs, als regulärer Merge-Commit) nur auf
+  ausdrückliche Anweisung des Repo-Inhabers für genau dieses Release.
+- **Ketten:** Bauen Schritte aufeinander auf, zweigt der nächste vom noch offenen Vorgänger-Branch ab. Nach dem Merge des
+  Vorgängers wird `develop` in den nächsten Branch gemergt (kein Rebase, kein Force-Push), erst dann geht dessen PR auf.
 - **Bericht an den Repo-Inhaber:** was fertig ist (mit PR), was läuft, was blockiert ist und welche Entscheidung gebraucht wird.
