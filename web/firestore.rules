@@ -7,6 +7,16 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == userId;
     }
 
+    // App-Konfiguration, Dokument "version" mit min_version, force_update und update_message:
+    // Update-Prüfung der App beim Start (mobile/lib/core/services/version_service.dart). Lesbar für
+    // alle, auch ohne Konto (Gast-Modus); keine Nutzerdaten. Geschrieben wird nur über die
+    // Firebase-Konsole bzw. das Admin-SDK, für die diese Regeln nicht gelten. Ohne diese Regel
+    // scheiterte jeder Lesezugriff mit PERMISSION_DENIED und die App überging die Prüfung still.
+    match /app_config/{doc} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     match /users/{userId} {
       // Profil-Dokument (inkl. isPremium-Flag).
       // isPremium wird client-seitig nach RevenueCat-Verifikation gesetzt

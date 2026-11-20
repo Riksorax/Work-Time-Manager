@@ -38,6 +38,7 @@ Workflows, Trigger und Secrets: `.github/workflows/` und `CONTRIBUTING.md`, „D
 | Gleitzeit | `users/{uid}/overtime/balance` | `minutes` (int), `lastUpdated` (Timestamp) |
 | Einstellungen | `users/{uid}/settings/current` | nur Web — Flutter nutzt SharedPreferences |
 | Profil/Premium | `users/{uid}` | `isPremium` (bool) |
+| App-Konfiguration | `app_config/version` | `min_version` (string, z. B. `"1.8.4"`), `force_update` (bool), `update_message` (string) — Update-Prüfung der App, lesbar für alle; nur in der Firebase-Konsole pflegen, `min_version` nie höher als die Version in der Produktion |
 | Wochen-Reflexion | `users/{uid}/weekly_reflections/{yyyy-Www}` | `whatWentWell`, `whatWasHard`, `updatedAt` — nur Mobile, nicht profilgebunden; Schlüssel = ISO-Wochenjahr + KW (Mo 29.12.2025 → `2026-W01`) |
 | Zusätzliches Arbeitszeit-Profil | `users/{uid}/profiles/{profileId}` | `name` (string), `createdAt` (Timestamp) — siehe #138/#239 |
 | Profil-Daten (Arbeitszeit-Profil) | `users/{uid}/profiles/{profileId}/{work_entries\|overtime\|settings}/...` | wie oben, nur unter dem Profil verschachtelt. Das Standard-Profil bleibt unter dem unveränderten `users/{uid}/...`-Pfad (keine Migration) |
