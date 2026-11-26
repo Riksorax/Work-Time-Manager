@@ -187,6 +187,10 @@ Daten über `GetRangeAsync`, Einstellungen je Profil (`profileId`), kein Premium
 - **Gemeinsame Testfälle:** `testdata/insights-parity/` und `testdata/home-office-parity/` (Backend `AnalyticsParityTests`,
   Mobile `insights_parity_tz_test.dart`/`home_office_parity_tz_test.dart` mit den **heutigen** Dart-Funktionen; erwartete Werte
   per `ANALYTICS_PARITY_UPDATE=1`).
+- **Clients:** Web (#590) und Mobile (#537 Teil 3) nutzen beide Endpunkte für angemeldete Nutzer (Mobile: Insights-Tab und
+  Home-Office-PDF für Monat/Jahr, `tz` = Systemzeitzone des Geräts; Details `mobile/CLAUDE.md`, „Home-Office und Insights vom
+  Backend (#537)“). Mobile prüft zusätzlich in `analytics_backend_parity_tz_test.dart`, dass die erwarteten Antworten über die
+  Lesegrenze dieselben Werte ergeben wie die lokale Gast-Rechnung.
 - **Laufzeit:** Die Zeitzonen kommen aus der tzdata des Containers (`aspnet:10.0`, `InvariantGlobalization` stört IANA-Namen
   nicht). Fehlt tzdata im Image, antwortet der Endpunkt für jede Zone mit 400.
 

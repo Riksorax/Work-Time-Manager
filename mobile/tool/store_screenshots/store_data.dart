@@ -4,7 +4,7 @@
 // zum festen Stichtag [storeNow]. Alle Bilder lesen aus diesem einen
 // Datensatz: das Dashboard und die lokalen Berichte über das
 // In-Memory-Repository, die Backend-Antworten (Trend, Jahreswerte,
-// Jahresvergleich, Urlaubsbilanz) über [StoreApi], das sie mit der
+// Jahresvergleich, Urlaubsbilanz, Insights) über [StoreApi], das sie mit der
 // kanonischen Berichtsrechnung der App (`report_calculator.dart`, Port des
 // Backends) aus denselben Einträgen bildet. Keine echten Nutzerdaten.
 
@@ -16,11 +16,13 @@ import 'package:flutter_work_time/data/models/trend_report_model.dart';
 import 'package:flutter_work_time/data/models/yearly_comparison_model.dart';
 import 'package:flutter_work_time/domain/entities/break_entity.dart';
 import 'package:flutter_work_time/domain/entities/bundesland.dart';
+import 'package:flutter_work_time/domain/entities/insights_report.dart';
 import 'package:flutter_work_time/domain/entities/trend_report.dart';
 import 'package:flutter_work_time/domain/entities/work_entry_entity.dart';
 import 'package:flutter_work_time/domain/entities/yearly_comparison.dart';
 import 'package:flutter_work_time/domain/utils/entry_day.dart';
 import 'package:flutter_work_time/domain/utils/german_holidays.dart';
+import 'package:flutter_work_time/domain/utils/insights_utils.dart';
 import 'package:flutter_work_time/domain/utils/iso_week.dart';
 import 'package:flutter_work_time/domain/utils/report_calculator.dart';
 
@@ -447,5 +449,26 @@ class StoreApi extends Fake implements ApiClient {
       'vacationDaysRemaining': storeVacationDaysPerYear - taken,
       'sickDays': inYear.where((e) => e.type == WorkEntryType.sick).length,
     };
+  }
+
+  // ── Insights (#537) ────────────────────────────────────────────────────
+
+  /// Wie das Backend: dieselben Regeln wie die lokale Rechnung der App
+  /// (`calculateInsightsReport`, belegt über `insights_parity_tz_test`).
+  @override
+  Future<InsightsReport> getInsightsReport(DateTime date, String timeZone,
+      {String? profileId}) async {
+    final window = insightsWindow(date);
+    return calculateInsightsReport(
+      entries: [
+        for (final e in _done)
+          if (!entryDay(e).isBefore(window.from) &&
+              !entryDay(e).isAfter(window.to))
+            e,
+      ],
+      today: date,
+      workdays: storeSettings.workdays,
+      targetWeeklyHours: storeSettings.weeklyTargetHours,
+    );
   }
 }

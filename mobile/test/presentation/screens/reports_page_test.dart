@@ -12,7 +12,6 @@ import 'package:flutter_work_time/core/providers/subscription_provider.dart';
 import 'package:flutter_work_time/domain/entities/settings_entity.dart';
 import 'package:flutter_work_time/domain/entities/user_entity.dart';
 import 'package:flutter_work_time/domain/entities/weekly_reflection_entity.dart';
-import 'package:flutter_work_time/domain/entities/work_entry_entity.dart';
 import 'package:flutter_work_time/domain/repositories/weekly_reflection_repository.dart';
 import 'package:flutter_work_time/l10n/app_localizations.dart';
 import 'package:flutter_work_time/presentation/screens/reports_page.dart';
@@ -24,7 +23,7 @@ import 'package:flutter_work_time/presentation/view_models/reports_view_model.da
 import 'package:flutter_work_time/presentation/view_models/settings_view_model.dart';
 
 import 'reports_page_test.mocks.dart';
-import '../../support/trend_fixture.dart';
+import '../../support/analytics_fixture.dart';
 import '../../support/yearly_comparison_fixture.dart';
 import '../view_models/reports_view_model_test.mocks.dart';
 import '../view_models/dashboard_view_model_test.mocks.dart'
@@ -339,10 +338,12 @@ void main() {
         settingsViewModel: settingsViewModel,
         authState:
             const AsyncValue.data(UserEntity(id: '1', email: 'test@test.com')),
-        // Trend (#531) steht oben im Insights-Tab: leere Antwort statt API.
+        // Trend (#531) oben leer; Insights (#537) angemeldet vom Backend.
         extraOverrides: [
-          apiClientProvider.overrideWithValue(FakeTrendApi(
-              (c) async => emptyTrendJson(c.date, c.granularity.apiValue))),
+          apiClientProvider.overrideWithValue(FakeAnalyticsApi(
+              onInsights: (c) async => insightsJson(c.date, empty: true))),
+          activeWorkProfileIdProvider.overrideWith(TestProfile.new),
+          deviceTimeZoneProvider.overrideWithValue(const FixedTimeZone()),
         ],
       ));
       await tester.pumpAndSettle();
@@ -354,31 +355,10 @@ void main() {
       expect(find.textContaining('Noch nicht genug Daten'), findsOneWidget);
     });
 
-    testWidgets(
-        'Insights-Tab zeigt Wochentags-Analyse und Heatmap mit Datenbasis',
+    testWidgets('Insights-Tab zeigt Wochentags-Analyse und Heatmap vom Backend',
         (tester) async {
       // Feste Uhr (clockProvider-Override in createSubject), kein DateTime.now().
-      final now = DateTime(2026, 10, 2);
-      // Zwei Einträge am selben Wochentag + selber Startstunde, damit sowohl
-      // die Wochentags-Analyse als auch die Heatmap (minSampleCount: 2)
-      // Ergebnisse liefern.
-      final testEntries = [
-        WorkEntryEntity(
-          id: '1',
-          date: DateTime(now.year, now.month, 1, 8),
-          workStart: DateTime(now.year, now.month, 1, 8),
-          workEnd: DateTime(now.year, now.month, 1, 17),
-        ),
-        WorkEntryEntity(
-          id: '2',
-          date: DateTime(now.year, now.month, 2, 8),
-          workStart: DateTime(now.year, now.month, 2, 8),
-          workEnd: DateTime(now.year, now.month, 2, 17),
-        ),
-      ];
-      when(mockWorkRepository.getWorkEntriesForMonth(any, any))
-          .thenAnswer((_) async => testEntries);
-
+      final api = FakeAnalyticsApi();
       final reportsViewModel = FakeReportsViewModel(
         initialState: ReportsState.initial(DateTime(2026, 10, 2))
             .copyWith(isLoading: false),
@@ -394,10 +374,10 @@ void main() {
         settingsViewModel: settingsViewModel,
         authState:
             const AsyncValue.data(UserEntity(id: '1', email: 'test@test.com')),
-        // Trend (#531) steht oben im Insights-Tab: leere Antwort statt API.
         extraOverrides: [
-          apiClientProvider.overrideWithValue(FakeTrendApi(
-              (c) async => emptyTrendJson(c.date, c.granularity.apiValue))),
+          apiClientProvider.overrideWithValue(api),
+          activeWorkProfileIdProvider.overrideWith(TestProfile.new),
+          deviceTimeZoneProvider.overrideWithValue(const FixedTimeZone()),
         ],
       ));
       await tester.pumpAndSettle();
@@ -406,7 +386,23 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(ErrorWidget), findsNothing);
+      expect(api.insightsCalls, [
+        (
+          date: DateTime(2026, 10, 2),
+          timeZone: 'Europe/Berlin',
+          profileId: null
+        )
+      ]);
+      // Angemeldet keine lokalen Monatsabfragen für die Insights.
+      verifyNever(mockWorkRepository.getWorkEntriesForMonth(any, any));
       expect(find.text('Wochentags-Analyse'), findsOneWidget);
+      expect(find.text('+00:35'), findsOneWidget); // Mittwoch, vom Backend
+      await tester.scrollUntilVisible(find.text('Start 08:00 Uhr'), 200,
+          scrollable: find
+              .descendant(
+                  of: find.byType(InsightsView),
+                  matching: find.byType(Scrollable))
+              .first);
       expect(
           find.text('Produktivitäts-Heatmap nach Startzeit'), findsOneWidget);
       expect(find.text('Start 08:00 Uhr'), findsOneWidget);

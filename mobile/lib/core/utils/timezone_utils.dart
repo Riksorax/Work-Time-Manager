@@ -40,3 +40,29 @@ Future<void> applyTimezone(String? override) async {
     }
   }
 }
+
+/// IANA-Name der Zeitzone des Geräts für Anfragen ans Backend (#537, Insights:
+/// Startstunde der Heatmap).
+///
+/// Bewusst die **Systemzeitzone** und nicht die manuelle Überschreibung
+/// (`timezone_override`, wirkt nur auf [tz.local] für Benachrichtigungen):
+/// Die App zeigt Uhrzeiten wie `DateTime.hour` in der Systemzeitzone, die
+/// bisherige lokale Heatmap nutzte genau diese Stunde. Ist sie nicht
+/// ermittelbar, gilt [tz.local], zuletzt `Europe/Berlin` (wie [applyTimezone]).
+class DeviceTimeZone {
+  const DeviceTimeZone();
+
+  Future<String> ianaName() async {
+    try {
+      final id = (await FlutterTimezone.getLocalTimezone()).identifier;
+      if (id.isNotEmpty) return id;
+    } catch (e) {
+      logger.i('[Timezone] Systemzeitzone nicht ermittelbar: ${e.runtimeType}');
+    }
+    try {
+      return tz.local.name;
+    } catch (_) {
+      return 'Europe/Berlin';
+    }
+  }
+}

@@ -6,6 +6,7 @@ import 'package:printing/src/interface.dart' show PrintingPlatform;
 
 import 'package:flutter_work_time/core/providers/providers.dart';
 import 'package:flutter_work_time/core/providers/subscription_provider.dart';
+import 'package:flutter_work_time/core/services/pdf_report_service.dart';
 import 'package:flutter_work_time/domain/entities/settings_entity.dart';
 import 'package:flutter_work_time/domain/entities/user_entity.dart';
 import 'package:flutter_work_time/domain/entities/work_entry_entity.dart';
@@ -20,6 +21,7 @@ import 'package:flutter_work_time/presentation/view_models/settings_view_model.d
 import 'package:flutter_work_time/presentation/view_models/yearly_comparison_view_model.dart';
 import 'package:flutter_work_time/presentation/view_models/yearly_report_view_model.dart';
 
+import '../../support/analytics_fixture.dart';
 import '../../support/fake_printing_platform.dart';
 import '../../support/fake_repositories.dart';
 import '../../support/yearly_comparison_fixture.dart';
@@ -66,6 +68,47 @@ WorkEntryEntity _entry(int month, int day, {bool homeOffice = false}) {
   );
 }
 
+/// Zeichnet die an den PDF-Export übergebenen Werte auf und erzeugt das PDF.
+class _RecordingPdf extends PdfReportService {
+  final calls = <Map<String, Object?>>[];
+
+  @override
+  Future<void> exportHomeOfficeReport({
+    required AppLocalizations l10n,
+    required String locale,
+    required String periodLabel,
+    required String fileSuffix,
+    required int homeOfficeDays,
+    required int officeDays,
+    required int totalWorkDays,
+    required double? ratio,
+    List<DateTime>? homeOfficeDates,
+    List<(String month, int homeOffice, int office, double? ratio)>? perMonth,
+  }) {
+    calls.add({
+      'periodLabel': periodLabel,
+      'homeOfficeDays': homeOfficeDays,
+      'officeDays': officeDays,
+      'totalWorkDays': totalWorkDays,
+      'ratio': ratio,
+      'homeOfficeDates': homeOfficeDates,
+      'perMonth': perMonth,
+    });
+    return super.exportHomeOfficeReport(
+      l10n: l10n,
+      locale: locale,
+      periodLabel: periodLabel,
+      fileSuffix: fileSuffix,
+      homeOfficeDays: homeOfficeDays,
+      officeDays: officeDays,
+      totalWorkDays: totalWorkDays,
+      ratio: ratio,
+      homeOfficeDates: homeOfficeDates,
+      perMonth: perMonth,
+    );
+  }
+}
+
 const _user =
     UserEntity(id: '123', email: 'test@test.com', displayName: 'Test User');
 
@@ -77,6 +120,8 @@ void main() {
 
   late FakePrintingPlatform platform;
   late FakeWorkRepository repo;
+  late FakeAnalyticsApi api;
+  late _RecordingPdf pdf;
 
   setUp(() {
     platform = FakePrintingPlatform();
@@ -84,6 +129,8 @@ void main() {
     repo = FakeWorkRepository();
     repo.store['2026-06-02'] = _entry(6, 2, homeOffice: true);
     repo.store['2026-06-03'] = _entry(6, 3);
+    api = FakeAnalyticsApi();
+    pdf = _RecordingPdf();
   });
 
   Future<void> pumpView(
@@ -92,6 +139,7 @@ void main() {
     bool premium = true,
     String locale = 'de',
     Size size = const Size(800, 1200),
+    String? profileId,
   }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1.0;
@@ -103,6 +151,11 @@ void main() {
           authStateProvider.overrideWith((ref) => Stream.value(_user)),
           isPremiumProvider.overrideWithValue(premium),
           workRepositoryProvider.overrideWithValue(repo),
+          // Home-Office (#537): angemeldet vom Backend.
+          apiClientProvider.overrideWithValue(api),
+          activeWorkProfileIdProvider
+              .overrideWith(() => TestProfile(profileId)),
+          pdfReportServiceProvider.overrideWithValue(pdf),
           reportsViewModelProvider.overrideWith(_FakeReportsViewModel.new),
           settingsViewModelProvider.overrideWith(_FakeSettingsViewModel.new),
           yearlyReportViewModelProvider.overrideWith(_FakeYearlyViewModel.new),
@@ -153,7 +206,33 @@ void main() {
 
       expect(platform.lastFilename, 'Home-Office-Auswertung_2026-06.pdf');
       expect(String.fromCharCodes(platform.lastBytes!.take(4)), '%PDF');
-      expect(repo.monthReads, ['2026-06']);
+      // Angemeldet (#537): ein Aufruf des Jahresendpunkts, keine Einträge
+      // gelesen; Monatswerte aus `months[]`, Tage aus `homeOfficeDates`.
+      expect(api.homeOfficeCalls, [(year: 2026, profileId: null)]);
+      expect(repo.monthReads, isEmpty);
+      expect(pdf.calls.single, {
+        'periodLabel': 'Juni 2026',
+        'homeOfficeDays': 5,
+        'officeDays': 10,
+        'totalWorkDays': 15,
+        'ratio': 5 / 15,
+        'homeOfficeDates': [
+          DateTime(2026, 6, 2),
+          DateTime(2026, 6, 9),
+          DateTime(2026, 6, 16),
+          DateTime(2026, 6, 23),
+          DateTime(2026, 6, 30),
+        ],
+        'perMonth': null,
+      });
+    });
+
+    testWidgets('Monatsansicht: Zusatzprofil fragt mit profileId an',
+        (tester) async {
+      await pumpView(tester, view: const MonthlyReportView(), profileId: 'p1');
+      await tapAndWait(tester, 'Home-Office-PDF',
+          done: () => platform.lastFilename != null);
+      expect(api.homeOfficeCalls, [(year: 2026, profileId: 'p1')]);
     });
 
     testWidgets('Jahresansicht: Button lädt 12 Monate und exportiert',
@@ -168,19 +247,29 @@ void main() {
           done: () => platform.lastFilename != null);
 
       expect(platform.lastFilename, 'Home-Office-Auswertung_2026.pdf');
-      expect(repo.monthReads.toSet(), {
-        for (var m = 1; m <= 12; m++) '2026-${m.toString().padLeft(2, '0')}',
-      });
-      expect(repo.monthReads, hasLength(12));
+      // Angemeldet (#537): ein Aufruf statt 12 Monatsabfragen.
+      expect(api.homeOfficeCalls, [(year: 2026, profileId: null)]);
+      expect(repo.monthReads, isEmpty);
+      final call = pdf.calls.single;
+      expect(call['homeOfficeDays'], 6);
+      expect(call['officeDays'], 12);
+      expect(call['totalWorkDays'], 18);
+      expect(call['ratio'], 6 / 18);
+      expect(call['homeOfficeDates'], isNull);
+      final perMonth = call['perMonth']! as List<(String, int, int, double?)>;
+      expect(perMonth, hasLength(12));
+      expect(perMonth[0], ('Januar', 0, 0, null));
+      expect(perMonth[2], ('März', 1, 2, 1 / 3));
+      expect(perMonth[5], ('Juni', 5, 10, 5 / 15));
     });
 
-    testWidgets('Lesefehler: Snackbar pdfExportFailed, kein Absturz',
+    testWidgets('Ladefehler: Snackbar pdfExportFailed, kein Absturz',
         (tester) async {
-      repo.failReads = true;
+      api.onHomeOffice = (_) async => throw StateError('kaputt');
       await pumpView(tester, view: const MonthlyReportView());
 
       await tapAndWait(tester, 'Home-Office-PDF',
-          done: () => repo.monthReads.isNotEmpty);
+          done: () => api.homeOfficeCalls.isNotEmpty);
       await tester.pump(const Duration(milliseconds: 100));
 
       expect(platform.lastFilename, isNull);
@@ -190,6 +279,7 @@ void main() {
               'erneut.'),
           findsOneWidget);
       expect(find.textContaining('Exception'), findsNothing);
+      expect(find.textContaining('kaputt'), findsNothing);
       expect(tester.takeException(), isNull);
     });
 
@@ -203,6 +293,27 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
       expect(find.text('Home office report (PDF)'), findsOneWidget);
+    });
+
+    testWidgets('Englisch: Backend-Werte im Monats- und Jahres-PDF',
+        (tester) async {
+      await pumpView(tester, view: const MonthlyReportView(), locale: 'en');
+      await tapAndWait(tester, 'Home office PDF',
+          done: () => platform.lastFilename != null);
+      expect(pdf.calls.single['periodLabel'], 'June 2026');
+      expect(pdf.calls.single['homeOfficeDays'], 5);
+
+      platform.lastFilename = null;
+      await pumpView(tester, view: const YearlyReportView(), locale: 'en');
+      await tester.tap(find.text('PDF export'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      await tapAndWait(tester, 'Home office report (PDF)',
+          done: () => platform.lastFilename != null);
+      final perMonth =
+          pdf.calls.last['perMonth']! as List<(String, int, int, double?)>;
+      expect(perMonth[5], ('June', 5, 10, 5 / 15));
+      expect(api.homeOfficeCalls, hasLength(2));
     });
 
     for (final locale in ['de', 'en']) {

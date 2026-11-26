@@ -764,6 +764,104 @@ final class WorkRepositoryProvider
 
 String _$workRepositoryHash() => r'f3376fefe33d50129e6b958abc0fb29eeb0cf412';
 
+/// Zeitzone des Geräts für Backend-Anfragen (#537), im Test überschreibbar.
+
+@ProviderFor(deviceTimeZone)
+const deviceTimeZoneProvider = DeviceTimeZoneProvider._();
+
+/// Zeitzone des Geräts für Backend-Anfragen (#537), im Test überschreibbar.
+
+final class DeviceTimeZoneProvider
+    extends $FunctionalProvider<DeviceTimeZone, DeviceTimeZone, DeviceTimeZone>
+    with $Provider<DeviceTimeZone> {
+  /// Zeitzone des Geräts für Backend-Anfragen (#537), im Test überschreibbar.
+  const DeviceTimeZoneProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'deviceTimeZoneProvider',
+          isAutoDispose: false,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$deviceTimeZoneHash();
+
+  @$internal
+  @override
+  $ProviderElement<DeviceTimeZone> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  DeviceTimeZone create(Ref ref) {
+    return deviceTimeZone(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(DeviceTimeZone value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<DeviceTimeZone>(value),
+    );
+  }
+}
+
+String _$deviceTimeZoneHash() => r'fb1375a42d157b63b7f763bafe42e312035bfe3d';
+
+/// Home-Office und Insights (#537): angemeldet vom Backend, als Gast lokal.
+/// Login- und Profilwechsel bauen eine neue, gebundene Instanz.
+
+@ProviderFor(analyticsRepository)
+const analyticsRepositoryProvider = AnalyticsRepositoryProvider._();
+
+/// Home-Office und Insights (#537): angemeldet vom Backend, als Gast lokal.
+/// Login- und Profilwechsel bauen eine neue, gebundene Instanz.
+
+final class AnalyticsRepositoryProvider extends $FunctionalProvider<
+    HybridAnalyticsRepository,
+    HybridAnalyticsRepository,
+    HybridAnalyticsRepository> with $Provider<HybridAnalyticsRepository> {
+  /// Home-Office und Insights (#537): angemeldet vom Backend, als Gast lokal.
+  /// Login- und Profilwechsel bauen eine neue, gebundene Instanz.
+  const AnalyticsRepositoryProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'analyticsRepositoryProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$analyticsRepositoryHash();
+
+  @$internal
+  @override
+  $ProviderElement<HybridAnalyticsRepository> $createElement(
+          $ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  HybridAnalyticsRepository create(Ref ref) {
+    return analyticsRepository(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(HybridAnalyticsRepository value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<HybridAnalyticsRepository>(value),
+    );
+  }
+}
+
+String _$analyticsRepositoryHash() =>
+    r'd9acbfd77291d45c585348a579aa35c731a5174a';
+
 /// Verlauf der Arbeitsorte je Nutzer und Profil (#526) für die Vorschläge.
 /// Wird aus den Einträgen gespeist, die [workRepository] ohnehin liest oder
 /// speichert (kein zusätzlicher Lesezugriff).

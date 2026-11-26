@@ -9,6 +9,7 @@ library;
 
 import 'package:intl/intl.dart';
 
+import '../entities/home_office_report.dart';
 import '../entities/work_entry_entity.dart';
 import 'entry_day.dart';
 
@@ -33,6 +34,14 @@ class HomeOfficeStats {
 
   /// Anteil der Home-Office-Tage (0..1), `null` ohne Bezugstage.
   double? get ratio => totalDays == 0 ? null : homeOfficeDays / totalDays;
+
+  /// Dieselben Zahlen in der Form der Backend-Antwort (#537).
+  HomeOfficeCounts toCounts() => HomeOfficeCounts(
+        homeOfficeDays: homeOfficeDays,
+        officeDays: officeDays,
+        totalDays: totalDays,
+        ratio: ratio,
+      );
 }
 
 HomeOfficeStats calculateHomeOfficeStats(List<WorkEntryEntity> entries) {
@@ -51,6 +60,25 @@ HomeOfficeStats calculateHomeOfficeStats(List<WorkEntryEntity> entries) {
     homeOfficeDays: homeOffice,
     officeDays: days.length - homeOffice,
     homeOfficeDates: homeOfficeDates,
+  );
+}
+
+/// Lokale Jahresauswertung (Gast-Modus, #537) aus den Einträgen je Monat
+/// ([entriesPerMonth], Index = Monat − 1): Jahr über alle Einträge, Monat je
+/// Monat, wie bisher der Home-Office-Jahresexport.
+HomeOfficeReport homeOfficeReportFromEntries(
+    int year, List<List<WorkEntryEntity>> entriesPerMonth) {
+  final total = calculateHomeOfficeStats([
+    for (final entries in entriesPerMonth) ...entries,
+  ]);
+  return HomeOfficeReport(
+    year: year,
+    total: total.toCounts(),
+    months: [
+      for (final entries in entriesPerMonth)
+        calculateHomeOfficeStats(entries).toCounts(),
+    ],
+    homeOfficeDates: total.homeOfficeDates,
   );
 }
 

@@ -1,82 +1,100 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
 import 'package:flutter_work_time/core/utils/api_errors.dart';
+import 'package:flutter_work_time/core/utils/network_error.dart';
 
 import '../../core/providers/providers.dart' as core_providers;
 import '../../core/providers/today_provider.dart';
-import '../../domain/utils/insights_utils.dart';
 import '../state/insights_state.dart';
+import '../state/reports_state.dart' show ReportsLoadFailure;
 
 final insightsViewModelProvider =
     NotifierProvider<InsightsViewModel, InsightsState>(InsightsViewModel.new);
 
-/// Lädt und berechnet die Arbeitszeit-Insights (siehe #134): Wochentags-
-/// Analyse, Burnout-Indikator und Produktivitäts-Heatmap.
+/// Arbeitszeit-Insights (siehe #134): Wochentags-Analyse, Burnout-Indikator
+/// und Produktivitäts-Heatmap über drei Kalendermonate bis heute.
 ///
-/// Datenbasis sind die letzten [_monthCount] Kalendermonate (inkl. aktuellem
-/// Monat) - analog zu `YearlyReportViewModel` per `Future.wait` über die
-/// bestehende `WorkRepository.getWorkEntriesForMonth`, statt einer neuen
-/// Repository-Methode über alle Implementierungsschichten hinweg.
+/// Die Werte kommen aus `analyticsRepositoryProvider` (#537): angemeldet vom
+/// Backend (`GET /api/reports/insights/...`, kein Offline-Ersatz), als Gast aus
+/// der lokalen Rechnung. Das ViewModel rechnet nichts.
+///
+/// - Geladen wird erst, wenn die Ansicht sichtbar ist ([ensureLoaded] aus dem
+///   Widget) bzw. über [loadInsights]; "heute" nur beim Laden aus
+///   [todayProvider], ohne Listener und ohne Auto-Reload (#387).
+/// - Login- und Profilwechsel bauen das ViewModel neu (neues Repository); die
+///   sichtbare Ansicht fordert dann neu an. Ein Ladelauf-Zähler verwirft späte
+///   Antworten.
+/// - Ladefehler setzen [InsightsState.loadFailure] (`offline`/`failed`);
+///   `NotSignedInException` ergibt keinen Fehlerzustand (#522).
 class InsightsViewModel extends Notifier<InsightsState> {
-  static const int _monthCount = 3;
-  static const int _burnoutWarningThresholdDays = 5;
+  int _gen = 0;
+  bool _requested = false;
 
   @override
   InsightsState build() {
-    ref.watch(core_providers.workRepositoryProvider);
+    _gen++;
+    _requested = false;
+    ref.watch(core_providers.analyticsRepositoryProvider);
     return InsightsState.initial();
   }
 
+  /// Die Ansicht ist sichtbar: lädt, falls seit dem letzten Aufbau noch nichts
+  /// angefordert wurde.
+  void ensureLoaded() {
+    if (!ref.mounted || _requested) return;
+    loadInsights();
+  }
+
+  /// „Erneut versuchen“.
+  Future<void> retry() => loadInsights();
+
   Future<void> loadInsights() async {
-    state = state.copyWith(isLoading: true);
+    if (!ref.mounted) return;
+    _requested = true;
+    final gen = ++_gen;
+    bool stale() => !ref.mounted || gen != _gen;
+    state =
+        state.copyWith(isLoading: true, loadFailure: ReportsLoadFailure.none);
 
-    final workRepository = ref.read(core_providers.workRepositoryProvider);
-    final settingsRepository =
-        ref.read(core_providers.settingsRepositoryProvider);
-    final workdays = settingsRepository.getWorkdays();
-    final targetWeeklyHours = settingsRepository.getTargetWeeklyHours();
-    final dailyTarget = workdays.isEmpty
-        ? Duration.zero
-        : Duration(minutes: (targetWeeklyHours / workdays.length * 60).round());
-
-    // "heute" nur beim Laden aus todayProvider; bewusst kein Listener/Auto-Reload
-    // (keine Reads für Nutzer ohne Zugriff, #387).
-    final now = ref.read(todayProvider);
-    final months = List.generate(_monthCount, (i) {
-      final date = DateTime(now.year, now.month - i, 1);
-      return (year: date.year, month: date.month);
-    });
+    final repository = ref.read(core_providers.analyticsRepositoryProvider);
+    final today = ref.read(todayProvider);
 
     try {
-      final entriesPerMonth = await Future.wait(
-        months
-            .map((m) => workRepository.getWorkEntriesForMonth(m.year, m.month)),
-      );
-      final entries = entriesPerMonth.expand((e) => e).toList();
-
+      final report = await repository.insights(today);
+      if (stale()) return;
       state = state.copyWith(
         isLoading: false,
-        weekdayAverages: calculateWeekdayAverages(entries),
-        burnoutStatus: detectOvertimeStreak(
-          entries: entries,
-          workdays: workdays,
-          dailyTarget: dailyTarget,
-          warningThresholdDays: _burnoutWarningThresholdDays,
-        ),
-        heatmap:
-            buildStartTimeHeatmap(entries: entries, dailyTarget: dailyTarget),
+        weekdayAverages: report.weekdayAverages,
+        burnoutStatus: report.burnoutStatus,
+        heatmap: report.heatmap,
+        loadFailure: ReportsLoadFailure.none,
       );
     } catch (e, stackTrace) {
+      if (e is NotSignedInException) {
+        // Kurz nach dem Abmelden: der Auth-Status zieht gleich nach und baut
+        // dieses ViewModel neu (#522). Kein Fehlerzustand.
+        logger.i('[InsightsViewModel] Laden ohne angemeldeten Nutzer');
+        return;
+      }
       if (isExpectedLoadFailure(e)) {
         // Verbindungsabbruch ist kein App-Fehler (#506): nur info.
-        logger.i(
-            '[InsightsViewModel] Netzwerkfehler beim Laden der Insights: $e');
+        logger.i('[InsightsViewModel] Netzwerkfehler beim Laden der Insights: '
+            '${errorLabel(e)}');
       } else {
-        logger.e('[InsightsViewModel] Fehler beim Laden der Insights: $e',
+        logger.e(
+            '[InsightsViewModel] Fehler beim Laden der Insights: '
+            '${errorLabel(e)}',
             stackTrace: stackTrace);
       }
-      state =
-          state.copyWith(isLoading: false, weekdayAverages: [], heatmap: []);
+      if (stale()) return;
+      state = state.copyWith(
+        isLoading: false,
+        weekdayAverages: const [],
+        heatmap: const [],
+        loadFailure: isTransientNetworkError(e)
+            ? ReportsLoadFailure.offline
+            : ReportsLoadFailure.failed,
+      );
     }
   }
 }

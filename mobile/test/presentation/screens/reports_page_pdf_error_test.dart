@@ -23,6 +23,7 @@ import 'package:flutter_work_time/presentation/view_models/settings_view_model.d
 import 'package:flutter_work_time/presentation/view_models/yearly_comparison_view_model.dart';
 import 'package:flutter_work_time/presentation/view_models/yearly_report_view_model.dart';
 
+import '../../support/analytics_fixture.dart';
 import '../../support/fake_printing_platform.dart';
 import '../../support/fake_repositories.dart';
 import '../../support/offline_fixture.dart' show hostLookupError;
@@ -112,6 +113,9 @@ void main() {
         authStateProvider.overrideWith((ref) => Stream.value(_user)),
         isPremiumProvider.overrideWithValue(true),
         workRepositoryProvider.overrideWithValue(FakeWorkRepository()),
+        // Home-Office (#537): angemeldet vom Backend.
+        apiClientProvider.overrideWithValue(FakeAnalyticsApi()),
+        activeWorkProfileIdProvider.overrideWith(TestProfile.new),
         reportsViewModelProvider.overrideWith(_FakeReportsViewModel.new),
         settingsViewModelProvider.overrideWith(_FakeSettingsViewModel.new),
         yearlyReportViewModelProvider.overrideWith(_FakeYearlyViewModel.new),

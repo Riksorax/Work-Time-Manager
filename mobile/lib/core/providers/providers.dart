@@ -16,10 +16,12 @@ import 'settings_sync_provider.dart';
 import 'clock_provider.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/utils/logger.dart';
+import '../../core/utils/timezone_utils.dart';
 import '../../data/datasources/remote/api_client.dart';
 import '../../data/datasources/remote/api_data_source.dart';
 import '../../data/datasources/remote/firestore_datasource.dart';
 import '../../data/repositories/auth_repository_impl.dart';
+import '../../data/repositories/hybrid_analytics_repository.dart';
 import '../../data/repositories/hybrid_overtime_repository_impl.dart';
 import '../../data/repositories/hybrid_work_repository_impl.dart';
 import '../../data/repositories/local_overtime_repository_impl.dart';
@@ -204,6 +206,27 @@ WorkRepository workRepository(Ref ref) {
     localRepository: localRepository,
     userId: userId,
     onEntriesSeen: history.record,
+  );
+}
+
+/// Zeitzone des Geräts für Backend-Anfragen (#537), im Test überschreibbar.
+@Riverpod(keepAlive: true)
+DeviceTimeZone deviceTimeZone(Ref ref) => const DeviceTimeZone();
+
+/// Home-Office und Insights (#537): angemeldet vom Backend, als Gast lokal.
+/// Login- und Profilwechsel bauen eine neue, gebundene Instanz.
+@riverpod
+HybridAnalyticsRepository analyticsRepository(Ref ref) {
+  final userId = ref.watch(authStateProvider).asData?.value?.id;
+  final signedIn = userId != null;
+  return HybridAnalyticsRepository(
+    // ApiClient nur angemeldet bauen (braucht FirebaseAuth).
+    api: signedIn ? ref.watch(apiClientProvider) : null,
+    // Einträge und Einstellungen braucht nur die lokale Rechnung (Gast).
+    workRepository: signedIn ? null : ref.watch(workRepositoryProvider),
+    settingsRepository: signedIn ? null : ref.watch(settingsRepositoryProvider),
+    profileId: signedIn ? ref.watch(activeWorkProfileIdProvider) : null,
+    timeZone: ref.watch(deviceTimeZoneProvider),
   );
 }
 
