@@ -86,15 +86,15 @@
   "@stopBreak": {
     "description": "Beschriftung des Buttons zum Beenden einer laufenden Pause."
   },
-  "expectedEndTime": "Voraussichtlicher Feierabend (±0): {time}",
+  "expectedEndTime": "Voraussichtlicher Feierabend (±0): {format, select, h24{{time} Uhr} other{{time}}}",
   "@expectedEndTime": {
-    "description": "Voraussichtliche Feierabendzeit basierend auf der Soll-Arbeitszeit.",
-    "placeholders": { "time": { "type": "String" } }
+    "description": "Voraussichtliche Feierabendzeit basierend auf der Soll-Arbeitszeit. {time} ist die bereits nach Einstellung formatierte Uhrzeit, {format} ist 'h24' (24-Stunden-Format, dann mit 'Uhr') oder 'h12' (AM/PM, ohne Zusatz) (#583).",
+    "placeholders": { "time": { "type": "String" }, "format": { "type": "String" } }
   },
-  "expectedEndTimeWithBalance": "Mit Gleitzeit-Bilanz auf 0: {time}",
+  "expectedEndTimeWithBalance": "Mit Gleitzeit-Bilanz auf 0: {format, select, h24{{time} Uhr} other{{time}}}",
   "@expectedEndTimeWithBalance": {
-    "description": "Voraussichtliche Feierabendzeit unter Berücksichtigung der Gleitzeit-Bilanz.",
-    "placeholders": { "time": { "type": "String" } }
+    "description": "Voraussichtliche Feierabendzeit unter Berücksichtigung der Gleitzeit-Bilanz. {time} ist die formatierte Uhrzeit, {format} 'h24' (mit 'Uhr') oder 'h12' (ohne Zusatz) (#583).",
+    "placeholders": { "time": { "type": "String" }, "format": { "type": "String" } }
   },
   "breaksTitle": "Pausen",
   "@breaksTitle": {

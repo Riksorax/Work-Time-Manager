@@ -411,6 +411,10 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
+  /// Auswahlwert `format` der ARB-Texte `expectedEndTime*` (#583).
+  static String _clockFormatKey(bool use24HourFormat) =>
+      use24HourFormat ? 'h24' : 'h12';
+
   Widget _buildExpectedEndTime(
       BuildContext context, DateTime? expectedEndTime, bool use24HourFormat) {
     if (expectedEndTime == null) {
@@ -419,13 +423,14 @@ class DashboardScreen extends ConsumerWidget {
 
     final formattedTime =
         formatTime(expectedEndTime, use24HourFormat: use24HourFormat);
-    // "Uhr"-Suffix passt nur zum 24h-Format - AM/PM ist im 12h-Format bereits eindeutig.
-    final suffix = use24HourFormat ? ' Uhr' : '';
 
     return Padding(
       padding: const EdgeInsets.only(top: 4.0),
       child: Text(
-        AppLocalizations.of(context).expectedEndTime('$formattedTime$suffix'),
+        // Ob ein Zusatz wie "Uhr" dazugehoert, entscheidet der ARB-Text der
+        // Sprache (#583): nur Deutsch im 24-Stunden-Format.
+        AppLocalizations.of(context)
+            .expectedEndTime(formattedTime, _clockFormatKey(use24HourFormat)),
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: Colors.grey[600],
               fontStyle: FontStyle.italic,
@@ -443,13 +448,12 @@ class DashboardScreen extends ConsumerWidget {
 
     final formattedTimeWithBalance = formatTime(expectedEndTimeWithBalance,
         use24HourFormat: use24HourFormat);
-    final suffix = use24HourFormat ? ' Uhr' : '';
 
     return Padding(
       padding: const EdgeInsets.only(top: 2.0),
       child: Text(
-        AppLocalizations.of(context)
-            .expectedEndTimeWithBalance('$formattedTimeWithBalance$suffix'),
+        AppLocalizations.of(context).expectedEndTimeWithBalance(
+            formattedTimeWithBalance, _clockFormatKey(use24HourFormat)),
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: Colors.grey[500],
               fontStyle: FontStyle.italic,
