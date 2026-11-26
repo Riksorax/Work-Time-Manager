@@ -1,3 +1,4 @@
+import '../entities/insights_report.dart';
 import '../entities/work_entry_entity.dart';
 import 'date_utils.dart';
 import 'entry_day.dart';
@@ -198,4 +199,48 @@ List<StartTimeBucket> buildStartTimeHeatmap({
   }
   buckets.sort((a, b) => a.startHour.compareTo(b.startHour));
   return buckets;
+}
+
+/// Anzahl der Kalendermonate des Insights-Fensters (#134, #537).
+const int insightsMonthCount = 3;
+
+/// Schwelle der Serien-Warnung in Tagen (#134).
+const int insightsWarningThresholdDays = 5;
+
+/// Fenster der Insights zum Bezugstag [today] (#537, wie das Backend): erster
+/// Tag des Monats zwei Monate vor dem Bezugsmonat bis Monatsletzter des
+/// Bezugsmonats (ganze Monate), jeweils lokale Mitternacht.
+({DateTime from, DateTime to}) insightsWindow(DateTime today) => (
+      from: DateTime(today.year, today.month - (insightsMonthCount - 1), 1),
+      to: DateTime(today.year, today.month + 1, 0),
+    );
+
+/// Lokale Insights-Rechnung (Gast-Modus, #134): Einträge der
+/// [insightsMonthCount] Monate bis zum Monat von [today], Tagessoll aus
+/// [targetWeeklyHours] und [workdays]. Dieselben Regeln wie das Backend
+/// (`InsightsCalculator`, belegt über `insights_parity_tz_test`).
+InsightsReport calculateInsightsReport({
+  required List<WorkEntryEntity> entries,
+  required DateTime today,
+  required List<int> workdays,
+  required double targetWeeklyHours,
+}) {
+  final dailyTarget = workdays.isEmpty
+      ? Duration.zero
+      : Duration(minutes: (targetWeeklyHours / workdays.length * 60).round());
+  final window = insightsWindow(today);
+  return InsightsReport(
+    from: window.from,
+    to: window.to,
+    dailyTarget: dailyTarget,
+    weekdayAverages: calculateWeekdayAverages(entries),
+    burnoutStatus: detectOvertimeStreak(
+      entries: entries,
+      workdays: workdays,
+      dailyTarget: dailyTarget,
+      warningThresholdDays: insightsWarningThresholdDays,
+    ),
+    warningThresholdDays: insightsWarningThresholdDays,
+    heatmap: buildStartTimeHeatmap(entries: entries, dailyTarget: dailyTarget),
+  );
 }

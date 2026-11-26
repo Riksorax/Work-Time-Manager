@@ -9,10 +9,10 @@ import '../../core/providers/clock_provider.dart';
 import '../../core/providers/providers.dart'
     show
         activeWorkProfileIdProvider,
+        analyticsRepositoryProvider,
         apiClientProvider,
         pdfReportServiceProvider,
-        workProfilesProvider,
-        workRepositoryProvider;
+        workProfilesProvider;
 import '../../core/providers/subscription_provider.dart';
 import '../../core/providers/today_provider.dart';
 import '../../core/services/pdf_report_service.dart';
@@ -24,7 +24,6 @@ import '../../domain/entities/work_entry_extensions.dart';
 import '../../domain/utils/date_utils.dart';
 import '../../domain/utils/entry_day.dart';
 import '../../domain/utils/german_holidays.dart';
-import '../../domain/utils/home_office_stats.dart';
 import '../../domain/utils/iso_week.dart';
 import '../../domain/utils/open_entry_report_utils.dart';
 import '../../domain/utils/weekday_labels.dart';
@@ -1119,8 +1118,9 @@ Future<void> _exportYearlyReportPdf({
 }
 
 /// Exportiert die Home-Office-Auswertung eines Monats als PDF (siehe #282).
-/// Liest den Monat über das Repository des aktiven Profils; die Zählregel
-/// liegt in `calculateHomeOfficeStats`.
+/// Die Werte kommen aus `analyticsRepositoryProvider` (#537): angemeldet vom
+/// Backend (`months[]` und `homeOfficeDates` des Monats), als Gast aus den
+/// Einträgen des Monats (`calculateHomeOfficeStats`).
 Future<void> _exportHomeOfficeMonthPdf({
   required BuildContext context,
   required WidgetRef ref,
@@ -1129,21 +1129,20 @@ Future<void> _exportHomeOfficeMonthPdf({
   final messenger = ScaffoldMessenger.of(context);
   final l10n = AppLocalizations.of(context);
   final locale = Localizations.localeOf(context).toString();
-  final repository = ref.read(workRepositoryProvider);
+  final repository = ref.read(analyticsRepositoryProvider);
+  final service = ref.read(pdfReportServiceProvider);
   try {
-    final entries =
-        await repository.getWorkEntriesForMonth(month.year, month.month);
-    final stats = calculateHomeOfficeStats(entries);
-    await _pdfReportService.exportHomeOfficeReport(
+    final result = await repository.homeOfficeMonth(month.year, month.month);
+    await service.exportHomeOfficeReport(
       l10n: l10n,
       locale: locale,
       periodLabel: DateFormat.yMMMM(locale).format(month),
       fileSuffix: DateFormat('yyyy-MM').format(month),
-      homeOfficeDays: stats.homeOfficeDays,
-      officeDays: stats.officeDays,
-      totalWorkDays: stats.totalDays,
-      ratio: stats.ratio,
-      homeOfficeDates: stats.homeOfficeDates,
+      homeOfficeDays: result.counts.homeOfficeDays,
+      officeDays: result.counts.officeDays,
+      totalWorkDays: result.counts.totalDays,
+      ratio: result.counts.ratio,
+      homeOfficeDates: result.dates,
     );
   } catch (e, st) {
     _showPdfExportError(messenger, l10n, 'Home-Office-Auswertung', e, st,
@@ -1152,7 +1151,7 @@ Future<void> _exportHomeOfficeMonthPdf({
 }
 
 /// Exportiert die Home-Office-Auswertung eines Jahres als PDF (siehe #282).
-/// Lädt die 12 Monate parallel.
+/// Angemeldet ein Aufruf ans Backend (#537), als Gast 12 Monatsabfragen.
 Future<void> _exportHomeOfficeYearPdf({
   required BuildContext context,
   required WidgetRef ref,
@@ -1161,34 +1160,28 @@ Future<void> _exportHomeOfficeYearPdf({
   final messenger = ScaffoldMessenger.of(context);
   final l10n = AppLocalizations.of(context);
   final locale = Localizations.localeOf(context).toString();
-  final repository = ref.read(workRepositoryProvider);
+  final repository = ref.read(analyticsRepositoryProvider);
+  final service = ref.read(pdfReportServiceProvider);
   try {
-    final entriesPerMonth = await Future.wait([
-      for (var m = 1; m <= 12; m++) repository.getWorkEntriesForMonth(year, m),
-    ]);
-    final total = calculateHomeOfficeStats([
-      for (final entries in entriesPerMonth) ...entries,
-    ]);
-    final perMonth = <(String, int, int, double?)>[];
-    for (var m = 1; m <= 12; m++) {
-      final stats = calculateHomeOfficeStats(entriesPerMonth[m - 1]);
-      perMonth.add((
-        DateFormat.MMMM(locale).format(DateTime(year, m)),
-        stats.homeOfficeDays,
-        stats.officeDays,
-        stats.ratio,
-      ));
-    }
-    await _pdfReportService.exportHomeOfficeReport(
+    final report = await repository.homeOfficeYear(year);
+    await service.exportHomeOfficeReport(
       l10n: l10n,
       locale: locale,
       periodLabel: '$year',
       fileSuffix: '$year',
-      homeOfficeDays: total.homeOfficeDays,
-      officeDays: total.officeDays,
-      totalWorkDays: total.totalDays,
-      ratio: total.ratio,
-      perMonth: perMonth,
+      homeOfficeDays: report.total.homeOfficeDays,
+      officeDays: report.total.officeDays,
+      totalWorkDays: report.total.totalDays,
+      ratio: report.total.ratio,
+      perMonth: [
+        for (var m = 1; m <= 12; m++)
+          (
+            DateFormat.MMMM(locale).format(DateTime(year, m)),
+            report.month(m).homeOfficeDays,
+            report.month(m).officeDays,
+            report.month(m).ratio,
+          ),
+      ],
     );
   } catch (e, st) {
     _showPdfExportError(messenger, l10n, 'Home-Office-Auswertung', e, st,
@@ -1922,14 +1915,13 @@ class InsightsView extends ConsumerStatefulWidget {
 class _InsightsViewState extends ConsumerState<InsightsView> {
   // Siehe _YearlyReportViewState: TabBarView baut alle Tabs sofort auf, der
   // Ladevorgang wird daher erst ausgelöst, wenn der Tab tatsächlich sichtbar
-  // wäre (eingeloggt + Premium).
-  bool _loadTriggered = false;
-
+  // wäre (eingeloggt + Premium). `ensureLoaded` lädt nur einmal je Aufbau des
+  // ViewModels; nach einem Login-/Profilwechsel (#537) fordert die sichtbare
+  // Ansicht so neu an.
   void _loadIfNeeded() {
-    if (_loadTriggered) return;
-    _loadTriggered = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(insightsViewModelProvider.notifier).loadInsights();
+      if (!mounted) return;
+      ref.read(insightsViewModelProvider.notifier).ensureLoaded();
     });
   }
 
@@ -2001,6 +1993,18 @@ class _InsightsViewState extends ConsumerState<InsightsView> {
             const Padding(
               padding: EdgeInsets.all(24.0),
               child: LoadingIndicator(),
+            )
+          else if (insightsState.loadFailure != ReportsLoadFailure.none)
+            // Ladefehler (#537): Hinweis mit „Erneut versuchen“ statt leerer
+            // Werte, kein Offline-Ersatz.
+            LoadFailureNotice(
+              key: const ValueKey('insightsLoadFailure'),
+              offline: insightsState.loadFailure == ReportsLoadFailure.offline,
+              message: insightsState.loadFailure == ReportsLoadFailure.offline
+                  ? l10n.reportsOfflineText
+                  : l10n.reportsLoadErrorText,
+              onRetry: () =>
+                  ref.read(insightsViewModelProvider.notifier).retry(),
             )
           else if (insightsState.hasNoData)
             Padding(

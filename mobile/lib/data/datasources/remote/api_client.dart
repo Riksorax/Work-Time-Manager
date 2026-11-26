@@ -8,14 +8,19 @@ import 'package:flutter_work_time/core/config/api_config.dart';
 import 'package:flutter_work_time/core/utils/api_errors.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
 import '../../../domain/entities/break_entity.dart';
+import '../../../domain/entities/home_office_report.dart';
+import '../../../domain/entities/insights_report.dart';
 import '../../../domain/entities/trend_report.dart';
 import '../../../domain/entities/yearly_comparison.dart';
 import '../../../domain/entities/yearly_leave_report.dart';
+import '../../models/home_office_report_model.dart';
+import '../../models/insights_report_model.dart';
 import '../../models/trend_report_model.dart';
 import '../../models/yearly_comparison_model.dart';
 import '../../models/yearly_leave_report_model.dart';
 import '../../../domain/entities/work_entry_entity.dart';
 import '../../../domain/utils/entry_day.dart';
+import '../../../domain/utils/insights_utils.dart';
 import '../../../domain/utils/work_locations.dart';
 import '../../models/work_entry_model.dart';
 import 'package:flutter_work_time/core/utils/time_precision.dart';
@@ -231,6 +236,36 @@ class ApiClient {
     return yearlyComparisonFromJson(
         jsonDecode(res.body) as Map<String, dynamic>,
         requestedYear: year);
+  }
+
+  /// Home-Office-Auswertung eines Kalenderjahres (#537):
+  /// `GET /api/reports/home-office/{year}`. Gelesen über die Lesegrenze
+  /// `homeOfficeReportFromJson` (zwölf Monate, Tage als Kalendertage).
+  Future<HomeOfficeReport> getHomeOfficeReport(int year,
+      {String? profileId}) async {
+    final json = await _getJson(
+        '/reports/home-office/$year', 'getHomeOfficeReport', profileId);
+    return homeOfficeReportFromJson(json, requestedYear: year);
+  }
+
+  /// Arbeitszeit-Insights (#537): `GET /api/reports/insights/{y}/{m}/{d}?tz=`.
+  /// [date] ist der Bezugstag des Clients (lokaler Kalendertag aus
+  /// `todayProvider`); nur seine Kalenderfelder gehen in den Pfad. [timeZone]
+  /// (IANA-Name, Pflicht) bestimmt die Startstunde der Heatmap.
+  Future<InsightsReport> getInsightsReport(DateTime date, String timeZone,
+      {String? profileId}) async {
+    final base = _uri(
+        '/reports/insights/${date.year}/${date.month}/${date.day}', profileId);
+    final uri = base.replace(queryParameters: {
+      ...base.queryParameters,
+      'tz': timeZone,
+    });
+    const op = 'getInsightsReport';
+    final res = await _http.get(uri, headers: await _headers(op));
+    if (res.statusCode != 200) _fail(op, res);
+    final window = insightsWindow(date);
+    return insightsReportFromJson(jsonDecode(res.body) as Map<String, dynamic>,
+        fallbackFrom: window.from, fallbackTo: window.to);
   }
 
   Future<Map<String, dynamic>> _getJson(String path, String op,
