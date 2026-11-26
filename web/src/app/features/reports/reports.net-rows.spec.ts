@@ -58,7 +58,7 @@ describe('ReportsComponent: Zeilen der Berichte zeigen Netto (#551)', () => {
         { provide: WorkProfileService, useValue: createFakeWorkProfile() },
         { provide: AuthService, useValue: { user$: of({ uid: 'u1' }) } },
         { provide: ProfileService, useValue: { isPremium: signal(true) } },
-        { provide: ApiClient, useValue: { getYearlyComparison: () => NEVER } },
+        { provide: ApiClient, useValue: { getYearlyComparison: () => NEVER, getHomeOfficeReport: () => NEVER } },
         { provide: Router, useValue: { navigate: vi.fn() } },
         { provide: MatDialog, useValue: {} },
         { provide: MatSnackBar, useValue: { open: vi.fn() } },

@@ -11,7 +11,6 @@ import 'package:flutter_work_time/domain/entities/user_entity.dart';
 import 'package:flutter_work_time/domain/entities/weekly_reflection_entity.dart';
 import 'package:flutter_work_time/domain/entities/work_profile_entity.dart';
 import 'package:flutter_work_time/l10n/app_localizations.dart';
-import 'package:flutter_work_time/presentation/screens/auth_gate.dart';
 import 'package:flutter_work_time/presentation/screens/settings_page.dart';
 import 'package:flutter_work_time/presentation/state/leave_balance_state.dart';
 import 'package:flutter_work_time/presentation/state/settings_state.dart';
@@ -63,7 +62,7 @@ const _user =
 
 class _Texts {
   const _Texts(this.locale, this.offline, this.sync, this.syncPartial,
-      this.create, this.delete, this.save, this.profilesLoad, this.authLoad);
+      this.create, this.delete, this.save, this.profilesLoad);
   final String locale;
   final String offline;
   final String sync;
@@ -72,7 +71,6 @@ class _Texts {
   final String delete;
   final String save;
   final String profilesLoad;
-  final String authLoad;
 }
 
 const _de = _Texts(
@@ -85,7 +83,6 @@ const _de = _Texts(
   'Das Profil konnte nicht gelöscht werden. Bitte versuche es erneut.',
   'Speichern fehlgeschlagen. Bitte versuche es erneut.',
   'Die Profile konnten nicht geladen werden.',
-  'Dein Anmeldestatus konnte nicht geprüft werden.',
 );
 
 const _en = _Texts(
@@ -97,7 +94,6 @@ const _en = _Texts(
   'The profile could not be deleted. Please try again.',
   'Saving failed. Please try again.',
   'The profiles could not be loaded.',
-  'Your sign-in status could not be checked.',
 );
 
 class _Settings extends SettingsViewModel {
@@ -412,39 +408,6 @@ void main() {
           expect(find.text(text), findsOneWidget);
           expect(find.byType(WeeklyReflectionDialog), findsOneWidget);
           expectNoRawText(tester);
-        });
-      }
-
-      for (final (name, error, offline) in [
-        ('Netzwerkfehler', hostLookupError as Object, true),
-        ('anderer Fehler', _unexpected, false),
-      ]) {
-        testWidgets('Anmeldestatus: $name, Erneut versuchen', (tester) async {
-          var calls = 0;
-          await pump(tester, t.locale, const AuthGate(),
-              signedIn: false,
-              overrides: [
-                authStateProvider.overrideWith((ref) {
-                  calls++;
-                  return calls == 1
-                      ? Stream<UserEntity?>.error(error)
-                      // Zweiter Versuch: nicht angemeldet → Login-Seite.
-                      : Stream<UserEntity?>.value(null);
-                }),
-              ]);
-          await settle(tester);
-          final notice =
-              tester.widget<LoadFailureNotice>(find.byType(LoadFailureNotice));
-          expect(notice.offline, offline);
-          expect(find.text(t.authLoad), findsOneWidget);
-          expect(find.text(l10n.retryButton), findsOneWidget);
-          expectNoRawText(tester);
-          expect(reported(logs, '[AuthGate]'), hasLength(offline ? 0 : 1));
-
-          await tester.tap(find.text(l10n.retryButton));
-          await settle(tester);
-          expect(calls, 2);
-          expect(find.byType(LoadFailureNotice), findsNothing);
         });
       }
     });

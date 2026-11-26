@@ -1,66 +1,139 @@
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
-import { provideTranslateService } from '@ngx-translate/core';
+import { TranslateService, provideTranslateService } from '@ngx-translate/core';
+import { BehaviorSubject, Observable, Subject, of, throwError } from 'rxjs';
 import { HomeOfficeCardComponent } from './home-office-card';
-import { WorkEntryService } from '../../../core/services/work-entry';
+import { AuthService } from '../../../core/auth/auth';
+import { ApiClient } from '../../../core/services/api-client';
+import { ProfileService } from '../../../core/services/profile';
 import { WorkProfileService } from '../../../core/services/work-profile';
-import { WorkEntry, WorkEntryType } from '../../models/index';
+import { HomeOfficeReport } from '../../../domain/models/home-office.models';
+import { FakeWorkProfile, createFakeWorkProfile } from '../../testing/work-profile-fake';
+import de from '../../../../../public/i18n/de.json';
+import en from '../../../../../public/i18n/en.json';
 
-function entry(day: string, isHomeOffice: boolean): WorkEntry {
-  const [y, m, d] = day.split('-').map(Number);
+function report(year: number, over: Partial<HomeOfficeReport> = {}): HomeOfficeReport {
   return {
-    id: day, date: new Date(y, m - 1, d), workStart: new Date(y, m - 1, d, 8), workEnd: new Date(y, m - 1, d, 16),
-    breaks: [], isManuallyEntered: false, type: WorkEntryType.Work, isHomeOffice,
+    year, homeOfficeDays: 7, officeDays: 5, totalDays: 12, homeOfficeRatio: 7 / 12,
+    months: Array.from({ length: 12 }, (_, i) => ({ month: i + 1, homeOfficeDays: 0, officeDays: 0, totalDays: 0, homeOfficeRatio: null })),
+    homeOfficeDates: [],
+    ...over,
   };
 }
 
-describe('HomeOfficeCardComponent (#283)', () => {
-  function setup(getMonth: (year: number, month: number) => Promise<WorkEntry[]>) {
-    const getEntriesForMonthOnce = vi.fn(getMonth);
+interface World {
+  user$: BehaviorSubject<{ uid: string } | null>;
+  isPremium: ReturnType<typeof signal<boolean>>;
+  workProfile: FakeWorkProfile;
+  getHomeOfficeReport: ReturnType<typeof vi.fn>;
+}
+
+describe('HomeOfficeCardComponent (#283, Backend seit #537)', () => {
+  let fixture: ComponentFixture<HomeOfficeCardComponent>;
+
+  afterEach(() => TestBed.resetTestingModule());
+
+  function mount(
+    respond: (year: number, pid?: string) => Observable<HomeOfficeReport>,
+    opts: { year?: number; lang?: 'de' | 'en'; premium?: boolean; loggedIn?: boolean } = {},
+  ): World {
+    const world: World = {
+      user$: new BehaviorSubject<{ uid: string } | null>(opts.loggedIn === false ? null : { uid: 'u1' }),
+      isPremium: signal(opts.premium ?? true),
+      workProfile: createFakeWorkProfile(),
+      getHomeOfficeReport: vi.fn(respond),
+    };
     TestBed.configureTestingModule({
+      imports: [HomeOfficeCardComponent],
       providers: [
-        provideTranslateService(),
-        { provide: WorkEntryService, useValue: { getEntriesForMonthOnce } },
-        { provide: WorkProfileService, useValue: { activeProfileId: signal('default') } },
+        provideTranslateService({ fallbackLang: 'de' }),
+        { provide: AuthService, useValue: { user$: world.user$ } },
+        { provide: ProfileService, useValue: { isPremium: world.isPremium } },
+        { provide: WorkProfileService, useValue: world.workProfile },
+        { provide: ApiClient, useValue: { getHomeOfficeReport: world.getHomeOfficeReport } },
       ],
     });
-    const fixture = TestBed.createComponent(HomeOfficeCardComponent);
-    fixture.componentRef.setInput('year', 2026);
-    fixture.detectChanges();
-    return { fixture, getEntriesForMonthOnce };
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('de', de);
+    translate.setTranslation('en', en);
+    translate.use(opts.lang ?? 'de');
+    fixture = TestBed.createComponent(HomeOfficeCardComponent);
+    fixture.componentRef.setInput('year', opts.year ?? 2026);
+    render();
+    return world;
   }
 
-  const settle = async (fixture: { whenStable: () => Promise<unknown>; detectChanges: () => void }) => {
-    await fixture.whenStable();
+  function render(): void {
     fixture.detectChanges();
-  };
+    TestBed.tick();
+    fixture.detectChanges();
+  }
 
-  it('lädt alle zwölf Monate des Jahres und zählt', async () => {
-    const { fixture, getEntriesForMonthOnce } = setup(async (_y, m) =>
-      m === 3 ? [entry('2026-03-02', true), entry('2026-03-03', false)] : []);
-    await settle(fixture);
+  const el = () => fixture.nativeElement as HTMLElement;
+  const text = (sel: string) => el().querySelector(sel)?.textContent?.replace(/\s+/g, ' ').trim() ?? null;
 
-    expect(getEntriesForMonthOnce).toHaveBeenCalledTimes(12);
-    expect(getEntriesForMonthOnce.mock.calls.map(c => c[1])).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
-    expect(getEntriesForMonthOnce.mock.calls.every(c => c[0] === 2026)).toBe(true);
-    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
-    expect(text).toContain('1');
-    expect((fixture.nativeElement as HTMLElement).querySelector('.ho-value')?.textContent?.trim()).toBe('1');
+  it('lädt das Jahr vom Backend und zeigt die Werte wie bisher', () => {
+    const w = mount(y => of(report(y)));
+    expect(w.getHomeOfficeReport).toHaveBeenCalledTimes(1);
+    expect(w.getHomeOfficeReport).toHaveBeenCalledWith(2026, undefined);
+    expect(text('.ho-title')).toBe('Home-Office 2026');
+    expect(text('.ho-value')).toBe('7');
+    expect(text('.ho-of')).toBe('von 12 Arbeitstagen');
+    const rows = [...el().querySelectorAll('.ho-row')].map(r => [...r.children].map(c => c.textContent?.trim()).join(' '));
+    expect(rows).toEqual(['Anteil Home-Office 58,3 %', 'Tage im Büro 5']);
   });
 
-  it('ein Lesefehler zeigt den Fehlerzustand mit Wiederholen-Button', async () => {
-    const { fixture } = setup(async () => { throw new Error('offline'); });
-    await settle(fixture);
-    const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('.ho-error')).not.toBeNull();
-    expect(el.querySelector('button')).not.toBeNull();
+  it('Anteil in der App-Sprache (Englisch mit Punkt)', () => {
+    mount(y => of(report(y)), { lang: 'en' });
+    expect(el().querySelectorAll('.ho-row dd')[0].textContent?.trim()).toBe('58.3 %');
   });
 
-  it('ohne Arbeitstage: Leerhinweis statt Zahlen', async () => {
-    const { fixture } = setup(async () => []);
-    await settle(fixture);
-    const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('.ho-empty')).not.toBeNull();
-    expect(el.querySelector('.ho-value')).toBeNull();
+  it('ohne Bezugstage: Leerhinweis statt Zahlen', () => {
+    mount(y => of(report(y, { homeOfficeDays: 0, officeDays: 0, totalDays: 0, homeOfficeRatio: null })));
+    expect(el().querySelector('.ho-empty')).not.toBeNull();
+    expect(el().querySelector('.ho-value')).toBeNull();
+  });
+
+  it('Ladezustand: Spinner mit Statusrolle und aria-busy', () => {
+    const pending = new Subject<HomeOfficeReport>();
+    mount(() => pending);
+    expect(el().querySelector('.ho-loading[role="status"]')).not.toBeNull();
+    expect(el().querySelector('.ho-card')?.getAttribute('aria-busy')).toBe('true');
+    pending.next(report(2026));
+    render();
+    expect(el().querySelector('.ho-loading')).toBeNull();
+    expect(text('.ho-value')).toBe('7');
+  });
+
+  it('Fehler zeigt „Erneut versuchen“, das neu lädt', () => {
+    let fail = true;
+    const w = mount(y => (fail ? throwError(() => new Error('offline')) : of(report(y))));
+    expect(el().querySelector('.ho-error[role="alert"]')).not.toBeNull();
+    fail = false;
+    (el().querySelector('.ho-error button') as HTMLButtonElement).click();
+    render();
+    expect(w.getHomeOfficeReport).toHaveBeenCalledTimes(2);
+    expect(text('.ho-value')).toBe('7');
+  });
+
+  it('Jahres- und Profilwechsel laden neu, mit profileId des aktiven Profils', () => {
+    const w = mount(y => of(report(y)));
+    fixture.componentRef.setInput('year', 2025);
+    render();
+    expect(w.getHomeOfficeReport).toHaveBeenLastCalledWith(2025, undefined);
+    w.workProfile.set('p2');
+    render();
+    expect(w.getHomeOfficeReport).toHaveBeenLastCalledWith(2025, 'p2');
+    expect(w.getHomeOfficeReport).toHaveBeenCalledTimes(3);
+  });
+
+  it('kein Aufruf ohne Premium oder ohne Anmeldung, dann auch keine Karte', () => {
+    const w = mount(y => of(report(y)), { premium: false });
+    expect(w.getHomeOfficeReport).not.toHaveBeenCalled();
+    expect(el().querySelector('.ho-card')).toBeNull();
+    TestBed.resetTestingModule();
+    const w2 = mount(y => of(report(y)), { loggedIn: false });
+    expect(w2.getHomeOfficeReport).not.toHaveBeenCalled();
+    expect(el().querySelector('.ho-card')).toBeNull();
   });
 });
