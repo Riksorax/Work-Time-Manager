@@ -572,6 +572,5 @@
   "voiceCommandsRecognitionHint": "Speech recognition is handled by Google Assistant. Which phrases it understands may vary by device and language.",
   "voiceCommandQuoted": "“{command}”",
   "errorNoConnectionMessage": "No connection. Check your internet connection and try again.",
-  "profilesLoadFailed": "The profiles could not be loaded.",
-  "authStateLoadFailed": "Your sign-in status could not be checked."
+  "profilesLoadFailed": "The profiles could not be loaded."
 }

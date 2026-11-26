@@ -1572,7 +1572,5 @@
   "errorNoConnectionMessage": "Keine Verbindung. Prüfe deine Internetverbindung und versuche es erneut.",
   "@errorNoConnectionMessage": {"description": "Meldung (Snackbar), wenn eine Aktion an einem Netzwerkfehler scheitert (offline, Verbindungsabbruch, Zeitüberschreitung); ersetzt dann die allgemeine Fehlermeldung der Aktion (#582)."},
   "profilesLoadFailed": "Die Profile konnten nicht geladen werden.",
-  "@profilesLoadFailed": {"description": "Hinweis im Dialog „Profile verwalten“, wenn die Profil-Liste nicht geladen werden kann; darunter „Erneut versuchen“, ohne Netz mit dem Titel „Keine Verbindung“ (#582)."},
-  "authStateLoadFailed": "Dein Anmeldestatus konnte nicht geprüft werden.",
-  "@authStateLoadFailed": {"description": "Hinweis, wenn der Anmeldestatus beim Start nicht ermittelt werden kann; darunter „Erneut versuchen“, ohne Netz mit dem Titel „Keine Verbindung“ (#582)."}
+  "@profilesLoadFailed": {"description": "Hinweis im Dialog „Profile verwalten“, wenn die Profil-Liste nicht geladen werden kann; darunter „Erneut versuchen“, ohne Netz mit dem Titel „Keine Verbindung“ (#582)."}
 }
