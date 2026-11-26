@@ -23,6 +23,7 @@ import '../../data/repositories/auth_repository_impl.dart';
 import '../../data/repositories/hybrid_overtime_repository_impl.dart';
 import '../../data/repositories/hybrid_work_repository_impl.dart';
 import '../../data/repositories/local_overtime_repository_impl.dart';
+import '../../data/repositories/local_user_data_repository_impl.dart';
 import '../../data/repositories/local_work_repository_impl.dart';
 import '../../data/repositories/firebase_overtime_repository_impl.dart';
 import '../../data/repositories/settings_repository_impl.dart';
@@ -33,6 +34,7 @@ import '../../data/repositories/work_repository_impl.dart';
 import '../../domain/entities/user_entity.dart';
 import '../../domain/entities/work_profile_entity.dart';
 import '../../domain/repositories/auth_repository.dart';
+import '../../domain/repositories/local_user_data_repository.dart';
 import '../../domain/repositories/overtime_repository.dart';
 import '../../domain/repositories/settings_repository.dart';
 import '../../domain/repositories/weekly_reflection_repository.dart';
@@ -357,9 +359,21 @@ SignOut signOutUseCase(Ref ref) {
   return SignOut(ref.watch(authRepositoryProvider));
 }
 
+/// Lokale Daten eines Nutzers (#581), aufgeräumt nach dem Löschen des Kontos.
+@riverpod
+LocalUserDataRepository localUserDataRepository(Ref ref) {
+  return LocalUserDataRepositoryImpl(ref.watch(sharedPreferencesProvider));
+}
+
 @riverpod
 DeleteAccount deleteAccountUseCase(Ref ref) {
-  return DeleteAccount(ref.watch(authRepositoryProvider));
+  // Der angemeldete Nutzer wird erst beim Aufruf gelesen: vor dem Löschen
+  // (wessen Daten) und danach (wirklich gelöscht?), siehe #581.
+  return DeleteAccount(
+    ref.watch(authRepositoryProvider),
+    localUserData: ref.watch(localUserDataRepositoryProvider),
+    currentUserId: () => ref.read(firebaseAuthProvider).currentUser?.uid,
+  );
 }
 
 @riverpod

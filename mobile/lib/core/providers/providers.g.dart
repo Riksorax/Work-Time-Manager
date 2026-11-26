@@ -1180,6 +1180,55 @@ final class SignOutUseCaseProvider
 
 String _$signOutUseCaseHash() => r'b625f35bebc61e8c1a7e7d0f6b3ba99912b8d1fc';
 
+/// Lokale Daten eines Nutzers (#581), aufgeräumt nach dem Löschen des Kontos.
+
+@ProviderFor(localUserDataRepository)
+const localUserDataRepositoryProvider = LocalUserDataRepositoryProvider._();
+
+/// Lokale Daten eines Nutzers (#581), aufgeräumt nach dem Löschen des Kontos.
+
+final class LocalUserDataRepositoryProvider extends $FunctionalProvider<
+    LocalUserDataRepository,
+    LocalUserDataRepository,
+    LocalUserDataRepository> with $Provider<LocalUserDataRepository> {
+  /// Lokale Daten eines Nutzers (#581), aufgeräumt nach dem Löschen des Kontos.
+  const LocalUserDataRepositoryProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'localUserDataRepositoryProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$localUserDataRepositoryHash();
+
+  @$internal
+  @override
+  $ProviderElement<LocalUserDataRepository> $createElement(
+          $ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  LocalUserDataRepository create(Ref ref) {
+    return localUserDataRepository(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(LocalUserDataRepository value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<LocalUserDataRepository>(value),
+    );
+  }
+}
+
+String _$localUserDataRepositoryHash() =>
+    r'ff035e59ddc382583241e9869f9e52c9d269368e';
+
 @ProviderFor(deleteAccountUseCase)
 const deleteAccountUseCaseProvider = DeleteAccountUseCaseProvider._();
 
@@ -1220,7 +1269,7 @@ final class DeleteAccountUseCaseProvider
 }
 
 String _$deleteAccountUseCaseHash() =>
-    r'5747087227f34cde6bc13863f0b2071d4c66c123';
+    r'294e7403eed54bf9c66c3f98fff0cfe9f5429638';
 
 @ProviderFor(reauthenticateUseCase)
 const reauthenticateUseCaseProvider = ReauthenticateUseCaseProvider._();

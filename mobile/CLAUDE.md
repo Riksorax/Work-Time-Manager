@@ -253,7 +253,7 @@ Angemeldet laufen Einträge, Saldo und Berichte über die API (auch Zusatzprofil
 - **Dashboard:** Der heutige Eintrag ist nicht ladbar (Logging seit #571 nur `logger.i`). `DashboardState.loadFailure` (`offline` bei Netzwerkfehler, `failed` bei unerwartetem Fehler, `NotSignedInException` ohne Hinweis) zeigt oben eine schmale Karte (`LoadFailureNotice(compact: true)`: „Keine Verbindung“ + `dashboardOfflineText` bzw. `dashboardLoadErrorText`, „Erneut versuchen“ = `DashboardViewModel.retryLoad()`, lädt ohne Writes neu). Solange der Tag nicht geladen ist, sind Start/Stopp, Pausen, Zeitfelder, Home-Office und Arbeitsorte gesperrt (wie `isSaving`), die Zeit steht als „—“, die Bruttozeile entfällt. `_showRememberedOvertime` zeigt nur den gemerkten Saldo (`totalOvertime`, `DashboardState.overtimeFreshness`), ohne Basis oder Writes; ohne Saldo „—“. Kein automatisches Neuladen bei wiederkehrendem Netz (nur „Erneut versuchen“, Aktion oder Tageswechsel). Gast-Modus und Normalfall unverändert.
 - **UI:** Nie Ausnahmetexte zeigen. Gemeinsame Widgets `widgets/common/load_failure_notice.dart` (`LoadFailureNotice`, „Keine Verbindung“/Meldung mit „Erneut versuchen“) und `widgets/common/overtime_freshness_hint.dart` (`OvertimeFreshnessHint` „Offline – Stand vom letzten Abruf“/„… noch kein Stand gespeichert“, `UnknownOvertimeValue` „—“, Screenreader „unbekannt“). Texte `reportsOffline*`, `reportsLoadErrorText`, `overtime*Hint`, `errorLoadingSettings` (ohne Platzhalter).
 - **Tests:** `firebase_overtime_repository_offline_test`, `settings_view_model_offline_test` (Neustart = neuer Container, Nutzer-/Profilwechsel), `reports_view_model_offline_test`, Widget-Tests `reports_page_offline_test`, `settings_page_offline_test`, `dashboard_screen_offline_test` (de/en, 320/360 px mit Roboto); Hilfen `test/support/offline_fixture.dart`.
-- **Kontolöschung:** Der gemerkte Saldo bleibt in den Prefs stehen (nach uid getrennt); beim Löschen werden bisher nirgends lokale Daten aufgeräumt (`DeleteAccount` löscht nur den Auth-User), deshalb auch hier nicht. Beim Abmelden bleibt er bewusst stehen.
+- **Kontolöschung:** Der gemerkte Saldo wird nach dem erfolgreichen Löschen des Kontos entfernt (#581, siehe „Konto-Löschung“). Beim Abmelden bleibt er bewusst stehen.
 - Die roten Snackbars mit Ausnahmetext sind mit #582 behoben, siehe „Keine technischen Fehlertexte (#582)“.
 
 ### Keine technischen Fehlertexte (#582)
@@ -268,6 +268,26 @@ Meldungen für Nutzer enthalten nie den Ausnahmetext (`'$e'`, `error.toString()`
 ### Konto-Löschung (#511)
 
 `FirestoreDataSourceImpl.deleteAccount()` löscht nur den Auth-User (bei `requires-recent-login` nach Re-Auth) und meldet danach Google ab. Die Firestore-Daten unter `users/{uid}` räumt der Server ab (Cloud Function `onUserDeleted` in `web/functions/`, `CONTRIBUTING.md`, „Konto-Löschung“). **Kein Firestore-Zugriff nach `user.delete()`:** Dann ist niemand mehr angemeldet, die Rules antworten mit `permission-denied`. `SettingsPage._deleteAccount` awaitet den Use Case und zeigt bei einem Fehler `deleteAccountFailed` als Snackbar; ein unbehandelter Fehler landete sonst als fataler Absturz in `PlatformDispatcher.onError`. Aufrufe von Use Cases aus `onPressed` deshalb nie ohne `await` und Fehlerbehandlung feuern.
+
+**Lokale Daten (#581).** `DeleteAccount` liest die UID vor dem Löschen und ruft nach dem Löschen `LocalUserDataRepository.removeUserData(uid)` auf (`data/repositories/local_user_data_repository_impl.dart`, Provider `localUserDataRepositoryProvider`), aber nur, wenn danach nicht mehr derselbe Nutzer angemeldet ist: `deleteAccount()` kehrt auch beim Abbruch der erneuten Anmeldung ohne Fehler zurück, dann ist das Konto nicht gelöscht und lokal bleibt alles. Scheitert das Löschen, bleibt alles (der Fehler geht weiter an die Snackbar). Scheitert nur das Aufräumen, gilt das Löschen als erfolgreich (`logger.e`). Abmelden räumt nichts auf. Liste aller Schlüssel (SharedPreferences, außer markiert):
+
+| Schlüssel | Herkunft | Beim Löschen |
+|---|---|---|
+| `target_weekly_hours_<uid>[_<profil>]`, `workdays_…`, `workdays_per_week_…` (Altschlüssel #217), `vacation_days_per_year_…`, `bundesland_…`, `show_work_location_on_dashboard_…`, `show_home_office_on_dashboard_…` | `SettingsRepositoryImpl`, je Nutzer und Profil | **entfernt** (Kopie der Server-Einstellungen, die `onUserDeleted` löscht) |
+| `last_known_overtime_minutes_<uid>[_<profil>]`, `last_known_overtime_updated_…` | gemerkter Saldo (#573) | **entfernt** |
+| `work_location_history_<uid>[_<profil>]` | Arbeitsort-Vorschläge (#526) | **entfernt** (enthält Orte des Nutzers) |
+| `active_work_profile_<uid>` | gemerktes Profil (#388) | **entfernt** |
+| `local_work_entries_<yyyy-MM>`, `local_monthly_keys`, `local_overtime_minutes`, `local_overtime_date`, `…_local` (Einstellungen, `work_location_history_local`) | Gast-Modus | bleibt: Daten ohne Konto, gehören nicht zum gelöschten Konto |
+| `theme_mode`, `locale`, `use_24_hour_format`, `timezone_override` | Darstellung, geräteweit | bleibt |
+| `notifications_enabled`, `notification_time`, `notification_days`, `notify_work_start`, `notify_work_end`, `notify_breaks`, `warn_on_overtime_threshold`, `overtime_threshold_hours`, `warn_on_undertime_threshold`, `undertime_threshold_hours` | Erinnerungen und Warnungen, geräteweit (nicht je Nutzer gespeichert) | bleibt |
+| `accepted_terms_of_service`, `accepted_privacy_policy` | Zustimmung auf dem Gerät, gilt auch für den Gast-Modus | bleibt |
+| `bundesland` | Altschlüssel vor #279, global, nur noch Lese-Fallback | bleibt |
+| `app_review_completed_days_count`, `app_review_last_counted_date`, `app_review_prompt_shown` | Bewertungs-Hinweis, geräteweit | bleibt |
+| `pending_timer_action` | gemerkte Timer-Aktion (5 Minuten), ohne Nutzerbezug | bleibt |
+| `app_lock_storage_version` | Migrationsmarker der App-Sperre | bleibt |
+| `app_lock_*` im **sicheren Speicher** (`enabled`, `pin_hash`, `pin_salt`, `recovery_code_hash`, `failed_attempts`, `locked_until_ms`, `last_seen_ms`) | App-Sperre (#375), geräteweit, schützt die App unabhängig vom Konto | bleibt |
+
+Neue nutzerbezogene Schlüssel müssen `<präfix><uid>[_<profil>]` heißen und in `LocalUserDataRepositoryImpl.userScopedKeyPrefixes` stehen; `local_user_data_repository_test` schreibt über die echten Repositories und prüft, dass danach kein Schlüssel mit der UID übrig ist und alles andere unverändert bleibt. **Außerhalb der Prefs:** Das Home-Screen-Widget leert `widgetSyncProvider` beim Nutzerwechsel; Firebase-/Google-Sitzung beendet `deleteAccount`, RevenueCat `Purchases.logOut` über den Auth-Stream. **Offen:** Der lokale Firestore-Cache (Offline-Persistenz des SDK, z. B. Wochen-Reflexionen und Profil-Liste unter `users/{uid}`) wird nicht geleert (`clearPersistence()` geht nur ohne aktive Firestore-Instanz).
 
 ### Edge-to-Edge (#468)
 
