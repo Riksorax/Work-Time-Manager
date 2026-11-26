@@ -116,7 +116,56 @@ internal static class ReportEndpoints
         })
         .WithName("GetYearlyComparisonReport");
 
+        reports.MapGet("/home-office/{year:int}", async (
+            int year, string? profileId, ClaimsPrincipal user, WorkEntryRepository entries, CancellationToken ct) =>
+        {
+            if (user.GetUid() is not { } uid) return Results.Unauthorized();
+            if (year is < 2000 or > 2100) return Results.BadRequest("Ungültiges Jahr.");
+
+            var yearEntries = await entries.GetRangeAsync(
+                uid, new DateOnly(year, 1, 1), new DateOnly(year, 12, 31), profileId, ct);
+            return Results.Ok(HomeOfficeCalculator.Calculate(yearEntries, year));
+        })
+        .WithName("GetHomeOfficeReport");
+
+        reports.MapGet("/insights/{year:int}/{month:int}/{day:int}", async (
+            int year, int month, int day, string? tz, string? profileId, ClaimsPrincipal user,
+            WorkEntryRepository entries, SettingsRepository settingsRepo, CancellationToken ct) =>
+        {
+            if (user.GetUid() is not { } uid) return Results.Unauthorized();
+            if (!IsValidDay(year, month, day)) return Results.BadRequest("Ungültiges Datum.");
+            if (!TryParseTimeZone(tz, out var zone))
+                return Results.BadRequest("tz muss eine gültige IANA-Zeitzone sein (z. B. Europe/Berlin).");
+
+            var date = new DateOnly(year, month, day);
+            var (from, to) = InsightsCalculator.Range(date);
+            var entriesTask = entries.GetRangeAsync(uid, from, to, profileId, ct);
+            var settingsTask = settingsRepo.GetAsync(uid, profileId, ct);
+            await Task.WhenAll(entriesTask, settingsTask);
+
+            return Results.Ok(InsightsCalculator.Calculate(entriesTask.Result, date, settingsTask.Result, zone));
+        })
+        .WithName("GetInsightsReport");
+
         return group;
+    }
+
+    /// <summary>
+    /// Pflicht-Query <c>tz</c> der Insights (#537): IANA-Name wie <c>Europe/Berlin</c>, <c>America/Los_Angeles</c> oder
+    /// <c>UTC</c>. Nur Buchstaben, Ziffern, <c>_ + - /</c>; kein <c>..</c>, keine Windows-Namen (<c>HasIanaId</c>), nicht
+    /// <c>localtime</c> (wäre die Server-Zone). Fehlend, leer oder unbekannt ist ungültig.
+    /// </summary>
+    internal static bool TryParseTimeZone(string? value, out TimeZoneInfo zone)
+    {
+        zone = TimeZoneInfo.Utc;
+        if (string.IsNullOrEmpty(value) || value.Length > 64 || value.Contains("..", StringComparison.Ordinal)
+            || value.StartsWith('/') || string.Equals(value, "localtime", StringComparison.OrdinalIgnoreCase)
+            || !value.All(c => char.IsAsciiLetterOrDigit(c) || c is '_' or '+' or '-' or '/'))
+            return false;
+
+        if (!TimeZoneInfo.TryFindSystemTimeZoneById(value, out var found) || !found.HasIanaId) return false;
+        zone = found;
+        return true;
     }
 
     /// <summary>

@@ -33,6 +33,8 @@ import { YearlyComparisonLockedComponent } from '../../shared/components/yearly-
 import { formatDurationHm, formatSignedDurationHm } from '../../shared/utils/duration-format.util';
 import { TrendViewComponent } from './components/trend-view/trend-view';
 import { TrendViewService } from './components/trend-view/trend-view.service';
+import { InsightsViewComponent } from './components/insights-view/insights-view';
+import { InsightsViewService } from './components/insights-view/insights-view.service';
 import { LeaveReportPrintComponent } from './components/leave-report-print/leave-report-print';
 import { LeaveReportPrintService } from './components/leave-report-print/leave-report-print.service';
 
@@ -52,12 +54,14 @@ import { LeaveReportPrintService } from './components/leave-report-print/leave-r
     YearlyComparisonCardComponent,
     YearlyComparisonLockedComponent,
     TrendViewComponent,
+    InsightsViewComponent,
     LeaveReportPrintComponent,
     TranslatePipe,
   ],
   // Trend (#531): Zustand (Wochen/Monate) lebt mit der Berichtsseite, geladen wird nur im sichtbaren Tab.
+  // Insights (#537): wie Trend, geladen wird nur im sichtbaren Tab.
   // Urlaubs-/Krankheitsauswertung (#284): Lade- und Druckzustand lebt mit der Berichtsseite.
-  providers: [TrendViewService, LeaveReportPrintService],
+  providers: [TrendViewService, InsightsViewService, LeaveReportPrintService],
   templateUrl: './reports.html',
   styleUrl: './reports.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

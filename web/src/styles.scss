@@ -101,6 +101,13 @@ body {
   margin-right: 8px;
 }
 
+// Sechs Tabs der Berichte (Insights #537): unter 360 px noch kompakter als in `reports.scss` (bis 430 px), damit auch
+// 320 px ohne Blätterpfeile reichen. Global aus demselben Budget-Grund; Selektor spezifischer als die ::ng-deep-Regel.
+@media (max-width: 359px) {
+  app-reports .reports-wrapper .main-tabs .mdc-tab { padding: 0 2px; }
+  app-reports .reports-wrapper .main-tabs .mdc-tab__text-label { font-size: 0.6875rem; }
+}
+
 // Druck (#483): Es wird nur der mit `.print-area` markierte Bereich gedruckt (Jahresauswertung in den Berichten,
 // als PDF über den Druckdialog des Browsers). Alles andere ist unsichtbar; `.print-only` erscheint nur im Druck.
 .print-only {

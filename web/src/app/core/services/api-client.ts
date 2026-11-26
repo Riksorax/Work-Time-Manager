@@ -8,6 +8,8 @@ import { YearlyLeaveReport } from '../../domain/models/leave.models';
 import { DailyStat, MonthlyReport, WeeklyReport } from '../../domain/models/reports.models';
 import { OvertimeForecast, TrendGranularity, TrendReport } from '../../domain/models/trend.models';
 import { YearlyComparison } from '../../domain/models/yearly-comparison.models';
+import { HomeOfficeReport } from '../../domain/models/home-office.models';
+import { InsightsReport } from '../../domain/models/insights.models';
 import { calendarDateFromUtcMidnight, parseEntryId } from '../../shared/utils/entry-day.util';
 import {
   roundToMinute,
@@ -311,6 +313,39 @@ export class ApiClient {
     let params = this._params(profileId) ?? new HttpParams();
     if (until) params = params.set('until', until);
     return this.http.get<YearlyComparison>(`${this.base}/reports/yearly-comparison/${year}`, { params });
+  }
+
+  /**
+   * Home-Office-Jahresauswertung (#537): `year` 2000–2100. Zählregel nur im Backend; fehlende Listen (älteres Backend)
+   * werden zu `[]`, ein fehlender Anteil zu `null`.
+   */
+  getHomeOfficeReport(year: number, profileId?: string): Observable<HomeOfficeReport> {
+    return this.http.get<HomeOfficeReport>(`${this.base}/reports/home-office/${year}`, { params: this._params(profileId) }).pipe(
+      map(dto => ({
+        ...dto,
+        homeOfficeRatio: dto.homeOfficeRatio ?? null,
+        months: dto.months ?? [],
+        homeOfficeDates: dto.homeOfficeDates ?? [],
+      })),
+    );
+  }
+
+  /**
+   * Arbeitszeit-Insights (#537): drei ganze Kalendermonate bis einschließlich des Monats von `date` (lokaler Kalendertag,
+   * das Backend nutzt keine Server-Uhr). `timeZone` (IANA, Pflicht) bestimmt die Startstunde der Heatmap. Fehlende Listen
+   * (älteres Backend) werden zu `[]`; `from`/`to` bleiben Kalendertage `yyyy-MM-dd` (nie über eine Zeitzone gelesen).
+   */
+  getInsightsReport(date: Date, timeZone: string, profileId?: string): Observable<InsightsReport> {
+    const params = (this._params(profileId) ?? new HttpParams()).set('tz', timeZone);
+    const url = `${this.base}/reports/insights/${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
+    return this.http.get<InsightsReport>(url, { params }).pipe(
+      map(dto => ({
+        ...dto,
+        weekdayAverages: dto.weekdayAverages ?? [],
+        startTimeHeatmap: dto.startTimeHeatmap ?? [],
+        overtimeStreak: dto.overtimeStreak ?? { currentStreak: 0, longestStreak: 0, isWarning: false, warningThresholdDays: 5 },
+      })),
+    );
   }
 
   private _params(profileId?: string): HttpParams | undefined {

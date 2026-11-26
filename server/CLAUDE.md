@@ -25,7 +25,7 @@ Firestore-Integrationstests übersprungen (`SkippableFact`) — das ist erwartet
 | `Firestore/Documents/` | `[FirestoreData]`-POCOs | Spiegeln das Flutter-kanonische Firestore-Format |
 | `Firestore/FirestoreMappings.cs` | POCO ↔ DTO | **Einziger** Ort für Mapping; days-Map-Keys ohne führende Null (`"5"`) |
 | `Firestore/*Repository.cs` | Firestore-Zugriff | Pfade immer über `ProfileScope.Collection(...)` |
-| `Domain/` | `BreakCalculator`, `ReportCalculator` | Pure, ohne DI/Firestore; kanonische Rechenlogik für alle Clients |
+| `Domain/` | `BreakCalculator`, `ReportCalculator`, `HomeOfficeCalculator`, `InsightsCalculator` | Pure, ohne DI/Firestore; kanonische Rechenlogik für alle Clients |
 | `Endpoints/` | Minimal-API-Gruppen je Ressource | UID nur aus dem Token (`user.GetUid()`), nie aus Route/Body |
 | `Program.cs` | Auth, CORS, Swagger, Mapping | Neue Gruppen unter `api` (erfordert Auth) registrieren |
 
@@ -47,6 +47,8 @@ Firestore-Integrationstests übersprungen (`SkippableFact`) — das ist erwartet
 | GET | `/api/reports/yearly/{year}` | Jahresauswertung Urlaub/Krank (#278): `{year, vacationDaysPerYear, vacationDaysTaken, vacationDaysRemaining, sickDays, months[12]{month, vacationDays, sickDays}, vacationPeriods[], sickPeriods[]{start, end, days}}` (#284, additiv); Rest kann negativ sein, `holiday` zählt nicht, Jahr 2000–2100 |
 | GET | `/api/reports/trend/{year}/{month}/{day}?granularity=week\|month` | Trend (#531): 12 Wochen bzw. 12 Monate bis zum Bezugstag + Wochen-Trend + Überstunden-Prognose (#532); `granularity` Pflicht (sonst 400), Jahr 2000–2100 |
 | GET | `/api/reports/yearly-comparison/{year}?until=MM-dd` | Jahresvergleich mit dem Vorjahr (#530): `{until, current, previous, delta}`; `until` optional (ungültig = 400), Jahr 2001–2100 |
+| GET | `/api/reports/home-office/{year}` | Home-Office-Jahresauswertung (#537): `{year, homeOfficeDays, officeDays, totalDays, homeOfficeRatio, months[12], homeOfficeDates[]}`; Jahr 2000–2100 |
+| GET | `/api/reports/insights/{year}/{month}/{day}?tz=<IANA>` | Insights (#537): Wochentags-Durchschnitte, Überstunden-Serie, Startzeit-Heatmap über 3 Kalendermonate bis zum Bezugsmonat; `tz` Pflicht (sonst 400), Jahr 2000–2100 |
 | GET | `/api/work-profiles` | Zusätzliche Arbeitszeit-Profile auflisten (ohne Standard-Profil, siehe #138/#239) |
 | POST | `/api/work-profiles` | Neues Profil anlegen (`{ name }`) |
 | DELETE | `/api/work-profiles/{profileId}` | Profil inkl. aller Daten löschen |
@@ -158,6 +160,35 @@ ohne Ende mit abgeschlossener Pause ergibt brutto 0 und netto negativ. `weeks[].
 Invarianten: Summe `days[].netWorkedMs` = `totalWorkedMs − totalBreaksMs` (Woche und Monat), Summe `weeks[].netWorkedMs` = derselbe
 Wert, je Tag `netWorkedMs ≤ workedMs`. Trend, Jahresvergleich und `CalculateDailyStat` unverändert. Web/Mobile nutzen die Felder
 noch nicht (die Paritätstests ignorieren sie bis #551 Web/Mobile). Deploy-Reihenfolge: API vor Clients.
+
+**Home-Office und Insights (#537, Teil 1 Backend):** Beide Regeln sind **1:1 aus Mobile** übernommen (Entscheidung
+26.11.2026: keine Zahl ändert sich), nicht aus `ReportCalculator`; Web und Mobile stellen danach nur dar. Kalendertag eines
+Eintrags = `EntryDays.Of` (wie Mobile `entryDay`/Web `entryDayKey`: aus der `id` `yyyy-MM-dd`, sonst UTC-Felder von `date`).
+Daten über `GetRangeAsync`, Einstellungen je Profil (`profileId`), kein Premium-Check.
+- `GET /api/reports/home-office/{year}` → `HomeOfficeReportDto` (`HomeOfficeCalculator`, Quelle `calculateHomeOfficeStats`):
+  gezählt werden Kalendertage mit `type == work` und `workStart` (offene Einträge zählen, leere nicht); Urlaub/Krank/Feiertag
+  nie, auch mit Flag. Mehrere Einträge am Tag zählen einmal, Home-Office, wenn irgendeiner das Flag trägt; Wochenenden zählen.
+  `homeOfficeRatio` = `homeOfficeDays ÷ totalDays` (Double, ungerundet), `null` ohne Bezugstage; `months` immer 12 (je Monat
+  dieselben Felder, Summen = Jahreswerte), `homeOfficeDates` aufsteigend als `yyyy-MM-dd`. Jahr 2000–2100 (wie `/yearly`).
+- `GET /api/reports/insights/{y}/{m}/{d}?tz=Europe/Berlin` → `InsightsReportDto` (`InsightsCalculator`, Quelle
+  `insights_utils.dart` + `InsightsViewModel`). Fenster `from`..`to` = 1. des Monats zwei Monate vor dem Bezugsmonat bis
+  Monatsletzter des Bezugsmonats (ganze Monate, auch Tage nach dem Bezugstag). `tz` Pflicht, IANA-Name
+  (`TryParseTimeZone`: `TimeZoneInfo.TryFindSystemTimeZoneById` + `HasIanaId`, kein `localtime`/`..`), sonst 400; keine
+  Server-Uhr/-Zone. Tagessoll `dailyTargetMs` = `DailyTargetMs` (#535). Zeitpunkte werden wie an der Mobile-Lesegrenze
+  (`roundToMinute`) auf die volle Minute **abgeschnitten**; effektiv = Ende − Start − abgeschlossene Pausen, nur mit Start und
+  Ende, nie negativ. Gerechnet in µs, Mittel ganzzahlig zur Null hin geteilt, Ausgabe in ms zur Null hin abgeschnitten (Dart
+  `~/`, `inMilliseconds`). `weekdayAverages`: nur `work` mit Start und Ende, je Eintrag ein Wert, Wochentag aus dem
+  Kalendertag, nur Wochentage mit Daten; `deviationMs` = Mittel des Wochentags − Mittel aller Einträge. `overtimeStreak`:
+  Zeitraum erster bis letzter Tag mit `work`-Eintrag (auch ohne Start); ein Vertragstag zählt, wenn **ein einzelner**
+  Eintrag effektiv > Tagessoll ist (nicht summiert); Vertragstag ohne das (auch Urlaub/Krank/Feiertag, Tag ohne Eintrag)
+  setzt auf 0, freie Wochentage unterbrechen nicht; `currentStreak` am Ende des Zeitraums, `isWarning` ab 5
+  (`warningThresholdDays`); ohne Einträge oder Arbeitstage 0/0. `startTimeHeatmap`: `work` mit Start (offene mit effektiv 0,
+  also −Soll), Stunde des Starts in `tz`, Wert effektiv − Soll, nur Stunden mit ≥ 2 Einträgen, aufsteigend.
+- **Gemeinsame Testfälle:** `testdata/insights-parity/` und `testdata/home-office-parity/` (Backend `AnalyticsParityTests`,
+  Mobile `insights_parity_tz_test.dart`/`home_office_parity_tz_test.dart` mit den **heutigen** Dart-Funktionen; erwartete Werte
+  per `ANALYTICS_PARITY_UPDATE=1`).
+- **Laufzeit:** Die Zeitzonen kommen aus der tzdata des Containers (`aspnet:10.0`, `InvariantGlobalization` stört IANA-Namen
+  nicht). Fehlt tzdata im Image, antwortet der Endpunkt für jede Zone mit 400.
 
 **Gemeinsame Testfälle (#535):** `testdata/report-parity/cases.json` (Repo-Wurzel) prüft Backend
 (`ReportParityTests`), Web (`report-calculator.parity.tz.spec.ts`) und Mobile

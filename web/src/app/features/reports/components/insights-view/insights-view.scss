@@ -1,0 +1,224 @@
+:host {
+  display: block;
+  // Unter Soll: warmer Ton (die Palette hat außer `error` keinen), auf der Fläche gemischt; Text bleibt on-surface.
+  --ins-below: color-mix(in srgb, #fb8c00 26%, var(--mat-sys-surface));
+}
+
+.insights-layout {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ins-card {
+  background: var(--mat-sys-surface-container-low);
+  border-radius: 16px;
+  padding: 16px;
+  min-width: 0;
+  box-sizing: border-box;
+
+  @media (min-width: 768px) { padding: 20px 24px; }
+}
+
+.ins-title {
+  margin: 0 0 4px;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.ins-sub {
+  margin: 0 0 12px;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.875rem;
+}
+
+.ins-note,
+.ins-legend {
+  margin: 8px 0 0;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.75rem;
+}
+
+.ins-muted { color: var(--mat-sys-on-surface-variant); }
+
+.ins-period {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.875rem;
+
+  mat-icon { flex: none; }
+}
+
+// ── Hinweis Überstunden-Serie: deutlich, aber ruhig ───────────────────────────
+.ins-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 16px;
+  // Warmer Ton statt Fehlerrot (Mobile: errorContainer): deutlich, aber ruhig; Text bleibt on-surface.
+  border-inline-start: 6px solid #fb8c00;
+  background: var(--ins-below);
+  color: var(--mat-sys-on-surface);
+
+  mat-icon { flex: none; }
+  p { margin: 0; }
+}
+
+// ── Wochentage ────────────────────────────────────────────────────────────────
+.ins-weekday-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ins-weekday {
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr) 10.5rem 5rem;
+  align-items: center;
+  gap: 4px 12px;
+  font-variant-numeric: tabular-nums;
+
+  // Handy: Name und Abweichung oben, Balken und Durchschnitt darunter.
+  @media (max-width: 599px) {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: 'label dev' 'bar bar' 'avg avg';
+
+    .ins-wd-label { grid-area: label; }
+    .ins-wd-bar { grid-area: bar; }
+    .ins-wd-avg { grid-area: avg; text-align: start; }
+    .ins-wd-dev { grid-area: dev; }
+  }
+}
+
+.ins-wd-label { font-weight: 500; }
+
+.ins-wd-bar {
+  display: block;
+  height: 10px;
+  border-radius: 5px;
+  background: var(--mat-sys-surface-container-highest);
+  overflow: hidden;
+
+  > span {
+    display: block;
+    height: 100%;
+    border-radius: 5px;
+    background: var(--mat-sys-primary);
+  }
+}
+
+.ins-wd-avg { font-size: 0.875rem; white-space: nowrap; text-align: end; }
+
+.ins-wd-dev {
+  justify-self: end;
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-weight: 500;
+
+  &.is-pos { background: var(--mat-sys-primary-container); color: var(--mat-sys-on-primary-container); }
+  &.is-neg { background: var(--ins-below); color: var(--mat-sys-on-surface); }
+}
+
+// ── Serie ─────────────────────────────────────────────────────────────────────
+.ins-streak-values {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 32px;
+
+  dt { color: var(--mat-sys-on-surface-variant); font-size: 0.875rem; }
+  dd { margin: 0; font-size: 1.25rem; font-weight: 500; font-variant-numeric: tabular-nums; }
+}
+
+// ── Heatmap ───────────────────────────────────────────────────────────────────
+.ins-heat-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(124px, 1fr));
+  gap: 8px;
+}
+
+.ins-heat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-variant-numeric: tabular-nums;
+  background: var(--mat-sys-surface-container-high);
+  color: var(--mat-sys-on-surface);
+
+  &.is-pos { background: var(--mat-sys-primary-container); color: var(--mat-sys-on-primary-container); }
+  &.is-neg { background: var(--ins-below); color: var(--mat-sys-on-surface); }
+}
+
+.ins-heat-hour { font-size: 0.8125rem; }
+.ins-heat-value { font-size: 1.125rem; font-weight: 500; }
+.ins-heat-days { font-size: 0.75rem; }
+
+.ins-heat-bar {
+  display: block;
+  height: 4px;
+  margin: 2px 0;
+  border-radius: 2px;
+
+  > span {
+    display: block;
+    height: 100%;
+    border-radius: 2px;
+    background: currentColor;
+  }
+}
+
+.ins-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.ins-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+
+  &.is-pos { background: var(--mat-sys-primary-container); }
+  &.is-neg { background: var(--ins-below); margin-inline-start: 12px; }
+}
+
+// ── Zustände ──────────────────────────────────────────────────────────────────
+.ins-loading {
+  display: flex;
+  justify-content: center;
+  padding: 48px 0;
+}
+
+.ins-error {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+
+  > mat-icon { color: var(--mat-sys-error); }
+}
+
+.ins-empty {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--mat-sys-on-surface-variant);
+
+  p { margin: 0; }
+}
