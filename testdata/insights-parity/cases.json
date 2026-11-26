@@ -1,0 +1,2175 @@
+{
+  "cases": [
+    {
+      "name": "leer",
+      "description": "Keine Einträge: keine Wochentage, Serie 0/0, keine Heatmap.",
+      "settings": {
+        "weeklyTargetHours": 40,
+        "workdays": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "referenceDate": "2026-06-15",
+      "timeZone": "Europe/Berlin",
+      "entries": [],
+      "expected": {
+        "from": "2026-04-01",
+        "to": "2026-06-30",
+        "timeZone": "Europe/Berlin",
+        "dailyTargetMs": 28800000,
+        "weekdayAverages": [],
+        "overtimeStreak": {
+          "currentStreak": 0,
+          "longestStreak": 0,
+          "isWarning": false,
+          "warningThresholdDays": 5
+        },
+        "startTimeHeatmap": []
+      }
+    },
+    {
+      "name": "normale-wochen-berlin",
+      "description": "40 h Mo–Fr, Pausen (offene zählen 0), Einträge vor/nach dem Fenster ausgeschlossen, Monatsende nach dem Bezugstag eingeschlossen, Samstag als freier Tag.",
+      "settings": {
+        "weeklyTargetHours": 40,
+        "workdays": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "referenceDate": "2026-06-10",
+      "timeZone": "Europe/Berlin",
+      "entries": [
+        {
+          "id": "2026-03-31",
+          "date": "2026-03-31T00:00:00Z",
+          "workStart": "2026-03-31T04:00:00Z",
+          "workEnd": "2026-03-31T18:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-07-01",
+          "date": "2026-07-01T00:00:00Z",
+          "workStart": "2026-07-01T04:00:00Z",
+          "workEnd": "2026-07-01T18:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-04-06",
+          "date": "2026-04-06T00:00:00Z",
+          "workStart": "2026-04-06T06:00:00Z",
+          "workEnd": "2026-04-06T14:30:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": [
+            {
+              "id": "b0",
+              "name": "Pause",
+              "isAutomatic": false,
+              "start": "2026-04-06T10:00:00Z",
+              "end": "2026-04-06T10:30:00Z"
+            }
+          ]
+        },
+        {
+          "id": "2026-04-07",
+          "date": "2026-04-07T00:00:00Z",
+          "workStart": "2026-04-07T06:15:00Z",
+          "workEnd": "2026-04-07T15:45:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": [
+            {
+              "id": "b0",
+              "name": "Pause",
+              "isAutomatic": false,
+              "start": "2026-04-07T10:00:00Z",
+              "end": "2026-04-07T10:45:00Z"
+            }
+          ]
+        },
+        {
+          "id": "2026-04-08",
+          "date": "2026-04-08T00:00:00Z",
+          "workStart": "2026-04-08T05:50:00Z",
+          "workEnd": "2026-04-08T13:20:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-04-13",
+          "date": "2026-04-13T00:00:00Z",
+          "workStart": "2026-04-13T06:05:00Z",
+          "workEnd": "2026-04-13T16:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": [
+            {
+              "id": "b0",
+              "name": "Pause",
+              "isAutomatic": false,
+              "start": "2026-04-13T10:00:00Z",
+              "end": "2026-04-13T10:30:00Z"
+            },
+            {
+              "id": "b1",
+              "name": "Pause",
+              "isAutomatic": false,
+              "start": "2026-04-13T13:00:00Z",
+              "end": "2026-04-13T13:10:00Z"
+            }
+          ]
+        },
+        {
+          "id": "2026-04-14",
+          "date": "2026-04-14T00:00:00Z",
+          "workStart": "2026-04-14T07:00:00Z",
+          "workEnd": "2026-04-14T15:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": [
+            {
+              "id": "b0",
+              "name": "Pause",
+              "isAutomatic": false,
+              "start": "2026-04-14T10:00:00Z",
+              "end": null
+            }
+          ]
+        },
+        {
+          "id": "2026-05-15",
+          "date": "2026-05-15T00:00:00Z",
+          "workStart": "2026-05-15T07:30:00Z",
+          "workEnd": "2026-05-15T17:31:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-06-05",
+          "date": "2026-06-05T00:00:00Z",
+          "workStart": "2026-06-05T05:00:00Z",
+          "workEnd": "2026-06-05T10:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-06-29",
+          "date": "2026-06-29T00:00:00Z",
+          "workStart": "2026-06-29T05:10:00Z",
+          "workEnd": "2026-06-29T14:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-06-13",
+          "date": "2026-06-13T00:00:00Z",
+          "workStart": "2026-06-13T08:00:00Z",
+          "workEnd": "2026-06-13T12:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        }
+      ],
+      "expected": {
+        "from": "2026-04-01",
+        "to": "2026-06-30",
+        "timeZone": "Europe/Berlin",
+        "dailyTargetMs": 28800000,
+        "weekdayAverages": [
+          {
+            "weekday": 1,
+            "averageWorkedMs": 31300000,
+            "deviationMs": 3560000,
+            "sampleCount": 3
+          },
+          {
+            "weekday": 2,
+            "averageWorkedMs": 30150000,
+            "deviationMs": 2410000,
+            "sampleCount": 2
+          },
+          {
+            "weekday": 3,
+            "averageWorkedMs": 27000000,
+            "deviationMs": -740000,
+            "sampleCount": 1
+          },
+          {
+            "weekday": 5,
+            "averageWorkedMs": 27030000,
+            "deviationMs": -710000,
+            "sampleCount": 2
+          },
+          {
+            "weekday": 6,
+            "averageWorkedMs": 14400000,
+            "deviationMs": -13340000,
+            "sampleCount": 1
+          }
+        ],
+        "overtimeStreak": {
+          "currentStreak": 1,
+          "longestStreak": 1,
+          "isWarning": false,
+          "warningThresholdDays": 5
+        },
+        "startTimeHeatmap": [
+          {
+            "startHour": 7,
+            "averageOvertimeMs": -3200000,
+            "sampleCount": 3
+          },
+          {
+            "startHour": 8,
+            "averageOvertimeMs": 2400000,
+            "sampleCount": 3
+          },
+          {
+            "startHour": 9,
+            "averageOvertimeMs": 3630000,
+            "sampleCount": 2
+          }
+        ]
+      }
+    },
+    {
+      "name": "urlaub-krank-feiertag",
+      "description": "Urlaub/Krank/Feiertag an Vertragstagen beenden die Serie und gehen in keine Rechnung ein.",
+      "settings": {
+        "weeklyTargetHours": 40,
+        "workdays": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "referenceDate": "2026-05-20",
+      "timeZone": "Europe/Berlin",
+      "entries": [
+        {
+          "id": "2026-05-04",
+          "date": "2026-05-04T00:00:00Z",
+          "workStart": "2026-05-04T06:00:00Z",
+          "workEnd": "2026-05-04T15:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-05-05",
+          "date": "2026-05-05T00:00:00Z",
+          "workStart": "2026-05-05T06:00:00Z",
+          "workEnd": "2026-05-05T15:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-05-06",
+          "date": "2026-05-06T00:00:00Z",
+          "workStart": "2026-05-06T06:00:00Z",
+          "workEnd": "2026-05-06T15:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-05-07",
+          "date": "2026-05-07T00:00:00Z",
+          "workStart": null,
+          "workEnd": null,
+          "type": "vacation",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": true,
+          "breaks": []
+        },
+        {
+          "id": "2026-05-08",
+          "date": "2026-05-08T00:00:00Z",
+          "workStart": "2026-05-08T06:00:00Z",
+          "workEnd": "2026-05-08T15:30:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-05-11",
+          "date": "2026-05-11T00:00:00Z",
+          "workStart": "2026-05-11T06:00:00Z",
+          "workEnd": "2026-05-11T15:30:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-05-12",
+          "date": "2026-05-12T00:00:00Z",
+          "workStart": null,
+          "workEnd": null,
+          "type": "sick",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-05-13",
+          "date": "2026-05-13T00:00:00Z",
+          "workStart": "2026-05-13T06:00:00Z",
+          "workEnd": "2026-05-13T15:30:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-05-14",
+          "date": "2026-05-14T00:00:00Z",
+          "workStart": null,
+          "workEnd": null,
+          "type": "holiday",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-05-15",
+          "date": "2026-05-15T00:00:00Z",
+          "workStart": "2026-05-15T06:00:00Z",
+          "workEnd": "2026-05-15T15:30:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        }
+      ],
+      "expected": {
+        "from": "2026-03-01",
+        "to": "2026-05-31",
+        "timeZone": "Europe/Berlin",
+        "dailyTargetMs": 28800000,
+        "weekdayAverages": [
+          {
+            "weekday": 1,
+            "averageWorkedMs": 33300000,
+            "deviationMs": -128571,
+            "sampleCount": 2
+          },
+          {
+            "weekday": 2,
+            "averageWorkedMs": 32400000,
+            "deviationMs": -1028571,
+            "sampleCount": 1
+          },
+          {
+            "weekday": 3,
+            "averageWorkedMs": 33300000,
+            "deviationMs": -128571,
+            "sampleCount": 2
+          },
+          {
+            "weekday": 5,
+            "averageWorkedMs": 34200000,
+            "deviationMs": 771428,
+            "sampleCount": 2
+          }
+        ],
+        "overtimeStreak": {
+          "currentStreak": 1,
+          "longestStreak": 3,
+          "isWarning": false,
+          "warningThresholdDays": 5
+        },
+        "startTimeHeatmap": [
+          {
+            "startHour": 8,
+            "averageOvertimeMs": 4628571,
+            "sampleCount": 7
+          }
+        ]
+      }
+    },
+    {
+      "name": "offene-eintraege",
+      "description": "Offene Einträge fehlen in den Wochentagen, zählen in der Heatmap mit −Soll und unterbrechen die Serie; ein leerer Eintrag verlängert den Serienzeitraum.",
+      "settings": {
+        "weeklyTargetHours": 40,
+        "workdays": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "referenceDate": "2026-05-12",
+      "timeZone": "Europe/Berlin",
+      "entries": [
+        {
+          "id": "2026-05-04",
+          "date": "2026-05-04T00:00:00Z",
+          "workStart": "2026-05-04T06:00:00Z",
+          "workEnd": "2026-05-04T15:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-05-05",
+          "date": "2026-05-05T00:00:00Z",
+          "workStart": "2026-05-05T06:00:00Z",
+          "workEnd": null,
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-05-06",
+          "date": "2026-05-06T00:00:00Z",
+          "workStart": "2026-05-06T06:00:00Z",
+          "workEnd": "2026-05-06T15:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-05-07",
+          "date": "2026-05-07T00:00:00Z",
+          "workStart": "2026-05-07T06:00:00Z",
+          "workEnd": "2026-05-07T15:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-05-11",
+          "date": "2026-05-11T00:00:00Z",
+          "workStart": null,
+          "workEnd": null,
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": true,
+          "breaks": []
+        },
+        {
+          "id": "2026-05-08",
+          "date": "2026-05-08T00:00:00Z",
+          "workStart": "2026-05-08T07:00:00Z",
+          "workEnd": null,
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": [
+            {
+              "id": "b0",
+              "name": "Pause",
+              "isAutomatic": false,
+              "start": "2026-05-08T08:00:00Z",
+              "end": "2026-05-08T08:30:00Z"
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "from": "2026-03-01",
+        "to": "2026-05-31",
+        "timeZone": "Europe/Berlin",
+        "dailyTargetMs": 28800000,
+        "weekdayAverages": [
+          {
+            "weekday": 1,
+            "averageWorkedMs": 32400000,
+            "deviationMs": 0,
+            "sampleCount": 1
+          },
+          {
+            "weekday": 3,
+            "averageWorkedMs": 32400000,
+            "deviationMs": 0,
+            "sampleCount": 1
+          },
+          {
+            "weekday": 4,
+            "averageWorkedMs": 32400000,
+            "deviationMs": 0,
+            "sampleCount": 1
+          }
+        ],
+        "overtimeStreak": {
+          "currentStreak": 0,
+          "longestStreak": 2,
+          "isWarning": false,
+          "warningThresholdDays": 5
+        },
+        "startTimeHeatmap": [
+          {
+            "startHour": 8,
+            "averageOvertimeMs": -4500000,
+            "sampleCount": 4
+          }
+        ]
+      }
+    },
+    {
+      "name": "mehrere-eintraege-am-tag",
+      "description": "Mehrere Einträge am Tag: jeder ist ein eigener Wert (Wochentag, Heatmap); für die Serie muss ein einzelner Eintrag über Soll liegen.",
+      "settings": {
+        "weeklyTargetHours": 40,
+        "workdays": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "referenceDate": "2026-05-06",
+      "timeZone": "Europe/Berlin",
+      "entries": [
+        {
+          "id": "2026-05-04",
+          "date": "2026-05-04T00:00:00Z",
+          "workStart": "2026-05-04T05:00:00Z",
+          "workEnd": "2026-05-04T09:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-05-04",
+          "date": "2026-05-04T00:00:00Z",
+          "workStart": "2026-05-04T10:00:00Z",
+          "workEnd": "2026-05-04T19:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-05-05",
+          "date": "2026-05-05T00:00:00Z",
+          "workStart": "2026-05-05T05:00:00Z",
+          "workEnd": "2026-05-05T10:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-05-05",
+          "date": "2026-05-05T00:00:00Z",
+          "workStart": "2026-05-05T11:00:00Z",
+          "workEnd": "2026-05-05T16:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-05-06",
+          "date": "2026-05-06T00:00:00Z",
+          "workStart": "2026-05-06T06:00:00Z",
+          "workEnd": "2026-05-06T15:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        }
+      ],
+      "expected": {
+        "from": "2026-03-01",
+        "to": "2026-05-31",
+        "timeZone": "Europe/Berlin",
+        "dailyTargetMs": 28800000,
+        "weekdayAverages": [
+          {
+            "weekday": 1,
+            "averageWorkedMs": 23400000,
+            "deviationMs": 360000,
+            "sampleCount": 2
+          },
+          {
+            "weekday": 2,
+            "averageWorkedMs": 18000000,
+            "deviationMs": -5040000,
+            "sampleCount": 2
+          },
+          {
+            "weekday": 3,
+            "averageWorkedMs": 32400000,
+            "deviationMs": 9360000,
+            "sampleCount": 1
+          }
+        ],
+        "overtimeStreak": {
+          "currentStreak": 1,
+          "longestStreak": 1,
+          "isWarning": false,
+          "warningThresholdDays": 5
+        },
+        "startTimeHeatmap": [
+          {
+            "startHour": 7,
+            "averageOvertimeMs": -12600000,
+            "sampleCount": 2
+          }
+        ]
+      }
+    },
+    {
+      "name": "monatswechsel-jahreswechsel",
+      "description": "Bezugstag im Januar: Fenster 01.11.2025–31.01.2026; Serien über Monats- und Jahreswechsel, Lücken an Vertragstagen beenden sie.",
+      "settings": {
+        "weeklyTargetHours": 40,
+        "workdays": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "referenceDate": "2026-01-10",
+      "timeZone": "Europe/Berlin",
+      "entries": [
+        {
+          "id": "2025-11-27",
+          "date": "2025-11-27T00:00:00Z",
+          "workStart": "2025-11-27T07:00:00Z",
+          "workEnd": "2025-11-27T16:15:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2025-11-28",
+          "date": "2025-11-28T00:00:00Z",
+          "workStart": "2025-11-28T07:00:00Z",
+          "workEnd": "2025-11-28T16:15:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2025-12-01",
+          "date": "2025-12-01T00:00:00Z",
+          "workStart": "2025-12-01T07:00:00Z",
+          "workEnd": "2025-12-01T16:15:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2025-12-30",
+          "date": "2025-12-30T00:00:00Z",
+          "workStart": "2025-12-30T07:00:00Z",
+          "workEnd": "2025-12-30T16:15:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2025-12-31",
+          "date": "2025-12-31T00:00:00Z",
+          "workStart": "2025-12-31T07:00:00Z",
+          "workEnd": "2025-12-31T16:15:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-01-02",
+          "date": "2026-01-02T00:00:00Z",
+          "workStart": "2026-01-02T07:00:00Z",
+          "workEnd": "2026-01-02T16:15:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-01-05",
+          "date": "2026-01-05T00:00:00Z",
+          "workStart": "2026-01-05T07:00:00Z",
+          "workEnd": "2026-01-05T16:15:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2025-10-31",
+          "date": "2025-10-31T00:00:00Z",
+          "workStart": "2025-10-31T07:00:00Z",
+          "workEnd": "2025-10-31T16:15:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        }
+      ],
+      "expected": {
+        "from": "2025-11-01",
+        "to": "2026-01-31",
+        "timeZone": "Europe/Berlin",
+        "dailyTargetMs": 28800000,
+        "weekdayAverages": [
+          {
+            "weekday": 1,
+            "averageWorkedMs": 33300000,
+            "deviationMs": 0,
+            "sampleCount": 2
+          },
+          {
+            "weekday": 2,
+            "averageWorkedMs": 33300000,
+            "deviationMs": 0,
+            "sampleCount": 1
+          },
+          {
+            "weekday": 3,
+            "averageWorkedMs": 33300000,
+            "deviationMs": 0,
+            "sampleCount": 1
+          },
+          {
+            "weekday": 4,
+            "averageWorkedMs": 33300000,
+            "deviationMs": 0,
+            "sampleCount": 1
+          },
+          {
+            "weekday": 5,
+            "averageWorkedMs": 33300000,
+            "deviationMs": 0,
+            "sampleCount": 2
+          }
+        ],
+        "overtimeStreak": {
+          "currentStreak": 2,
+          "longestStreak": 3,
+          "isWarning": false,
+          "warningThresholdDays": 5
+        },
+        "startTimeHeatmap": [
+          {
+            "startHour": 8,
+            "averageOvertimeMs": 4500000,
+            "sampleCount": 7
+          }
+        ]
+      }
+    },
+    {
+      "name": "streak-wochenende-freie-tage",
+      "description": "Mo–Do 38,5 h (Soll 578 min): freie Tage (Fr–So) unterbrechen nicht, genau Soll zählt nicht als darüber; längste Serie 6 mit Warnung, laufende Serie 1.",
+      "settings": {
+        "weeklyTargetHours": 38.5,
+        "workdays": [
+          1,
+          2,
+          3,
+          4
+        ]
+      },
+      "referenceDate": "2026-06-11",
+      "timeZone": "Europe/Berlin",
+      "entries": [
+        {
+          "id": "2026-06-01",
+          "date": "2026-06-01T00:00:00Z",
+          "workStart": "2026-06-01T06:00:00Z",
+          "workEnd": "2026-06-01T15:39:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-06-02",
+          "date": "2026-06-02T00:00:00Z",
+          "workStart": "2026-06-02T06:00:00Z",
+          "workEnd": "2026-06-02T15:39:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-06-03",
+          "date": "2026-06-03T00:00:00Z",
+          "workStart": "2026-06-03T06:00:00Z",
+          "workEnd": "2026-06-03T15:39:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-06-04",
+          "date": "2026-06-04T00:00:00Z",
+          "workStart": "2026-06-04T06:00:00Z",
+          "workEnd": "2026-06-04T15:39:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-06-08",
+          "date": "2026-06-08T00:00:00Z",
+          "workStart": "2026-06-08T06:00:00Z",
+          "workEnd": "2026-06-08T15:39:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-06-09",
+          "date": "2026-06-09T00:00:00Z",
+          "workStart": "2026-06-09T06:00:00Z",
+          "workEnd": "2026-06-09T15:39:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-06-06",
+          "date": "2026-06-06T00:00:00Z",
+          "workStart": "2026-06-06T08:00:00Z",
+          "workEnd": "2026-06-06T09:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-06-10",
+          "date": "2026-06-10T00:00:00Z",
+          "workStart": "2026-06-10T06:00:00Z",
+          "workEnd": "2026-06-10T15:38:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-06-11",
+          "date": "2026-06-11T00:00:00Z",
+          "workStart": "2026-06-11T06:00:00Z",
+          "workEnd": "2026-06-11T15:39:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-06-13",
+          "date": "2026-06-13T00:00:00Z",
+          "workStart": "2026-06-13T06:00:00Z",
+          "workEnd": "2026-06-13T07:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        }
+      ],
+      "expected": {
+        "from": "2026-04-01",
+        "to": "2026-06-30",
+        "timeZone": "Europe/Berlin",
+        "dailyTargetMs": 34680000,
+        "weekdayAverages": [
+          {
+            "weekday": 1,
+            "averageWorkedMs": 34740000,
+            "deviationMs": 6234000,
+            "sampleCount": 2
+          },
+          {
+            "weekday": 2,
+            "averageWorkedMs": 34740000,
+            "deviationMs": 6234000,
+            "sampleCount": 2
+          },
+          {
+            "weekday": 3,
+            "averageWorkedMs": 34710000,
+            "deviationMs": 6204000,
+            "sampleCount": 2
+          },
+          {
+            "weekday": 4,
+            "averageWorkedMs": 34740000,
+            "deviationMs": 6234000,
+            "sampleCount": 2
+          },
+          {
+            "weekday": 6,
+            "averageWorkedMs": 3600000,
+            "deviationMs": -24906000,
+            "sampleCount": 2
+          }
+        ],
+        "overtimeStreak": {
+          "currentStreak": 1,
+          "longestStreak": 6,
+          "isWarning": false,
+          "warningThresholdDays": 5
+        },
+        "startTimeHeatmap": [
+          {
+            "startHour": 8,
+            "averageOvertimeMs": -3406666,
+            "sampleCount": 9
+          }
+        ]
+      }
+    },
+    {
+      "name": "streak-warnung-laufend",
+      "description": "Fünf Vertragstage in Folge über Soll: laufende Serie 5 = Warnschwelle (isWarning), danach unter Soll.",
+      "settings": {
+        "weeklyTargetHours": 40,
+        "workdays": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "referenceDate": "2026-06-05",
+      "timeZone": "Europe/Berlin",
+      "entries": [
+        {
+          "id": "2026-06-01",
+          "date": "2026-06-01T00:00:00Z",
+          "workStart": "2026-06-01T06:00:00Z",
+          "workEnd": "2026-06-01T15:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-06-02",
+          "date": "2026-06-02T00:00:00Z",
+          "workStart": "2026-06-02T06:00:00Z",
+          "workEnd": "2026-06-02T15:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-06-03",
+          "date": "2026-06-03T00:00:00Z",
+          "workStart": "2026-06-03T06:00:00Z",
+          "workEnd": "2026-06-03T15:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-06-04",
+          "date": "2026-06-04T00:00:00Z",
+          "workStart": "2026-06-04T06:00:00Z",
+          "workEnd": "2026-06-04T15:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-06-05",
+          "date": "2026-06-05T00:00:00Z",
+          "workStart": "2026-06-05T06:00:00Z",
+          "workEnd": "2026-06-05T15:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        }
+      ],
+      "expected": {
+        "from": "2026-04-01",
+        "to": "2026-06-30",
+        "timeZone": "Europe/Berlin",
+        "dailyTargetMs": 28800000,
+        "weekdayAverages": [
+          {
+            "weekday": 1,
+            "averageWorkedMs": 32400000,
+            "deviationMs": 0,
+            "sampleCount": 1
+          },
+          {
+            "weekday": 2,
+            "averageWorkedMs": 32400000,
+            "deviationMs": 0,
+            "sampleCount": 1
+          },
+          {
+            "weekday": 3,
+            "averageWorkedMs": 32400000,
+            "deviationMs": 0,
+            "sampleCount": 1
+          },
+          {
+            "weekday": 4,
+            "averageWorkedMs": 32400000,
+            "deviationMs": 0,
+            "sampleCount": 1
+          },
+          {
+            "weekday": 5,
+            "averageWorkedMs": 32400000,
+            "deviationMs": 0,
+            "sampleCount": 1
+          }
+        ],
+        "overtimeStreak": {
+          "currentStreak": 5,
+          "longestStreak": 5,
+          "isWarning": true,
+          "warningThresholdDays": 5
+        },
+        "startTimeHeatmap": [
+          {
+            "startHour": 8,
+            "averageOvertimeMs": 3600000,
+            "sampleCount": 5
+          }
+        ]
+      }
+    },
+    {
+      "name": "heatmap-1-und-2-eintraege",
+      "description": "Startstunden mit nur einem Eintrag fehlen, mit zwei erscheinen sie; 07:59 zählt zu 7, 08:59 zu 8.",
+      "settings": {
+        "weeklyTargetHours": 40,
+        "workdays": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "referenceDate": "2026-06-08",
+      "timeZone": "Europe/Berlin",
+      "entries": [
+        {
+          "id": "2026-06-01",
+          "date": "2026-06-01T00:00:00Z",
+          "workStart": "2026-06-01T04:30:00Z",
+          "workEnd": "2026-06-01T13:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-06-02",
+          "date": "2026-06-02T00:00:00Z",
+          "workStart": "2026-06-02T05:00:00Z",
+          "workEnd": "2026-06-02T13:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-06-03",
+          "date": "2026-06-03T00:00:00Z",
+          "workStart": "2026-06-03T05:59:00Z",
+          "workEnd": "2026-06-03T15:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-06-04",
+          "date": "2026-06-04T00:00:00Z",
+          "workStart": "2026-06-04T06:00:00Z",
+          "workEnd": "2026-06-04T13:01:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-06-05",
+          "date": "2026-06-05T00:00:00Z",
+          "workStart": "2026-06-05T06:59:00Z",
+          "workEnd": "2026-06-05T16:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-06-08",
+          "date": "2026-06-08T00:00:00Z",
+          "workStart": "2026-06-08T21:30:00Z",
+          "workEnd": null,
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        }
+      ],
+      "expected": {
+        "from": "2026-04-01",
+        "to": "2026-06-30",
+        "timeZone": "Europe/Berlin",
+        "dailyTargetMs": 28800000,
+        "weekdayAverages": [
+          {
+            "weekday": 1,
+            "averageWorkedMs": 30600000,
+            "deviationMs": 684000,
+            "sampleCount": 1
+          },
+          {
+            "weekday": 2,
+            "averageWorkedMs": 28800000,
+            "deviationMs": -1116000,
+            "sampleCount": 1
+          },
+          {
+            "weekday": 3,
+            "averageWorkedMs": 32460000,
+            "deviationMs": 2544000,
+            "sampleCount": 1
+          },
+          {
+            "weekday": 4,
+            "averageWorkedMs": 25260000,
+            "deviationMs": -4656000,
+            "sampleCount": 1
+          },
+          {
+            "weekday": 5,
+            "averageWorkedMs": 32460000,
+            "deviationMs": 2544000,
+            "sampleCount": 1
+          }
+        ],
+        "overtimeStreak": {
+          "currentStreak": 0,
+          "longestStreak": 1,
+          "isWarning": false,
+          "warningThresholdDays": 5
+        },
+        "startTimeHeatmap": [
+          {
+            "startHour": 7,
+            "averageOvertimeMs": 1830000,
+            "sampleCount": 2
+          },
+          {
+            "startHour": 8,
+            "averageOvertimeMs": 60000,
+            "sampleCount": 2
+          }
+        ]
+      }
+    },
+    {
+      "name": "sommerzeit-berlin",
+      "description": "Umstellung 29.03.2026: dieselbe UTC-Startzeit liegt davor in Stunde 7, danach in 8; Nacht über die Umstellung dauert 1:30.",
+      "settings": {
+        "weeklyTargetHours": 40,
+        "workdays": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "referenceDate": "2026-04-02",
+      "timeZone": "Europe/Berlin",
+      "entries": [
+        {
+          "id": "2026-03-25",
+          "date": "2026-03-25T00:00:00Z",
+          "workStart": "2026-03-25T06:30:00Z",
+          "workEnd": "2026-03-25T15:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-03-26",
+          "date": "2026-03-26T00:00:00Z",
+          "workStart": "2026-03-26T06:30:00Z",
+          "workEnd": "2026-03-26T15:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-03-27",
+          "date": "2026-03-27T00:00:00Z",
+          "workStart": "2026-03-27T06:30:00Z",
+          "workEnd": "2026-03-27T15:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-03-30",
+          "date": "2026-03-30T00:00:00Z",
+          "workStart": "2026-03-30T06:30:00Z",
+          "workEnd": "2026-03-30T15:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-03-31",
+          "date": "2026-03-31T00:00:00Z",
+          "workStart": "2026-03-31T06:30:00Z",
+          "workEnd": "2026-03-31T15:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-04-01",
+          "date": "2026-04-01T00:00:00Z",
+          "workStart": "2026-04-01T06:30:00Z",
+          "workEnd": "2026-04-01T15:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-03-28",
+          "date": "2026-03-28T00:00:00Z",
+          "workStart": "2026-03-28T00:30:00Z",
+          "workEnd": "2026-03-28T03:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-03-29",
+          "date": "2026-03-29T00:00:00Z",
+          "workStart": "2026-03-29T00:30:00Z",
+          "workEnd": "2026-03-29T02:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        }
+      ],
+      "expected": {
+        "from": "2026-02-01",
+        "to": "2026-04-30",
+        "timeZone": "Europe/Berlin",
+        "dailyTargetMs": 28800000,
+        "weekdayAverages": [
+          {
+            "weekday": 1,
+            "averageWorkedMs": 30600000,
+            "deviationMs": 5850000,
+            "sampleCount": 1
+          },
+          {
+            "weekday": 2,
+            "averageWorkedMs": 30600000,
+            "deviationMs": 5850000,
+            "sampleCount": 1
+          },
+          {
+            "weekday": 3,
+            "averageWorkedMs": 30600000,
+            "deviationMs": 5850000,
+            "sampleCount": 2
+          },
+          {
+            "weekday": 4,
+            "averageWorkedMs": 30600000,
+            "deviationMs": 5850000,
+            "sampleCount": 1
+          },
+          {
+            "weekday": 5,
+            "averageWorkedMs": 30600000,
+            "deviationMs": 5850000,
+            "sampleCount": 1
+          },
+          {
+            "weekday": 6,
+            "averageWorkedMs": 9000000,
+            "deviationMs": -15750000,
+            "sampleCount": 1
+          },
+          {
+            "weekday": 7,
+            "averageWorkedMs": 5400000,
+            "deviationMs": -19350000,
+            "sampleCount": 1
+          }
+        ],
+        "overtimeStreak": {
+          "currentStreak": 6,
+          "longestStreak": 6,
+          "isWarning": true,
+          "warningThresholdDays": 5
+        },
+        "startTimeHeatmap": [
+          {
+            "startHour": 1,
+            "averageOvertimeMs": -21600000,
+            "sampleCount": 2
+          },
+          {
+            "startHour": 7,
+            "averageOvertimeMs": 1800000,
+            "sampleCount": 3
+          },
+          {
+            "startHour": 8,
+            "averageOvertimeMs": 1800000,
+            "sampleCount": 3
+          }
+        ]
+      }
+    },
+    {
+      "name": "winterzeit-berlin",
+      "description": "Umstellung 26.10.2025: 07:00Z ist davor 09 Uhr, danach 08 Uhr; Nacht über die Umstellung dauert 4:00 (Stunde doppelt).",
+      "settings": {
+        "weeklyTargetHours": 40,
+        "workdays": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "referenceDate": "2025-10-28",
+      "timeZone": "Europe/Berlin",
+      "entries": [
+        {
+          "id": "2025-10-22",
+          "date": "2025-10-22T00:00:00Z",
+          "workStart": "2025-10-22T07:00:00Z",
+          "workEnd": "2025-10-22T15:30:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2025-10-23",
+          "date": "2025-10-23T00:00:00Z",
+          "workStart": "2025-10-23T07:00:00Z",
+          "workEnd": "2025-10-23T15:30:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2025-10-24",
+          "date": "2025-10-24T00:00:00Z",
+          "workStart": "2025-10-24T07:00:00Z",
+          "workEnd": "2025-10-24T15:30:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2025-10-27",
+          "date": "2025-10-27T00:00:00Z",
+          "workStart": "2025-10-27T07:00:00Z",
+          "workEnd": "2025-10-27T15:30:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2025-10-28",
+          "date": "2025-10-28T00:00:00Z",
+          "workStart": "2025-10-28T07:00:00Z",
+          "workEnd": "2025-10-28T15:30:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2025-10-26",
+          "date": "2025-10-26T00:00:00Z",
+          "workStart": "2025-10-25T23:00:00Z",
+          "workEnd": "2025-10-26T03:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        }
+      ],
+      "expected": {
+        "from": "2025-08-01",
+        "to": "2025-10-31",
+        "timeZone": "Europe/Berlin",
+        "dailyTargetMs": 28800000,
+        "weekdayAverages": [
+          {
+            "weekday": 1,
+            "averageWorkedMs": 30600000,
+            "deviationMs": 2700000,
+            "sampleCount": 1
+          },
+          {
+            "weekday": 2,
+            "averageWorkedMs": 30600000,
+            "deviationMs": 2700000,
+            "sampleCount": 1
+          },
+          {
+            "weekday": 3,
+            "averageWorkedMs": 30600000,
+            "deviationMs": 2700000,
+            "sampleCount": 1
+          },
+          {
+            "weekday": 4,
+            "averageWorkedMs": 30600000,
+            "deviationMs": 2700000,
+            "sampleCount": 1
+          },
+          {
+            "weekday": 5,
+            "averageWorkedMs": 30600000,
+            "deviationMs": 2700000,
+            "sampleCount": 1
+          },
+          {
+            "weekday": 7,
+            "averageWorkedMs": 14400000,
+            "deviationMs": -13500000,
+            "sampleCount": 1
+          }
+        ],
+        "overtimeStreak": {
+          "currentStreak": 5,
+          "longestStreak": 5,
+          "isWarning": true,
+          "warningThresholdDays": 5
+        },
+        "startTimeHeatmap": [
+          {
+            "startHour": 8,
+            "averageOvertimeMs": 1800000,
+            "sampleCount": 2
+          },
+          {
+            "startHour": 9,
+            "averageOvertimeMs": 1800000,
+            "sampleCount": 3
+          }
+        ]
+      }
+    },
+    {
+      "name": "los-angeles-sommerzeit-und-abend",
+      "description": "LA: Umstellung 08.03.2026 verschiebt 16:00Z von 8 auf 9 Uhr; Abend-Einträge liegen in UTC am Folgetag, Wochentag kommt aus dem Kalendertag.",
+      "settings": {
+        "weeklyTargetHours": 40,
+        "workdays": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "referenceDate": "2026-04-15",
+      "timeZone": "America/Los_Angeles",
+      "entries": [
+        {
+          "id": "2026-03-04",
+          "date": "2026-03-04T00:00:00Z",
+          "workStart": "2026-03-04T16:00:00Z",
+          "workEnd": "2026-03-04T23:30:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-03-05",
+          "date": "2026-03-05T00:00:00Z",
+          "workStart": "2026-03-05T16:00:00Z",
+          "workEnd": "2026-03-05T23:30:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-03-06",
+          "date": "2026-03-06T00:00:00Z",
+          "workStart": "2026-03-06T16:00:00Z",
+          "workEnd": "2026-03-06T23:30:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-03-09",
+          "date": "2026-03-09T00:00:00Z",
+          "workStart": "2026-03-09T16:00:00Z",
+          "workEnd": "2026-03-09T23:30:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-03-10",
+          "date": "2026-03-10T00:00:00Z",
+          "workStart": "2026-03-10T16:00:00Z",
+          "workEnd": "2026-03-10T23:30:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-06-04",
+          "date": "2026-06-04T00:00:00Z",
+          "workStart": "2026-06-05T01:00:00Z",
+          "workEnd": "2026-06-05T06:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-06-05",
+          "date": "2026-06-05T00:00:00Z",
+          "workStart": "2026-06-06T01:30:00Z",
+          "workEnd": "2026-06-06T06:59:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-04-02",
+          "date": "2026-04-02T00:00:00Z",
+          "workStart": "2026-04-02T15:00:00Z",
+          "workEnd": "2026-04-03T00:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        }
+      ],
+      "expected": {
+        "from": "2026-02-01",
+        "to": "2026-04-30",
+        "timeZone": "America/Los_Angeles",
+        "dailyTargetMs": 28800000,
+        "weekdayAverages": [
+          {
+            "weekday": 1,
+            "averageWorkedMs": 27000000,
+            "deviationMs": -900000,
+            "sampleCount": 1
+          },
+          {
+            "weekday": 2,
+            "averageWorkedMs": 27000000,
+            "deviationMs": -900000,
+            "sampleCount": 1
+          },
+          {
+            "weekday": 3,
+            "averageWorkedMs": 27000000,
+            "deviationMs": -900000,
+            "sampleCount": 1
+          },
+          {
+            "weekday": 4,
+            "averageWorkedMs": 29700000,
+            "deviationMs": 1800000,
+            "sampleCount": 2
+          },
+          {
+            "weekday": 5,
+            "averageWorkedMs": 27000000,
+            "deviationMs": -900000,
+            "sampleCount": 1
+          }
+        ],
+        "overtimeStreak": {
+          "currentStreak": 1,
+          "longestStreak": 1,
+          "isWarning": false,
+          "warningThresholdDays": 5
+        },
+        "startTimeHeatmap": [
+          {
+            "startHour": 8,
+            "averageOvertimeMs": -450000,
+            "sampleCount": 4
+          },
+          {
+            "startHour": 9,
+            "averageOvertimeMs": -1800000,
+            "sampleCount": 2
+          }
+        ]
+      }
+    },
+    {
+      "name": "los-angeles-abend-juni",
+      "description": "LA, Bezugstag im Juni: Abend-Einträge mit UTC-Folgetag, Heatmap Stunde 18.",
+      "settings": {
+        "weeklyTargetHours": 40,
+        "workdays": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "referenceDate": "2026-06-20",
+      "timeZone": "America/Los_Angeles",
+      "entries": [
+        {
+          "id": "2026-06-04",
+          "date": "2026-06-04T00:00:00Z",
+          "workStart": "2026-06-05T01:00:00Z",
+          "workEnd": "2026-06-05T06:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-06-05",
+          "date": "2026-06-05T00:00:00Z",
+          "workStart": "2026-06-06T01:30:00Z",
+          "workEnd": "2026-06-06T06:59:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-06-08",
+          "date": "2026-06-08T00:00:00Z",
+          "workStart": "2026-06-09T01:10:00Z",
+          "workEnd": "2026-06-09T05:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        }
+      ],
+      "expected": {
+        "from": "2026-04-01",
+        "to": "2026-06-30",
+        "timeZone": "America/Los_Angeles",
+        "dailyTargetMs": 28800000,
+        "weekdayAverages": [
+          {
+            "weekday": 1,
+            "averageWorkedMs": 13800000,
+            "deviationMs": -3380000,
+            "sampleCount": 1
+          },
+          {
+            "weekday": 4,
+            "averageWorkedMs": 18000000,
+            "deviationMs": 820000,
+            "sampleCount": 1
+          },
+          {
+            "weekday": 5,
+            "averageWorkedMs": 19740000,
+            "deviationMs": 2560000,
+            "sampleCount": 1
+          }
+        ],
+        "overtimeStreak": {
+          "currentStreak": 0,
+          "longestStreak": 0,
+          "isWarning": false,
+          "warningThresholdDays": 5
+        },
+        "startTimeHeatmap": [
+          {
+            "startHour": 18,
+            "averageOvertimeMs": -11620000,
+            "sampleCount": 3
+          }
+        ]
+      }
+    },
+    {
+      "name": "utc-abschneiden",
+      "description": "UTC; Sekunden werden wie an der Mobile-Lesegrenze abgeschnitten; Mittelwerte mit Rest (1/3 min) zur Null hin abgeschnitten, negative Abweichungen.",
+      "settings": {
+        "weeklyTargetHours": 39,
+        "workdays": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      "referenceDate": "2026-02-28",
+      "timeZone": "UTC",
+      "entries": [
+        {
+          "id": "2026-02-02",
+          "date": "2026-02-02T00:00:00Z",
+          "workStart": "2026-02-02T08:00:59Z",
+          "workEnd": "2026-02-02T16:00:30Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-02-03",
+          "date": "2026-02-03T00:00:00Z",
+          "workStart": "2026-02-03T08:00:00Z",
+          "workEnd": "2026-02-03T16:07:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-02-09",
+          "date": "2026-02-09T00:00:00Z",
+          "workStart": "2026-02-09T08:00:00Z",
+          "workEnd": "2026-02-09T16:01:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-02-10",
+          "date": "2026-02-10T00:00:00Z",
+          "workStart": "2026-02-10T08:00:00Z",
+          "workEnd": "2026-02-10T15:59:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-02-16",
+          "date": "2026-02-16T00:00:00Z",
+          "workStart": "2026-02-16T08:01:00Z",
+          "workEnd": "2026-02-16T16:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-02-17",
+          "date": "2026-02-17T00:00:00Z",
+          "workStart": "2026-02-17T08:00:00Z",
+          "workEnd": "2026-02-17T16:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-02-04",
+          "date": "2026-02-04T00:00:00Z",
+          "workStart": "2026-02-04T08:00:00Z",
+          "workEnd": "2026-02-04T11:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        }
+      ],
+      "expected": {
+        "from": "2025-12-01",
+        "to": "2026-02-28",
+        "timeZone": "UTC",
+        "dailyTargetMs": 20040000,
+        "weekdayAverages": [
+          {
+            "weekday": 1,
+            "averageWorkedMs": 28800000,
+            "deviationMs": 2520000,
+            "sampleCount": 3
+          },
+          {
+            "weekday": 2,
+            "averageWorkedMs": 28920000,
+            "deviationMs": 2640000,
+            "sampleCount": 3
+          },
+          {
+            "weekday": 3,
+            "averageWorkedMs": 10800000,
+            "deviationMs": -15480000,
+            "sampleCount": 1
+          }
+        ],
+        "overtimeStreak": {
+          "currentStreak": 2,
+          "longestStreak": 2,
+          "isWarning": false,
+          "warningThresholdDays": 5
+        },
+        "startTimeHeatmap": [
+          {
+            "startHour": 8,
+            "averageOvertimeMs": 6240000,
+            "sampleCount": 7
+          }
+        ]
+      }
+    },
+    {
+      "name": "ohne-arbeitstage",
+      "description": "Keine Arbeitstage: Tagessoll 0, Serie 0/0, Heatmap mit effektiver Zeit als Überstunden.",
+      "settings": {
+        "weeklyTargetHours": 40,
+        "workdays": []
+      },
+      "referenceDate": "2026-06-10",
+      "timeZone": "Europe/Berlin",
+      "entries": [
+        {
+          "id": "2026-06-01",
+          "date": "2026-06-01T00:00:00Z",
+          "workStart": "2026-06-01T06:00:00Z",
+          "workEnd": "2026-06-01T10:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-06-02",
+          "date": "2026-06-02T00:00:00Z",
+          "workStart": "2026-06-02T06:30:00Z",
+          "workEnd": "2026-06-02T11:00:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        }
+      ],
+      "expected": {
+        "from": "2026-04-01",
+        "to": "2026-06-30",
+        "timeZone": "Europe/Berlin",
+        "dailyTargetMs": 0,
+        "weekdayAverages": [
+          {
+            "weekday": 1,
+            "averageWorkedMs": 14400000,
+            "deviationMs": -900000,
+            "sampleCount": 1
+          },
+          {
+            "weekday": 2,
+            "averageWorkedMs": 16200000,
+            "deviationMs": 900000,
+            "sampleCount": 1
+          }
+        ],
+        "overtimeStreak": {
+          "currentStreak": 0,
+          "longestStreak": 0,
+          "isWarning": false,
+          "warningThresholdDays": 5
+        },
+        "startTimeHeatmap": [
+          {
+            "startHour": 8,
+            "averageOvertimeMs": 15300000,
+            "sampleCount": 2
+          }
+        ]
+      }
+    },
+    {
+      "name": "tagessoll-rundung",
+      "description": "37,5 h an 4 Tagen = 562,5 min -> 563 min (Backend und Mobile runden .5 von der Null weg): 562 und 563 min sind nicht über Soll, 564 min schon.",
+      "settings": {
+        "weeklyTargetHours": 37.5,
+        "workdays": [
+          1,
+          2,
+          3,
+          4
+        ]
+      },
+      "referenceDate": "2026-06-10",
+      "timeZone": "Europe/Berlin",
+      "entries": [
+        {
+          "id": "2026-06-01",
+          "date": "2026-06-01T00:00:00Z",
+          "workStart": "2026-06-01T06:00:00Z",
+          "workEnd": "2026-06-01T15:22:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-06-02",
+          "date": "2026-06-02T00:00:00Z",
+          "workStart": "2026-06-02T06:00:00Z",
+          "workEnd": "2026-06-02T15:23:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-06-03",
+          "date": "2026-06-03T00:00:00Z",
+          "workStart": "2026-06-03T06:00:00Z",
+          "workEnd": "2026-06-03T15:24:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        },
+        {
+          "id": "2026-06-04",
+          "date": "2026-06-04T00:00:00Z",
+          "workStart": "2026-06-04T06:00:00Z",
+          "workEnd": "2026-06-04T15:24:00Z",
+          "type": "work",
+          "isManuallyEntered": false,
+          "manualOvertimeMinutes": null,
+          "isHomeOffice": false,
+          "breaks": []
+        }
+      ],
+      "expected": {
+        "from": "2026-04-01",
+        "to": "2026-06-30",
+        "timeZone": "Europe/Berlin",
+        "dailyTargetMs": 33780000,
+        "weekdayAverages": [
+          {
+            "weekday": 1,
+            "averageWorkedMs": 33720000,
+            "deviationMs": -75000,
+            "sampleCount": 1
+          },
+          {
+            "weekday": 2,
+            "averageWorkedMs": 33780000,
+            "deviationMs": -15000,
+            "sampleCount": 1
+          },
+          {
+            "weekday": 3,
+            "averageWorkedMs": 33840000,
+            "deviationMs": 45000,
+            "sampleCount": 1
+          },
+          {
+            "weekday": 4,
+            "averageWorkedMs": 33840000,
+            "deviationMs": 45000,
+            "sampleCount": 1
+          }
+        ],
+        "overtimeStreak": {
+          "currentStreak": 2,
+          "longestStreak": 2,
+          "isWarning": false,
+          "warningThresholdDays": 5
+        },
+        "startTimeHeatmap": [
+          {
+            "startHour": 8,
+            "averageOvertimeMs": 15000,
+            "sampleCount": 4
+          }
+        ]
+      }
+    }
+  ]
+}

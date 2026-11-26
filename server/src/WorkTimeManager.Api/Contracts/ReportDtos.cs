@@ -289,3 +289,78 @@ public sealed record YearlyDeltaDto
     public int SickDays { get; init; }
     public int HolidayDays { get; init; }
 }
+
+/// <summary>
+/// Home-Office-Auswertung eines Kalenderjahres (#537, Regel 1:1 aus Mobile <c>calculateHomeOfficeStats</c>, #282).
+/// Gezählt werden Kalendertage mit Arbeitseintrag mit Start (<c>type == work</c>, <c>workStart</c> gesetzt; offene
+/// Einträge zählen). Urlaub, Krank und Feiertag zählen nie, auch mit gesetztem Flag. Mehrere Einträge an einem Tag
+/// zählen einmal; der Tag ist Home-Office, wenn irgendein Eintrag das Flag trägt.
+/// </summary>
+public sealed record HomeOfficeReportDto
+{
+    public int Year { get; init; }
+
+    /// <summary>Tage mit erfasster Zeit und Home-Office-Flag.</summary>
+    public int HomeOfficeDays { get; init; }
+
+    /// <summary>Tage mit erfasster Zeit ohne Home-Office-Flag.</summary>
+    public int OfficeDays { get; init; }
+
+    /// <summary>Bezugstage: <see cref="HomeOfficeDays"/> + <see cref="OfficeDays"/>.</summary>
+    public int TotalDays { get; init; }
+
+    /// <summary>Anteil 0..1 (<c>HomeOfficeDays ÷ TotalDays</c>, ungerundet); <c>null</c> ohne Bezugstage.</summary>
+    public double? HomeOfficeRatio { get; init; }
+
+    /// <summary>Immer 12 Einträge (Monat 1–12); die Summen der Monate ergeben die Jahreswerte.</summary>
+    public IReadOnlyList<HomeOfficeMonthDto> Months { get; init; } = Array.Empty<HomeOfficeMonthDto>();
+
+    /// <summary>Home-Office-Tage als Kalendertage <c>yyyy-MM-dd</c>, aufsteigend, ohne Duplikate.</summary>
+    public IReadOnlyList<DateOnly> HomeOfficeDates { get; init; } = Array.Empty<DateOnly>();
+}
+
+/// <summary>Home-Office-Werte eines Monats (#537), Regel wie <see cref="HomeOfficeReportDto"/>.</summary>
+public sealed record HomeOfficeMonthDto(int Month, int HomeOfficeDays, int OfficeDays, int TotalDays, double? HomeOfficeRatio);
+
+/// <summary>
+/// Arbeitszeit-Insights (#537, Regeln 1:1 aus Mobile <c>insights_utils.dart</c>/<c>InsightsViewModel</c>, #134).
+/// Datenbasis: die drei Kalendermonate bis einschließlich des Monats des Bezugstags, jeweils ganz. Zeitwerte in ms.
+/// </summary>
+public sealed record InsightsReportDto
+{
+    /// <summary>Erster Tag des Zeitfensters (1. des Monats zwei Monate vor dem Bezugsmonat).</summary>
+    public DateOnly From { get; init; }
+
+    /// <summary>Letzter Tag des Zeitfensters (Monatsletzter des Bezugsmonats).</summary>
+    public DateOnly To { get; init; }
+
+    /// <summary>Die übergebene IANA-Zeitzone (bestimmt die Startstunde der Heatmap).</summary>
+    public required string TimeZone { get; init; }
+
+    /// <summary>Tagessoll (Regel der Berichte, auf die Minute gerundet, #535); Bezug für Streak und Heatmap.</summary>
+    public long DailyTargetMs { get; init; }
+
+    /// <summary>Nur Wochentage mit Daten, aufsteigend (1 = Mo … 7 = So).</summary>
+    public IReadOnlyList<WeekdayAverageDto> WeekdayAverages { get; init; } = Array.Empty<WeekdayAverageDto>();
+
+    public required OvertimeStreakDto OvertimeStreak { get; init; }
+
+    /// <summary>Nur Startstunden mit mindestens 2 Einträgen, aufsteigend nach Stunde.</summary>
+    public IReadOnlyList<StartTimeBucketDto> StartTimeHeatmap { get; init; } = Array.Empty<StartTimeBucketDto>();
+}
+
+/// <summary>
+/// Durchschnittliche effektive Arbeitszeit eines Wochentags (#537). <c>DeviationMs</c> = Durchschnitt des Wochentags −
+/// Durchschnitt aller eingerechneten Einträge (kann negativ sein). Gerechnet in Mikrosekunden mit Abschneiden zur Null
+/// hin, dann auf ganze ms abgeschnitten (wie Dart <c>Duration ~/</c> und <c>inMilliseconds</c>).
+/// </summary>
+public sealed record WeekdayAverageDto(int Weekday, long AverageWorkedMs, long DeviationMs, int SampleCount);
+
+/// <summary>
+/// Serie aufeinanderfolgender Vertrags-Arbeitstage mit effektiver Zeit über dem Tagessoll (#537). Freie Wochentage
+/// unterbrechen nicht; <c>CurrentStreak</c> endet am letzten Tag mit Arbeitseintrag im Zeitfenster.
+/// </summary>
+public sealed record OvertimeStreakDto(int CurrentStreak, int LongestStreak, bool IsWarning, int WarningThresholdDays);
+
+/// <summary>Durchschnittliche Abweichung vom Tagessoll für Einträge, die in dieser lokalen Stunde begannen (#537).</summary>
+public sealed record StartTimeBucketDto(int StartHour, long AverageOvertimeMs, int SampleCount);

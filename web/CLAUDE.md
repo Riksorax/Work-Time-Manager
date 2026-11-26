@@ -62,7 +62,9 @@ domain/
 │   ├── reports.models.ts  DailyStat, WeeklyReport, MonthlyReport
 │   ├── leave.models.ts    YearlyLeaveReport (1:1 Backend-DTO), LeaveMonth, LeavePeriod (#284)
 │   ├── trend.models.ts    TrendReport, TrendBucket, WeeklyTrend, OvertimeForecast (#531/#532, 1:1 Backend-DTO ohne `Ms`-Suffix)
-│   └── yearly-comparison.models.ts  YearlyComparison, YearlySummary, YearlyDelta (#530, 1:1 Backend-DTO mit `Ms`-Suffix)
+│   ├── yearly-comparison.models.ts  YearlyComparison, YearlySummary, YearlyDelta (#530, 1:1 Backend-DTO mit `Ms`-Suffix)
+│   ├── home-office.models.ts  HomeOfficeReport, HomeOfficeMonth (#537, 1:1 Backend-DTO)
+│   └── insights.models.ts  InsightsReport, WeekdayAverage, OvertimeStreak, StartTimeBucket (#537, 1:1 Backend-DTO mit `Ms`-Suffix)
 ├── services/
 │   ├── break-calculator.ts   Pure — Pflichtpausen (30min/6h, 45min/9h)
 │   ├── report-calculator.ts  Pure — ISO-8601-Wochennummer, DailyStat, Weekly/MonthlyReport; Parität zum Backend über `testdata/report-parity/` (`report-calculator.parity.tz.spec.ts`, #535, seit #551 inkl. `netWorkedMs`)
@@ -73,7 +75,7 @@ domain/
 
 features/
 ├── dashboard/      DashboardComponent + DashboardService (Timer, Pausen, Überstunden); `OpenEntryService` + `OpenEntryCloseService` + Beenden-Dialog (offene Einträge vor heute, #385)
-├── reports/        ReportsComponent + ReportsService (Täglich/Wöchentlich/Monatlich/Jahr/Trend, Premium-Gate); Trend-Ansicht `components/trend-view/` (#531, siehe „Trend-Ansicht“); Urlaubs-/Krankheitsauswertung `components/leave-report-print/` (#284, siehe dort); Mehrfachauswahl-Modus im Service: `toggleMultiSelect`, idempotentes `endMultiSelect`, `removeDatesFromSelection`, Modus endet nach erfolgreichem Batch-Speichern (#377)
+├── reports/        ReportsComponent + ReportsService (Täglich/Wöchentlich/Monatlich/Jahr/Trend/Insights, Premium-Gate); Trend-Ansicht `components/trend-view/` (#531, siehe „Trend-Ansicht“); Insights `components/insights-view/` (#537, siehe „Insights“); Urlaubs-/Krankheitsauswertung `components/leave-report-print/` (#284, siehe dort); Mehrfachauswahl-Modus im Service: `toggleMultiSelect`, idempotentes `endMultiSelect`, `removeDatesFromSelection`, Modus endet nach erfolgreichem Batch-Speichern (#377)
 └── settings/       SettingsComponent + SettingsPageService (Profil, Arbeitszeit, Gleitzeit, Sync, Theme)
 
 shared/
@@ -82,7 +84,7 @@ shared/
 │   ├── edit-entry-dialog/      EditEntryDialogComponent (inkl. Arbeitsorte, #526)
 │   ├── work-locations-input/   WorkLocationsInputComponent (#526) — Orte als `mat-chip-set` + `matInput` mit `matAutocomplete`, `model` `locations`, `commitPending()`; bewusst kein `mat-chip-grid` (axe `aria-required-children`)
 │   ├── work-locations-dialog/  WorkLocationsDialogComponent (#526) — Dialog des Dashboard-Buttons „Arbeitsort hinzufügen“ (hinzufügen, entfernen, speichern, abbrechen); Vorschlagsliste ist beim Öffnen zu und geht erst bei Tippen, Klick oder Pfeil-Taste auf (`matAutocompleteDisabled` über das Signal `locked`, `reveal()` setzt `autocompleteDisabled` sofort und ruft `openPanel()`), nach Hinzufügen/Auswählen schließt sie wieder. Escape bei offener Liste schließt nur die Liste (Capture-Listener am Host, der das Event stoppt und `closePanel()` ruft: der Autocomplete schließt die Liste im keydown am Feld synchron, danach hielte der Overlay-Dispatcher des Dialogs das Escape für sein eigenes), das zweite bricht den Dialog ab
-│   ├── home-office-card/       HomeOfficeCardComponent — Home-Office-Jahresauswertung (#283/#483, Premium im Jahres-Tab): lädt zwölf Monate über `getEntriesForMonthOnce`, Zählregel `domain/services/home-office-stats.ts` (Port von Mobile `home_office_stats.dart`: nur `work` mit Start, Dedup über `entryDayKey`, ein Flag macht den Tag zum Home-Office-Tag). Druck: Jahres-Tab ist `.print-area`, Button „Als PDF speichern“ ruft `window.print()` (Premium, sonst Paywall)
+│   ├── home-office-card/       HomeOfficeCardComponent — Home-Office-Jahresauswertung (#283/#483, Premium im Jahres-Tab), seit #537 vom Backend: `ApiClient.getHomeOfficeReport(year, profileId?)` → `GET /api/reports/home-office/{year}` (Modell `domain/models/home-office.models.ts`, Zählregel nur im Backend). Lädt nur angemeldet + Premium (Muster Jahresvergleich), Jahres- und Profilwechsel laden neu; `loading`/`error` (mit „Erneut versuchen“)/`data`, `totalDays = 0` → Leerzustand. Die frühere lokale Rechnung (`domain/services/home-office-stats.ts`) ist entfallen: die Karte ist Premium, Premium setzt die Anmeldung voraus, einen Gast-Modus gibt es dafür nicht. Unberührt bleibt `ReportsService.homeOfficeDays` (Kalender-Icon aus dem Flag der geladenen Einträge, reine Darstellung, auch für Gäste). Druck: Jahres-Tab ist `.print-area`, Button „Als PDF speichern“ ruft `window.print()` (Premium, sonst Paywall)
 │   ├── yearly-comparison-card/ YearlyComparisonCardComponent + YearlyComparisonLockedComponent — Jahresvergleich mit dem Vorjahr (#530, Premium im Jahres-Tab), siehe „Jahresvergleich (#530)“
 │   ├── leave-balance-card/     LeaveBalanceCardComponent — reine Darstellung der Urlaubsübersicht (Settings, Reports; bewusst nicht im Dashboard: dort schob sie Start-/Endzeit und den Start-Button unter den sichtbaren Bereich)
 │   ├── holiday-banner/         HolidayBannerComponent — „Heute ist Feiertag: …“ (#279), rein informativ
@@ -174,10 +176,32 @@ der Trend hat ein eigenes Zeitfenster (12 Wochen/12 Monate bis heute) und hängt
   (Roving tabindex: ein Tab-Stopp, Pfeile/Home/End) füllen eine Detailzeile; jede Spalte ist `role="img"` mit `aria-label`, das SVG
   `role="group"`. Textalternative: visuell versteckte Tabelle (`cdk-visually-hidden`) mit denselben Werten. Farben nur über
   `--mat-sys-*`.
-- **Tab-Leiste:** die kompakte Tab-Darstellung (4 px Abstand, 13 px) gilt bis 430 px, damit fünf Tabs auf 320–430 px ohne Blättern passen.
+- **Tab-Leiste:** die kompakte Tab-Darstellung (4 px Abstand, 13 px) gilt bis 430 px, damit fünf Tabs auf 320–430 px ohne Blättern passen (seit #537 sechs Tabs, siehe „Insights“).
 - **Tests:** `api-client.trend*.spec.ts`, `chart-scale.util.spec.ts`, `charts.spec.ts`, `trend-view.spec.ts`, `reports.trend.spec.ts`;
   E2E `e2e/trend.spec.ts` (ohne Konto) und `e2e/trend-account.spec.ts` (Emulatoren; Trend-Endpunkt per `page.route` gemockt,
   Testdaten `e2e/trend-data.ts`).
+
+### Insights (#537)
+
+Sechster Tab „Insights“ in den Berichten (Premium), Port der Mobile-Insights (`reports_page.dart`, `InsightsView`). Alle Werte
+vom Backend, der Client formatiert nur.
+- **Gate** in `reports.html` wie beim Trend (`!isLoggedIn` → Anmelde-Hinweis, `!isPremium` → gesperrte Karte mit Paywall), Inhalt
+  in `<ng-template matTabContent>`.
+- **Laden:** `InsightsViewService` (von `ReportsComponent` bereitgestellt, Muster `TrendViewService`): nur angehängt (`attach()`),
+  angemeldet und Premium; `ApiClient.getInsightsReport(date, timeZone, profileId?)` → `GET /api/reports/insights/{y}/{m}/{d}?tz=`.
+  Bezugstag = `TodayService.today()`, `tz` aus dem Token `BROWSER_TIME_ZONE` (`core/services/time-zone.ts`,
+  `Intl.DateTimeFormat().resolvedOptions().timeZone`, im Test ersetzbar). Profil- und Tageswechsel laden neu. `loading`/`error`
+  (mit „Erneut versuchen“)/`data`; leer = keine Wochentage und keine Startstunden (wie Mobile `hasNoData`).
+- **Darstellung:** Zeitraum aus `from`/`to` (Kalendertage zerlegt, `Intl.formatRange` in der App-Sprache). Hinweis bei
+  `overtimeStreak.isWarning` oben (warmer Ton statt Fehlerrot, `role="status"`). Wochentage als Liste: Name, Balken = Durchschnitt
+  (relativ zum längsten, `aria-hidden`), „Ø HH:MM h · n Tage“, Abweichung als Chip mit Vorzeichen (0 ohne). Serie: aktuelle und
+  längste, Schwelle als Hinweis. Heatmap: Zelle je Startstunde mit Abweichung vom Tagessoll als Text, Anzahl und kleinem Balken;
+  Farbe nach Vorzeichen (über Soll `primary-container`, unter Soll `--ins-below` = Orange auf `surface` gemischt, Text on-surface;
+  die Palette hat außer `error` keinen warmen Ton), Legende. Alle Werte stehen als Text da; Balken und Farben sind Zusatz.
+- **Tab-Leiste:** Sechs Tabs passen auf 320–430 px ohne Blättern: bis 430 px die kompakte Form aus #531, unter 360 px zusätzlich 11 px Schrift und 2 px Abstand (`styles.scss`, Style-Budget von `reports.scss`); geprüft in `e2e/trend.spec.ts` (320/375 px).
+- **Tests:** `api-client.insights.spec.ts`, `insights-view.service.spec.ts`, `insights-view.spec.ts`, `insights-view.tz.spec.ts`,
+  `reports.insights.spec.ts`; E2E `e2e/insights-account.spec.ts` (Emulatoren, Endpunkt per `page.route` gemockt, Testdaten
+  `e2e/insights-data.ts`, inkl. axe und 320 px).
 
 ### Jahresvergleich (#530)
 

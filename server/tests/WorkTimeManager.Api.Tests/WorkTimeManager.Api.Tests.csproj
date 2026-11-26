@@ -26,6 +26,12 @@
     <None Include="..\..\..\testdata\report-parity\*.json" LinkBase="report-parity" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <!-- Paritätsfälle Insights und Home-Office (Backend, Mobile; #537): verlinkt, nicht kopiert. -->
+  <ItemGroup>
+    <None Include="..\..\..\testdata\insights-parity\*.json" LinkBase="insights-parity" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\..\testdata\home-office-parity\*.json" LinkBase="home-office-parity" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\src\WorkTimeManager.Api\WorkTimeManager.Api.csproj" />
   </ItemGroup>
