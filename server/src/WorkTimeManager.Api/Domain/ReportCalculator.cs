@@ -513,7 +513,7 @@ public static class ReportCalculator
     /// (#535). Rundung wie <c>roundMsToMinute</c> im Web: kaufmännisch, .5 von der Null weg. Ohne
     /// Arbeitstage ist das Soll 0 (keine Division durch null).
     /// </summary>
-    private static long DailyTargetMs(SettingsDto s)
+    internal static long DailyTargetMs(SettingsDto s)
     {
         if (s.Workdays.Count == 0) return 0;
         var minutes = s.WeeklyTargetHours * 3_600_000 / s.Workdays.Count / 60_000;
