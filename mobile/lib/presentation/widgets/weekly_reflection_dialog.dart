@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/utils/iso_week.dart';
 import '../../l10n/app_localizations.dart';
+import '../utils/user_error_message.dart';
 import '../view_models/weekly_reflection_view_model.dart';
 
 /// Dialog für die Wochen-Reflexion (siehe #137): kurzer strukturierter
@@ -58,8 +59,11 @@ class _WeeklyReflectionDialogState
         SnackBar(content: Text(l10n.reflectionSaved)),
       );
     } catch (e) {
+      // Geloggt hat das ViewModel; hier nur eine verständliche Meldung
+      // statt des Ausnahmetexts (#582).
       messenger.showSnackBar(
-        SnackBar(content: Text(l10n.saveFailed('$e'))),
+        SnackBar(
+            content: Text(userErrorMessage(l10n, e, general: l10n.saveFailed))),
       );
     }
   }

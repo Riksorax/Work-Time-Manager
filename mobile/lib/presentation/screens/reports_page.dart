@@ -30,6 +30,7 @@ import '../../domain/utils/open_entry_report_utils.dart';
 import '../../domain/utils/weekday_labels.dart';
 import '../../l10n/app_localizations.dart';
 import '../utils/holiday_name_localizer.dart';
+import '../utils/user_error_message.dart';
 import '../widgets/common/paywall_launcher.dart';
 import '../widgets/common/responsive_center.dart';
 import '../widgets/premium_blur_gate.dart';
@@ -991,6 +992,23 @@ void _navigateToMonth(WidgetRef ref, {required int year, required int month}) {
 
 final _pdfReportService = PdfReportService();
 
+/// Fehler eines PDF-Exports (#582): ins Log ohne Ausnahmetext (erwartbare
+/// Netzwerkfehler nur `logger.i`), dem Nutzer eine verständliche Meldung
+/// („Keine Verbindung …“ bzw. `pdfExportFailed`) statt des Fehlertexts.
+void _showPdfExportError(ScaffoldMessengerState messenger,
+    AppLocalizations l10n, String what, Object error, StackTrace stackTrace,
+    {required bool show}) {
+  logUserFacingError('[PDF-Export] $what fehlgeschlagen', error, stackTrace);
+  if (!show) return;
+  messenger.showSnackBar(
+    SnackBar(
+      content:
+          Text(userErrorMessage(l10n, error, general: l10n.pdfExportFailed)),
+      backgroundColor: Colors.red,
+    ),
+  );
+}
+
 Future<void> _exportWeeklyReportPdf({
   required BuildContext context,
   required PdfReportService service,
@@ -1022,16 +1040,9 @@ Future<void> _exportWeeklyReportPdf({
       // Arbeitsorte der geladenen Einträge (#526), nur Anzeige.
       dailyLocations: dailyLocations,
     );
-  } catch (e) {
-    logger.e('[PDF-Export] Wochenbericht fehlgeschlagen: $e');
-    if (context.mounted) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).pdfExportFailed('$e')),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+  } catch (e, st) {
+    _showPdfExportError(messenger, l10n, 'Wochenbericht', e, st,
+        show: context.mounted);
   }
 }
 
@@ -1065,16 +1076,9 @@ Future<void> _exportMonthlyReportPdf({
       // Arbeitsorte der geladenen Einträge (#526), nur Anzeige.
       dailyLocations: dailyLocations,
     );
-  } catch (e) {
-    logger.e('[PDF-Export] Monatsbericht fehlgeschlagen: $e');
-    if (context.mounted) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).pdfExportFailed('$e')),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+  } catch (e, st) {
+    _showPdfExportError(messenger, l10n, 'Monatsbericht', e, st,
+        show: context.mounted);
   }
 }
 
@@ -1108,16 +1112,9 @@ Future<void> _exportYearlyReportPdf({
           ),
       ],
     );
-  } catch (e) {
-    logger.e('[PDF-Export] Jahresbericht fehlgeschlagen: $e');
-    if (context.mounted) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).pdfExportFailed('$e')),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+  } catch (e, st) {
+    _showPdfExportError(messenger, l10n, 'Jahresbericht', e, st,
+        show: context.mounted);
   }
 }
 
@@ -1148,16 +1145,9 @@ Future<void> _exportHomeOfficeMonthPdf({
       ratio: stats.ratio,
       homeOfficeDates: stats.homeOfficeDates,
     );
-  } catch (e) {
-    logger.e('[PDF-Export] Home-Office-Auswertung fehlgeschlagen: $e');
-    if (context.mounted) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).pdfExportFailed('$e')),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+  } catch (e, st) {
+    _showPdfExportError(messenger, l10n, 'Home-Office-Auswertung', e, st,
+        show: context.mounted);
   }
 }
 
@@ -1200,16 +1190,9 @@ Future<void> _exportHomeOfficeYearPdf({
       ratio: total.ratio,
       perMonth: perMonth,
     );
-  } catch (e) {
-    logger.e('[PDF-Export] Home-Office-Auswertung fehlgeschlagen: $e');
-    if (context.mounted) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).pdfExportFailed('$e')),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+  } catch (e, st) {
+    _showPdfExportError(messenger, l10n, 'Home-Office-Auswertung', e, st,
+        show: context.mounted);
   }
 }
 
@@ -1242,22 +1225,9 @@ Future<void> _exportLeaveReportPdf({
       profileName: profileName,
     );
   } catch (e, st) {
-    if (isExpectedLoadFailure(e)) {
-      // Verbindungsabbruch/abgemeldet ist kein App-Fehler (#506, #522).
-      logger.i('[PDF-Export] Urlaubsauswertung nicht ladbar: ${errorLabel(e)}');
-    } else {
-      logger.e(
-          '[PDF-Export] Urlaubsauswertung fehlgeschlagen: ${errorLabel(e)}',
-          stackTrace: st);
-    }
-    if (context.mounted) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).pdfExportFailed('$e')),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+    // Verbindungsabbruch/abgemeldet ist kein App-Fehler (#506, #522).
+    _showPdfExportError(messenger, l10n, 'Urlaubsauswertung', e, st,
+        show: context.mounted);
   }
 }
 

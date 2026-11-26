@@ -14,6 +14,7 @@ import '../../domain/entities/bundesland.dart';
 import '../../domain/entities/settings_entity.dart';
 import '../../domain/utils/weekday_labels.dart';
 import '../../l10n/app_localizations.dart';
+import '../utils/user_error_message.dart';
 import '../view_models/auth_view_model.dart';
 import '../view_models/dashboard_view_model.dart' as dashboard_vm;
 import '../view_models/data_sync_view_model.dart';
@@ -556,15 +557,17 @@ class SettingsPage extends ConsumerWidget {
         messenger.showSnackBar(
           SnackBar(
             content: Text(
-              l10n.syncErrorsMessage(
-                  result.workEntriesSynced, result.errors.join(", ")),
+              // Ohne Fehlertexte (#582); die Fehler loggt DataSyncService.
+              l10n.syncErrorsMessage(result.workEntriesSynced),
             ),
             backgroundColor: Colors.orange,
             duration: const Duration(seconds: 5),
           ),
         );
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      logUserFacingError(
+          '[SettingsPage] Synchronisierung fehlgeschlagen', e, stackTrace);
       // Schließe Loading-Dialog bei Fehler
       if (context.mounted) {
         Navigator.of(context).pop();
@@ -572,7 +575,9 @@ class SettingsPage extends ConsumerWidget {
 
       messenger.showSnackBar(
         SnackBar(
-          content: Text(l10n.syncFailedMessage('$e')),
+          // Verständliche Meldung statt des Ausnahmetexts (#582).
+          content:
+              Text(userErrorMessage(l10n, e, general: l10n.syncFailedMessage)),
           backgroundColor: Colors.red,
           duration: const Duration(seconds: 4),
         ),

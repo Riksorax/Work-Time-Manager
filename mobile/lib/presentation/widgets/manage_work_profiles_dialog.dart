@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers/providers.dart' show workProfilesProvider;
-import '../../core/utils/logger.dart';
+import '../../core/utils/network_error.dart';
 import '../../domain/entities/work_profile_entity.dart';
 import '../../l10n/app_localizations.dart';
+import '../utils/user_error_message.dart';
 import '../view_models/work_profile_view_model.dart';
+import 'common/load_failure_notice.dart';
 
 /// Dialog zum Löschen zusätzlicher Arbeitszeit-Profile (siehe #238). Das
 /// Standard-Profil wird hier nicht aufgeführt - es kann nicht gelöscht
@@ -45,10 +47,12 @@ class ManageWorkProfilesDialog extends ConsumerWidget {
       messenger.showSnackBar(
           SnackBar(content: Text(l10n.profileDeletedMessage(profile.name))));
     } catch (e, stackTrace) {
-      logger.e('[ManageWorkProfilesDialog] Fehler beim Löschen: $e',
-          stackTrace: stackTrace);
-      messenger.showSnackBar(
-          SnackBar(content: Text(l10n.profileDeletionFailed('$e'))));
+      // Ohne Ausnahmetext ins Log und in die Meldung (#582).
+      logUserFacingError(
+          '[ManageWorkProfilesDialog] Profil nicht gelöscht', e, stackTrace);
+      messenger.showSnackBar(SnackBar(
+          content: Text(
+              userErrorMessage(l10n, e, general: l10n.profileDeletionFailed))));
     }
   }
 
@@ -56,6 +60,13 @@ class ManageWorkProfilesDialog extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profilesAsync = ref.watch(workProfilesProvider);
     final l10n = AppLocalizations.of(context);
+    // Ladefehler der Profil-Liste ins Log, ohne Ausnahmetext (#582).
+    ref.listen(workProfilesProvider, (previous, next) {
+      if (next is AsyncError && previous is! AsyncError) {
+        logUserFacingError('[ManageWorkProfilesDialog] Profile nicht geladen',
+            next.error!, next.stackTrace);
+      }
+    });
 
     return AlertDialog(
       title: Text(l10n.manageProfilesDialogTitle),
@@ -66,7 +77,13 @@ class ManageWorkProfilesDialog extends ConsumerWidget {
             height: 80,
             child: Center(child: CircularProgressIndicator()),
           ),
-          error: (error, _) => Text(l10n.errorLoadingGeneric('$error')),
+          // Verständlicher Hinweis mit „Erneut versuchen“ statt des
+          // Ausnahmetexts (#582); geloggt wird beim Laden der Profile.
+          error: (error, _) => LoadFailureNotice(
+            message: l10n.profilesLoadFailed,
+            offline: isTransientNetworkError(error),
+            onRetry: () => ref.invalidate(workProfilesProvider),
+          ),
           data: (profiles) {
             final additionalProfiles =
                 profiles.where((p) => !p.isDefault).toList();
