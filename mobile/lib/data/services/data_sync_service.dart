@@ -1,3 +1,4 @@
+import 'package:flutter_work_time/core/utils/api_errors.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
 
 import '../../domain/repositories/work_repository.dart';
@@ -44,7 +45,8 @@ class DataSyncService {
           syncedCount++;
           logger.i('[DataSyncService] Synced: ${entry.date}');
         } catch (e) {
-          logger.e('[DataSyncService] Fehler beim Sync von ${entry.date}: $e');
+          logger.e(
+              '[DataSyncService] Fehler beim Sync von ${entry.date}: ${errorLabel(e)}');
           // Weiter mit nächstem Eintrag
         }
       }
@@ -61,7 +63,7 @@ class DataSyncService {
 
       return syncedCount;
     } catch (e) {
-      logger.e('[DataSyncService] Fehler beim Sync: $e');
+      logger.e('[DataSyncService] Fehler beim Sync: ${errorLabel(e)}');
       rethrow;
     }
   }
@@ -146,7 +148,8 @@ class DataSyncService {
 
       return true;
     } catch (e) {
-      logger.e('[DataSyncService] Fehler beim Sync der Überstunden: $e');
+      logger.e(
+          '[DataSyncService] Fehler beim Sync der Überstunden: ${errorLabel(e)}');
       return false;
     }
   }
@@ -176,7 +179,7 @@ class DataSyncService {
       );
       result['workEntriesSynced'] = syncedCount;
     } catch (e) {
-      result['errors'].add('Arbeitseinträge: $e');
+      result['errors'].add('Arbeitseinträge: ${errorLabel(e)}');
     }
 
     // Sync Überstunden
@@ -187,7 +190,7 @@ class DataSyncService {
       );
       result['overtimeSynced'] = overtimeSynced;
     } catch (e) {
-      result['errors'].add('Überstunden: $e');
+      result['errors'].add('Überstunden: ${errorLabel(e)}');
     }
 
     logger.i('[DataSyncService] ═══ Synchronisation abgeschlossen ═══');

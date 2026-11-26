@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:intl/intl.dart';
 import 'package:flutter_work_time/core/config/google_sign_in_config.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
+import 'package:flutter_work_time/core/utils/api_errors.dart';
+import 'package:flutter_work_time/core/utils/sign_in_errors.dart';
 
 import '../../models/work_entry_model.dart';
 import 'package:flutter_work_time/core/utils/time_precision.dart';
@@ -115,15 +117,19 @@ class FirestoreDataSourceImpl implements FirestoreDataSource {
 
         await _firebaseAuth.signInWithCredential(credential);
       }
-    } on GoogleSignInException catch (e) {
-      logger.e(
-          "Google Sign-In Exception: code=${e.code.name}, description=${e.description}");
-      rethrow;
-    } on firebase.FirebaseAuthException catch (e) {
-      logger.e("Firebase Auth Exception: code=${e.code}, message=${e.message}");
-      rethrow;
     } catch (e) {
-      logger.e("Fehler beim Google Sign-In: $e");
+      // Abbruch durch den Nutzer und Netzwerkfehler sind kein App-Fehler;
+      // geloggt wird nur Typ bzw. Code, nie der Ausnahmetext (#582).
+      final label = switch (e) {
+        GoogleSignInException(:final code) => 'GoogleSignIn(${code.name})',
+        firebase.FirebaseAuthException(:final code) => 'FirebaseAuth($code)',
+        _ => errorLabel(e),
+      };
+      if (isSignInCanceled(e) || isSignInNetworkError(e)) {
+        logger.i('Google Sign-In nicht abgeschlossen: $label');
+      } else {
+        logger.e('Fehler beim Google Sign-In: $label');
+      }
       rethrow;
     }
   }
