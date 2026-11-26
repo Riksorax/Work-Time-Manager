@@ -1,9 +1,12 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_work_time/core/utils/api_errors.dart';
 import 'package:flutter_work_time/core/utils/logger.dart';
+import 'package:flutter_work_time/core/utils/sign_in_errors.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../utils/user_error_message.dart';
 import '../view_models/auth_view_model.dart';
 import '../view_models/dashboard_view_model.dart' as dashboard_vm;
 import '../view_models/data_sync_view_model.dart';
@@ -198,16 +201,22 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                 if (context.mounted) {
                                   Navigator.of(context).pop();
                                 }
-                              } catch (syncError) {
-                                logger.e(
-                                    '[LoginPage] Fehler bei der Synchronisierung: $syncError');
+                              } catch (syncError, stackTrace) {
+                                // Ohne Ausnahmetext ins Log und in die
+                                // Meldung (#582).
+                                logUserFacingError(
+                                    '[LoginPage] Synchronisierung fehlgeschlagen',
+                                    syncError,
+                                    stackTrace);
                                 // Schließe Sync-Dialog bei Fehler
                                 if (context.mounted) {
                                   Navigator.of(context).pop();
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                      content: Text(l10n.syncFailedLoginMessage(
-                                          '$syncError')),
+                                      content: Text(userErrorMessage(
+                                          l10n, syncError,
+                                          general:
+                                              l10n.syncFailedLoginMessage)),
                                       backgroundColor: Colors.orange,
                                       duration: const Duration(seconds: 3),
                                     ),
@@ -223,16 +232,31 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                           initialIndex: widget.returnToIndex)),
                                 );
                               }
-                            } catch (loginError) {
-                              logger.e(
-                                  '[LoginPage] Fehler beim Login: $loginError');
+                            } catch (loginError, stackTrace) {
+                              final canceled = isSignInCanceled(loginError);
+                              final offline = isSignInNetworkError(loginError);
+                              // Abbruch und Netzwerk sind kein App-Fehler;
+                              // nie mit Ausnahmetext loggen (#582).
+                              if (canceled || offline) {
+                                logger.i('[LoginPage] Anmeldung '
+                                    '${canceled ? 'abgebrochen' : 'ohne Verbindung'} '
+                                    '(${errorLabel(loginError)})');
+                              } else {
+                                logger.e(
+                                    '[LoginPage] Anmeldung fehlgeschlagen '
+                                    '(${errorLabel(loginError)})',
+                                    stackTrace: stackTrace);
+                              }
                               // Schließe Loading-Dialog bei Fehler
                               if (context.mounted) {
                                 Navigator.of(context).pop();
+                                // Abbruch durch den Nutzer: keine Meldung.
+                                if (canceled) return;
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text(
-                                        l10n.loginFailedMessage('$loginError')),
+                                    content: Text(offline
+                                        ? l10n.errorNoConnectionMessage
+                                        : l10n.loginFailedMessage),
                                     backgroundColor: Colors.red,
                                     duration: const Duration(seconds: 3),
                                   ),

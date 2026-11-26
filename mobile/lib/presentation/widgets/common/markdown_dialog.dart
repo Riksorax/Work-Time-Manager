@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../core/utils/api_errors.dart';
+import '../../../core/utils/logger.dart';
 import '../../../l10n/app_localizations.dart';
 
 /// Ein wiederverwendbarer Dialog, der Markdown-Content aus Assets lädt und anzeigt.
@@ -61,7 +63,7 @@ class MarkdownDialog extends StatelessWidget {
             const Divider(height: 1),
             Expanded(
               child: FutureBuilder<String>(
-                future: rootBundle.loadString(assetPath),
+                future: _load(assetPath),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
@@ -70,7 +72,8 @@ class MarkdownDialog extends StatelessWidget {
                   if (snapshot.hasError) {
                     return Center(
                       child: Text(
-                        l10n.errorLoadingContent('${snapshot.error}'),
+                        // Ohne Ausnahmetext (#582), geloggt in [_load].
+                        l10n.errorLoadingContent,
                         style: const TextStyle(color: Colors.red),
                       ),
                     );
@@ -134,5 +137,17 @@ class MarkdownDialog extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Lädt das Markdown-Dokument; ein Fehler geht ohne Ausnahmetext ins Log
+/// (#582) und wird für den Fehlerzustand des `FutureBuilder` weitergereicht.
+Future<String> _load(String assetPath) async {
+  try {
+    return await rootBundle.loadString(assetPath);
+  } catch (e, stackTrace) {
+    logger.e('[MarkdownDialog] Dokument nicht geladen (${errorLabel(e)})',
+        stackTrace: stackTrace);
+    rethrow;
   }
 }

@@ -1010,11 +1010,8 @@
   "@privacyPolicyTitle": { "description": "Titel des Datenschutz-Dialogs. Der Rechtstext selbst bleibt auf Deutsch (assets/legal/*.md)." },
   "termsOfServiceTitle": "Allgemeine Geschäftsbedingungen",
   "@termsOfServiceTitle": { "description": "Titel des AGB-Dialogs. Der Rechtstext selbst bleibt auf Deutsch (assets/legal/*.md)." },
-  "errorLoadingContent": "Fehler beim Laden: {error}",
-  "@errorLoadingContent": {
-    "description": "Fehlermeldung, wenn ein Markdown-Rechtsdokument nicht geladen werden konnte.",
-    "placeholders": { "error": { "type": "String" } }
-  },
+  "errorLoadingContent": "Der Inhalt konnte nicht geladen werden.",
+  "@errorLoadingContent": {"description": "Fehlermeldung, wenn ein Markdown-Rechtsdokument nicht geladen werden konnte; ohne technischen Fehlertext (#582)."},
   "noContentFound": "Kein Inhalt gefunden.",
   "@noContentFound": { "description": "Hinweis, wenn ein Markdown-Rechtsdokument leer ist." },
   "closeAction": "Schließen",
@@ -1032,16 +1029,10 @@
     "description": "Erfolgsmeldung nach der automatischen Synchronisierung beim Login.",
     "placeholders": { "count": { "type": "int" }, "overtimeSynced": { "type": "String" } }
   },
-  "syncFailedLoginMessage": "Synchronisierung fehlgeschlagen: {error}",
-  "@syncFailedLoginMessage": {
-    "description": "Fehlermeldung, wenn die Synchronisierung nach dem Login fehlschlägt.",
-    "placeholders": { "error": { "type": "String" } }
-  },
-  "loginFailedMessage": "Anmeldung fehlgeschlagen: {error}",
-  "@loginFailedMessage": {
-    "description": "Fehlermeldung, wenn die Google-Anmeldung fehlschlägt.",
-    "placeholders": { "error": { "type": "String" } }
-  },
+  "syncFailedLoginMessage": "Die Synchronisierung nach der Anmeldung ist fehlgeschlagen. Du kannst sie in den Einstellungen erneut starten.",
+  "@syncFailedLoginMessage": {"description": "Meldung, wenn die Synchronisierung nach dem Login fehlschlägt; ohne technischen Fehlertext, bei fehlender Verbindung steht stattdessen errorNoConnectionMessage (#582)."},
+  "loginFailedMessage": "Die Anmeldung ist fehlgeschlagen. Bitte versuche es erneut.",
+  "@loginFailedMessage": {"description": "Fehlermeldung, wenn die Google-Anmeldung fehlschlägt; ohne technischen Fehlertext. Bei fehlender Verbindung steht stattdessen errorNoConnectionMessage, bei Abbruch durch den Nutzer gibt es keine Meldung (#582)."},
   "legalNoticePrefix": "Mit der Anmeldung akzeptierst du unsere ",
   "@legalNoticePrefix": { "description": "Erster Teil des rechtlichen Hinweises auf der Login-Seite, vor dem AGB-Link." },
   "termsShortLabel": "AGB",
