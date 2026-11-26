@@ -557,5 +557,19 @@
   "overtimeUnknownHint": "Offline – no value saved yet",
   "overtimeUnknownValue": "unknown",
   "dashboardOfflineText": "Today's times can't be loaded right now.",
-  "dashboardLoadErrorText": "The dashboard could not be loaded."
+  "dashboardLoadErrorText": "The dashboard could not be loaded.",
+  "voiceCommandsTitle": "Voice commands",
+  "voiceCommandsSubtitle": "With Google Assistant",
+  "voiceCommandsIntro": "Say “Hey Google, open … in Work Time Manager” and replace … with one of the commands below. Android only.",
+  "voiceCommandsTimerSection": "Timer (free)",
+  "voiceCommandStartDay": "clock in",
+  "voiceCommandStartBreak": "start break",
+  "voiceCommandEndBreak": "end break",
+  "voiceCommandClockOut": "clock out",
+  "voiceCommandsQuerySection": "Queries (Premium, sign-in required)",
+  "voiceCommandOvertime": "overtime",
+  "voiceCommandLeave": "remaining leave",
+  "voiceCommandTrend": "weekly trend",
+  "voiceCommandsRecognitionHint": "Speech recognition is handled by Google Assistant. Which phrases it understands may vary by device and language.",
+  "voiceCommandQuoted": "“{command}”"
 }
