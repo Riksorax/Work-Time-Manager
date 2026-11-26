@@ -1,0 +1,111 @@
+<div class="insights-layout" [attr.aria-busy]="svc.state().status === 'loading'">
+  @switch (svc.state().status) {
+    @case ('error') {
+      <div class="ins-card ins-error" role="alert">
+        <mat-icon aria-hidden="true">error_outline</mat-icon>
+        <span>{{ 'insights.loadError' | translate }}</span>
+        <button mat-stroked-button type="button" (click)="svc.retry()">
+          <mat-icon aria-hidden="true">refresh</mat-icon>
+          {{ 'leave.retry' | translate }}
+        </button>
+      </div>
+    }
+
+    @case ('data') {
+      <p class="ins-period">
+        <mat-icon aria-hidden="true">date_range</mat-icon>
+        <span>{{ 'insights.period' | translate: { range: periodLabel() } }}</span>
+      </p>
+
+      @if (svc.isEmpty()) {
+        <div class="ins-card ins-empty" role="status">
+          <mat-icon aria-hidden="true">insights</mat-icon>
+          <p>{{ 'insights.empty' | translate }}</p>
+        </div>
+      } @else {
+        @if (streak(); as s) {
+          @if (s.isWarning) {
+            <div class="ins-warning" role="status">
+              <mat-icon aria-hidden="true">self_improvement</mat-icon>
+              <p>{{ s.warning }}</p>
+            </div>
+          }
+        }
+
+        <!-- 1. Wochentage: Balken = Durchschnitt, Abweichung als Zahl mit Vorzeichen (Balken nur Zusatz). -->
+        <section class="ins-card ins-weekdays" aria-labelledby="ins-weekday-title">
+          <h3 class="ins-title" id="ins-weekday-title">{{ 'insights.weekdayTitle' | translate }}</h3>
+          <p class="ins-sub">{{ 'insights.weekdayExplanation' | translate }}</p>
+          <ul class="ins-weekday-list">
+            @for (w of weekdays(); track w.weekday) {
+              <li class="ins-weekday">
+                <span class="ins-wd-label">{{ w.label }}</span>
+                <span class="ins-wd-bar" aria-hidden="true"><span [style.width.%]="w.barPercent"></span></span>
+                <span class="ins-wd-avg">
+                  {{ 'insights.weekdayAverage' | translate: { duration: w.average } }}
+                  <span class="ins-muted">· {{ w.days }}</span>
+                </span>
+                <span [class]="'ins-wd-dev is-' + w.sign">
+                  <span class="cdk-visually-hidden">{{ 'insights.deviationLabel' | translate }}:</span>
+                  {{ w.deviation }}
+                </span>
+              </li>
+            }
+          </ul>
+        </section>
+
+        <!-- 2. Überstunden-Serie -->
+        @if (streak(); as s) {
+          <section class="ins-card ins-streak" aria-labelledby="ins-streak-title">
+            <h3 class="ins-title" id="ins-streak-title">{{ 'insights.streakTitle' | translate }}</h3>
+            <p class="ins-sub">{{ 'insights.streakExplanation' | translate }}</p>
+            <dl class="ins-streak-values">
+              <div>
+                <dt>{{ 'insights.streakCurrent' | translate }}</dt>
+                <dd>{{ s.current }}</dd>
+              </div>
+              <div>
+                <dt>{{ 'insights.streakLongest' | translate }}</dt>
+                <dd>{{ s.longest }}</dd>
+              </div>
+            </dl>
+            <p class="ins-note">{{ s.threshold }}</p>
+          </section>
+        }
+
+        <!-- 3. Startzeit-Heatmap: Farbe nach Vorzeichen, Werte immer als Text. -->
+        <section class="ins-card ins-heatmap" aria-labelledby="ins-heatmap-title">
+          <h3 class="ins-title" id="ins-heatmap-title">{{ 'insights.heatmapTitle' | translate }}</h3>
+          <p class="ins-sub">{{ 'insights.heatmapExplanation' | translate: { target: dailyTarget() } }}</p>
+          @if (heatmap().length === 0) {
+            <p class="ins-note">{{ 'insights.heatmapEmpty' | translate }}</p>
+          } @else {
+            <ul class="ins-heat-grid">
+              @for (c of heatmap(); track c.hour) {
+                <li [class]="'ins-heat is-' + c.sign">
+                  <span class="ins-heat-hour">{{ c.label }}</span>
+                  <span class="ins-heat-value">
+                    <span class="cdk-visually-hidden">{{ 'insights.heatmapDeviationLabel' | translate }}:</span>
+                    {{ c.value }}
+                  </span>
+                  <span class="ins-heat-bar" aria-hidden="true"><span [style.width.%]="c.strength"></span></span>
+                  <span class="ins-heat-days">{{ c.days }}</span>
+                </li>
+              }
+            </ul>
+            <p class="ins-legend" aria-hidden="true">
+              <span class="ins-swatch is-pos"></span>{{ 'insights.legendAbove' | translate }}
+              <span class="ins-swatch is-neg"></span>{{ 'insights.legendBelow' | translate }}
+            </p>
+          }
+        </section>
+      }
+    }
+
+    @default {
+      <div class="ins-loading" role="status" [attr.aria-label]="'insights.loading' | translate">
+        <mat-spinner diameter="40" aria-hidden="true" />
+      </div>
+    }
+  }
+</div>

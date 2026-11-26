@@ -221,6 +221,9 @@ async function installFakeBackend(page: Page, user: TestUser, state: FakeBackend
       return json((await fsGet(doc)) ?? {});
     }
 
+    const homeOffice = path.match(/^\/reports\/home-office\/(\d+)$/);
+    if (homeOffice) return json(await buildHomeOffice(user.uid, pid, Number(homeOffice[1])));
+
     const report = path.match(/^\/reports\/(daily|weekly|monthly|yearly)\/(\d+)(?:\/(\d+))?(?:\/(\d+))?$/);
     if (report) return json(await buildReport(user.uid, pid, report[1], Number(report[2]), Number(report[3]), Number(report[4])));
 
@@ -293,6 +296,25 @@ async function buildReport(uid: string, pid: string, kind: string, y: number, m:
     };
   }
   return { year: y, vacationDaysPerYear: 30, vacationDaysTaken: 0, vacationDaysRemaining: 30, sickDays: 0 };
+}
+
+/** Home-Office-Jahr (#537), vereinfacht: Arbeitstage mit Start, Flag `isHomeOffice` (die echte Regel testet das Backend). */
+async function buildHomeOffice(uid: string, pid: string, year: number): Promise<unknown> {
+  const months = await Promise.all(Array.from({ length: 12 }, async (_, i) => {
+    const doc = await fsGet(`${scoped(uid, 'work_entries', pid)}/${year}-${pad(i + 1)}`);
+    const days = Object.entries((doc?.['days'] as Record<string, Record<string, unknown>> | undefined) ?? {})
+      .filter(([, e]) => (e['type'] ?? 'work') === 'work' && e['workStart'] instanceof Date);
+    const home = days.filter(([, e]) => e['isHomeOffice'] === true).map(([d]) => `${year}-${pad(i + 1)}-${pad(Number(d))}`);
+    return { month: i + 1, homeOfficeDays: home.length, officeDays: days.length - home.length, totalDays: days.length, home };
+  }));
+  const ratio = (h: number, t: number) => (t === 0 ? null : h / t);
+  const homeOfficeDays = months.reduce((a, m) => a + m.homeOfficeDays, 0);
+  const totalDays = months.reduce((a, m) => a + m.totalDays, 0);
+  return {
+    year, homeOfficeDays, officeDays: totalDays - homeOfficeDays, totalDays, homeOfficeRatio: ratio(homeOfficeDays, totalDays),
+    months: months.map(({ home: _home, ...m }) => ({ ...m, homeOfficeRatio: ratio(m.homeOfficeDays, m.totalDays) })),
+    homeOfficeDates: months.flatMap(m => m.home).sort(),
+  };
 }
 
 async function seedEntryRaw(uid: string, pid: string, date: Date, dto: EntryDto): Promise<void> {

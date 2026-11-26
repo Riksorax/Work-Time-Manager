@@ -54,7 +54,7 @@ describe('ReportsComponent: Jahresvergleich im Jahres-Tab (#530)', () => {
         { provide: WorkProfileService, useValue: createFakeWorkProfile() },
         { provide: AuthService, useValue: { user$: of(loggedIn ? { uid: 'u1' } : null) } },
         { provide: ProfileService, useValue: { isPremium: signal(premium) } },
-        { provide: ApiClient, useValue: { getYearlyComparison } },
+        { provide: ApiClient, useValue: { getYearlyComparison, getHomeOfficeReport: () => NEVER } },
         { provide: Router, useValue: { navigate: vi.fn() } },
         { provide: MatDialog, useValue: {} },
         { provide: MatSnackBar, useValue: { open: vi.fn() } },
