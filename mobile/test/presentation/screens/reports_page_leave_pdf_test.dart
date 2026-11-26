@@ -341,7 +341,12 @@ void main() {
 
     expect(platform.lastFilename, isNull);
     expect(service.last, isNull);
-    expect(find.textContaining('PDF-Export fehlgeschlagen'), findsOneWidget);
+    // Verständliche Meldung ohne Ausnahmetext (#582).
+    expect(
+        find.text('Der PDF-Export ist fehlgeschlagen. Bitte versuche es '
+            'erneut.'),
+        findsOneWidget);
+    expect(find.textContaining('ApiException'), findsNothing);
     final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
     expect(snackBar.backgroundColor, Colors.red);
     expect(reported(logs, 'Urlaubsauswertung'), hasLength(1));
@@ -358,7 +363,9 @@ void main() {
           done: () => api.calls.isNotEmpty);
 
       expect(platform.lastFilename, isNull);
-      expect(find.textContaining('PDF-Export fehlgeschlagen'), findsOneWidget);
+      // Netzwerkfehler: „Keine Verbindung …“ ohne Ausnahmetext (#582).
+      expect(find.textContaining('Keine Verbindung.'), findsOneWidget);
+      expect(find.textContaining('Exception'), findsNothing);
       expect(reported(logs, 'Urlaubsauswertung'), isEmpty);
     });
   }

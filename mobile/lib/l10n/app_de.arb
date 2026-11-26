@@ -408,16 +408,10 @@
     "description": "Erfolgsmeldung nach abgeschlossener Datensynchronisierung.",
     "placeholders": { "count": { "type": "int" }, "overtimeSynced": { "type": "String" } }
   },
-  "syncErrorsMessage": "Synchronisierung mit Fehlern:\nArbeitseinträge: {count}\nFehler: {errors}",
-  "@syncErrorsMessage": {
-    "description": "Meldung nach Datensynchronisierung mit Fehlern.",
-    "placeholders": { "count": { "type": "int" }, "errors": { "type": "String" } }
-  },
-  "syncFailedMessage": "Fehler bei der Synchronisierung: {error}",
-  "@syncFailedMessage": {
-    "description": "Meldung, wenn die Datensynchronisierung komplett fehlschlägt.",
-    "placeholders": { "error": { "type": "String" } }
-  },
+  "syncErrorsMessage": "Die Synchronisierung war nur teilweise erfolgreich.\nArbeitseinträge: {count}\nBitte versuche es erneut.",
+  "@syncErrorsMessage": {"description": "Meldung nach einer Datensynchronisierung, bei der ein Teil fehlgeschlagen ist; ohne technischen Fehlertext (#582).", "placeholders": {"count": {"type": "int"}}},
+  "syncFailedMessage": "Die Synchronisierung ist fehlgeschlagen. Bitte versuche es erneut.",
+  "@syncFailedMessage": {"description": "Meldung, wenn die Datensynchronisierung komplett fehlschlägt; ohne technischen Fehlertext, bei fehlender Verbindung steht stattdessen errorNoConnectionMessage (#582)."},
   "yesLabel": "Ja",
   "@yesLabel": {
     "description": "Generisches Ja, z.B. in der Sync-Erfolgsmeldung."
@@ -763,11 +757,8 @@
   "@overtimeColonLabel": { "description": "Label für Überstunden in einer Statistikkarte." },
   "dailyWorkTimeLabel": "Arbeitszeit pro Tag:",
   "@dailyWorkTimeLabel": { "description": "Überschrift der Tagesliste im Wochenbericht. Die Werte sind netto (ohne Pausen; Urlaub/Krank/Feiertag mit dem Tagessoll), ihre Summe ist die Gesamte Arbeitszeit, siehe #551." },
-  "pdfExportFailed": "PDF-Export fehlgeschlagen: {error}",
-  "@pdfExportFailed": {
-    "description": "Fehlermeldung, wenn der PDF-Export fehlschlägt.",
-    "placeholders": { "error": { "type": "String" } }
-  },
+  "pdfExportFailed": "Der PDF-Export ist fehlgeschlagen. Bitte versuche es erneut.",
+  "@pdfExportFailed": {"description": "Fehlermeldung, wenn der PDF-Export fehlschlägt; ohne technischen Fehlertext, bei fehlender Verbindung steht stattdessen errorNoConnectionMessage (#582)."},
   "pdfWeeklyReportTitle": "Wochenbericht",
   "@pdfWeeklyReportTitle": { "description": "Titel des PDF-Wochenberichts (siehe #297)." },
   "pdfMonthlyReportTitle": "Monatsbericht",
@@ -1110,11 +1101,8 @@
     "description": "Erfolgsmeldung nach dem Anlegen eines Arbeitszeit-Profils.",
     "placeholders": { "name": { "type": "String" } }
   },
-  "profileCreationFailed": "Anlegen fehlgeschlagen: {error}",
-  "@profileCreationFailed": {
-    "description": "Fehlermeldung, wenn das Anlegen eines Profils fehlschlägt.",
-    "placeholders": { "error": { "type": "String" } }
-  },
+  "profileCreationFailed": "Das Profil konnte nicht angelegt werden. Bitte versuche es erneut.",
+  "@profileCreationFailed": {"description": "Fehlermeldung, wenn das Anlegen eines Profils fehlschlägt; ohne technischen Fehlertext, bei fehlender Verbindung steht stattdessen errorNoConnectionMessage (#582)."},
   "newProfileDialogTitle": "Neues Profil",
   "@newProfileDialogTitle": { "description": "Titel des Dialogs zum Anlegen eines neuen Arbeitszeit-Profils." },
   "profileNameFieldLabel": "Name (z. B. Arbeitgeber)",
@@ -1133,18 +1121,10 @@
     "description": "Erfolgsmeldung nach dem Löschen eines Arbeitszeit-Profils.",
     "placeholders": { "name": { "type": "String" } }
   },
-  "profileDeletionFailed": "Löschen fehlgeschlagen: {error}",
-  "@profileDeletionFailed": {
-    "description": "Fehlermeldung, wenn das Löschen eines Profils fehlschlägt.",
-    "placeholders": { "error": { "type": "String" } }
-  },
+  "profileDeletionFailed": "Das Profil konnte nicht gelöscht werden. Bitte versuche es erneut.",
+  "@profileDeletionFailed": {"description": "Fehlermeldung, wenn das Löschen eines Profils fehlschlägt; ohne technischen Fehlertext, bei fehlender Verbindung steht stattdessen errorNoConnectionMessage (#582)."},
   "manageProfilesDialogTitle": "Profile verwalten",
   "@manageProfilesDialogTitle": { "description": "Titel des Dialogs zum Verwalten der Arbeitszeit-Profile." },
-  "errorLoadingGeneric": "Fehler beim Laden: {error}",
-  "@errorLoadingGeneric": {
-    "description": "Generische Fehlermeldung beim Laden von Daten.",
-    "placeholders": { "error": { "type": "String" } }
-  },
   "noAdditionalProfiles": "Keine zusätzlichen Profile vorhanden.",
   "@noAdditionalProfiles": { "description": "Hinweis, wenn außer dem Standard-Profil keine weiteren Profile existieren." },
   "deleteProfileTooltip": "Profil löschen",
@@ -1233,11 +1213,8 @@
   "@requiredVersionLabel": { "description": "Label der mindestens erforderlichen App-Version im Update-Dialog." },
   "reflectionSaved": "Reflexion gespeichert.",
   "@reflectionSaved": { "description": "Erfolgsmeldung nach dem Speichern der Wochen-Reflexion." },
-  "saveFailed": "Speichern fehlgeschlagen: {error}",
-  "@saveFailed": {
-    "description": "Generische Fehlermeldung, wenn ein Speichervorgang fehlschlägt.",
-    "placeholders": { "error": { "type": "String" } }
-  },
+  "saveFailed": "Speichern fehlgeschlagen. Bitte versuche es erneut.",
+  "@saveFailed": {"description": "Allgemeine Fehlermeldung, wenn ein Speichervorgang fehlschlägt (Wochen-Reflexion); ohne technischen Fehlertext, bei fehlender Verbindung steht stattdessen errorNoConnectionMessage (#582)."},
   "weeklyReflectionDialogTitle": "Wochen-Reflexion KW {week}",
   "@weeklyReflectionDialogTitle": {
     "description": "Titel des Wochen-Reflexion-Dialogs mit Kalenderwoche.",
@@ -1600,5 +1577,11 @@
   "voiceCommandsRecognitionHint": "Die Spracherkennung übernimmt der Google Assistant. Welche Sätze er versteht, kann je nach Gerät und Sprache abweichen.",
   "@voiceCommandsRecognitionHint": {"description": "Hinweis am Ende der Hilfeseite „Sprachbefehle“ (#584): die Erkennung hängt vom Google Assistant ab."},
   "voiceCommandQuoted": "„{command}“",
-  "@voiceCommandQuoted": {"description": "Ein Sprachbefehl in Anführungszeichen auf der Hilfeseite „Sprachbefehle“ (#584).", "placeholders": {"command": {"type": "String"}}}
+  "@voiceCommandQuoted": {"description": "Ein Sprachbefehl in Anführungszeichen auf der Hilfeseite „Sprachbefehle“ (#584).", "placeholders": {"command": {"type": "String"}}},
+  "errorNoConnectionMessage": "Keine Verbindung. Prüfe deine Internetverbindung und versuche es erneut.",
+  "@errorNoConnectionMessage": {"description": "Meldung (Snackbar), wenn eine Aktion an einem Netzwerkfehler scheitert (offline, Verbindungsabbruch, Zeitüberschreitung); ersetzt dann die allgemeine Fehlermeldung der Aktion (#582)."},
+  "profilesLoadFailed": "Die Profile konnten nicht geladen werden.",
+  "@profilesLoadFailed": {"description": "Hinweis im Dialog „Profile verwalten“, wenn die Profil-Liste nicht geladen werden kann; darunter „Erneut versuchen“, ohne Netz mit dem Titel „Keine Verbindung“ (#582)."},
+  "authStateLoadFailed": "Dein Anmeldestatus konnte nicht geprüft werden.",
+  "@authStateLoadFailed": {"description": "Hinweis, wenn der Anmeldestatus beim Start nicht ermittelt werden kann; darunter „Erneut versuchen“, ohne Netz mit dem Titel „Keine Verbindung“ (#582)."}
 }

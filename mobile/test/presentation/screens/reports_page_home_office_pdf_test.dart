@@ -184,7 +184,12 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       expect(platform.lastFilename, isNull);
-      expect(find.textContaining('PDF-Export fehlgeschlagen'), findsOneWidget);
+      // Verständliche Meldung ohne Ausnahmetext (#582).
+      expect(
+          find.text('Der PDF-Export ist fehlgeschlagen. Bitte versuche es '
+              'erneut.'),
+          findsOneWidget);
+      expect(find.textContaining('Exception'), findsNothing);
       expect(tester.takeException(), isNull);
     });
 

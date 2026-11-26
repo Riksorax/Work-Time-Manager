@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers/providers.dart';
-import '../../core/utils/logger.dart';
 import '../../domain/entities/work_profile_entity.dart';
 import '../../l10n/app_localizations.dart';
+import '../utils/user_error_message.dart';
 import '../view_models/work_profile_view_model.dart';
 import 'profile_switch_confirm_dialog.dart';
 
@@ -76,11 +76,13 @@ class _AddWorkProfileDialogState extends ConsumerState<AddWorkProfileDialog> {
       messenger.showSnackBar(
           SnackBar(content: Text(l10n.profileCreatedMessage(newProfile.name))));
     } catch (e, stackTrace) {
-      logger.e('[AddWorkProfileDialog] Fehler beim Anlegen des Profils: $e',
-          stackTrace: stackTrace);
-      setState(() => _isSaving = false);
-      messenger.showSnackBar(
-          SnackBar(content: Text(l10n.profileCreationFailed('$e'))));
+      // Ohne Ausnahmetext ins Log und in die Meldung (#582).
+      logUserFacingError(
+          '[AddWorkProfileDialog] Profil nicht angelegt', e, stackTrace);
+      if (mounted) setState(() => _isSaving = false);
+      messenger.showSnackBar(SnackBar(
+          content: Text(
+              userErrorMessage(l10n, e, general: l10n.profileCreationFailed))));
     }
   }
 

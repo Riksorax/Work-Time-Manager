@@ -88,11 +88,14 @@ class WeeklyReflectionViewModel extends Notifier<WeeklyReflectionState> {
       await repository.saveReflection(updated);
       state = state.copyWith(isSaving: false, reflection: updated);
     } catch (e, stackTrace) {
+      // Ohne Ausnahmetext (#582): nur errorLabel.
       if (isExpectedLoadFailure(e)) {
-        logger
-            .i('[WeeklyReflectionViewModel] Netzwerkfehler beim Speichern: $e');
+        logger.i('[WeeklyReflectionViewModel] Netzwerkfehler beim Speichern '
+            '(${errorLabel(e)})');
       } else {
-        logger.e('[WeeklyReflectionViewModel] Fehler beim Speichern: $e',
+        logger.e(
+            '[WeeklyReflectionViewModel] Fehler beim Speichern '
+            '(${errorLabel(e)})',
             stackTrace: stackTrace);
       }
       state = state.copyWith(isSaving: false);
