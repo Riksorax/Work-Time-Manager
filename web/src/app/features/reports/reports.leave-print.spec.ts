@@ -67,7 +67,7 @@ describe('ReportsComponent: Urlaubs- und Krankheitsauswertung drucken (#284)', (
         { provide: WorkProfileService, useValue: profile },
         { provide: AuthService, useValue: { user$: of(loggedIn ? { uid: 'u1' } : null) } },
         { provide: ProfileService, useValue: { isPremium: signal(premium) } },
-        { provide: ApiClient, useValue: { getYearlyComparison: () => NEVER, getYearlyLeave } },
+        { provide: ApiClient, useValue: { getYearlyComparison: () => NEVER, getHomeOfficeReport: () => NEVER, getYearlyLeave } },
         { provide: Router, useValue: { navigate: vi.fn() } },
         { provide: MatDialog, useValue: {} },
         { provide: MatSnackBar, useValue: { open: snackOpen } },

@@ -21,10 +21,10 @@ test('nicht angemeldet: axe ohne ernste Verstöße im Trend-Tab', async ({ page,
 });
 
 for (const width of [320, 375]) {
-  test(`Reports: alle fünf Tabs sind bei ${width}px ohne Blättern sichtbar (ohne Konto)`, async ({ page }) => {
+  test(`Reports: alle sechs Tabs sind bei ${width}px ohne Blättern sichtbar (ohne Konto)`, async ({ page }) => {
     await page.setViewportSize({ width, height: 800 });
     await gotoReady(page, '/reports');
-    for (const name of ['Täglich', 'Wöchentlich', 'Monatlich', 'Jahr', 'Trend']) {
+    for (const name of ['Täglich', 'Wöchentlich', 'Monatlich', 'Jahr', 'Trend', 'Insights']) {
       const box = await page.getByRole('tab', { name, exact: true }).boundingBox();
       expect(box!.x, `${name} links`).toBeGreaterThanOrEqual(0);
       expect(box!.x + box!.width, `${name} rechts`).toBeLessThanOrEqual(width);

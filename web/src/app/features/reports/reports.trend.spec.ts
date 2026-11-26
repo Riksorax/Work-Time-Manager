@@ -62,13 +62,13 @@ describe('ReportsComponent: Tab Trend (#531)', () => {
         { provide: LeaveBalanceService, useValue: {
           year: signal(2026), canGoPrevYear: signal(false), canGoNextYear: signal(false), isCurrentYear: signal(true),
           report: signal(null), state: signal('loading'), navigateYear: vi.fn(), refresh: vi.fn() } },
-        // Jahres-Tab (Premium): Home-Office-Karte wird eager angelegt.
+        // Jahres-Tab (Premium): Home-Office-Karte lädt seit #537 über ApiClient (unten), WorkEntryService bleibt für andere Teile.
         { provide: WorkEntryService, useValue: { getEntriesForMonthOnce: async () => [] } },
         { provide: WorkProfileService, useValue: createFakeWorkProfile() },
         // Jahres-Tab (Premium, #530): Jahresvergleichskarte; die Antwort bleibt hier offen.
         { provide: AuthService, useValue: { user$: of(loggedIn ? { uid: 'u1' } : null) } },
         { provide: ProfileService, useValue: { isPremium: signal(premium) } },
-        { provide: ApiClient, useValue: { getYearlyComparison: () => NEVER } },
+        { provide: ApiClient, useValue: { getYearlyComparison: () => NEVER, getHomeOfficeReport: () => NEVER } },
         { provide: Router, useValue: { navigate: vi.fn() } },
         { provide: MatDialog, useValue: {} },
         { provide: MatSnackBar, useValue: { open: vi.fn() } },
@@ -103,7 +103,7 @@ describe('ReportsComponent: Tab Trend (#531)', () => {
   it('fünfter Tab „Trend“; die Ansicht entsteht erst beim Öffnen des Tabs', async () => {
     mount(true, true);
     const tabs = [...el().querySelectorAll('[role="tab"]')].map(t => t.textContent?.trim());
-    expect(tabs).toEqual(['Täglich', 'Wöchentlich', 'Monatlich', 'Jahr', 'Trend']);
+    expect(tabs).toEqual(['Täglich', 'Wöchentlich', 'Monatlich', 'Jahr', 'Trend', 'Insights']);
     expect(attach).not.toHaveBeenCalled();
     await openTrendTab();
     expect(el().querySelector('app-trend-view')).not.toBeNull();

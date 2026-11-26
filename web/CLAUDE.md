@@ -63,7 +63,8 @@ domain/
 │   ├── leave.models.ts    YearlyLeaveReport (1:1 Backend-DTO), LeaveMonth, LeavePeriod (#284)
 │   ├── trend.models.ts    TrendReport, TrendBucket, WeeklyTrend, OvertimeForecast (#531/#532, 1:1 Backend-DTO ohne `Ms`-Suffix)
 │   ├── yearly-comparison.models.ts  YearlyComparison, YearlySummary, YearlyDelta (#530, 1:1 Backend-DTO mit `Ms`-Suffix)
-│   └── home-office.models.ts  HomeOfficeReport, HomeOfficeMonth (#537, 1:1 Backend-DTO)
+│   ├── home-office.models.ts  HomeOfficeReport, HomeOfficeMonth (#537, 1:1 Backend-DTO)
+│   └── insights.models.ts  InsightsReport, WeekdayAverage, OvertimeStreak, StartTimeBucket (#537, 1:1 Backend-DTO mit `Ms`-Suffix)
 ├── services/
 │   ├── break-calculator.ts   Pure — Pflichtpausen (30min/6h, 45min/9h)
 │   ├── report-calculator.ts  Pure — ISO-8601-Wochennummer, DailyStat, Weekly/MonthlyReport; Parität zum Backend über `testdata/report-parity/` (`report-calculator.parity.tz.spec.ts`, #535, seit #551 inkl. `netWorkedMs`)
@@ -74,7 +75,7 @@ domain/
 
 features/
 ├── dashboard/      DashboardComponent + DashboardService (Timer, Pausen, Überstunden); `OpenEntryService` + `OpenEntryCloseService` + Beenden-Dialog (offene Einträge vor heute, #385)
-├── reports/        ReportsComponent + ReportsService (Täglich/Wöchentlich/Monatlich/Jahr/Trend, Premium-Gate); Trend-Ansicht `components/trend-view/` (#531, siehe „Trend-Ansicht“); Urlaubs-/Krankheitsauswertung `components/leave-report-print/` (#284, siehe dort); Mehrfachauswahl-Modus im Service: `toggleMultiSelect`, idempotentes `endMultiSelect`, `removeDatesFromSelection`, Modus endet nach erfolgreichem Batch-Speichern (#377)
+├── reports/        ReportsComponent + ReportsService (Täglich/Wöchentlich/Monatlich/Jahr/Trend/Insights, Premium-Gate); Trend-Ansicht `components/trend-view/` (#531, siehe „Trend-Ansicht“); Insights `components/insights-view/` (#537, siehe „Insights“); Urlaubs-/Krankheitsauswertung `components/leave-report-print/` (#284, siehe dort); Mehrfachauswahl-Modus im Service: `toggleMultiSelect`, idempotentes `endMultiSelect`, `removeDatesFromSelection`, Modus endet nach erfolgreichem Batch-Speichern (#377)
 └── settings/       SettingsComponent + SettingsPageService (Profil, Arbeitszeit, Gleitzeit, Sync, Theme)
 
 shared/
@@ -175,10 +176,32 @@ der Trend hat ein eigenes Zeitfenster (12 Wochen/12 Monate bis heute) und hängt
   (Roving tabindex: ein Tab-Stopp, Pfeile/Home/End) füllen eine Detailzeile; jede Spalte ist `role="img"` mit `aria-label`, das SVG
   `role="group"`. Textalternative: visuell versteckte Tabelle (`cdk-visually-hidden`) mit denselben Werten. Farben nur über
   `--mat-sys-*`.
-- **Tab-Leiste:** die kompakte Tab-Darstellung (4 px Abstand, 13 px) gilt bis 430 px, damit fünf Tabs auf 320–430 px ohne Blättern passen.
+- **Tab-Leiste:** die kompakte Tab-Darstellung (4 px Abstand, 13 px) gilt bis 430 px, damit fünf Tabs auf 320–430 px ohne Blättern passen (seit #537 sechs Tabs, siehe „Insights“).
 - **Tests:** `api-client.trend*.spec.ts`, `chart-scale.util.spec.ts`, `charts.spec.ts`, `trend-view.spec.ts`, `reports.trend.spec.ts`;
   E2E `e2e/trend.spec.ts` (ohne Konto) und `e2e/trend-account.spec.ts` (Emulatoren; Trend-Endpunkt per `page.route` gemockt,
   Testdaten `e2e/trend-data.ts`).
+
+### Insights (#537)
+
+Sechster Tab „Insights“ in den Berichten (Premium), Port der Mobile-Insights (`reports_page.dart`, `InsightsView`). Alle Werte
+vom Backend, der Client formatiert nur.
+- **Gate** in `reports.html` wie beim Trend (`!isLoggedIn` → Anmelde-Hinweis, `!isPremium` → gesperrte Karte mit Paywall), Inhalt
+  in `<ng-template matTabContent>`.
+- **Laden:** `InsightsViewService` (von `ReportsComponent` bereitgestellt, Muster `TrendViewService`): nur angehängt (`attach()`),
+  angemeldet und Premium; `ApiClient.getInsightsReport(date, timeZone, profileId?)` → `GET /api/reports/insights/{y}/{m}/{d}?tz=`.
+  Bezugstag = `TodayService.today()`, `tz` aus dem Token `BROWSER_TIME_ZONE` (`core/services/time-zone.ts`,
+  `Intl.DateTimeFormat().resolvedOptions().timeZone`, im Test ersetzbar). Profil- und Tageswechsel laden neu. `loading`/`error`
+  (mit „Erneut versuchen“)/`data`; leer = keine Wochentage und keine Startstunden (wie Mobile `hasNoData`).
+- **Darstellung:** Zeitraum aus `from`/`to` (Kalendertage zerlegt, `Intl.formatRange` in der App-Sprache). Hinweis bei
+  `overtimeStreak.isWarning` oben (warmer Ton statt Fehlerrot, `role="status"`). Wochentage als Liste: Name, Balken = Durchschnitt
+  (relativ zum längsten, `aria-hidden`), „Ø HH:MM h · n Tage“, Abweichung als Chip mit Vorzeichen (0 ohne). Serie: aktuelle und
+  längste, Schwelle als Hinweis. Heatmap: Zelle je Startstunde mit Abweichung vom Tagessoll als Text, Anzahl und kleinem Balken;
+  Farbe nach Vorzeichen (über Soll `primary-container`, unter Soll `--ins-below` = Orange auf `surface` gemischt, Text on-surface;
+  die Palette hat außer `error` keinen warmen Ton), Legende. Alle Werte stehen als Text da; Balken und Farben sind Zusatz.
+- **Tab-Leiste:** Sechs Tabs passen auf 320–430 px ohne Blättern: bis 430 px die kompakte Form aus #531, unter 360 px zusätzlich 11 px Schrift und 2 px Abstand (`styles.scss`, Style-Budget von `reports.scss`); geprüft in `e2e/trend.spec.ts` (320/375 px).
+- **Tests:** `api-client.insights.spec.ts`, `insights-view.service.spec.ts`, `insights-view.spec.ts`, `insights-view.tz.spec.ts`,
+  `reports.insights.spec.ts`; E2E `e2e/insights-account.spec.ts` (Emulatoren, Endpunkt per `page.route` gemockt, Testdaten
+  `e2e/insights-data.ts`, inkl. axe und 320 px).
 
 ### Jahresvergleich (#530)
 
