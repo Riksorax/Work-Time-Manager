@@ -34,6 +34,11 @@ public class EndpointAuthTests : IClassFixture<WebApplicationFactory<Program>>
     [InlineData("/api/reports/yearly-comparison/2026?until=11-14")]
     [InlineData("/api/reports/yearly-comparison/2026?until=11-14&profileId=abc")]
     [InlineData("/api/reports/yearly-comparison/2026?profileId=abc")]
+    [InlineData("/api/reports/home-office/2026")]
+    [InlineData("/api/reports/home-office/2026?profileId=abc")]
+    [InlineData("/api/reports/insights/2026/11/26?tz=Europe/Berlin")]
+    [InlineData("/api/reports/insights/2026/11/26?tz=America/Los_Angeles&profileId=abc")]
+    [InlineData("/api/reports/insights/2026/11/26")]
     public async Task Get_WithoutToken_ReturnsUnauthorized(string url)
     {
         var response = await _client.GetAsync(url);
