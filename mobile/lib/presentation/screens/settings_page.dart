@@ -34,6 +34,7 @@ import '../widgets/common/responsive_center.dart';
 import '../widgets/work_profile_switcher.dart';
 import 'app_info_page.dart';
 import 'login_page.dart';
+import 'voice_commands_page.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -229,6 +230,21 @@ class SettingsPage extends ConsumerWidget {
             if (!kIsWeb) ...[
               const Divider(height: 1),
               const _AppLockSection(),
+              // Hilfe zu den Sprachbefehlen (#584): Google Assistant gibt es
+              // nur in der Android-App.
+              const Divider(height: 1),
+              ListTile(
+                title: Text(l10n.voiceCommandsTitle),
+                subtitle: Text(l10n.voiceCommandsSubtitle),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const VoiceCommandsPage()),
+                  );
+                },
+              ),
             ],
             const Divider(height: 1),
             ListTile(

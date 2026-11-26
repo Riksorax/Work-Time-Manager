@@ -30,7 +30,7 @@ Export as PDF: weekly, monthly, and yearly reports, the home office report for a
 Main job and side job, or separate projects? Create additional profiles with their own target hours, workdays, and separate time accounts.
 
 🎙 GOOGLE ASSISTANT (ANDROID)
-Start, pause, and stop the timer by voice. With Premium you can also ask for your overtime balance, your remaining leave, and your weekly trend.
+Start, pause, and stop the timer by voice. With Premium you can also ask for your overtime balance, your remaining leave, and your weekly trend. For example, say: "Hey Google, open start break in Work Time Manager".
 
 💻 CLOUD SYNC & WEB APP
 Without signing in, your data stays on your device. Sign in with your Google account to sync it and use time tracking in your browser at work-time-manager.app.

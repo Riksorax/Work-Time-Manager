@@ -30,7 +30,7 @@ Exportiere als PDF: Wochen-, Monats- und Jahresbericht, die Home-Office-Auswertu
 Hauptjob und Nebenjob oder getrennte Projekte? Lege zusätzliche Profile mit eigenen Sollstunden, Arbeitstagen und getrennten Zeitkonten an.
 
 🎙 GOOGLE ASSISTANT (ANDROID)
-Starte, pausiere und beende den Timer per Sprachbefehl. Mit Premium fragst du auch dein Überstunden-Saldo, deinen Resturlaub und deinen Wochen-Trend ab.
+Starte, pausiere und beende den Timer per Sprachbefehl. Mit Premium fragst du auch dein Überstunden-Saldo, deinen Resturlaub und deinen Wochen-Trend ab. Sag zum Beispiel: „Hey Google, öffne Arbeitstag starten in Work Time Manager“.
 
 💻 CLOUD-SYNC & WEB-APP
 Ohne Anmeldung bleiben deine Daten auf deinem Gerät. Mit deinem Google-Konto synchronisierst du sie und nutzt die Zeiterfassung auch im Browser unter work-time-manager.app.
