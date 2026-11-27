@@ -1,0 +1,34 @@
+{
+  "fps": 30,
+  "bilder": 283,
+  "marken": {
+    "wisch": 97,
+    "prognose": 115
+  },
+  "ausschnitte": {
+    "wochen_trend_oben": {
+      "x": 0.0777,
+      "y": 0.2922,
+      "breite": 0.8447,
+      "hoehe": 0.172
+    },
+    "prognose_karte_oben": {
+      "x": 0.0777,
+      "y": 0.4751,
+      "breite": 0.8447,
+      "hoehe": 0.2184
+    },
+    "diagramm_oben": {
+      "x": 0.0777,
+      "y": 0.7045,
+      "breite": 0.8447,
+      "hoehe": 0.2955
+    },
+    "prognose_karte": {
+      "x": 0.0777,
+      "y": 0.3222,
+      "breite": 0.8447,
+      "hoehe": 0.2184
+    }
+  }
+}

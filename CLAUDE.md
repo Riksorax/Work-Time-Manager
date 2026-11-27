@@ -12,6 +12,7 @@ Monorepo einer deutschen Arbeitszeit-App:
 - `mobile/` — Flutter-App (primär, produktiv) → `mobile/CLAUDE.md`
 - `web/` — Angular-Port der Flutter-App, Cloud Functions unter `web/functions/` → `web/CLAUDE.md`
 - `server/` — .NET-10-Backend-API, kanonische Rechenlogik → `server/CLAUDE.md`
+- `marketing/shorts/` — Pipeline für Kurzvideos (TikTok, Reels, Shorts) aus echten App-Aufnahmen, kein App-Code → `marketing/shorts/CLAUDE.md`
 
 **Arbeitsablauf** (Branches, Commits, PRs, Release, Deployment inkl. Secrets, Rollback): `CONTRIBUTING.md`.
 Integrationsbranch ist `develop`; PRs gehen gegen `develop`, nur Release-Branches gegen `main`.

@@ -1,0 +1,43 @@
+{
+  "fps": 30,
+  "bilder": 270,
+  "marken": {
+    "wisch_hoch": 109,
+    "tipp": 144,
+    "beendet": 150,
+    "wisch_karte": 165,
+    "ergaenzt": 178
+  },
+  "ausschnitte": {
+    "timer_brutto": {
+      "x": 0.2241,
+      "y": 0.0965,
+      "breite": 0.5519,
+      "hoehe": 0.1293
+    },
+    "beenden_knopf": {
+      "x": 0.0777,
+      "y": 0.5931,
+      "breite": 0.8447,
+      "hoehe": 0.071
+    },
+    "pause_karte": {
+      "x": 0.0777,
+      "y": 0.6532,
+      "breite": 0.8447,
+      "hoehe": 0.1256
+    },
+    "pause_zeile": {
+      "x": 0.1168,
+      "y": 0.7376,
+      "breite": 0.3376,
+      "hoehe": 0.0224
+    },
+    "automatisch": {
+      "x": 0.3688,
+      "y": 0.6696,
+      "breite": 0.2235,
+      "hoehe": 0.0655
+    }
+  }
+}
